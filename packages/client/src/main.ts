@@ -180,7 +180,9 @@ let accountStatus = '확인 중';
 
 const connection = new ZoneConnection({
   onSelf: (x, z, lastSeq, status) => {
-    player.reconcile(x, z, lastSeq);
+    // 서버가 모는 동안에는 보정 대신 서버 자세를 그대로 따라간다
+    if (status.auto || status.chasing) player.setServerPose(x, z, status.rotY);
+    else player.reconcile(x, z, lastSeq);
     myState = status;
     hud.setStatus(status.level, status.hp, status.maxHp, status.exp);
     autoHuntToggle.setOn(status.auto);
@@ -792,7 +794,9 @@ function frame(now: number): void {
 
   // 자동 사냥·추격 중에는 서버가 위치를 정한다. 예측을 멈추고 서버 위치를
   // 따라간다 — 양쪽이 동시에 움직이면 보정이 계속 싸워서 캐릭터가 떨린다.
-  if (myState.auto || myState.chasing) {
+  const driven = myState.auto || myState.chasing;
+  player.setDriven(driven);
+  if (driven) {
     axis.set(0, 0);
     player.stop();
   }

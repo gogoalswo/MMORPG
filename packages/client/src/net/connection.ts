@@ -141,6 +141,13 @@ export interface SelfStatus {
   chasing: boolean;
   /** 지금 걸치고 있는 것 — 내 캐릭터도 남과 같은 경로로 그린다 */
   gear: GearLook;
+  /**
+   * 서버가 정한 바라보는 각.
+   *
+   * 자동 사냥·추격 중에는 **서버가 각을 정한다.** 클라이언트는 "움직인 방향"밖에
+   * 알 수 없어서, 이걸 안 받으면 대상을 옆구리로 보고 걷는다.
+   */
+  rotY: number;
 }
 
 export interface HitEvent {
@@ -406,6 +413,7 @@ export class ZoneConnection {
           dead: p.dead,
           auto: p.auto ?? false,
           chasing: p.chasing ?? false,
+          rotY: p.rotY ?? 0,
           gear: {
             weapon: p.weapon ?? '',
             offhand: p.offhand ?? '',

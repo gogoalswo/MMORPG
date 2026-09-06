@@ -9,6 +9,14 @@ const SNAP_DISTANCE = 2.5;
 /** 매 보정마다 오차를 이만큼 줄인다. 1이면 딱딱하고, 낮으면 늘어진다 */
 const CORRECTION_RATE = 0.25;
 
+/**
+ * 서버가 몰 때 따라붙는 속도 (1/초).
+ *
+ * 상태는 15Hz 로 오는데 화면은 60Hz 다. 도착한 순간에만 위치를 옮기면
+ * 초당 열다섯 번 툭툭 끊겨 보인다 — 매 프레임 목표 쪽으로 당겨야 한다.
+ */
+const FOLLOW_RATE = 14;
+
 export class Player {
   /** 컨테이너. 직업을 바꾸면 안의 리그만 갈아끼운다 */
   readonly group = new THREE.Group();
@@ -25,6 +33,16 @@ export class Player {
   private readonly dir = new THREE.Vector3();
   private facing = 0;
   private currentSpeed = 0;
+
+  /**
+   * 서버가 몰고 있는지 (자동 사냥·클릭 추격).
+   *
+   * 이때는 예측을 멈추고 서버가 준 위치와 **각**을 따라간다. 예전에는 위치만
+   * 따라가고 각과 속도를 그대로 뒀는데, 그래서 캐릭터가 정면을 본 채로
+   * 대기 자세로 미끄러졌다.
+   */
+  private driven = false;
+  private readonly drive = { x: 0, z: 0, rotY: 0 };
   /** 현재 존의 이동 한계 (존마다 크기가 다르다) */
   private halfSize = 100;
 
@@ -108,6 +126,33 @@ export class Player {
     this.hasMoveTarget = false;
   }
 
+  /** 서버가 모는 중인가 — 매 프레임 알려준다 */
+  setDriven(on: boolean): void {
+    if (this.driven === on) return;
+    this.driven = on;
+    if (on) {
+      // 넘겨받는 순간의 자리를 목표로 잡는다. 0,0 으로 두면 원점으로 끌려간다.
+      this.drive.x = this.position.x;
+      this.drive.z = this.position.z;
+      this.drive.rotY = this.facing;
+    } else {
+      // 다시 내가 몬다. 남아 있던 예측 이력은 의미가 없다.
+      this.pending.length = 0;
+    }
+  }
+
+  /** 서버가 정한 위치와 각. 자동 사냥·추격 중에 reconcile 대신 쓴다 */
+  setServerPose(x: number, z: number, rotY: number): void {
+    this.drive.x = x;
+    this.drive.z = z;
+    this.drive.rotY = rotY;
+    // 순간이동처럼 크게 벌어졌으면 따라붙지 말고 바로 옮긴다
+    if (Math.hypot(x - this.position.x, z - this.position.z) > SNAP_DISTANCE) {
+      this.position.x = x;
+      this.position.z = z;
+    }
+  }
+
   /**
    * 한 프레임 진행하고, 서버에 보낼 입력을 돌려준다.
    *
@@ -116,6 +161,8 @@ export class Player {
    */
   update(dt: number, axis: THREE.Vector2, camYaw: number): MoveInput {
     this.dir.set(0, 0, 0);
+
+    if (this.driven) return this.follow(dt);
 
     if (axis.lengthSq() > 0.0001) {
       // 키보드 입력이 들어오면 클릭 이동은 취소
@@ -156,6 +203,35 @@ export class Player {
     this.rig.update(dt, this.currentSpeed);
 
     return input;
+  }
+
+  /**
+   * 서버가 모는 동안 한 프레임.
+   *
+   * 위치는 매 프레임 목표 쪽으로 당기고, 각도 서버가 준 값으로 돌린다.
+   * 속도는 **실제로 움직인 거리에서 되돌린다** — 0 으로 두면 대기 자세로
+   * 미끄러지고, RUN_SPEED 로 박아두면 멈춰 서서도 달리는 시늉을 한다.
+   */
+  private follow(dt: number): MoveInput {
+    const beforeX = this.position.x;
+    const beforeZ = this.position.z;
+
+    const k = 1 - Math.exp(-FOLLOW_RATE * dt);
+    this.position.x += (this.drive.x - this.position.x) * k;
+    this.position.z += (this.drive.z - this.position.z) * k;
+
+    let delta = this.drive.rotY - this.facing;
+    while (delta > Math.PI) delta -= Math.PI * 2;
+    while (delta < -Math.PI) delta += Math.PI * 2;
+    this.facing += delta * (1 - Math.exp(-14 * dt));
+    this.group.rotation.y = this.facing;
+
+    const moved = Math.hypot(this.position.x - beforeX, this.position.z - beforeZ);
+    this.currentSpeed = dt > 0 ? moved / dt : 0;
+    this.rig.update(dt, this.currentSpeed);
+
+    // 정지 입력이라도 보내야 서버가 마지막 순번을 확인해준다
+    return { seq: ++this.seq, dx: 0, dz: 0, dt };
   }
 
   /**

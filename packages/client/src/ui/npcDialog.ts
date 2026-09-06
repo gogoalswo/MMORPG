@@ -1,17 +1,9 @@
 import {
-  GRADE_MAX,
   canEquip,
   describeOption,
-  MAX_ENHANCE,
-  canEnhance,
-  craftRequirement,
-  enhanceCost,
-  enhanceOdds,
-  forgeRecipe,
   getItem,
   gradeMultiplier,
   slotLabel,
-  type ItemStack,
   type JobId,
   type NpcRole,
 } from '@mmo/shared';
@@ -19,10 +11,14 @@ import { itemIcon } from './itemIcons';
 import type { InventoryState } from '../net/connection';
 
 /**
- * 마을 NPC 창 — 상점 / 대장간 / 전직.
+ * 마을 NPC 창 — 상점 / 전직.
  *
- * 셋을 한 창으로 묶은 이유는 하는 일이 전부 "목록에서 하나 고르고 버튼을
- * 누른다"로 같기 때문이다. 창을 셋으로 나누면 같은 코드가 세 벌이 된다.
+ * 둘을 한 창으로 묶은 이유는 하는 일이 "목록에서 하나 고르고 버튼을 누른다"로
+ * 같기 때문이다.
+ *
+ * **대장간은 여기 없다.** 하는 일이 셋(제작·강화·등급)이고 목록이 길어서
+ * 탭과 거르개가 필요했다 — `craftWindow.ts` 로 뗐다. `main.ts` 의 `onNpc` 가
+ * role 로 갈라 보낸다.
  *
  * **여기 보이는 건 전부 안내다.** 살 수 있는지, 가까이 있는지, 그 직업이
  * 맞는지는 서버가 다시 본다.
@@ -56,7 +52,6 @@ export class NpcDialog {
 
   private role: NpcRole = 'shop';
   private stock: string[] = [];
-  private forge: string[] = [];
   private jobs: string[] = [];
   private inventory: InventoryState = { gold: 0, items: [], equipment: {} };
   private job: JobId = 'knight';
@@ -64,10 +59,7 @@ export class NpcDialog {
 
   onBuy: ((itemId: string) => void) | null = null;
   onSell: ((index: number) => void) | null = null;
-  onCraft: ((index: number) => void) | null = null;
   onJob: ((job: string) => void) | null = null;
-  onForge: ((itemId: string) => void) | null = null;
-  onEnhance: ((index: number) => void) | null = null;
 
   constructor(parent: HTMLElement) {
     this.root = document.createElement('div');
@@ -109,10 +101,9 @@ export class NpcDialog {
     if (this.open) this.render();
   }
 
-  show(role: NpcRole, stock: string[], forge: string[], jobs: string[]): void {
+  show(role: NpcRole, stock: string[], jobs: string[]): void {
     this.role = role;
     this.stock = stock;
-    this.forge = forge;
     this.jobs = jobs;
     this.root.classList.remove('is-hidden');
     this.render();
@@ -123,8 +114,8 @@ export class NpcDialog {
     this.goldEl.textContent = `${this.inventory.gold.toLocaleString()} G`;
     this.bodyEl.replaceChildren();
 
+    // 대장간(smith)은 이 창으로 오지 않는다 — main.ts 가 제작창으로 보낸다
     if (this.role === 'shop') this.renderShop();
-    else if (this.role === 'smith') this.renderSmith();
     else this.renderJobs();
   }
 
@@ -194,104 +185,6 @@ export class NpcDialog {
       this.bodyEl.appendChild(row);
     });
     if (sellable === 0) this.empty('가방이 비어 있습니다.');
-  }
-
-  private renderSmith(): void {
-    const owned = new Map<string, number>();
-    for (const stack of this.inventory.items) {
-      owned.set(stack.id, (owned.get(stack.id) ?? 0) + 1);
-    }
-
-    // --- 새로 만들기 — 끝내 안 나오는 자리를 재료로 직접 채운다 ---
-    this.section('새로 만들기 — 1등급, 옵션 1~3개 무작위');
-    if (this.forge.length === 0) this.empty('만들 수 있는 게 없습니다.');
-
-    for (const id of this.forge) {
-      const item = getItem(id);
-      const recipe = item ? forgeRecipe(item) : null;
-      if (!item || !recipe) continue;
-
-      const have = owned.get(recipe.materialId) ?? 0;
-      const ready = have >= recipe.materialCount && this.inventory.gold >= recipe.gold;
-
-      const row = this.row(
-        itemIcon(item, 1),
-        item.name,
-        `${slotLabel(item.slot!, this.job)} · Lv.${item.level} · ${recipe.materialName} ${have}/${recipe.materialCount}`
-      );
-      row.appendChild(this.button('제작', `${recipe.gold} G`, ready, () => this.onForge?.(id)));
-      this.bodyEl.appendChild(row);
-    }
-
-    this.section('강화 — 골드로 두드린다');
-
-    const pct = (v: number) => `${Math.round(v * 100)}%`;
-    let enhanceShown = 0;
-
-    this.inventory.items.forEach((stack, index) => {
-      const item = getItem(stack.id);
-      if (!item || item.material) return;
-
-      const level = stack.enhance ?? 0;
-      const odds = enhanceOdds(level);
-      const cost = enhanceCost(item, level);
-      const affordable = this.inventory.gold >= cost;
-
-      const row = this.row(
-        itemIcon(item, stack.grade),
-        `${item.name}${level > 0 ? ` +${level}` : ''}`,
-        canEnhance(level)
-          ? `성공 ${pct(odds.success)} · 유지 ${pct(odds.keep)} · 파괴 ${pct(odds.destroy)}`
-          : `+${MAX_ENHANCE} — 더 못 올립니다`
-      );
-
-      if (canEnhance(level)) {
-        row.appendChild(
-          this.button(`+${level + 1} 시도`, `${cost} G`, affordable, () => this.onEnhance?.(index))
-        );
-      }
-      this.bodyEl.appendChild(row);
-      enhanceShown++;
-    });
-
-    if (enhanceShown === 0) this.empty('강화할 장비가 없습니다.');
-
-    this.section('등급 올리기 — 옵션을 다시 굴립니다');
-
-    // 같은 물건·등급은 한 줄로 묶는다 — 가방과 같은 규칙이다
-    const seen = new Set<string>();
-    let shown = 0;
-
-    this.inventory.items.forEach((stack: ItemStack, index) => {
-      const item = getItem(stack.id);
-      if (!item || item.material) return;
-
-      const key = `${stack.id}#${stack.grade}`;
-      if (seen.has(key)) return;
-      seen.add(key);
-
-      const need = craftRequirement(item, stack.grade);
-      const row = this.row(
-        itemIcon(item, stack.grade),
-        `${item.name} (${stack.grade}등급)`,
-        need
-          ? `${need.materialName} ${owned.get(need.materialId) ?? 0}/${need.materialCount}`
-          : `${GRADE_MAX}등급 — 더 올릴 수 없습니다`
-      );
-
-      if (need) {
-        const ready = (owned.get(need.materialId) ?? 0) >= need.materialCount;
-        row.appendChild(
-          this.button(`▲ ${need.targetGrade}등급`, `${need.gold} G`, ready, () =>
-            this.onCraft?.(index)
-          )
-        );
-      }
-      this.bodyEl.appendChild(row);
-      shown++;
-    });
-
-    if (shown === 0) this.empty('올릴 장비가 없습니다.');
   }
 
   private renderJobs(): void {

@@ -14,6 +14,7 @@
 | `packages/server/src/ZoneRoom.ts` | 굴리는 자리 — `handleNpcBuy` / `handleNpcForge` / `handleCraft` / `handleNpcEnhance` / 드롭 |
 | `packages/server/src/db.ts` | `toStack` / `withOptions` — 저장값 복원과 마이그레이션 |
 | `packages/client/src/ui/itemIcons.ts` | 절차적 SVG 아이콘 (아트 에셋 없음) |
+| `packages/client/src/ui/craftWindow.ts` | 제작창 — 탭 3개 + 거르개 |
 
 ## 규칙
 
@@ -73,9 +74,16 @@ baseBonus(item, enhance)        기본(고정) × 강화
 stackStats(stack)               기본 + 옵션 → ItemStats
 equipmentStats(equipped)        장착 8칸 합
 ```
-`ItemStats = { attack, defense, maxHp, maxMp, crit, critDamage, attackSpeed }`
+`ItemStats = { attack, defense, maxHp, crit, critDamage, attackSpeed }`
+
+장신구(반지·목걸이·귀걸이)와 마법서는 원래 **마나를 주던 자리**였다. 마나를
+걷어내면서 그 몫을 공격과 체력으로 옮겼다 — 안 그러면 여덟 자리 중 셋이
+빈 물건이 된다.
 
 ### 제작
+창은 `craftWindow.ts` 하나다. 대장간에서만 열리고 탭이 셋이다 —
+**새로 만들기 / 강화 / 등급 올리기**. 자세한 건 [npc-town.md](npc-town.md).
+
 - **등급 올리기**: 같은 단계 보스 재료 `targetGrade - 1` 개 + 수수료.
   낮은 단계 재료로 최상위를 올릴 수 있으면 초반 보스만 반복하면 끝난다.
 - **새로 만들기(forge)**: 재료 `FORGE_MATERIALS = 5` 개 + `price * 1.5`.

@@ -28,7 +28,6 @@ function describe(skill: SkillDef): string {
   else bits.push(`배율 ${skill.power}`);
   if (skill.maxTargets > 1) bits.push(`${skill.maxTargets}명`);
   if (skill.range > 0) bits.push(`${skill.range}m`);
-  bits.push(`마나 ${skill.mpCost}`);
   bits.push(`${Math.round(skill.cooldown / 1000)}초`);
   return bits.join(' · ');
 }

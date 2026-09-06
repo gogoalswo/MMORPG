@@ -65,7 +65,6 @@ export interface ItemBonus {
   attack?: number;
   defense?: number;
   maxHp?: number;
-  maxMp?: number;
 }
 
 export interface ItemDef {
@@ -107,25 +106,38 @@ export function tierLevel(index: number): number {
   return index === 0 ? 1 : index * 10;
 }
 
+/** 단계 개수 */
+export const TIER_COUNT = TIER_PREFIX.length;
+
+/**
+ * 단계 이름(접두어). 제작창에서 단계를 골라 거르려면 이름이 있어야 한다 —
+ * "8단계" 로만 적으면 어느 사냥터 물건인지 알 수 없다.
+ */
+export function tierName(index: number): string {
+  return TIER_PREFIX[Math.max(0, Math.min(TIER_PREFIX.length - 1, index))]!;
+}
+
 /**
  * 슬롯마다 성격이 다르다.
  *
- * 무기는 공격, 갑옷 계열은 체력·방어, 장신구는 마나 위주다. 보조는 직업이
- * 갈리는 자리라 기사는 버티고 마법사는 마나를, 궁수는 공격을 얻는다.
+ * 무기는 공격, 갑옷 계열은 체력·방어, 장신구는 공격 위주다. 보조는 직업이
+ * 갈리는 자리라 기사는 버티고, 마법사와 궁수는 공격을 얻는다.
  * 같은 단계 안에서 갑옷 > 투구 > 신발 순으로 무게를 준다.
+ *
+ * 장신구가 원래 마나를 주던 자리였다. 마나를 걷어내면서 그 몫을 공격과
+ * 체력으로 옮겼다 — 안 그러면 반지·목걸이·귀걸이 세 자리가 빈 물건이 된다.
  */
 function bonusFor(slot: EquipSlot, level: number, job?: JobId): ItemBonus {
   const hp = (k: number) => Math.round((10 + level * 4) * k);
   const def = (k: number) => Math.round((1 + level * 0.4) * k);
   const atk = (k: number) => Math.round((2 + level * 0.6) * k);
-  const mp = (k: number) => Math.round((5 + level * 2) * k);
 
   switch (slot) {
     case 'weapon':
       return { attack: atk(1) };
     case 'offhand':
       if (job === 'knight') return { defense: def(0.9), maxHp: hp(0.5) };
-      if (job === 'mage') return { maxMp: mp(1.2), attack: atk(0.35) };
+      if (job === 'mage') return { attack: atk(0.55), maxHp: hp(0.2) }; // 마법서
       return { attack: atk(0.5), defense: def(0.3) }; // 궁수 화살통
     case 'armor':
       return { maxHp: hp(1), defense: def(1) };
@@ -134,11 +146,11 @@ function bonusFor(slot: EquipSlot, level: number, job?: JobId): ItemBonus {
     case 'boots':
       return { maxHp: hp(0.4), defense: def(0.45) };
     case 'ring':
-      return { maxMp: mp(1), attack: atk(0.2) };
+      return { attack: atk(0.45), maxHp: hp(0.15) };
     case 'necklace':
-      return { maxMp: mp(0.8), attack: atk(0.3) };
+      return { attack: atk(0.5), maxHp: hp(0.2) };
     case 'earring':
-      return { maxMp: mp(0.7), defense: def(0.4) };
+      return { defense: def(0.6), maxHp: hp(0.25) };
   }
 }
 
@@ -511,7 +523,6 @@ export function baseBonus(item: ItemDef, enhance = 0): Required<ItemBonus> {
     attack: Math.round((item.bonus.attack ?? 0) * m),
     defense: Math.round((item.bonus.defense ?? 0) * m),
     maxHp: Math.round((item.bonus.maxHp ?? 0) * m),
-    maxMp: Math.round((item.bonus.maxMp ?? 0) * m),
   };
 }
 
@@ -525,7 +536,6 @@ export interface ItemStats {
   attack: number;
   defense: number;
   maxHp: number;
-  maxMp: number;
   /** 치명타 확률 가산 (0.07 = +7%p) */
   crit: number;
   /** 치명타 데미지 가산 (0.2 = +20%) */
@@ -535,7 +545,7 @@ export interface ItemStats {
 }
 
 export function emptyStats(): ItemStats {
-  return { attack: 0, defense: 0, maxHp: 0, maxMp: 0, crit: 0, critDamage: 0, attackSpeed: 0 };
+  return { attack: 0, defense: 0, maxHp: 0, crit: 0, critDamage: 0, attackSpeed: 0 };
 }
 
 /** 물건 하나가 주는 것 전부 */
@@ -548,7 +558,6 @@ export function stackStats(stack: ItemStack): ItemStats {
   total.attack = base.attack;
   total.defense = base.defense;
   total.maxHp = base.maxHp;
-  total.maxMp = base.maxMp;
 
   for (const option of stack.options ?? []) {
     switch (option.kind) {
@@ -575,7 +584,6 @@ export function equipmentStats(
     total.attack += one.attack;
     total.defense += one.defense;
     total.maxHp += one.maxHp;
-    total.maxMp += one.maxMp;
     total.crit += one.crit;
     total.critDamage += one.critDamage;
     total.attackSpeed += one.attackSpeed;

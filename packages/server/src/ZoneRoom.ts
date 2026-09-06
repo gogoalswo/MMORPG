@@ -126,7 +126,6 @@ export class ZoneRoom extends Room {
   private readonly chatHistory = new Map<string, number[]>();
 
   private saveTimer = 0;
-  private regenTimer = 0;
   private combat!: CombatSystem;
   private lastTickAt = Date.now();
 
@@ -322,11 +321,9 @@ export class ZoneRoom extends Room {
     // 아직 viewer 를 등록하기 전이라 statsOf 를 못 쓴다. 장비 보너스를 직접 더한다.
     const base = statsFor(character.job as JobId, character.level);
     const gear = equipmentStats(character.equipment);
-    const stats = { maxHp: base.maxHp + gear.maxHp, maxMp: base.maxMp + gear.maxMp };
+    const stats = { maxHp: base.maxHp + gear.maxHp };
     player.hp = Math.min(character.hp, stats.maxHp);
     player.maxHp = stats.maxHp;
-    player.mp = stats.maxMp;
-    player.maxMp = stats.maxMp;
     player.level = character.level;
     player.exp = character.exp;
     player.dead = player.hp <= 0;
@@ -601,7 +598,7 @@ export class ZoneRoom extends Room {
    * 자동 사냥 한 틱.
    *
    * 때리는 건 사람이 눌렀을 때와 **똑같은 경로**(handleAttack/handleSkill)로 보낸다.
-   * 쿨타임·마나·정면각 검증을 두 벌 만들면 반드시 어긋난다.
+   * 쿨타임·정면각 검증을 두 벌 만들면 반드시 어긋난다.
    */
   private driveAutoHunt(dt: number): void {
     for (const viewer of this.viewers.values()) {
@@ -828,7 +825,6 @@ export class ZoneRoom extends Room {
 
       const key = `${client.sessionId}:${skill.id}`;
       if (Date.now() < (this.skillReadyAt.get(key) ?? 0)) continue;
-      if (player.mp < skill.mpCost) continue;
 
       this.handleSkill(client, skill.id);
       return true;
@@ -854,7 +850,6 @@ export class ZoneRoom extends Room {
       attack: base.attack + bonus.attack,
       defense: base.defense + bonus.defense,
       maxHp: base.maxHp + bonus.maxHp,
-      maxMp: base.maxMp + bonus.maxMp,
       // 상한은 쓰는 쪽(rollCrit / effectiveCooldown)에서 자른다
       crit: base.crit + bonus.crit,
       critDamage: base.critDamage + bonus.critDamage,
@@ -875,9 +870,7 @@ export class ZoneRoom extends Room {
   private refreshMax(sessionId: string, player: PlayerState): void {
     const stats = this.statsOf(sessionId, player.job as JobId, player.level);
     player.maxHp = stats.maxHp;
-    player.maxMp = stats.maxMp;
     player.hp = Math.min(player.hp, stats.maxHp);
-    player.mp = Math.min(player.mp, stats.maxMp);
     this.syncLook(sessionId, player);
   }
 
@@ -1400,7 +1393,7 @@ export class ZoneRoom extends Room {
   /**
    * 스킬 사용.
    *
-   * 이 직업이 실제로 가진 스킬인지, 쿨타임이 돌았는지, 마나가 있는지를
+   * 이 직업이 실제로 가진 스킬인지, 쿨타임이 돌았는지를
    * **서버가 다시 확인한다.** 클라이언트 액션바는 표시일 뿐이다.
    */
   private handleSkill(client: Client, skillId: string): void {
@@ -1418,13 +1411,7 @@ export class ZoneRoom extends Room {
     const now = Date.now();
     const key = `${client.sessionId}:${skill.id}`;
     if (now < (this.skillReadyAt.get(key) ?? 0)) return;
-    if (player.mp < skill.mpCost) {
-      client.send('notice', { text: '마나가 부족합니다.' });
-      return;
-    }
-
     this.skillReadyAt.set(key, now + skill.cooldown);
-    player.mp = Math.max(0, player.mp - skill.mpCost);
     this.broadcast('skill', { id: player.id, skillId: skill.id });
 
     // 회복형 스킬은 공격 판정을 하지 않는다
@@ -1526,8 +1513,6 @@ export class ZoneRoom extends Room {
       const grown = this.statsOf(client.sessionId, player.job as JobId, player.level);
       player.maxHp = grown.maxHp;
       player.hp = grown.maxHp;
-      player.maxMp = grown.maxMp;
-      player.mp = grown.maxMp;
       // 레벨마다 스킬 포인트를 준다
       viewer.character.skillPoints += SKILL_POINT_PER_LEVEL * (after.level - before);
       this.sendSkills(viewer);
@@ -1664,18 +1649,6 @@ export class ZoneRoom extends Room {
     // --- 자동 사냥 / 클릭 추격 ---
     this.driveAutoHunt(dt);
     this.driveChase(dt);
-
-    // --- 마나 회복 ---
-    this.regenTimer += TICK_MS;
-    if (this.regenTimer >= 1000) {
-      this.regenTimer = 0;
-      for (const player of this.state.players.values()) {
-        if (player.dead) continue;
-        if (player.mp < player.maxMp) {
-          player.mp = Math.min(player.maxMp, player.mp + Math.max(1, Math.round(player.maxMp * 0.03)));
-        }
-      }
-    }
 
     // --- 부활 ---
     for (const [id, at] of this.respawnAt) {

@@ -119,8 +119,6 @@ export interface SelfStatus {
   level: number;
   hp: number;
   maxHp: number;
-  mp: number;
-  maxMp: number;
   exp: number;
   dead: boolean;
   /** 자동 사냥 중인지 — 판단과 이동은 서버가 한다 */
@@ -390,8 +388,6 @@ export class ZoneConnection {
           level: p.level,
           hp: p.hp,
           maxHp: p.maxHp,
-          mp: p.mp,
-          maxMp: p.maxMp,
           exp: p.exp,
           dead: p.dead,
           auto: p.auto ?? false,

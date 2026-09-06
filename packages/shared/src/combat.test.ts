@@ -25,7 +25,7 @@ test('직업마다 성격이 수치로 갈린다', () => {
   assert.ok(knight.defense > archer.defense, '기사가 궁수보다 방어가 높다');
   assert.ok(mage.attack > archer.attack, '마법사 한 방이 더 아프다');
   assert.ok(archer.attackRange > knight.attackRange, '궁수가 더 멀리 닿는다');
-  assert.ok(mage.maxMp > knight.maxMp, '마법사가 마나가 많다');
+  assert.ok(knight.attackCooldown < mage.attackCooldown, '기사가 더 자주 때린다');
 });
 
 test('레벨이 오르면 스탯이 오른다', () => {

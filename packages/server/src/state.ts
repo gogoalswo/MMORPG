@@ -20,8 +20,6 @@ export const Player = schema({
 
   hp: t.uint16(),
   maxHp: t.uint16(),
-  mp: t.uint16(),
-  maxMp: t.uint16(),
   level: t.uint16(),
   exp: t.uint32(),
   /** 죽은 상태면 조작을 막고 리스폰을 기다린다 */

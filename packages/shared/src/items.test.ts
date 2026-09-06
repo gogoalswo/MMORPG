@@ -114,7 +114,7 @@ test('보조 슬롯 이름이 직업마다 다르다', () => {
 test('직업별 보조 장비는 성격이 다르다', () => {
   const at = (job: string) => ITEMS[`o_${job}_05`]!.bonus;
   assert.ok((at('knight').defense ?? 0) > 0, '기사 방패는 방어를 준다');
-  assert.ok((at('mage').maxMp ?? 0) > 0, '마법사 마법서는 마나를 준다');
+  assert.ok((at('mage').attack ?? 0) > 0, '마법사 마법서는 공격을 준다');
   assert.ok((at('archer').attack ?? 0) > 0, '궁수 화살통은 공격을 준다');
 });
 

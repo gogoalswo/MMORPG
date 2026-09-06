@@ -64,7 +64,6 @@ function describeBonus(bonus: ItemBonus): string {
   if (bonus.attack) parts.push(`공격 +${bonus.attack}`);
   if (bonus.defense) parts.push(`방어 +${bonus.defense}`);
   if (bonus.maxHp) parts.push(`체력 +${bonus.maxHp}`);
-  if (bonus.maxMp) parts.push(`마나 +${bonus.maxMp}`);
   return parts.join(' · ');
 }
 

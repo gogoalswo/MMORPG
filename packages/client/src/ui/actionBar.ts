@@ -3,7 +3,7 @@ import { SKILLS, type SkillDef } from '@mmo/shared';
 /**
  * 액션바.
  *
- * 여기 보이는 쿨타임과 마나는 **표시일 뿐이다.** 실제 판정은 서버가 한다.
+ * 여기 보이는 쿨타임은 **표시일 뿐이다.** 실제 판정은 서버가 한다.
  * 그래도 클라이언트에서 미리 막아야 하는 이유는, 눌렀는데 아무 일도 안 일어나면
  * 게임이 고장난 것처럼 느껴지기 때문이다.
  */
@@ -33,7 +33,6 @@ function readAuto(): Set<string> {
 export class ActionBar {
   private readonly root: HTMLDivElement;
   private slots: Slot[] = [];
-  private mp = 0;
   /** 자동 시전으로 켜둔 스킬 id */
   private auto = readAuto();
 
@@ -70,11 +69,10 @@ export class ActionBar {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'slot';
-      button.title = `${skill.name} — ${skill.description} (마나 ${skill.mpCost})`;
+      button.title = `${skill.name} — ${skill.description}`;
       button.innerHTML = `
         <span class="slot-key">${index + 1}</span>
         <span class="slot-name">${skill.name}</span>
-        <span class="slot-cost">${skill.mpCost}</span>
         <span class="slot-sweep"></span>
         <span class="slot-timer"></span>`;
       button.addEventListener('click', () => this.use(index));
@@ -113,17 +111,12 @@ export class ActionBar {
     const slot = this.slots[index];
     if (!slot) return false;
     if (performance.now() < slot.readyAt) return false;
-    if (this.mp < slot.skill.mpCost) return false;
 
     // 서버 응답을 기다리지 않고 쿨타임을 돌린다 — 연타로 도배되는 걸 막는다.
     // 서버가 거절하면 그냥 쿨타임만 돈 셈이라 손해가 크지 않다.
     slot.readyAt = performance.now() + slot.skill.cooldown;
     this.onUse?.(slot.skill.id);
     return true;
-  }
-
-  setMana(mp: number): void {
-    this.mp = mp;
   }
 
   /** 지금 켜둔 자동 시전 목록 — 접속하자마자 서버에 알려야 한다 */
@@ -157,7 +150,6 @@ export class ActionBar {
       const onCooldown = remain > 0;
 
       slot.root.classList.toggle('is-cooling', onCooldown);
-      slot.root.classList.toggle('is-poor', !onCooldown && this.mp < slot.skill.mpCost);
 
       if (onCooldown) {
         // 위에서 아래로 걷히는 그림자로 남은 시간을 보여준다

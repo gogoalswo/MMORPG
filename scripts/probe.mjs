@@ -142,7 +142,7 @@ const stackLine = (s) => {
 
 function dumpSelf() {
   const p = me();
-  say(`나: ${p.name} ${p.job} Lv.${p.level} hp ${p.hp}/${p.maxHp} mp ${p.mp}/${p.maxMp}` +
+  say(`나: ${p.name} ${p.job} Lv.${p.level} hp ${p.hp}/${p.maxHp}` +
       ` (${p.x.toFixed(1)}, ${p.z.toFixed(1)}) auto=${p.auto ?? false} chasing=${p.chasing ?? false}`);
   // 남에게 보이는 장비 — 이게 비어 있으면 다른 사람 화면에서 빈손으로 보인다
   say(`  겉모습: 무기=${p.weapon || '-'} 보조=${p.offhand || '-'} 투구=${p.helmet || '-'}`);
@@ -238,9 +238,12 @@ if (command === 'state') {
   if (payload !== undefined) {
     try { payload = JSON.parse(payload); } catch { /* 문자열 그대로 보낸다 */ }
   }
+  // 보내기 전후를 같이 찍는다 — 마나가 줄었는지 같은 건 이걸로만 보인다
+  dumpSelf();
   say(`보냄: ${type} ${JSON.stringify(payload ?? null)}`);
   room.send(type, payload);
   await sleep(Number(opt('seconds', 2)) * 1000);
+  dumpSelf();
   dumpInventory();
 } else {
   say(`모르는 명령: ${command} (state | fight | send | watch)`);

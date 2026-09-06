@@ -81,7 +81,6 @@ test('요구 레벨이 액션바 칸 수만큼은 일찍 열린다', () => {
 
 test('수치가 말이 되는 범위에 있다', () => {
   for (const skill of all) {
-    assert.ok(skill.mpCost > 0, `${skill.id}: 마나가 ${skill.mpCost}`);
     assert.ok(skill.cooldown >= 1000, `${skill.id}: 쿨타임이 ${skill.cooldown}ms`);
     assert.ok(skill.arc >= 0 && skill.arc <= Math.PI * 2, `${skill.id}: 각이 ${skill.arc}`);
     assert.ok(skill.name.length > 0 && skill.description.length > 0, `${skill.id}: 이름·설명이 비었다`);
@@ -109,7 +108,7 @@ test('레벨이 오를수록 세진다', () => {
     const best = attacks[attacks.length - 1]!;
     const first = attacks[0]!;
     assert.ok(best.power > first.power, `${job}: 마지막 스킬이 첫 스킬보다 약하다`);
-    assert.ok(best.mpCost > first.mpCost, `${job}: 마지막 스킬이 더 싸다`);
+    assert.ok(best.cooldown >= first.cooldown, `${job}: 마지막 스킬이 더 자주 나간다`);
   }
 });
 

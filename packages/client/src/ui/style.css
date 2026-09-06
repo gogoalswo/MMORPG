@@ -33,7 +33,8 @@ html, body {
 .npc,
 .bag,
 .sb,
-.gate {
+.gate,
+.craft {
   pointer-events: auto;
 }
 
@@ -494,8 +495,6 @@ input,
 }
 
 .status-hp > i { background: linear-gradient(#d8564a, #a3352c); }
-.status-mp { height: 7px; }
-.status-mp > i { background: linear-gradient(#5b8fd8, #375fa0); }
 .status-exp { height: 5px; }
 .status-exp > i { background: linear-gradient(#c8d86a, #96a844); }
 
@@ -544,11 +543,6 @@ input,
 
 .slot-name { font-size: 12px; font-weight: 600; }
 
-.slot-cost {
-  font-size: 10px;
-  color: #7fa6d8;
-}
-
 /* 위에서 아래로 걷히는 쿨타임 그림자 */
 .slot-sweep {
   position: absolute;
@@ -574,12 +568,8 @@ input,
 }
 
 .slot.is-cooling { border-color: rgba(200, 220, 180, 0.14); }
-.slot.is-cooling .slot-name, .slot.is-cooling .slot-cost { opacity: 0.35; }
+.slot.is-cooling .slot-name { opacity: 0.35; }
 
-/* 마나 부족 */
-.slot.is-poor { border-color: rgba(200, 120, 110, 0.5); }
-.slot.is-poor .slot-cost { color: #e2887c; }
-.slot.is-poor .slot-name { opacity: 0.5; }
 
 /* 자동 사냥 토글 — 액션바 오른쪽에 붙는다 */
 .autohunt {
@@ -1236,6 +1226,179 @@ input,
 }
 .sb-btn.is-locked:hover { border-color: rgba(200, 220, 180, 0.14); }
 
+/* 제작창 — 대장간. 탭 + 거르개로 목록을 줄인다 */
+.craft {
+  position: fixed;
+  left: 50%;
+  top: 56px;
+  transform: translateX(-50%);
+  width: 460px;
+  max-height: calc(100vh - 170px);
+  display: flex;
+  flex-direction: column;
+  color: #e6e9da;
+  background: rgba(12, 15, 11, 0.94);
+  border: 1px solid rgba(200, 220, 180, 0.28);
+  border-radius: 7px;
+  z-index: 9;
+  overflow: hidden;
+}
+.craft.is-hidden { display: none; }
+
+.craft-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 9px 11px;
+  border-bottom: 1px solid rgba(200, 220, 180, 0.18);
+}
+.craft-title { font-size: 13px; font-weight: 600; }
+.craft-gold { margin-left: auto; font-size: 12px; color: #e8cf7a; }
+
+.craft-close {
+  padding: 0 4px;
+  font: inherit;
+  font-size: 12px;
+  color: #9aa38c;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.craft-close:hover { color: #e6e9da; }
+
+/* 탭 — 셋을 한 화면에 쌓지 않는 이유가 이 창의 전부다 */
+.craft-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 11px 0;
+}
+.craft-tab {
+  flex: 1;
+  padding: 6px 4px;
+  font: inherit;
+  font-size: 11px;
+  color: #9aa38c;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(200, 220, 180, 0.14);
+  border-radius: 4px 4px 0 0;
+  border-bottom-color: transparent;
+  cursor: pointer;
+}
+.craft-tab:hover { color: #e6e9da; }
+.craft-tab.is-on {
+  color: #e6e9da;
+  background: rgba(120, 160, 90, 0.18);
+  border-color: rgba(150, 200, 120, 0.5);
+  border-bottom-color: transparent;
+}
+
+.craft-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 8px 11px;
+  border-top: 1px solid rgba(200, 220, 180, 0.14);
+  border-bottom: 1px solid rgba(200, 220, 180, 0.14);
+}
+.craft-filter:empty { display: none; }
+
+.craft-pick {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: #9aa38c;
+}
+.craft-pick select {
+  font: inherit;
+  font-size: 11px;
+  color: #e6e9da;
+  background: #1b201a;
+  border: 1px solid rgba(200, 220, 180, 0.22);
+  border-radius: 3px;
+  padding: 2px 4px;
+}
+
+.craft-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: #cfe3b4;
+  cursor: pointer;
+}
+
+/* 가진 재료 — 0개인 단계는 안 적는다 */
+.craft-mats {
+  flex-basis: 100%;
+  font-size: 10px;
+  color: #9aa38c;
+}
+.craft-mats-label { color: #6f7563; margin-right: 6px; }
+.craft-mats b { font-weight: 500; color: #cfe3b4; }
+.craft-mats i { font-style: normal; opacity: 0.35; margin: 0 5px; }
+
+.craft-body { padding: 8px 11px; overflow-y: auto; flex: 1; }
+
+.craft-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  margin-bottom: 3px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(200, 220, 180, 0.12);
+  border-radius: 4px;
+}
+/* 파괴 확률이 있는 강화 — 글을 안 읽어도 눈에 걸리게 */
+.craft-row.is-risky { border-color: rgba(200, 120, 110, 0.4); }
+
+.craft-row-icon { width: 26px; height: 26px; flex: none; }
+.craft-row-icon svg { width: 100%; height: 100%; display: block; }
+.craft-row-text { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+.craft-row-text b { font-size: 12px; font-weight: 500; }
+.craft-row-text small { font-size: 10px; color: #9aa38c; }
+
+.craft-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 10px;
+  font: inherit;
+  font-size: 11px;
+  color: #cfe3b4;
+  background: rgba(90, 130, 70, 0.24);
+  border: 1px solid rgba(150, 200, 120, 0.45);
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.craft-btn small { font-size: 9px; opacity: 0.7; }
+.craft-btn:hover { border-color: rgba(190, 240, 160, 0.9); }
+.craft-btn.is-locked {
+  color: #79806e;
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(200, 220, 180, 0.14);
+  cursor: not-allowed;
+}
+.craft-btn.is-locked:hover { border-color: rgba(200, 220, 180, 0.14); }
+
+.craft-empty {
+  padding: 14px 4px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #79806e;
+}
+
+/* 몇 개가 걸러졌는지 — 목록이 비면 거르개 탓인지 재료 탓인지 알아야 한다 */
+.craft-count {
+  padding: 7px 11px;
+  font-size: 10px;
+  color: #6f7563;
+  border-top: 1px solid rgba(200, 220, 180, 0.14);
+}
+
 /* 차원문 — 사냥터를 골라 바로 간다 */
 .gate {
   position: fixed;
@@ -1351,7 +1514,8 @@ input,
   .npc,
   .bag,
   .sb,
-  .gate {
+  .gate,
+  .craft {
     left: 8px;
     right: 8px;
     /* 창 여는 버튼이 위를 차지한다 */
@@ -1377,10 +1541,13 @@ input,
   .npc-close,
   .bag-close,
   .sb-close,
-  .gate-close {
+  .gate-close,
+  .craft-close {
     padding: 4px 8px;
     font-size: 15px;
   }
+  .craft-pick select { padding: 5px 6px; }
+  .craft-toggle input { width: 18px; height: 18px; }
   /* 손가락으로 20줄을 훑는다 — 줄이 얇으면 옆줄이 눌린다 */
   .gate-row { padding: 10px 9px; }
 }

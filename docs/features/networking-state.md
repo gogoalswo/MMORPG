@@ -24,7 +24,7 @@ Colyseus 0.18. 존 하나 = 룸 하나. 서버 권위 + 클라이언트 예측/�
 - `RUN_SPEED = 4.6`, `AOI_CELL_SIZE = 32`.
 
 ### 스키마
-- `Player`: id, name, job, x, z, rotY, hp/maxHp, mp/maxMp, level, exp, dead,
+- `Player`: id, name, job, x, z, rotY, hp/maxHp, level, exp, dead,
   **auto**(자동 사냥), **chasing**(클릭 추격), lastSeq.
 - `Monster`: id, kind, x, z, rotY, hp/maxHp, state(idle|chase|attack|dead).
 - 좌표는 `float32` — 월드가 ±110이라 정밀도는 충분하고 대역폭은 절반.

@@ -33,7 +33,7 @@ stepAutoPlayer(player, stand, dt, target)                  // 걷고, 대상을 
 tryAutoSkill(...) || (거리 <= attackRange && handleAttack(...))
 ```
 - 때리는 건 사람이 눌렀을 때와 **똑같은** `handleAttack` / `handleSkill` 이다.
-  쿨타임·마나·정면각 검증을 두 벌 만들면 반드시 어긋난다.
+  쿨타임·정면각 검증을 두 벌 만들면 반드시 어긋난다.
 - 서버가 `player.rotY` 를 직접 정한다. 클라이언트 이동으로는 "움직인 방향"밖에
   못 정해서 옆구리로 굳는다.
 

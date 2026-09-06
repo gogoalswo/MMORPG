@@ -24,7 +24,6 @@ export class CombatHud {
   private readonly layer: HTMLDivElement;
   private readonly bar: HTMLDivElement;
   private readonly hpFill: HTMLElement;
-  private readonly mpFill: HTMLElement;
   private readonly expFill: HTMLElement;
   private readonly levelText: HTMLElement;
   private readonly hpText: HTMLElement;
@@ -42,7 +41,6 @@ export class CombatHud {
       <div class="status-level"></div>
       <div class="status-bars">
         <div class="status-track status-hp"><i></i><span></span></div>
-        <div class="status-track status-mp"><i></i></div>
         <div class="status-track status-exp"><i></i></div>
       </div>`;
 
@@ -50,7 +48,6 @@ export class CombatHud {
 
     this.hpFill = this.bar.querySelector('.status-hp > i') as HTMLElement;
     this.hpText = this.bar.querySelector('.status-hp > span') as HTMLElement;
-    this.mpFill = this.bar.querySelector('.status-mp > i') as HTMLElement;
     this.expFill = this.bar.querySelector('.status-exp > i') as HTMLElement;
     this.levelText = this.bar.querySelector('.status-level') as HTMLElement;
   }
@@ -59,11 +56,10 @@ export class CombatHud {
     this.bar.classList.toggle('is-hidden', !visible);
   }
 
-  setStatus(level: number, hp: number, maxHp: number, mp: number, maxMp: number, exp: number): void {
+  setStatus(level: number, hp: number, maxHp: number, exp: number): void {
     this.levelText.textContent = `Lv.${level}`;
     this.hpFill.style.width = `${Math.max(0, (hp / Math.max(1, maxHp)) * 100)}%`;
     this.hpText.textContent = `${hp} / ${maxHp}`;
-    this.mpFill.style.width = `${Math.max(0, (mp / Math.max(1, maxMp)) * 100)}%`;
     const need = expToNext(level);
     this.expFill.style.width = `${Math.min(100, (exp / Math.max(1, need)) * 100)}%`;
   }

@@ -35,8 +35,10 @@ import { loadAssets, type Assets } from './scene/assets';
 import { ensureBeasts, setModels } from './game/rigFactory';
 import { PostFX } from './render/postfx';
 import { Projectiles } from './scene/projectiles';
+import { SkillFx, skillColor } from './scene/skillFx';
 import { AoeMarkers } from './scene/aoeMarkers';
 import { ZoneGate } from './ui/zoneGate';
+import { CraftWindow } from './ui/craftWindow';
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const overlay = document.getElementById('overlay') as HTMLElement;
@@ -128,12 +130,24 @@ scene.add(projectiles.group);
 
 const aoeMarkers = new AoeMarkers();
 scene.add(aoeMarkers.group);
+const skillFx = new SkillFx();
+scene.add(skillFx.group);
+
+/** 명중 섬광 색 — 투사체와 맞추고, 없으면 옅은 금색 */
+const IMPACT_COLOR: Record<string, number> = {
+  arrow: 0xd8e8a0,
+  fireball: 0xff9a3c,
+  spark: 0x9fe6ff,
+};
 
 const hud = new CombatHud(overlay);
 hud.setVisible(false);
 
 /** 마을 차원문 창 — 밟으면 열리고, 고르면 그 사냥터로 간다 */
 const zoneGate = new ZoneGate(overlay);
+
+/** 제작창 — 대장간에서 열린다. 상점·전직은 그대로 npcDialog 가 맡는다 */
+const craftWindow = new CraftWindow(overlay);
 
 const actionBar = new ActionBar(overlay);
 actionBar.setVisible(false);
@@ -155,8 +169,6 @@ let myState = {
   level: 1,
   hp: 0,
   maxHp: 1,
-  mp: 0,
-  maxMp: 1,
   exp: 0,
   dead: false,
   auto: false,
@@ -170,8 +182,7 @@ const connection = new ZoneConnection({
   onSelf: (x, z, lastSeq, status) => {
     player.reconcile(x, z, lastSeq);
     myState = status;
-    hud.setStatus(status.level, status.hp, status.maxHp, status.mp, status.maxMp, status.exp);
-    actionBar.setMana(status.mp);
+    hud.setStatus(status.level, status.hp, status.maxHp, status.exp);
     autoHuntToggle.setOn(status.auto);
     player.setGear(status.gear);
     bag.setCharacter(player.job, status.level);
@@ -219,16 +230,23 @@ const connection = new ZoneConnection({
         ? player.position
         : remotePlayers.positionOf(event.sourceId);
 
+    // 맞은 자리에 섬광 하나. 숫자만 뜨면 어디서 맞았는지 눈이 못 따라간다.
+    const flash = event.heal
+      ? 0x8ce87a
+      : (event.projectile ? IMPACT_COLOR[event.projectile] : undefined) ?? 0xffe0a8;
+
     if (event.projectile && source) {
       // 대상이 도중에 사라질 수 있으므로 지금 위치를 복사해 둔다
       const landing = target.clone();
       projectiles.spawn(event.projectile as ProjectileKind, source, target, () => {
         hud.addNumber(landing, text, kind, crit);
+        skillFx.impact(landing, flash);
       });
       return;
     }
 
     hud.addNumber(target, text, kind, crit);
+    skillFx.impact(target, flash);
   },
 
   /**
@@ -244,11 +262,29 @@ const connection = new ZoneConnection({
 
   onSkill: (id, skillId) => {
     // 스킬도 같은 스윙 모션을 쓴다. 스킬별 전용 모션은 다음 단계.
-    if (id === connection.sessionId) player.swing();
+    const mine = id === connection.sessionId;
+    if (mine) player.swing();
     else remotePlayers.swing(id);
-    if (id === connection.sessionId) {
-      const skill = SKILLS[skillId];
-      if (skill) hud.addNumber(player.position, skill.name, 'gain');
+
+    const skill = SKILLS[skillId];
+    if (mine && skill) hud.addNumber(player.position, skill.name, 'gain');
+
+    // --- 이펙트 ---
+    // 남이 쓴 것도 보여야 한다. 옆에서 뭘 하는지 안 보이면 같이 노는 느낌이 안 난다.
+    const at = mine ? player.position : remotePlayers.positionOf(id);
+    if (!skill || !at) return;
+
+    const color = skillColor(skill);
+    if (skill.selfHeal) {
+      skillFx.heal(at, color);
+      return;
+    }
+
+    skillFx.cast(at, color);
+    // 자기 주위로 터지는 기술은 사거리만큼 고리를 그린다.
+    // 날아가는 게 있으면 투사체가 대신 보여주므로 겹쳐 그리지 않는다.
+    if (skill.arc >= Math.PI * 2 && !skill.projectile) {
+      skillFx.nova(at, skill.range, color);
     }
   },
 
@@ -257,9 +293,20 @@ const connection = new ZoneConnection({
   onInventory: (state) => {
     bag.setState(state);
     npcDialog.setInventory(state);
+    // 제작·강화 결과는 가방이 다시 오는 것으로 알 수 있다. 열려 있으면 다시 그린다.
+    craftWindow.setInventory(state);
   },
 
-  onNpc: (info) => npcDialog.show(info.role, info.stock, info.forge, info.jobs),
+  /**
+   * 서버가 "이 창을 열어도 된다"고 확인해준 뒤에 온다 (거리 검사 통과).
+   *
+   * 대장간만 따로 뗀 이유는 하는 일이 셋(제작·강화·등급)이고 목록이 길어서다 —
+   * 상점·전직과 같은 창에 쌓으면 200레벨에서 제작 목록만 180줄이 된다.
+   */
+  onNpc: (info) => {
+    if (info.role === 'smith') craftWindow.show(info.forge);
+    else npcDialog.show(info.role, info.stock, info.jobs);
+  },
 
   onSkills: (state) => {
     skillBook.setState(state);
@@ -274,6 +321,7 @@ const connection = new ZoneConnection({
     skillBook.setCharacter(job as ClassId, myState.level);
     bag.setCharacter(job as ClassId, myState.level);
     npcDialog.setCharacter(job as ClassId, myState.level);
+    craftWindow.setCharacter(job as ClassId);
     playerPlate.name = `${characterName} (${CLASSES[job as ClassId].label})`;
   },
 
@@ -453,10 +501,12 @@ window.addEventListener('keydown', (e) => {
  */
 npcDialog.onBuy = (id) => connection.buyItem(id);
 npcDialog.onSell = (index) => connection.sellItem(index);
-npcDialog.onCraft = (index) => connection.craft(index);
 npcDialog.onJob = (job) => connection.changeJob(job);
-npcDialog.onForge = (id) => connection.forgeItem(id);
-npcDialog.onEnhance = (index) => connection.enhanceItem(index);
+
+// 제작창은 **원래 쓰던 메시지 셋을 그대로** 보낸다. 서버에 새 경로를 뚫지 않았다.
+craftWindow.onForge = (id) => connection.forgeItem(id);
+craftWindow.onEnhance = (index) => connection.enhanceItem(index);
+craftWindow.onGrade = (index) => connection.craft(index);
 npcPrompt.onTalk = (role) => connection.openNpc(role);
 
 bag.onEquip = (index) => connection.equip(index);
@@ -481,9 +531,11 @@ zoneGate.onPick = (zoneId) => travel(zoneId, 'default');
 
 // 차원문에는 여는 단축키가 없다(문을 밟아야 열린다). 닫는 건 Esc 로도 되게 둔다.
 window.addEventListener('keydown', (e) => {
-  if (e.code !== 'Escape' || !zoneGate.open) return;
+  if (e.code !== 'Escape') return;
+  if (!zoneGate.open && !craftWindow.open) return;
   e.preventDefault();
   zoneGate.close();
+  craftWindow.close();
 });
 
 /**
@@ -633,11 +685,13 @@ async function mountZone(zoneId: string, spawnName?: string, characterId?: strin
   targetId = null;
   projectiles.clear();
   aoeMarkers.clear();
+  skillFx.clear();
   hud.clear();
   actionBar.reset();
   bag.setOpen(false);
   skillBook.setOpen(false);
   zoneGate.close();
+  craftWindow.close();
   npcDialog.close();
   npcPrompt.clear();
   netStatus = '연결 중';
@@ -697,6 +751,7 @@ let lastFrameAt = performance.now();
 function dropStaleVisuals(): void {
   projectiles.clear(); // 도착 콜백을 부르지 않고 버린다
   aoeMarkers.clear(); // 이미 터졌을 예고를 붙잡고 있어봐야 거짓말이다
+  skillFx.clear();
   hud.clear();
 }
 
@@ -749,6 +804,7 @@ function frame(now: number): void {
   monsters.update(dt);
   projectiles.update(dt);
   aoeMarkers.update(dt);
+  skillFx.update(dt);
   npcPrompt.update(zone?.def.npcs ?? [], player.position);
   rig.update(dt, player.position);
   sun.follow(player.position);

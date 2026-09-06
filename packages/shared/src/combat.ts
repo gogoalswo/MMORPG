@@ -10,7 +10,6 @@ import type { JobId } from './character.ts';
 
 export interface Stats {
   maxHp: number;
-  maxMp: number;
   /** 공격력 */
   attack: number;
   /** 방어력 */
@@ -72,16 +71,16 @@ interface JobGrowth {
  */
 const JOB_GROWTH: Record<JobId, JobGrowth> = {
   knight: {
-    base: { maxHp: 140, maxMp: 30, attack: 12, defense: 8, attackRange: 2.4, attackCooldown: 900 },
-    perLevel: { maxHp: 14, maxMp: 2, attack: 2.2, defense: 1.4 },
+    base: { maxHp: 140, attack: 12, defense: 8, attackRange: 2.4, attackCooldown: 900 },
+    perLevel: { maxHp: 14, attack: 2.2, defense: 1.4 },
   },
   mage: {
-    base: { maxHp: 80, maxMp: 90, attack: 20, defense: 3, attackRange: 9, attackCooldown: 1300 },
-    perLevel: { maxHp: 6, maxMp: 9, attack: 3.6, defense: 0.5 },
+    base: { maxHp: 80, attack: 20, defense: 3, attackRange: 9, attackCooldown: 1300 },
+    perLevel: { maxHp: 6, attack: 3.6, defense: 0.5 },
   },
   archer: {
-    base: { maxHp: 100, maxMp: 50, attack: 15, defense: 5, attackRange: 12, attackCooldown: 800 },
-    perLevel: { maxHp: 9, maxMp: 5, attack: 2.8, defense: 0.9 },
+    base: { maxHp: 100, attack: 15, defense: 5, attackRange: 12, attackCooldown: 800 },
+    perLevel: { maxHp: 9, attack: 2.8, defense: 0.9 },
   },
 };
 
@@ -91,7 +90,6 @@ export function statsFor(job: JobId, level: number): Stats {
   const add = growth.perLevel;
   return {
     maxHp: Math.round(growth.base.maxHp + (add.maxHp ?? 0) * steps),
-    maxMp: Math.round(growth.base.maxMp + (add.maxMp ?? 0) * steps),
     attack: Math.round(growth.base.attack + (add.attack ?? 0) * steps),
     defense: Math.round(growth.base.defense + (add.defense ?? 0) * steps),
     attackRange: growth.base.attackRange,

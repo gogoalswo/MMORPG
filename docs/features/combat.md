@@ -18,7 +18,10 @@
 ## 규칙
 
 ### 스탯
-`statsFor(job, level)` → `{ maxHp, maxMp, attack, defense, attackRange, attackCooldown, crit, critDamage, attackSpeed }`
+`statsFor(job, level)` → `{ maxHp, attack, defense, attackRange, attackCooldown, crit, critDamage, attackSpeed }`
+
+**마나는 없다.** 자원 관리가 컨텐츠를 만드는 데 방해만 돼서 통째로 걷어냈다 —
+스킬 비용도, 마나 막대도, 회복도 없다. 남은 자원은 체력 하나뿐이다.
 
 | 직업 | 성격 | 사거리 | 공격 간격 |
 |---|---|---|---|
@@ -98,7 +101,7 @@ radius 7 · windupMs 1600 · cooldownMs 9000 · power 2.2 (보스 공격력 배�
 - 피해 공식을 만지면 [monsters-progression.md](monsters-progression.md) 의
   `defense = 2√L` 도 같이 봐야 한다.
 - 새 공격 수단을 만들 때 판정을 새로 쓰지 말 것. `handleAttack` / `handleSkill` 을
-  타야 쿨타임·마나·정면각 검증이 한 벌로 유지된다. 자동 사냥도 같은 이유로
+  타야 쿨타임·정면각 검증이 한 벌로 유지된다. 자동 사냥도 같은 이유로
   이 둘을 그대로 호출한다.
 
 ## 관련

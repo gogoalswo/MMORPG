@@ -1,0 +1,1252 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #1b1d18;
+  font-family: 'Segoe UI', -apple-system, sans-serif;
+  user-select: none;
+}
+
+#game { display: block; width: 100%; height: 100%; }
+
+/* 3D 위에 얹히는 UI 레이어. 포인터 이벤트는 통과시킨다. */
+#overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/*
+ * 위 레이어는 클릭을 통과시킨다. 그래서 **눌러야 하는 창은 여기서 하나씩 다시
+ * 켜줘야 한다** — pointer-events 는 상속되는 성질이라, 이 목록에 없으면 화면에
+ * 멀쩡히 보이면서 눌리지는 않는다. 키보드가 있는 PC 는 단축키로 가려지지만
+ * 폰에서는 그대로 조작 불가가 된다.
+ */
+.actionbar,
+.autohunt,
+.autorange,
+.npc-prompt,
+.npc,
+.bag,
+.sb {
+  pointer-events: auto;
+}
+
+/* 폰에서 두 번 두드리면 확대되는 동작과, 그걸 기다리느라 생기는 눌림 지연을 없앤다 */
+button,
+input,
+.actionbar,
+.autohunt {
+  touch-action: manipulation;
+}
+
+.nameplate {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  text-align: center;
+  white-space: nowrap;
+  will-change: transform;
+}
+
+.nameplate .np-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 0 3px #000, 0 1px 2px #000;
+  letter-spacing: 0.3px;
+}
+
+/* 클릭으로 물고 있는 대상 — 어느 놈을 때리는 중인지 한눈에 보여야 한다 */
+.nameplate.is-target .np-name {
+  color: #ffd36b;
+  text-shadow: 0 0 6px rgba(255, 180, 60, 0.9), 0 0 3px #000, 0 1px 2px #000;
+}
+
+.nameplate.is-target .np-hp {
+  border-color: rgba(255, 211, 107, 0.9);
+  box-shadow: 0 0 5px rgba(255, 180, 60, 0.55);
+}
+
+.nameplate .np-hp {
+  width: 58px;
+  height: 4px;
+  margin: 2px auto 0;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(0, 0, 0, 0.7);
+  border-radius: 1px;
+}
+
+.nameplate .np-hp > i {
+  display: block;
+  height: 100%;
+  background: #d2453a;
+}
+
+#stats {
+  position: fixed;
+  top: 8px;
+  left: 10px;
+  font: 12px/1.5 ui-monospace, Consolas, monospace;
+  color: #cfe0b4;
+  text-shadow: 0 1px 2px #000;
+  pointer-events: none;
+  white-space: pre;
+}
+
+#help {
+  position: fixed;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.72);
+  text-shadow: 0 1px 2px #000;
+  pointer-events: none;
+}
+
+/* 존 전환 페이드 */
+.zone-fade {
+  position: fixed;
+  inset: 0;
+  /* 이름표는 나중에 DOM 에 붙으므로 명시적으로 위로 올려야 한다 */
+  z-index: 10;
+  background: #0d0f0c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0s linear 0.3s;
+  pointer-events: none;
+}
+
+.zone-fade.is-visible {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.3s ease, visibility 0s;
+}
+
+.zone-fade-title {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: 4px;
+  color: #e8e3d4;
+  text-shadow: 0 2px 12px #000;
+}
+
+/* 채팅 */
+.chat {
+  position: fixed;
+  left: 12px;
+  bottom: 34px;
+  width: min(420px, 40vw);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.chat-log {
+  max-height: 168px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+  /* 평소엔 로그만 보이고 조작은 통과. 채팅창을 열면 스크롤할 수 있게 바뀐다 */
+  pointer-events: none;
+}
+
+.chat.is-open .chat-log {
+  pointer-events: auto;
+  background: rgba(10, 12, 10, 0.45);
+  border-radius: 4px;
+  padding: 4px 6px;
+}
+
+.chat-line {
+  font-size: 13px;
+  line-height: 1.45;
+  color: #eef0e6;
+  text-shadow: 0 1px 2px #000, 0 0 4px #000;
+  word-break: break-word;
+}
+
+.chat-from { font-weight: 600; }
+.chat-say .chat-from { color: #cfe0b4; }
+.chat-whisper { color: #e6b8f0; }
+.chat-whisper .chat-from { color: #e6b8f0; }
+.chat-system { color: #9fb8c9; font-style: italic; }
+
+.chat-form { display: none; }
+.chat.is-open .chat-form { display: block; pointer-events: auto; }
+
+.chat-input {
+  width: 100%;
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 13px;
+  color: #f2f4ea;
+  background: rgba(10, 12, 10, 0.78);
+  border: 1px solid rgba(200, 220, 180, 0.35);
+  border-radius: 4px;
+  outline: none;
+}
+
+.chat-input::placeholder { color: rgba(240, 244, 234, 0.4); }
+
+/* 캐릭터 생성 화면 */
+.create {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  /* 오른쪽에 씬의 캐릭터가 보이도록 패널을 왼쪽에 붙인다 */
+  justify-content: flex-start;
+  padding: 0 0 0 6vw;
+  background: linear-gradient(
+    100deg,
+    rgba(8, 10, 8, 0.94) 0%,
+    rgba(8, 10, 8, 0.86) 34%,
+    rgba(8, 10, 8, 0) 62%
+  );
+  z-index: 20;
+  pointer-events: auto;
+}
+
+.create.is-open { display: flex; }
+
+.create-panel { width: min(380px, 82vw); }
+
+.create-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #f1f3e8;
+  letter-spacing: 1px;
+  margin-bottom: 20px;
+}
+
+.create-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: #9fb08a;
+  margin-bottom: 6px;
+}
+
+.create-input {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 9px 11px;
+  font: inherit;
+  font-size: 15px;
+  color: #f2f4ea;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(200, 220, 180, 0.28);
+  border-radius: 5px;
+  outline: none;
+}
+
+.create-input:focus { border-color: rgba(200, 220, 180, 0.65); }
+.create-input::placeholder { color: rgba(240, 244, 234, 0.32); }
+
+.create-error {
+  min-height: 18px;
+  margin: 6px 0 16px;
+  font-size: 12px;
+  color: #e2887c;
+}
+
+.create-jobs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+
+.create-job {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  text-align: left;
+  font: inherit;
+  color: #dfe3d4;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(200, 220, 180, 0.18);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.create-job:hover { background: rgba(255, 255, 255, 0.09); }
+
+.create-job.is-selected {
+  background: rgba(160, 200, 120, 0.16);
+  border-color: rgba(180, 220, 140, 0.7);
+}
+
+.create-job-name { font-size: 15px; font-weight: 600; }
+.create-job-desc { font-size: 12px; color: #a6b096; }
+
+.create-submit {
+  width: 100%;
+  padding: 11px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: #161a12;
+  background: #b6cf86;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.create-submit:hover { background: #c4dc95; }
+.create-submit:disabled { background: #6d7561; color: #a8ae9e; cursor: default; }
+
+/* 생성 화면이 떠 있는 동안에는 이름표를 감춘다 */
+#overlay.creating .nameplate { display: none !important; }
+
+/* 캐릭터 선택 화면 — 생성 화면과 레이아웃을 공유한다 */
+.select {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0 0 0 6vw;
+  background: linear-gradient(
+    100deg,
+    rgba(8, 10, 8, 0.94) 0%,
+    rgba(8, 10, 8, 0.86) 34%,
+    rgba(8, 10, 8, 0) 62%
+  );
+  z-index: 20;
+  pointer-events: auto;
+}
+
+.select.is-open { display: flex; }
+
+.select-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.select-row {
+  display: flex;
+  gap: 6px;
+  border: 1px solid rgba(200, 220, 180, 0.18);
+  border-radius: 5px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.select-row:hover { background: rgba(255, 255, 255, 0.09); }
+
+.select-row.is-selected {
+  background: rgba(160, 200, 120, 0.16);
+  border-color: rgba(180, 220, 140, 0.7);
+}
+
+.select-pick {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  text-align: left;
+  font: inherit;
+  color: #dfe3d4;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.select-name { font-size: 15px; font-weight: 600; }
+.select-meta { font-size: 12px; color: #a6b096; }
+
+.select-delete {
+  padding: 0 12px;
+  font: inherit;
+  font-size: 12px;
+  color: #9aa08e;
+  background: rgba(0, 0, 0, 0.22);
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.select-delete:hover { color: #e2887c; }
+.select-delete.is-confirming { color: #fff; background: #a4413a; font-weight: 600; }
+
+.select-new {
+  width: 100%;
+  margin-top: 8px;
+  padding: 9px;
+  font: inherit;
+  font-size: 13px;
+  color: #cdd4c0;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(200, 220, 180, 0.22);
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.select-new:hover:not(:disabled) { background: rgba(255, 255, 255, 0.11); }
+.select-new:disabled { color: #7c8172; cursor: default; }
+
+/* 피해 숫자 */
+.damage-layer { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 6; }
+
+.damage {
+  position: absolute;
+  font-weight: 700;
+  font-size: 17px;
+  white-space: nowrap;
+  text-shadow: 0 0 4px #000, 0 2px 3px #000;
+  will-change: transform, opacity;
+}
+
+.damage-deal { color: #f4f0e2; }
+.damage-take { color: #ff7a6b; font-size: 19px; }
+.damage-kill { color: #ffd36b; font-size: 22px; }
+
+/* 치명타 — 색은 그대로 두고 키운다. 색까지 바꾸면 처치와 헷갈린다 */
+.damage.is-crit {
+  font-size: 26px;
+  text-shadow: 0 0 8px rgba(255, 190, 90, 0.85), 0 0 4px #000, 0 2px 3px #000;
+}
+.damage.is-crit::after {
+  content: '!';
+  font-size: 0.7em;
+  vertical-align: super;
+  opacity: 0.9;
+}
+.damage-gain { color: #9ff08a; font-size: 15px; }
+
+/* 하단 상태바 */
+.status {
+  position: fixed;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
+  background: rgba(10, 12, 10, 0.55);
+  border: 1px solid rgba(200, 220, 180, 0.16);
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.status.is-hidden { display: none; }
+
+.status-level {
+  font-size: 15px;
+  font-weight: 700;
+  color: #e8e2ce;
+  text-shadow: 0 1px 2px #000;
+  min-width: 46px;
+  text-align: center;
+}
+
+.status-bars { display: flex; flex-direction: column; gap: 3px; width: 240px; }
+
+.status-track {
+  position: relative;
+  height: 12px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(0, 0, 0, 0.6);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.status-track > i {
+  display: block;
+  height: 100%;
+  transition: width 0.15s linear;
+}
+
+.status-track > span {
+  position: absolute;
+  inset: 0;
+  font-size: 10px;
+  line-height: 12px;
+  text-align: center;
+  color: #fff;
+  text-shadow: 0 1px 2px #000;
+}
+
+.status-hp > i { background: linear-gradient(#d8564a, #a3352c); }
+.status-mp { height: 7px; }
+.status-mp > i { background: linear-gradient(#5b8fd8, #375fa0); }
+.status-exp { height: 5px; }
+.status-exp > i { background: linear-gradient(#c8d86a, #96a844); }
+
+/* 액션바 */
+.actionbar {
+  position: fixed;
+  left: 50%;
+  bottom: 76px;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 7px;
+  z-index: 5;
+}
+
+.actionbar.is-hidden { display: none; }
+
+.slot {
+  position: relative;
+  width: 66px;
+  height: 62px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font: inherit;
+  color: #e6e9da;
+  background: rgba(14, 17, 13, 0.82);
+  border: 1px solid rgba(200, 220, 180, 0.3);
+  border-radius: 5px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.12s;
+}
+
+.slot:hover { border-color: rgba(200, 220, 180, 0.6); }
+
+.slot-key {
+  position: absolute;
+  top: 2px;
+  left: 5px;
+  font-size: 10px;
+  color: #9fb08a;
+}
+
+.slot-name { font-size: 12px; font-weight: 600; }
+
+.slot-cost {
+  font-size: 10px;
+  color: #7fa6d8;
+}
+
+/* 위에서 아래로 걷히는 쿨타임 그림자 */
+.slot-sweep {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 0;
+  background: rgba(0, 0, 0, 0.62);
+  pointer-events: none;
+}
+
+.slot-timer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 19px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 3px #000;
+  pointer-events: none;
+}
+
+.slot.is-cooling { border-color: rgba(200, 220, 180, 0.14); }
+.slot.is-cooling .slot-name, .slot.is-cooling .slot-cost { opacity: 0.35; }
+
+/* 마나 부족 */
+.slot.is-poor { border-color: rgba(200, 120, 110, 0.5); }
+.slot.is-poor .slot-cost { color: #e2887c; }
+.slot.is-poor .slot-name { opacity: 0.5; }
+
+/* 자동 사냥 토글 — 액션바 오른쪽에 붙는다 */
+.autohunt {
+  position: fixed;
+  left: calc(50% + 116px);
+  bottom: 76px;
+  width: 78px;
+  height: 62px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  font: inherit;
+  color: #e6e9da;
+  background: rgba(14, 17, 13, 0.82);
+  border: 1px solid rgba(200, 220, 180, 0.3);
+  border-radius: 5px;
+  cursor: pointer;
+  z-index: 5;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.autohunt.is-hidden { display: none; }
+.autohunt:hover { border-color: rgba(200, 220, 180, 0.6); }
+
+.autohunt-icon { font-size: 15px; line-height: 1; opacity: 0.8; }
+.autohunt-label { font-size: 10px; letter-spacing: -0.3px; opacity: 0.85; }
+.autohunt-state { font-size: 10px; opacity: 0.55; }
+
+/* 켜져 있다는 걸 멀리서도 알아볼 수 있어야 한다 — 방치하고 보는 기능이다.
+   깜빡이지는 않는다: 화면에 계속 떠 있는 버튼이라 눈에 거슬린다. */
+.autohunt.is-on {
+  background: rgba(46, 74, 34, 0.9);
+  border-color: rgba(150, 220, 120, 0.75);
+}
+
+.autohunt.is-on .autohunt-icon { opacity: 1; }
+.autohunt.is-on .autohunt-state {
+  color: #b6e88a;
+  opacity: 1;
+  font-weight: 700;
+}
+
+/* 가방·장비 창 — 5칸씩 격자 */
+.bag {
+  position: fixed;
+  right: 18px;
+  top: 60px;
+  width: 322px;
+  max-height: calc(100vh - 160px);
+  display: flex;
+  flex-direction: column;
+  color: #e6e9da;
+  background: rgba(12, 15, 11, 0.94);
+  border: 1px solid rgba(200, 220, 180, 0.28);
+  border-radius: 7px;
+  z-index: 8;
+  overflow: hidden;
+}
+
+.bag.is-hidden { display: none; }
+
+.bag-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 11px;
+  border-bottom: 1px solid rgba(200, 220, 180, 0.18);
+}
+
+.bag-title { font-size: 13px; font-weight: 600; }
+.bag-gold { margin-left: auto; font-size: 12px; color: #e8cf7a; }
+
+.bag-close {
+  padding: 0 4px;
+  font: inherit;
+  font-size: 12px;
+  color: #9aa38c;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.bag-close:hover { color: #e6e9da; }
+
+/* --- 장비 슬롯 3칸 --- */
+.bag-equip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+  padding: 9px 11px;
+}
+
+.bag-slot {
+  position: relative;
+  aspect-ratio: 1;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: inherit;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(200, 220, 180, 0.16);
+  border-radius: 5px;
+  cursor: default;
+}
+
+.bag-slot.is-filled {
+  background: rgba(120, 160, 90, 0.15);
+  border-color: rgba(150, 200, 120, 0.45);
+  cursor: pointer;
+}
+.bag-slot.is-filled:hover { border-color: rgba(190, 240, 160, 0.85); }
+
+.bag-slot-empty { font-size: 10px; color: #6f7563; }
+
+.bag-sub {
+  padding: 2px 11px 7px;
+  font-size: 11px;
+  color: #9aa38c;
+  border-top: 1px solid rgba(200, 220, 180, 0.12);
+}
+
+/* --- 가방 격자 --- */
+.bag-grid {
+  display: grid;
+  gap: 5px;
+  padding: 0 11px 11px;
+  overflow-y: auto;
+  align-content: start;
+}
+
+.bag-empty {
+  grid-column: 1 / -1;
+  padding: 16px 2px;
+  font-size: 11px;
+  color: #79806e;
+}
+
+.bag-cell {
+  position: relative;
+  aspect-ratio: 1;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: inherit;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(200, 220, 180, 0.16);
+  border-radius: 5px;
+  cursor: pointer;
+}
+.bag-cell:hover { border-color: rgba(200, 220, 180, 0.55); }
+
+.bag-cell.is-selected {
+  background: rgba(120, 160, 90, 0.22);
+  border-color: rgba(190, 240, 160, 0.9);
+}
+
+/* 못 끼는 건 흐리게 — 눌러서 볼 수는 있다 */
+.bag-cell.is-locked { opacity: 0.45; }
+
+.item-icon { width: 100%; height: 100%; display: block; }
+
+/* 등급·개수 배지 */
+.bag-badge-grade,
+.bag-badge-count {
+  position: absolute;
+  min-width: 13px;
+  padding: 0 2px;
+  font-size: 9px;
+  line-height: 13px;
+  text-align: center;
+  border-radius: 3px;
+}
+
+.bag-badge-grade {
+  top: 2px;
+  left: 2px;
+  color: #0d100c;
+  background: #9aa38c;
+}
+
+.bag-badge-count {
+  right: 2px;
+  bottom: 2px;
+  color: #e6e9da;
+  background: rgba(0, 0, 0, 0.72);
+}
+
+/* --- 상세 --- */
+.bag-detail {
+  padding: 9px 11px 11px;
+  border-top: 1px solid rgba(200, 220, 180, 0.18);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.bag-detail.is-empty { font-size: 11px; color: #6f7563; }
+
+.bag-detail-head { display: flex; flex-direction: column; gap: 1px; }
+.bag-detail-name { font-size: 12px; }
+.bag-detail-meta { font-size: 10px; color: #9aa38c; }
+.bag-detail-bonus { margin-top: 3px; font-size: 10px; color: #a8c98a; }
+
+/* 굴려서 붙은 옵션 — 기본 수치와 눈에 띄게 갈라놔야 한다 */
+.bag-detail-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 5px;
+  margin-top: 5px;
+}
+
+.bag-opt {
+  padding: 2px 6px;
+  font-size: 10px;
+  color: #d8c68a;
+  background: rgba(216, 198, 138, 0.1);
+  border: 1px solid rgba(216, 198, 138, 0.28);
+  border-radius: 3px;
+  cursor: help;
+}
+
+.bag-opt.is-none {
+  color: #79806e;
+  background: none;
+  border-color: rgba(200, 220, 180, 0.14);
+  cursor: default;
+}
+
+/* 상태바에 안 나오는 것들의 합 (치명타·공격 속도) */
+.bag-gear-sum {
+  padding: 4px 11px 0;
+  font-size: 10px;
+  color: #d8c68a;
+  cursor: help;
+}
+.bag-detail-hint { font-size: 10px; color: #79806e; }
+
+.bag-detail-actions {
+  display: flex;
+  gap: 5px;
+  align-items: stretch;
+  margin-top: 7px;
+}
+
+.bag-action {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 6px 4px;
+  font: inherit;
+  font-size: 11px;
+  color: #e6e9da;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(200, 220, 180, 0.28);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.bag-action:hover { border-color: rgba(200, 220, 180, 0.7); }
+
+.bag-action.is-craft {
+  color: #cfe3b4;
+  background: rgba(90, 130, 70, 0.24);
+  border-color: rgba(150, 200, 120, 0.5);
+}
+
+/* 조건이 안 되면 눌러도 소용없다는 걸 보이게 */
+.bag-action.is-locked {
+  color: #79806e;
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(200, 220, 180, 0.14);
+  cursor: not-allowed;
+}
+.bag-action.is-locked:hover { border-color: rgba(200, 220, 180, 0.14); }
+
+.bag-action-sub { font-size: 9px; opacity: 0.8; }
+
+/* 자동 사냥 범위 — 토글 버튼 위에 붙는다 */
+.autorange {
+  position: fixed;
+  left: calc(50% + 116px);
+  bottom: 142px;
+  width: 78px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 5px 6px;
+  color: #cfe3b4;
+  background: rgba(14, 17, 13, 0.82);
+  border: 1px solid rgba(200, 220, 180, 0.22);
+  border-radius: 5px;
+  z-index: 5;
+}
+
+.autorange.is-hidden { display: none; }
+
+.autorange-label { font-size: 9px; text-align: center; opacity: 0.85; }
+.autorange-value { font-size: 11px; color: #e6e9da; }
+
+.autorange-input {
+  width: 100%;
+  height: 14px;
+  margin: 0;
+  accent-color: #9be07a;
+  cursor: pointer;
+}
+
+/* 스킬 자동 시전 스위치 */
+.slot-auto {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 15px;
+  height: 15px;
+  padding: 0;
+  font: inherit;
+  font-size: 9px;
+  line-height: 15px;
+  color: #6f7563;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(200, 220, 180, 0.22);
+  border-radius: 3px;
+  cursor: pointer;
+  z-index: 2;
+}
+.slot-auto:hover { color: #cfe3b4; border-color: rgba(200, 220, 180, 0.6); }
+
+/* 켜진 건 멀리서도 보여야 한다 — 방치하고 보는 기능이다 */
+.slot-auto.is-on {
+  color: #0d100c;
+  background: #9be07a;
+  border-color: #9be07a;
+}
+
+/* NPC 말걸기 버튼 */
+.npc-prompt {
+  position: fixed;
+  left: 50%;
+  bottom: 172px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 11px 6px 7px;
+  font: inherit;
+  color: #e6e9da;
+  background: rgba(12, 15, 11, 0.9);
+  border: 1px solid rgba(200, 220, 180, 0.45);
+  border-radius: 20px;
+  cursor: pointer;
+  z-index: 7;
+}
+.npc-prompt.is-hidden { display: none; }
+.npc-prompt:hover { border-color: rgba(200, 220, 180, 0.9); }
+
+.npc-prompt-key {
+  width: 19px;
+  height: 19px;
+  font-size: 10px;
+  line-height: 19px;
+  text-align: center;
+  color: #0d100c;
+  background: #cfe3b4;
+  border-radius: 4px;
+}
+
+.npc-prompt-text { display: flex; flex-direction: column; font-size: 12px; line-height: 1.15; }
+.npc-prompt-text small { font-size: 9px; color: #9aa38c; }
+
+/* NPC 창 */
+.npc {
+  position: fixed;
+  left: 18px;
+  top: 60px;
+  width: 340px;
+  max-height: calc(100vh - 200px);
+  display: flex;
+  flex-direction: column;
+  color: #e6e9da;
+  background: rgba(12, 15, 11, 0.94);
+  border: 1px solid rgba(200, 220, 180, 0.28);
+  border-radius: 7px;
+  z-index: 9;
+  overflow: hidden;
+}
+.npc.is-hidden { display: none; }
+
+.npc-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 11px;
+  border-bottom: 1px solid rgba(200, 220, 180, 0.18);
+}
+.npc-title { font-size: 13px; font-weight: 600; }
+.npc-gold { margin-left: auto; font-size: 12px; color: #e8cf7a; }
+
+.npc-close {
+  padding: 0 4px;
+  font: inherit;
+  font-size: 12px;
+  color: #9aa38c;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.npc-close:hover { color: #e6e9da; }
+
+.npc-body { padding: 4px 11px 11px; overflow-y: auto; }
+
+.npc-section {
+  margin: 9px 0 5px;
+  font-size: 10px;
+  color: #9aa38c;
+  letter-spacing: 0.4px;
+}
+
+.npc-empty { padding: 8px 2px; font-size: 11px; color: #6f7563; }
+
+.npc-warn {
+  margin-bottom: 6px;
+  padding: 6px 8px;
+  font-size: 10px;
+  color: #e8cf7a;
+  background: rgba(160, 130, 40, 0.14);
+  border-radius: 4px;
+}
+
+.npc-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  margin-bottom: 3px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(200, 220, 180, 0.12);
+  border-radius: 4px;
+}
+
+.npc-row-icon { width: 26px; height: 26px; flex: 0 0 26px; }
+.npc-row-icon svg { width: 100%; height: 100%; display: block; }
+.npc-row-job .npc-row-icon { display: none; }
+
+.npc-row-text { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+.npc-row-text b { font-size: 12px; font-weight: 500; }
+.npc-row-text small { font-size: 10px; color: #9aa38c; }
+
+.npc-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 5px 9px;
+  font: inherit;
+  font-size: 11px;
+  color: #cfe3b4;
+  background: rgba(90, 130, 70, 0.24);
+  border: 1px solid rgba(150, 200, 120, 0.45);
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.npc-btn:hover { border-color: rgba(190, 240, 160, 0.9); }
+.npc-btn small { font-size: 9px; opacity: 0.85; }
+
+/* 조건이 안 되면 눌러도 소용없다는 걸 보이게 */
+.npc-btn.is-locked {
+  color: #79806e;
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(200, 220, 180, 0.14);
+  cursor: not-allowed;
+}
+.npc-btn.is-locked:hover { border-color: rgba(200, 220, 180, 0.14); }
+
+/* NPC 직함 — 이름 아래 한 줄 */
+.np-sub {
+  font-size: 9px;
+  line-height: 1.1;
+  color: #cfe3b4;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+/* 스킬창 */
+.sb {
+  position: fixed;
+  left: 50%;
+  top: 60px;
+  transform: translateX(-50%);
+  width: 400px;
+  max-height: calc(100vh - 200px);
+  display: flex;
+  flex-direction: column;
+  color: #e6e9da;
+  background: rgba(12, 15, 11, 0.94);
+  border: 1px solid rgba(200, 220, 180, 0.28);
+  border-radius: 7px;
+  z-index: 9;
+  overflow: hidden;
+}
+.sb.is-hidden { display: none; }
+
+.sb-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 11px;
+  border-bottom: 1px solid rgba(200, 220, 180, 0.18);
+}
+.sb-title { font-size: 13px; font-weight: 600; }
+.sb-points { margin-left: auto; font-size: 12px; color: #9be07a; }
+
+.sb-close {
+  padding: 0 4px;
+  font: inherit;
+  font-size: 12px;
+  color: #9aa38c;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.sb-close:hover { color: #e6e9da; }
+
+.sb-sub {
+  padding: 9px 11px 5px;
+  font-size: 10px;
+  color: #9aa38c;
+}
+
+.sb-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+  padding: 0 11px 4px;
+}
+
+.sb-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 7px 4px;
+  font: inherit;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(200, 220, 180, 0.16);
+  border-radius: 4px;
+  color: #6f7563;
+  cursor: default;
+}
+.sb-slot.is-filled {
+  color: #e6e9da;
+  background: rgba(120, 160, 90, 0.16);
+  border-color: rgba(150, 200, 120, 0.45);
+  cursor: pointer;
+}
+.sb-slot.is-filled:hover { border-color: rgba(190, 240, 160, 0.85); }
+
+.sb-slot-key { font-size: 9px; opacity: 0.7; }
+.sb-slot-name { font-size: 11px; }
+.sb-slot-empty { font-size: 10px; }
+
+.sb-list { padding: 0 11px 11px; overflow-y: auto; }
+
+.sb-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  margin-bottom: 3px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(200, 220, 180, 0.12);
+  border-radius: 4px;
+}
+
+/* 아직 못 배운 건 흐리게 — 무엇이 남았는지는 보여야 한다 */
+.sb-row.is-locked { opacity: 0.55; }
+
+.sb-row-text { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+.sb-row-text b { font-size: 12px; font-weight: 500; display: flex; align-items: baseline; gap: 6px; }
+.sb-row-text small { font-size: 10px; color: #9aa38c; }
+.sb-req { color: #e8cf7a; }
+.sb-stat { color: #a8c98a; }
+
+.sb-btn {
+  padding: 5px 10px;
+  font: inherit;
+  font-size: 11px;
+  color: #cfe3b4;
+  background: rgba(90, 130, 70, 0.24);
+  border: 1px solid rgba(150, 200, 120, 0.45);
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.sb-btn:hover { border-color: rgba(190, 240, 160, 0.9); }
+
+.sb-btn.is-on {
+  color: #0d100c;
+  background: #9be07a;
+  border-color: #9be07a;
+}
+
+.sb-btn.is-locked {
+  color: #79806e;
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(200, 220, 180, 0.14);
+  cursor: not-allowed;
+}
+.sb-btn.is-locked:hover { border-color: rgba(200, 220, 180, 0.14); }
+
+/* ---------------------------------------------------------------
+ * 폰 화면.
+ *
+ * 액션바(4칸)와 자동 사냥 버튼을 한 줄에 두면 78px 짜리 버튼이 화면 밖으로
+ * 밀려난다 — 보이지도 않고 눌리지도 않는다. 폰에서는 자동 사냥을 오른쪽
+ * 위로 올려 세우고, 아래에서부터 상태바 → 액션바 → 자동사냥 → 채팅 순으로
+ * 겹치지 않게 쌓는다.
+ * --------------------------------------------------------------- */
+@media (max-width: 760px) {
+  .actionbar { bottom: 86px; gap: 5px; }
+  .slot { width: 62px; height: 58px; }
+  .slot-name { font-size: 11px; }
+
+  .autohunt { left: auto; right: 8px; bottom: 152px; width: 70px; height: 56px; }
+  .autorange { left: auto; right: 8px; bottom: 214px; width: 70px; }
+
+  .status { bottom: 18px; }
+  .status-bars { width: min(240px, 52vw); }
+
+  .npc-prompt { bottom: 152px; }
+
+  .chat { bottom: 196px; width: min(320px, 58vw); }
+  .chat-log { max-height: 84px; }
+
+  /* 조작 안내는 폰에서 쓸 일이 없다 — WASD 도 휠도 Enter 도 없다 */
+  #help { display: none; }
+
+  /* 창은 화면 폭을 꽉 채운다 — 340px 짜리를 375px 폰에 띄우면 여백이 없다 */
+  .npc,
+  .bag,
+  .sb {
+    left: 8px;
+    right: 8px;
+    top: 46px;
+    width: auto;
+    max-height: calc(100vh - 280px);
+    transform: none;
+  }
+}
+
+/* 손가락은 커서보다 굵다 — 작은 스위치를 눌릴 만한 크기로 키운다 */
+@media (pointer: coarse) {
+  .slot-auto {
+    width: 22px;
+    height: 22px;
+    font-size: 11px;
+    line-height: 20px;
+  }
+
+  /* 커진 A 스위치에 스킬 이름이 가리지 않도록 글자를 아래로 내린다 */
+  .slot { padding-top: 12px; }
+  .autorange-input { height: 22px; }
+  .npc-close,
+  .bag-close,
+  .sb-close {
+    padding: 4px 8px;
+    font-size: 15px;
+  }
+}

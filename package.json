@@ -1,0 +1,24 @@
+{
+  "name": "mmorpg",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @mmo/client",
+    "build": "npm run build -w @mmo/client",
+    "preview": "npm run preview -w @mmo/client",
+    "typecheck": "npm run typecheck -w @mmo/client && npm run typecheck -w @mmo/server",
+    "test": "node --test \"packages/**/*.test.ts\"",
+    "server": "node scripts/serve.mjs",
+    "server:raw": "npm run dev -w @mmo/server",
+    "probe": "node scripts/probe.mjs",
+    "compress": "node scripts/compress-textures.mjs",
+    "tunnel": "node scripts/tunnel.mjs"
+  },
+  "devDependencies": {
+    "ktx2-encoder": "^0.6.0",
+    "sharp": "^0.35.4"
+  }
+}

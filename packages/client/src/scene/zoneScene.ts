@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { ZoneDef } from '@mmo/shared';
+import type { GateDef, PortalDef, ZoneDef } from '@mmo/shared';
 import { createGround, createPathMask, type Ground, type PathMask } from './ground';
 import { createGrass, type GrassField } from './grass';
 import { createPortal, type Portal } from './portal';
@@ -21,7 +21,9 @@ export interface ZoneScene {
   group: THREE.Group;
   /** 클릭 이동 레이캐스트 대상 */
   ground: THREE.Mesh;
-  portals: Portal[];
+  portals: Portal<PortalDef>[];
+  /** 목적지를 고르는 문. 없는 존이 대부분이다 */
+  gate: Portal<GateDef> | null;
   npcs: { name: string; subtitle?: string; hp: number; rig: CharacterRig }[];
   update(dt: number, elapsed: number): void;
   dispose(): void;
@@ -47,6 +49,9 @@ export function buildZoneScene(def: ZoneDef, assets: Assets): ZoneScene {
   for (const p of def.portals) {
     blockers.push({ x: p.position[0], z: p.position[1], r: p.radius + 1.5 });
   }
+  if (def.gate) {
+    blockers.push({ x: def.gate.position[0], z: def.gate.position[1], r: def.gate.radius + 1.5 });
+  }
 
   // --- 지면 ---
   const ground: Ground = createGround(def.size, env, mask, assets);
@@ -62,6 +67,12 @@ export function buildZoneScene(def: ZoneDef, assets: Assets): ZoneScene {
     group.add(portal.group);
     return portal;
   });
+
+  // --- 차원문 ---
+  // 사슬 포탈과 같은 모양으로 그린다. 다르게 생기면 "밟으면 이동한다"는
+  // 학습을 새로 시켜야 한다. 색만 다르다.
+  const gate = def.gate ? createPortal(def.gate) : null;
+  if (gate) group.add(gate.group);
 
   // --- NPC ---
   const npcs = (def.npcs ?? []).map((n) => {
@@ -79,17 +90,20 @@ export function buildZoneScene(def: ZoneDef, assets: Assets): ZoneScene {
     group,
     ground: ground.mesh,
     portals,
+    gate,
     npcs,
 
     update(dt: number, elapsed: number): void {
       grass.update(elapsed);
       for (const portal of portals) portal.update(elapsed);
+      gate?.update(elapsed);
       for (const npc of npcs) npc.rig.update(dt, 0);
     },
 
     dispose(): void {
       grass.dispose();
       for (const portal of portals) portal.dispose();
+      gate?.dispose();
       for (const npc of npcs) npc.rig.dispose();
 
       ground.dispose();

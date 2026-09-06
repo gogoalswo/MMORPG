@@ -30,11 +30,13 @@ import { InventoryPanel } from './ui/inventory';
 import { NpcDialog } from './ui/npcDialog';
 import { NpcPrompt } from './ui/npcPrompt';
 import { SkillBook } from './ui/skillBook';
+import { HudButtons, type HudPanel } from './ui/hudButtons';
 import { loadAssets, type Assets } from './scene/assets';
 import { ensureBeasts, setModels } from './game/rigFactory';
 import { PostFX } from './render/postfx';
 import { Projectiles } from './scene/projectiles';
 import { AoeMarkers } from './scene/aoeMarkers';
+import { ZoneGate } from './ui/zoneGate';
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const overlay = document.getElementById('overlay') as HTMLElement;
@@ -130,6 +132,9 @@ scene.add(aoeMarkers.group);
 const hud = new CombatHud(overlay);
 hud.setVisible(false);
 
+/** 마을 차원문 창 — 밟으면 열리고, 고르면 그 사냥터로 간다 */
+const zoneGate = new ZoneGate(overlay);
+
 const actionBar = new ActionBar(overlay);
 actionBar.setVisible(false);
 
@@ -140,6 +145,10 @@ const bag = new InventoryPanel(overlay);
 const npcDialog = new NpcDialog(overlay);
 const npcPrompt = new NpcPrompt(overlay);
 const skillBook = new SkillBook(overlay);
+const hudButtons = new HudButtons(overlay);
+/** 매 프레임 다시 만들지 않으려고 하나를 재사용한다 */
+const openPanels = new Set<HudPanel>();
+hudButtons.setVisible(false);
 
 /** 내 전투 상태 — 서버가 보내주는 값을 그대로 보여준다 */
 let myState = {
@@ -168,6 +177,7 @@ const connection = new ZoneConnection({
     bag.setCharacter(player.job, status.level);
     skillBook.setCharacter(player.job, status.level);
     npcDialog.setCharacter(player.job, status.level);
+    zoneGate.setLevel(status.level);
     playerPlate.hp = status.hp;
     playerPlate.maxHp = status.maxHp;
   },
@@ -326,6 +336,7 @@ const connection = new ZoneConnection({
     selectUI.hide();
     hud.setVisible(true);
     actionBar.setVisible(true);
+    hudButtons.setVisible(true);
     autoHuntToggle.setVisible(true);
     // 저장해둔 설정을 서버에 알려준다 — 안 보내면 서버는 기본값으로 돈다
     connection.setAutoRange(autoHuntToggle.radius);
@@ -458,6 +469,34 @@ window.addEventListener('keydown', (e) => {
   e.preventDefault();
   bag.toggle();
 });
+
+/**
+ * 차원문에서 사냥터를 골랐다.
+ *
+ * 'default' 스폰은 맵 한가운데다. 무리는 네 귀퉁이(±20)에 있으니 도착하자마자
+ * 둘러싸이지 않는다. 존을 옮기는 길은 포탈로 걸어갈 때와 **같은 `travel`** 이다 —
+ * 룸을 나가고 들어가는 순서를 두 벌 만들면 한쪽만 고치는 실수가 난다.
+ */
+zoneGate.onPick = (zoneId) => travel(zoneId, 'default');
+
+// 차원문에는 여는 단축키가 없다(문을 밟아야 열린다). 닫는 건 Esc 로도 되게 둔다.
+window.addEventListener('keydown', (e) => {
+  if (e.code !== 'Escape' || !zoneGate.open) return;
+  e.preventDefault();
+  zoneGate.close();
+});
+
+/**
+ * 창 여는 버튼.
+ *
+ * 단축키(I / K / Enter)와 **같은 일**을 한다. 두 벌로 만들면 한쪽만 고치게 된다.
+ */
+hudButtons.onOpen = (panel: HudPanel) => {
+  if (createUI.open || selectUI.open) return;
+  if (panel === 'bag') bag.toggle();
+  else if (panel === 'skills') skillBook.toggle();
+  else chat.openInput();
+};
 
 autoHuntToggle.onRange = (radius) => connection.setAutoRange(radius);
 
@@ -598,6 +637,7 @@ async function mountZone(zoneId: string, spawnName?: string, characterId?: strin
   actionBar.reset();
   bag.setOpen(false);
   skillBook.setOpen(false);
+  zoneGate.close();
   npcDialog.close();
   npcPrompt.clear();
   netStatus = '연결 중';
@@ -723,6 +763,10 @@ function frame(now: number): void {
           break;
         }
       }
+      // 차원문은 밟아도 이동하지 않는다. 어디로 갈지 먼저 고른다.
+      // test() 는 반경을 한 번 벗어나야 다시 발동하므로, 닫고 그 자리에
+      // 서 있어도 창이 계속 다시 열리지 않는다.
+      if (zone.gate?.test(player.position.x, player.position.z)) zoneGate.show();
     }
   }
 
@@ -730,6 +774,12 @@ function frame(now: number): void {
   nameplates.update(rig.camera, window.innerWidth, window.innerHeight);
   hud.update(dt, rig.camera, window.innerWidth, window.innerHeight);
   actionBar.update();
+  // 창은 자기 ✕ 로도 닫히므로 버튼이 먼저 알 방법이 없다. 매 프레임 물어본다.
+  openPanels.clear();
+  if (bag.open) openPanels.add('bag');
+  if (skillBook.open) openPanels.add('skills');
+  if (chat.inputOpen) openPanels.add('chat');
+  hudButtons.update(openPanels);
 
   // FPS는 시뮬레이션 dt가 아니라 실제 경과 시간으로 재야 한다
   fpsFrames++;

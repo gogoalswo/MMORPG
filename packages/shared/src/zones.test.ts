@@ -137,3 +137,65 @@ test('없는 스폰 이름은 default 로 떨어진다', () => {
   const zone = getZone(START_ZONE);
   assert.deepEqual(getSpawn(zone, '오타난_이름'), zone.spawns.default);
 });
+
+// --- 마을 차원문 -----------------------------------------------------------
+// 문은 밟아야 열린다. 겹치거나 밖에 놓이면 예외가 나지 않고 "안 열린다" 로만
+// 나타나서, 문을 못 찾은 건지 코드가 안 도는 건지 구분이 안 된다.
+
+test('차원문은 마을에만 있다', () => {
+  const withGate = Object.values(ZONES).filter((z) => z.gate);
+  assert.deepEqual(
+    withGate.map((z) => z.id),
+    [START_ZONE],
+    '사냥터에도 문이 생기면 죽어도 곧장 제자리로 돌아와 존을 나눈 의미가 없어진다'
+  );
+});
+
+test('차원문이 이동 가능 영역 안에 있고 다른 것과 겹치지 않는다', () => {
+  for (const zone of Object.values(ZONES)) {
+    const gate = zone.gate;
+    if (!gate) continue;
+    const half = zoneHalfSize(zone.size);
+    const [gx, gz] = gate.position;
+    assert.ok(
+      Math.abs(gx) <= half && Math.abs(gz) <= half,
+      `${zone.id} 차원문이 걸어갈 수 없는 자리에 있다`
+    );
+
+    // 사슬 포탈과 겹치면 밟는 순간 둘 다 발동해 창이 열리자마자 존이 바뀐다
+    for (const portal of zone.portals) {
+      const d = Math.hypot(portal.position[0] - gx, portal.position[1] - gz);
+      assert.ok(d > gate.radius + portal.radius, `${zone.id} 차원문이 ${portal.id} 과 겹친다`);
+    }
+    // 스폰 위에 놓으면 접속하자마자 창이 열린다
+    for (const [name, [sx, sz]] of Object.entries(zone.spawns)) {
+      const d = Math.hypot(sx - gx, sz - gz);
+      assert.ok(d > gate.radius, `${zone.id} 차원문이 '${name}' 스폰을 덮는다`);
+    }
+    // NPC 위에 놓으면 말걸기와 문이 같은 자리에서 다툰다
+    for (const npc of zone.npcs ?? []) {
+      const d = Math.hypot(npc.x - gx, npc.z - gz);
+      assert.ok(d > gate.radius + 1, `${zone.id} 차원문이 ${npc.name} 과 겹친다`);
+    }
+  }
+});
+
+test('차원문 목록의 사냥터가 전부 default 스폰을 가진다', () => {
+  // 창은 항상 'default'(맵 한가운데)로 보낸다. 없으면 getSpawn 이 조용히
+  // 떨어뜨려서 엉뚱한 자리에 도착한다.
+  for (const zoneId of FIELD_ORDER) {
+    const zone = getZone(zoneId);
+    assert.ok(zone.spawns.default, `${zoneId} 에 default 스폰이 없다`);
+    const [x, z] = getSpawn(zone, 'default');
+    // 한가운데는 무리(±20)에서 충분히 떨어져 있어야 도착하자마자 안 물린다
+    for (const pack of zone.monsters ?? []) {
+      const d = Math.hypot(pack.x - x, pack.z - z);
+      const kind = MONSTER_KINDS[pack.kind];
+      assert.ok(kind, `${zoneId} 에 없는 몬스터 ${pack.kind}`);
+      assert.ok(
+        d > pack.radius + kind.aggroRange,
+        `${zoneId}: 도착 지점이 ${kind.name} 무리의 인식 범위 안이다 (${d.toFixed(1)}m)`
+      );
+    }
+  }
+});

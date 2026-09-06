@@ -217,6 +217,15 @@ const VILLAGE: ZoneDef = {
       target: { zone: 'meadow', spawn: 'from_north' },
     },
   ],
+  // 사냥터를 골라 바로 가는 문. 스폰에서 동쪽으로 9유닛 — NPC 여섯이 전부
+  // 서쪽·남쪽에 몰려 있어 이쪽이 비어 있고, 걸어 나가는 길목이라 눈에 띈다.
+  gate: {
+    position: [9, 0],
+    radius: 2.6,
+    // 사슬 포탈과 색이 겹치면 "저기로 가면 초원" 이라는 학습을 흔든다
+    color: '#c9a6ff',
+    name: '차원문',
+  },
   npcs: [
     // 말을 걸 수 있는 세 사람. 스폰 지점에서 걸어서 바로 닿는 거리에 둔다.
     { name: '상인 보리스', job: 'mage', look: 'merchant', x: -7, z: 4, role: 'shop', title: '상점' },

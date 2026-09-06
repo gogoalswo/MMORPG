@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { PortalDef } from '@mmo/shared';
+import type { PortalVisual } from '@mmo/shared';
 
 /**
  * 포탈. 바닥의 빛나는 고리와 위로 솟는 빛기둥으로 표시한다.
@@ -8,8 +8,8 @@ import type { PortalDef } from '@mmo/shared';
  * 포탈 반경 안에 서 있으면 곧바로 되돌아가면서 무한 왕복에 빠진다.
  * 그래서 "반경 밖으로 한 번 나간 뒤"부터 발동하게 한다.
  */
-export interface Portal {
-  def: PortalDef;
+export interface Portal<D extends PortalVisual = PortalVisual> {
+  def: D;
   group: THREE.Group;
   update(elapsed: number): void;
   /** 플레이어가 진입했는지. 발동하면 true 를 한 번만 돌려준다 */
@@ -17,7 +17,12 @@ export interface Portal {
   dispose(): void;
 }
 
-export function createPortal(def: PortalDef): Portal {
+/**
+ * 정의를 그대로 돌려주도록 제네릭으로 둔다. 사슬 포탈은 `def.target` 을,
+ * 마을 차원문은 `def.name` 을 부르는 쪽에서 그대로 읽을 수 있어야 한다.
+ * 그리는 데 필요한 건 위치·반경·색뿐이다.
+ */
+export function createPortal<D extends PortalVisual>(def: D): Portal<D> {
   const group = new THREE.Group();
   group.position.set(def.position[0], 0, def.position[1]);
 

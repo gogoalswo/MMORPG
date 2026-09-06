@@ -46,15 +46,37 @@ export interface ZoneEnv {
   roads: RoadDef[];
 }
 
-export interface PortalDef {
-  id: string;
+/**
+ * 바닥에 놓인 빛나는 문 하나의 생김새와 크기.
+ *
+ * 사슬 포탈(`PortalDef`)과 마을 차원문(`GateDef`)이 같은 모양으로 그려진다.
+ * 밟았을 때 무슨 일이 일어나는지만 다르다 — 그래서 그리는 쪽은 이것만 안다.
+ */
+export interface PortalVisual {
   /** [x, z] */
   position: [number, number];
   /** 진입 판정 반경 */
   radius: number;
   /** 포탈 빛 색 */
   color: string;
+}
+
+export interface PortalDef extends PortalVisual {
+  id: string;
   target: { zone: string; spawn: string };
+}
+
+/**
+ * 목적지를 고르는 문. 밟으면 곧바로 이동하지 않고 사냥터 목록을 연다.
+ *
+ * 사슬(포탈)을 **대체하지 않는다.** 처음 가는 길은 걸어서 뚫는 그대로 두고,
+ * 이미 아는 곳으로 돌아갈 때 사냥터 20개를 차례로 지나가는 시간만 줄인다.
+ * 마을에만 둔다 — 사냥터마다 있으면 죽어도 곧장 제자리로 돌아와서
+ * 존을 나누고 포탈로 잇는 구조 자체가 의미를 잃는다.
+ */
+export interface GateDef extends PortalVisual {
+  /** 머리 위에 띄우는 이름 */
+  name: string;
 }
 
 /**
@@ -97,6 +119,8 @@ export interface ZoneDef {
   /** 이름 붙은 스폰 지점들. 'default' 는 반드시 있어야 한다 */
   spawns: Record<string, [number, number]>;
   portals: PortalDef[];
+  /** 목적지를 고르는 문. 지금은 마을에만 있다 */
+  gate?: GateDef;
   npcs?: NpcDef[];
   monsters?: MonsterSpawnDef[];
   env: ZoneEnv;

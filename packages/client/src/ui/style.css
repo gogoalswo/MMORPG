@@ -28,10 +28,12 @@ html, body {
 .actionbar,
 .autohunt,
 .autorange,
+.hudbtns,
 .npc-prompt,
 .npc,
 .bag,
-.sb {
+.sb,
+.gate {
   pointer-events: auto;
 }
 
@@ -623,6 +625,49 @@ input,
   font-weight: 700;
 }
 
+/* 창 여는 버튼 — 가방·스킬·채팅. 폰에는 단축키가 없다 */
+.hudbtns {
+  position: fixed;
+  top: 12px;
+  right: 18px;
+  display: flex;
+  gap: 6px;
+  z-index: 6;
+}
+
+.hudbtns.is-hidden { display: none; }
+
+.hudbtn {
+  width: 52px;
+  height: 46px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  font: inherit;
+  color: #e6e9da;
+  background: rgba(14, 17, 13, 0.82);
+  border: 1px solid rgba(200, 220, 180, 0.3);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.hudbtn:hover { border-color: rgba(200, 220, 180, 0.6); }
+
+.hudbtn-glyph { font-size: 14px; line-height: 1; opacity: 0.85; }
+.hudbtn-label { font-size: 10px; letter-spacing: -0.3px; }
+/* 단축키를 같이 적어둔다 — 한 번 눌러본 사람은 다음부터 키를 쓴다 */
+.hudbtn-key { font-size: 8px; color: #7f8a6e; }
+
+.hudbtn.is-on {
+  background: rgba(46, 74, 34, 0.9);
+  border-color: rgba(150, 220, 120, 0.75);
+}
+.hudbtn.is-on .hudbtn-glyph { opacity: 1; }
+
 /* 가방·장비 창 — 5칸씩 격자 */
 .bag {
   position: fixed;
@@ -1191,6 +1236,86 @@ input,
 }
 .sb-btn.is-locked:hover { border-color: rgba(200, 220, 180, 0.14); }
 
+/* 차원문 — 사냥터를 골라 바로 간다 */
+.gate {
+  position: fixed;
+  left: 50%;
+  top: 60px;
+  transform: translateX(-50%);
+  width: 420px;
+  max-height: calc(100vh - 200px);
+  display: flex;
+  flex-direction: column;
+  color: #e6e9da;
+  background: rgba(12, 15, 11, 0.94);
+  border: 1px solid rgba(190, 165, 235, 0.34);
+  border-radius: 7px;
+  z-index: 9;
+  overflow: hidden;
+}
+.gate.is-hidden { display: none; }
+
+.gate-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 9px 11px;
+  border-bottom: 1px solid rgba(190, 165, 235, 0.22);
+}
+.gate-title { font-size: 13px; font-weight: 600; color: #d9c8ff; }
+.gate-sub { font-size: 10px; color: #9aa38c; }
+
+.gate-close {
+  margin-left: auto;
+  padding: 0 4px;
+  font: inherit;
+  font-size: 12px;
+  color: #9aa38c;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.gate-close:hover { color: #e6e9da; }
+
+.gate-list {
+  padding: 8px 11px 11px;
+  overflow-y: auto;
+}
+
+.gate-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 9px;
+  margin-bottom: 3px;
+  font: inherit;
+  text-align: left;
+  color: #e6e9da;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(200, 220, 180, 0.12);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.gate-row:hover { border-color: rgba(190, 165, 235, 0.7); }
+
+.gate-name { font-size: 12px; flex: 1; min-width: 0; }
+.gate-lv { font-size: 10px; color: #9aa38c; white-space: nowrap; }
+.gate-lv b { font-weight: 500; color: #c9a6ff; }
+
+/* 레벨대 표시. 잠그지는 않는다 — 갈지 말지는 본인이 정한다 */
+.gate-tag {
+  width: 30px;
+  font-size: 10px;
+  text-align: right;
+  white-space: nowrap;
+}
+.gate-row.is-fit .gate-tag { color: #9be07a; }
+.gate-row.is-danger .gate-tag { color: #e2887c; }
+.gate-row.is-easy .gate-tag { color: #79806e; }
+/* 너무 센 곳은 줄 자체를 붉게 — 목록을 훑을 때 글자를 안 읽어도 보인다 */
+.gate-row.is-danger { border-color: rgba(200, 120, 110, 0.4); }
+
 /* ---------------------------------------------------------------
  * 폰 화면.
  *
@@ -1212,6 +1337,10 @@ input,
 
   .npc-prompt { bottom: 152px; }
 
+  /* 손가락으로 누를 크기로 키운다 */
+  .hudbtns { top: 8px; right: 8px; gap: 5px; }
+  .hudbtn { width: 56px; height: 50px; }
+
   .chat { bottom: 196px; width: min(320px, 58vw); }
   .chat-log { max-height: 84px; }
 
@@ -1221,10 +1350,12 @@ input,
   /* 창은 화면 폭을 꽉 채운다 — 340px 짜리를 375px 폰에 띄우면 여백이 없다 */
   .npc,
   .bag,
-  .sb {
+  .sb,
+  .gate {
     left: 8px;
     right: 8px;
-    top: 46px;
+    /* 창 여는 버튼이 위를 차지한다 */
+    top: 64px;
     width: auto;
     max-height: calc(100vh - 280px);
     transform: none;
@@ -1245,8 +1376,11 @@ input,
   .autorange-input { height: 22px; }
   .npc-close,
   .bag-close,
-  .sb-close {
+  .sb-close,
+  .gate-close {
     padding: 4px 8px;
     font-size: 15px;
   }
+  /* 손가락으로 20줄을 훑는다 — 줄이 얇으면 옆줄이 눌린다 */
+  .gate-row { padding: 10px 9px; }
 }

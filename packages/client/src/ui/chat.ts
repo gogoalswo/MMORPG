@@ -85,6 +85,15 @@ export class ChatUI {
     return document.activeElement === this.field;
   }
 
+  /** 화면 버튼으로도 연다 — 폰에는 Enter 키가 없다 */
+  openInput(): void {
+    if (!this.typing) this.open();
+  }
+
+  get inputOpen(): boolean {
+    return this.root.classList.contains('is-open');
+  }
+
   private open(): void {
     this.root.classList.add('is-open');
     this.field.focus();

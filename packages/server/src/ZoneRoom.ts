@@ -877,14 +877,17 @@ export class ZoneRoom extends Room {
   /**
    * 화면에 그려지는 장비를 상태에 반영한다.
    *
-   * 무기·보조·투구 셋만 내려간다. 갑옷·신발·장신구는 **모델에 갈아입힐 것이
-   * 없어서** 어차피 못 그린다 — 안 그릴 걸 보내면 대역폭만 쓴다.
+   * 다섯 자리만 내려간다. 무기·보조·투구는 모델에 붙일 것이 있고, 갑옷·신발은
+   * 몸통과 다리 색으로 보여준다. 반지·목걸이·귀걸이는 **보여줄 방법이 없어서**
+   * 안 보낸다 — 안 그릴 걸 보내면 대역폭만 쓴다.
    */
   private syncLook(sessionId: string, player: PlayerState): void {
     const gear = this.viewers.get(sessionId)?.character.equipment;
     player.weapon = gear?.weapon?.id ?? '';
     player.offhand = gear?.offhand?.id ?? '';
     player.helmet = gear?.helmet?.id ?? '';
+    player.armor = gear?.armor?.id ?? '';
+    player.boots = gear?.boots?.id ?? '';
   }
 
   /**

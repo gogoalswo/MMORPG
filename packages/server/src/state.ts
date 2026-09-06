@@ -49,6 +49,8 @@ export const Player = schema({
   weapon: t.string(),
   offhand: t.string(),
   helmet: t.string(),
+  armor: t.string(),
+  boots: t.string(),
 
   /** 서버가 마지막으로 처리한 입력 번호. 클라이언트 예측 보정의 기준점 */
   lastSeq: t.uint32(),

@@ -45,8 +45,16 @@ export interface Beast {
   clips: Record<string, THREE.AnimationClip>;
 }
 
+/**
+ * 캐릭터 파일 안에 없는 장비.
+ *
+ * 무기와 방패는 모델 안에 이미 매달려 있지만 화살통은 없다. 팩의 별도 파일을
+ * 받아 등에 붙인다. 같은 팩이라 크기와 텍스처가 자동으로 맞는다.
+ */
 export interface Models {
   characters: Record<string, LoadedModel>;
+  /** 이름 -> 붙일 물건. 못 받았으면 없다 */
+  accessories: Record<string, THREE.Object3D>;
   /** 다섯 사람 모델이 공유하는 클립 */
   clips: Record<string, THREE.AnimationClip>;
   /** 지금까지 받아둔 짐승들 */
@@ -127,6 +135,16 @@ export async function loadModels(): Promise<Models> {
     if (gltf.animations.length > 0) clips = byName(gltf.animations);
   }
 
+  // 화살통 — 없어도 게임은 돈다. 궁수 등이 비어 보일 뿐이다.
+  const accessories: Record<string, THREE.Object3D> = {};
+  try {
+    const quiver = await loader.loadAsync('/assets/models/accessories/quiver.gltf');
+    prepare(quiver.scene);
+    accessories.quiver = quiver.scene;
+  } catch (err) {
+    console.warn('[models] 화살통을 못 불러왔다', err);
+  }
+
   const beasts: Record<string, Beast> = {};
   // 같은 짐승을 동시에 두 번 받지 않도록 진행 중인 것도 기억한다
   const pending = new Map<string, Promise<void>>();
@@ -145,6 +163,7 @@ export async function loadModels(): Promise<Models> {
 
   return {
     characters,
+    accessories,
     clips,
     beasts,
 

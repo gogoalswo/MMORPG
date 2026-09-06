@@ -363,6 +363,8 @@ export interface GearLook {
   weapon: string;
   offhand: string;
   helmet: string;
+  armor: string;
+  boots: string;
 }
 
 export interface CharacterRig {

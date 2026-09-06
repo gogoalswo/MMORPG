@@ -80,15 +80,39 @@ fetch_beast() { # $1=팩/파일  $2=출력 이름  $3...=남길 클립
   node scripts/trim-gltf.mjs "assets-src/models/${src}.glb" "public/assets/models/${out}.glb" "$@"
 }
 
-fetch_beast animals_pack/Wolf   wolf  Idle Walk Gallop Attack Death
-fetch_beast animals_pack/Husky  husky Idle Walk Gallop Attack Death
-fetch_beast animals_pack/Bull   bull  Idle Walk Gallop Attack_Headbutt Death
-fetch_beast animals_pack/Stag   stag  Idle Walk Gallop Attack_Headbutt Death
+# 사냥터 20곳에 한 종씩. 같은 짐승이 두 번 나오면 사냥터를 옮긴 느낌이 안 난다.
+fetch_beast animals_pack/Fox         fox         Idle Walk Gallop Attack Death
+fetch_beast animals_pack/ShibaInu    shibainu    Idle Walk Gallop Attack Death
+fetch_beast animals_pack/Wolf        wolf        Idle Walk Gallop Attack Death
+fetch_beast animals_pack/Husky       husky       Idle Walk Gallop Attack Death
+fetch_beast animals_pack/Bull        bull        Idle Walk Gallop Attack_Headbutt Death
+fetch_beast animals_pack/Stag        stag        Idle Walk Gallop Attack_Headbutt Death
+fetch_beast animals_pack/Deer        deer        Idle Walk Gallop Attack_Headbutt Death
+fetch_beast animals_pack/Horse       horse       Idle Walk Gallop Attack_Kick Death
+fetch_beast animals_pack/Horse_White horse_white Idle Walk Gallop Attack_Kick Death
+
 fetch_beast easy_enemies_pack/Spider spider Spider_Idle Spider_Walk Spider_Attack Spider_Death
+fetch_beast easy_enemies_pack/Rat    rat    Rat_Idle Rat_Walk Rat_Run Rat_Attack Rat_Death
+fetch_beast easy_enemies_pack/Snake  snake  Snake_Idle Snake_Walk Snake_Attack
+fetch_beast easy_enemies_pack/Frog   frog   Frog_Idle Frog_Jump Frog_Attack Frog_Death
+fetch_beast easy_enemies_pack/Wasp   wasp   Wasp_Flying Wasp_Attack Wasp_Death
 
 fetch_beast dinosaurs_pack/Trex         trex         TRex_Idle TRex_Walk TRex_Run TRex_Attack TRex_Death
 fetch_beast dinosaurs_pack/Velociraptor velociraptor Velociraptor_Idle Velociraptor_Walk Velociraptor_Run Velociraptor_Attack Velociraptor_Death
 fetch_beast dinosaurs_pack/Triceratops  triceratops  Triceratops_Idle Triceratops_Walk Triceratops_Run Triceratops_Attack Triceratops_Death
 fetch_beast dinosaurs_pack/Stegosaurus  stegosaurus  Stegosaurus_Idle Stegosaurus_Walk Stegosaurus_Run Stegosaurus_Attack Stegosaurus_Death
+# 사망 클립 이름이 팩에서 잘못 붙어 있다 (Stegosaurus_Death). 원본대로 받는다.
+fetch_beast dinosaurs_pack/Apatosaurus     apatosaurus     Apatosaurus_Idle Apatosaurus_Walk Apatosaurus_Run Apatosaurus_Attack Stegosaurus_Death
+fetch_beast dinosaurs_pack/Parasaurolophus parasaurolophus Parasaurolophus_Idle Parasaurolophus_Walk Parasaurolophus_Run Parasaurolophus_Attack Parasaurolophus_Death
+
+# 화살통 — 캐릭터 모델 안에 없어서 따로 받는다. .gltf 는 옆의 .bin 과 .png 를
+# 상대 경로로 참조하므로 셋을 같은 폴더에 둔다.
+mkdir -p public/assets/models/accessories
+for f in quiver.gltf quiver.bin rogue_texture.png; do
+  if [ ! -f "public/assets/models/accessories/$f" ]; then
+    echo "받는 중: $f"
+    curl -sL --max-time 120 -o "public/assets/models/accessories/$f"       "https://raw.githubusercontent.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/main/addons/kaykit_character_pack_adventures/Assets/gltf/$f"
+  fi
+done
 
 echo "완료. 총 $(du -sh public/assets | cut -f1)"

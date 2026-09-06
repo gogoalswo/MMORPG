@@ -50,19 +50,23 @@
 받는 곳: https://github.com/trebeljahr/quaternius-showcase (모델 미러.
 저장소 자체의 MIT 는 데모 코드에 붙은 것이고, **모델은 원작자의 CC0** 다)
 
-| 팩 | 원본 | 우리 파일 | 쓰는 곳 |
-|---|---|---|---|
-| Animals | `Wolf.glb` | `wolf.glb` | 늑대류 (초원·서리고원·그림자계곡) |
-| Animals | `Husky.glb` | `husky.glb` | 사냥개류 (잿빛황야·화산재) |
-| Animals | `Bull.glb` | `bull.glb` | 멧돼지·곰류 (덤불숲·검은삼림) |
-| Animals | `Stag.glb` | `stag.glb` | 뿔짐승 (협곡·소금평원·창백한고원) |
-| Easy Enemies | `Spider.glb` | `spider.glb` | 벌레류 (늪·사막·심연) |
-| Dinosaurs | `Trex.glb` | `trex.glb` | 종말의 대지 + 보스 |
-| Dinosaurs | `Velociraptor.glb` | `velociraptor.glb` | 도마뱀류 + 보스 |
-| Dinosaurs | `Triceratops.glb` | `triceratops.glb` | 골렘·수호자류 + 보스 |
-| Dinosaurs | `Stegosaurus.glb` | `stegosaurus.glb` | 수호병·고목류 + 보스 |
+**사냥터 20곳에 한 종씩, 20개.** 같은 짐승이 두 번 나오면 사냥터를 옮긴
+느낌이 나지 않는다. 보스는 덩치 큰 공룡 여섯을 돌려 쓰되, 그 사냥터 잡몹과
+같은 모델이 걸리면 다음 것으로 넘긴다.
+
+| 팩 | 우리 파일 | 사냥터 |
+|---|---|---|
+| Animals | `fox` `shibainu` `wolf` `husky` | 초원 · 검은삼림 · 서리고원 · 잿빛황야 |
+| Animals | `bull` `stag` `deer` | 덤불숲 · 협곡 · 소금평원 |
+| Animals | `horse` `horse_white` | 그림자계곡 · 창백한고원 |
+| Easy Enemies | `spider` `rat` `snake` `frog` `wasp` | 뒤틀린숲 · 화산재 · 붉은사막 · 안개늪 · 유황분지 |
+| Dinosaurs | `trex` `velociraptor` `triceratops` | 종말의대지 · 균열지대 · 얼어붙은심연 |
+| Dinosaurs | `stegosaurus` `apatosaurus` `parasaurolophus` | 무너진성터 · 심연의문턱 · 폐허도시 |
 
 각 파일에 **대기·걷기·달리기·공격·사망** 다섯 클립만 남겼다 (원본 12~13개).
+팩마다 이름이 제각각이라 클립은 이름이 아니라 역할로 찾는다 — 벌은 대기가
+`Wasp_Flying` 뿐이고, 개구리는 걷지 않고 뛴다(`Frog_Jump`).
+아파토사우루스는 팩에서 사망 클립 이름이 `Stegosaurus_Death` 로 잘못 붙어 있다.
 종류마다 뼈대가 달라서 클립을 공유할 수 없다 — 파일마다 자기 것을 들고 있다.
 
 색은 몬스터 종류의 `bodyColor` 를 곱해서 낸다. 그냥 곱하면 어두워지므로
@@ -70,6 +74,18 @@
 
 **부팅 때 다 받지 않는다.** 사냥터 하나에 두세 종뿐이라, 존을 옮길 때
 필요한 것만 받는다 (`Models.ensureBeasts`). 마을에서는 한 개도 안 받는다.
+
+## 장비 — KayKit 액세서리
+
+같은 Adventurers 팩의 별도 파일. 라이선스 동일 (**CC0 1.0**).
+
+| 원본 | 우리 위치 | 쓰는 곳 |
+|---|---|---|
+| `quiver.gltf` + `quiver.bin` + `rogue_texture.png` | `public/assets/models/accessories/` | 궁수 등에 매다는 화살통 |
+
+무기·방패·마법서는 캐릭터 `.glb` 안에 이미 매달려 있어서 따로 받지 않는다.
+화살통만 도적 모델에 빠져 있다. `.gltf` 가 옆의 `.bin` 과 `.png` 를 상대 경로로
+참조하므로 **셋을 같은 폴더에 둬야** 한다.
 
 ## HDRI — Poly Haven
 

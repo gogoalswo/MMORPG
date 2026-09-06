@@ -145,7 +145,8 @@ function dumpSelf() {
   say(`나: ${p.name} ${p.job} Lv.${p.level} hp ${p.hp}/${p.maxHp}` +
       ` (${p.x.toFixed(1)}, ${p.z.toFixed(1)}) auto=${p.auto ?? false} chasing=${p.chasing ?? false}`);
   // 남에게 보이는 장비 — 이게 비어 있으면 다른 사람 화면에서 빈손으로 보인다
-  say(`  겉모습: 무기=${p.weapon || '-'} 보조=${p.offhand || '-'} 투구=${p.helmet || '-'}`);
+  say(`  겉모습: 무기=${p.weapon || '-'} 보조=${p.offhand || '-'} 투구=${p.helmet || '-'}` +
+      ` 갑옷=${p.armor || '-'} 신발=${p.boots || '-'}`);
 }
 
 function dumpInventory() {
@@ -163,7 +164,10 @@ function dumpOthers() {
   const list = [];
   room.state.players?.forEach((p, id) => {
     if (id === room.sessionId) return;
-    list.push(`  ${p.name} ${p.job} ${dist(me2, p).toFixed(1)}m 무기=${p.weapon || '-'} 보조=${p.offhand || '-'} 투구=${p.helmet || '-'}`);
+    list.push(
+      `  ${p.name} ${p.job} ${dist(me2, p).toFixed(1)}m 무기=${p.weapon || '-'} 보조=${p.offhand || '-'}` +
+        ` 투구=${p.helmet || '-'} 갑옷=${p.armor || '-'} 신발=${p.boots || '-'}`
+    );
   });
   say(`다른 플레이어 ${list.length}명`);
   for (const line of list) say(line);

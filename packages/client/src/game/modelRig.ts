@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
-import { RUN_SPEED, getItem, tierIndexOf, type MonsterKind } from '@mmo/shared';
+import { RUN_SPEED, TIER_COLOR, getItem, tierIndexOf, type MonsterKind } from '@mmo/shared';
 import { CLIP, pickClip, type Models } from '../scene/models';
 import type { CharacterRig, ClassProfile, GearLook } from './characterRig';
 import type { MonsterRig } from './monsterRig';
@@ -38,15 +38,29 @@ const HUMAN_HEIGHT = 1.8;
  * 정해진다)이 곱해지므로, 보스는 자동으로 더 커진다.
  */
 const BEAST_HEIGHT: Record<string, number> = {
-  wolf: 0.85,
+  // 작은 것들
+  rat: 0.4,
+  frog: 0.45,
+  snake: 0.45,
+  shibainu: 0.55,
+  fox: 0.6,
+  wasp: 0.65,
+  spider: 0.65,
+  // 네발 짐승
   husky: 0.8,
+  wolf: 0.85,
+  deer: 1.1,
   bull: 1.15,
   stag: 1.2,
-  spider: 0.65,
+  horse: 1.5,
+  horse_white: 1.5,
+  // 큰 것들
   velociraptor: 1.35,
-  triceratops: 1.5,
   stegosaurus: 1.5,
+  triceratops: 1.5,
+  parasaurolophus: 1.8,
   trex: 2.4,
+  apatosaurus: 2.6,
 };
 const BEAST_HEIGHT_DEFAULT = 0.9;
 
@@ -64,21 +78,39 @@ function loop(action: THREE.AnimationAction | null, weight: number): void {
 const tintCache = new Map<string, THREE.Material>();
 const WHITE = new THREE.Color(0xffffff);
 
-function tintedMaterial(source: THREE.Material, color: string): THREE.Material {
-  const key = `${source.uuid}#${color}`;
+function tintedMaterial(source: THREE.Material, color: string, softness = 0.3): THREE.Material {
+  const key = `${source.uuid}#${color}#${softness}`;
   const found = tintCache.get(key);
   if (found) return found;
 
   const copy = (source as THREE.MeshStandardMaterial).clone();
   // 색을 그냥 곱하면 어두워진다 — 늑대 색(#7b6a55)을 곱하면 밝기가 절반이 되어
   // 텍스처의 명암까지 뭉개진 검은 덩어리가 된다. 밝기는 1 로 되돌리고 색조만
-  // 가져온 뒤, 흰색 쪽으로 조금 물러선다.
+  // 가져온 뒤, 흰색 쪽으로 물러선다. softness 가 클수록 원래 색이 많이 남는다.
   const tint = new THREE.Color(color);
   const peak = Math.max(tint.r, tint.g, tint.b, 0.001);
-  tint.multiplyScalar(1 / peak).lerp(WHITE, 0.3);
+  tint.multiplyScalar(1 / peak).lerp(WHITE, softness);
   copy.color.multiply(tint);
   tintCache.set(key, copy);
   return copy;
+}
+
+/**
+ * 갑옷·신발은 갈아입힐 메시가 없다.
+ *
+ * 그래서 **몸통과 다리 색을 바꾼다.** 통째로 칠하면 직업 구분이 사라지므로
+ * 색조만 얹고 원래 색을 많이 남긴다 — 다시 칠하는 게 아니라 물드는 정도다.
+ */
+const ARMOR_SOFTNESS = 0.45;
+
+/** 이름이 이렇게 끝나는 메시가 그 자리다 */
+const BODY_PARTS = ['_Body', '_ArmLeft', '_ArmRight'];
+const LEG_PARTS = ['_LegLeft', '_LegRight'];
+
+function tierColorOf(itemId: string): string | null {
+  const item = getItem(itemId);
+  if (!item) return null;
+  return TIER_COLOR[tierIndexOf(item)] ?? null;
 }
 
 /**
@@ -191,12 +223,54 @@ export function createModelCharacterRig(models: Models, profile: ClassProfile): 
     }
   };
 
+  // 갑옷·신발로 물들일 메시와, 물들이기 전 원래 머티리얼
+  const skin = new Map<THREE.Mesh, { material: THREE.Material; leg: boolean }>();
+  root.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.isMesh || Array.isArray(mesh.material)) return;
+    if (BODY_PARTS.some((suffix) => mesh.name.endsWith(suffix))) {
+      skin.set(mesh, { material: mesh.material, leg: false });
+    } else if (LEG_PARTS.some((suffix) => mesh.name.endsWith(suffix))) {
+      skin.set(mesh, { material: mesh.material, leg: true });
+    }
+  });
+
   const applyGear = (gear: GearLook): void => {
     for (const node of parts.values()) node.visible = false;
     if (gear.weapon) show(meshes.weapon[variantFor(gear.weapon, meshes.weapon.length)]);
     if (gear.offhand) show(meshes.offhand[variantFor(gear.offhand, meshes.offhand.length)]);
     if (gear.helmet) show(meshes.helmet);
+
+    // 화살통은 보조 자리에 낀 게 있을 때만 등에 걸린다
+    if (quiver) quiver.visible = Boolean(gear.offhand) && meshes.offhand.length === 0;
+
+    // 갑옷·신발 — 안 낀 자리는 원래 색으로 되돌린다
+    const armor = gear.armor ? tierColorOf(gear.armor) : null;
+    const boots = gear.boots ? tierColorOf(gear.boots) : null;
+    for (const [mesh, origin] of skin) {
+      const color = origin.leg ? boots : armor;
+      mesh.material = color ? tintedMaterial(origin.material, color, ARMOR_SOFTNESS) : origin.material;
+    }
   };
+
+  /**
+   * 화살통.
+   *
+   * 이 팩의 도적 모델에는 화살통이 없다. 별도 파일을 받아 가슴 뼈에 매단다 —
+   * 같은 팩이라 크기와 텍스처가 저절로 맞고, 뼈에 붙으니 달릴 때 같이 흔들린다.
+   * 화살통 자리(보조)가 모델 안에 따로 있는 직업은 그걸 쓰므로 붙이지 않는다.
+   */
+  let quiver: THREE.Object3D | null = null;
+  if (meshes.offhand.length === 0 && models.accessories.quiver) {
+    const chest = root.getObjectByName('chest');
+    if (chest) {
+      quiver = models.accessories.quiver.clone(true);
+      quiver.position.set(0.06, 0.1, -0.16);
+      quiver.rotation.set(0.35, 0, -0.4);
+      quiver.visible = false;
+      chest.add(quiver);
+    }
+  }
 
   // NPC 는 장비 정보가 없다. 프로필에 적힌 기본값으로 세운다.
   const npc = profile.npcGear;
@@ -284,8 +358,10 @@ export function createModelMonsterRig(models: Models, kind: MonsterKind): Monste
   const act = (clip: THREE.AnimationClip | null): THREE.AnimationAction | null =>
     clip ? mixer.clipAction(clip) : null;
 
-  const idle = act(pickClip(beast.clips, 'idle'));
-  const move = act(pickClip(beast.clips, 'gallop', 'run', 'walk'));
+  // 팩마다 이름이 제각각이다. 벌은 대기가 'Flying' 뿐이고, 개구리는 걷지 않고
+  // 뛴다('Jump'). 없는 걸 찾다 끝나면 그 짐승만 굳은 채로 서 있게 된다.
+  const idle = act(pickClip(beast.clips, 'idle', 'flying'));
+  const move = act(pickClip(beast.clips, 'gallop', 'run', 'walk', 'flying', 'jump'));
   const attack = act(pickClip(beast.clips, 'attack'));
   const death = act(pickClip(beast.clips, 'death'));
 

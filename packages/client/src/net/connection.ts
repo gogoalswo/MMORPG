@@ -24,12 +24,26 @@ export interface GearLook {
   weapon: string;
   offhand: string;
   helmet: string;
+  armor: string;
+  boots: string;
 }
 
-export const EMPTY_GEAR: GearLook = { weapon: '', offhand: '', helmet: '' };
+export const EMPTY_GEAR: GearLook = {
+  weapon: '',
+  offhand: '',
+  helmet: '',
+  armor: '',
+  boots: '',
+};
 
 export function sameGear(a: GearLook, b: GearLook): boolean {
-  return a.weapon === b.weapon && a.offhand === b.offhand && a.helmet === b.helmet;
+  return (
+    a.weapon === b.weapon &&
+    a.offhand === b.offhand &&
+    a.helmet === b.helmet &&
+    a.armor === b.armor &&
+    a.boots === b.boots
+  );
 }
 
 export interface RemoteEntity {
@@ -392,7 +406,13 @@ export class ZoneConnection {
           dead: p.dead,
           auto: p.auto ?? false,
           chasing: p.chasing ?? false,
-          gear: { weapon: p.weapon ?? '', offhand: p.offhand ?? '', helmet: p.helmet ?? '' },
+          gear: {
+            weapon: p.weapon ?? '',
+            offhand: p.offhand ?? '',
+            helmet: p.helmet ?? '',
+            armor: p.armor ?? '',
+            boots: p.boots ?? '',
+          },
         });
         return;
       }
@@ -404,7 +424,13 @@ export class ZoneConnection {
         this.handlers.onRemoteAdd(entity);
       }
       entity.hp = p.hp;
-      entity.gear = { weapon: p.weapon ?? '', offhand: p.offhand ?? '', helmet: p.helmet ?? '' };
+      entity.gear = {
+        weapon: p.weapon ?? '',
+        offhand: p.offhand ?? '',
+        helmet: p.helmet ?? '',
+        armor: p.armor ?? '',
+        boots: p.boots ?? '',
+      };
       entity.buffer.push({ t: now, x: p.x, z: p.z, rotY: p.rotY });
       if (entity.buffer.length > MAX_SNAPSHOTS) entity.buffer.shift();
     });

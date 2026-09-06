@@ -18,7 +18,7 @@ export class Player {
   private rig: CharacterRig;
   private classId: ClassId;
   /** 지금 그려둔 장비. 직업을 바꾸면 리그를 새로 만드므로 다시 입혀야 한다 */
-  private gear: GearLook = { weapon: '', offhand: '', helmet: '' };
+  private gear: GearLook = { weapon: '', offhand: '', helmet: '', armor: '', boots: '' };
 
   private readonly moveTarget = new THREE.Vector3();
   private hasMoveTarget = false;

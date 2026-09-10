@@ -105,6 +105,11 @@ export class RemoteMonsters {
     return null;
   }
 
+  /** 한 대 맞았다 — 이미 시야에서 빠진 놈이면 아무 일도 안 한다 */
+  flash(id: string): void {
+    this.remotes.get(id)?.rig.flash();
+  }
+
   /** 지금 물고 있는 대상. 이름표를 밝혀 어느 놈인지 보여준다 */
   setHighlight(id: string | null): void {
     for (const [key, remote] of this.remotes) remote.plate.highlight = key === id;

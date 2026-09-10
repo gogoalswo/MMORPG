@@ -3,8 +3,8 @@ import type { MonsterSpawnDef } from './monsters.ts';
 /**
  * 존(맵) 정의.
  *
- * 월드는 연속된 하나의 공간이 아니라 독립된 존 여러 개이고, 포탈로 이동한다.
- * 이 정의는 클라이언트(씬 구성)와 서버(룸 생성·포탈 검증)가 함께 쓴다.
+ * 월드는 연속된 하나의 공간이 아니라 독립된 존 여러 개이고, 차원문으로 이동한다.
+ * 이 정의는 클라이언트(씬 구성)와 서버(룸 생성)가 함께 쓴다.
  *
  * JSON 파일이 아니라 TS 객체로 두는 이유: 타입 검사가 되고,
  * Vite 와 Node 양쪽에서 import 방식이 동일하다. 존이 수십 개로 늘고
@@ -49,8 +49,8 @@ export interface ZoneEnv {
 /**
  * 바닥에 놓인 빛나는 문 하나의 생김새와 크기.
  *
- * 사슬 포탈(`PortalDef`)과 마을 차원문(`GateDef`)이 같은 모양으로 그려진다.
- * 밟았을 때 무슨 일이 일어나는지만 다르다 — 그래서 그리는 쪽은 이것만 안다.
+ * 그리는 쪽(`createPortal`)은 이것만 안다 — 밟았을 때 무슨 일이 일어나는지는
+ * 모른다. 지금 세상에 있는 문은 차원문(`GateDef`) 하나뿐이다.
  */
 export interface PortalVisual {
   /** [x, z] */
@@ -61,21 +61,16 @@ export interface PortalVisual {
   color: string;
 }
 
-export interface PortalDef extends PortalVisual {
-  id: string;
-  target: { zone: string; spawn: string };
-}
-
 /**
- * 목적지를 고르는 문. 밟으면 곧바로 이동하지 않고 사냥터 목록을 연다.
+ * 목적지를 고르는 문. 밟으면 곧바로 이동하지 않고 목록을 연다.
  *
- * 사슬(포탈)을 **대체하지 않는다.** 처음 가는 길은 걸어서 뚫는 그대로 두고,
- * 이미 아는 곳으로 돌아갈 때 사냥터 20개를 차례로 지나가는 시간만 줄인다.
- * 마을에만 둔다 — 사냥터마다 있으면 죽어도 곧장 제자리로 돌아와서
- * 존을 나누고 포탈로 잇는 구조 자체가 의미를 잃는다.
+ * **존을 오가는 유일한 길이다.** 예전에는 존끼리 사슬 포탈로 이어져 있어서
+ * 밟으면 곧장 옆 사냥터로 넘어갔지만, 걸어 들어가는 포탈은 전부 없앴다.
+ * 그래서 문은 **모든 존에** 있어야 한다 — 하나라도 빠지면 그 존에 들어간
+ * 캐릭터가 죽는 것 말고는 나올 방법이 없다. `zones.test.ts` 가 검사한다.
  */
 export interface GateDef extends PortalVisual {
-  /** 머리 위에 띄우는 이름 */
+  /** 문 위에 띄우는 이름 */
   name: string;
 }
 
@@ -118,9 +113,8 @@ export interface ZoneDef {
   size: number;
   /** 이름 붙은 스폰 지점들. 'default' 는 반드시 있어야 한다 */
   spawns: Record<string, [number, number]>;
-  portals: PortalDef[];
-  /** 목적지를 고르는 문. 지금은 마을에만 있다 */
-  gate?: GateDef;
+  /** 목적지를 고르는 문. 존을 오가는 유일한 길이라 모든 존에 있다 */
+  gate: GateDef;
   npcs?: NpcDef[];
   monsters?: MonsterSpawnDef[];
   env: ZoneEnv;

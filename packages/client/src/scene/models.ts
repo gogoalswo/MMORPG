@@ -15,8 +15,22 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
  *    **존을 옮길 때 필요한 것만** 받는다. 전부 받으면 3MB 를 마을에서도 들고 있게 된다.
  */
 
-/** 파일 이름 = 모델 이름 */
+/** 파일 이름 = 모델 이름. 다섯이 41본 뼈대와 클립을 공유한다 */
 export const CHARACTER_MODELS = ['knight', 'mage', 'rogue', 'rogue_hooded', 'barbarian'] as const;
+
+/**
+ * **제 뼈대에 제 클립을 들고 오는** 사람 모델.
+ *
+ * VARCO(바르코) 커스텀 워크플로우로 만든 캐릭터다. KayKit 과 뼈 이름도 개수도
+ * 다르므로(23본 Mixamo 계열 — Hips/Spine/LeftUpLeg/RightToeBase) 공유 클립을
+ * 쓸 수 없고, 클립이 파일 안에 같이 들어 있다. 그래서 클립을 **모델마다** 들고
+ * 다닌다(LoadedModel.clips) — 이걸 공유 클립에 섞으면 KayKit 넷이 통째로 굳는다.
+ *
+ * **없어도 부팅은 된다.** 이 파일은 저장소 밖에서 만들어지므로
+ * (scripts/build-varco-character.mjs) 못 받으면 그 직업만 절차적 리그로 떨어진다.
+ * KayKit 다섯과 달리 실패를 그 자리에서 삼키는 이유다.
+ */
+export const SOLO_MODELS = ['varco_knight', 'varco_mage', 'varco_archer'] as const;
 
 /** 사람 애니메이션 클립 이름 — 원본 팩의 이름을 그대로 쓴다 */
 export const CLIP = {
@@ -37,6 +51,12 @@ export interface LoadedModel {
   height: number;
   /** 앞뒤 길이 */
   length: number;
+  /**
+   * 이 모델만의 클립. KayKit 다섯은 없다(공유 클립을 쓴다).
+   *
+   * 있으면 **이름이 아니라 역할로** 찾는다 — 팩마다 이름 규칙이 다르다.
+   */
+  clips?: Record<string, THREE.AnimationClip>;
 }
 
 export interface Beast {
@@ -134,6 +154,21 @@ export async function loadModels(): Promise<Models> {
     characters[name] = { scene, ...measure(scene) };
     if (gltf.animations.length > 0) clips = byName(gltf.animations);
   }
+
+  // 제 클립을 들고 오는 모델 — 한 장이 없어도 나머지는 그대로 간다.
+  // 여기서 던지면 KayKit 다섯까지 같이 날아가 게임 전체가 절차적 리그가 된다.
+  await Promise.all(
+    SOLO_MODELS.map(async (name) => {
+      try {
+        const gltf = await loader.loadAsync(`/assets/models/${name}.glb`);
+        const scene = gltf.scene as THREE.Group;
+        prepare(scene);
+        characters[name] = { scene, ...measure(scene), clips: byName(gltf.animations) };
+      } catch (err) {
+        console.warn(`[models] ${name} 을 못 불러왔다 — 절차적 리그로 간다`, err);
+      }
+    })
+  );
 
   // 화살통 — 없어도 게임은 돈다. 궁수 등이 비어 보일 뿐이다.
   const accessories: Record<string, THREE.Object3D> = {};

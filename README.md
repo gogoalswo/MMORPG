@@ -8,24 +8,24 @@
 
 ## 실행
 
-터미널 두 개가 필요하다.
-
 ```bash
 npm install
 ./scripts/fetch-assets.sh   # CC0 에셋 다운로드 (최초 1회)
 npm run compress            # JPEG -> KTX2 압축
-npm run server
-```
-
-```bash
 npm run dev
 ```
 
 http://localhost:5173 접속. 서버는 `:2567`.
 
+`npm run dev` 는 게임 서버(`:2567`)가 안 떠 있으면 **같이 띄운다**
+(`scripts/vite-plugin-game-server.mjs`). 터미널 두 개를 여는 걸 잊어서
+5173 은 열리는데 접속만 안 되는 상태로 헤매는 일이 반복돼서 붙인 것이다.
+이미 `npm run server` 로 띄워 뒀으면 건드리지 않는다 — 그 터미널의 로그를
+빼앗지 않기 위해서다. 서버 로그만 따로 보고 싶으면 터미널 두 개로 나눠도 된다.
+
 | 명령 | 설명 |
 |---|---|
-| `npm run dev` | 클라이언트 개발 서버 (HMR) |
+| `npm run dev` | 클라이언트 개발 서버 (HMR). 게임 서버가 없으면 같이 띄운다 |
 | `npm run server` | 게임 서버 (Colyseus). 출력을 `logs/server.log` 에도 남긴다 |
 | `npm run probe -- state` | 헤드리스 클라이언트로 접속해 상태를 글로 찍는다 ([문서](docs/features/verification.md)) |
 | `npm run build` | 프로덕션 빌드 |
@@ -64,7 +64,7 @@ packages/
     movement.ts      이동 계산 — 클라 예측과 서버 검증이 같은 코드를 쓴다
   client/   Vite + TypeScript + Three.js
     src/
-      scene/    존 씬 구성 — 지형·잔디·건물·나무·포탈 (전부 절차적 생성)
+      scene/    존 씬 구성 — 지형·잔디·건물·차원문 (전부 절차적 생성)
       game/     카메라 리그, 입력, 플레이어 컨트롤러, 캐릭터 리그(8등신 스킨드 메시)
       net/      서버 접속, 스냅샷 버퍼, 보간
       render/   후처리 (GTAO·블룸·SMAA)
@@ -133,16 +133,21 @@ node scripts/db-peek.mjs   # 저장된 계정·캐릭터 확인 (packages/server
 서버 주소는 빌드에 박지 않고 `?server=wss://...` 쿼리로 받는다 —
 무료 터널은 켤 때마다 주소가 바뀌기 때문이다. 한 번 받은 주소는 브라우저가 기억한다.
 
-## 존과 포탈
+## 존과 차원문
 
-월드는 연속된 하나의 공간이 아니라 독립된 존 여러 개이고, 포탈로 이동한다.
-존 정의는 `packages/shared/src/zones.ts` 에 있고 클라·서버가 함께 쓴다.
+월드는 연속된 하나의 공간이 아니라 독립된 존 여러 개(마을 1 + 사냥터 20)이고,
+**차원문**으로 이동한다. 존 정의는 `packages/shared/src/zones.ts` 에 있고
+클라·서버가 함께 쓴다.
 
+- 존끼리는 이어져 있지 않다. 걸어 들어가면 옆 존으로 넘어가던 사슬 포탈은 없앴다
+- 차원문은 **모든 존의 `(9, 0)`** 에 있다. 밟으면 이동하지 않고 목록을 연다 —
+  맨 위가 마을이라 사냥터에서 언제든 돌아올 수 있다
 - 존을 넘어가면 씬을 통째로 해제하고 새로 만든다 (`buildZoneScene` / `dispose`)
 - 지형 색, 안개, 식생 밀도, 길 배치가 전부 존 데이터로 결정된다
-- 포탈은 반경 밖으로 한 번 나가야 발동한다 — 도착 직후 무한 왕복을 막는 장치
+- 문은 반경 밖으로 한 번 나가야 발동한다 — 문 위에 선 채로 창이 계속 열리는 걸 막는다
 
-새 존을 만들려면 `zones.ts` 에 `ZoneDef` 를 하나 추가하고 양쪽 포탈을 서로 가리키게 하면 된다.
+새 존을 만들려면 `zones.ts` 에 `ZoneDef` 를 하나 추가하면 된다. **`gate` 를 빼먹으면
+들어가서 못 나오는 방이 된다** — `npm test` 가 잡는다.
 
 ## 현재 상태 — Phase 1B (멀티플레이)
 

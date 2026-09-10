@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "client",
-      "runtimeExecutable": "scripts/dev.cmd",
-      "runtimeArgs": [],
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "scripts\\dev.cmd"],
       "port": 5173
     }
   ]

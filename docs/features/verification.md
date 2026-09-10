@@ -21,7 +21,7 @@
 |---|---|
 | `npm run probe -- <명령>` (`scripts/probe.mjs`) | **서버 로직** — 접속해서 상태·전투·아이템·메시지를 글로 찍는다 |
 | `scripts/ui-probe.js` | **클라이언트 UI** — DOM 을 글로 뽑는 조각 모음 (콘솔에 붙여 넣는 용도) |
-| `logs/server.log` | 서버 출력. `npm run server` 가 자동으로 남긴다 |
+| `logs/server.log` | 서버 출력. `npm run server` 와 `npm run dev` 의 자동 실행이 남긴다 |
 | `scripts/db-peek.mjs` | 저장된 캐릭터를 훑는다 |
 | `npm test` | 데이터 규칙 전수 검사 |
 
@@ -75,6 +75,22 @@ npm run probe -- watch --seconds 20             # 상태 변화를 지켜본다
 - 새로 만든 화면의 **모양**을 사람이 봐야 할 때 (레이아웃, 색, 겹침)
 - 텍스트로 설명이 안 되는 시각 효과
 - 그때도 **한 장**. 여러 번 찍어 비교해야 하면 그건 대개 `layout()` 으로 풀린다.
+
+## 저장된 데이터를 건드리는 검증
+
+"죽은 채로 재접속" 처럼 **DB 상태를 만들어야 하는 검증**은 돌아가는 서버의 DB 를
+건드리지 말고, 임시 DB 로 서버를 하나 더 띄워서 한다. 둘 다 환경변수로 갈린다:
+
+```bash
+PORT=2599 DB_PATH=<임시경로>/test.db node src/index.ts   # packages/server 에서
+```
+
+- **`DB_PATH` 는 cwd 상대경로(`data/game.db`)다.** 서버는 `packages/server` 에서
+  도니까 실제 파일은 `packages/server/data/game.db` 인데, 저장소 루트에서 스크립트를
+  돌리면 `DB_PATH` 를 안 주는 순간 **루트에 빈 DB 를 새로 만들고 거기에 쓴다.**
+  에러가 안 나서 검증이 통과한 것처럼 보인다 — 2026-09-07 에 이걸로 한 번 속았다.
+- 고치기 전/후를 비교하려면 임시 서버 쪽 코드만 잠깐 되돌려 두 번 돌린다.
+  같은 스크립트가 양쪽에서 다른 결과를 내야 원인이 맞다고 할 수 있다.
 
 ## 손댈 때
 

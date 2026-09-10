@@ -61,8 +61,14 @@ export class SkillFx {
 
   constructor() {
     this.group.name = 'skillFx';
-    // 안쪽이 뚫린 고리. 꽉 찬 원은 캐릭터와 지면을 덮어버린다.
-    this.ringGeo = new THREE.RingGeometry(0.78, 1, 48);
+    /**
+     * 안쪽이 뚫린 고리. 꽉 찬 원은 캐릭터와 지면을 덮어버린다.
+     *
+     * 두께가 얇으면 **이 게임 카메라에서는 안 보인다.** 카메라가 거리 40 ·
+     * FOV 30 이라 화면 세로가 월드 21유닛이다 — 두께 0.22 짜리 테는 1080p
+     * 에서 10픽셀 남짓이고, 반투명이라 배경에 묻힌다.
+     */
+    this.ringGeo = new THREE.RingGeometry(0.62, 1, 48);
     this.ringGeo.rotateX(-Math.PI / 2);
     this.burstGeo = new THREE.IcosahedronGeometry(1, 1);
   }
@@ -70,12 +76,13 @@ export class SkillFx {
   /** 스킬을 쓰는 순간 발밑에서 솟는 고리 */
   cast(at: THREE.Vector3, color: number): void {
     this.spawn(this.ringGeo, color, {
-      duration: 0.42,
-      from: 0.35,
-      to: 1.15,
+      duration: 0.45,
+      from: 0.5,
+      // 카메라가 멀어서(거리 40) 1.15 짜리 고리는 캐릭터에 가려 안 보인다
+      to: 2.1,
       yFrom: 0.05,
-      yTo: 1.05,
-      opacity: 0.75,
+      yTo: 1.2,
+      opacity: 1,
       spin: 0,
     });
     this.place(at);
@@ -94,7 +101,7 @@ export class SkillFx {
       to: radius,
       yFrom: 0.08,
       yTo: 0.35,
-      opacity: 0.85,
+      opacity: 1,
       spin: 0,
     });
     this.place(at);
@@ -103,12 +110,12 @@ export class SkillFx {
   /** 맞은 자리의 짧은 섬광 */
   impact(at: THREE.Vector3, color: number): void {
     this.spawn(this.burstGeo, color, {
-      duration: 0.24,
-      from: 0.12,
-      to: 0.62,
+      duration: 0.26,
+      from: 0.2,
+      to: 1.0,
       yFrom: 0.9,
       yTo: 1.15,
-      opacity: 0.9,
+      opacity: 1,
       spin: 6,
     });
     this.place(at);
@@ -193,8 +200,20 @@ export class SkillFx {
       fx.mesh.scale.setScalar(fx.from + (fx.to - fx.from) * e);
       fx.mesh.position.y += (fx.yTo - fx.yFrom) * (dt / fx.duration);
       if (fx.spin) fx.mesh.rotation.y += fx.spin * dt;
-      // 끝으로 갈수록 사라진다. 처음부터 옅으면 터진 걸 못 본다.
-      fx.material.opacity = fx.opacity * (1 - fx.t) * (1 - fx.t);
+      /**
+       * 밝기 곡선 ★
+       *
+       * 예전에는 `opacity * (1-t)²` 였다. 그런데 크기는 `t` 를 따라 **커지므로**,
+       * 가장 커지는 순간이 가장 투명한 순간과 겹쳤다. 카메라가 멀어서(거리 40)
+       * 작을 때는 몇 픽셀뿐이라, 결국 어느 프레임에도 눈에 걸리는 그림이 없었다 —
+       * 실제로 재보니 최대 밝기가 765 중 15~22 였다. "이펙트가 안 나온다" 가
+       * 이것이다.
+       *
+       * 그래서 **빠르게 켜고, 커져 있는 동안 유지하다가, 끝에서 끈다.**
+       */
+      const rise = Math.min(1, fx.t / 0.12);
+      const fall = Math.min(1, (1 - fx.t) / 0.45);
+      fx.material.opacity = fx.opacity * rise * fall;
     }
   }
 

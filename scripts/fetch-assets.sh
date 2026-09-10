@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# CC0 에셋을 다시 받아 public/assets 에 배치한다.
-# 원본(zip/hdr)은 저장소에 커밋하지 않으므로, 새로 클론했을 때 이 스크립트를 돌린다.
-# 출처와 라이선스는 docs/ASSETS.md 참고 — 전부 CC0 1.0.
+# 에셋을 다시 받아 public/assets 에 배치한다.
+# 원본(zip/hdr/glb)은 저장소에 커밋하지 않으므로, 새로 클론했을 때 이 스크립트를 돌린다.
+# 출처와 라이선스는 docs/ASSETS.md 참고 — 외부 에셋은 전부 CC0 1.0 이고,
+# 맨 끝 VARCO 캐릭터만 우리가 직접 생성한 것이다.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -114,5 +115,80 @@ for f in quiver.gltf quiver.bin rogue_texture.png; do
     curl -sL --max-time 120 -o "public/assets/models/accessories/$f"       "https://raw.githubusercontent.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/main/addons/kaykit_character_pack_adventures/Assets/gltf/$f"
   fi
 done
+
+# ---------------------------------------------------------------- VARCO 캐릭터
+
+# 바르코(3d.varco.ai) 커스텀 워크플로우 "기사" 의 결과물.
+# 리깅된 메시 하나 + 동작 여섯이 **파일 일곱 개**로 나온다. 각 파일에 메시와
+# 2048² 텍스처가 통째로 다시 들어 있어서 그대로 받으면 97MB 다 — 애니메이션만
+# 뽑아 한 파일로 합치고 텍스처를 1024² JPEG 으로 줄여 3MB 로 만든다.
+#
+# 이 주소들은 그 워크플로우를 한 번 돌린 **결과물**이다. 다시 돌리면 다른
+# 캐릭터가 나오므로(생성 모델이라 같은 프롬프트로도 같은 결과가 안 나온다)
+# 프롬프트가 아니라 결과물 주소를 박아 둔다. 주소가 죽으면 워크플로우를
+# 다시 돌리고 여기 해시를 갈아 끼운다.
+VARCO="https://3d.varco.ai/api/objects"
+
+fetch_varco() { # $1=객체 해시  $2=출력 이름
+  if [ ! -f "assets-src/models/varco/$2.glb" ]; then
+    echo "받는 중: varco/$2.glb"
+    curl -sL --max-time 300 -o "assets-src/models/varco/$2.glb" "${VARCO}/$1.glb"
+  fi
+}
+
+mkdir -p assets-src/models/varco
+fetch_varco 9a40444d68ddcce196fc6fa1ec711441 knight_rigged
+fetch_varco 2a6f6d32f109d27ce2cf512079521170 anim_idle
+fetch_varco 14e6288b273526a4bcb75ca2fb9a8af6 anim_run
+fetch_varco a93c151d72acf6ef215eee6b69e347f8 anim_sword_slash
+fetch_varco cf5ba760a2b2a8cfad130107f63a37b1 anim_two_hand_attack
+fetch_varco b6a60400c72d6338f2fbe0391251bef0 anim_staff_spin
+fetch_varco 81b1f814d822bf04983d4cdbd61f60f3 anim_death
+
+# 클립 이름 = 파일. **역슬래시로 줄을 잇지 않는다** — 이 파일은 CRLF 라서
+# 줄 끝 역슬래시 다음에 CR 이 오면 bash 가 줄바꿈이 아니라 CR 이스케이프로 읽고 거기서 끊는다.
+VARCO_CLIPS=()
+# 대기 노드는 뒤에 워크플로우에서 sprint 로 바뀌었다. 주소가 고정이라 상관없다
+VARCO_CLIPS+=("Idle=assets-src/models/varco/anim_idle.glb")
+# #loop = 반복 재생이라 한 주기로 잘라 시작·끝을 맞춘다
+# #face = 클립에 구워진 몸 방향(-83.2°)을 되돌린다 — 둘 다 build 스크립트의 closeLoop
+VARCO_CLIPS+=("Run=assets-src/models/varco/anim_run.glb#loop#face")
+VARCO_CLIPS+=("Attack=assets-src/models/varco/anim_sword_slash.glb")
+VARCO_CLIPS+=("Attack_Heavy=assets-src/models/varco/anim_two_hand_attack.glb")
+VARCO_CLIPS+=("Attack_Spin=assets-src/models/varco/anim_staff_spin.glb")
+# 사망 = Animate left_side_fall. 한 번 재생이라 #loop 없음. #face 는 루프에만 걸리므로
+# 시작 자세에 구워진 몸 방향(-23°)은 그대로 남는다
+VARCO_CLIPS+=("Death=assets-src/models/varco/anim_death.glb")
+
+node scripts/build-varco-character.mjs public/assets/models/varco_knight.glb assets-src/models/varco/knight_rigged.glb "${VARCO_CLIPS[@]}"
+
+# 마법사 — 대기·달리기·공격 세 파일. 리깅 결과물을 따로 안 받고 대기 파일을
+# 기본으로 쓴다: 세 파일의 뼈대가 Root 의 쉬는 위치만 빼고 같고, Root 위치는
+# 모든 클립이 움직이므로 어느 걸 기본으로 써도 같다.
+# **결과물 주소를 아직 못 박았다.** 받아 둔 원본(assets-src/models/varco/mage_*.glb)
+# 이 있을 때만 만든다. 주소를 알게 되면 위처럼 fetch_varco 줄로 바꾼다.
+MAGE_CLIPS=()
+MAGE_CLIPS+=("Idle=assets-src/models/varco/mage_idle.glb")
+# 달리기에 구워진 방향은 -94.6° 였다
+MAGE_CLIPS+=("Run=assets-src/models/varco/mage_run.glb#loop#face")
+MAGE_CLIPS+=("Attack=assets-src/models/varco/mage_attack.glb")
+MAGE_CLIPS+=("Death=assets-src/models/varco/mage_death.glb")
+if [ -f assets-src/models/varco/mage_idle.glb ] && [ -f assets-src/models/varco/mage_run.glb ] && [ -f assets-src/models/varco/mage_attack.glb ] && [ -f assets-src/models/varco/mage_death.glb ]; then
+  node scripts/build-varco-character.mjs public/assets/models/varco_mage.glb assets-src/models/varco/mage_idle.glb "${MAGE_CLIPS[@]}"
+else
+  echo "건너뜀: varco_mage — 원본이 없다 (마법사는 절차적 리그로 나온다)"
+fi
+
+# 궁수 — 마법사와 같은 방식(받은 파일 넷, 대기 파일이 기본)
+ARCHER_CLIPS=()
+ARCHER_CLIPS+=("Idle=assets-src/models/varco/archer_idle.glb")
+ARCHER_CLIPS+=("Run=assets-src/models/varco/archer_run.glb#loop#face")
+ARCHER_CLIPS+=("Attack=assets-src/models/varco/archer_attack.glb")
+ARCHER_CLIPS+=("Death=assets-src/models/varco/archer_death.glb")
+if [ -f assets-src/models/varco/archer_idle.glb ] && [ -f assets-src/models/varco/archer_run.glb ] && [ -f assets-src/models/varco/archer_attack.glb ] && [ -f assets-src/models/varco/archer_death.glb ]; then
+  node scripts/build-varco-character.mjs public/assets/models/varco_archer.glb assets-src/models/varco/archer_idle.glb "${ARCHER_CLIPS[@]}"
+else
+  echo "건너뜀: varco_archer — 원본이 없다 (궁수는 절차적 리그로 나온다)"
+fi
 
 echo "완료. 총 $(du -sh public/assets | cut -f1)"

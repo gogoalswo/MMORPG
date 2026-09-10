@@ -1,7 +1,9 @@
 # 에셋 출처와 라이선스
 
-이 프로젝트에 포함된 모든 외부 에셋은 **CC0 1.0 (퍼블릭 도메인)** 이다.
+이 프로젝트에 포함된 모든 **외부** 에셋은 **CC0 1.0 (퍼블릭 도메인)** 이다.
 출처 표기 의무가 없고 상업적 사용에 제한이 없다.
+예외는 [VARCO 로 직접 생성한 캐릭터](#캐릭터-모델--varco-생성-기사마법사궁수) 셋뿐이다 —
+받아온 게 아니라 우리가 만든 것이라 라이선스가 아니라 **약관**이 걸린다.
 
 > 새 에셋을 추가할 때는 **반드시 이 표에 먼저 기록한다.**
 > 나중에 상용화 시점에 "이건 어디서 받았더라"를 역추적하는 건 불가능에 가깝다.
@@ -75,6 +77,71 @@
 **부팅 때 다 받지 않는다.** 사냥터 하나에 두세 종뿐이라, 존을 옮길 때
 필요한 것만 받는다 (`Models.ensureBeasts`). 마을에서는 한 개도 안 받는다.
 
+## 캐릭터 모델 — VARCO 생성 (기사·마법사·궁수)
+
+출처: 바르코 3D (https://3d.varco.ai) 커스텀 워크플로우 "기사" 와 마법사·궁수 결과물 · **CC0 아님**
+
+받아온 에셋이 아니라 **우리가 그 서비스로 만든 결과물**이다. 그래서 라이선스가
+아니라 VARCO 의 이용약관이 적용된다 — 상용화 전에 생성물 권리 조항을 확인해야
+한다. 위 표들과 성격이 다르므로 절을 따로 뒀다.
+
+| 워크플로우 노드 | 우리 파일 | 쓰는 곳 |
+|---|---|---|
+| Rig(humanoid) 결과 | `assets-src/models/varco/knight_rigged.glb` | 메시·뼈대 |
+| Animate `standing_idle_1` | `anim_idle.glb` | `Idle` (노드는 뒤에 `sprint` 로 바뀜 — 고정 주소로 받는다) |
+| Animate `run` | `anim_run.glb` | `Run` |
+| Animate `sword_slash` | `anim_sword_slash.glb` | `Attack` |
+| Animate `two_hand_attack` | `anim_two_hand_attack.glb` | `Attack_Heavy` (아직 안 씀) |
+| Animate `staff_spin_attack` | `anim_staff_spin.glb` | `Attack_Spin` (아직 안 씀) |
+| Animate `left_side_fall` | `anim_death.glb` | `Death` |
+| 합친 결과 | `public/assets/models/varco_knight.glb` (3.1MB) | 기사 직업 |
+
+마법사는 리깅 결과물 없이 **동작 파일 셋**으로 왔다. 대기 파일을 기본(메시·뼈대)으로 쓴다.
+
+| 원본 | 우리 파일 | 쓰는 곳 |
+|---|---|---|
+| 대기 | `assets-src/models/varco/mage_idle.glb` | 메시·뼈대 + `Idle` |
+| 달리기 | `mage_run.glb` | `Run` |
+| 공격(시전) | `mage_attack.glb` | `Attack` |
+| 사망 | `mage_death.glb` | `Death` |
+| 합친 결과 | `public/assets/models/varco_mage.glb` (2.4MB) | 마법사 직업 |
+
+궁수도 같은 방식이다.
+
+| 원본 | 우리 파일 | 쓰는 곳 |
+|---|---|---|
+| 대기 | `assets-src/models/varco/archer_idle.glb` | 메시·뼈대 + `Idle` |
+| 달리기 | `archer_run.glb` | `Run` |
+| 공격 | `archer_attack.glb` | `Attack` |
+| 사망 | `archer_death.glb` | `Death` |
+| 합친 결과 | `public/assets/models/varco_archer.glb` (2.3MB) | 궁수 직업 |
+
+**마법사·궁수는 받은 파일로 만든다** — 결과물 주소는 박지 않았다.
+`fetch-assets.sh` 는 원본이 `assets-src/models/varco/` 에 있을 때만 만들고,
+없으면 건너뛴다(그 직업은 절차적 리그로 나온다).
+
+**동작 하나가 파일 하나로 나온다.** 그런데 그 파일에 메시와 2048² 텍스처가
+통째로 다시 들어 있어서 하나가 14MB, 여섯이면 83MB 다. 여섯의 뼈대가 완전히
+같으므로(23본) **메시는 리깅 결과물 하나만 쓰고 나머지에서는 애니메이션만
+뽑아 옮겨 붙인다** — `scripts/build-varco-character.mjs`.
+채널이 가리키는 노드는 인덱스가 아니라 **이름으로** 다시 잇는다. 인덱스가
+파일마다 같다는 보장이 없고, 어긋나면 팔이 다리처럼 움직인다.
+
+텍스처는 2048² PNG 세 장(11.9MB)을 1024² JPEG(1.0MB)으로 줄인다. 쿼터뷰에서
+캐릭터는 화면상 100px 남짓이라 그 해상도가 화면에 닿지 않는다. 노멀맵만 품질을
+올려 잡는다(92 vs 84) — JPEG 은 색차부터 버리는데 노멀맵은 그게 곧 기울기다.
+KTX2 로는 안 넘겼다. `npm run compress` 는 지면 텍스처(`assets-src/textures`)만
+보고, 이건 .glb 안에 들어 있다.
+
+**뼈 이름이 KayKit 과 다르다**(`RightHand` vs `handslotr`). 클립도 KayKit 것과
+공유할 수 없어서 파일 안에 같이 들고 있다 — 짐승 모델과 같은 취급이다
+(`models.ts` 의 `SOLO_MODELS`).
+
+**결과물 주소를 `scripts/fetch-assets.sh` 에 박아 뒀다.** 워크플로우를 다시
+돌리면 같은 프롬프트로도 다른 캐릭터가 나오므로(생성 모델이다) 프롬프트가 아니라
+결과물을 고정해야 재현이 된다. 주소가 죽으면 워크플로우를 다시 돌리고 해시를
+갈아 끼운다.
+
 ## 장비 — KayKit 액세서리
 
 같은 Adventurers 팩의 별도 파일. 라이선스 동일 (**CC0 1.0**).
@@ -104,6 +171,8 @@
 assets-src/          원본 — git 에 커밋하지 않는다 (fetch 스크립트로 재취득)
   *.zip                ambientCG 아카이브
   textures/*.jpg       추출한 원본 맵 (KTX2 재인코딩용)
+  models/*.glb         KayKit·Quaternius 원본 (클립을 잘라내기 전)
+  models/varco/*.glb   VARCO 워크플로우 결과물 (합치기 전, 기사 6개 83MB + 마법사·궁수 각 4개 48MB 남짓)
   sky_1k.hdr
 public/assets/       배포되는 파일만
   textures/*.ktx2      압축된 텍스처

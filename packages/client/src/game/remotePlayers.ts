@@ -8,7 +8,7 @@ import {
   type GearLook,
   type RemoteEntity,
 } from '../net/connection';
-import type { CharacterRig } from './characterRig';
+import type { CharacterRig, WeaponEdge } from './characterRig';
 import { createRig } from './rigFactory';
 import { CLASSES, type ClassId } from './characterClasses';
 import type { NameplateLayer, NameplateTarget } from '../ui/nameplate';
@@ -55,6 +55,16 @@ export class RemotePlayers {
 
   swing(id: string): void {
     this.remotes.get(id)?.rig.swing();
+  }
+
+  /** 한 대 맞았다 — 안 보이는 사람이면 아무 일도 안 한다 */
+  flash(id: string): void {
+    this.remotes.get(id)?.rig.flash();
+  }
+
+  /** 궤적용 — 그 사람이 아직 보이면 무기 위치를 알려줄 것을 돌려준다 */
+  weaponOf(id: string): WeaponEdge | null {
+    return this.remotes.get(id)?.rig ?? null;
   }
 
   add(entity: RemoteEntity): void {

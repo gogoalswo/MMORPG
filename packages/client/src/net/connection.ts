@@ -168,6 +168,8 @@ export interface HitEvent {
   crit?: boolean;
   /** 있으면 날아가는 모습을 보여주고, 도착할 때 피해를 표시한다 */
   projectile?: string;
+  /** 이 타격을 낸 스킬. 기본 공격이면 없다 — 맞은 자리에 그 이펙트를 터뜨린다 */
+  skillId?: string;
 }
 
 /**
@@ -261,7 +263,6 @@ export interface ConnectionHandlers {
   /** 방금 주운 것 */
   onLoot(gold: number, items: string[]): void;
   onLevelUp(level: number): void;
-  onRespawn(x: number, z: number): void;
   /** 서버가 물고 있는 대상이 바뀌었다 (지정·해제·대상 사망) */
   onTarget(monsterId: string | null): void;
   onChat(message: ChatMessage): void;
@@ -390,7 +391,6 @@ export class ZoneConnection {
     room.onMessage('loot', (m: { gold: number; items: string[] }) =>
       this.handlers.onLoot(m.gold, m.items)
     );
-    room.onMessage('respawn', (m: { x: number; z: number }) => this.handlers.onRespawn(m.x, m.z));
     room.onMessage('target', (m: { id: string | null }) => this.handlers.onTarget(m.id ?? null));
 
     room.onStateChange((state) => this.ingest(state));
@@ -400,6 +400,11 @@ export class ZoneConnection {
     const now = performance.now();
     const self = this.room?.sessionId;
     const seen = new Set<string>();
+
+    // 접속 직후 첫 패치는 StateView 가 아직 비어 있어 players 맵 자체가 내려오지 않는다.
+    // 여기서 던지면 SDK 의 디코드 루프가 끊겨 뒤따르는 패치가 아예 오지 않는다 —
+    // 화면은 뜨는데 HP·레벨이 영원히 빈 채로 굳는다. monsters 쪽과 같은 이유로 건너뛴다.
+    if (!state.players) return;
 
     state.players.forEach((p: any, id: string) => {
       seen.add(id);
@@ -517,6 +522,17 @@ export class ZoneConnection {
   /** 자동 사냥 켜기/끄기. 실제 상태는 서버가 정하고 state 로 돌아온다 */
   setAutoHunt(on: boolean): void {
     this.room?.send('autohunt', on);
+  }
+
+  /**
+   * 자동 사냥 중에 "저기로 먼저 가라".
+   *
+   * 자동 사냥이 켜져 있으면 이동은 서버가 몬다. 클라이언트가 목표를 들고 있어 봐야
+   * 매 프레임 지워지므로(driven 모드), 자리를 서버에 알려주는 수밖에 없다.
+   * 꺼져 있을 때는 보내지 않는다 — 그때는 클라이언트 예측이 더 부드럽다.
+   */
+  moveTo(x: number, z: number): void {
+    this.room?.send('moveTo', { x, z });
   }
 
   /**

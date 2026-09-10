@@ -34,7 +34,8 @@ html, body {
 .bag,
 .sb,
 .gate,
-.craft {
+.craft,
+.death {
   pointer-events: auto;
 }
 
@@ -60,6 +61,26 @@ input,
   color: #fff;
   text-shadow: 0 0 3px #000, 0 1px 2px #000;
   letter-spacing: 0.3px;
+}
+
+/* NPC — 마을 사람과 유저를 글씨 색으로 가른다.
+   생김새만으로는 사람 많은 마을에서 누가 유저인지 알아볼 수 없다. */
+.nameplate.is-npc .np-name {
+  color: #ffdf3d;
+  text-shadow: 0 0 3px #000, 0 1px 2px #000;
+}
+
+.nameplate.is-npc .np-sub {
+  color: #e8cf6a;
+}
+
+/* 차원문 안내 글씨 — 문과 같은 파란색이라 "저 문의 이름"으로 읽힌다.
+   HP바는 nameplate.ts 에서 아예 빼므로 여기서 숨길 것이 없다. */
+.nameplate.is-portal .np-name {
+  color: #8fd0ff;
+  font-size: 14px;
+  letter-spacing: 0.6px;
+  text-shadow: 0 0 6px rgba(74, 168, 255, 0.75), 0 0 3px #000, 0 1px 2px #000;
 }
 
 /* 클릭으로 물고 있는 대상 — 어느 놈을 때리는 중인지 한눈에 보여야 한다 */
@@ -138,6 +159,45 @@ input,
   letter-spacing: 4px;
   color: #e8e3d4;
   text-shadow: 0 2px 12px #000;
+}
+
+/* 사망 화면 — 화면 전체가 버튼이다 */
+.death {
+  position: fixed;
+  inset: 0;
+  /* 존 전환 페이드(10)보다 아래. 마을로 가는 동안은 전환 화면이 덮어야 한다 */
+  z-index: 9;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  cursor: pointer;
+  /* 피처럼 붉게 깔되 화면은 읽혀야 한다 */
+  background: radial-gradient(ellipse at center, rgba(60, 6, 6, 0.45), rgba(8, 4, 4, 0.88));
+  animation: death-in 0.45s ease both;
+}
+
+.death.is-hidden { display: none; }
+
+@keyframes death-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.death-title {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: 6px;
+  color: #e7c9c2;
+  text-shadow: 0 2px 16px #000;
+}
+
+.death-hint {
+  font-size: 15px;
+  letter-spacing: 1px;
+  color: #b9ada4;
+  text-shadow: 0 1px 8px #000;
 }
 
 /* 채팅 */
@@ -1411,7 +1471,7 @@ input,
   flex-direction: column;
   color: #e6e9da;
   background: rgba(12, 15, 11, 0.94);
-  border: 1px solid rgba(190, 165, 235, 0.34);
+  border: 1px solid rgba(120, 180, 245, 0.34);
   border-radius: 7px;
   z-index: 9;
   overflow: hidden;
@@ -1423,9 +1483,9 @@ input,
   align-items: baseline;
   gap: 8px;
   padding: 9px 11px;
-  border-bottom: 1px solid rgba(190, 165, 235, 0.22);
+  border-bottom: 1px solid rgba(120, 180, 245, 0.22);
 }
-.gate-title { font-size: 13px; font-weight: 600; color: #d9c8ff; }
+.gate-title { font-size: 13px; font-weight: 600; color: #a8d4ff; }
 .gate-sub { font-size: 10px; color: #9aa38c; }
 
 .gate-close {
@@ -1460,11 +1520,11 @@ input,
   border-radius: 4px;
   cursor: pointer;
 }
-.gate-row:hover { border-color: rgba(190, 165, 235, 0.7); }
+.gate-row:hover { border-color: rgba(120, 180, 245, 0.7); }
 
 .gate-name { font-size: 12px; flex: 1; min-width: 0; }
 .gate-lv { font-size: 10px; color: #9aa38c; white-space: nowrap; }
-.gate-lv b { font-weight: 500; color: #c9a6ff; }
+.gate-lv b { font-weight: 500; color: #8fd0ff; }
 
 /* 레벨대 표시. 잠그지는 않는다 — 갈지 말지는 본인이 정한다 */
 .gate-tag {
@@ -1478,6 +1538,16 @@ input,
 .gate-row.is-easy .gate-tag { color: #79806e; }
 /* 너무 센 곳은 줄 자체를 붉게 — 목록을 훑을 때 글자를 안 읽어도 보인다 */
 .gate-row.is-danger { border-color: rgba(200, 120, 110, 0.4); }
+
+/* 지금 서 있는 곳. 눌러도 아무 데도 안 가므로 누를 수 없게 해 둔다 */
+.gate-row.is-current {
+  color: #9aa38c;
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(200, 220, 180, 0.1);
+  cursor: default;
+}
+.gate-row.is-current:hover { border-color: rgba(200, 220, 180, 0.1); }
+.gate-row.is-current .gate-tag { color: #8fd0ff; }
 
 /* ---------------------------------------------------------------
  * 폰 화면.

@@ -16,6 +16,7 @@ import { CameraRig } from './game/cameraRig';
 import { Input } from './game/input';
 import { Player } from './game/player';
 import { NameplateLayer } from './ui/nameplate';
+import { DeathOverlay } from './ui/deathOverlay';
 import { ZoneTransition } from './ui/zoneTransition';
 import { ChatUI } from './ui/chat';
 import { CharacterCreateUI } from './ui/characterCreate';
@@ -37,6 +38,7 @@ import { PostFX } from './render/postfx';
 import { Projectiles } from './scene/projectiles';
 import { SkillFx, skillColor } from './scene/skillFx';
 import { AoeMarkers } from './scene/aoeMarkers';
+import { SwingTrails } from './scene/swingTrails';
 import { ZoneGate } from './ui/zoneGate';
 import { CraftWindow } from './ui/craftWindow';
 
@@ -130,15 +132,23 @@ scene.add(projectiles.group);
 
 const aoeMarkers = new AoeMarkers();
 scene.add(aoeMarkers.group);
+
+const swingTrails = new SwingTrails();
+scene.add(swingTrails.group);
+
+/**
+ * 그 사람의 무기 궤적을 남긴다.
+ *
+ * 날이 어디 있는지는 리그가 안다 — 직업마다 무기가 다르고 장비 단계마다 메시가
+ * 바뀌므로, 여기서 무기 모양을 알면 그때마다 이 파일을 같이 고쳐야 한다.
+ * 안 보이는 사람(시야 밖)이면 아무 일도 하지 않는다.
+ */
+function trailFor(id: string, tint?: number): void {
+  const weapon = id === connection.sessionId ? player.weapon : remotePlayers.weaponOf(id);
+  if (weapon) swingTrails.begin(weapon, tint);
+}
 const skillFx = new SkillFx();
 scene.add(skillFx.group);
-
-/** 명중 섬광 색 — 투사체와 맞추고, 없으면 옅은 금색 */
-const IMPACT_COLOR: Record<string, number> = {
-  arrow: 0xd8e8a0,
-  fireball: 0xff9a3c,
-  spark: 0x9fe6ff,
-};
 
 const hud = new CombatHud(overlay);
 hud.setVisible(false);
@@ -183,6 +193,19 @@ const connection = new ZoneConnection({
     // 서버가 모는 동안에는 보정 대신 서버 자세를 그대로 따라간다
     if (status.auto || status.chasing) player.setServerPose(x, z, status.rotY);
     else player.reconcile(x, z, lastSeq);
+    // 죽고 사는 것은 **바뀌는 순간에만** 처리한다. 매 프레임 부르면
+    // 사망 클립이 계속 되감겨 쓰러지다 마는 동작을 반복한다.
+    if (status.dead !== myState.dead) {
+      if (status.dead) {
+        player.die();
+        releaseTarget();
+        deathOverlay.show();
+      } else {
+        player.revive();
+        deathOverlay.hide();
+      }
+    }
+
     myState = status;
     hud.setStatus(status.level, status.hp, status.maxHp, status.exp);
     autoHuntToggle.setOn(status.auto);
@@ -232,23 +255,39 @@ const connection = new ZoneConnection({
         ? player.position
         : remotePlayers.positionOf(event.sourceId);
 
-    // 맞은 자리에 섬광 하나. 숫자만 뜨면 어디서 맞았는지 눈이 못 따라간다.
-    const flash = event.heal
-      ? 0x8ce87a
-      : (event.projectile ? IMPACT_COLOR[event.projectile] : undefined) ?? 0xffe0a8;
+    /**
+     * 맞은 쪽을 잠깐 하얗게 물들인다.
+     *
+     * 예전에는 맞은 자리에 섬광 덩어리를 띄웠는데, 타격마다 터지니 난전에서
+     * 화면만 번쩍이고 **정작 누가 맞았는지는 더 안 보였다.** 몸을 물들이면
+     * 시선이 그 캐릭터로 간다. 회복은 맞은 게 아니므로 번쩍이지 않는다.
+     */
+    if (!event.heal) {
+      if (event.targetKind === 'monster') monsters.flash(event.targetId);
+      else if (event.targetId === connection.sessionId) player.flash();
+      else remotePlayers.flash(event.targetId);
+    }
+
+    /**
+     * 스킬로 때린 자리에서만 이펙트가 터진다.
+     *
+     * 기본 공격은 번쩍임만으로 충분하다. 근접기(강타 같은 것)는 시전자 발밑이
+     * 아니라 **때린 자리**에서 터져야 말이 된다 — 그래서 여기서 그린다.
+     */
+    const hitSkill = event.skillId ? SKILLS[event.skillId] : null;
 
     if (event.projectile && source) {
       // 대상이 도중에 사라질 수 있으므로 지금 위치를 복사해 둔다
       const landing = target.clone();
       projectiles.spawn(event.projectile as ProjectileKind, source, target, () => {
         hud.addNumber(landing, text, kind, crit);
-        skillFx.impact(landing, flash);
+        if (hitSkill) skillFx.impact(landing, skillColor(hitSkill));
       });
       return;
     }
 
     hud.addNumber(target, text, kind, crit);
-    skillFx.impact(target, flash);
+    if (hitSkill) skillFx.impact(target, skillColor(hitSkill));
   },
 
   /**
@@ -260,6 +299,7 @@ const connection = new ZoneConnection({
   onSwing: (id) => {
     if (id === connection.sessionId) player.swing();
     else remotePlayers.swing(id);
+    trailFor(id);
   },
 
   onSkill: (id, skillId) => {
@@ -269,6 +309,8 @@ const connection = new ZoneConnection({
     else remotePlayers.swing(id);
 
     const skill = SKILLS[skillId];
+    // 궤적도 그 스킬 색으로 남는다 — 기본 공격과 구별된다
+    trailFor(id, skill ? skillColor(skill) : undefined);
     if (mine && skill) hud.addNumber(player.position, skill.name, 'gain');
 
     // --- 이펙트 ---
@@ -282,9 +324,15 @@ const connection = new ZoneConnection({
       return;
     }
 
-    skillFx.cast(at, color);
-    // 자기 주위로 터지는 기술은 사거리만큼 고리를 그린다.
-    // 날아가는 게 있으면 투사체가 대신 보여주므로 겹쳐 그리지 않는다.
+    /**
+     * 시전자 자리에 그리는 건 **자기 주위로 터지는 기술뿐**이다.
+     *
+     * - 전방위기(`arc >= 2π`) — 사거리만큼 고리를 그린다. 그게 실제 판정 범위다.
+     * - 날아가는 기술 — 투사체와 착탄이 대신 보여준다.
+     * - 근접기(강타처럼 한 방향으로 내리치는 것) — **여기서는 아무것도 안 그린다.**
+     *   발밑에서 고리가 솟으면 "내가 뭔가를 둘렀다"로 보여서, 앞을 내리치는
+     *   동작과 전혀 안 맞는다. 맞은 자리에서 터지는 건 `onHit` 이 그린다.
+     */
     if (skill.arc >= Math.PI * 2 && !skill.projectile) {
       skillFx.nova(at, skill.range, color);
     }
@@ -343,12 +391,6 @@ const connection = new ZoneConnection({
     chat.addMessage({ kind: 'system', from: '', text: `레벨 ${level} 달성!` });
   },
 
-  onRespawn: (x, z) => {
-    player.teleport(x, z);
-    rig.snapTo(player.position);
-    chat.addMessage({ kind: 'system', from: '', text: '마을에서 부활했습니다.' });
-  },
-
   // 물고 있는 대상은 서버가 정한다 — 죽거나 너무 멀어지면 서버가 놓고 알려준다.
   // 여기서 하는 일은 어느 놈인지 이름표를 밝히는 것뿐이다.
   onTarget: (monsterId) => {
@@ -399,7 +441,8 @@ const connection = new ZoneConnection({
     player.teleport(info.x, info.z);
     rig.snapTo(player.position);
     playerPlate.name = `${characterName} (${CLASSES[player.job].label})`;
-    if (info.job !== player.job) player.setClass(info.job as ClassId);
+    if (info.job !== player.job) player.setClass(info.job as ClassId);
+
     // 로컬 플레이어는 knight 로 만들어졌다가 여기서 교정된다.
     // 가방의 착용 판정이 이 값을 쓰므로 확정되는 즉시 넘겨야 한다.
     bag.setCharacter(info.job as ClassId, myState.level);
@@ -450,6 +493,7 @@ function releaseTarget(): void {
   connection.setTarget(null);
 }
 const transition = new ZoneTransition(overlay);
+const deathOverlay = new DeathOverlay(overlay);
 const chat = new ChatUI(overlay);
 const createUI = new CharacterCreateUI(overlay);
 const selectUI = new CharacterSelectUI(overlay);
@@ -511,7 +555,8 @@ craftWindow.onEnhance = (index) => connection.enhanceItem(index);
 craftWindow.onGrade = (index) => connection.craft(index);
 npcPrompt.onTalk = (role) => connection.openNpc(role);
 
-bag.onEquip = (index) => connection.equip(index);
+bag.onEquip = (index) => connection.equip(index);
+
 bag.onCraft = (index) => connection.craft(index);
 bag.onUnequip = (slot) => connection.unequip(slot);
 
@@ -523,13 +568,20 @@ window.addEventListener('keydown', (e) => {
 });
 
 /**
- * 차원문에서 사냥터를 골랐다.
+ * 차원문에서 목적지를 골랐다.
  *
  * 'default' 스폰은 맵 한가운데다. 무리는 네 귀퉁이(±20)에 있으니 도착하자마자
- * 둘러싸이지 않는다. 존을 옮기는 길은 포탈로 걸어갈 때와 **같은 `travel`** 이다 —
+ * 둘러싸이지 않는다. 죽어서 마을로 갈 때와 **같은 `travel`** 을 쓴다 —
  * 룸을 나가고 들어가는 순서를 두 벌 만들면 한쪽만 고치는 실수가 난다.
  */
 zoneGate.onPick = (zoneId) => travel(zoneId, 'default');
+
+// 죽어서 화면을 눌렀다 — 마을로 보낸다.
+//
+// 서버에 따로 "부활" 을 청하지 않는다. 존에 들어갈 때 HP 0 이면 서버가
+// 되살려서 스폰 지점에 놓기 때문에(ZoneRoom.enterWorld), 마을 룸으로 들어가는
+// 것만으로 부활까지 끝난다. 부활 경로를 두 벌 만들면 한쪽만 고치게 된다.
+deathOverlay.onReturn = () => travel(START_ZONE, 'default');
 
 // 차원문에는 여는 단축키가 없다(문을 밟아야 열린다). 닫는 건 Esc 로도 되게 둔다.
 window.addEventListener('keydown', (e) => {
@@ -571,12 +623,33 @@ input.onPickTarget = (monsterId) => {
   connection.setTarget(monsterId);
 };
 
-// 직접 조작하면 자동 사냥과 추격을 모두 끈다 —
-// 두 주인이 이동을 두고 싸우면 캐릭터가 떨린다
+// 땅을 클릭하면 물고 있던 대상은 놓는다.
+//
+// 자동 사냥은 **끄지 않는다.** 대신 "저기로 먼저 가라"를 서버에 보내고,
+// 서버가 그 자리까지 걸어간 뒤 거기를 새 앵커 삼아 사냥을 이어간다.
+// 예전에는 여기서 껐는데, 사냥터 안에서 자리를 옮길 때마다 버튼을 다시
+// 눌러야 했다. 자동 사냥이 꺼져 있을 때만 클라이언트가 직접 예측해 걷는다 —
+// 두 주인이 이동을 두고 싸우면 캐릭터가 떨린다.
+//
+// 버튼을 누르고 있으면 이 콜백이 **매 프레임** 온다(커서를 따라가는 이동).
+// 그대로 보내면 초당 60개가 나가므로, 자리가 의미 있게 바뀌었을 때만 보낸다.
+const MOVE_TO_MIN_GAP_MS = 100;
+const MOVE_TO_MIN_DIST = 0.5;
+let lastMoveToAt = 0;
+const lastMoveTo = new THREE.Vector2();
+
 input.onGroundPoint = (p) => {
-  if (myState.auto) connection.setAutoHunt(false);
   releaseTarget();
-  player.setMoveTarget(p);
+  if (!myState.auto) {
+    player.setMoveTarget(p);
+    return;
+  }
+  const now = performance.now();
+  if (now - lastMoveToAt < MOVE_TO_MIN_GAP_MS) return;
+  if (Math.hypot(p.x - lastMoveTo.x, p.z - lastMoveTo.y) < MOVE_TO_MIN_DIST) return;
+  lastMoveToAt = now;
+  lastMoveTo.set(p.x, p.z);
+  connection.moveTo(p.x, p.z);
 };
 input.onAttack = () => {
   if (createUI.open || selectUI.open || chat.typing || myState.dead) return;
@@ -673,13 +746,28 @@ async function mountZone(zoneId: string, spawnName?: string, characterId?: strin
       headHeight: npc.rig.headHeight,
       name: npc.name,
       subtitle: npc.subtitle,
+      // 노란 글씨로 유저와 갈린다
+      kind: 'npc',
       hp: npc.hp,
       maxHp: 100,
     });
   }
 
+  // 차원문 위 안내 글씨. 문은 밟아야 열리는데, 밟기 전에는 무슨 문인지 알 수
+  // 없어서 그냥 지나치게 된다. 빛기둥(높이 5.5) 바로 위에 띄운다.
+  nameplates.add({
+    object: zone.gate.group,
+    headHeight: 6.2,
+    name: zone.gate.def.name,
+    kind: 'portal',
+    hp: 1,
+    maxHp: 1,
+  });
+
   document.title = def.name + ' — MMORPG';
   rememberZone(def.id);
+  // 목록에서 지금 서 있는 곳을 "현재" 로 눌리지 않게 한다
+  zoneGate.setZone(def.id);
 
   // 존마다 룸이 다르다. 이전 룸에서 나가고 새 룸에 들어간다.
   remotePlayers.clear();
@@ -687,6 +775,7 @@ async function mountZone(zoneId: string, spawnName?: string, characterId?: strin
   targetId = null;
   projectiles.clear();
   aoeMarkers.clear();
+  swingTrails.clear();
   skillFx.clear();
   hud.clear();
   actionBar.reset();
@@ -704,7 +793,7 @@ async function mountZone(zoneId: string, spawnName?: string, characterId?: strin
     });
 }
 
-/** 포탈 이동. 지금 플레이 중인 캐릭터를 그대로 데려간다 */
+/** 존 이동. 지금 플레이 중인 캐릭터를 그대로 데려간다 */
 function travel(zoneId: string, spawnName?: string, characterId = activeCharacterId): void {
   const def = getZone(zoneId);
   void transition.run(def.name, () => mountZone(zoneId, spawnName, characterId));
@@ -752,6 +841,7 @@ let lastFrameAt = performance.now();
  */
 function dropStaleVisuals(): void {
   projectiles.clear(); // 도착 콜백을 부르지 않고 버린다
+  swingTrails.clear(); // 한참 전에 지나간 칼자국을 들고 있어봐야 거짓말이다
   aoeMarkers.clear(); // 이미 터졌을 예고를 붙잡고 있어봐야 거짓말이다
   skillFx.clear();
   hud.clear();
@@ -779,9 +869,13 @@ function frame(now: number): void {
   const dt = Math.min(timer.getDelta(), MAX_DT);
   const elapsed = timer.getElapsed();
 
-  // 전환 중에는 입력을 막는다 — 로딩 화면 뒤에서 캐릭터가 걸어다니면 곤란하다
-  if (transition.running || createUI.open || selectUI.open) {
+  // 전환 중에는 입력을 막는다 — 로딩 화면 뒤에서 캐릭터가 걸어다니면 곤란하다.
+  // 죽어 있을 때도 막는다 ★ — 서버는 죽은 플레이어의 이동을 통째로 거부하는데
+  // (ZoneRoom.handleInput) 여기서 예측을 계속하면 한 발 나갔다가 보정에 끌려
+  // 돌아오기를 반복해 캐릭터가 떤다. 부활을 기다리는 5초 내내 그렇다.
+  if (transition.running || createUI.open || selectUI.open || myState.dead) {
     axis.set(0, 0);
+    player.stop();
   } else {
     input.moveAxis(axis);
     input.update(); // 마우스를 누르고 있으면 커서 쪽으로 계속 이동
@@ -808,6 +902,8 @@ function frame(now: number): void {
   monsters.update(dt);
   projectiles.update(dt);
   aoeMarkers.update(dt);
+  // 궤적은 리그가 이번 프레임 자세를 잡은 **뒤에** 찍어야 한 프레임 밀리지 않는다
+  swingTrails.update(dt);
   skillFx.update(dt);
   npcPrompt.update(zone?.def.npcs ?? [], player.position);
   rig.update(dt, player.position);
@@ -817,16 +913,10 @@ function frame(now: number): void {
     zone.update(dt, elapsed);
 
     if (!transition.running) {
-      for (const portal of zone.portals) {
-        if (portal.test(player.position.x, player.position.z)) {
-          travel(portal.def.target.zone, portal.def.target.spawn);
-          break;
-        }
-      }
-      // 차원문은 밟아도 이동하지 않는다. 어디로 갈지 먼저 고른다.
-      // test() 는 반경을 한 번 벗어나야 다시 발동하므로, 닫고 그 자리에
-      // 서 있어도 창이 계속 다시 열리지 않는다.
-      if (zone.gate?.test(player.position.x, player.position.z)) zoneGate.show();
+      // 존을 옮기는 길은 차원문 하나뿐이다. 밟아도 이동하지 않고 어디로 갈지
+      // 먼저 고른다. test() 는 반경을 한 번 벗어나야 다시 발동하므로, 닫고
+      // 그 자리에 서 있어도 창이 계속 다시 열리지 않는다.
+      if (zone.gate.test(player.position.x, player.position.z)) zoneGate.show();
     }
   }
 

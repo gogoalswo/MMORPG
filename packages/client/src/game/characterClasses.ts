@@ -277,37 +277,55 @@ export const CLASSES: Record<ClassId, ClassProfile> = {
     id: 'knight',
     label: '기사',
     colors: KNIGHT_COLORS,
-    model: 'knight',
+    // VARCO 커스텀 워크플로우로 만든 기사. 이 파일이 없으면 아래 equipKnight 로
+    // 떨어진다 — rigFactory 의 MODEL_RIGS 참고.
+    model: 'varco_knight',
     attackClip: '1H_Melee_Attack_Slice_Diagonal',
     // 생성 화면 미리보기용. 월드에서는 서버가 내려준 장비로 덮인다.
     npcGear: { weapon: 0, offhand: 1, helmet: true },
     // 갑옷을 입어 몸통이 두껍다
     body: { headwear: 'helmet', bulk: 1.12 },
     weaponHand: 'R', // 장검
+    // 손잡이 바로 아래(가드)부터 칼끝까지 — equipKnight 의 blade 와 같은 자리
+    weaponReach: [
+      [RIGHT_X, HAND_Y - 0.08, 0],
+      [RIGHT_X, HAND_Y - 0.76, 0],
+    ],
     equip: equipKnight,
   },
   mage: {
     id: 'mage',
     label: '마법사',
     colors: MAGE_COLORS,
-    model: 'mage',
+    // VARCO 커스텀 워크플로우로 만든 마법사. 없으면 equipMage 로 떨어진다.
+    model: 'varco_mage',
     attackClip: 'Spellcast_Shoot',
     npcGear: { weapon: 1, offhand: 0, helmet: true },
     // 로브가 하반신을 덮는다
     body: { headwear: 'hood', robe: true, bulk: 0.94 },
     weaponHand: 'R', // 지팡이
+    // 휘두를 때 실제로 호를 그리는 건 손 위쪽 지팡이다
+    weaponReach: [
+      [RIGHT_X - 0.04, HAND_Y + 0.2, 0.03],
+      [RIGHT_X - 0.04, HAND_Y + 1.2, 0.03],
+    ],
     equip: equipMage,
   },
   archer: {
     id: 'archer',
     label: '궁수',
     colors: ARCHER_COLORS,
-    // 후드 도적 모델이 우리 궁수 설정과 가장 가깝다
-    model: 'rogue_hooded',
+    // VARCO 커스텀 워크플로우로 만든 궁수. 없으면 equipArcher 로 떨어진다.
+    model: 'varco_archer',
     attackClip: '1H_Ranged_Shoot',
     npcGear: { weapon: 1 },
     body: { headwear: 'hood', bulk: 0.98 },
     weaponHand: 'L', // 활
+    // 활은 후려치는 자세라 활대 전체가 지나간다
+    weaponReach: [
+      [LEFT_X + 0.03, HAND_Y - 0.34, 0.05],
+      [LEFT_X + 0.03, HAND_Y + 0.4, 0.05],
+    ],
     equip: equipArcher,
   },
 };

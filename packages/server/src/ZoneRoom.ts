@@ -91,8 +91,6 @@ const CHAT_BURST = 5;
 
 /** 위치를 DB 에 남기는 주기. 매 틱 쓰면 디스크가 못 버틴다 */
 const SAVE_INTERVAL_MS = 15000;
-/** 죽은 뒤 부활까지 */
-const RESPAWN_DELAY_MS = 5000;
 
 interface Viewer {
   client: Client;
@@ -133,8 +131,6 @@ export class ZoneRoom extends Room {
   private readonly nextAttackAt = new Map<string, number>();
   /** "세션:스킬" 별 쿨타임 */
   private readonly skillReadyAt = new Map<string, number>();
-  /** 죽은 플레이어의 부활 예정 시각 */
-  private readonly respawnAt = new Map<string, number>();
 
   /**
    * 자동 사냥을 켠 자리. 이 주변에서만 싸운다 —
@@ -143,6 +139,14 @@ export class ZoneRoom extends Room {
   private readonly autoAnchor = new Map<string, { x: number; z: number }>();
   /** 자동 사냥이 지금 물고 있는 몬스터 */
   private readonly autoTarget = new Map<string, string>();
+  /**
+   * 자동 사냥 중에 땅을 클릭했을 때 "여기 먼저 가라"는 지시.
+   *
+   * 있으면 대상을 고르지 않고 이 자리로 걷기만 한다. 도착하면 지워지고
+   * 평소 자동 사냥으로 돌아간다. 앵커도 같은 자리로 옮기므로, 도착한 뒤에는
+   * 그 주변을 사냥한다 — 앵커를 안 옮기면 도착하자마자 원래 자리로 되돌아간다.
+   */
+  private readonly moveOrder = new Map<string, { x: number; z: number }>();
   /**
    * 클릭으로 직접 지정한 대상과, **지목한 순간 그놈이 서 있던 자리**.
    *
@@ -191,6 +195,9 @@ export class ZoneRoom extends Room {
     this.onMessage('attack', (client) => this.handleAttack(client));
     this.onMessage('target', (client, id: string | null) => this.handleTarget(client, id));
     this.onMessage('autohunt', (client, on: boolean) => this.handleAutoHunt(client, on));
+    this.onMessage('moveTo', (client, msg: { x: number; z: number }) =>
+      this.handleMoveTo(client, msg)
+    );
     this.onMessage('autoSkills', (client, ids: string[]) => this.handleAutoSkills(client, ids));
     this.onMessage('learnSkill', (client, id: string) => this.handleLearnSkill(client, id));
     this.onMessage('setSkillBar', (client, ids: string[]) => this.handleSetSkillBar(client, ids));
@@ -301,15 +308,20 @@ export class ZoneRoom extends Room {
     options: { spawn?: string }
   ): void {
 
+    // HP 0 으로 저장된 캐릭터는 되살려서 들여보낸다. ★
+    // 죽으면 저절로 살아나지 않는다. 사람이 사망 화면을 눌러 마을로 들어오는
+    // 것이 곧 부활이고, **그 부활을 하는 곳이 여기다.** 되살리지 않으면 죽은 채로
+    // 들어와 영원히 못 움직인다 — 서버는 죽은 플레이어의 이동을 전부 거부하는데
+    // 클라이언트는 혼자 예측하다 보정에 끌려와 캐릭터가 떤다.
+    const revive = character.hp <= 0;
+
     // 스폰 지점을 지정해서 들어왔으면(포탈 통과) 그 자리에,
-    // 아니면(재접속) 저장된 위치에 놓는다.
+    // 아니면(재접속) 저장된 위치에 놓는다. 되살아난 경우는 죽은 자리가 아니라
+    // 스폰 지점에서 시작한다 — 죽은 자리는 대개 그 죽인 놈 앞이다.
     const spawned = getSpawn(this.def, options.spawn ?? 'default');
-    const restore = character.zoneId === this.def.id && !options.spawn;
+    const restore = character.zoneId === this.def.id && !options.spawn && !revive;
     const sx = restore ? character.x : spawned[0];
     const sz = restore ? character.z : spawned[1];
-
-    // 지금 존을 바로 기록해둔다. 다음 접속에 어느 존으로 돌아갈지의 근거가 된다.
-    saveCharacterPosition(character.id, this.def.id, sx, sz, character.hp);
 
     const player = new Player();
     player.id = client.sessionId;
@@ -322,7 +334,7 @@ export class ZoneRoom extends Room {
     const base = statsFor(character.job as JobId, character.level);
     const gear = equipmentStats(character.equipment);
     const stats = { maxHp: base.maxHp + gear.maxHp };
-    player.hp = Math.min(character.hp, stats.maxHp);
+    player.hp = revive ? stats.maxHp : Math.min(character.hp, stats.maxHp);
     player.maxHp = stats.maxHp;
     player.level = character.level;
     player.exp = character.exp;
@@ -333,6 +345,10 @@ export class ZoneRoom extends Room {
     player.auto = false;
     player.chasing = false;
     player.lastSeq = 0;
+
+    // 지금 존과 자리를 바로 기록해둔다. 다음 접속에 어디로 돌아갈지의 근거다.
+    // 되살렸으면 그 HP 로 적어야 한다 — 0 을 다시 적으면 다음 접속에 또 죽은 채다.
+    saveCharacterPosition(character.id, this.def.id, sx, sz, player.hp);
 
     this.state.players.set(client.sessionId, player);
     this.grid.insert(client.sessionId, sx, sz, player);
@@ -422,9 +438,9 @@ export class ZoneRoom extends Room {
     this.chatHistory.delete(id);
     this.pending.delete(id);
     this.nextAttackAt.delete(id);
-    this.respawnAt.delete(id);
     this.autoAnchor.delete(id);
     this.autoTarget.delete(id);
+    this.moveOrder.delete(id);
     this.chase.delete(id);
     this.autoRadius.delete(id);
     this.autoSkills.delete(id);
@@ -586,12 +602,43 @@ export class ZoneRoom extends Room {
     if (player.auto === next) return;
     player.auto = next;
 
+    // 켜든 끄든 남아 있던 "여기 먼저 가라"는 버린다.
+    // 켤 때는 앵커를 지금 자리로 새로 잡으므로 옛 지시가 남으면 엉뚱한 데로 걷는다.
+    this.moveOrder.delete(client.sessionId);
+
     if (next) {
       this.autoAnchor.set(client.sessionId, { x: player.x, z: player.z });
     } else {
       this.autoAnchor.delete(client.sessionId);
       this.autoTarget.delete(client.sessionId);
     }
+  }
+
+  /**
+   * 자동 사냥 중에 땅을 클릭했다 — 저기로 먼저 가라. ★
+   *
+   * 예전에는 클릭하면 자동 사냥이 꺼졌다. "저 자리로 옮겨서 계속 사냥"이 안 되고
+   * 옮긴 다음 버튼을 다시 눌러야 했다. 이제 자동 사냥은 켜둔 채로 그 자리까지
+   * 걸어가고, 도착하면 거기를 새 앵커 삼아 사냥을 이어간다.
+   *
+   * 앵커를 같이 옮기는 게 핵심이다. 앵커가 그대로면 도착하자마자
+   * "대상이 없으면 앵커로 돌아간다"에 걸려 원래 자리로 되돌아간다.
+   *
+   * 자동 사냥이 꺼져 있으면 아무것도 하지 않는다 — 그때는 클라이언트가 직접
+   * 예측해서 걷는 게 더 부드럽다(왕복 지연이 없다).
+   */
+  private handleMoveTo(client: Client, msg: { x: number; z: number }): void {
+    const player = this.state.players.get(client.sessionId);
+    if (!player || !msg || player.dead || !player.auto) return;
+    if (!Number.isFinite(msg.x) || !Number.isFinite(msg.z)) return;
+
+    const x = clamp(msg.x, -this.halfSize, this.halfSize);
+    const z = clamp(msg.z, -this.halfSize, this.halfSize);
+
+    this.moveOrder.set(client.sessionId, { x, z });
+    this.autoAnchor.set(client.sessionId, { x, z });
+    // 가는 길에 물고 있던 놈은 놓는다. 안 놓으면 첫 틱에 그놈에게 다시 붙는다.
+    this.autoTarget.delete(client.sessionId);
   }
 
   /**
@@ -631,6 +678,19 @@ export class ZoneRoom extends Room {
       if (player.dead) {
         this.autoTarget.delete(id);
         continue;
+      }
+
+      // --- "여기 먼저 가라"가 있으면 그것부터 ---
+      // 자동 사냥 중에 땅을 클릭한 것이다. 도착할 때까지는 대상을 고르지 않는다 —
+      // 가는 길에 아무나 물면 "저기로 옮겨라"가 아니라 "저쪽으로 싸우며 가라"가 된다.
+      const order = this.moveOrder.get(id);
+      if (order) {
+        if (Math.hypot(order.x - player.x, order.z - player.z) <= HUNT_ARRIVE_EPS) {
+          this.moveOrder.delete(id);
+        } else {
+          this.stepAutoPlayer(player, order.x, order.z, dt, null);
+          continue;
+        }
       }
 
       // --- 대상 고르기 ---
@@ -1444,7 +1504,13 @@ export class ZoneRoom extends Room {
       now,
       skill.arc,
       skill.maxTargets,
-      { projectile: skill.projectile, crit: stats.crit, critDamage: stats.critDamage }
+      {
+        projectile: skill.projectile,
+        crit: stats.crit,
+        critDamage: stats.critDamage,
+        // 맞은 자리에서 그 스킬 이펙트가 터지도록 어느 스킬이었는지 같이 보낸다
+        skillId: skill.id,
+      }
     );
     this.awardHits(client, viewer, player, hits);
   }
@@ -1585,22 +1651,13 @@ export class ZoneRoom extends Room {
     });
 
     if (player.hp === 0) {
+      // 시간이 지나도 저절로 살아나지 않는다. ★
+      // 사람이 사망 화면을 눌러 마을 룸으로 들어오면 그때 되살아난다
+      // (enterWorld 의 revive). 예전처럼 5초 뒤 제자리에서 일으켜 세우면
+      // 죽은 걸 읽기도 전에 화면이 사라져서, 죽은 줄도 모르게 된다.
       player.dead = true;
-      this.respawnAt.set(player.id, Date.now() + RESPAWN_DELAY_MS);
       this.announce(`${player.name} 님이 쓰러졌습니다.`);
     }
-  }
-
-  private respawnPlayer(player: PlayerState): void {
-    const [sx, sz] = getSpawn(this.def, 'default');
-    const stats = this.statsOf(player.id, player.job as JobId, player.level);
-    player.x = sx;
-    player.z = sz;
-    player.hp = stats.maxHp;
-    player.dead = false;
-    this.respawnAt.delete(player.id);
-    this.grid.move(player.id, sx, sz);
-    this.clients.getById(player.id)?.send('respawn', { x: sx, z: sz });
   }
 
   private findByName(name: string): PlayerState | undefined {
@@ -1652,14 +1709,6 @@ export class ZoneRoom extends Room {
     // --- 자동 사냥 / 클릭 추격 ---
     this.driveAutoHunt(dt);
     this.driveChase(dt);
-
-    // --- 부활 ---
-    for (const [id, at] of this.respawnAt) {
-      if (now < at) continue;
-      const player = this.state.players.get(id);
-      if (player) this.respawnPlayer(player);
-      else this.respawnAt.delete(id);
-    }
 
     // 주기적으로 위치를 남긴다. 서버가 갑자기 죽어도 최근 위치는 지킨다.
     this.saveTimer += TICK_MS;

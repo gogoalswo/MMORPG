@@ -20,7 +20,7 @@
 
 | 문서 | 다루는 것 |
 |---|---|
-| [world-zones.md](world-zones.md) | 존 21개, 포탈 사슬, 맵 크기, 보스 스폰 자리, 지형 생성 |
+| [world-zones.md](world-zones.md) | 존 21개, 차원문, 맵 크기, 보스 스폰 자리, 지형 생성 |
 | [monsters-progression.md](monsters-progression.md) | 몬스터 60종, 능력치 공식, 레벨 곡선, 경험치 |
 | [combat.md](combat.md) | 피해 공식, 정면 판정, 치명타·공격 속도, 투사체, 사망·부활 |
 | [items.md](items.md) | 아이템 260종 생성, 등급, **랜덤 옵션**, 강화, 제작, 드롭 |

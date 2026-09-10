@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { MonsterKind } from '@mmo/shared';
 import { mergeAll } from '../scene/geometry';
+import { HitFlash } from './hitFlash';
 
 /**
  * 네발 몬스터.
@@ -83,6 +84,8 @@ interface Part {
 export interface MonsterRig {
   group: THREE.Group;
   headHeight: number;
+  /** 한 대 맞았다 — 잠깐 하얗게 번쩍인다 */
+  flash(): void;
   /** state: idle | chase | attack | cast(범위 공격 예고) | dead */
   update(dt: number, state: string, speed: number): void;
   dispose(): void;
@@ -280,12 +283,18 @@ export function createMonsterRig(kind: MonsterKind): MonsterRig {
   let moveBlend = 0;
   let attackAnim = 0;
   let deadFade = 0;
+  const hitFlash = new HitFlash(group);
 
   return {
     group,
     headHeight: 1.25 * kind.scale,
 
+    flash(): void {
+      hitFlash.flash();
+    },
+
     update(dt: number, state: string, speed: number): void {
+      hitFlash.update(dt);
       idlePhase += dt;
 
       if (state === 'dead') {

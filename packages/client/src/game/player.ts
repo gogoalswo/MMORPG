@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { RUN_SPEED, applyMove, zoneHalfSize, type MoveInput } from '@mmo/shared';
-import type { CharacterRig, GearLook } from './characterRig';
+import { sameGear } from '../net/connection';
+import type { CharacterRig, GearLook, WeaponEdge } from './characterRig';
 import { createRig } from './rigFactory';
 import { CLASSES, type ClassId } from './characterClasses';
 
@@ -109,10 +110,44 @@ export class Player {
     this.rig.swing();
   }
 
+  /**
+   * 쓰러진다 / 다시 일어난다.
+   *
+   * 서버 상태(dead)가 바뀔 때만 부른다. 매 프레임 부르면 사망 클립이
+   * 계속 처음으로 되감겨 쓰러지다 마는 동작을 반복한다.
+   */
+  die(): void {
+    this.hasMoveTarget = false;
+    this.pending.length = 0;
+    this.rig.die();
+  }
+
+  revive(): void {
+    this.rig.revive();
+  }
+
+  /** 무기 궤적을 그릴 때 쓴다 — 지금 든 무기의 날 위치는 리그가 안다 */
+  get weapon(): WeaponEdge {
+    return this.rig;
+  }
+
   /** 손에 든 것과 투구. 서버가 내려준 값을 그대로 넘긴다 */
+  /**
+   * 걸친 것을 맞춘다.
+   *
+   * **안 바뀌었으면 건드리지 않는다.** 서버 상태가 올 때마다(초당 20번쯤)
+   * 불리는데, 모델 리그의 `setGear` 는 메시 재질을 통째로 다시 깐다 —
+   * 피격 번쩍임처럼 재질을 잠깐 바꿔치우는 것이 그때마다 지워진다.
+   */
   setGear(gear: GearLook): void {
+    if (sameGear(this.gear, gear)) return;
     this.gear = gear;
     this.rig.setGear(gear);
+  }
+
+  /** 한 대 맞았다 */
+  flash(): void {
+    this.rig.flash();
   }
 
   /** 클릭 이동 목표 지정 */

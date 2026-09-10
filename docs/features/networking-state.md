@@ -40,6 +40,12 @@ Colyseus 0.18. 존 하나 = 룸 하나. 서버 권위 + 클라이언트 예측/�
 ### 관심영역 (StateView)
 - `players` / `monsters` 맵에 `.view()` 를 걸어, 클라이언트별 `StateView` 에
   등록된 것만 내려간다. 자기 자신은 거리와 무관하게 항상 보인다.
+- **뷰가 차기 전에는 맵 자체가 `undefined` 다.** 캐릭터를 아직 만들지 않았거나
+  접속 직후 첫 패치에서는 `state.players` / `state.monsters` 가 내려오지 않는다.
+  `ingest` 에서 그대로 `.forEach` 하면 **콜백 안에서 던진 예외가 SDK 의 디코드
+  루프를 끊어 뒤따르는 패치가 아예 오지 않는다** — 화면은 뜨는데 HP·레벨이 빈
+  채로 굳는다(2026-09-07). `connection.ts` 의 `ingest` 는 `players` 가 없으면
+  일찍 반환하고, `monsters` 는 `?.` 로 건너뛴다.
 - `SpatialGrid` 로 주변 셀만 조회한다.
 
 ### 이동 예측/보정
@@ -59,16 +65,24 @@ Colyseus 0.18. 존 하나 = 룸 하나. 서버 권위 + 클라이언트 예측/�
   존을 옮기면 서버가 새 `Player` 를 만들며 `lastSeq` 를 0 으로 두므로,
   클라이언트 번호가 계속 커져도 문제가 없다.
 - 서버가 이동을 모는 동안(`auto` 또는 `chasing`)에는 클라이언트가 예측을 멈춘다.
+- 그래서 자동 사냥 중의 땅 클릭은 `input` 이 아니라 `moveTo { x, z }` 로 간다 —
+  클라이언트가 목표를 들고 있어 봐야 매 프레임 지워진다.
+  누르고 있으면 콜백이 매 프레임 오므로 100ms / 0.5유닛 이상 바뀔 때만 보낸다
+  ([auto-hunt-and-targeting.md](auto-hunt-and-targeting.md)).
+- **죽어 있을 때도 예측을 멈춘다.** 서버는 죽은 플레이어의 `input` 을 순번만 갱신하고
+  버린다(`handleInput`). 클라이언트가 계속 예측하면 어긋남이 `SNAP_DISTANCE` 를 넘어
+  스냅으로 끌려오기를 반복한다 — 부활을 기다리는 5초 내내 캐릭터가 떤다.
+  `main.ts` 프레임 루프가 `myState.dead` 면 축을 0 으로 두고 `player.stop()` 한다.
 
 ### 메시지 목록 (클라 → 서버)
-`input` `chat` `attack` `target` `autohunt` `autoSkills` `autoRange` `skill`
+`input` `moveTo` `chat` `attack` `target` `autohunt` `autoSkills` `autoRange` `skill`
 `learnSkill` `setSkillBar` `equip` `unequip` `craft`
 `npcOpen` `npcBuy` `npcSell` `npcForge` `npcEnhance` `npcJob`
 `createCharacter` `selectCharacter` `deleteCharacter` `setJob` `linkGoogle`
 
 ### 메시지 목록 (서버 → 클라)
 `hit` `aoe` `swing` `skill` `notice` `reward` `levelUp` `inventory` `skills` `npc`
-`loot` `respawn` `target` `enhanceResult` `jobChanged` `chat` `session`
+`loot` `target` `enhanceResult` `jobChanged` `chat` `session`
 `needsCharacter` `createResult` `characterList` `switchZone` `linkResult`
 
 - `aoe` — 보스 범위 공격 예고 `{ id, name, x, z, radius, delayMs }`. **보여주기 전용**이다.

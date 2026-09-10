@@ -2,11 +2,11 @@ import * as THREE from 'three';
 import type { PortalVisual } from '@mmo/shared';
 
 /**
- * 포탈. 바닥의 빛나는 고리와 위로 솟는 빛기둥으로 표시한다.
+ * 차원문. 바닥의 빛나는 고리와 위로 솟는 빛기둥으로 표시한다.
  *
- * 진입 판정에 armed 플래그가 중요하다. 포탈을 타고 도착한 직후 대상 존의
- * 포탈 반경 안에 서 있으면 곧바로 되돌아가면서 무한 왕복에 빠진다.
- * 그래서 "반경 밖으로 한 번 나간 뒤"부터 발동하게 한다.
+ * 진입 판정에 armed 플래그가 중요하다. 없으면 문 위에 서 있는 내내 매 프레임
+ * 발동해서, 창을 닫아도 곧바로 다시 열린다. 그래서 "반경 밖으로 한 번 나간
+ * 뒤"부터 발동하게 한다.
  */
 export interface Portal<D extends PortalVisual = PortalVisual> {
   def: D;
@@ -18,9 +18,8 @@ export interface Portal<D extends PortalVisual = PortalVisual> {
 }
 
 /**
- * 정의를 그대로 돌려주도록 제네릭으로 둔다. 사슬 포탈은 `def.target` 을,
- * 마을 차원문은 `def.name` 을 부르는 쪽에서 그대로 읽을 수 있어야 한다.
- * 그리는 데 필요한 건 위치·반경·색뿐이다.
+ * 정의를 그대로 돌려주도록 제네릭으로 둔다. 부르는 쪽이 `def.name` 같은
+ * 제 필드를 그대로 읽을 수 있어야 한다. 그리는 데 필요한 건 위치·반경·색뿐이다.
  */
 export function createPortal<D extends PortalVisual>(def: D): Portal<D> {
   const group = new THREE.Group();
@@ -81,7 +80,7 @@ export function createPortal<D extends PortalVisual>(def: D): Portal<D> {
     shards.push(shard);
   }
 
-  // 도착 직후 즉시 되돌아가는 걸 막는다 — 반경을 한 번 벗어나야 발동한다
+  // 문 위에 서 있는 내내 다시 열리는 걸 막는다 — 반경을 한 번 벗어나야 발동한다
   let armed = false;
   const r2 = def.radius * def.radius;
 

@@ -74,6 +74,14 @@ export interface HitEvent {
   z: number;
   /** 있으면 클라이언트가 날아가는 모습을 보여주고, 도착할 때 피해를 표시한다 */
   projectile?: string;
+  /**
+   * 이 타격을 낸 스킬. 기본 공격이면 없다.
+   *
+   * 클라이언트가 **맞은 자리에** 그 스킬 이펙트를 터뜨리는 데 쓴다. 근접기는
+   * 시전자 발밑이 아니라 때린 자리에서 터져야 말이 된다. 서버가 이미 아는
+   * 값이라 좌표(x/z)와 같은 이유로 그냥 같이 보낸다.
+   */
+  skillId?: string;
 }
 
 /** 죽은 몬스터가 시체로 남아 있는 시간 */
@@ -153,7 +161,7 @@ export class CombatSystem {
      * 뒤에 파라미터를 계속 붙이면 호출부가 `undefined, 1, undefined` 처럼
      * 읽을 수 없게 된다. 여기서부터는 이름을 붙여 넘긴다.
      */
-    extra: { projectile?: string; crit?: number; critDamage?: number } = {}
+    extra: { projectile?: string; crit?: number; critDamage?: number; skillId?: string } = {}
   ): HitEvent[] {
     const candidates = this.grid.queryRadius(player.x, player.z, range);
     if (candidates.length === 0) return [];
@@ -219,6 +227,7 @@ export class CombatSystem {
         z: monster.z,
         ...(crit ? { crit: true } : {}),
         ...(extra.projectile ? { projectile: extra.projectile } : {}),
+        ...(extra.skillId ? { skillId: extra.skillId } : {}),
       });
     }
 

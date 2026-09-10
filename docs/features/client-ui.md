@@ -22,7 +22,7 @@
 하나씩 `pointer-events: auto` 로 다시 켜야 한다. 목록에 없으면 화면에 멀쩡히
 보이면서 눌리지 않는다 — PC 는 단축키로 가려지지만 폰에서는 그대로 조작 불가가 된다.
 
-지금 켜 둔 것: `.actionbar .autohunt .autorange .hudbtns .npc-prompt .npc .bag .sb .gate .craft`
+지금 켜 둔 것: `.actionbar .autohunt .autorange .hudbtns .npc-prompt .npc .bag .sb .gate .craft .death`
 
 장식(이름표, 피해 숫자, 상태바, `#stats`)은 꺼진 채로 둔다.
 
@@ -44,6 +44,18 @@
 - 3D 텍스트가 아니라 HTML 오버레이다. 폰트가 또렷하고 드로우콜을 안 늘린다.
 - 카메라 뒤 / 70유닛 초과는 숨긴다 (DOM 갱신 비용).
 - 이름은 거의 안 바뀌므로 달라졌을 때만 DOM 을 건드린다. 강조(`is-target`)도 마찬가지.
+- **종류 세 가지** (`NameplateTarget.kind`, 붙일 때 한 번만 정한다):
+
+  | kind | 누구 | 이름 색 | HP바 |
+  |---|---|---|---|
+  | `unit` (기본) | 플레이어 · 몬스터 | 흰색 `#fff` | 있음 |
+  | `npc` | 마을 사람 | **노란색 `#ffdf3d`** (직함 `#e8cf6a`) | 있음 |
+  | `portal` | 차원문 안내 글씨 | 파란색 `#8fd0ff` | 없음 |
+
+  **NPC 를 노랗게 뗀 이유**: 마을 사람은 고유 외형(`NPC_LOOKS`)을 입고 있지만,
+  그것만으로는 사람이 몰린 마을에서 누가 유저인지 알아볼 수 없다. 색이 가장 빨리
+  읽힌다. 물고 있는 대상(`is-target`)도 금색이라 비슷해 보일 수 있는데, 그쪽은
+  글로우가 함께 붙고 몬스터에게만 달린다.
 - 피해 숫자 종류: `deal` / `take` / `kill` / `gain`, 치명타는 `is-crit`
   (색은 그대로 두고 키운다 — 색까지 바꾸면 처치와 헷갈린다).
 

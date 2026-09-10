@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { GateDef, PortalDef, ZoneDef } from '@mmo/shared';
+import type { GateDef, ZoneDef } from '@mmo/shared';
 import { createGround, createPathMask, type Ground, type PathMask } from './ground';
 import { createGrass, type GrassField } from './grass';
 import { createPortal, type Portal } from './portal';
@@ -21,9 +21,8 @@ export interface ZoneScene {
   group: THREE.Group;
   /** 클릭 이동 레이캐스트 대상 */
   ground: THREE.Mesh;
-  portals: Portal<PortalDef>[];
-  /** 목적지를 고르는 문. 없는 존이 대부분이다 */
-  gate: Portal<GateDef> | null;
+  /** 목적지를 고르는 문. 존을 오가는 유일한 길이라 모든 존에 있다 */
+  gate: Portal<GateDef>;
   npcs: { name: string; subtitle?: string; hp: number; rig: CharacterRig }[];
   update(dt: number, elapsed: number): void;
   dispose(): void;
@@ -45,13 +44,8 @@ export function buildZoneScene(def: ZoneDef, assets: Assets): ZoneScene {
     return false;
   };
 
-  // 포탈 자리에는 풀도 나무도 두지 않는다
-  for (const p of def.portals) {
-    blockers.push({ x: p.position[0], z: p.position[1], r: p.radius + 1.5 });
-  }
-  if (def.gate) {
-    blockers.push({ x: def.gate.position[0], z: def.gate.position[1], r: def.gate.radius + 1.5 });
-  }
+  // 차원문 자리에는 풀을 두지 않는다
+  blockers.push({ x: def.gate.position[0], z: def.gate.position[1], r: def.gate.radius + 1.5 });
 
   // --- 지면 ---
   const ground: Ground = createGround(def.size, env, mask, assets);
@@ -61,18 +55,10 @@ export function buildZoneScene(def: ZoneDef, assets: Assets): ZoneScene {
   const grass: GrassField = createGrass(env, mask, isBlocked);
   group.add(grass.mesh);
 
-  // --- 포탈 ---
-  const portals = def.portals.map((p) => {
-    const portal = createPortal(p);
-    group.add(portal.group);
-    return portal;
-  });
-
   // --- 차원문 ---
-  // 사슬 포탈과 같은 모양으로 그린다. 다르게 생기면 "밟으면 이동한다"는
-  // 학습을 새로 시켜야 한다. 색만 다르다.
-  const gate = def.gate ? createPortal(def.gate) : null;
-  if (gate) group.add(gate.group);
+  // 존을 오가는 유일한 문이다. 걸어 들어가면 곧장 넘어가던 사슬 포탈은 없다.
+  const gate = createPortal(def.gate);
+  group.add(gate.group);
 
   // --- NPC ---
   const npcs = (def.npcs ?? []).map((n) => {
@@ -89,21 +75,18 @@ export function buildZoneScene(def: ZoneDef, assets: Assets): ZoneScene {
     def,
     group,
     ground: ground.mesh,
-    portals,
     gate,
     npcs,
 
     update(dt: number, elapsed: number): void {
       grass.update(elapsed);
-      for (const portal of portals) portal.update(elapsed);
-      gate?.update(elapsed);
+      gate.update(elapsed);
       for (const npc of npcs) npc.rig.update(dt, 0);
     },
 
     dispose(): void {
       grass.dispose();
-      for (const portal of portals) portal.dispose();
-      gate?.dispose();
+      gate.dispose();
       for (const npc of npcs) npc.rig.dispose();
 
       ground.dispose();

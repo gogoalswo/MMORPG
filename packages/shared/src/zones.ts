@@ -4,30 +4,50 @@ import { bossIdFor, monsterIdFor, tierLevels } from './monsters.ts';
 /**
  * 존 배치.
  *
- *   마을
- *    │
- *   초원(1-10) ─ 덤불숲(10-20) ─ 협곡(20-30) ─ 잿빛황야(30-40) ─ … ─ 종말의 대지(190-200)
- *    │                                            │
- *    └────────────── 지름길 ──────────────────────┘
+ *   마을 ─┐
+ *          ├─ 차원문 ─┬─ 초원(1-10)
+ *   사냥터 ┘          ├─ 덤불숲(10-20)
+ *                     ├─ …
+ *                     └─ 종말의 대지(190-200)
  *
- * 사냥터 20개가 사슬로 이어지고, 마을은 첫 사냥터에만 붙는다.
- * 초원 ↔ 잿빛 황야 지름길 하나는 처음 그린 배치도를 그대로 남긴 것이다 —
- * 저레벨이 30레벨대로 바로 넘어갈 수 있는 위험한 문이다.
+ * **존끼리는 이어져 있지 않다.** 걸어 들어가면 곧장 옆 존으로 넘어가던 사슬
+ * 포탈은 전부 없앴다. 지금은 어느 존에서든 차원문 하나를 밟고 목적지를 고른다.
  *
- * **표에서 만든다.** 20개를 손으로 적으면 포탈 짝이 어긋나도 조용히 지나가고,
- * "왜 엉뚱한 데서 시작하지?" 로만 나타난다. 생성 규칙은 이렇다.
- *   - 포탈은 북(0,-34) 남(0,34) 서(-34,0) 동(34,0) 에만 둔다
- *   - 사슬은 서(뒤) ↔ 동(앞) 으로만 잇는다
- *   - 도착 지점은 그 문 안쪽 8유닛이고 이름은 들어온 방향을 쓴다 (from_west 등)
- * 실제로 맞물렸는지는 `zones.test.ts` 가 전수 검사한다.
+ * 그래서 **모든 존에 차원문이 있어야 한다.** 하나라도 빠지면 그 존은 들어가면
+ * 못 나오는 방이 된다 — 예외가 나지 않고 "여기서 어떻게 나가지?" 로만 나타나서
+ * `zones.test.ts` 가 전수 검사한다.
+ *
+ * **표에서 만든다.** 20개를 손으로 적으면 한 곳만 빠져도 조용히 지나간다.
  *
  * 한 화면에 보이는 지면이 16:9 기준 약 56.5 유닛 사각형이라(FOV 30, 거리 40, 부각 42),
  * 그 1.5배가 되도록 모든 존을 size 92 (이동 가능 영역 84) 로 맞췄다.
  */
 
-/** 이동 가능 영역이 ±42 이므로 포탈은 34, 도착 지점은 26 에 둔다 */
-const PORTAL = 34;
-const ARRIVE = 26;
+/**
+ * 차원문 자리 — 모든 존에서 같다.
+ *
+ * 도착 지점(맵 한가운데)에서 동쪽으로 9유닛. 어느 존에 가도 같은 자리에 있어야
+ * "나가려면 어디로 가야 하나"를 존마다 다시 찾지 않는다. 스폰을 덮지 않을 만큼
+ * 떨어져 있고(반경 2.6), 무리(±20)·보스(-12, 20.8) 어느 쪽에도 붙지 않는다.
+ * 마을은 NPC 여섯이 전부 서쪽·남쪽에 몰려 있어 이쪽이 비어 있기도 하다.
+ */
+const GATE_SPOT: [number, number] = [9, 0];
+
+/**
+ * 차원문 빛 색과 이름.
+ *
+ * 파란색 하나로 통일한다. 문이 하나뿐이니 색으로 구분할 상대가 없고, 존마다
+ * 색이 다르면 "저건 다른 문인가" 하고 다시 확인하게 된다.
+ */
+const GATE_COLOR = '#4aa8ff';
+const GATE_NAME = '사냥터 이동';
+
+const gateFor = (): ZoneDef['gate'] => ({
+  position: [GATE_SPOT[0], GATE_SPOT[1]],
+  radius: 2.6,
+  color: GATE_COLOR,
+  name: GATE_NAME,
+});
 
 /** 사냥터 한 곳의 겉모습 */
 interface FieldTheme {
@@ -66,9 +86,6 @@ const FIELDS: FieldTheme[] = [
   { id: 'endland', name: '종말의 대지', sky: '#2e1d22', fog: '#241619', grassDark: '#26191d', grassLight: '#37232a', dirt: '#301f24', dirtLight: '#3d282e', dim: 0.95 },
 ];
 
-/** 포탈 빛 색을 돌려 쓴다 — 인접한 존끼리 색이 겹치지 않게만 하면 된다 */
-const PORTAL_COLORS = ['#7fd8ff', '#9ae67f', '#ffd18a', '#e6795f', '#c9a0ff', '#8affd1'];
-
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
 /** 어둠도 하나에서 안개·광량·풀 밀도를 만든다 */
@@ -101,12 +118,12 @@ function envFor(theme: FieldTheme): ZoneEnv {
 /**
  * 보스 자리 — 시계로 7시 방향, 중앙에서 24유닛.
  *
- * 12시를 -z(북)로 놓고 시계방향으로 잰다. 포탈(±34)과 도착 지점(±26)에서
+ * 12시를 -z(북)로 놓고 시계방향으로 잰다. 도착 지점(0,0)과 차원문(9,0)에서
  * 충분히 떨어져 있어 지나가다 얻어걸리지 않는다.
  */
 const BOSS_SPOT: [number, number] = [-12.0, 20.8];
 
-/** 무리를 놓을 자리 — 포탈과 도착 지점을 피해 네 귀퉁이에 둔다 */
+/** 무리를 놓을 자리 — 도착 지점과 차원문을 피해 네 귀퉁이에 둔다 */
 const PACKS: [number, number][] = [
   [-20, -20],
   [20, -20],
@@ -116,72 +133,15 @@ const PACKS: [number, number][] = [
 
 function buildField(theme: FieldTheme, index: number): ZoneDef {
   const [weak, strong] = tierLevels(index);
-  const last = index === FIELDS.length - 1;
 
-  const spawns: Record<string, [number, number]> = { default: [0, 0] };
-  const portals: ZoneDef['portals'] = [];
-
-  // 뒤로 — 첫 사냥터만 마을(북쪽)이고 나머지는 이전 사냥터(서쪽)
-  if (index === 0) {
-    spawns.from_north = [0, -ARRIVE];
-    portals.push({
-      id: 'to_village',
-      position: [0, -PORTAL],
-      radius: 2.4,
-      color: '#ffd18a',
-      target: { zone: 'village', spawn: 'from_south' },
-    });
-  } else {
-    spawns.from_west = [-ARRIVE, 0];
-    portals.push({
-      id: 'to_' + FIELDS[index - 1]!.id,
-      position: [-PORTAL, 0],
-      radius: 2.4,
-      color: PORTAL_COLORS[index % PORTAL_COLORS.length]!,
-      target: { zone: FIELDS[index - 1]!.id, spawn: 'from_east' },
-    });
-  }
-
-  // 앞으로 — 마지막 사냥터는 막다른 길
-  if (!last) {
-    spawns.from_east = [ARRIVE, 0];
-    portals.push({
-      id: 'to_' + FIELDS[index + 1]!.id,
-      position: [PORTAL, 0],
-      radius: 2.4,
-      color: PORTAL_COLORS[(index + 1) % PORTAL_COLORS.length]!,
-      target: { zone: FIELDS[index + 1]!.id, spawn: 'from_west' },
-    });
-  }
-
-  // 처음 그린 배치도의 지름길: 초원 ↔ 잿빛 황야
-  if (index === SHORTCUT_FROM) {
-    spawns.from_south = [0, ARRIVE];
-    portals.push({
-      id: 'to_' + FIELDS[SHORTCUT_TO]!.id,
-      position: [0, PORTAL],
-      radius: 2.4,
-      color: '#e6795f',
-      target: { zone: FIELDS[SHORTCUT_TO]!.id, spawn: 'from_north' },
-    });
-  }
-  if (index === SHORTCUT_TO) {
-    spawns.from_north = [0, -ARRIVE];
-    portals.push({
-      id: 'to_' + FIELDS[SHORTCUT_FROM]!.id,
-      position: [0, -PORTAL],
-      radius: 2.4,
-      color: '#7fd8ff',
-      target: { zone: FIELDS[SHORTCUT_FROM]!.id, spawn: 'from_south' },
-    });
-  }
-
+  // 도착 지점은 맵 한가운데 하나뿐이다. 사슬 포탈이 없어졌으니 "어느 문으로
+  // 들어왔나"를 따질 일이 없고, 이름 붙은 스폰(from_west 등)도 같이 사라졌다.
   return {
     id: theme.id,
     name: theme.name,
     size: 92,
-    spawns,
-    portals,
+    spawns: { default: [0, 0] },
+    gate: gateFor(),
     monsters: [
       // 보스는 사냥터마다 한 마리, 7시 방향에 선다. 15분에 한 번 나온다.
       { kind: bossIdFor(index), x: BOSS_SPOT[0], z: BOSS_SPOT[1], radius: 3, count: 1, respawnMs: 900000 },
@@ -194,38 +154,14 @@ function buildField(theme: FieldTheme, index: number): ZoneDef {
   };
 }
 
-/** 지름길 양끝 (배치도의 1-10 ↔ 30-40) */
-const SHORTCUT_FROM = 0;
-const SHORTCUT_TO = 3;
-
 /** 마을 — 몬스터가 없는 시작 지점 */
 const VILLAGE: ZoneDef = {
   id: 'village',
   name: '마을',
   size: 92,
-  spawns: {
-    default: [0, 0],
-    // 포탈 위에 그대로 떨어뜨리면 즉시 되돌아가므로 안쪽에 놓는다
-    from_south: [0, ARRIVE],
-  },
-  portals: [
-    {
-      id: 'to_meadow',
-      position: [0, PORTAL],
-      radius: 2.4,
-      color: '#7fd8ff',
-      target: { zone: 'meadow', spawn: 'from_north' },
-    },
-  ],
-  // 사냥터를 골라 바로 가는 문. 스폰에서 동쪽으로 9유닛 — NPC 여섯이 전부
-  // 서쪽·남쪽에 몰려 있어 이쪽이 비어 있고, 걸어 나가는 길목이라 눈에 띈다.
-  gate: {
-    position: [9, 0],
-    radius: 2.6,
-    // 사슬 포탈과 색이 겹치면 "저기로 가면 초원" 이라는 학습을 흔든다
-    color: '#c9a6ff',
-    name: '차원문',
-  },
+  spawns: { default: [0, 0] },
+  // 사냥터로 나가는 유일한 문. 사냥터에 선 것과 같은 자리·같은 색이다.
+  gate: gateFor(),
   npcs: [
     // 말을 걸 수 있는 세 사람. 스폰 지점에서 걸어서 바로 닿는 거리에 둔다.
     { name: '상인 보리스', job: 'mage', look: 'merchant', x: -7, z: 4, role: 'shop', title: '상점' },

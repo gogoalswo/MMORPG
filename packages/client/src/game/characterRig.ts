@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { HitFlash } from './hitFlash';
 import { RUN_SPEED } from '@mmo/shared';
 import { mergeAll } from '../scene/geometry';
 
@@ -109,6 +110,14 @@ export interface ClassProfile {
    * 팔을 그대로 휘두르면 검이 창처럼 앞으로 튀어나오고 지팡이가 눕는다.
    */
   weaponHand?: 'L' | 'R';
+  /**
+   * 궤적을 그릴 날 구간 — **기본 자세(bind pose) 모델 좌표** `[뿌리, 끝]`.
+   *
+   * 절차적 리그는 무기가 지오메트리에 통째로 병합돼 있어서 무기 노드를 따로
+   * 집을 수가 없다. 그래서 `equip` 에 적은 좌표를 여기에 한 번 더 적어 둔다.
+   * 모델 리그는 무기가 별도 노드라 이 값이 필요 없다 (경계 상자로 구한다).
+   */
+  weaponReach?: [[number, number, number], [number, number, number]];
   /** 직업 고유 장비 */
   equip?(add: AddPart, c: CharacterColors): void;
 }
@@ -184,6 +193,8 @@ const WEAPON_ARM_ELBOW = 0.45;
  * 골반을 돌려 그 힘을 팔로 보낸다. 그래서 몸 전체가 세 구간을 지나간다.
  */
 const SWING_TIME = 0.44;
+/** 쓰러지는 데 걸리는 시간. 툭 눕히면 인형을 넘어뜨린 것으로 보인다 */
+const FALL_TIME = 0.6;
 /** 뒤로 당기는 구간이 끝나는 지점 (0~1) */
 const SWING_WIND = 0.34;
 /** 내리치는 구간이 끝나는 지점 */
@@ -367,13 +378,39 @@ export interface GearLook {
   boots: string;
 }
 
-export interface CharacterRig {
+/**
+ * 무기의 날 구간을 월드 좌표로 알려주는 것.
+ *
+ * 궤적(`swingTrails`)이 매 프레임 이걸 물어서 리본을 잇는다. 리그마다 무기가
+ * 붙는 방식이 달라서(절차적 리그는 지오메트리에 병합, 모델 리그는 별도 노드)
+ * "어디가 날인가" 는 리그가 알고 있어야 한다.
+ */
+export interface WeaponEdge {
+  /**
+   * 지금 들고 있는 무기의 뿌리와 끝을 채운다.
+   * 무기가 없으면 `false` 를 돌려주고 인자는 건드리지 않는다.
+   */
+  weaponEdge(base: THREE.Vector3, tip: THREE.Vector3): boolean;
+}
+
+export interface CharacterRig extends WeaponEdge {
   group: THREE.Group;
   /** 이름표를 띄울 높이 */
   headHeight: number;
   update(dt: number, speed: number): void;
   /** 공격 모션을 한 번 재생한다 */
   swing(): void;
+  /** 한 대 맞았다 — 잠깐 하얗게 번쩍인다 */
+  flash(): void;
+  /**
+   * 쓰러진다. 마지막 자세에서 멈춘 채로 있는다.
+   *
+   * 죽은 걸 화면으로 알리는 유일한 신호다 — 예전에는 HP 만 0 이 되고 서 있어서,
+   * 조작이 안 먹는 이유를 알 수 없었다.
+   */
+  die(): void;
+  /** 다시 살아났다. 죽은 자세를 풀고 대기로 돌린다 */
+  revive(): void;
   /**
    * 손에 든 것과 투구를 맞춘다.
    *
@@ -485,6 +522,29 @@ export function createCharacterRig(profile: ClassProfile): CharacterRig {
   const scale = profile.scale ?? 1;
   if (scale !== 1) group.scale.setScalar(scale);
 
+  /**
+   * 궤적 앵커 — 손 뼈에 매단 빈 오브젝트 둘.
+   *
+   * 뼈의 자식으로 두면 애니메이션이 알아서 끌고 다니므로, 매 프레임 스키닝
+   * 행렬을 손으로 풀 필요가 없다. 위치는 기본 자세에서 한 번만 계산한다.
+   */
+  let edgeBase: THREE.Object3D | null = null;
+  let edgeTip: THREE.Object3D | null = null;
+  if (profile.weaponReach) {
+    const handBone = byName.get('hand' + (profile.weaponHand ?? 'R'));
+    if (handBone) {
+      // 아직 씬에 안 붙어 있어서 group 의 행렬은 단위행렬이다 —
+      // 즉 지금의 월드 좌표가 곧 모델 좌표다.
+      group.updateMatrixWorld(true);
+      const [from, to] = profile.weaponReach;
+      edgeBase = new THREE.Object3D();
+      edgeTip = new THREE.Object3D();
+      edgeBase.position.copy(handBone.worldToLocal(new THREE.Vector3(...from)));
+      edgeTip.position.copy(handBone.worldToLocal(new THREE.Vector3(...to)));
+      handBone.add(edgeBase, edgeTip);
+    }
+  }
+
   // --- 애니메이션 상태 ---
   const b = (name: string) => byName.get(name)!;
   const hipsRestY = root.position.y;
@@ -494,13 +554,44 @@ export function createCharacterRig(profile: ClassProfile): CharacterRig {
   let moveBlend = 0; // 0 = 대기, 1 = 달리기
   /** 남은 공격 모션 시간(초). 0 이면 안 하고 있다 */
   let swingT = 0;
+  /** 쓰러진 뒤 지난 시간. 음수면 살아 있다 */
+  let fallT = -1;
+
+  const hitFlash = new HitFlash(group);
 
   return {
     group,
     headHeight: (HEIGHT + 0.16) * (profile.scale ?? 1),
 
+    flash(): void {
+      hitFlash.flash();
+    },
+
     swing(): void {
       swingT = SWING_TIME;
+    },
+
+    die(): void {
+      if (fallT >= 0) return;
+      fallT = 0;
+      swingT = 0;
+    },
+
+    revive(): void {
+      fallT = -1;
+      group.rotation.z = 0;
+      group.position.y = 0;
+    },
+
+    weaponEdge(base: THREE.Vector3, tip: THREE.Vector3): boolean {
+      if (!edgeBase || !edgeTip) return false;
+      // 뼈 행렬은 렌더 직전에 갱신된다. 궤적은 그 전에 물어보므로 여기서
+      // 이 두 개만 직접 올려 준다 — 안 하면 한 프레임 뒤처진 자리에 그린다.
+      edgeBase.updateWorldMatrix(true, false);
+      edgeTip.updateWorldMatrix(true, false);
+      base.setFromMatrixPosition(edgeBase.matrixWorld);
+      tip.setFromMatrixPosition(edgeTip.matrixWorld);
+      return true;
     },
 
     setGear(): void {
@@ -508,6 +599,19 @@ export function createCharacterRig(profile: ClassProfile): CharacterRig {
     },
 
     update(dt: number, speed: number): void {
+      hitFlash.update(dt);
+      // 쓰러지는 중/쓰러진 뒤 — 포즈를 그대로 두고 몸만 옆으로 넘긴다.
+      // 클립이 없는 리그라 자세를 만들 수 없다. 넘어가는 것만으로도
+      // "서 있다"와는 확실히 구분된다.
+      if (fallT >= 0) {
+        fallT = Math.min(FALL_TIME, fallT + dt);
+        const t = fallT / FALL_TIME;
+        const ease = 1 - (1 - t) * (1 - t); // 처음엔 천천히, 바닥에서 빨리
+        group.rotation.z = ease * Math.PI * 0.5;
+        group.position.y = -ease * 0.12; // 어깨가 땅에 묻히지 않을 만큼만
+        return;
+      }
+
       if (swingT > 0) swingT = Math.max(0, swingT - dt);
       // 대기 <-> 달리기 전환만 부드럽게 섞는다
       const k = 1 - Math.exp(-12 * dt);
@@ -644,6 +748,7 @@ export function createCharacterRig(profile: ClassProfile): CharacterRig {
     },
 
     dispose(): void {
+      hitFlash.dispose();
       geometry.dispose();
       material.dispose();
       skeleton.dispose();

@@ -4,6 +4,7 @@ import { RUN_SPEED, TIER_COLOR, getItem, tierIndexOf, type MonsterKind } from '@
 import { CLIP, pickClip, type Models } from '../scene/models';
 import type { CharacterRig, ClassProfile, GearLook } from './characterRig';
 import type { MonsterRig } from './monsterRig';
+import { HitFlash } from './hitFlash';
 
 /**
  * 불러온 모델로 만드는 리그.
@@ -20,6 +21,17 @@ import type { MonsterRig } from './monsterRig';
 const BLEND_RATE = 10;
 /** 달리기 클립이 원래 상정한 이동 속도(m/s). 실제 속도에 맞춰 재생 속도를 조절한다 */
 const RUN_CLIP_SPEED = 4.6;
+/**
+ * 모델마다 달리기 클립이 달라서 따로 잡은 값. 없으면 RUN_CLIP_SPEED.
+ *
+ * VARCO 마법사는 디딤발이 뒤로 쓸려 가는 속도를 이 리그로 재서 잡았다(5.8).
+ * 기사 값(4.6)으로 틀면 발이 몸보다 25% 남짓 빨리 쓸려 앞으로 미끄러진다.
+ */
+const RUN_CLIP_SPEEDS: Record<string, number> = {
+  varco_mage: 5.8,
+  // 궁수 달리기는 마법사와 같은 클립이다 (46키, 루프 닫기 결과까지 같다)
+  varco_archer: 5.8,
+};
 /** 공격 중에 남겨두는 이동 동작의 비중 */
 const ATTACK_LOWER = 0.18;
 /**
@@ -158,6 +170,17 @@ const GEAR_MESHES: Record<string, GearMeshes> = {
     offhand: ['Barbarian_Round_Shield'],
     helmet: 'Barbarian_Hat',
   },
+  /**
+   * VARCO 로 만든 기사 — **갈아끼울 메시가 없다.**
+   *
+   * 이미지 한 장에서 만들어진 모델이라 검·방패·투구가 몸과 한 덩어리로 구워져
+   * 있다(메시 1개, 머티리얼 1개). 그래서 장비를 바꿔도 겉모습이 안 바뀐다.
+   * 빈 표를 적어 두는 건 이게 누락이 아니라 **사실**임을 남기기 위해서다.
+   */
+  varco_knight: { weapon: [], offhand: [], helmet: null },
+  // VARCO 마법사도 같다 — 지팡이·모자가 몸에 구워져 있다
+  varco_mage: { weapon: [], offhand: [], helmet: null },
+  varco_archer: { weapon: [], offhand: [], helmet: null },
 };
 
 /** 20단계를 목록 길이만큼 나눠 몇 번째 모양을 쓸지 고른다 */
@@ -184,14 +207,28 @@ export function createModelCharacterRig(models: Models, profile: ClassProfile): 
   group.scale.setScalar(fit * scale);
 
   const mixer = new THREE.AnimationMixer(root);
-  const make = (name: string): THREE.AnimationAction | null => {
-    const clip = models.clips[name];
+
+  /**
+   * 클립 고르기.
+   *
+   * KayKit 다섯은 뼈대가 같아 **클립을 공유한다**(models.clips). 이름이 팩 그대로라
+   * 정확한 이름으로 집으면 된다. 반면 VARCO 로 만든 모델은 제 클립을 파일 안에
+   * 들고 오고 이름 규칙이 다르므로(`Idle` `Run` `Attack`) **역할로** 찾는다.
+   *
+   * 없는 역할은 null 이고, 부르는 쪽이 폴백을 갖고 있다 — 사망 클립이 없으면
+   * die() 가 몸을 옆으로 눕힌다.
+   */
+  const own = source.clips;
+  const act = (name: string, ...roles: string[]): THREE.AnimationAction | null => {
+    const clip = own ? pickClip(own, name, ...roles) : models.clips[name];
     return clip ? mixer.clipAction(clip) : null;
   };
 
-  const idle = make(CLIP.idle);
-  const run = make(CLIP.run);
-  const attack = make(profile.attackClip ?? CLIP.melee);
+  const idle = act(CLIP.idle, 'idle');
+  const run = act(CLIP.run, 'run', 'walk');
+  const attack = act(profile.attackClip ?? CLIP.melee, 'attack');
+  const death = act(CLIP.death, 'death');
+  const runClipSpeed = RUN_CLIP_SPEEDS[profile.model!] ?? RUN_CLIP_SPEED;
 
   idle?.play();
   if (run) {
@@ -202,8 +239,15 @@ export function createModelCharacterRig(models: Models, profile: ClassProfile): 
     attack.setLoop(THREE.LoopOnce, 1);
     attack.clampWhenFinished = false;
   }
+  // 사망은 짐승과 같은 규칙 — 한 번만 재생하고 마지막 자세에서 멈춘다.
+  // 멈추지 않으면 쓰러졌다가 슬그머니 일어선다.
+  if (death) {
+    death.setLoop(THREE.LoopOnce, 1);
+    death.clampWhenFinished = true;
+  }
 
   let moveBlend = 0;
+  let dying = false;
 
   // --- 장비 메시 ---
   const meshes = GEAR_MESHES[profile.model!] ?? { weapon: [], offhand: [], helmet: null };
@@ -280,9 +324,66 @@ export function createModelCharacterRig(models: Models, profile: ClassProfile): 
     if (npc.helmet) show(meshes.helmet);
   }
 
+  /** 지금 켜져 있는 무기 노드 (없으면 null) */
+  const visibleWeapon = (): THREE.Object3D | null => {
+    for (const name of meshes.weapon) {
+      const node = parts.get(name);
+      if (node?.visible) return node;
+    }
+    return null;
+  };
+
+  /** 무기 노드의 지역 경계 상자. 모양은 안 바뀌므로 한 번만 재고 기억한다 */
+  const boxCache = new Map<THREE.Object3D, THREE.Box3 | null>();
+  const localBox = (node: THREE.Object3D): THREE.Box3 | null => {
+    const hit = boxCache.get(node);
+    if (hit !== undefined) return hit;
+    const mesh = node as THREE.Mesh;
+    const geo = mesh.isMesh ? mesh.geometry : null;
+    if (geo) geo.computeBoundingBox();
+    const box = geo?.boundingBox ?? null;
+    boxCache.set(node, box);
+    return box;
+  };
+
+  /**
+   * 맨손일 때 궤적을 그릴 길이 (m).
+   *
+   * 무기 궤적보다 확실히 짧아야 한다 — 길면 안 보이는 칼을 든 것처럼 보인다.
+   * 그렇다고 안 그리면 안 된다: 장비를 안 낀 캐릭터가 대부분이라,
+   * 무기가 있을 때만 그리면 이 기능이 거의 항상 죽어 있는 셈이 된다.
+   */
+  const FIST_REACH = 0.34;
+
+  // 맨손 궤적을 매달 뼈. KayKit 은 무기를 handslot 에 붙이고, 방향은
+  // 아래팔 → 손 으로 잡는다 (주먹이 뻗어 나가는 쪽).
+  const side = (profile.weaponHand ?? 'R').toLowerCase();
+  const long = side === 'l' ? 'Left' : 'Right';
+  // 뼈 이름은 팩마다 다르다 — KayKit 은 `handslotr`, VARCO 는 `RightHand` 다.
+  // 못 찾으면 궤적이 통째로 안 그려지므로 후보를 늘어놓고 먼저 잡히는 걸 쓴다.
+  const bone = (...names: string[]): THREE.Object3D | null => {
+    for (const name of names) {
+      const found = root.getObjectByName(name);
+      if (found) return found;
+    }
+    return null;
+  };
+  const handSlot = bone('handslot' + side, 'hand' + side, long + 'Hand');
+  const foreArm = bone('lowerarm' + side, 'wrist' + side, long + 'ForeArm');
+
+  const edgeCenter = new THREE.Vector3();
+  const edgeSize = new THREE.Vector3();
+  const edgeHand = new THREE.Vector3();
+  const edgeSwap = new THREE.Vector3();
+  const hitFlash = new HitFlash(group);
+
   return {
     group,
     headHeight: HUMAN_HEIGHT * scale + 0.18,
+
+    flash(): void {
+      hitFlash.flash();
+    },
 
     setGear(gear: GearLook): void {
       applyGear(gear);
@@ -295,7 +396,104 @@ export function createModelCharacterRig(models: Models, profile: ClassProfile): 
       attack.play();
     },
 
+    die(): void {
+      if (dying) return;
+      dying = true;
+      attack?.stop();
+      loop(idle, 0);
+      loop(run, 0);
+      if (death) {
+        death.reset();
+        death.setEffectiveWeight(1);
+        death.play();
+      } else {
+        // 클립이 없는 폴백(에셋 미다운로드) — 옆으로 눕힌다
+        group.rotation.z = Math.PI * 0.5;
+      }
+    },
+
+    revive(): void {
+      if (!dying) return;
+      dying = false;
+      death?.stop();
+      group.rotation.z = 0;
+      idle?.reset().play();
+      if (run) run.reset().play();
+    },
+
+    /**
+     * 지금 보이는 무기의 양 끝을 월드 좌표로 준다 (궤적용).
+     *
+     * 무기 모양을 종류별로 적어 두지 않는다 — 팩마다 칼·도끼·지팡이가 다르고
+     * 장비 단계마다 메시가 바뀐다. 대신 **경계 상자의 가장 긴 축**을 날로 본다.
+     * 손 뼈에서 먼 쪽이 끝이다.
+     */
+    weaponEdge(base: THREE.Vector3, tip: THREE.Vector3): boolean {
+      const node = visibleWeapon();
+
+      // --- 맨손 ---
+      // 장비를 안 낀 캐릭터가 대부분이다. 무기가 있을 때만 그리면 이 기능은
+      // 거의 항상 안 보인다. 주먹 앞으로 짧게 긋는다.
+      if (!node) {
+        if (!handSlot) return false;
+        handSlot.updateWorldMatrix(true, false);
+        base.setFromMatrixPosition(handSlot.matrixWorld);
+        if (foreArm) {
+          foreArm.updateWorldMatrix(true, false);
+          edgeHand.setFromMatrixPosition(foreArm.matrixWorld);
+          tip.subVectors(base, edgeHand);
+        } else {
+          tip.set(0, 0, 0);
+        }
+        // 팔이 접혀 길이가 0 이 되는 순간이 있다. 그때는 위로 세운다.
+        if (tip.lengthSq() < 1e-8) tip.set(0, 1, 0);
+        tip.normalize().multiplyScalar(FIST_REACH).add(base);
+        return true;
+      }
+
+      const box = localBox(node);
+      if (!box) return false;
+
+      // 뼈 행렬은 렌더 직전에 갱신된다. 궤적은 그 전에 물어보므로 여기서
+      // 이 노드만 직접 올려 준다 — 안 하면 한 프레임 뒤처진 자리에 그린다.
+      node.updateWorldMatrix(true, false);
+
+      box.getCenter(edgeCenter);
+      box.getSize(edgeSize);
+      // 가장 긴 축 하나를 고른다
+      const axis =
+        edgeSize.x >= edgeSize.y && edgeSize.x >= edgeSize.z
+          ? 'x'
+          : edgeSize.y >= edgeSize.z
+            ? 'y'
+            : 'z';
+      const half = edgeSize[axis] / 2;
+      base.copy(edgeCenter);
+      tip.copy(edgeCenter);
+      base[axis] -= half;
+      tip[axis] += half;
+      base.applyMatrix4(node.matrixWorld);
+      tip.applyMatrix4(node.matrixWorld);
+
+      // 손에서 먼 쪽이 칼끝이다. 축 방향은 모델마다 뒤집혀 있다.
+      node.parent?.getWorldPosition(edgeHand);
+      if (base.distanceToSquared(edgeHand) > tip.distanceToSquared(edgeHand)) {
+        edgeSwap.copy(base);
+        base.copy(tip);
+        tip.copy(edgeSwap);
+      }
+      return true;
+    },
+
     update(dt: number, speed: number): void {
+      hitFlash.update(dt);
+      // 죽어 있으면 사망 클립만 돌린다. 이동 가중치를 계속 섞으면
+      // 쓰러진 자세 위로 대기 동작이 얹혀 시체가 숨을 쉰다.
+      if (dying) {
+        mixer.update(dt);
+        return;
+      }
+
       const k = 1 - Math.exp(-BLEND_RATE * dt);
       moveBlend += (THREE.MathUtils.clamp(speed / RUN_SPEED, 0, 1) - moveBlend) * k;
 
@@ -306,7 +504,7 @@ export function createModelCharacterRig(models: Models, profile: ClassProfile): 
       loop(run, moveBlend * base);
 
       // 재생 속도를 실제 이동 속도에 맞춘다. 안 그러면 발이 미끄러진다.
-      if (run) run.setEffectiveTimeScale(Math.max(0.35, speed / RUN_CLIP_SPEED));
+      if (run) run.setEffectiveTimeScale(Math.max(0.35, speed / runClipSpeed));
 
       mixer.update(dt);
     },
@@ -380,12 +578,18 @@ export function createModelMonsterRig(models: Models, kind: MonsterKind): Monste
   const moveClipSpeed = 3;
   let moveBlend = 0;
   let dying = false;
+  const beastFlash = new HitFlash(group);
 
   return {
     group,
     headHeight: target + 0.25,
 
+    flash(): void {
+      beastFlash.flash();
+    },
+
     update(dt: number, state: string, speed: number): void {
+      beastFlash.update(dt);
       if (state === 'dead') {
         if (!dying) {
           dying = true;

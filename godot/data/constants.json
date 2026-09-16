@@ -1,0 +1,10 @@
+{
+  "tickRate": 15,
+  "tickMs": 66.66666666666667,
+  "interpDelayMs": 120,
+  "runSpeed": 4.6,
+  "maxSpeed": 4.6,
+  "moveTolerance": 1.15,
+  "aoiCellSize": 32,
+  "npcReach": 4.5
+}

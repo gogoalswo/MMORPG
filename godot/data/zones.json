@@ -1,0 +1,1588 @@
+{
+  "start": "village",
+  "fieldOrder": [
+    "meadow",
+    "thicket",
+    "canyon",
+    "waste",
+    "mire",
+    "frostmoor",
+    "blackwood",
+    "ruins",
+    "redsand",
+    "saltflat",
+    "sulfur",
+    "cinder",
+    "glacier",
+    "warpwood",
+    "shadowvale",
+    "deadcity",
+    "palemoor",
+    "rift",
+    "abyssgate",
+    "endland"
+  ],
+  "zones": {
+    "village": {
+      "id": "village",
+      "name": "마을",
+      "size": 92,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          9,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "npcs": [
+        {
+          "name": "상인 보리스",
+          "job": "mage",
+          "look": "merchant",
+          "x": -7,
+          "z": 4,
+          "role": "shop",
+          "title": "상점"
+        },
+        {
+          "name": "대장장이 군터",
+          "job": "knight",
+          "look": "smith",
+          "x": 0,
+          "z": 6.5,
+          "role": "smith",
+          "title": "대장간"
+        },
+        {
+          "name": "아네트",
+          "job": "knight",
+          "look": "villager_sack",
+          "x": -8.7,
+          "z": -1.3
+        },
+        {
+          "name": "요한",
+          "job": "mage",
+          "look": "villager_apron",
+          "x": -6.2,
+          "z": -3.8,
+          "hp": 72
+        },
+        {
+          "name": "릴리",
+          "job": "archer",
+          "look": "villager_hood",
+          "x": -3.8,
+          "z": -6.2
+        },
+        {
+          "name": "노인 하르트",
+          "job": "archer",
+          "look": "villager_old",
+          "x": -9,
+          "z": -12
+        }
+      ],
+      "env": {
+        "skyColor": "#b9c9d8",
+        "fogColor": "#c2c8b8",
+        "fogNear": 70,
+        "fogFar": 190,
+        "sunIntensity": 2.7,
+        "hemiIntensity": 1.1,
+        "grassDark": "#5c6a3c",
+        "grassLight": "#82905a",
+        "ground": "stone",
+        "groundTint": "#6a665c"
+      }
+    },
+    "meadow": {
+      "id": "meadow",
+      "name": "초원",
+      "size": 92,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          9,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss00",
+          "x": -12,
+          "z": 20.8,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob003",
+          "x": -20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": 20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob008",
+          "x": -20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob008",
+          "x": 20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        }
+      ],
+      "env": {
+        "skyColor": "#b4c6cf",
+        "fogColor": "#bcc4ae",
+        "fogNear": 68,
+        "fogFar": 185,
+        "sunIntensity": 2.61,
+        "hemiIntensity": 1.07,
+        "grassDark": "#54663a",
+        "grassLight": "#7c8b54",
+        "ground": "grass",
+        "groundTint": "#7c8b54"
+      }
+    },
+    "thicket": {
+      "id": "thicket",
+      "name": "덤불숲",
+      "size": 92,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          9,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss01",
+          "x": -12,
+          "z": 20.8,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob013",
+          "x": -20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": 20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob018",
+          "x": -20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob018",
+          "x": 20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        }
+      ],
+      "env": {
+        "skyColor": "#5f6b63",
+        "fogColor": "#48544a",
+        "fogNear": 45,
+        "fogFar": 135,
+        "sunIntensity": 1.71,
+        "hemiIntensity": 0.8,
+        "grassDark": "#2f3a28",
+        "grassLight": "#4a5936",
+        "ground": "grass",
+        "groundTint": "#4a5936"
+      }
+    },
+    "canyon": {
+      "id": "canyon",
+      "name": "메마른 협곡",
+      "size": 92,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          9,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss02",
+          "x": -12,
+          "z": 20.8,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob023",
+          "x": -20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": 20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob028",
+          "x": -20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob028",
+          "x": 20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        }
+      ],
+      "env": {
+        "skyColor": "#c4b39a",
+        "fogColor": "#b09c7f",
+        "fogNear": 61,
+        "fogFar": 170,
+        "sunIntensity": 2.34,
+        "hemiIntensity": 0.99,
+        "grassDark": "#6b6142",
+        "grassLight": "#8a7d55",
+        "ground": "dirt",
+        "groundTint": "#b09468"
+      }
+    },
+    "waste": {
+      "id": "waste",
+      "name": "잿빛 황야",
+      "size": 92,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          9,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss03",
+          "x": -12,
+          "z": 20.8,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob033",
+          "x": -20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob033",
+          "x": 20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob038",
+          "x": -20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob038",
+          "x": 20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        }
+      ],
+      "env": {
+        "skyColor": "#4a4750",
+        "fogColor": "#3d3a42",
+        "fogNear": 38,
+        "fogFar": 120,
+        "sunIntensity": 1.44,
+        "hemiIntensity": 0.72,
+        "grassDark": "#3a3740",
+        "grassLight": "#4e4a55",
+        "ground": "dirt",
+        "groundTint": "#655f6c"
+      }
+    },
+    "mire": {
+      "id": "mire",
+      "name": "안개 늪",
+      "size": 92,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          9,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss04",
+          "x": -12,
+          "z": 20.8,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob043",
+          "x": -20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob043",
+          "x": 20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob048",
+          "x": -20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob048",
+          "x": 20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        }
+      ],
+      "env": {
+        "skyColor": "#6d7a6a",
+        "fogColor": "#5b6a58",
+        "fogNear": 42,
+        "fogFar": 130,
+        "sunIntensity": 1.62,
+        "hemiIntensity": 0.77,
+        "grassDark": "#37452f",
+        "grassLight": "#4d5c3d",
+        "ground": "grass",
+        "groundTint": "#4d5c3d"
+      }
+    },
+    "frostmoor": {
+      "id": "frostmoor",
+      "name": "서리 고원",
+      "size": 92,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          9,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss05",
+          "x": -12,
+          "z": 20.8,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob053",
+          "x": -20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob053",
+          "x": 20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob058",
+          "x": -20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob058",
+          "x": 20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        }
+      ],
+      "env": {
+        "skyColor": "#c8d8e4",
+        "fogColor": "#aec2d2",
+        "fogNear": 63,
+        "fogFar": 175,
+        "sunIntensity": 2.43,
+        "hemiIntensity": 1.02,
+        "grassDark": "#6d7f86",
+        "grassLight": "#93a6ae",
+        "ground": "snow",
+        "groundTint": "#a5b1b6"
+      }
+    },
+    "blackwood": {
+      "id": "blackwood",
+      "name": "검은 삼림",
+      "size": 92,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          9,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss06",
+          "x": -12,
+          "z": 20.8,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob063",
+          "x": -20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob063",
+          "x": 20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob068",
+          "x": -20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob068",
+          "x": 20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        }
+      ],
+      "env": {
+        "skyColor": "#39423a",
+        "fogColor": "#2a322b",
+        "fogNear": 33,
+        "fogFar": 110,
+        "sunIntensity": 1.26,
+        "hemiIntensity": 0.66,
+        "grassDark": "#1f2a1c",
+        "grassLight": "#33422c",
+        "ground": "grass",
+        "groundTint": "#33422c"
+      }
+    },
+    "ruins": {
+      "id": "ruins",
+      "name": "무너진 성터",
+      "size": 92,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          9,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss07",
+          "x": -12,
+          "z": 20.8,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob073",
+          "x": -20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob073",
+          "x": 20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob078",
+          "x": -20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob078",
+          "x": 20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        }
+      ],
+      "env": {
+        "skyColor": "#8f8d86",
+        "fogColor": "#75736c",
+        "fogNear": 54,
+        "fogFar": 155,
+        "sunIntensity": 2.07,
+        "hemiIntensity": 0.91,
+        "grassDark": "#4f5348",
+        "grassLight": "#6c705f",
+        "ground": "cobble",
+        "groundTint": "#847e6e"
+      }
+    },
+    "redsand": {
+      "id": "redsand",
+      "name": "붉은 사막",
+      "size": 92,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          9,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss08",
+          "x": -12,
+          "z": 20.8,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob083",
+          "x": -20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob083",
+          "x": 20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob088",
+          "x": -20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob088",
+          "x": 20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        }
+      ],
+      "env": {
+        "skyColor": "#d8b98a",
+        "fogColor": "#c9aa76",
+        "fogNear": 65,
+        "fogFar": 180,
+        "sunIntensity": 2.52,
+        "hemiIntensity": 1.05,
+        "grassDark": "#9c7c4a",
+        "grassLight": "#bd9a63",
+        "ground": "sand",
+        "groundTint": "#d4aa72"
+      }
+    },
+    "saltflat": {
+      "id": "saltflat",
+      "name": "소금 평원",
+      "size": 92,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          9,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss09",
+          "x": -12,
+          "z": 20.8,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob093",
+          "x": -20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob093",
+          "x": 20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob098",
+          "x": -20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob098",
+          "x": 20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        }
+      ],
+      "env": {
+        "skyColor": "#dcdcd4",
+        "fogColor": "#c3c3ba",
+        "fogNear": 65,
+        "fogFar": 180,
+        "sunIntensity": 2.52,
+        "hemiIntensity": 1.05,
+        "grassDark": "#9a9a8e",
+        "grassLight": "#b8b8ab",
+        "ground": "dirt",
+        "groundTint": "#c8c6b8"
+      }
+    },
+    "sulfur": {
+      "id": "sulfur",
+      "name": "유황 분지",
+      "size": 92,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          9,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss10",
+          "x": -12,
+          "z": 20.8,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob103",
+          "x": -20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob103",
+          "x": 20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob108",
+          "x": -20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob108",
+          "x": 20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        }
+      ],
+      "env": {
+        "skyColor": "#a89448",
+        "fogColor": "#8e7c36",
+        "fogNear": 56,
+        "fogFar": 160,
+        "sunIntensity": 2.16,
+        "hemiIntensity": 0.94,
+        "grassDark": "#6e6428",
+        "grassLight": "#8f8240",
+        "ground": "sand",
+        "groundTint": "#a38c42"
+      }
+    },
+    "cinder": {
+      "id": "cinder",
+      "name": "화산재 언덕",
+      "size": 92,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          9,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss11",
+          "x": -12,
+          "z": 20.8,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob113",
+          "x": -20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob113",
+          "x": 20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob118",
+          "x": -20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob118",
+          "x": 20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        }
+      ],
+      "env": {
+        "skyColor": "#5a4a46",
+        "fogColor": "#463a37",
+        "fogNear": 40,
+        "fogFar": 125,
+        "sunIntensity": 1.53,
+        "hemiIntensity": 0.74,
+        "grassDark": "#3b3230",
+        "grassLight": "#524644",
+        "ground": "lava",
+        "groundTint": "#5f4e48"
+      }
+    },
+    "glacier": {
+      "id": "glacier",
+      "name": "얼어붙은 심연",
+      "size": 92,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          9,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss12",
+          "x": -12,
+          "z": 20.8,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob123",
+          "x": -20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob123",
+          "x": 20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob128",
+          "x": -20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob128",
+          "x": 20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        }
+      ],
+      "env": {
+        "skyColor": "#8fa6bb",
+        "fogColor": "#7089a0",
+        "fogNear": 45,
+        "fogFar": 135,
+        "sunIntensity": 1.71,
+        "hemiIntensity": 0.8,
+        "grassDark": "#4a5f6e",
+        "grassLight": "#6b8291",
+        "ground": "snow",
+        "groundTint": "#77848e"
+      }
+    },
+    "warpwood": {
+      "id": "warpwood",
+      "name": "뒤틀린 숲",
+      "size": 92,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          9,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss13",
+          "x": -12,
+          "z": 20.8,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob133",
+          "x": -20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob133",
+          "x": 20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob138",
+          "x": -20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob138",
+          "x": 20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        }
+      ],
+      "env": {
+        "skyColor": "#3f3a2c",
+        "fogColor": "#302c22",
+        "fogNear": 36,
+        "fogFar": 115,
+        "sunIntensity": 1.35,
+        "hemiIntensity": 0.69,
+        "grassDark": "#2c2f1f",
+        "grassLight": "#42452e",
+        "ground": "grass",
+        "groundTint": "#42452e"
+      }
+    },
+    "shadowvale": {
+      "id": "shadowvale",
+      "name": "그림자 계곡",
+      "size": 92,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          9,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss14",
+          "x": -12,
+          "z": 20.8,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob143",
+          "x": -20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob143",
+          "x": 20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob148",
+          "x": -20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob148",
+          "x": 20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        }
+      ],
+      "env": {
+        "skyColor": "#2e2a3d",
+        "fogColor": "#221f2e",
+        "fogNear": 31,
+        "fogFar": 105,
+        "sunIntensity": 1.17,
+        "hemiIntensity": 0.63,
+        "grassDark": "#232036",
+        "grassLight": "#332e48",
+        "ground": "dirt",
+        "groundTint": "#3f394f"
+      }
+    },
+    "deadcity": {
+      "id": "deadcity",
+      "name": "폐허 도시",
+      "size": 92,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          9,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss15",
+          "x": -12,
+          "z": 20.8,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob153",
+          "x": -20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob153",
+          "x": 20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob158",
+          "x": -20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob158",
+          "x": 20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        }
+      ],
+      "env": {
+        "skyColor": "#7d7d80",
+        "fogColor": "#65656a",
+        "fogNear": 49,
+        "fogFar": 145,
+        "sunIntensity": 1.89,
+        "hemiIntensity": 0.85,
+        "grassDark": "#4b4b4d",
+        "grassLight": "#666668",
+        "ground": "cobble",
+        "groundTint": "#75726f"
+      }
+    },
+    "palemoor": {
+      "id": "palemoor",
+      "name": "빛바랜 고원",
+      "size": 92,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          9,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss16",
+          "x": -12,
+          "z": 20.8,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob163",
+          "x": -20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob163",
+          "x": 20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob168",
+          "x": -20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob168",
+          "x": 20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        }
+      ],
+      "env": {
+        "skyColor": "#cfd2cf",
+        "fogColor": "#b3b7b4",
+        "fogNear": 61,
+        "fogFar": 170,
+        "sunIntensity": 2.34,
+        "hemiIntensity": 0.99,
+        "grassDark": "#7f857c",
+        "grassLight": "#9ba296",
+        "ground": "grass",
+        "groundTint": "#9ba296"
+      }
+    },
+    "rift": {
+      "id": "rift",
+      "name": "균열 지대",
+      "size": 92,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          9,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss17",
+          "x": -12,
+          "z": 20.8,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob173",
+          "x": -20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob173",
+          "x": 20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob178",
+          "x": -20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob178",
+          "x": 20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        }
+      ],
+      "env": {
+        "skyColor": "#4a3358",
+        "fogColor": "#392846",
+        "fogNear": 36,
+        "fogFar": 115,
+        "sunIntensity": 1.35,
+        "hemiIntensity": 0.69,
+        "grassDark": "#332a3d",
+        "grassLight": "#473a52",
+        "ground": "lava",
+        "groundTint": "#523f5c"
+      }
+    },
+    "abyssgate": {
+      "id": "abyssgate",
+      "name": "심연의 문턱",
+      "size": 92,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          9,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss18",
+          "x": -12,
+          "z": 20.8,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob183",
+          "x": -20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob183",
+          "x": 20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob188",
+          "x": -20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob188",
+          "x": 20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        }
+      ],
+      "env": {
+        "skyColor": "#25303c",
+        "fogColor": "#1c252f",
+        "fogNear": 29,
+        "fogFar": 100,
+        "sunIntensity": 1.08,
+        "hemiIntensity": 0.61,
+        "grassDark": "#1e2730",
+        "grassLight": "#2c3846",
+        "ground": "cobble",
+        "groundTint": "#333d48"
+      }
+    },
+    "endland": {
+      "id": "endland",
+      "name": "종말의 대지",
+      "size": 92,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          9,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss19",
+          "x": -12,
+          "z": 20.8,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob193",
+          "x": -20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob193",
+          "x": 20,
+          "z": -20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob198",
+          "x": -20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob198",
+          "x": 20,
+          "z": 20,
+          "radius": 8,
+          "count": 20,
+          "respawnMs": 10000
+        }
+      ],
+      "env": {
+        "skyColor": "#2e1d22",
+        "fogColor": "#241619",
+        "fogNear": 26,
+        "fogFar": 95,
+        "sunIntensity": 0.99,
+        "hemiIntensity": 0.58,
+        "grassDark": "#26191d",
+        "grassLight": "#37232a",
+        "ground": "lava",
+        "groundTint": "#3d282e"
+      }
+    }
+  }
+}

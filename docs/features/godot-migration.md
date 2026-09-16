@@ -16,7 +16,9 @@ three.js 웹 클라이언트를 **고도 엔진으로 갈아타는 중**이다. 
 | `godot/export_presets.cfg` | 안드로이드·웹 익스포트 설정. **비밀은 없다** — 아래 "서명" 참고 |
 | `.github/workflows/android.yml` | push 하면 APK 를 구워 Actions 산출물로 올린다 |
 | `.github/workflows/pages.yml` | 같은 사이트의 **`/game/`** 아래에 웹 빌드를 같이 올린다 (웹 클라이언트는 `/` 그대로) |
-| `scripts/export-shared.mjs` | (예정) `packages/shared` 의 표를 `godot/data/*.json` 으로 내보낸다 |
+| `scripts/export-shared.mjs` | `packages/shared` 의 표를 `godot/data/*.json` 으로 내보낸다 (`npm run export:godot`) |
+| `godot/data/*.json` | 내보낸 결과. **손으로 고치지 않는다** — 고치면 테스트가 잡는다 |
+| `packages/shared/src/godotExport.test.ts` | 위 JSON 이 TS 표와 같은지 전수 검사 |
 
 ## 규칙
 
@@ -44,6 +46,15 @@ three.js 웹 클라이언트를 **고도 엔진으로 갈아타는 중**이다. 
 이렇게 가르면 `*.test.ts` 1,559줄(데이터 전수 검사)이 **그대로 살아 있다.** 생성기가
 TS 에 남으니 표가 어긋나면 `npm test` 가 잡는다. 전부 GDScript 로 옮겼으면 이 그물이
 통째로 없어진다.
+
+내보낸 JSON 이 낡는 것도 `godotExport.test.ts` 가 막는다 — 수치를 고치고 내보내기를
+잊으면 **웹과 고도가 조용히 다른 게임이 된다.** 깨지면 `npm run export:godot` 을 돌린다.
+
+**아이템은 내보내지 않는다.** 나중에 다시 만들기로 했다 (2026-09-16). `items.ts` 는
+웹 클라이언트가 아직 쓰고 있어서 지우지 않았다. 다시 만들 때 `export-shared.mjs` 에
+줄을 더하면 된다.
+
+`JOB_STATS` 는 이 일로 `combat.ts` 에서 `export` 만 붙였다. 값도 자리도 그대로다.
 
 ### `World` 를 클라이언트가 직접 만지지 않는다 ★
 
@@ -105,9 +116,9 @@ godot --headless --path godot --script check.gd # 상태를 글로 찍는다
 
 ## 단계
 
-1. **골격** ← 지금 여기. 프로젝트·임시 화면·APK 워크플로우. 빈 화면 APK 를 폰에서 한 번 확인
-2. **데이터 내보내기** — `scripts/export-shared.mjs` + TS 표와 대조하는 테스트
-3. **`World`** — `ZoneRoom` 의 판정을 GDScript 로. 네트워크 없이
+1. ~~**골격** — 프로젝트·임시 화면·APK 워크플로우~~ 끝 (2026-09-16)
+2. ~~**데이터 내보내기** — `scripts/export-shared.mjs` + 대조 테스트~~ 끝 (2026-09-16)
+3. **`World`** ← 지금 여기. `ZoneRoom` 의 판정을 GDScript 로. 네트워크 없이
 4. **걸어다니기** — 한 존, 이동, 몬스터 표시
 5. **모델·애니메이션** — `varco_*.glb` (아래 참고)
 6. **전투 표현 → UI → 이펙트**

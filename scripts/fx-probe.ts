@@ -1,5 +1,8 @@
 /**
- * 스킬 이펙트를 **브라우저 없이** 돌려 보고 결과를 글로 찍는다.
+ * 남은 이펙트(캐릭터 피격)를 **브라우저 없이** 돌려 보고 결과를 글로 찍는다.
+ *
+ * 원래는 스킬 이펙트 전부를 보는 도구였다. 스킬 이펙트를 걷어내면서
+ * (2026-09-16, `docs/features/skills.md`) 확인할 것이 `hurt` 하나만 남아 줄였다.
  *
  * 이펙트는 눈으로 봐야 하는 것이라 그동안 스크린샷으로 확인했는데, 두 가지가 문제였다.
  * 하나는 토큰이 비싸고, 다른 하나는 **창이 가려지면 `requestAnimationFrame` 이 멈춰서**
@@ -11,15 +14,13 @@
  * 그건 사람이 한 번 보면 된다.
  *
  * 쓰는 법:
- *   npm run fx-probe                 # 검기(올려차기)
- *   npm run fx-probe -- sky_breaker  # 다른 스킬
+ *   npm run fx-probe
  *
- * 스프라이트(주먹·발 연타·천붕각의 발)는 `TextureLoader` 가 `document` 를 찾으므로
- * Node 에서 못 만든다. 그 자리는 "그림 N장"으로만 세고 넘어간다.
+ * 그림(`hit.png`)은 `TextureLoader` 가 `document` 를 찾으므로 Node 에서 못 받는다.
+ * 그 자리는 "그림 N장"으로만 세고 넘어간다.
  */
 import * as THREE from 'three';
-import { SkillFx, skillColor } from '../packages/client/src/scene/skillFx.ts';
-import { SKILLS } from '../packages/shared/src/skills.ts';
+import { SkillFx } from '../packages/client/src/scene/skillFx.ts';
 
 /**
  * 그림(스프라이트)은 `TextureLoader` 가 `document` 를 찾으므로 Node 에서 못 받는다.
@@ -36,37 +37,14 @@ THREE.TextureLoader.prototype.load = function load(): THREE.Texture {
  * 스킬 id, 또는 스킬과 무관한 이펙트 이름.
  * 지금 스킬이 아닌 것은 `hurt` 하나뿐이다 — 몬스터에게 맞았을 때 뜨는 발톱 자국.
  */
-const skillId = process.argv[2] ?? 'rising_kick';
-const skill = SKILLS[skillId] ?? null;
-if (!skill && skillId !== 'hurt') {
-  console.error(`없는 스킬: ${skillId} (스킬이 아닌 것은 hurt)`);
-  process.exit(1);
-}
-
-/**
- * 캐릭터가 보는 각(도). 기본 90° 는 +X 쪽(동쪽)이라 정면이 어디인지 눈으로 세기 쉽다.
- * 옆모습 그림(백호)이 제대로 뒤집히는지 보려면 반대쪽(-90)을 준다 — 크기 x 가 음수면 뒤집힌 것이다.
- */
-const facing = ((Number(process.argv[3]) || 90) * Math.PI) / 180;
 const at = new THREE.Vector3(0, 0, 0);
 
 const fx = new SkillFx();
 
-if (skill) {
-  const color = skillColor(skill);
-
-  console.log(`# ${skill.name} (${skill.id})`);
-  console.log(`  사거리 ${skill.range} · 각 ${(skill.arc / Math.PI).toFixed(2)}π · 색 #${color.toString(16)}`);
-  console.log(`  시전 위치 (0, 0) · 정면 ${((facing * 180) / Math.PI).toFixed(0)}° (+X 쪽)`);
-
-  const drawn = fx.castSignature(at, facing, skill);
-  if (!drawn && skill.arc >= Math.PI * 2 && !skill.projectile) fx.nova(at, skill.range, color);
-  if (!drawn && skill.selfHeal) fx.heal(at, color);
-} else {
-  console.log('# 피격 (hurt)');
-  console.log('  맞은 자리 (0, 0) — 스킬과 무관하다');
-  fx.hurt(at);
-}
+console.log('# 피격 (hurt)');
+console.log('  맞은 자리 (0, 0) — 스킬과 무관한 피격 표시다');
+// 연달아 맞는 상황을 본다. 같은 자리에 포개지면 한 장처럼 보이므로 흩어져야 한다
+for (let i = 0; i < 3; i++) fx.hurt(at);
 
 const meshes = fx.group.children as THREE.Object3D[];
 console.log(`\n## 띄운 것 ${meshes.length}개 (그림 ${spriteCount}장)`);
@@ -115,9 +93,8 @@ for (let step = 0; step < 60 * 3; step++) {
 }
 
 console.log('\n## 확인할 것');
-if (skill) console.log(`  - 가장 먼 것이 사거리(${skill.range}m)를 넘지 않는가`);
-console.log('  - 정면이 +X 이므로, 앞으로 나가는 것이면 x 가 커지고 z 는 0 근처여야 한다');
-console.log('  - 위로 차올리는 것이면 거리는 그대로고 높이가 올라가야 한다');
+console.log('  - 세 장이 같은 자리에 포개지지 않는가 (HURT.spread 0.35m 안에서 흩어진다)');
+console.log('  - 높이가 가슴께(1.2m)에서 조금 올라가는가');
 console.log('  - 밝기가 도중에 0 으로 꺼지지 않는가 (커질 때 투명해지면 화면에서 사라진다)');
 
 fx.dispose();

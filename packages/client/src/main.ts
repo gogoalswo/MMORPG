@@ -319,30 +319,16 @@ const connection = new ZoneConnection({
       }
     }
 
-    /**
-     * 스킬로 때린 자리에서만 이펙트가 터진다.
-     *
-     * 기본 공격은 번쩍임만으로 충분하다. 근접기(강타 같은 것)는 시전자 발밑이
-     * 아니라 **때린 자리**에서 터져야 말이 된다 — 그래서 여기서 그린다.
-     */
-    const hitSkill = event.skillId ? SKILLS[event.skillId] : null;
-
     if (event.projectile && source) {
       // 대상이 도중에 사라질 수 있으므로 지금 위치를 복사해 둔다
       const landing = target.clone();
       projectiles.spawn(event.projectile as ProjectileKind, source, target, () => {
         if (!silent) hud.addNumber(landing, text, kind, crit);
-        if (hitSkill) skillFx.impact(landing, skillColor(hitSkill));
       });
       return;
     }
 
     if (!silent) hud.addNumber(target, text, kind, crit);
-    if (hitSkill) {
-      skillFx.impact(target, skillColor(hitSkill));
-      // 스킬 고유 그림(격투가 주먹·발 연타) — 섬광만으로는 칼로 벤 것과 같아 보인다
-      skillFx.signature(target, hitSkill);
-    }
   },
 
   /**
@@ -370,38 +356,6 @@ const connection = new ZoneConnection({
     trailFor(id, skill ? skillColor(skill) : undefined);
     if (mine && skill) hud.addNumber(player.position, skill.name, 'gain');
 
-    // --- 이펙트 ---
-    // 남이 쓴 것도 보여야 한다. 옆에서 뭘 하는지 안 보이면 같이 노는 느낌이 안 난다.
-    const at = mine ? player.position : remotePlayers.positionOf(id);
-    if (!skill || !at) return;
-
-    const color = skillColor(skill);
-    if (skill.selfHeal) {
-      skillFx.heal(at, color);
-      return;
-    }
-
-    /**
-     * 몬스터가 없어도 시전자 자리에서 나오는 그림 (발 연타·천붕각).
-     * true 면 그 스킬이 자기 이펙트를 전부 그린 것이므로 아래 고리는 건너뛴다.
-     */
-    const facing = mine ? player.group.rotation.y : remotePlayers.facingOf(id);
-    const drawnBySkill = facing !== null && skillFx.castSignature(at, facing, skill);
-
-    /**
-     * 시전자 자리에 그리는 건 **자기 주위로 터지는 기술뿐**이다.
-     *
-     * - 전방위기(`arc >= 2π`) — 사거리만큼 고리를 그린다. 그게 실제 판정 범위다.
-     * - 날아가는 기술 — 투사체와 착탄이 대신 보여준다.
-     * - 근접기(강타처럼 한 방향으로 내리치는 것) — **여기서는 아무것도 안 그린다.**
-     *   발밑에서 고리가 솟으면 "내가 뭔가를 둘렀다"로 보여서, 앞을 내리치는
-     *   동작과 전혀 안 맞는다. 맞은 자리에서 터지는 건 `onHit` 이 그린다.
-     * - 자기 이펙트를 스스로 그린 기술(`drawnBySkill`) — 천붕각은 발이 닿는 순간에
-     *   맞춰 고리를 직접 띄운다. 여기서 또 그리면 발보다 고리가 앞서 퍼진다.
-     */
-    if (!drawnBySkill && skill.arc >= Math.PI * 2 && !skill.projectile) {
-      skillFx.nova(at, skill.range, color);
-    }
   },
 
   // 무적은 테스트 도구다. 켜졌는지는 서버가 정하고, 단추는 받은 값만 그린다
@@ -1026,8 +980,6 @@ function frame(now: number): void {
   for (const solid of remotePlayers.solids()) solidBuffer.push(solid);
   player.solids = solidBuffer;
 
-  // 옆모습 그림(백호)을 어느 쪽으로 뒤집을지 정하는 데 쓴다 — 카메라는 사용자가 돌린다
-  skillFx.cameraYaw = rig.yawAngle;
   skillFx.update(dt);
   clickMarker.update(dt);
   npcPrompt.update(zone?.def.npcs ?? [], player.position);
@@ -1089,27 +1041,5 @@ function frame(now: number): void {
     fpsFrames = 0;
   }
 }
-
-/**
- * 확인용 — 이펙트만 그 자리에서 띄운다. 콘솔에서 `__skillFx('sky_breaker')`.
- *
- * 이펙트는 글로 읽을 수가 없는데, 실제로 쓰려면 서버 판정(직업·레벨·액션바)을
- * 통과해야 한다. 천붕각은 Lv.150 이라 그러지 않으면 확인할 방법이 아예 없다.
- * **그리기만 한다** — 서버로 아무것도 안 보내고 피해도 없다.
- * 시전 때 그리는 것만 낸다. 맞았을 때 붙는 그림(`signature`)은 대상이 있어야 한다.
- */
-(window as unknown as Record<string, unknown>).__skillFx = (skillId: string) => {
-  const skill = SKILLS[skillId];
-  if (!skill) return `없는 스킬: ${skillId}`;
-  const color = skillColor(skill);
-  if (skill.selfHeal) skillFx.heal(player.position, color);
-  else {
-    const drawn = skillFx.castSignature(player.position, player.group.rotation.y, skill);
-    if (!drawn && skill.arc >= Math.PI * 2 && !skill.projectile) {
-      skillFx.nova(player.position, skill.range, color);
-    }
-  }
-  return `${skill.name} (${skill.id})`;
-};
 
 requestAnimationFrame(frame);

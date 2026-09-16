@@ -12,7 +12,14 @@ three.js 웹 클라이언트를 **고도 엔진으로 갈아타는 중**이다. 
 | 파일 | 역할 |
 |---|---|
 | `godot/project.godot` | 프로젝트 설정. 렌더러는 `mobile`, 주 화면은 `main.tscn` |
-| `godot/main.tscn` `godot/main.gd` | **빌드 확인용 임시 화면.** 돌아가는 상자와 버전 글자뿐이다. 게임이 들어오면 버린다 |
+| `godot/main.tscn` | 시작 화면. `game/game.gd` 하나를 달고 나머지는 코드가 짓는다 |
+| `godot/world/world.gd` | **판정.** `ZoneRoom.ts` 의 자리다. 네트워크 얘기가 없다 |
+| `godot/world/movement.gd` | `shared/movement.ts` 이식본. TS 와 값이 같아야 한다 |
+| `godot/world/game_data.gd` | `data/*.json` 로더 |
+| `godot/net/transport.gd` | 화면과 판정 사이의 유일한 통로 |
+| `godot/net/local_transport.gd` | 서버 없이 `World` 를 이 자리에서 돌린다 |
+| `godot/game/game.gd` | 화면. 바닥·카메라·캡슐·터치 이동. **`World` 를 직접 안 만진다** |
+| `godot/tests/*.gd` | 헤드리스 검사 — 이동 공식·World·터치 이동 |
 | `godot/export_presets.cfg` | 안드로이드·웹 익스포트 설정. **비밀은 없다** — 아래 "서명" 참고 |
 | `.github/workflows/android.yml` | push 하면 APK 를 구워 Actions 산출물로 올린다 |
 | `.github/workflows/pages.yml` | 같은 사이트의 **`/game/`** 아래에 웹 빌드를 같이 올린다 (웹 클라이언트는 `/` 그대로) |
@@ -86,15 +93,33 @@ TS 에 남으니 표가 어긋나면 `npm test` 가 잡는다. 전부 GDScript �
 경로와 비밀번호는 CI 가 `~/.config/godot/editor_settings-4.tres` 로 넣는다.
 스토어에 낼 릴리스 키는 GitHub Secrets 로 간다 (아직 안 만들었다).
 
+### 아직 예측·보정이 없다
+
+화면은 `Transport` 가 준 상태를 **그대로 그린다.** 로컬이라 지연이 0 이라서
+매끄럽다. 서버를 붙이는 단계에서 `networking-state.md` 의 예측·보정을 넣는다.
+그때 손댈 자리는 `game.gd` 의 `_draw_state` 하나다.
+
 ### 한글 폰트가 없다
 
 고도 기본 폰트에 한글 글리프가 없다. 한글을 넣으면 **폰에서 네모로 나온다.**
-UI 를 만들기 전에 폰트 리소스를 먼저 붙여야 한다. `main.gd` 가 ASCII 만 쓰는 이유다.
+UI 를 만들기 전에 폰트 리소스를 먼저 붙여야 한다. `game.gd` 의 글자가 ASCII 만
+쓰는 이유이고, 화면에 존 이름("마을") 대신 id(`village`)를 찍는 이유다.
 
 ## 확인
 
 **화면 확인은 브라우저나 폰의 APK 로 한다.** `--headless` 는 더미 렌더러라
 화면을 못 그린다.
+
+| 어디 | 무엇 |
+|---|---|
+| 이동 공식이 TS 와 같은가 | `godot --headless --path godot --script tests/movement_test.gd` |
+| World 와 Transport | `... tests/world_test.gd` |
+| 눌러서 걸어가기 | `... tests/touch_test.gd` |
+
+셋 다 `pages.yml` 이 배포 전에 돌린다. 하나라도 깨지면 배포까지 가지 않는다.
+
+기준값은 `movement.ts` 를 node 로 직접 돌려 뽑았다 (2026-09-16). 두 쪽이 갈라지면
+나중에 서버를 붙였을 때 매 틱 보정이 튄다.
 
 | 어디 | 주소 |
 |---|---|
@@ -118,8 +143,8 @@ godot --headless --path godot --script check.gd # 상태를 글로 찍는다
 
 1. ~~**골격** — 프로젝트·임시 화면·APK 워크플로우~~ 끝 (2026-09-16)
 2. ~~**데이터 내보내기** — `scripts/export-shared.mjs` + 대조 테스트~~ 끝 (2026-09-16)
-3. **`World`** ← 지금 여기. `ZoneRoom` 의 판정을 GDScript 로. 네트워크 없이
-4. **걸어다니기** — 한 존, 이동, 몬스터 표시
+3. ~~**`World` 와 걸어다니기** — 판정·Transport·마을 한 곳·터치 이동~~ 끝 (2026-09-16)
+4. **몬스터** ← 지금 여기. 스폰·충돌·표시
 5. **모델·애니메이션** — `varco_*.glb` (아래 참고)
 6. **전투 표현 → UI → 이펙트**
 7. **서버** — 고도 헤드리스. `Transport` 에 구현을 하나 더 끼운다

@@ -35,6 +35,7 @@
 | [client-ui.md](client-ui.md) | HUD 레이아웃, 오버레이 규칙, **미니맵**, **클릭 이동 표시**, **테스트 도구(스킬 목록·무적 단추)**, 모바일 대응 |
 | [characters-and-animation.md](characters-and-animation.md) | 캐릭터·몬스터·NPC 외형, 본 구조, 걷기·대기·공격 동작 |
 | [verification.md](verification.md) | **확인하는 방법** — 헤드리스 클라이언트, DOM 읽기, 로그 |
+| [godot-migration.md](godot-migration.md) | **고도 엔진 이관**(모바일 앱) — 왜 서버까지 가는지, `shared` 를 생성기/공식으로 가르는 기준, `World`·`Transport` 규칙, APK 빌드 |
 
 ## 전체를 관통하는 규칙
 

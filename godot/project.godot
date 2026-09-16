@@ -1,0 +1,24 @@
+; 고도 프로젝트 설정. 에디터가 다시 쓰므로 주석은 지워질 수 있다.
+; 무엇을 왜 이렇게 뒀는지는 docs/features/godot-migration.md 에 적는다.
+
+config_version=5
+
+[application]
+
+config/name="MMORPG"
+run/main_scene="res://main.tscn"
+config/features=PackedStringArray("4.7", "Mobile")
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+
+[rendering]
+
+renderer/rendering_method="mobile"
+renderer/rendering_method.mobile="mobile"
+; 안드로이드 익스포트가 요구한다. 없으면 "ETC2/ASTC texture compression is
+; required for Android export" 로 익스포트가 거부된다.
+textures/vram_compression/import_etc2_astc=true

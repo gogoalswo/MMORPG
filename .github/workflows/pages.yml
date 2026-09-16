@@ -24,6 +24,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      GODOT_VERSION: 4.7.2
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -38,6 +40,41 @@ jobs:
           VITE_SERVER_URL: local
           # https://<아이디>.github.io/<저장소>/ 아래에 올라가므로 에셋 경로 앞에 저장소 이름이 붙는다
           VITE_BASE: /${{ github.event.repository.name }}/
+      # 고도 이관본을 같은 사이트의 /game/ 아래에 같이 올린다.
+      # 웹 클라이언트를 건드리지 않으므로, 이관을 그만두면 이 두 단계만 지우면 된다.
+      # 스레드를 끈 빌드여야 한다 — 이유는 godot/export_presets.cfg 참고.
+      - name: 고도와 익스포트 템플릿 캐시
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/godot-bin
+            ~/.local/share/godot/export_templates
+          key: godot-${{ env.GODOT_VERSION }}
+
+      - name: 고도와 익스포트 템플릿 받기
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        run: |
+          set -e
+          mkdir -p ~/godot-bin ~/.local/share/godot/export_templates
+          base="https://downloads.godotengine.org/?version=$GODOT_VERSION&flavor=stable"
+          curl -fsSL -o /tmp/godot.zip "$base&slug=linux.x86_64.zip&platform=linux.64"
+          unzip -q /tmp/godot.zip -d ~/godot-bin
+          mv "$HOME/godot-bin/Godot_v${GODOT_VERSION}-stable_linux.x86_64" ~/godot-bin/godot
+          chmod +x ~/godot-bin/godot
+          curl -fsSL -o /tmp/templates.tpz "$base&slug=export_templates.tpz&platform=templates"
+          unzip -q /tmp/templates.tpz -d /tmp/tpl
+          mv /tmp/tpl/templates "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+
+      - name: 고도 웹 빌드 → /game/
+        run: |
+          set -e
+          mkdir -p packages/client/dist/game
+          ~/godot-bin/godot --headless --path godot --import
+          ~/godot-bin/godot --headless --path godot \
+            --export-release "Web" "$GITHUB_WORKSPACE/packages/client/dist/game/index.html"
+          ls -lh packages/client/dist/game
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: packages/client/dist

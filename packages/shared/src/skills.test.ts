@@ -5,6 +5,7 @@ import {
   PROJECTILE_SPEED,
   SKILLS,
   SKILL_BAR_SIZE,
+  SKILL_UNLOCK_ALL,
   canLearn,
   skillForJob,
 } from './skills.ts';
@@ -33,20 +34,28 @@ test('모든 스킬이 실재하는 직업에 속한다', () => {
   }
 });
 
-test('직업마다 같은 수의 스킬을 갖는다', () => {
-  // 한 직업만 적으면 그 직업이 손해다
-  const counts = JOB_IDS.map((job) => JOB_SKILLS[job].length);
-  assert.ok(counts.every((c) => c === counts[0]), `직업별 개수: ${counts.join(', ')}`);
-  assert.ok(counts[0]! > SKILL_BAR_SIZE, '고를 수 있어야 장착이 의미가 있다');
-});
-
-test('직업별 요구 레벨이 서로 같다', () => {
-  // 직업마다 배우는 시점이 다르면 그 자체로 강약이 갈린다
-  const levelsOf = (job: (typeof JOB_IDS)[number]) =>
-    JOB_SKILLS[job].map((id) => SKILLS[id]!.reqLevel);
-  const first = levelsOf(JOB_IDS[0]!);
+/**
+ * **직업끼리 개수·요구 레벨을 맞추던 검사는 뺐다** (2026-09-12).
+ *
+ * 원래는 "한 직업만 적으면 그 직업이 손해다", "배우는 시점이 다르면 그 자체로 강약이
+ * 갈린다" 는 이유로 넷을 똑같이 맞췄다. 그런데 그 규칙 때문에 **격투가에 스킬 하나를
+ * 더하려면 나머지 세 직업 몫까지 같이 설계해야 했다.** 지금은 직업마다 콘텐츠가
+ * 따로 붙는 단계라, 균형을 맞추느라 만들고 싶은 걸 못 만드는 쪽이 더 손해다.
+ *
+ * 남아 있는 것: 직업마다 Lv.1 스킬이 하나씩 있고(첫 스킬), 요구 레벨이 오름차순이며,
+ * Lv.20 까지 액션바 칸 수(4개)만큼은 열린다. **직업별 개수만 자유다.**
+ */
+test('직업마다 액션바를 채울 만큼은 갖는다', () => {
+  /**
+   * 원래는 "칸 수보다 **많아야** 고르는 의미가 있다" 였다. 2026-09-12 격투가를
+   * 이펙트가 붙은 넷만 남기고 정리하면서 딱 4개가 됐다 — 고를 여지는 없지만 빈 칸도
+   * 없다. 스킬을 더 만들면 자연스럽게 다시 고르게 된다.
+   */
   for (const job of JOB_IDS) {
-    assert.deepEqual(levelsOf(job), first, `${job} 의 요구 레벨이 다르다`);
+    assert.ok(
+      JOB_SKILLS[job].length >= SKILL_BAR_SIZE,
+      `${job}: ${JOB_SKILLS[job].length}개라 액션바(${SKILL_BAR_SIZE}칸)에 빈 칸이 남는다`
+    );
   }
 });
 
@@ -152,7 +161,10 @@ test('다른 직업 스킬은 걸러진다', () => {
 test('배우기 판정이 직업과 레벨을 함께 본다', () => {
   const late = SKILLS[JOB_SKILLS.archer[JOB_SKILLS.archer.length - 1]!]!;
   assert.equal(canLearn(late, 'archer', late.reqLevel), true);
-  assert.equal(canLearn(late, 'archer', late.reqLevel - 1), false, '레벨이 모자라면 못 배운다');
+  // 테스트 스위치가 켜져 있는 동안은 레벨을 안 본다 — 그게 스위치의 목적이다 (skills.ts)
+  if (!SKILL_UNLOCK_ALL) {
+    assert.equal(canLearn(late, 'archer', late.reqLevel - 1), false, '레벨이 모자라면 못 배운다');
+  }
   assert.equal(canLearn(late, 'knight', MAX_LEVEL), false, '다른 직업은 못 배운다');
 });
 

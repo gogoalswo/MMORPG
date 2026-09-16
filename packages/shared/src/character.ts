@@ -35,7 +35,7 @@ export function nameErrorMessage(error: NameError): string {
   }
 }
 
-export const JOB_IDS = ['knight', 'mage', 'archer'] as const;
+export const JOB_IDS = ['knight', 'mage', 'archer', 'fighter'] as const;
 export type JobId = (typeof JOB_IDS)[number];
 
 export function isJobId(value: unknown): value is JobId {

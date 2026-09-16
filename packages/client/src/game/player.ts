@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { RUN_SPEED, applyMove, zoneHalfSize, type MoveInput } from '@mmo/shared';
+import { RUN_SPEED, applyMove, zoneHalfSize, type MoveInput, type Solid } from '@mmo/shared';
 import { sameGear } from '../net/connection';
 import type { CharacterRig, GearLook, WeaponEdge } from './characterRig';
 import { createRig } from './rigFactory';
@@ -34,9 +34,25 @@ export class Player {
   private readonly dir = new THREE.Vector3();
   private facing = 0;
   private currentSpeed = 0;
+  /**
+   * 겨눈 쪽을 보라고 정해 둔 각. 움직이면 지워진다 (이동 방향이 이긴다).
+   *
+   * **서버도 같은 규칙으로 `rotY` 를 정한다** (`ZoneRoom.faceMonster`).
+   * 여기서 안 돌리면, 예측 중에는 서버 각이 안 내려오므로 타겟을 찍어 두고도
+   * 마지막으로 걷던 쪽을 향한 채 휘두른다.
+   */
+  private lookAt: number | null = null;
 
   /**
-   * 서버가 몰고 있는지 (자동 사냥·클릭 추격).
+   * 공격 경직이 풀리는 시각(`performance.now` 기준). 0 이면 안 묶여 있다.
+   *
+   * 서버가 `swing`/`skill` 에 실어 보내는 `rootMs` 로만 설정한다 — 누를 때
+   * 미리 잡으면 쿨타임에 걸려 서버가 안 친 공격에도 발이 묶인다.
+   */
+  private rootUntil = 0;
+
+  /**
+   * 서버가 몰고 있는지 (자동 사냥·자동 시전).
    *
    * 이때는 예측을 멈추고 서버가 준 위치와 **각**을 따라간다. 예전에는 위치만
    * 따라가고 각과 속도를 그대로 뒀는데, 그래서 캐릭터가 정면을 본 채로
@@ -103,11 +119,20 @@ export class Player {
     this.dir.set(0, 0, 0);
     this.currentSpeed = 0;
     this.pending.length = 0;
+    // 존을 옮기면 서버 쪽 경직도 새 방에서 0 부터다. 안 풀면 도착하자마자 못 움직인다
+    this.rootUntil = 0;
   }
 
-  /** 공격 모션 */
-  swing(): void {
+  /**
+   * 공격 모션. `rootMs` 동안은 **발이 묶인다** (서버가 보내 준 값 그대로).
+   *
+   * 서버가 `handleInput` 에서 이 동안의 이동 입력을 버리므로, 여기서 예측을
+   * 같이 멈추지 않으면 한 발 나갔다가 보정에 끌려 돌아오기를 반복해 떤다.
+   * **가려던 곳은 지우지 않는다** — 경직이 풀리면 이어서 걸어간다.
+   */
+  swing(rootMs = 0): void {
     this.rig.swing();
+    if (rootMs > 0) this.rootUntil = performance.now() + rootMs;
   }
 
   /**
@@ -161,6 +186,27 @@ export class Player {
     this.hasMoveTarget = false;
   }
 
+  /**
+   * 겨눈 자리를 향해 몸을 돌린다 (공격·스킬을 쏘는 순간).
+   *
+   * **즉시 돌린다.** 서버도 쏘는 순간 `rotY` 를 그 값으로 대입하므로
+   * (`ZoneRoom.faceMonster`), 여기서만 부드럽게 돌리면 이펙트가 나가는 동안
+   * 판정 방향과 그림 방향이 서로 다르다 — 할퀸 자국은 옆을 긁는데 앞의 놈이 맞는다.
+   */
+  faceTo(x: number, z: number): void {
+    const dx = x - this.position.x;
+    const dz = z - this.position.z;
+    if (Math.hypot(dx, dz) < 1e-3) return;
+    this.lookAt = Math.atan2(dx, dz);
+    this.facing = this.lookAt;
+    this.group.rotation.y = this.facing;
+  }
+
+  /** 지금 공격 경직 중인가 (이동 예측을 멈추는 구간) */
+  get rooted(): boolean {
+    return performance.now() < this.rootUntil;
+  }
+
   /** 서버가 모는 중인가 — 매 프레임 알려준다 */
   setDriven(on: boolean): void {
     if (this.driven === on) return;
@@ -176,7 +222,22 @@ export class Player {
     }
   }
 
-  /** 서버가 정한 위치와 각. 자동 사냥·추격 중에 reconcile 대신 쓴다 */
+  /**
+   * 지나갈 수 없는 몸들 (몬스터). `main.ts` 가 매 프레임 넣어 준다.
+   * 예측과 되돌려 재생(`reconcile`)이 **서버와 같은 목록**을 봐야 보정이 안 튄다.
+   */
+  solids: Solid[] = [];
+
+  /** 목표 각으로 한 프레임만큼 돌린다. 세 군데(이동·조준·서버 추종)가 같은 속도를 쓴다 */
+  private turnTo(want: number, dt: number): void {
+    let delta = want - this.facing;
+    while (delta > Math.PI) delta -= Math.PI * 2;
+    while (delta < -Math.PI) delta += Math.PI * 2;
+    this.facing += delta * (1 - Math.exp(-14 * dt));
+    this.group.rotation.y = this.facing;
+  }
+
+  /** 서버가 정한 위치와 각. 자동 사냥 중에 reconcile 대신 쓴다 */
   setServerPose(x: number, z: number, rotY: number): void {
     this.drive.x = x;
     this.drive.z = z;
@@ -193,21 +254,20 @@ export class Player {
    *
    * 위치는 서버 응답을 기다리지 않고 즉시 반영한다(예측).
    * 서버가 확정 위치를 보내주면 reconcile() 이 차이를 메운다.
+   *
+   * 이동은 클릭 목표로만 한다 — WASD 이동은 2026-09-11 에 뺐다.
    */
-  update(dt: number, axis: THREE.Vector2, camYaw: number): MoveInput {
+  update(dt: number): MoveInput {
     this.dir.set(0, 0, 0);
 
     if (this.driven) return this.follow(dt);
 
-    if (axis.lengthSq() > 0.0001) {
-      // 키보드 입력이 들어오면 클릭 이동은 취소
-      this.hasMoveTarget = false;
-      const sin = Math.sin(camYaw);
-      const cos = Math.cos(camYaw);
-      // 화면 오른쪽 = (cos, -sin), 화면 위쪽 = -(sin, cos)
-      this.dir.set(cos * axis.x + sin * axis.y, 0, -sin * axis.x + cos * axis.y);
-      this.dir.normalize();
-    } else if (this.hasMoveTarget) {
+    /**
+     * 휘두르는 동안은 제자리다. **목표는 남겨 둔다** — 경직이 풀리면 가던 길을
+     * 이어서 간다. 방향(`dir`)을 0 으로 둔 채 내려가므로 서버에는 정지 입력이
+     * 가고(순번 확인은 계속된다), 리그는 이동 가중치가 빠져 공격 동작만 보인다.
+     */
+    if (this.hasMoveTarget && !this.rooted) {
       this.dir.subVectors(this.moveTarget, this.position);
       this.dir.y = 0;
       if (this.dir.lengthSq() < 0.02) {
@@ -222,16 +282,15 @@ export class Player {
     const moving = this.dir.lengthSq() > 0.0001;
 
     if (moving) {
-      // 서버와 완전히 같은 함수로 계산해야 보정이 튀지 않는다
-      applyMove(this.position, input, this.halfSize);
+      // 서버와 완전히 같은 함수로 계산해야 보정이 튀지 않는다 — 막히는 것 목록까지 같아야 한다
+      applyMove(this.position, input, this.halfSize, this.solids);
       this.pending.push(input);
 
-      const want = Math.atan2(this.dir.x, this.dir.z);
-      let delta = want - this.facing;
-      while (delta > Math.PI) delta -= Math.PI * 2;
-      while (delta < -Math.PI) delta += Math.PI * 2;
-      this.facing += delta * (1 - Math.exp(-14 * dt));
-      this.group.rotation.y = this.facing;
+      // 걷기 시작하면 겨눠 둔 각은 버린다 — 가는 쪽을 봐야 한다
+      this.lookAt = null;
+      this.turnTo(Math.atan2(this.dir.x, this.dir.z), dt);
+    } else if (this.lookAt !== null) {
+      this.turnTo(this.lookAt, dt);
     }
 
     this.currentSpeed = moving ? RUN_SPEED : 0;
@@ -255,11 +314,7 @@ export class Player {
     this.position.x += (this.drive.x - this.position.x) * k;
     this.position.z += (this.drive.z - this.position.z) * k;
 
-    let delta = this.drive.rotY - this.facing;
-    while (delta > Math.PI) delta -= Math.PI * 2;
-    while (delta < -Math.PI) delta += Math.PI * 2;
-    this.facing += delta * (1 - Math.exp(-14 * dt));
-    this.group.rotation.y = this.facing;
+    this.turnTo(this.drive.rotY, dt);
 
     const moved = Math.hypot(this.position.x - beforeX, this.position.z - beforeZ);
     this.currentSpeed = dt > 0 ? moved / dt : 0;
@@ -280,7 +335,7 @@ export class Player {
 
     this.replay.x = serverX;
     this.replay.z = serverZ;
-    for (const input of this.pending) applyMove(this.replay, input, this.halfSize);
+    for (const input of this.pending) applyMove(this.replay, input, this.halfSize, this.solids);
 
     const dx = this.replay.x - this.position.x;
     const dz = this.replay.z - this.position.z;

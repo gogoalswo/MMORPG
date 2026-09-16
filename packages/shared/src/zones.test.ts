@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FIELD_ORDER, START_ZONE, ZONES, getSpawn, getZone } from './zones.ts';
 import { MONSTER_KINDS } from './monsters.ts';
-import { zoneHalfSize } from './movement.ts';
+import { GROUND_KINDS } from './zone.ts';
+import { MONSTER_GAP, monsterRadius, scatterSpawn, zoneHalfSize, type Solid } from './movement.ts';
 
 /**
  * 존 연결 검사.
@@ -46,6 +47,21 @@ test('몬스터 무리가 실재하는 종이고 영역 안에 있다', () => {
 
 test('마을은 안전지대다', () => {
   assert.equal(ZONES[START_ZONE]?.monsters ?? undefined, undefined, '시작 존에 몬스터가 있으면 안 된다');
+});
+
+test('바닥 텍스처가 전부 쓰이고, 길·풀 잎이 되살아나지 않는다', () => {
+  const used = new Set<string>();
+  for (const zone of Object.values(ZONES)) {
+    const { ground } = zone.env;
+    assert.ok(GROUND_KINDS.includes(ground), `${zone.id}: 없는 바닥 '${ground}'`);
+    used.add(ground);
+    // 바닥은 이미지 한 장만 깐다 (2026-09-10 요청). 길·풀 잎 필드가 돌아오면 여기서 잡는다.
+    for (const gone of ['road', 'roads', 'roadTint', 'grassCount', 'grassRadius']) {
+      assert.ok(!(gone in zone.env), `${zone.id}: 없앤 '${gone}' 이 env 에 있다`);
+    }
+  }
+  // 아무도 안 쓰는 이미지는 부팅 때 받기만 하는 짐이다
+  assert.deepEqual([...used].sort(), [...GROUND_KINDS].sort());
 });
 
 test('차원문 목록이 세상의 모든 존을 덮는다', () => {
@@ -140,6 +156,43 @@ test('차원문 목록의 사냥터가 전부 default 스폰을 가진다', () =
         d > pack.radius + kind.aggroRange,
         `${zoneId}: 도착 지점이 ${kind.name} 무리의 인식 범위 안이다 (${d.toFixed(1)}m)`
       );
+    }
+  }
+});
+
+test('무리 안에서 몬스터가 서로 겹치지 않는다', () => {
+  /**
+   * 스폰 원이 좁은데 마릿수가 많거나 몬스터가 크면 `scatterSpawn` 이 빈 자리를 못 찾고
+   * 겹친 채로 놓는다. 몬스터는 가만히 서 있으므로 그게 그대로 화면에 남는다
+   * (실제로 한 자리에 두 마리가 포개져 보였다). 무리 정의를 손댈 때 여기서 걸린다.
+   *
+   * 난수는 씨앗을 고정한다 — 테스트가 어떤 날만 실패하면 아무도 안 믿는다.
+   */
+  let seed = 12345;
+  const random = () => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648;
+  };
+
+  for (const zone of Object.values(ZONES)) {
+    const half = zoneHalfSize(zone.size);
+    for (const spawn of zone.monsters ?? []) {
+      const kind = MONSTER_KINDS[spawn.kind];
+      const r = monsterRadius(kind.scale);
+      const placed: Solid[] = [];
+      for (let i = 0; i < spawn.count; i++) {
+        const spot = scatterSpawn(spawn, r, placed, half, random);
+        for (const other of placed) {
+          // other.r 에 이미 MONSTER_GAP 이 들어 있다 — 서버가 보는 목록과 같은 모양이다
+          const gap = Math.hypot(spot.x - other.x, spot.z - other.z) - (other.r + r);
+          assert.ok(
+            gap > -1e-6,
+            `${zone.id} 의 ${spawn.kind} 무리(반경 ${spawn.radius}, ${spawn.count}마리)가 ` +
+              `${(-gap).toFixed(2)}m 모자란다 — 반경을 넓히거나 마릿수를 줄인다`
+          );
+        }
+        placed.push({ x: spot.x, z: spot.z, r: r + MONSTER_GAP });
+      }
     }
   }
 });

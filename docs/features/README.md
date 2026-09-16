@@ -20,17 +20,18 @@
 
 | 문서 | 다루는 것 |
 |---|---|
-| [world-zones.md](world-zones.md) | 존 21개, 차원문, 맵 크기, 보스 스폰 자리, 지형 생성 |
+| [world-zones.md](world-zones.md) | 존 21개, 차원문, 맵 크기, 보스 스폰 자리, **바닥 텍스처 7종**(존별 배정·틴트, 풀 잎·길 없음) |
 | [monsters-progression.md](monsters-progression.md) | 몬스터 60종, 능력치 공식, 레벨 곡선, 경험치 |
-| [combat.md](combat.md) | 피해 공식, 정면 판정, 치명타·공격 속도, 투사체, 사망·부활 |
-| [items.md](items.md) | 아이템 260종 생성, 등급, **랜덤 옵션**, 강화, 제작, 드롭 |
+| [combat.md](combat.md) | **직업 스탯 표(`combat.ts` 의 `JOB_STATS`)**, 피해 공식, 정면 판정, 치명타·공격 속도, **공격 경직(휘두르는 동안 이동 금지)**, 투사체, 사망·부활 |
+| [items.md](items.md) | 아이템 280종 생성, 등급, **랜덤 옵션**, 강화, 제작, 드롭 |
 | [inventory-equipment.md](inventory-equipment.md) | 가방 200칸, 장비 8슬롯, 창 UI |
-| [skills.md](skills.md) | 스킬 30종, 스킬창, 액션바 4칸, 자동 시전 |
-| [auto-hunt-and-targeting.md](auto-hunt-and-targeting.md) | 자동 사냥, 클릭 추격, 둘이 공유하는 경로 |
+| [skills.md](skills.md) | 스킬 34종(격투가는 이펙트 붙은 4개), 스킬창, 액션바 4칸, 자동 시전, **테스트 스위치(쿨타임·레벨 잠금 해제)** |
+| [collision.md](collision.md) | **충돌 셋 다**(캐릭터↔몬스터·캐릭터끼리·몬스터끼리) — 몸 반지름, 미는 쪽, 스폰 자리 잡기, 사거리와의 관계 |
+| [auto-hunt-and-targeting.md](auto-hunt-and-targeting.md) | 자동 사냥, **클릭 타겟팅**(겨눈 쪽으로 쏘기), 둘의 관계 |
 | [npc-town.md](npc-town.md) | 마을 NPC, 상점, 대장간(제작·강화·등급) |
 | [networking-state.md](networking-state.md) | Colyseus 스키마, 관심영역, 예측·보정, 메시지 목록 |
 | [persistence.md](persistence.md) | SQLite 스키마, 마이그레이션, 계정·토큰 |
-| [client-ui.md](client-ui.md) | HUD 레이아웃, 오버레이 규칙, 모바일 대응 |
+| [client-ui.md](client-ui.md) | HUD 레이아웃, 오버레이 규칙, **미니맵**, **클릭 이동 표시**, **테스트 도구(스킬 목록·무적 단추)**, 모바일 대응 |
 | [characters-and-animation.md](characters-and-animation.md) | 캐릭터·몬스터·NPC 외형, 본 구조, 걷기·대기·공격 동작 |
 | [verification.md](verification.md) | **확인하는 방법** — 헤드리스 클라이언트, DOM 읽기, 로그 |
 
@@ -50,7 +51,7 @@
   로 돈다. 그래서 파라미터 프로퍼티(`constructor(private x)`)를 쓸 수 없고,
   상대 임포트에 `.ts` 확장자를 반드시 붙여야 한다.
 - **`requestAnimationFrame` 은 화면이 가려지면 멈춘다.** 탭을 옮기거나 폰에서
-  화면이 꺼지면 0~1Hz가 된다. 계속 돌아야 하는 것(자동 사냥, 추격)은 전부
+  화면이 꺼지면 0~1Hz가 된다. 계속 돌아야 하는 것(자동 사냥)은 전부
   서버에 둔다. 이것 때문에 "얼어붙었다"고 오진한 적이 여러 번 있다.
 - 소스 파일은 CRLF와 LF가 섞여 있다. 스크립트로 패치할 때 줄바꿈을 가정하지 말 것.
 - **확인은 글로 한다.** 스크린샷은 눈으로 봐야 할 때 한 장만. 이유와 도구는

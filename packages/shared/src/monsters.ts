@@ -126,7 +126,7 @@ function bossLookFor(index: number): string {
 }
 
 const TIERS: TierDef[] = [
-  { names: ['들늑대', '숲그림자'], bodyColor: '#7b6a55', accentColor: '#4a3f33', look: 'fox' }, // 초원
+  { names: ['들늑대', '숲그림자'], bodyColor: '#7b6a55', accentColor: '#4a3f33', look: 'varco_ogre1' }, // 초원 — VARCO 오우거. 나머지 존은 아직 뺀 짐승 이름이다
   { names: ['가시멧돼지', '그림자늑대'], bodyColor: '#6b5230', accentColor: '#3a2c19', look: 'bull' }, // 덤불숲
   { names: ['바위짐승', '협곡사냥꾼'], bodyColor: '#6d6a63', accentColor: '#3d3b37', look: 'stag' }, // 메마른 협곡
   { names: ['잿빛사냥개', '공포야수'], bodyColor: '#58545a', accentColor: '#2b2a2e', look: 'husky' }, // 잿빛 황야

@@ -3,6 +3,7 @@ export * from './spatialGrid.ts';
 export * from './character.ts';
 export * from './combat.ts';
 export * from './monsters.ts';
+export * from './beasts.ts';
 export * from './skills.ts';
 export * from './autoHunt.ts';
 export * from './items.ts';

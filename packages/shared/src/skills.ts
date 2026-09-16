@@ -3,7 +3,7 @@ import type { JobId } from './character.ts';
 /**
  * 직업별 스킬.
  *
- * 세 직업이 같은 뼈대를 공유한다 — 짧은 쿨타임의 단일기, 여러 마리를 치는 범위기,
+ * 네 직업이 같은 뼈대를 공유한다 — 짧은 쿨타임의 단일기, 여러 마리를 치는 범위기,
  * 긴 쿨타임의 한 방. 그래야 직업 차이가 "숫자"가 아니라 "쓰는 방법"으로 드러난다.
  * 기사만 세 번째가 자기 회복이다 (버티는 직업이라는 정체성).
  *
@@ -54,14 +54,53 @@ export interface SkillDef {
 /** 액션바에 올릴 수 있는 개수 */
 export const SKILL_BAR_SIZE = 4;
 
+/**
+ * **테스트용 스위치 — 스킬 쿨타임을 끈다.** (2026-09-12, 스킬 이펙트 테스트 중)
+ *
+ * 서버 판정(`handleSkill`)과 액션바가 둘 다 `skillCooldown` 을 보므로 여기 하나만 바꾸면
+ * 된다. 각 스킬의 `cooldown` 데이터는 건드리지 않는다 — 테스트가 끝나면 false 로 되돌린다.
+ * 켜져 있어도 서버 자동 시전은 `AUTO_SKILL_TEST_GAP` 마다 한 번만 쏜다 (ZoneRoom 참고).
+ */
+export const SKILL_COOLDOWN_OFF = true;
+
+/** 쿨타임을 끈 동안에도 자동 시전이 쏘는 간격(ms) — 0 이면 매 틱(15Hz) 쏜다 */
+export const AUTO_SKILL_TEST_GAP = 1000;
+
+/** 실제로 적용할 쿨타임(ms) — 테스트 스위치가 켜져 있으면 0 */
+export function skillCooldown(skill: SkillDef): number {
+  return SKILL_COOLDOWN_OFF ? 0 : skill.cooldown;
+}
+
 /** 레벨업 한 번에 주는 스킬 포인트 */
 export const SKILL_POINT_PER_LEVEL = 1;
+
+/**
+ * **테스트용 스위치 — 배우는 데 걸리는 제한(요구 레벨·스킬 포인트)을 끈다.** (2026-09-12)
+ *
+ * 레벨에 따라 열리는 건 나중에 다시 설계한다. 지금 보려는 건 이펙트와 판정인데,
+ * 천붕각은 Lv.150 이라 그때까지 올리지 않으면 **한 번도 못 본다.** 포인트도 같이 끈다 —
+ * 레벨당 1개라 액션바 4칸을 채우는 데만 4레벨이 필요해서, 레벨만 풀면 반만 풀린 것이다.
+ *
+ * 서버(`handleLearnSkill`)와 스킬창이 둘 다 `canLearn` · `skillPointCost` 를 보므로
+ * 여기 하나만 바꾸면 양쪽이 같은 답을 낸다. 스킬 데이터의 `reqLevel` 은 건드리지 않는다 —
+ * 스킬창에는 그대로 "Lv.150" 이라고 적혀 있고, false 로 되돌리면 곧바로 다시 잠긴다.
+ *
+ * **직업은 이 스위치와 무관하게 본다.** 남의 직업 스킬은 배워 봐야 쓸 수가 없다
+ * (`handleSkill` 이 `skillForJob` 으로 다시 거른다).
+ */
+export const SKILL_UNLOCK_ALL = true;
+
+/** 하나 배우는 데 드는 스킬 포인트 — 테스트 스위치가 켜져 있으면 0 */
+export function skillPointCost(): number {
+  return SKILL_UNLOCK_ALL ? 0 : 1;
+}
 
 /** 기본 공격의 투사체 (직업별) */
 export const BASIC_PROJECTILE: Record<JobId, ProjectileKind | undefined> = {
   knight: undefined, // 근접
   mage: 'fireball',
   archer: 'arrow',
+  fighter: undefined, // 근접 — 맨주먹
 };
 
 const SKILL_LIST: SkillDef[] = [
@@ -459,6 +498,63 @@ const SKILL_LIST: SkillDef[] = [
     reqLevel: 200,
     description: '빗나가지 않는 한 발.',
   },
+
+  {
+    // 이름은 '올려차기' 에서 바꿨지만 id 는 그대로 둔다 — 저장된 캐릭터가 이 id 로 남아 있다
+    id: 'rising_kick',
+    name: '할퀴기',
+    job: 'fighter',
+    cooldown: 6500,
+    range: 3.0,
+    arc: Math.PI * 0.5,
+    power: 2.8,
+    maxTargets: 1,
+    reqLevel: 1,
+    description: '손톱을 세워 앞을 긁어낸다.',
+  },
+  {
+    /**
+     * 호랑이 포효를 정면으로 날린다. 격투가만 스킬이 하나 많은데,
+     * 직업끼리 개수를 맞추던 검사를 뺐기 때문이다 (`skills.test.ts`).
+     */
+    id: 'tiger_roar',
+    name: '호포각',
+    job: 'fighter',
+    cooldown: 16000,
+    // 기운 줄기가 사거리만큼 뻗는다 — 넓게 터지는 그림에 맞춰 4 에서 올렸다
+    range: 6,
+    // 호랑이가 몸에서 솟아 주위로 터진다 — 이펙트가 사방이라 판정도 전방위여야 한다
+    arc: Math.PI * 2,
+    power: 3.2,
+    maxTargets: 5,
+    reqLevel: 6,
+    description: '호랑이의 기운을 끌어올려 주위를 찢는다.',
+  },
+  {
+    /** 백호가 앞장서 내달린다 — 이펙트가 잔상을 남기며 질주한다 (`SkillFx.whiteTiger`) */
+    id: 'white_tiger',
+    name: '백호격',
+    job: 'fighter',
+    cooldown: 30000,
+    range: 4,
+    arc: Math.PI * 0.4,
+    power: 5.5,
+    maxTargets: 5,
+    reqLevel: 12,
+    description: '백호를 앞세워 내달린다.',
+  },
+  {
+    id: 'sky_breaker',
+    name: '천붕각',
+    job: 'fighter',
+    cooldown: 55000,
+    range: 6.0,
+    arc: Math.PI * 2,
+    power: 5.5,
+    maxTargets: 10,
+    reqLevel: 20,
+    description: '뛰어올라 내리찍어 일대를 무너뜨린다.',
+  },
 ];
 
 export const SKILLS: Record<string, SkillDef> = Object.fromEntries(
@@ -476,6 +572,7 @@ export const JOB_SKILLS: Record<JobId, string[]> = {
   knight: skillsOf('knight'),
   mage: skillsOf('mage'),
   archer: skillsOf('archer'),
+  fighter: skillsOf('fighter'),
 };
 
 function skillsOf(job: JobId): string[] {
@@ -484,9 +581,10 @@ function skillsOf(job: JobId): string[] {
     .map((s) => s.id);
 }
 
-/** 그 레벨에 배울 수 있는지 */
+/** 그 레벨에 배울 수 있는지 — 테스트 스위치(`SKILL_UNLOCK_ALL`)가 켜져 있으면 레벨을 안 본다 */
 export function canLearn(skill: SkillDef, job: JobId, level: number): boolean {
-  return skill.job === job && level >= skill.reqLevel;
+  if (skill.job !== job) return false;
+  return SKILL_UNLOCK_ALL || level >= skill.reqLevel;
 }
 
 /** 이 직업이 실제로 가진 스킬인지 — 서버가 반드시 확인해야 한다 */
@@ -494,4 +592,33 @@ export function skillForJob(job: JobId, skillId: string): SkillDef | null {
   const skill = SKILLS[skillId];
   if (!skill || skill.job !== job) return null;
   return skill;
+}
+
+/**
+ * 타겟을 지정하고 쓴 스킬이 **어디서 터지는지** — 원거리면 타겟 자리, 근접이면 내 몸.
+ *
+ * 따로 필드를 두지 않고 `projectile` 로 가른다. 이미 그게 원거리 여부를 뜻하기
+ * 때문이다 (투사체 규칙: 한 방향으로 사거리 4 넘게 쏘는 스킬에는 투사체가 반드시
+ * 있고, 투사체 없는 전방위기는 사거리 8 이하다). 필드를 하나 더 만들면 두 값이
+ * 어긋난 스킬이 반드시 생긴다.
+ */
+export function isRangedSkill(skill: SkillDef): boolean {
+  return !!skill.projectile;
+}
+
+/**
+ * 원거리 스킬이 **타겟 자리에서** 터질 때의 판정 반경.
+ *
+ * 사거리를 그대로 쓰면 안 된다 — 원거리기는 사거리가 10~14 라, 타겟을 중심으로
+ * 그만큼 잡으면 지름 20m 가 넘어 화면(세로 21유닛) 전체가 범위가 된다.
+ * 그래서 사거리에 비례하되 상한을 둔다. 단일기(`maxTargets <= 1`)는 타겟 하나만
+ * 맞아야 하므로 몸 하나 크기(`SKILL_BLAST_MIN`)만 본다.
+ */
+export const SKILL_BLAST_RATIO = 0.35;
+export const SKILL_BLAST_MAX = 6;
+export const SKILL_BLAST_MIN = 0.6;
+
+export function blastRadius(skill: SkillDef): number {
+  if (skill.maxTargets <= 1) return SKILL_BLAST_MIN;
+  return Math.min(SKILL_BLAST_MAX, Math.max(SKILL_BLAST_MIN, skill.range * SKILL_BLAST_RATIO));
 }

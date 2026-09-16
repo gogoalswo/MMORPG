@@ -86,6 +86,14 @@ export interface MonsterRig {
   headHeight: number;
   /** 한 대 맞았다 — 잠깐 하얗게 번쩍인다 */
   flash(): void;
+  /**
+   * 한 번 휘두른다. **서버가 사람을 때린 순간**(`hit`) 불린다.
+   *
+   * 절차적 리그는 `state === 'attack'` 만으로 덤비는 자세를 만들므로 할 일이 없다.
+   * 모델 리그(`modelRig` 의 짐승)는 긴 공격 클립에서 한 번 휘두르는 구간만 잘라
+   * 튼다 — 그쪽은 언제 시작하는지가 서버 경직과 맞아야 한다.
+   */
+  swing(): void;
   /** state: idle | chase | attack | cast(범위 공격 예고) | dead */
   update(dt: number, state: string, speed: number): void;
   dispose(): void;
@@ -292,6 +300,9 @@ export function createMonsterRig(kind: MonsterKind): MonsterRig {
     flash(): void {
       hitFlash.flash();
     },
+
+    // 절차적 리그의 공격 자세는 state 로 만든다 — 시작 신호가 따로 필요 없다
+    swing(): void {},
 
     update(dt: number, state: string, speed: number): void {
       hitFlash.update(dt);

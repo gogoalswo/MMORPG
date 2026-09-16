@@ -138,7 +138,6 @@ export interface SelfStatus {
   /** 자동 사냥 중인지 — 판단과 이동은 서버가 한다 */
   auto: boolean;
   /** 클릭으로 지정한 대상을 쫓는 중인지. 이동은 서버가 한다 */
-  chasing: boolean;
   /** 지금 걸치고 있는 것 — 내 캐릭터도 남과 같은 경로로 그린다 */
   gear: GearLook;
   /**
@@ -249,8 +248,14 @@ export interface ConnectionHandlers {
   onHit(event: HitEvent): void;
   /** 보스가 범위 공격을 걸었다 — 바닥에 원을 그린다 */
   onAoe(event: AoeEvent): void;
-  onSwing(id: string): void;
-  onSkill(id: string, skillId: string): void;
+  /**
+   * 공격 모션. `rootMs` 는 **이 동안 못 움직인다**는 서버의 통보다
+   * (`ATTACK_ROOT_MS`). 내 것이면 예측도 그만큼 멈춰야 보정이 안 튄다.
+   */
+  onSwing(id: string, rootMs: number): void;
+  onSkill(id: string, skillId: string, rootMs: number): void;
+  /** 무적 모드가 켜졌는지 — 서버가 정한 값 (테스트 도구) */
+  onGodMode(on: boolean): void;
   onNotice(text: string): void;
   onReward(exp: number, name: string): void;
   /** 가방·골드·장비. 바뀔 때마다 서버가 통째로 다시 보낸다 */
@@ -285,6 +290,13 @@ export class ZoneConnection {
   private room: Room | null = null;
   /** 접속 요청 세대. 늦게 도착한 이전 존의 응답을 버리는 데 쓴다 */
   private generation = 0;
+  /**
+   * 사람이 마지막으로 누른 무적 값 (테스트 도구).
+   *
+   * 존을 옮기면 룸이 새로 생겨 **서버 쪽 무적은 꺼진 채로 시작한다.** 다시
+   * 요청하지 않으면 단추만 노랗게 켜져 있고 실제로는 안 무적이 된다.
+   */
+  private godmodeWanted = false;
 
   constructor(private readonly handlers: ConnectionHandlers) {
     // https 페이지에서 ws:// 는 브라우저가 조용히 막는다. 원인을 못 찾으면 한참 헤맨다.
@@ -371,10 +383,13 @@ export class ZoneConnection {
 
     room.onMessage('hit', (e: HitEvent) => this.handlers.onHit(e));
     room.onMessage('aoe', (e: AoeEvent) => this.handlers.onAoe(e));
-    room.onMessage('swing', (m: { id: string }) => this.handlers.onSwing(m.id));
-    room.onMessage('skill', (m: { id: string; skillId: string }) =>
-      this.handlers.onSkill(m.id, m.skillId)
+    room.onMessage('swing', (m: { id: string; rootMs?: number }) =>
+      this.handlers.onSwing(m.id, m.rootMs ?? 0)
     );
+    room.onMessage('skill', (m: { id: string; skillId: string; rootMs?: number }) =>
+      this.handlers.onSkill(m.id, m.skillId, m.rootMs ?? 0)
+    );
+    room.onMessage('godmode', (m: { on: boolean }) => this.handlers.onGodMode(!!m.on));
     room.onMessage('notice', (m: { text: string }) => this.handlers.onNotice(m.text));
     room.onMessage('reward', (m: { exp: number; name: string }) =>
       this.handlers.onReward(m.exp, m.name)
@@ -392,6 +407,16 @@ export class ZoneConnection {
       this.handlers.onLoot(m.gold, m.items)
     );
     room.onMessage('target', (m: { id: string | null }) => this.handlers.onTarget(m.id ?? null));
+
+    /**
+     * 무적은 룸에 붙어 있다 — 존을 옮기면 새 룸이라 꺼진 채로 시작한다. ★
+     *
+     * 그래서 단추를 **먼저 꺼짐으로 되돌린 다음** 원했으면 다시 요청한다.
+     * 되돌리지 않으면 차원문을 지난 뒤 단추만 노랗게 남아 "눌렀는데 무적이
+     * 안 된다"가 된다 — 켜졌는지는 서버가 돌려주는 'godmode' 로만 그린다.
+     */
+    this.handlers.onGodMode(false);
+    if (this.godmodeWanted) room.send('godmode', true);
 
     room.onStateChange((state) => this.ingest(state));
   }
@@ -417,7 +442,6 @@ export class ZoneConnection {
           exp: p.exp,
           dead: p.dead,
           auto: p.auto ?? false,
-          chasing: p.chasing ?? false,
           rotY: p.rotY ?? 0,
           gear: {
             weapon: p.weapon ?? '',
@@ -504,6 +528,15 @@ export class ZoneConnection {
 
   attack(): void {
     this.room?.send('attack');
+  }
+
+  /**
+   * 무적 모드 켜기/끄기 (테스트 도구). **켜졌는지는 서버가 `godmode` 로 돌려준다** —
+   * 여기서 미리 켠 것으로 치면 서버가 거절해도(스위치가 꺼져 있으면) 켜 보인다.
+   */
+  setGodMode(on: boolean): void {
+    this.godmodeWanted = on;
+    this.room?.send('godmode', on);
   }
 
   /** 가방 칸 번호로 낀다 — 같은 아이템의 등급 다른 것이 섞이므로 id 로는 못 고른다 */

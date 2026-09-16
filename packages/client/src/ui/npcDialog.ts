@@ -36,12 +36,14 @@ const JOB_LABEL: Record<string, string> = {
   knight: '기사',
   mage: '마법사',
   archer: '궁수',
+  fighter: '격투가',
 };
 
 const JOB_DESC: Record<string, string> = {
   knight: '두꺼운 판금 갑옷과 방패. 앞에서 버틴다.',
   mage: '발목까지 오는 로브와 지팡이. 멀리서 큰 피해를 준다.',
   archer: '가벼운 가죽과 활. 거리를 유지하며 쏜다.',
+  fighter: '도복과 맨주먹. 파고들어 가장 빠르게 친다.',
 };
 
 export class NpcDialog {

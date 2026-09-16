@@ -6,17 +6,15 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
  *
  * 예전에는 캡슐과 상자를 쌓아 사람을 만들었다. 아무리 잘 움직여도 마네킹이라
  * 한계가 분명해서, **리깅된 모델과 애니메이션 클립**으로 갈아탔다.
- * 전부 CC0 이고 출처는 docs/ASSETS.md 에 있다.
+ * 출처는 docs/ASSETS.md 에 있다.
  *
  * 두 종류를 다르게 다룬다.
- *  - **사람**: 다섯 모델이 같은 41본 뼈대를 써서 클립을 공유한다. 어느 존에서든
- *    필요하므로(다른 플레이어의 직업을 고를 수 없다) 부팅 때 전부 받는다.
+ *  - **사람**: VARCO 셋(SOLO_MODELS). 어느 존에서든 필요하므로(다른 플레이어의
+ *    직업을 고를 수 없다) 부팅 때 전부 받는다. 41본 뼈대로 클립을 나눠 쓰던
+ *    KayKit 다섯은 2026-09-10 에 파일째 뺐다.
  *  - **짐승**: 종류마다 뼈대도 클립도 다르다. 한 사냥터에 두세 종뿐이므로
  *    **존을 옮길 때 필요한 것만** 받는다. 전부 받으면 3MB 를 마을에서도 들고 있게 된다.
  */
-
-/** 파일 이름 = 모델 이름. 다섯이 41본 뼈대와 클립을 공유한다 */
-export const CHARACTER_MODELS = ['knight', 'mage', 'rogue', 'rogue_hooded', 'barbarian'] as const;
 
 /**
  * **제 뼈대에 제 클립을 들고 오는** 사람 모델.
@@ -30,7 +28,7 @@ export const CHARACTER_MODELS = ['knight', 'mage', 'rogue', 'rogue_hooded', 'bar
  * (scripts/build-varco-character.mjs) 못 받으면 그 직업만 절차적 리그로 떨어진다.
  * KayKit 다섯과 달리 실패를 그 자리에서 삼키는 이유다.
  */
-export const SOLO_MODELS = ['varco_knight', 'varco_mage', 'varco_archer'] as const;
+export const SOLO_MODELS = ['varco_knight', 'varco_mage', 'varco_archer', 'varco_fighter'] as const;
 
 /** 사람 애니메이션 클립 이름 — 원본 팩의 이름을 그대로 쓴다 */
 export const CLIP = {
@@ -75,7 +73,7 @@ export interface Models {
   characters: Record<string, LoadedModel>;
   /** 이름 -> 붙일 물건. 못 받았으면 없다 */
   accessories: Record<string, THREE.Object3D>;
-  /** 다섯 사람 모델이 공유하는 클립 */
+  /** KayKit 다섯이 공유하던 클립. 그 팩을 뺐으므로 비어 있다 */
   clips: Record<string, THREE.AnimationClip>;
   /** 지금까지 받아둔 짐승들 */
   beasts: Record<string, Beast>;
@@ -138,25 +136,12 @@ function prepare(scene: THREE.Group): void {
 export async function loadModels(): Promise<Models> {
   const loader = new GLTFLoader();
 
-  const entries = await Promise.all(
-    CHARACTER_MODELS.map(async (name) => {
-      const gltf = await loader.loadAsync(`/assets/models/${name}.glb`);
-      return [name, gltf] as const;
-    })
-  );
-
   const characters: Record<string, LoadedModel> = {};
-  let clips: Record<string, THREE.AnimationClip> = {};
-
-  for (const [name, gltf] of entries) {
-    const scene = gltf.scene as THREE.Group;
-    prepare(scene);
-    characters[name] = { scene, ...measure(scene) };
-    if (gltf.animations.length > 0) clips = byName(gltf.animations);
-  }
+  // KayKit 다섯이 나눠 쓰던 공유 클립. 그 팩을 2026-09-10 에 뺐으므로 비어 있다.
+  const clips: Record<string, THREE.AnimationClip> = {};
 
   // 제 클립을 들고 오는 모델 — 한 장이 없어도 나머지는 그대로 간다.
-  // 여기서 던지면 KayKit 다섯까지 같이 날아가 게임 전체가 절차적 리그가 된다.
+  // 여기서 던지면 나머지 모델까지 같이 날아가 절차적 리그가 된다.
   await Promise.all(
     SOLO_MODELS.map(async (name) => {
       try {
@@ -170,15 +155,8 @@ export async function loadModels(): Promise<Models> {
     })
   );
 
-  // 화살통 — 없어도 게임은 돈다. 궁수 등이 비어 보일 뿐이다.
+  // 화살통(KayKit)은 2026-09-10 에 뺐다 — 붙일 물건이 없다.
   const accessories: Record<string, THREE.Object3D> = {};
-  try {
-    const quiver = await loader.loadAsync('/assets/models/accessories/quiver.gltf');
-    prepare(quiver.scene);
-    accessories.quiver = quiver.scene;
-  } catch (err) {
-    console.warn('[models] 화살통을 못 불러왔다', err);
-  }
 
   const beasts: Record<string, Beast> = {};
   // 같은 짐승을 동시에 두 번 받지 않도록 진행 중인 것도 기억한다

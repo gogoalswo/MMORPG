@@ -1,28 +1,35 @@
 import * as THREE from 'three';
 import { HDRLoader } from 'three/examples/jsm/loaders/HDRLoader.js';
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js';
+import { GROUND_KINDS, type GroundKind } from '@mmo/shared';
 import { loadModels, type Models } from './models';
 
 /**
  * 공용 에셋 로딩.
  *
- * 전부 CC0 다. ambientCG(지면 PBR 텍스처)와 Poly Haven(HDRI) 에서 받았고
- * 출처 표기 의무나 상업적 사용 제한이 없다. 목록은 docs/ASSETS.md 참고.
+ * 바닥 텍스처 7장은 바르코(VARCO)로 만든 타일 이미지다 — 받아 온 게 아니라
+ * 우리가 만든 것이라 CC0 가 아니고 약관이 걸린다. HDRI 는 Poly Haven(CC0).
+ * 목록은 docs/ASSETS.md 참고.
  *
  * 존을 넘어가도 이 텍스처들은 공유한다 — 존마다 다시 로드하면
- * 포탈을 지날 때마다 몇 MB 를 다시 디코딩하게 된다.
+ * 차원문을 지날 때마다 다시 디코딩하게 된다. 일곱 장을 **부팅 때 전부** 받는다.
+ * 512² KTX2 라 합쳐도 작고, 다 받아 두면 buildZoneScene 이 동기로 남는다.
  */
 
-export interface SurfaceMaps {
+/**
+ * 바닥 한 종류.
+ *
+ * 받은 이미지가 색 한 장뿐이라 러프니스 맵이 없다 — 러프니스는 종류마다
+ * 상수로 준다(ground.ts 의 LOOKS). 노멀맵은 빌드 때 밝기에서 만든다
+ * (scripts/build-ground-textures.mjs).
+ */
+export interface GroundMaps {
   map: THREE.Texture;
   normalMap: THREE.Texture;
-  roughnessMap: THREE.Texture;
 }
 
 export interface Assets {
-  grass: SurfaceMaps;
-  dirt: SurfaceMaps;
-  rock: SurfaceMaps;
+  grounds: Record<GroundKind, GroundMaps>;
   /** PMREM 으로 구운 환경광 */
   environment: THREE.Texture;
   /**
@@ -45,24 +52,22 @@ function configure(tex: THREE.Texture, srgb: boolean, anisotropy: number): THREE
 
 export async function loadAssets(renderer: THREE.WebGLRenderer): Promise<Assets> {
   // KTX2 는 압축된 채로 GPU 에 올라간다. JPEG 은 RGBA 로 풀려서
-  // 1024x1024 한 장이 VRAM 4MB 를 먹는다 (9장이면 36MB).
-  // 트랜스코더가 기기가 지원하는 포맷(ASTC/BC7/ETC2...)으로 변환해준다.
+  // 한 장이 그대로 VRAM 을 먹는다. 트랜스코더가 기기가 지원하는
+  // 포맷(ASTC/BC7/ETC2...)으로 변환해준다.
   const loader = new KTX2Loader()
     .setTranscoderPath('/assets/basis/')
     .detectSupport(renderer);
   const anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
 
-  const surface = async (name: string): Promise<SurfaceMaps> => {
-    const [map, normalMap, roughnessMap] = await Promise.all([
-      loader.loadAsync(`/assets/textures/${name}_color.ktx2`),
-      loader.loadAsync(`/assets/textures/${name}_normal.ktx2`),
-      loader.loadAsync(`/assets/textures/${name}_rough.ktx2`),
+  const ground = async (kind: GroundKind): Promise<GroundMaps> => {
+    const [map, normalMap] = await Promise.all([
+      loader.loadAsync(`/assets/textures/ground_${kind}_color.ktx2`),
+      loader.loadAsync(`/assets/textures/ground_${kind}_normal.ktx2`),
     ]);
     return {
       map: configure(map, true, anisotropy),
-      // 노멀맵과 러프니스는 색이 아니라 데이터다. sRGB 변환을 걸면 값이 틀어진다.
+      // 노멀맵은 색이 아니라 데이터다. sRGB 변환을 걸면 값이 틀어진다.
       normalMap: configure(normalMap, false, anisotropy),
-      roughnessMap: configure(roughnessMap, false, anisotropy),
     };
   };
 
@@ -72,13 +77,15 @@ export async function loadAssets(renderer: THREE.WebGLRenderer): Promise<Assets>
     return null;
   });
 
-  const [grass, dirt, rock, hdr] = await Promise.all([
-    surface('grass'),
-    surface('dirt'),
-    surface('rock'),
+  const [loaded, hdr] = await Promise.all([
+    Promise.all(GROUND_KINDS.map(ground)),
     // HDRI 는 PMREM 이 어차피 흐리게 굽는다. 1k 로 충분하다.
     new HDRLoader().loadAsync('/assets/hdri/sky_1k.hdr'),
   ]);
+  const grounds = Object.fromEntries(GROUND_KINDS.map((kind, i) => [kind, loaded[i]!])) as Record<
+    GroundKind,
+    GroundMaps
+  >;
 
   // 실제 하늘 사진에서 환경광을 굽는다. 절차적 그라디언트와 달리
   // 방향마다 색과 밝기가 달라서 금속 표면에 그럴듯한 반사가 생긴다.
@@ -90,21 +97,17 @@ export async function loadAssets(renderer: THREE.WebGLRenderer): Promise<Assets>
   // 트랜스코딩용 워커를 정리한다 (로딩은 부팅 때 한 번뿐)
   loader.dispose();
 
-  const all = [grass, dirt, rock];
   const models = await modelsPromise;
 
   return {
-    grass,
-    dirt,
-    rock,
+    grounds,
     environment: target.texture,
     models,
     dispose() {
       models?.dispose();
-      for (const s of all) {
-        s.map.dispose();
-        s.normalMap.dispose();
-        s.roughnessMap.dispose();
+      for (const g of Object.values(grounds)) {
+        g.map.dispose();
+        g.normalMap.dispose();
       }
       target.dispose();
     },

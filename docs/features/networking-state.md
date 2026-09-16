@@ -25,7 +25,7 @@ Colyseus 0.18. 존 하나 = 룸 하나. 서버 권위 + 클라이언트 예측/�
 
 ### 스키마
 - `Player`: id, name, job, x, z, rotY, hp/maxHp, level, exp, dead,
-  **auto**(자동 사냥), **chasing**(클릭 추격), lastSeq.
+  **auto**(자동 사냥), lastSeq.
 - `Monster`: id, kind, x, z, rotY, hp/maxHp, state(idle|chase|attack|dead).
 - 좌표는 `float32` — 월드가 ±110이라 정밀도는 충분하고 대역폭은 절반.
 - **데코레이터를 쓰지 않는다.** `schema()` / `t.*` 함수형 정의라야 Node 가
@@ -34,7 +34,7 @@ Colyseus 0.18. 존 하나 = 룸 하나. 서버 권위 + 클라이언트 예측/�
   `false` 가 아니라 `undefined` 로 남아 그대로 내려간다. 클라이언트에서
   `classList.toggle(cls, undefined)` 는 강제 지정이 아니라 **뒤집기**라서,
   상태 패치마다(≈20Hz) 클래스가 뒤집혀 버튼이 깜빡인다 — 2026-09-06 자동 사냥
-  버튼이 이걸로 깜빡였다. `ZoneRoom` 의 플레이어 생성부에서 `auto`/`chasing`/`dead`
+  버튼이 이걸로 깜빡였다. `ZoneRoom` 의 플레이어 생성부에서 `auto`/`dead`
   를 전부 대입하고, 받는 쪽 `ingest` 에서도 `?? false` 로 한 번 더 메운다.
 
 ### 관심영역 (StateView)
@@ -64,27 +64,45 @@ Colyseus 0.18. 존 하나 = 룸 하나. 서버 권위 + 클라이언트 예측/�
   2026-09-06 `Player.teleport()` 가 `seq = 0` 을 해서 이 증상이 났다.
   존을 옮기면 서버가 새 `Player` 를 만들며 `lastSeq` 를 0 으로 두므로,
   클라이언트 번호가 계속 커져도 문제가 없다.
-- 서버가 이동을 모는 동안(`auto` 또는 `chasing`)에는 클라이언트가 예측을 멈춘다.
+- 서버가 이동을 모는 동안(`auto`)에는 클라이언트가 예측을 멈춘다.
+  **겨누고 있는 것(`target`)은 스키마에 없다** — 남에게 보일 필요가 없고 이동도
+  뺏지 않는다. 서버가 `target` 메시지로 그 사람에게만 알린다
+  ([auto-hunt-and-targeting.md](auto-hunt-and-targeting.md)).
 - 그래서 자동 사냥 중의 땅 클릭은 `input` 이 아니라 `moveTo { x, z }` 로 간다 —
   클라이언트가 목표를 들고 있어 봐야 매 프레임 지워진다.
   누르고 있으면 콜백이 매 프레임 오므로 100ms / 0.5유닛 이상 바뀔 때만 보낸다
   ([auto-hunt-and-targeting.md](auto-hunt-and-targeting.md)).
+- **휘두르는 동안에도 예측을 멈춘다.** 죽었을 때와 같은 이유다 — 서버가
+  `ATTACK_ROOT_MS` 동안 이동 입력을 순번만 갱신하고 버린다. 클라이언트는
+  `swing`/`skill` 의 `rootMs` 로 같은 구간을 멈춘다 (`Player.swing(rootMs)`).
 - **죽어 있을 때도 예측을 멈춘다.** 서버는 죽은 플레이어의 `input` 을 순번만 갱신하고
   버린다(`handleInput`). 클라이언트가 계속 예측하면 어긋남이 `SNAP_DISTANCE` 를 넘어
   스냅으로 끌려오기를 반복한다 — 부활을 기다리는 5초 내내 캐릭터가 떤다.
   `main.ts` 프레임 루프가 `myState.dead` 면 축을 0 으로 두고 `player.stop()` 한다.
 
 ### 메시지 목록 (클라 → 서버)
-`input` `moveTo` `chat` `attack` `target` `autohunt` `autoSkills` `autoRange` `skill`
+`input` `moveTo` `chat` `attack` `godmode` `target` `autohunt` `autoSkills` `autoRange` `skill`
 `learnSkill` `setSkillBar` `equip` `unequip` `craft`
 `npcOpen` `npcBuy` `npcSell` `npcForge` `npcEnhance` `npcJob`
 `createCharacter` `selectCharacter` `deleteCharacter` `setJob` `linkGoogle`
 
 ### 메시지 목록 (서버 → 클라)
-`hit` `aoe` `swing` `skill` `notice` `reward` `levelUp` `inventory` `skills` `npc`
+`hit` `aoe` `swing` `skill` `godmode` `notice` `reward` `levelUp` `inventory` `skills` `npc`
 `loot` `target` `enhanceResult` `jobChanged` `chat` `session`
 `needsCharacter` `createResult` `characterList` `switchZone` `linkResult`
 
+- `godmode` — 무적 모드(테스트 도구) 켜기/끄기. **켜졌는지는 서버가 답으로 알려준다**
+  `{ on }` — 스위치(`GODMODE_ALLOWED`)가 꺼져 있으면 요청을 통째로 무시하므로,
+  클라이언트가 제 값을 들고 있으면 안 켜진 것을 켜졌다고 보여준다 → [combat.md](combat.md).
+- `hit` — 피해 `{ targetId, targetKind, amount, killed, sourceId, x, z, crit?, heal?, projectile? }`.
+  **몬스터의 공격 동작을 트는 신호이기도 하다** — 몬스터는 `swing` 을 따로 보내지
+  않고, 클라이언트가 `sourceId` 로 `monsters.swing()` 을 부른다 ([combat.md](combat.md)).
+- `swing` / `skill` — 공격 모션 `{ id, rootMs }` / `{ id, skillId, rootMs }`.
+  **`rootMs` 는 "이 동안 못 움직인다"는 통보다** (`ATTACK_ROOT_MS`). 서버가
+  `handleInput` 에서 그 동안의 이동을 버리므로, 내 것이면 클라이언트도 같은
+  시간만큼 예측을 멈춰야 한다 — 안 멈추면 한 발 나갔다가 보정에 끌려 돌아오며
+  떤다. 장비가 붙인 공격 속도는 서버만 알아서 클라가 다시 못 구하므로 값을
+  같이 실어 보낸다 → [combat.md](combat.md).
 - `aoe` — 보스 범위 공격 예고 `{ id, name, x, z, radius, delayMs }`. **보여주기 전용**이다.
   누가 맞았는지는 터질 때 `hit` 이 따로 알려준다 → [combat.md](combat.md).
 

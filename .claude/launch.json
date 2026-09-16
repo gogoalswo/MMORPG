@@ -6,6 +6,12 @@
       "runtimeExecutable": "cmd",
       "runtimeArgs": ["/c", "scripts\\dev.cmd"],
       "port": 5173
+    },
+    {
+      "name": "client-5174",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "scripts\\dev.cmd", "--port", "5174", "--strictPort"],
+      "port": 5174
     }
   ]
 }

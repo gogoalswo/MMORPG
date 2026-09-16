@@ -1,11 +1,23 @@
 import * as THREE from 'three';
+import { SKILL_BAR_SIZE } from '@mmo/shared';
 
+/**
+ * 입력.
+ *
+ * **이동은 마우스 클릭으로만 한다.** WASD·방향키 이동은 2026-09-11 에 뺐다 —
+ * 키보드는 스킬(1~4)·카메라(Q/E)·단축키만 맡는다.
+ */
 export class Input {
+  /** 눌려 있는 키 — 키를 누르고 있을 때 반복해서 오는 keydown 을 한 번으로 거른다 */
   private readonly keys = new Set<string>();
   /**
    * 커서 아래 지면 좌표. 누른 순간과, 누르고 있는 동안 매 프레임 호출된다.
+   *
+   * `pressed` 는 **누른 그 프레임에만** true 다. 끌고 다니는 동안 오는 것과
+   * 구분하려고 붙였다 — 클릭 표시를 매 프레임 다시 찍으면 애니메이션이
+   * 계속 처음으로 돌아가 멈춰 있는 것처럼 보인다.
    */
-  onGroundPoint: ((point: THREE.Vector3) => void) | null = null;
+  onGroundPoint: ((point: THREE.Vector3, pressed: boolean) => void) | null = null;
   onRotate: ((dir: -1 | 1) => void) | null = null;
   onZoom: ((delta: number) => void) | null = null;
   /**
@@ -14,7 +26,7 @@ export class Input {
    * 여기서는 "누구를 눌렀다"만 알린다. 붙고 때리는 건 서버가 한다.
    */
   onPickTarget: ((monsterId: string) => void) | null = null;
-  /** 숫자키로 스킬 사용 (0-based) */
+  /** 숫자키 1~4 로 액션바 칸 사용 (0-based 칸 번호) */
   onSkill: ((index: number) => void) | null = null;
   /** 스페이스바 공격 */
   onAttack: (() => void) | null = null;
@@ -62,7 +74,10 @@ export class Input {
     return tag === 'INPUT' || tag === 'TEXTAREA' || el.isContentEditable;
   }
 
-  /** 채팅창이 열릴 때 눌려 있던 키를 털어낸다 (안 그러면 계속 이동한다) */
+  /**
+   * 채팅창이 열릴 때 눌려 있던 키를 털어낸다. 누른 채 채팅으로 넘어가면 keyup 을
+   * 못 받아서, 다음에 같은 키를 눌러도 "이미 눌려 있음" 으로 걸러져 안 먹는다.
+   */
   clearKeys(): void {
     this.keys.clear();
   }
@@ -76,7 +91,8 @@ export class Input {
       if (k === 'KeyE') this.onRotate?.(1);
       if (k.startsWith('Digit')) {
         const n = Number(k.slice(5));
-        if (n >= 1 && n <= 9) this.onSkill?.(n - 1);
+        // 액션바 칸 수만큼만 (1~4). 5~9 는 비워 둔다
+        if (n >= 1 && n <= SKILL_BAR_SIZE) this.onSkill?.(n - 1);
       }
     }
     this.keys.add(k);
@@ -121,7 +137,7 @@ export class Input {
       return;
     }
 
-    this.emitGroundPoint();
+    this.emitGroundPoint(true);
   };
 
   /** 커서 아래 몬스터. 없으면 null */
@@ -155,12 +171,12 @@ export class Input {
     this.ndc.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
   }
 
-  private emitGroundPoint(): void {
+  private emitGroundPoint(pressed = false): void {
     if (!this.ground) return;
     this.raycaster.setFromCamera(this.ndc, this.camera);
     const hit = this.raycaster.intersectObject(this.ground, false)[0];
     // 커서가 하늘을 가리키면 직전 목표를 유지한다
-    if (hit) this.onGroundPoint?.(hit.point);
+    if (hit) this.onGroundPoint?.(hit.point, pressed);
   }
 
   /**
@@ -171,18 +187,5 @@ export class Input {
    */
   update(): void {
     if (this.held) this.emitGroundPoint();
-  }
-
-  /** 카메라 기준 이동 입력 (-1..1) */
-  moveAxis(out: THREE.Vector2): THREE.Vector2 {
-    let x = 0;
-    let y = 0;
-    if (this.keys.has('KeyW') || this.keys.has('ArrowUp')) y -= 1;
-    if (this.keys.has('KeyS') || this.keys.has('ArrowDown')) y += 1;
-    if (this.keys.has('KeyA') || this.keys.has('ArrowLeft')) x -= 1;
-    if (this.keys.has('KeyD') || this.keys.has('ArrowRight')) x += 1;
-    out.set(x, y);
-    if (out.lengthSq() > 1) out.normalize();
-    return out;
   }
 }

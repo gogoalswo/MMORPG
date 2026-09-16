@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import type { GateDef, ZoneDef } from '@mmo/shared';
-import { createGround, createPathMask, type Ground, type PathMask } from './ground';
-import { createGrass, type GrassField } from './grass';
+import { createGround, type Ground } from './ground';
 import { createPortal, type Portal } from './portal';
 import { hash2 } from './palette';
 import type { Assets } from './assets';
@@ -33,27 +32,9 @@ export function buildZoneScene(def: ZoneDef, assets: Assets): ZoneScene {
   const group = new THREE.Group();
   group.name = 'zone:' + def.id;
 
-  const mask: PathMask = createPathMask(env.roads);
-  const blockers: { x: number; z: number; r: number }[] = [];
-  const isBlocked = (x: number, z: number): boolean => {
-    for (const b of blockers) {
-      const dx = x - b.x;
-      const dz = z - b.z;
-      if (dx * dx + dz * dz < b.r * b.r) return true;
-    }
-    return false;
-  };
-
-  // 차원문 자리에는 풀을 두지 않는다
-  blockers.push({ x: def.gate.position[0], z: def.gate.position[1], r: def.gate.radius + 1.5 });
-
-  // --- 지면 ---
-  const ground: Ground = createGround(def.size, env, mask, assets);
+  // --- 지면 --- 바닥 이미지 한 장뿐이다. 풀 잎·길은 없다.
+  const ground: Ground = createGround(def.size, env, assets);
   group.add(ground.mesh);
-
-  // --- 잔디 ---
-  const grass: GrassField = createGrass(env, mask, isBlocked);
-  group.add(grass.mesh);
 
   // --- 차원문 ---
   // 존을 오가는 유일한 문이다. 걸어 들어가면 곧장 넘어가던 사슬 포탈은 없다.
@@ -79,13 +60,11 @@ export function buildZoneScene(def: ZoneDef, assets: Assets): ZoneScene {
     npcs,
 
     update(dt: number, elapsed: number): void {
-      grass.update(elapsed);
       gate.update(elapsed);
       for (const npc of npcs) npc.rig.update(dt, 0);
     },
 
     dispose(): void {
-      grass.dispose();
       gate.dispose();
       for (const npc of npcs) npc.rig.dispose();
 

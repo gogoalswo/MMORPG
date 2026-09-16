@@ -1,11 +1,19 @@
 import { randomUUID } from 'node:crypto';
 import {
   ATTACK_ARC,
+  monsterRootMs,
   SpatialGrid,
   computeDamage,
   rollCrit,
   BASE_CRIT_DAMAGE,
   getMonsterKind,
+  MONSTER_KINDS,
+  monsterRadius,
+  MONSTER_GAP,
+  pushOutOfSolids,
+  scatterSpawn,
+  zoneHalfSize,
+  type Solid,
   type MonsterKind,
   type MonsterSpawnDef,
   type ZoneDef,
@@ -27,8 +35,19 @@ interface MonsterRuntime {
   homeX: number;
   homeZ: number;
   spawn: MonsterSpawnDef;
+  /**
+   * 다른 놈과 **정확히 같은 자리**에 겹쳤을 때 빠져나갈 방향. 마리마다 달라야 풀린다
+   * (같으면 둘 다 같은 자리로 밀려 계속 겹친다). 스폰할 때 한 번 정하고 안 바꾼다.
+   */
+  pushAngle: number;
   targetId: string | null;
   nextAttackAt: number;
+  /**
+   * **휘두르는 동안 발이 묶이는 시각** (`MONSTER_SWING_MS`). 플레이어의 공격 경직과
+   * 같은 생각인데, 짐승은 **클라이언트가 클립을 보여 주는 창과 길이를 맞춘다** —
+   * 안 맞으면 휘두르며 달리거나, 다 휘두르고도 멈춰 서 있는다.
+   */
+  rootedUntil: number;
   /** 죽은 뒤 다시 나올 시각 (0 이면 살아 있음) */
   respawnAt: number;
   /** 다음 범위 공격을 시작해도 되는 시각 */
@@ -87,6 +106,14 @@ export interface HitEvent {
 /** 죽은 몬스터가 시체로 남아 있는 시간 */
 const CORPSE_MS = 2500;
 
+/**
+ * 다른 몬스터가 닿을 수 있는 가장 먼 거리 — 가장 큰 몸에 벌려 둘 여유를 더한 값.
+ * 충돌을 볼 때 훑는 반경에 더한다. **표에서 뽑는다** — 손으로 적으면 몬스터를 키운 날
+ * 조용히 어긋난다.
+ */
+const MONSTER_SOLID_REACH =
+  Math.max(...Object.values(MONSTER_KINDS).map((kind) => monsterRadius(kind.scale))) + MONSTER_GAP;
+
 export class CombatSystem {
   readonly grid = new SpatialGrid<MonsterState>();
   private readonly monsters = new Map<string, MonsterRuntime>();
@@ -95,8 +122,15 @@ export class CombatSystem {
   // 서버는 빌드 없이 그대로 실행되므로 명시적 필드로 쓴다.
   private readonly state: { monsters: Map<string, MonsterState> };
 
+  /** 존 경계 — 밀려나다 지면 밖으로 나가지 않게 잡아 준다 */
+  private readonly halfSize: number;
+
+  /** 근처 몬스터를 담는 재사용 버퍼 (틱마다 새로 만들면 그만큼 쓰레기가 쌓인다) */
+  private readonly solidScan: MonsterState[] = [];
+
   constructor(def: ZoneDef, state: { monsters: Map<string, MonsterState> }) {
     this.state = state;
+    this.halfSize = zoneHalfSize(def.size);
     for (const spawn of def.monsters ?? []) {
       for (let i = 0; i < spawn.count; i++) this.spawnOne(spawn);
     }
@@ -108,10 +142,13 @@ export class CombatSystem {
 
   private spawnOne(spawn: MonsterSpawnDef): void {
     const kind = getMonsterKind(spawn.kind);
-    const angle = Math.random() * Math.PI * 2;
-    const dist = Math.sqrt(Math.random()) * spawn.radius;
-    const x = spawn.x + Math.cos(angle) * dist;
-    const z = spawn.z + Math.sin(angle) * dist;
+    // 겹치지 않는 자리를 고른다. 무작위로만 뿌리면 몇 마리가 포개진 채로 서 있게 된다
+    const { x, z } = scatterSpawn(
+      spawn,
+      monsterRadius(kind.scale),
+      this.solidsNear(spawn.x, spawn.z, spawn.radius + MONSTER_SOLID_REACH),
+      this.halfSize
+    );
 
     const monster = new Monster();
     monster.id = randomUUID();
@@ -131,8 +168,10 @@ export class CombatSystem {
       homeX: x,
       homeZ: z,
       spawn,
+      pushAngle: Math.random() * Math.PI * 2,
       targetId: null,
       nextAttackAt: 0,
+      rootedUntil: 0,
       respawnAt: 0,
       nextAoeAt: 0,
       aoeBurstAt: 0,
@@ -147,6 +186,11 @@ export class CombatSystem {
    * 대상은 **서버가 고른다** — 클라이언트가 대상 id 를 보내게 하면
    * 사거리 밖이나 벽 너머의 적을 지정할 수 있다.
    * 정면 부채꼴 안에서 가까운 순서로 maxTargets 만큼 친다.
+   *
+   * **`extra.origin` 은 판정을 그 자리에서 한다** (원거리 스킬을 타겟에게 쏜 것).
+   * 원점이 옮겨졌으면 부채꼴을 보지 않는다 — 날아가 터진 것에 "시전자 정면"은
+   * 의미가 없고, 그 자리를 중심으로 한 원이 맞다. 원점을 넘기는 쪽이 사거리도
+   * 이미 확인했으므로(`ZoneRoom`), 여기 `range` 는 터지는 반경으로 쓰인다.
    */
   resolvePlayerAttack(
     player: PlayerState,
@@ -161,9 +205,16 @@ export class CombatSystem {
      * 뒤에 파라미터를 계속 붙이면 호출부가 `undefined, 1, undefined` 처럼
      * 읽을 수 없게 된다. 여기서부터는 이름을 붙여 넘긴다.
      */
-    extra: { projectile?: string; crit?: number; critDamage?: number; skillId?: string } = {}
+    extra: {
+      projectile?: string;
+      crit?: number;
+      critDamage?: number;
+      skillId?: string;
+      origin?: { x: number; z: number };
+    } = {}
   ): HitEvent[] {
-    const candidates = this.grid.queryRadius(player.x, player.z, range);
+    const origin = extra.origin ?? { x: player.x, z: player.z };
+    const candidates = this.grid.queryRadius(origin.x, origin.z, range);
     if (candidates.length === 0) return [];
 
     const facingX = Math.sin(player.rotY);
@@ -173,12 +224,12 @@ export class CombatSystem {
     const inRange: { monster: MonsterState; dist: number }[] = [];
     for (const monster of candidates) {
       if (monster.hp <= 0) continue;
-      const dx = monster.x - player.x;
-      const dz = monster.z - player.z;
+      const dx = monster.x - origin.x;
+      const dz = monster.z - origin.z;
       const dist = Math.hypot(dx, dz);
 
-      // 전방향 스킬이 아니면 등 뒤는 맞지 않는다
-      if (arc < Math.PI * 2 && dist >= 1e-3) {
+      // 전방향 스킬이 아니면 등 뒤는 맞지 않는다 (원점을 옮긴 것은 원으로 본다)
+      if (!extra.origin && arc < Math.PI * 2 && dist >= 1e-3) {
         const dot = (dx / dist) * facingX + (dz / dist) * facingZ;
         if (Math.acos(Math.min(1, Math.max(-1, dot))) > halfArc) continue;
       }
@@ -275,8 +326,27 @@ export class CombatSystem {
         m.state = 'cast';
         if (now >= runtime.aoeBurstAt) {
           runtime.aoeBurstAt = 0;
+          // 터지는 것도 클라이언트에서는 한 번 휘두르는 동작으로 보인다
+          // (`hit` 을 받은 자리에서 `monsters.swing`). 그만큼 세워 둔다.
+          runtime.rootedUntil = now + monsterRootMs(kind.attackCooldown);
           on.aoeBurst(m, kind, runtime.aoeX, runtime.aoeZ);
         }
+        continue;
+      }
+
+      /**
+       * --- 휘두르는 중이면 그 자리에 선다 --- ★
+       *
+       * 플레이어의 공격 경직과 같은 생각이다(`monsterRootMs`) → [combat.md]
+       * 안 묶으면 한 대 치자마자 다음 틱에 쫓아가고, 클라이언트에서는 아직 도는
+       * 공격 클립 위에 달리기가 섞여 **공격 모션으로 미끄러진다.**
+       *
+       * 각도 이때는 안 돌린다 — 친 방향이 공격이 끝날 때까지 그대로여야 한다.
+       * 범위 공격 예고(`cast`)보다 뒤에 보는 이유: 한번 예고한 것은 대상이
+       * 도망가든 죽든 그대로 터져야 하고, 경직은 그보다 짧다.
+       */
+      if (now < runtime.rootedUntil) {
+        m.state = 'attack';
         continue;
       }
 
@@ -345,6 +415,10 @@ export class CombatSystem {
       m.rotY = Math.atan2(target.x - m.x, target.z - m.z);
       if (now >= runtime.nextAttackAt) {
         runtime.nextAttackAt = now + kind.attackCooldown;
+        // 휘두르는 동안은 못 움직인다. **클라이언트가 공격 클립을 보여 주는 창과
+        // 같은 길이**(`MONSTER_SWING_MS`)라, 동작이 끝나는 순간에 발이 떨어진다.
+        // 공격 간격보다 길어지지 않게 한 번 더 자른다.
+        runtime.rootedUntil = now + monsterRootMs(kind.attackCooldown);
         on.hitPlayer(target, m, kind);
       }
     }
@@ -352,12 +426,18 @@ export class CombatSystem {
 
   private respawn(runtime: MonsterRuntime): void {
     const spawn = runtime.spawn;
-    const angle = Math.random() * Math.PI * 2;
-    const dist = Math.sqrt(Math.random()) * spawn.radius;
     const m = runtime.state;
 
-    runtime.homeX = spawn.x + Math.cos(angle) * dist;
-    runtime.homeZ = spawn.z + Math.sin(angle) * dist;
+    // 처음 스폰과 같은 규칙 — 살아 있는 놈들과 겹치지 않는 자리에 되살아난다.
+    // 자기 자신은 죽으면서 그리드에서 빠졌으므로 걸러 낼 것이 없다
+    const spot = scatterSpawn(
+      spawn,
+      monsterRadius(runtime.kind.scale),
+      this.solidsNear(spawn.x, spawn.z, spawn.radius + MONSTER_SOLID_REACH),
+      this.halfSize
+    );
+    runtime.homeX = spot.x;
+    runtime.homeZ = spot.z;
     m.x = runtime.homeX;
     m.z = runtime.homeZ;
     m.hp = runtime.kind.maxHp;
@@ -386,7 +466,37 @@ export class CombatSystem {
     m.x += (dx / dist) * step;
     m.z += (dz / dist) * step;
     m.rotY = Math.atan2(dx, dz);
+
+    /**
+     * 몬스터끼리도 통과하지 않는다. **미는 쪽은 지금 움직인 이 놈**이다 —
+     * 캐릭터 충돌과 같은 규칙이라 서 있는 놈은 제자리를 지킨다.
+     * 한 마리를 쫓아 여럿이 몰려도 서로를 밀어 사거리 언저리에 둥글게 선다.
+     */
+    const r = monsterRadius(runtime.kind.scale);
+    pushOutOfSolids(
+      m,
+      this.solidsNear(m.x, m.z, r + MONSTER_SOLID_REACH, m.id),
+      this.halfSize,
+      r,
+      runtime.pushAngle
+    );
+
     this.grid.move(m.id, m.x, m.z);
+  }
+
+  /**
+   * 그 자리 근처에서 지나갈 수 없는 몬스터들. 그리드에는 **살아 있는 것만** 들어 있다
+   * (죽을 때 빠지고 리스폰 때 다시 들어온다) — 시체에 막히는 일이 없다.
+   */
+  private solidsNear(x: number, z: number, range: number, exceptId?: string): Solid[] {
+    const near: Solid[] = [];
+    for (const other of this.grid.queryRadius(x, z, range, this.solidScan)) {
+      if (other.id === exceptId) continue;
+      const kind = getMonsterKind(other.kind);
+      // 여유는 **한쪽에만** 더한다 (양쪽에 더하면 두 배로 벌어진다)
+      near.push({ x: other.x, z: other.z, r: monsterRadius(kind.scale) + MONSTER_GAP });
+    }
+    return near;
   }
 
   private findNearestPlayer(

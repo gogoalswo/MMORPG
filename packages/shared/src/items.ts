@@ -42,6 +42,7 @@ export const OFFHAND_NAME: Record<JobId, string> = {
   knight: '방패',
   mage: '마법서',
   archer: '화살통',
+  fighter: '보호대',
 };
 
 const FIXED_SLOT_LABEL: Record<Exclude<EquipSlot, 'offhand'>, string> = {
@@ -113,6 +114,7 @@ const WEAPON_NAME: Record<JobId, string> = {
   knight: '장검',
   mage: '지팡이',
   archer: '활',
+  fighter: '너클',
 };
 
 /** 단계 번호(0부터)에서 요구 레벨 — 사냥터 레벨대의 시작점과 같다 */
@@ -135,7 +137,7 @@ export function tierName(index: number): string {
  * 슬롯마다 성격이 다르다.
  *
  * 무기는 공격, 갑옷 계열은 체력·방어, 장신구는 공격 위주다. 보조는 직업이
- * 갈리는 자리라 기사는 버티고, 마법사와 궁수는 공격을 얻는다.
+ * 갈리는 자리라 기사는 버티고, 마법사와 궁수는 공격을 얻고, 격투가는 반반이다.
  * 같은 단계 안에서 갑옷 > 투구 > 신발 순으로 무게를 준다.
  *
  * 장신구가 원래 마나를 주던 자리였다. 마나를 걷어내면서 그 몫을 공격과
@@ -152,6 +154,7 @@ function bonusFor(slot: EquipSlot, level: number, job?: JobId): ItemBonus {
     case 'offhand':
       if (job === 'knight') return { defense: def(0.9), maxHp: hp(0.5) };
       if (job === 'mage') return { attack: atk(0.55), maxHp: hp(0.2) }; // 마법서
+      if (job === 'fighter') return { attack: atk(0.35), maxHp: hp(0.35) }; // 격투가 보호대 — 치면서 버틴다
       return { attack: atk(0.5), defense: def(0.3) }; // 궁수 화살통
     case 'armor':
       return { maxHp: hp(1), defense: def(1) };

@@ -1,7 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  ATTACK_ROOT_MS,
   ATTACK_SPEED_CAP,
+  attackRootMs,
+  MONSTER_SWING_MS,
+  monsterRootMs,
   BASE_CRIT,
   BASE_CRIT_DAMAGE,
   CRIT_CAP,
@@ -26,6 +30,11 @@ test('직업마다 성격이 수치로 갈린다', () => {
   assert.ok(mage.attack > archer.attack, '마법사 한 방이 더 아프다');
   assert.ok(archer.attackRange > knight.attackRange, '궁수가 더 멀리 닿는다');
   assert.ok(knight.attackCooldown < mage.attackCooldown, '기사가 더 자주 때린다');
+
+  const fighter = statsFor('fighter', 1);
+  assert.ok(fighter.attackCooldown < archer.attackCooldown, '격투가가 가장 자주 때린다');
+  assert.ok(fighter.attackRange < knight.attackRange, '격투가가 가장 붙어서 싸운다');
+  assert.ok(knight.maxHp > fighter.maxHp && fighter.maxHp > archer.maxHp, '격투가는 기사와 궁수 사이로 단단하다');
 });
 
 test('레벨이 오르면 스탯이 오른다', () => {
@@ -103,6 +112,31 @@ test('레벨업 직전 경험치는 다음 레벨로 이월된다', () => {
   const result = applyExp(1, half, need);
   assert.equal(result.level, 2);
   assert.equal(result.exp, half, '초과분이 사라지지 않는다');
+});
+
+test('공격 경직은 공격 간격보다 짧다 — 때리는 사이에 움직일 틈이 남는다', () => {
+  for (const job of JOB_IDS) {
+    // 공격 속도 상한까지 붙은 최악의 경우로 본다 (간격이 절반이 된다)
+    const cooldown = effectiveCooldown(statsFor(job, 1).attackCooldown, ATTACK_SPEED_CAP);
+    const root = attackRootMs(cooldown);
+    assert.ok(root > 0, `${job}: 경직이 0 이면 휘두르며 달린다`);
+    assert.ok(root <= cooldown, `${job}: 경직 ${root} 이 간격 ${cooldown} 을 넘으면 영영 못 움직인다`);
+  }
+  // 간격이 넉넉하면 경직은 모션 길이(ATTACK_ROOT_MS)로 고정이다
+  assert.equal(attackRootMs(5000), ATTACK_ROOT_MS);
+});
+
+test('몬스터 경직은 공격 간격보다 짧다 — 때리는 사이에 쫓아올 틈이 남는다', () => {
+  for (const [id, kind] of Object.entries(MONSTER_KINDS)) {
+    const root = monsterRootMs(kind.attackCooldown);
+    assert.ok(root > 0, `${id}: 경직이 0 이면 휘두르며 달린다`);
+    assert.ok(
+      root <= kind.attackCooldown,
+      `${id}: 경직 ${root} 이 간격 ${kind.attackCooldown} 을 넘으면 붙어서 굳는다`
+    );
+    // 클라이언트가 공격 클립에서 잘라 트는 창과 같은 길이여야 한다 (modelRig 의 BEAST_ATTACK_WINDOWS)
+    assert.equal(root, Math.min(MONSTER_SWING_MS, kind.attackCooldown));
+  }
 });
 
 // ---------------------------------------------------------------- 레벨 곡선

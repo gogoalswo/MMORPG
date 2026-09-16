@@ -5,16 +5,28 @@ import {
   SpatialGrid,
   TICK_MS,
   applyMove,
+  pushOutOfSolids,
+  monsterRadius,
+  PLAYER_RADIUS,
+  type Solid,
   getSpawn,
   getZone,
   zoneHalfSize,
   isJobId,
   BASIC_PROJECTILE,
   skillForJob,
+  isRangedSkill,
+  blastRadius,
+  SKILL_BLAST_MIN,
+  skillCooldown,
+  SKILL_COOLDOWN_OFF,
+  AUTO_SKILL_TEST_GAP,
   JOB_SKILLS,
   SKILLS,
   SKILL_BAR_SIZE,
+  SKILL_UNLOCK_ALL,
   SKILL_POINT_PER_LEVEL,
+  skillPointCost,
   canLearn,
   validateCharacterName,
   nameErrorMessage,
@@ -24,6 +36,8 @@ import {
   statsFor,
   rollOptions,
   effectiveCooldown,
+  attackRootMs,
+  GODMODE_ALLOWED,
   resolveZoneId,
   INVENTORY_SIZE,
   GRADE_MAX,
@@ -48,7 +62,6 @@ import {
   EQUIP_SLOTS,
   type EquipSlot,
   type Stats,
-  CHASE_LEASH,
   HUNT_ARRIVE_EPS,
   clampHuntRadius,
   huntLeash,
@@ -58,6 +71,7 @@ import {
   pickHuntTarget,
   standoffPoint,
   type JobId,
+  getMonsterKind,
   type MonsterKind,
   type MoveInput,
   type ZoneDef,
@@ -108,6 +122,12 @@ interface Viewer {
  * 권위 서버다 — 클라이언트는 "이 방향으로 이 시간만큼 움직이겠다"는 요청만 보내고,
  * 실제 좌표는 서버가 공유 이동 함수로 계산한다.
  */
+/**
+ * 충돌을 볼 때 훑는 반경 (m). 캐릭터 반지름 + 가장 큰 보스 반지름(1.16)보다 넉넉하면 된다.
+ * 존 전체를 훑으면 입력마다 몬스터 수십 마리를 도는 셈이라 그게 곧 서버 부하다.
+ */
+const SOLID_SCAN_RANGE = 4;
+
 export class ZoneRoom extends Room {
   state = new ZoneState();
 
@@ -120,6 +140,9 @@ export class ZoneRoom extends Room {
   /** 매 틱 재사용하는 임시 버퍼 (GC 압박을 줄인다) */
   private readonly scratch: PlayerState[] = [];
 
+  /** 충돌용으로 근처 캐릭터를 담는 버퍼. `scratch` 와 따로 둔다 — 훑는 도중에 섞이면 안 된다 */
+  private readonly solidScan: PlayerState[] = [];
+
   /** 세션별 최근 채팅 시각 (도배 제한) */
   private readonly chatHistory = new Map<string, number[]>();
 
@@ -129,6 +152,20 @@ export class ZoneRoom extends Room {
 
   /** 세션별 다음 공격 가능 시각 (쿨타임) */
   private readonly nextAttackAt = new Map<string, number>();
+  /**
+   * 세션별 **공격 경직이 풀리는 시각**. 이때까지는 이동을 받지 않는다
+   * (`ATTACK_ROOT_MS`). 스키마에 넣지 않는 이유는 클라이언트가 이 값을
+   * 상태로 볼 일이 없기 때문이다 — 자기 경직은 `swing`/`skill` 메시지에
+   * 실려 오는 `rootMs` 로 알고, 남의 경직은 서버가 정한 위치로 이미 보인다.
+   */
+  private readonly rootedUntil = new Map<string, number>();
+  /**
+   * **무적 모드를 켠 세션** (테스트 도구, `GODMODE_ALLOWED`).
+   *
+   * 스키마가 아니라 여기 두는 이유는 남에게 보일 값이 아니어서다. 존을 옮기면
+   * 룸이 새로 만들어져 저절로 꺼지므로, 클라이언트가 들어가서 다시 켠다.
+   */
+  private readonly godmode = new Set<string>();
   /** "세션:스킬" 별 쿨타임 */
   private readonly skillReadyAt = new Map<string, number>();
 
@@ -148,13 +185,15 @@ export class ZoneRoom extends Room {
    */
   private readonly moveOrder = new Map<string, { x: number; z: number }>();
   /**
-   * 클릭으로 직접 지정한 대상과, **지목한 순간 그놈이 서 있던 자리**.
+   * 클릭으로 지목한 대상 (세션 → 몬스터 id).
    *
-   * 자동 사냥과 같은 길(붙는다 → 본다 → 때린다)을 타지만 대상을 사람이 고른다.
-   * 앵커를 대상 쪽에 두는 이유는, 플레이어 자리에 두면 멀리 보이는 놈을 눌렀을 때
-   * 누르자마자 놓아버리기 때문이다. 여기서 재는 건 "대상이 얼마나 도망쳤나"다.
+   * **적어두는 것은 "누구를 겨누고 있나" 뿐이고 이동은 건드리지 않는다.** ★
+   * 예전에는 지목하면 서버가 붙어서 죽을 때까지 때렸다(클릭 추격). 그런데 그건
+   * 자동 사냥과 하는 일이 같아서, 사람이 **직접 쏘려고** 지목한 것까지 서버가
+   * 대신 해 버렸다. 지금은 겨누기만 하고, 때리는 건 사람이 누를 때 그쪽으로 나간다
+   * (`focusOf` → `handleAttack` / `handleSkill`).
    */
-  private readonly chase = new Map<string, { id: string; x: number; z: number }>();
+  private readonly targets = new Map<string, string>();
   /** 세션별 사냥 반경 (사람이 조절한다) */
   private readonly autoRadius = new Map<string, number>();
   /**
@@ -193,6 +232,20 @@ export class ZoneRoom extends Room {
       this.handleDeleteCharacter(client, msg)
     );
     this.onMessage('attack', (client) => this.handleAttack(client));
+    /**
+     * 무적 모드 (테스트 도구). 값을 주면 그 값으로, 안 주면 뒤집는다.
+     *
+     * **스위치가 꺼져 있으면 아무 일도 안 한다** — 클라이언트 단추가 안 보이는
+     * 것은 안내일 뿐이고, 막는 것은 여기다 (판정은 서버가 한다).
+     */
+    this.onMessage('godmode', (client, on?: boolean) => {
+      if (!GODMODE_ALLOWED) return;
+      const want = typeof on === 'boolean' ? on : !this.godmode.has(client.sessionId);
+      if (want) this.godmode.add(client.sessionId);
+      else this.godmode.delete(client.sessionId);
+      // 켜졌는지는 **서버가 알려준다.** 단추가 제 값을 들고 있으면 서버가 거절해도 켜 보인다
+      client.send('godmode', { on: want });
+    });
     this.onMessage('target', (client, id: string | null) => this.handleTarget(client, id));
     this.onMessage('autohunt', (client, on: boolean) => this.handleAutoHunt(client, on));
     this.onMessage('moveTo', (client, msg: { x: number; z: number }) =>
@@ -343,15 +396,22 @@ export class ZoneRoom extends Room {
     // 클라이언트에서 undefined 를 받으면 classList.toggle(cls, undefined) 가
     // "강제 지정"이 아니라 "뒤집기"로 동작해 패치마다 버튼이 깜빡인다.
     player.auto = false;
-    player.chasing = false;
     player.lastSeq = 0;
+
+    /**
+     * 스폰 지점은 모두에게 같은 한 점이라 **그냥 놓으면 서로 겹친 채로 시작한다.**
+     * 겹친 둘은 아무도 움직이지 않으면 영원히 겹쳐 있다 — 미는 건 이동 계산 안에서만
+     * 일어나기 때문이다. 그래서 들어오는 순간 한 번 밀어 자리를 띄운다.
+     * 미는 쪽은 **들어온 쪽**이다 (이미 서 있던 사람을 밀면 그 사람 화면이 튄다).
+     */
+    pushOutOfSolids(player, this.solidsNear(player.x, player.z, player.id), this.halfSize);
 
     // 지금 존과 자리를 바로 기록해둔다. 다음 접속에 어디로 돌아갈지의 근거다.
     // 되살렸으면 그 HP 로 적어야 한다 — 0 을 다시 적으면 다음 접속에 또 죽은 채다.
-    saveCharacterPosition(character.id, this.def.id, sx, sz, player.hp);
+    saveCharacterPosition(character.id, this.def.id, player.x, player.z, player.hp);
 
     this.state.players.set(client.sessionId, player);
-    this.grid.insert(client.sessionId, sx, sz, player);
+    this.grid.insert(client.sessionId, player.x, player.z, player);
 
     // 이 클라이언트가 볼 수 있는 것만 담는 뷰.
     // 자기 자신은 거리와 무관하게 항상 보여야 한다.
@@ -382,8 +442,10 @@ export class ZoneRoom extends Room {
       characterName: character.name,
       job: character.job,
       zoneId: this.def.id,
-      x: sx,
-      z: sz,
+      // 밀어낸 뒤의 자리를 보낸다 — 스폰 지점을 그대로 보내면 클라가 겹친 자리에서
+      // 예측을 시작해 첫 보정에 튄다
+      x: player.x,
+      z: player.z,
       linkedGoogle: auth.account.googleEmail ?? null,
       isNewAccount: auth.isNewAccount,
     });
@@ -438,10 +500,12 @@ export class ZoneRoom extends Room {
     this.chatHistory.delete(id);
     this.pending.delete(id);
     this.nextAttackAt.delete(id);
+    this.rootedUntil.delete(id);
+    this.godmode.delete(id);
     this.autoAnchor.delete(id);
     this.autoTarget.delete(id);
     this.moveOrder.delete(id);
-    this.chase.delete(id);
+    this.targets.delete(id);
     this.autoRadius.delete(id);
     this.autoSkills.delete(id);
     for (const skillId of JOB_SKILLS[(this.state.players.get(id)?.job ?? 'knight') as JobId] ?? []) {
@@ -469,20 +533,27 @@ export class ZoneRoom extends Room {
       return;
     }
 
-    // 사람이 직접 방향을 넣었으면 그건 "그만 쫓아"라는 뜻이다.
-    // 자동 사냥은 버튼으로 끄지만, 클릭 추격은 움직이는 것으로 푼다.
-    if (player.chasing && Math.hypot(message.dx, message.dz) > 1e-4) {
-      this.clearChase(client.sessionId);
-    }
-
-    // 자동 사냥·추격 중에는 서버가 직접 움직인다. 클라이언트 이동은 무시하되
+    // 자동 사냥 중에는 서버가 직접 움직인다. 클라이언트 이동은 무시하되
     // 순번은 갱신해야 클라 보정이 멈추지 않는다.
-    if (player.auto || player.chasing) {
+    //
+    // **타겟을 잡고 있어도 이동은 사람 몫이다** — 지목은 "어디로 쏠까"만 정한다.
+    if (player.auto) {
       player.lastSeq = message.seq;
       return;
     }
 
-    applyMove(player, message, this.halfSize);
+    /**
+     * 휘두르는 중이면 발을 묶는다 (`ATTACK_ROOT_MS`). 죽었을 때와 같은 모양으로
+     * **순번은 갱신하고 위치만 안 옮긴다** — 안 갱신하면 클라이언트 보정이 이 구간
+     * 내내 멈춘다. 각도 그대로 둔다: 쏘는 순간 `faceMonster` 가 맞춰 둔 방향이
+     * 공격이 끝날 때까지 판정 방향이어야 한다.
+     */
+    if (Date.now() < (this.rootedUntil.get(client.sessionId) ?? 0)) {
+      player.lastSeq = message.seq;
+      return;
+    }
+
+    applyMove(player, message, this.halfSize, this.solidsNear(player.x, player.z, player.id));
     player.lastSeq = message.seq;
 
     const moving = Math.hypot(message.dx, message.dz) > 1e-4;
@@ -662,10 +733,6 @@ export class ZoneRoom extends Room {
        *
        * 둘 다 "붙어서 때린다"는 동작은 같아서 코드를 나누면 한쪽만 고치는 실수가 난다.
        */
-      // 클릭으로 직접 지목한 대상이 있으면 그쪽이 우선이다.
-      // driveChase 가 스킬까지 같이 쓰므로 여기서 또 돌리면 둘이 겹친다.
-      if (this.chase.has(id)) continue;
-
       const hunting = player.auto;
       const casting = !hunting && (this.autoSkills.get(id)?.size ?? 0) > 0;
       if (!hunting && !casting) continue;
@@ -694,14 +761,27 @@ export class ZoneRoom extends Room {
       }
 
       // --- 대상 고르기 ---
+      //
+      // **사람이 클릭으로 지목한 놈이 있으면 그놈부터.** 자동 사냥을 켜 둔 채로
+      // "쟤부터 잡아" 라고 찍는 일이 있어서다. 리쉬 밖까지 따라가지는 않는다 —
+      // 앵커를 두는 이유(맵 끝까지 끌려가지 않기)가 그대로 살아 있어야 한다.
       const radius = clampHuntRadius(this.autoRadius.get(id));
-      const targetId = pickHuntTarget(
-        anchor.x,
-        anchor.z,
-        this.combat.grid.queryRadius(anchor.x, anchor.z, huntLeash(radius)),
-        this.autoTarget.get(id) ?? null,
-        radius
-      );
+      const picked = this.targets.get(id);
+      const pickedMonster = picked ? this.state.monsters.get(picked) : undefined;
+      const usePicked =
+        pickedMonster &&
+        pickedMonster.hp > 0 &&
+        Math.hypot(pickedMonster.x - anchor.x, pickedMonster.z - anchor.z) <= huntLeash(radius);
+
+      const targetId = usePicked
+        ? picked
+        : pickHuntTarget(
+            anchor.x,
+            anchor.z,
+            this.combat.grid.queryRadius(anchor.x, anchor.z, huntLeash(radius)),
+            this.autoTarget.get(id) ?? null,
+            radius
+          );
 
       if (targetId) this.autoTarget.set(id, targetId);
       else this.autoTarget.delete(id);
@@ -721,40 +801,21 @@ export class ZoneRoom extends Room {
   }
 
   /**
-   * 클릭으로 지정한 대상 한 틱.
+   * 겨누고 있던 놈이 죽었거나 사라졌으면 놓는다 (매 틱).
    *
-   * 자동 사냥과 **같은 경로**(engageTarget)를 탄다. 붙는 거리·바라보는 각·
-   * 쿨타임 판정을 두 벌 만들면 반드시 한쪽만 고치는 실수가 난다.
-   *
-   * 이동을 서버가 맡는 이유도 자동 사냥과 같다 — 폰에서 화면이 꺼지거나 앱을
-   * 옮기면 브라우저가 루프를 멈춰서, 클라이언트가 몰면 그 자리에 선다.
+   * 대상이 죽은 자리에 조준이 남아 있으면 다음 스킬이 **시체 자리로** 나간다.
+   * 몬스터가 죽는 길이 여럿(내 공격·남의 공격·리스폰 정리)이라 지우는 자리를
+   * 한 군데로 모았다.
    */
-  private driveChase(dt: number): void {
-    for (const [id, order] of [...this.chase]) {
-      const viewer = this.viewers.get(id);
+  private sweepTargets(): void {
+    for (const [id, monsterId] of [...this.targets]) {
+      const monster = this.state.monsters.get(monsterId);
       const player = this.state.players.get(id);
-      // 자동 사냥을 켜면 그쪽이 주인이다
-      if (!viewer || !player || player.dead || player.auto) {
-        this.clearChase(id);
-        continue;
-      }
-
-      const target = this.state.monsters.get(order.id);
-      // 죽었거나, 눌렀을 때 서 있던 자리에서 너무 멀리 달아났으면 놓는다
-      const gone =
-        !target ||
-        target.hp <= 0 ||
-        Math.hypot(target.x - order.x, target.z - order.z) > CHASE_LEASH;
-      if (gone) {
-        this.clearChase(id);
-        continue;
-      }
-
-      this.engageTarget(viewer.client, player, target, dt);
+      if (!monster || monster.hp <= 0 || !player || player.dead) this.clearTarget(id);
     }
   }
 
-  /** 대상에게 붙어서 한 틱 싸운다. 자동 사냥과 클릭 추격이 함께 쓴다 */
+  /** 대상에게 붙어서 한 틱 싸운다. 자동 사냥과 자동 시전이 함께 쓴다 */
   private engageTarget(client: Client, player: PlayerState, target: MonsterState, dt: number): void {
     const job = player.job as JobId;
     const stats = this.statsOf(client.sessionId, job, player.level);
@@ -764,17 +825,19 @@ export class ZoneRoom extends Room {
     this.stepAutoPlayer(player, stand.x, stand.z, dt, target);
 
     // --- 때린다 ---
+    // 어느 놈을 치는지 **그대로 넘긴다.** 안 넘기면 handleAttack 이 사람이 찍어 둔
+    // 타겟을 보고 엉뚱한 쪽으로 몸을 돌린다 (자동 사냥이 고른 놈과 다를 수 있다).
     const distance = Math.hypot(target.x - player.x, target.z - player.z);
-    if (this.tryAutoSkill(client, player, job, distance)) return;
-    if (distance <= stats.attackRange) this.handleAttack(client);
+    if (this.tryAutoSkill(client, player, job, distance, target)) return;
+    if (distance <= stats.attackRange) this.handleAttack(client, target);
   }
 
   /**
-   * 클릭으로 때릴 대상을 지정한다.
+   * 클릭으로 겨눌 대상을 지정한다.
    *
-   * 여기서 하는 일은 적어두는 것뿐이다. 붙고 때리는 건 driveChase 가 한다.
+   * 여기서 하는 일은 적어두는 것뿐이다 — **이동도 공격도 하지 않는다.**
    * 대상이 이 존에 실재하는지, 살아 있는지는 **서버가 다시 본다** —
-   * 클라이언트가 보낸 id 를 그대로 믿으면 없는 몬스터를 영원히 쫓는다.
+   * 클라이언트가 보낸 id 를 그대로 믿으면 없는 몬스터를 겨눈 채로 굳는다.
    */
   private handleTarget(client: Client, id: string | null): void {
     const sessionId = client.sessionId;
@@ -782,32 +845,101 @@ export class ZoneRoom extends Room {
     if (!player) return;
 
     if (typeof id !== 'string' || !id) {
-      this.clearChase(sessionId);
+      this.clearTarget(sessionId);
       return;
     }
 
     const monster = this.state.monsters.get(id);
     if (!monster || monster.hp <= 0 || player.dead) {
-      this.clearChase(sessionId);
+      this.clearTarget(sessionId);
       return;
     }
 
-    // 직접 지목한 순간 자동 사냥은 손을 뗀다 — 두 주인이 이동을 두고 싸우면 떨린다
-    if (player.auto) this.handleAutoHunt(client, false);
-
-    this.chase.set(sessionId, { id, x: monster.x, z: monster.z });
-    player.chasing = true;
+    // 자동 사냥은 **끄지 않는다.** 겨누기는 이동을 뺏지 않으므로 주인이 겹치지
+    // 않고, 자동 사냥은 지목한 놈을 먼저 잡는다(driveAutoHunt).
+    this.targets.set(sessionId, id);
     client.send('target', { id });
   }
 
-  /** 추격을 푼다. state 도 함께 내려야 클라이언트가 예측을 다시 시작한다 */
-  private clearChase(sessionId: string): void {
-    const had = this.chase.delete(sessionId);
-    const player = this.state.players.get(sessionId);
-    if (player && player.chasing) player.chasing = false;
-    // 표시를 지우는 건 클라이언트 몫이라 알려준다.
-    // 상태(chasing)만 보고 지우면, 보낸 직후 아직 안 반영된 한 틱에 깜빡인다.
-    if (had) this.clients.getById(sessionId)?.send('target', { id: null });
+  /** 조준을 푼다. 표시를 지우는 건 클라이언트 몫이라 알려준다 */
+  private clearTarget(sessionId: string): void {
+    if (!this.targets.delete(sessionId)) return;
+    this.clients.getById(sessionId)?.send('target', { id: null });
+  }
+
+  /**
+   * 지금 겨누고 있는 몬스터. 죽었거나 사라졌으면 놓고 null.
+   *
+   * 공격·스킬이 나갈 때마다 부른다 — 겨눈 놈이 그 사이 죽었을 수 있다.
+   */
+  private focusOf(sessionId: string): MonsterState | null {
+    const id = this.targets.get(sessionId);
+    if (!id) return null;
+    const monster = this.state.monsters.get(id);
+    if (!monster || monster.hp <= 0) {
+      this.clearTarget(sessionId);
+      return null;
+    }
+    return monster;
+  }
+
+  /**
+   * 겨누는 놈이 없을 때 **사거리 안에서 가장 가까운 놈**을 대신 잡는다.
+   *
+   * 찍지 않고 스킬을 누르면 판정이 내 정면 부채꼴로만 나가서, 몬스터를 옆에 두고
+   * 눌렀을 때 눈앞의 놈을 헛친다. 그래서 한 놈을 골라 **진짜 조준으로 등록한다**
+   * (`handleTarget` 과 같은 자리 — `targets` 에 적고 `target` 메시지로 알린다).
+   * 이 시전에만 몰래 쓰고 말면 클라이언트는 조준이 없는 줄 알고 이펙트를 정면으로
+   * 그리는데 판정만 옆에서 나 둘이 어긋난다.
+   *
+   * 고르는 규칙은 자동 사냥과 **같은 `pickHuntTarget`** 이다. "가장 가까운 놈"을
+   * 두 벌 만들면 자동 사냥과 손 시전이 서로 다른 놈을 고른다.
+   */
+  private acquireTarget(client: Client, player: PlayerState, range: number): MonsterState | null {
+    const id = pickHuntTarget(
+      player.x,
+      player.z,
+      this.combat.grid.queryRadius(player.x, player.z, range),
+      null,
+      range
+    );
+    if (!id) return null;
+    const monster = this.state.monsters.get(id);
+    if (!monster || monster.hp <= 0) return null;
+    this.targets.set(client.sessionId, id);
+    client.send('target', { id });
+    return monster;
+  }
+
+  /**
+   * 겨눈 쪽으로 몸을 돌린다.
+   *
+   * **판정(부채꼴)이 rotY 를 보므로 쏘기 직전에 여기서 정한다.** 클라이언트가
+   * 보내는 건 "움직인 방향"뿐이라, 서서 쏘면 마지막으로 걷던 쪽을 향한 채로
+   * 나간다 — 타겟을 찍어 놓고도 옆으로 휘두르는 게 그것이다.
+   */
+  private faceMonster(player: PlayerState, monster: MonsterState): void {
+    const dx = monster.x - player.x;
+    const dz = monster.z - player.z;
+    if (Math.hypot(dx, dz) > 1e-3) player.rotY = Math.atan2(dx, dz);
+  }
+
+  /**
+   * 판정을 **겨눈 놈의 자리에서** 할지 정한다. 아니면 null (내 몸이 중심).
+   *
+   * 원거리일 때만, 그리고 사거리 안일 때만이다. 사거리 밖을 찍어 놓고 눌러도
+   * 날아가게 하면 사거리라는 수치가 없는 것과 같다 — 그때는 예전처럼 내 몸에서
+   * 부채꼴로 재고, 닿는 게 없으면 헛친다.
+   */
+  private blastAt(
+    player: PlayerState,
+    aim: MonsterState | null,
+    ranged: boolean,
+    range: number
+  ): { x: number; z: number } | null {
+    if (!aim || !ranged) return null;
+    if (Math.hypot(aim.x - player.x, aim.z - player.z) > range) return null;
+    return { x: aim.x, z: aim.z };
   }
 
   /** 목표 지점 쪽으로 한 틱만큼 걷고, 대상이 있으면 그쪽을 본다 */
@@ -816,16 +948,34 @@ export class ZoneRoom extends Room {
     toX: number,
     toZ: number,
     dt: number,
-    lookAt: { x: number; z: number } | null
+    lookAt: { x: number; z: number; id?: string } | null
   ): void {
     const dx = toX - player.x;
     const dz = toZ - player.z;
     const distance = Math.hypot(dx, dz);
 
-    if (distance > HUNT_ARRIVE_EPS) {
+    /**
+     * **휘두르는 중에는 발을 멈춘다** (`ATTACK_ROOT_MS`). 사람이 모는 쪽
+     * (`handleInput`)만 막으면 자동 사냥은 그대로 미끄러지면서 친다 —
+     * 여기가 서버가 직접 위치를 옮기는 다른 한 길이다. 각은 아래에서 계속
+     * 맞춘다: 붙어 있는 대상을 향해 선 채로 치는 그림이어야 한다.
+     */
+    const rooted = Date.now() < (this.rootedUntil.get(player.id) ?? 0);
+
+    if (!rooted && distance > HUNT_ARRIVE_EPS) {
       const step = Math.min(RUN_SPEED * dt, distance);
       player.x = clamp(player.x + (dx / distance) * step, -this.halfSize, this.halfSize);
       player.z = clamp(player.z + (dz / distance) * step, -this.halfSize, this.halfSize);
+      /**
+       * 서버가 몰 때도 몬스터를 통과하면 안 된다. 다만 **쫓는 대상은 빼 준다** —
+       * 넣으면 사거리 안으로 붙으려는 걸 충돌이 밀어내 둘이 서로 밀치며 떤다.
+       * 대상과는 어차피 `standoffPoint` 가 사거리만큼 떨어진 자리를 잡아 준다.
+       */
+      pushOutOfSolids(
+        player,
+        this.solidsNear(player.x, player.z, player.id, lookAt?.id),
+        this.halfSize
+      );
       this.grid.move(player.id, player.x, player.z);
     }
 
@@ -838,6 +988,40 @@ export class ZoneRoom extends Room {
     } else if (distance > HUNT_ARRIVE_EPS) {
       player.rotY = Math.atan2(dx, dz);
     }
+  }
+
+  /**
+   * 그 자리 근처에서 지나갈 수 없는 것들 — 살아 있는 몬스터와 **다른 캐릭터**.
+   *
+   * 존 전체를 훑지 않고 반경 안의 것만 본다. 몬스터가 수십 마리인데 입력은 사람마다
+   * 초당 수십 번 오므로, 전부 훑으면 그게 곧 서버 부하다.
+   *
+   * 죽은 몬스터는 지나갈 수 있다 — 시체에 막히면 "왜 안 가지" 가 된다. 죽은 캐릭터도 같다.
+   *
+   * 캐릭터끼리는 **움직이는 쪽만 밀린다.** 여기서 나온 목록은 이동 계산(`applyMove`)
+   * 안에서만 쓰이고, 서 있는 쪽은 입력이 없어 계산을 아예 돌지 않기 때문이다.
+   * 그래서 둘이 서로 밀치며 떠는 일이 없다.
+   */
+  private solidsNear(x: number, z: number, selfId: string, exceptId?: string): Solid[] {
+    const near: Solid[] = [];
+    for (const monster of this.state.monsters.values()) {
+      if (monster.hp <= 0) continue;
+      if (monster.id === exceptId) continue;
+      const dx = monster.x - x;
+      const dz = monster.z - z;
+      if (dx * dx + dz * dz > SOLID_SCAN_RANGE * SOLID_SCAN_RANGE) continue;
+      const kind = getMonsterKind(monster.kind);
+      if (!kind) continue;
+      near.push({ x: monster.x, z: monster.z, r: monsterRadius(kind.scale) });
+    }
+
+    // 다른 캐릭터도 몸이다. 자기 자신과 시체는 뺀다.
+    // 그리드로 추린다 — 존에 사람이 몰려도 훑는 수가 반경 안으로 묶인다.
+    for (const other of this.grid.queryRadius(x, z, SOLID_SCAN_RANGE, this.solidScan)) {
+      if (other.id === selfId || other.dead) continue;
+      near.push({ x: other.x, z: other.z, r: PLAYER_RADIUS });
+    }
+    return near;
   }
 
   /** 쓸 수 있는 스킬을 우선순위대로 하나 시도한다 */
@@ -869,7 +1053,8 @@ export class ZoneRoom extends Room {
     client: Client,
     player: PlayerState,
     job: JobId,
-    distance: number
+    distance: number,
+    focus?: MonsterState
   ): boolean {
     const viewer = this.viewers.get(client.sessionId);
     for (const skillId of viewer?.character.skillBar ?? []) {
@@ -884,9 +1069,11 @@ export class ZoneRoom extends Room {
       if (!usable) continue;
 
       const key = `${client.sessionId}:${skill.id}`;
-      if (Date.now() < (this.skillReadyAt.get(key) ?? 0)) continue;
+      // 쿨타임을 끈 테스트 중에도 자동 시전은 AUTO_SKILL_TEST_GAP 마다 한 번 — 안 그러면 매 틱 쏜다
+      const gap = SKILL_COOLDOWN_OFF ? AUTO_SKILL_TEST_GAP : 0;
+      if (Date.now() < (this.skillReadyAt.get(key) ?? 0) + gap) continue;
 
-      this.handleSkill(client, skill.id);
+      this.handleSkill(client, skill.id, focus);
       return true;
     }
     return false;
@@ -1079,10 +1266,30 @@ export class ZoneRoom extends Room {
    *
    * 아무것도 없으면 때릴 수단이 기본 공격뿐이라 시작이 답답하고,
    * 스킬 시스템이 생기기 전에 키운 캐릭터는 포인트가 0인 채로 남는다.
+   *
+   * **테스트 스위치(`SKILL_UNLOCK_ALL`)가 켜져 있으면 그 직업 스킬을 전부 준다.**
+   * 레벨과 포인트를 풀어 놔도 스킬창에서 한 번씩 눌러야 배워지는데, 이펙트나 판정을
+   * 보려고 들어올 때마다 그걸 반복하는 건 확인이 아니라 잡일이다. 액션바는 4칸이라
+   * 앞의 넷만 올라간다 — 나머지는 스킬창에서 바꿔 끼운다.
+   * 스위치를 끄면 **이미 배운 것은 그대로 남는다** (저장된 캐릭터라서).
    */
   private grantStartingSkill(viewer: Viewer, job: JobId, level: number): void {
+    const all = JOB_SKILLS[job] ?? [];
+
+    if (SKILL_UNLOCK_ALL) {
+      const before = viewer.character.skills.length;
+      for (const id of all) {
+        if (!viewer.character.skills.includes(id)) viewer.character.skills.push(id);
+        if (viewer.character.skillBar.length < SKILL_BAR_SIZE && !viewer.character.skillBar.includes(id)) {
+          viewer.character.skillBar.push(id);
+        }
+      }
+      if (viewer.character.skills.length !== before) this.persist(viewer.client.sessionId);
+      return;
+    }
+
     if (viewer.character.skills.length === 0) {
-      const first = (JOB_SKILLS[job] ?? [])[0];
+      const first = all[0];
       if (first) {
         viewer.character.skills.push(first);
         viewer.character.skillBar.push(first);
@@ -1120,17 +1327,20 @@ export class ZoneRoom extends Room {
 
     if (viewer.character.skills.includes(skillId)) return; // 이미 배웠다
 
+    // 테스트 스위치(SKILL_UNLOCK_ALL)가 켜져 있으면 레벨을 안 본다
     if (!canLearn(skill, player.job as JobId, player.level)) {
       client.send('notice', { text: `Lv.${skill.reqLevel} 부터 배울 수 있습니다.` });
       return;
     }
-    if (viewer.character.skillPoints < 1) {
+    // 같은 스위치가 켜져 있으면 0 이다 — 그때는 아래 검사도 차감도 그냥 지나간다
+    const cost = skillPointCost();
+    if (viewer.character.skillPoints < cost) {
       client.send('notice', { text: '스킬 포인트가 없습니다.' });
       return;
     }
 
     viewer.character.skills.push(skillId);
-    viewer.character.skillPoints -= 1;
+    viewer.character.skillPoints -= cost;
 
     // 자리가 비어 있으면 바로 올려준다 — 배우고 또 끌어다 놓게 하면 번거롭다
     if (viewer.character.skillBar.length < SKILL_BAR_SIZE) {
@@ -1423,7 +1633,13 @@ export class ZoneRoom extends Room {
     this.persist(client.sessionId);
   }
 
-  private handleAttack(client: Client): void {
+  /**
+   * 기본 공격.
+   *
+   * `focus` 는 서버가 모는 경로(자동 사냥)가 "이 놈을 친다"고 넘겨준 것이다.
+   * 사람이 눌렀으면 비어 있고, 그때는 **클릭으로 찍어 둔 타겟**을 쓴다.
+   */
+  private handleAttack(client: Client, focus?: MonsterState): void {
     const viewer = this.viewers.get(client.sessionId);
     const player = this.state.players.get(client.sessionId);
     if (!viewer || !player || player.dead) return;
@@ -1431,24 +1647,39 @@ export class ZoneRoom extends Room {
     const now = Date.now();
     const job = player.job as JobId;
     const stats = this.statsOf(client.sessionId, job, player.level);
+    const aim = focus ?? this.focusOf(client.sessionId);
+    if (aim) this.faceMonster(player, aim);
     const ready = this.nextAttackAt.get(client.sessionId) ?? 0;
     if (now < ready) return; // 쿨타임 — 연타해도 소용없다
-    this.nextAttackAt.set(
-      client.sessionId,
-      now + effectiveCooldown(stats.attackCooldown, stats.attackSpeed)
-    );
+    const cooldown = effectiveCooldown(stats.attackCooldown, stats.attackSpeed);
+    this.nextAttackAt.set(client.sessionId, now + cooldown);
 
-    // 헛스윙도 클라이언트에 알려야 모션이 나온다
-    this.broadcast('swing', { id: player.id });
+    // 휘두르는 동안은 못 움직인다 (`handleInput` · `stepAutoPlayer` 가 본다)
+    const rootMs = attackRootMs(cooldown);
+    this.rootedUntil.set(client.sessionId, now + rootMs);
+
+    // 헛스윙도 클라이언트에 알려야 모션이 나온다.
+    // `rootMs` 를 같이 보내는 이유는 클라이언트가 **같은 시간만큼** 예측을 멈춰야
+    // 하기 때문이다. 장비가 붙인 공격 속도는 서버만 알아서 클라가 다시 못 구한다.
+    this.broadcast('swing', { id: player.id, rootMs });
+
+    // 원거리 직업(투사체가 있는 직업)은 겨눈 놈에게 날아가 맞는다.
+    // 근접은 예전처럼 내 몸 앞 부채꼴이다 — 아래 handleSkill 과 같은 규칙이다.
+    const onTarget = this.blastAt(player, aim, !!BASIC_PROJECTILE[job], stats.attackRange);
 
     const hits = this.combat.resolvePlayerAttack(
       player,
       stats.attack,
-      stats.attackRange,
+      onTarget ? SKILL_BLAST_MIN : stats.attackRange,
       now,
       undefined,
       1,
-      { projectile: BASIC_PROJECTILE[job], crit: stats.crit, critDamage: stats.critDamage }
+      {
+        projectile: BASIC_PROJECTILE[job],
+        crit: stats.crit,
+        critDamage: stats.critDamage,
+        ...(onTarget ? { origin: onTarget } : {}),
+      }
     );
     this.awardHits(client, viewer, player, hits);
   }
@@ -1459,7 +1690,7 @@ export class ZoneRoom extends Room {
    * 이 직업이 실제로 가진 스킬인지, 쿨타임이 돌았는지를
    * **서버가 다시 확인한다.** 클라이언트 액션바는 표시일 뿐이다.
    */
-  private handleSkill(client: Client, skillId: string): void {
+  private handleSkill(client: Client, skillId: string, focus?: MonsterState): void {
     const viewer = this.viewers.get(client.sessionId);
     const player = this.state.players.get(client.sessionId);
     if (!viewer || !player || player.dead) return;
@@ -1468,18 +1699,46 @@ export class ZoneRoom extends Room {
     const skill = skillForJob(job, typeof skillId === 'string' ? skillId : '');
     if (!skill) return; // 없는 스킬이거나 다른 직업 스킬
 
-    // 배워서 액션바에 올린 것만 쓸 수 있다
-    if (!viewer.character.skillBar.includes(skill.id)) return;
+    /**
+     * 배워서 액션바에 올린 것만 쓸 수 있다.
+     *
+     * **테스트 스위치(`SKILL_UNLOCK_ALL`)가 켜져 있으면 액션바를 안 본다.** 화면 왼쪽
+     * 디버그 목록(`ui/skillDebug.ts`)이 장착 없이 바로 쏘기 때문이다. 직업과 쿨타임은
+     * 그대로 본다 — 남의 직업 스킬까지 열어 주면 확인이 아니라 딴 게 된다.
+     */
+    if (!SKILL_UNLOCK_ALL && !viewer.character.skillBar.includes(skill.id)) return;
+
+    // 겨눈 쪽으로 몸을 돌리는 것은 **쿨타임을 돌리기 전에** 한다. 회복기도
+    // 대상을 향해 서야 이펙트가 엉뚱한 쪽을 보지 않는다.
+    /**
+     * 겨눈 놈이 없으면 **사거리 안에서 가장 가까운 놈**을 잡아서 그쪽으로 쏜다
+     * (`acquireTarget`). 때리지 않는 스킬(회복기, `maxTargets <= 0`)은 잡지 않는다 —
+     * 조준이 걸릴 이유가 없는데 엉뚱하게 표시만 켜진다.
+     */
+    const aim =
+      focus ??
+      this.focusOf(client.sessionId) ??
+      (skill.maxTargets > 0 ? this.acquireTarget(client, player, skill.range) : null);
+    if (aim) this.faceMonster(player, aim);
 
     const now = Date.now();
     const key = `${client.sessionId}:${skill.id}`;
     if (now < (this.skillReadyAt.get(key) ?? 0)) return;
-    this.skillReadyAt.set(key, now + skill.cooldown);
-    this.broadcast('skill', { id: player.id, skillId: skill.id });
+    // 테스트 스위치(SKILL_COOLDOWN_OFF)가 켜져 있으면 0 이다
+    const cooldown = skillCooldown(skill);
+    this.skillReadyAt.set(key, now + cooldown);
+
+    const stats = this.statsOf(client.sessionId, job, player.level);
+
+    // 스킬도 같은 공격 모션을 쓰므로 같은 동안 발이 묶인다.
+    // **기본 공격 간격으로 자른다** — 스킬 쿨타임(수 초)으로 자르면 걷지도 못하고,
+    // 테스트 스위치(`SKILL_COOLDOWN_OFF`)로 쿨타임이 0 이 되면 경직까지 0 이 된다.
+    const rootMs = attackRootMs(effectiveCooldown(stats.attackCooldown, stats.attackSpeed));
+    this.rootedUntil.set(client.sessionId, now + rootMs);
+    this.broadcast('skill', { id: player.id, skillId: skill.id, rootMs });
 
     // 회복형 스킬은 공격 판정을 하지 않는다
     if (skill.selfHeal) {
-      const stats = this.statsOf(client.sessionId, job, player.level);
       const healed = Math.round(stats.maxHp * skill.selfHeal);
       const before = player.hp;
       player.hp = Math.min(stats.maxHp, player.hp + healed);
@@ -1496,11 +1755,19 @@ export class ZoneRoom extends Room {
       return;
     }
 
-    const stats = this.statsOf(client.sessionId, job, player.level);
+    /**
+     * **겨눈 놈이 있으면 원거리 스킬은 그 자리에서 터진다.** ★
+     *
+     * 근접기는 여전히 내 몸이 중심이다 — 내 앞을 베는 동작인데 판정만 저쪽에서
+     * 나면 이펙트와 어긋난다. 원거리기는 반대로, 날아가서 터지는 것이라 시전자
+     * 정면 부채꼴로 재면 "타겟을 찍었는데 옆에 있던 놈만 맞는" 일이 난다.
+     */
+    const onTarget = this.blastAt(player, aim, isRangedSkill(skill), skill.range);
+
     const hits = this.combat.resolvePlayerAttack(
       player,
       Math.round(stats.attack * skill.power),
-      skill.range,
+      onTarget ? blastRadius(skill) : skill.range,
       now,
       skill.arc,
       skill.maxTargets,
@@ -1510,6 +1777,7 @@ export class ZoneRoom extends Room {
         critDamage: stats.critDamage,
         // 맞은 자리에서 그 스킬 이펙트가 터지도록 어느 스킬이었는지 같이 보낸다
         skillId: skill.id,
+        ...(onTarget ? { origin: onTarget } : {}),
       }
     );
     this.awardHits(client, viewer, player, hits);
@@ -1637,7 +1905,13 @@ export class ZoneRoom extends Room {
   private damagePlayer(player: PlayerState, attack: number, sourceId: string): void {
     if (player.dead) return;
     const stats = this.statsOf(player.id, player.job as JobId, player.level);
-    const amount = computeDamage(attack, stats.defense);
+    /**
+     * 무적이면 체력을 안 깎는다. **그래도 `hit` 은 그대로 보낸다** (`amount: 0`) —
+     * 몬스터의 공격 동작은 이 메시지로 도는 구조라(`monsters.swing`), 여기서
+     * 막아 버리면 동작을 보려고 켠 무적이 동작을 못 보게 만든다.
+     */
+    const godmode = this.godmode.has(player.id);
+    const amount = godmode ? 0 : computeDamage(attack, stats.defense);
     player.hp = Math.max(0, player.hp - amount);
 
     this.broadcast('hit', {
@@ -1708,7 +1982,7 @@ export class ZoneRoom extends Room {
 
     // --- 자동 사냥 / 클릭 추격 ---
     this.driveAutoHunt(dt);
-    this.driveChase(dt);
+    this.sweepTargets();
 
     // 주기적으로 위치를 남긴다. 서버가 갑자기 죽어도 최근 위치는 지킨다.
     this.saveTimer += TICK_MS;

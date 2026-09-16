@@ -1,33 +1,21 @@
 #!/usr/bin/env bash
 # 에셋을 다시 받아 public/assets 에 배치한다.
 # 원본(zip/hdr/glb)은 저장소에 커밋하지 않으므로, 새로 클론했을 때 이 스크립트를 돌린다.
-# 출처와 라이선스는 docs/ASSETS.md 참고 — 외부 에셋은 전부 CC0 1.0 이고,
-# 맨 끝 VARCO 캐릭터만 우리가 직접 생성한 것이다.
+# 출처와 라이선스는 docs/ASSETS.md 참고 — 받아 온 외부 에셋은 전부 CC0 1.0 이고,
+# VARCO 로 만든 바닥 텍스처와 캐릭터는 우리가 직접 생성한 것이다.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 mkdir -p assets-src/textures public/assets/textures public/assets/hdri public/assets/basis
 
-fetch_material() { # $1=ambientCG 자산명  $2=출력 이름
-  local id="$1" out="$2"
-  if [ ! -f "assets-src/${id}_1K-JPG.zip" ]; then
-    echo "받는 중: $id"
-    curl -sL --max-time 300 -o "assets-src/${id}_1K-JPG.zip" \
-      "https://ambientcg.com/get?file=${id}_1K-JPG.zip"
-  fi
-  rm -rf "assets-src/${id}_1K-JPG"
-  unzip -q -o "assets-src/${id}_1K-JPG.zip" -d "assets-src/${id}_1K-JPG"
-  # Color/NormalGL/Roughness 만 쓴다 (이유는 docs/ASSETS.md).
-  # 원본 JPEG 은 public/ 밖에 둔다 — 배포되는 건 압축한 .ktx2 뿐이다.
-  cp "assets-src/${id}_1K-JPG/${id}_1K-JPG_Color.jpg"     "assets-src/textures/${out}_color.jpg"
-  cp "assets-src/${id}_1K-JPG/${id}_1K-JPG_NormalGL.jpg"  "assets-src/textures/${out}_normal.jpg"
-  cp "assets-src/${id}_1K-JPG/${id}_1K-JPG_Roughness.jpg" "assets-src/textures/${out}_rough.jpg"
-  echo "  -> assets-src/textures/${out}_*.jpg"
-}
-
-fetch_material Grass005  grass
-fetch_material Ground037 dirt
-fetch_material Rock063   rock
+# 바닥 텍스처 — 바르코로 만든 타일 이미지 7장(map1~7.png). 출처와 약관은 docs/ASSETS.md.
+# 결과물 주소를 아직 못 박았다 — 받아 둔 원본(assets-src/textures/varco/map*.png)이 있을 때만 만든다.
+# 여기서는 JPEG(색 + 밝기로 만든 노멀)까지만 만든다. 배포되는 .ktx2 는 `npm run compress` 가 누른다.
+if [ -f assets-src/textures/varco/map1.png ]; then
+  node scripts/build-ground-textures.mjs
+else
+  echo "건너뜀: 바닥 텍스처 — 원본(assets-src/textures/varco/map1~7.png)이 없다"
+fi
 
 if [ ! -f assets-src/sky_2k.hdr ]; then
   echo "받는 중: HDRI"
@@ -36,85 +24,6 @@ if [ ! -f assets-src/sky_2k.hdr ]; then
 fi
 cp assets-src/sky_2k.hdr public/assets/hdri/sky_2k.hdr
 echo "  -> public/assets/hdri/sky_2k.hdr"
-
-# ---------------------------------------------------------------- 캐릭터 모델
-
-# KayKit 캐릭터 팩(CC0). 다섯이 같은 뼈대를 쓰므로 애니메이션은 knight 한 곳에만
-# 남기고 나머지는 통째로 잘라낸다 — 원본 그대로면 다섯이 18MB, 잘라내면 2MB 다.
-KAYKIT="https://raw.githubusercontent.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/main/addons/kaykit_character_pack_adventures/Characters/gltf"
-
-# 우리가 실제로 쓰는 클립만 남긴다 (원본은 76개)
-KEEP_CLIPS="Idle Walking_A Running_A 1H_Melee_Attack_Slice_Diagonal 1H_Ranged_Shoot Spellcast_Shoot Death_A Hit_A Interact"
-
-mkdir -p assets-src/models public/assets/models
-
-fetch_character() { # $1=원본 이름  $2=출력 이름  $3=남길 클립("--none" 이면 전부 제거)
-  local src="$1" out="$2"
-  if [ ! -f "assets-src/models/${src}.glb" ]; then
-    echo "받는 중: ${src}.glb"
-    curl -sL --max-time 300 -o "assets-src/models/${src}.glb" "${KAYKIT}/${src}.glb"
-  fi
-  shift 2
-  node scripts/trim-gltf.mjs "assets-src/models/${src}.glb" "public/assets/models/${out}.glb" "$@"
-}
-
-fetch_character Knight       knight       $KEEP_CLIPS
-fetch_character Mage         mage         --none
-fetch_character Rogue        rogue        --none
-fetch_character Rogue_Hooded rogue_hooded --none
-fetch_character Barbarian    barbarian    --none
-
-# ---------------------------------------------------------------- 몬스터 모델
-
-# Quaternius 짐승들(CC0). 종류마다 뼈대와 클립 이름이 달라서 파일마다 따로 자른다.
-# 대기·걷기·달리기·공격·사망 다섯이면 충분하다 (원본은 12~13개).
-QUAT="https://raw.githubusercontent.com/trebeljahr/quaternius-showcase/main/public/glb"
-
-fetch_beast() { # $1=팩/파일  $2=출력 이름  $3...=남길 클립
-  local path="$1" out="$2" src
-  src=$(basename "$path")
-  if [ ! -f "assets-src/models/${src}.glb" ]; then
-    echo "받는 중: ${src}.glb"
-    curl -sL --max-time 300 -o "assets-src/models/${src}.glb" "${QUAT}/${path}.glb"
-  fi
-  shift 2
-  node scripts/trim-gltf.mjs "assets-src/models/${src}.glb" "public/assets/models/${out}.glb" "$@"
-}
-
-# 사냥터 20곳에 한 종씩. 같은 짐승이 두 번 나오면 사냥터를 옮긴 느낌이 안 난다.
-fetch_beast animals_pack/Fox         fox         Idle Walk Gallop Attack Death
-fetch_beast animals_pack/ShibaInu    shibainu    Idle Walk Gallop Attack Death
-fetch_beast animals_pack/Wolf        wolf        Idle Walk Gallop Attack Death
-fetch_beast animals_pack/Husky       husky       Idle Walk Gallop Attack Death
-fetch_beast animals_pack/Bull        bull        Idle Walk Gallop Attack_Headbutt Death
-fetch_beast animals_pack/Stag        stag        Idle Walk Gallop Attack_Headbutt Death
-fetch_beast animals_pack/Deer        deer        Idle Walk Gallop Attack_Headbutt Death
-fetch_beast animals_pack/Horse       horse       Idle Walk Gallop Attack_Kick Death
-fetch_beast animals_pack/Horse_White horse_white Idle Walk Gallop Attack_Kick Death
-
-fetch_beast easy_enemies_pack/Spider spider Spider_Idle Spider_Walk Spider_Attack Spider_Death
-fetch_beast easy_enemies_pack/Rat    rat    Rat_Idle Rat_Walk Rat_Run Rat_Attack Rat_Death
-fetch_beast easy_enemies_pack/Snake  snake  Snake_Idle Snake_Walk Snake_Attack
-fetch_beast easy_enemies_pack/Frog   frog   Frog_Idle Frog_Jump Frog_Attack Frog_Death
-fetch_beast easy_enemies_pack/Wasp   wasp   Wasp_Flying Wasp_Attack Wasp_Death
-
-fetch_beast dinosaurs_pack/Trex         trex         TRex_Idle TRex_Walk TRex_Run TRex_Attack TRex_Death
-fetch_beast dinosaurs_pack/Velociraptor velociraptor Velociraptor_Idle Velociraptor_Walk Velociraptor_Run Velociraptor_Attack Velociraptor_Death
-fetch_beast dinosaurs_pack/Triceratops  triceratops  Triceratops_Idle Triceratops_Walk Triceratops_Run Triceratops_Attack Triceratops_Death
-fetch_beast dinosaurs_pack/Stegosaurus  stegosaurus  Stegosaurus_Idle Stegosaurus_Walk Stegosaurus_Run Stegosaurus_Attack Stegosaurus_Death
-# 사망 클립 이름이 팩에서 잘못 붙어 있다 (Stegosaurus_Death). 원본대로 받는다.
-fetch_beast dinosaurs_pack/Apatosaurus     apatosaurus     Apatosaurus_Idle Apatosaurus_Walk Apatosaurus_Run Apatosaurus_Attack Stegosaurus_Death
-fetch_beast dinosaurs_pack/Parasaurolophus parasaurolophus Parasaurolophus_Idle Parasaurolophus_Walk Parasaurolophus_Run Parasaurolophus_Attack Parasaurolophus_Death
-
-# 화살통 — 캐릭터 모델 안에 없어서 따로 받는다. .gltf 는 옆의 .bin 과 .png 를
-# 상대 경로로 참조하므로 셋을 같은 폴더에 둔다.
-mkdir -p public/assets/models/accessories
-for f in quiver.gltf quiver.bin rogue_texture.png; do
-  if [ ! -f "public/assets/models/accessories/$f" ]; then
-    echo "받는 중: $f"
-    curl -sL --max-time 120 -o "public/assets/models/accessories/$f"       "https://raw.githubusercontent.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/main/addons/kaykit_character_pack_adventures/Assets/gltf/$f"
-  fi
-done
 
 # ---------------------------------------------------------------- VARCO 캐릭터
 
@@ -144,6 +53,40 @@ fetch_varco a93c151d72acf6ef215eee6b69e347f8 anim_sword_slash
 fetch_varco cf5ba760a2b2a8cfad130107f63a37b1 anim_two_hand_attack
 fetch_varco b6a60400c72d6338f2fbe0391251bef0 anim_staff_spin
 fetch_varco 81b1f814d822bf04983d4cdbd61f60f3 anim_death
+
+mkdir -p assets-src/textures/varco
+
+# '천붕각' 의 떨어지는 발(fx/sky_foot.png)은 **받아 올 주소가 없다** — 워크플로우 화면을
+# 찍은 것이라 출력물 URL 이 아니다. 원본은 assets-src/textures/varco/fx_sky_foot_src.png,
+# 게임이 쓰는 512² **회색조** 판은 커밋해 두었다. 만드는 법은 docs/ASSETS.md.
+# 먼지 구름(fx/dust.png)도 여기서 안 받는다 — 바르코가 아니라 코드로 만든 그림이다.
+# (예전에 쓰던 kick_flurry.png 는 지웠다. 주소가 필요하면 이 파일의 이력에 있다)
+
+# 호포각 — 포효하는 호랑이 머리. 받는 원본은 주황이지만, 게임에 쓰는 판은
+# **회색조로 바꿔서** 커밋했다 (sharp 의 grayscale + linear(1.25)). 그래야 코드에서
+# 색을 입힐 수 있다 — 주황 그림에 파랑을 곱하면 탁한 녹색이 된다.
+# 까만 바탕에 **불꽃 선으로만** 그려서
+# 가산 혼합에 얹으면 바탕이 저절로 빠지고 겹쳐도 뭉개지지 않는다.
+# 같은 실행에서 두 장이 나왔는데(다른 하나는 d597eed9…) 속을 색으로 채운 쪽이라 안 썼다.
+if [ ! -f assets-src/textures/varco/fx_tiger_roar.png ]; then
+  echo "받는 중: textures/varco/fx_tiger_roar.png"
+  curl -sL --max-time 120 -o assets-src/textures/varco/fx_tiger_roar.png "${VARCO}/7e7e10aa5498c117edb792114d0a65cb.png"
+fi
+
+# 백호격 — 오른쪽으로 도약하는 백호 옆모습. **옆모습이라 방향이 있다**: 코드가 화면에서
+# 왼쪽으로 갈 때 좌우로 뒤집는다 (skillFx 의 flipX). 같은 실행의 다른 판(4ef9eaad…)은
+# 몸이 위로 솟아 도약에 가까웠고, 이쪽이 수평으로 길게 뻗어 달리는 것으로 읽혔다.
+if [ ! -f assets-src/textures/varco/fx_white_tiger.png ]; then
+  echo "받는 중: textures/varco/fx_white_tiger.png"
+  curl -sL --max-time 120 -o assets-src/textures/varco/fx_white_tiger.png "${VARCO}/d936deb7ebf6fe5c48389f90ec878465.png"
+fi
+
+# 캐릭터 피격 — 발톱 자국과 붉은 불티. 작게 뜨므로 사방으로 고르게 퍼진 판을 골랐다
+# (발톱 자국이 더 또렷한 7c6d0d07… 도 같이 나왔다).
+if [ ! -f assets-src/textures/varco/fx_hit.png ]; then
+  echo "받는 중: textures/varco/fx_hit.png"
+  curl -sL --max-time 120 -o assets-src/textures/varco/fx_hit.png "${VARCO}/714ba0443e09383d73e4424237ceae53.png"
+fi
 
 # 클립 이름 = 파일. **역슬래시로 줄을 잇지 않는다** — 이 파일은 CRLF 라서
 # 줄 끝 역슬래시 다음에 CR 이 오면 bash 가 줄바꿈이 아니라 CR 이스케이프로 읽고 거기서 끊는다.
@@ -190,5 +133,34 @@ if [ -f assets-src/models/varco/archer_idle.glb ] && [ -f assets-src/models/varc
 else
   echo "건너뜀: varco_archer — 원본이 없다 (궁수는 절차적 리그로 나온다)"
 fi
+
+# 격투가 — 궁수와 같은 방식. 받은 파일: 격투가-Animate-격투가-1 = 대기, -1-2 = 달리기, -1-3 = 공격, -1-4 = 사망
+# (클립 이름이 비어 있어 길이·동작 폭을 재서 가렸다 — characters-and-animation.md)
+# 공격은 #face 를 안 붙인다: 골반이 -70° 쯤 틀어진 건 격투 자세이고, 차는 발은 정면(7°)으로 나간다.
+FIGHTER_CLIPS=()
+FIGHTER_CLIPS+=("Idle=assets-src/models/varco/fighter_idle.glb")
+FIGHTER_CLIPS+=("Run=assets-src/models/varco/fighter_run.glb#loop#face")
+FIGHTER_CLIPS+=("Attack=assets-src/models/varco/fighter_attack.glb")
+FIGHTER_CLIPS+=("Death=assets-src/models/varco/fighter_death.glb")
+if [ -f assets-src/models/varco/fighter_idle.glb ] && [ -f assets-src/models/varco/fighter_run.glb ] && [ -f assets-src/models/varco/fighter_attack.glb ] && [ -f assets-src/models/varco/fighter_death.glb ]; then
+  node scripts/build-varco-character.mjs public/assets/models/varco_fighter.glb assets-src/models/varco/fighter_idle.glb "${FIGHTER_CLIPS[@]}"
+else
+  echo "건너뜀: varco_fighter — 원본이 없다 (격투가는 절차적 리그로 나온다)"
+fi
+
+# 오우거 5종 — 몬스터 외형. 지금은 varco_ogre1 만 초원에 걸었다 (monsters.ts 의 TIERS[].look).
+# 바르코 워크플로우 "오우거" 의 Type1~5. 생김새만 다르고 동작 넷은 같다.
+# 받은 파일 순서가 타입마다 같다: 오우거-Animate-오우거-1 = 대기, -2 = 달리기, -3 = 공격, -4 = 사망
+# (파일에 클립 이름이 비어 있어 동작 데이터를 재서 가렸다 — characters-and-animation.md)
+# **결과물 주소를 아직 못 박았다.** 받아 둔 원본(assets-src/models/varco/ogre<N>_*.glb)이 있을 때만 만든다.
+for n in 1 2 3 4 5; do
+  O="assets-src/models/varco/ogre${n}"
+  if [ -f "${O}_idle.glb" ] && [ -f "${O}_run.glb" ] && [ -f "${O}_attack.glb" ] && [ -f "${O}_death.glb" ]; then
+    # 달리기는 마법사와 같은 클립이다 (구워진 방향 -94.6°)
+    node scripts/build-varco-character.mjs "public/assets/models/varco_ogre${n}.glb" "${O}_idle.glb" "Idle=${O}_idle.glb" "Run=${O}_run.glb#loop#face" "Attack=${O}_attack.glb" "Death=${O}_death.glb"
+  else
+    echo "건너뜀: varco_ogre${n} — 원본이 없다"
+  fi
+done
 
 echo "완료. 총 $(du -sh public/assets | cut -f1)"

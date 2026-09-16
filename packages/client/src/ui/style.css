@@ -29,6 +29,8 @@ html, body {
 .autohunt,
 .autorange,
 .hudbtns,
+.skilldbg,
+.godmode,
 .npc-prompt,
 .npc,
 .bag,
@@ -1557,7 +1559,128 @@ input,
  * 위로 올려 세우고, 아래에서부터 상태바 → 액션바 → 자동사냥 → 채팅 순으로
  * 겹치지 않게 쌓는다.
  * --------------------------------------------------------------- */
+/* --------------------------------------------------------------- 미니맵 */
+/**
+ * 창 여는 버튼(.hudbtns, top 12 + 높이 46) 바로 아래에 둔다. 오른쪽 위는 이미
+ * 버튼이 쓰는 자리라 왼쪽에 두면 상태바·채팅과 겹친다.
+ * 누를 일이 없으므로 pointer-events 는 꺼 둔 채로 둔다 (3D 클릭이 통과해야 한다).
+ */
+.minimap {
+  position: fixed;
+  top: 70px;
+  right: 18px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.minimap.is-hidden { display: none; }
+
+.minimap-canvas {
+  display: block;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5));
+}
+
+.minimap-name {
+  font-size: 12px;
+  color: #cfd6c4;
+  text-shadow: 0 1px 2px #000;
+  letter-spacing: 0.02em;
+}
+
+/* --------------------------------------------------------------- 스킬 디버그 목록 */
+/**
+ * 테스트용. SKILL_UNLOCK_ALL 이 꺼지면 클래스가 is-hidden 으로 붙어 사라진다.
+ * 왼쪽 위 #stats(FPS·존 정보) 아래에서 시작한다 — 아래쪽은 채팅이 쓴다.
+ */
+.skilldbg {
+  position: fixed;
+  left: 12px;
+  top: 150px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: calc(100vh - 320px);
+  overflow-y: auto;
+}
+
+.skilldbg.is-hidden { display: none; }
+
+/* 무적 단추 — 스킬 디버그 목록 바로 위에 같은 모양으로 선다 */
+.godmode {
+  position: fixed;
+  left: 12px;
+  top: 112px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  width: 104px;
+  padding: 5px 7px;
+  font: inherit;
+  text-align: left;
+  color: #e6e9da;
+  background: rgba(18, 22, 28, 0.78);
+  border: 1px solid rgba(150, 180, 210, 0.3);
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.godmode b { font-size: 12px; font-weight: 600; }
+.godmode small { font-size: 10px; color: #9fb0c0; }
+.godmode:hover { background: rgba(38, 48, 60, 0.9); }
+/* 켜진 상태는 색으로 갈린다 — 글씨만 바뀌면 난전 중에 못 알아본다 */
+.godmode.is-on {
+  color: #0f1418;
+  background: rgba(255, 223, 61, 0.9);
+  border-color: rgba(255, 223, 61, 0.95);
+}
+.godmode.is-on small { color: #4a3f10; }
+.godmode.is-hidden { display: none; }
+
+.skilldbg-title {
+  font-size: 11px;
+  color: #9fb0c0;
+  text-shadow: 0 1px 2px #000;
+  letter-spacing: 0.04em;
+  padding-left: 2px;
+}
+
+.skilldbg-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  width: 104px;
+  padding: 5px 7px;
+  font: inherit;
+  text-align: left;
+  color: #e6e9da;
+  background: rgba(18, 22, 28, 0.78);
+  border: 1px solid rgba(150, 180, 210, 0.3);
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.skilldbg-item:hover { background: rgba(38, 48, 60, 0.9); }
+.skilldbg-item:active { background: rgba(58, 72, 88, 0.95); }
+.skilldbg-item b { font-size: 12px; font-weight: 600; }
+.skilldbg-item small { font-size: 10px; color: #9fb0c0; }
+
 @media (max-width: 760px) {
+  /* 테스트 도구라 좁은 화면에서는 자리를 빼앗지 않게 숨긴다 */
+  .skilldbg,
+  .godmode { display: none; }
+
+  /* 폰에서는 오른쪽 위에 자동 사냥까지 서므로 더 내리고 줄인다 */
+  .minimap { top: 62px; right: 8px; }
+  .minimap-canvas { width: 96px; height: 96px; }
+  .minimap-name { font-size: 11px; }
+
   .actionbar { bottom: 86px; gap: 5px; }
   .slot { width: 62px; height: 58px; }
   .slot-name { font-size: 11px; }
@@ -1577,7 +1700,7 @@ input,
   .chat { bottom: 196px; width: min(320px, 58vw); }
   .chat-log { max-height: 84px; }
 
-  /* 조작 안내는 폰에서 쓸 일이 없다 — WASD 도 휠도 Enter 도 없다 */
+  /* 조작 안내는 폰에서 쓸 일이 없다 — 휠도 Enter 도 숫자키도 없다 */
   #help { display: none; }
 
   /* 창은 화면 폭을 꽉 채운다 — 340px 짜리를 375px 폰에 띄우면 여백이 없다 */

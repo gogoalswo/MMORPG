@@ -14,6 +14,8 @@
     "server": "node scripts/serve.mjs",
     "server:raw": "npm run dev -w @mmo/server",
     "probe": "node scripts/probe.mjs",
+    "fx-probe": "node scripts/fx-probe.ts",
+    "hit-probe": "node scripts/hit-probe.ts",
     "compress": "node scripts/compress-textures.mjs",
     "tunnel": "node scripts/tunnel.mjs"
   },

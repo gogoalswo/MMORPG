@@ -1,4 +1,4 @@
-import type { ZoneDef, ZoneEnv } from './zone.ts';
+import type { GroundKind, ZoneDef, ZoneEnv } from './zone.ts';
 import { bossIdFor, monsterIdFor, tierLevels } from './monsters.ts';
 
 /**
@@ -53,42 +53,45 @@ const gateFor = (): ZoneDef['gate'] => ({
 interface FieldTheme {
   id: string;
   name: string;
+  /** 바닥 텍스처. 돌판(stone)은 마을 몫이라 사냥터는 나머지 여섯을 나눠 쓴다 */
+  ground: GroundKind;
   sky: string;
   fog: string;
   grassDark: string;
   grassLight: string;
-  dirt: string;
+  /** 풀밭이 아닌 바닥의 틴트, 그리고 풀밭에 난 흙길의 틴트 */
   dirtLight: string;
   /** 0 = 훤함, 1 = 캄캄함. 안개 거리와 광량, 풀 밀도를 여기서 뽑는다 */
   dim: number;
 }
 
 const FIELDS: FieldTheme[] = [
-  { id: 'meadow', name: '초원', sky: '#b4c6cf', fog: '#bcc4ae', grassDark: '#54663a', grassLight: '#7c8b54', dirt: '#a08a66', dirtLight: '#b39c77', dim: 0.05 },
-  { id: 'thicket', name: '덤불숲', sky: '#5f6b63', fog: '#48544a', grassDark: '#2f3a28', grassLight: '#4a5936', dirt: '#5a4f3c', dirtLight: '#6b5f49', dim: 0.55 },
-  { id: 'canyon', name: '메마른 협곡', sky: '#c4b39a', fog: '#b09c7f', grassDark: '#6b6142', grassLight: '#8a7d55', dirt: '#9c8055', dirtLight: '#b09468', dim: 0.2 },
-  { id: 'waste', name: '잿빛 황야', sky: '#4a4750', fog: '#3d3a42', grassDark: '#3a3740', grassLight: '#4e4a55', dirt: '#55505a', dirtLight: '#655f6c', dim: 0.7 },
-  { id: 'mire', name: '안개 늪', sky: '#6d7a6a', fog: '#5b6a58', grassDark: '#37452f', grassLight: '#4d5c3d', dirt: '#4a4a38', dirtLight: '#5b5b46', dim: 0.6 },
-  { id: 'frostmoor', name: '서리 고원', sky: '#c8d8e4', fog: '#aec2d2', grassDark: '#6d7f86', grassLight: '#93a6ae', dirt: '#8d9aa0', dirtLight: '#a5b1b6', dim: 0.15 },
-  { id: 'blackwood', name: '검은 삼림', sky: '#39423a', fog: '#2a322b', grassDark: '#1f2a1c', grassLight: '#33422c', dirt: '#3a3328', dirtLight: '#4a4133', dim: 0.8 },
-  { id: 'ruins', name: '무너진 성터', sky: '#8f8d86', fog: '#75736c', grassDark: '#4f5348', grassLight: '#6c705f', dirt: '#6f6a5c', dirtLight: '#847e6e', dim: 0.35 },
-  { id: 'redsand', name: '붉은 사막', sky: '#d8b98a', fog: '#c9aa76', grassDark: '#9c7c4a', grassLight: '#bd9a63', dirt: '#c2955c', dirtLight: '#d4aa72', dim: 0.1 },
-  { id: 'saltflat', name: '소금 평원', sky: '#dcdcd4', fog: '#c3c3ba', grassDark: '#9a9a8e', grassLight: '#b8b8ab', dirt: '#b5b3a4', dirtLight: '#c8c6b8', dim: 0.1 },
-  { id: 'sulfur', name: '유황 분지', sky: '#a89448', fog: '#8e7c36', grassDark: '#6e6428', grassLight: '#8f8240', dirt: '#8a7530', dirtLight: '#a38c42', dim: 0.3 },
-  { id: 'cinder', name: '화산재 언덕', sky: '#5a4a46', fog: '#463a37', grassDark: '#3b3230', grassLight: '#524644', dirt: '#4d3f3a', dirtLight: '#5f4e48', dim: 0.65 },
-  { id: 'glacier', name: '얼어붙은 심연', sky: '#8fa6bb', fog: '#7089a0', grassDark: '#4a5f6e', grassLight: '#6b8291', dirt: '#5e6d78', dirtLight: '#77848e', dim: 0.55 },
-  { id: 'warpwood', name: '뒤틀린 숲', sky: '#3f3a2c', fog: '#302c22', grassDark: '#2c2f1f', grassLight: '#42452e', dirt: '#3d3527', dirtLight: '#4d4433', dim: 0.75 },
-  { id: 'shadowvale', name: '그림자 계곡', sky: '#2e2a3d', fog: '#221f2e', grassDark: '#232036', grassLight: '#332e48', dirt: '#302b3f', dirtLight: '#3f394f', dim: 0.85 },
-  { id: 'deadcity', name: '폐허 도시', sky: '#7d7d80', fog: '#65656a', grassDark: '#4b4b4d', grassLight: '#666668', dirt: '#605e5c', dirtLight: '#75726f', dim: 0.45 },
-  { id: 'palemoor', name: '빛바랜 고원', sky: '#cfd2cf', fog: '#b3b7b4', grassDark: '#7f857c', grassLight: '#9ba296', dirt: '#98978c', dirtLight: '#adaa9f', dim: 0.2 },
-  { id: 'rift', name: '균열 지대', sky: '#4a3358', fog: '#392846', grassDark: '#332a3d', grassLight: '#473a52', dirt: '#413349', dirtLight: '#523f5c', dim: 0.75 },
-  { id: 'abyssgate', name: '심연의 문턱', sky: '#25303c', fog: '#1c252f', grassDark: '#1e2730', grassLight: '#2c3846', dirt: '#28303a', dirtLight: '#333d48', dim: 0.9 },
-  { id: 'endland', name: '종말의 대지', sky: '#2e1d22', fog: '#241619', grassDark: '#26191d', grassLight: '#37232a', dirt: '#301f24', dirtLight: '#3d282e', dim: 0.95 },
+  { id: 'meadow', name: '초원', ground: 'grass', sky: '#b4c6cf', fog: '#bcc4ae', grassDark: '#54663a', grassLight: '#7c8b54', dirtLight: '#b39c77', dim: 0.05 },
+  { id: 'thicket', name: '덤불숲', ground: 'grass', sky: '#5f6b63', fog: '#48544a', grassDark: '#2f3a28', grassLight: '#4a5936', dirtLight: '#6b5f49', dim: 0.55 },
+  { id: 'canyon', name: '메마른 협곡', ground: 'dirt', sky: '#c4b39a', fog: '#b09c7f', grassDark: '#6b6142', grassLight: '#8a7d55', dirtLight: '#b09468', dim: 0.2 },
+  { id: 'waste', name: '잿빛 황야', ground: 'dirt', sky: '#4a4750', fog: '#3d3a42', grassDark: '#3a3740', grassLight: '#4e4a55', dirtLight: '#655f6c', dim: 0.7 },
+  { id: 'mire', name: '안개 늪', ground: 'grass', sky: '#6d7a6a', fog: '#5b6a58', grassDark: '#37452f', grassLight: '#4d5c3d', dirtLight: '#5b5b46', dim: 0.6 },
+  { id: 'frostmoor', name: '서리 고원', ground: 'snow', sky: '#c8d8e4', fog: '#aec2d2', grassDark: '#6d7f86', grassLight: '#93a6ae', dirtLight: '#a5b1b6', dim: 0.15 },
+  { id: 'blackwood', name: '검은 삼림', ground: 'grass', sky: '#39423a', fog: '#2a322b', grassDark: '#1f2a1c', grassLight: '#33422c', dirtLight: '#4a4133', dim: 0.8 },
+  { id: 'ruins', name: '무너진 성터', ground: 'cobble', sky: '#8f8d86', fog: '#75736c', grassDark: '#4f5348', grassLight: '#6c705f', dirtLight: '#847e6e', dim: 0.35 },
+  { id: 'redsand', name: '붉은 사막', ground: 'sand', sky: '#d8b98a', fog: '#c9aa76', grassDark: '#9c7c4a', grassLight: '#bd9a63', dirtLight: '#d4aa72', dim: 0.1 },
+  // 금 간 마른 땅을 하얗게 물들이면 소금 평원이 된다
+  { id: 'saltflat', name: '소금 평원', ground: 'dirt', sky: '#dcdcd4', fog: '#c3c3ba', grassDark: '#9a9a8e', grassLight: '#b8b8ab', dirtLight: '#c8c6b8', dim: 0.1 },
+  { id: 'sulfur', name: '유황 분지', ground: 'sand', sky: '#a89448', fog: '#8e7c36', grassDark: '#6e6428', grassLight: '#8f8240', dirtLight: '#a38c42', dim: 0.3 },
+  { id: 'cinder', name: '화산재 언덕', ground: 'lava', sky: '#5a4a46', fog: '#463a37', grassDark: '#3b3230', grassLight: '#524644', dirtLight: '#5f4e48', dim: 0.65 },
+  { id: 'glacier', name: '얼어붙은 심연', ground: 'snow', sky: '#8fa6bb', fog: '#7089a0', grassDark: '#4a5f6e', grassLight: '#6b8291', dirtLight: '#77848e', dim: 0.55 },
+  { id: 'warpwood', name: '뒤틀린 숲', ground: 'grass', sky: '#3f3a2c', fog: '#302c22', grassDark: '#2c2f1f', grassLight: '#42452e', dirtLight: '#4d4433', dim: 0.75 },
+  { id: 'shadowvale', name: '그림자 계곡', ground: 'dirt', sky: '#2e2a3d', fog: '#221f2e', grassDark: '#232036', grassLight: '#332e48', dirtLight: '#3f394f', dim: 0.85 },
+  { id: 'deadcity', name: '폐허 도시', ground: 'cobble', sky: '#7d7d80', fog: '#65656a', grassDark: '#4b4b4d', grassLight: '#666668', dirtLight: '#75726f', dim: 0.45 },
+  { id: 'palemoor', name: '빛바랜 고원', ground: 'grass', sky: '#cfd2cf', fog: '#b3b7b4', grassDark: '#7f857c', grassLight: '#9ba296', dirtLight: '#adaa9f', dim: 0.2 },
+  { id: 'rift', name: '균열 지대', ground: 'lava', sky: '#4a3358', fog: '#392846', grassDark: '#332a3d', grassLight: '#473a52', dirtLight: '#523f5c', dim: 0.75 },
+  { id: 'abyssgate', name: '심연의 문턱', ground: 'cobble', sky: '#25303c', fog: '#1c252f', grassDark: '#1e2730', grassLight: '#2c3846', dirtLight: '#333d48', dim: 0.9 },
+  { id: 'endland', name: '종말의 대지', ground: 'lava', sky: '#2e1d22', fog: '#241619', grassDark: '#26191d', grassLight: '#37232a', dirtLight: '#3d282e', dim: 0.95 },
 ];
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
-/** 어둠도 하나에서 안개·광량·풀 밀도를 만든다 */
+/** 어둠도 하나에서 안개·광량을 만든다 */
 function envFor(theme: FieldTheme): ZoneEnv {
   const d = theme.dim;
   return {
@@ -102,16 +105,11 @@ function envFor(theme: FieldTheme): ZoneEnv {
 
     grassDark: theme.grassDark,
     grassLight: theme.grassLight,
-    dirt: theme.dirt,
-    dirtLight: theme.dirtLight,
 
-    grassCount: Math.round(lerp(58000, 20000, d)),
-    grassRadius: 42,
-
-    roads: [
-      { axis: 'x', offset: 0, width: 5.2, wave: 7, waveFreq: 0.05 },
-      { axis: 'z', offset: 0, width: 4.4, wave: 8, waveFreq: 0.06 },
-    ],
+    // 바닥은 이미지 한 장뿐이다. 풀 잎·길은 없다.
+    ground: theme.ground,
+    // 풀밭은 풀색 칸, 나머지 바닥은 흙색 칸으로 물들인다
+    groundTint: theme.ground === 'grass' ? theme.grassLight : theme.dirtLight,
   };
 }
 
@@ -145,10 +143,10 @@ function buildField(theme: FieldTheme, index: number): ZoneDef {
     monsters: [
       // 보스는 사냥터마다 한 마리, 7시 방향에 선다. 15분에 한 번 나온다.
       { kind: bossIdFor(index), x: BOSS_SPOT[0], z: BOSS_SPOT[1], radius: 3, count: 1, respawnMs: 900000 },
-      { kind: monsterIdFor(weak), x: PACKS[0]![0], z: PACKS[0]![1], radius: 8, count: 4, respawnMs: 20000 },
-      { kind: monsterIdFor(weak), x: PACKS[1]![0], z: PACKS[1]![1], radius: 8, count: 3, respawnMs: 20000 },
-      { kind: monsterIdFor(strong), x: PACKS[2]![0], z: PACKS[2]![1], radius: 8, count: 3, respawnMs: 26000 },
-      { kind: monsterIdFor(strong), x: PACKS[3]![0], z: PACKS[3]![1], radius: 8, count: 3, respawnMs: 26000 },
+      { kind: monsterIdFor(weak), x: PACKS[0]![0], z: PACKS[0]![1], radius: 8, count: 20, respawnMs: 10000 },
+      { kind: monsterIdFor(weak), x: PACKS[1]![0], z: PACKS[1]![1], radius: 8, count: 20, respawnMs: 10000 },
+      { kind: monsterIdFor(strong), x: PACKS[2]![0], z: PACKS[2]![1], radius: 8, count: 20, respawnMs: 10000 },
+      { kind: monsterIdFor(strong), x: PACKS[3]![0], z: PACKS[3]![1], radius: 8, count: 20, respawnMs: 10000 },
     ],
     env: envFor(theme),
   };
@@ -183,16 +181,10 @@ const VILLAGE: ZoneDef = {
 
     grassDark: '#5c6a3c',
     grassLight: '#82905a',
-    dirt: '#a8916c',
-    dirtLight: '#b9a37e',
 
-    grassCount: 60000,
-    grassRadius: 44,
-
-    roads: [
-      { axis: 'z', offset: 8, width: 4.6, wave: 9, waveFreq: 0.055 },
-      { axis: 'x', offset: -14, width: 3.6, wave: 6, waveFreq: 0.045 },
-    ],
+    // 돌판 한 장만 깐다
+    ground: 'stone',
+    groundTint: '#6a665c',
   },
 };
 

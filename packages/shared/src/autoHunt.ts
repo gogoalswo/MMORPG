@@ -36,15 +36,6 @@ export function clampHuntRadius(value: unknown): number {
 export function huntLeash(radius: number): number {
   return radius + 8;
 }
-/**
- * 클릭으로 직접 지정한 대상을 포기하는 거리.
- *
- * 자동 사냥과 달리 돌아갈 앵커가 없어서, 도망치는 몬스터를 그냥 따라가면
- * 존 끝까지 끌려간다. **누른 순간 그놈이 서 있던 자리**에서 이만큼 달아나면
- * 놓는다. 플레이어 기준으로 재면 멀리 보이는 놈을 눌렀을 때 누르자마자 풀린다.
- */
-export const CHASE_LEASH = 45;
-
 /** 사거리의 몇 할까지 붙을지. 꽉 채우면 몬스터가 조금만 움직여도 빠진다 */
 export const HUNT_STANDOFF = 0.7;
 /** 목표 지점에 이만큼 붙으면 도착으로 본다 */

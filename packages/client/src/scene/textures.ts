@@ -222,57 +222,6 @@ export function createMacroVariation(size = 256, strength = 0.34): THREE.Texture
 }
 
 /**
- * 풀포기 카드.
- *
- * 판 하나에 잎 하나를 그리면 아무리 많이 심어도 종이조각처럼 보인다.
- * 실제 게임은 판 하나에 잎 여러 장을 그린 "포기" 텍스처를 쓴다 —
- * 같은 인스턴스 수로 밀도가 몇 배가 되고 실루엣이 훨씬 자연스럽다.
- *
- * RGB 는 무채색 명암(밑동 어둡고 끝 밝음)만 담는다.
- * 색은 인스턴스별 틴트가 입히므로 텍스처에 색을 굽지 않는다.
- */
-export function createGrassCard(size = 256): THREE.Texture {
-  const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = size;
-  const ctx = canvas.getContext('2d')!;
-  ctx.clearRect(0, 0, size, size);
-
-  const blades = 7;
-  for (let i = 0; i < blades; i++) {
-    const baseX = size * (0.1 + (i / (blades - 1)) * 0.8 + (hash2(i, 3.1) - 0.5) * 0.06);
-    const height = size * (0.55 + hash2(i, 7.7) * 0.42);
-    const lean = (hash2(i, 11.3) - 0.5) * size * 0.42;
-    const halfWidth = size * (0.018 + hash2(i, 13.9) * 0.014);
-
-    const tipX = baseX + lean;
-    const tipY = size - height;
-    const ctrlX = baseX + lean * 0.35;
-    const ctrlY = size - height * 0.45;
-
-    // 밑동은 어둡고 끝으로 갈수록 밝다 — 무리 안쪽에 빛이 덜 든다
-    const grad = ctx.createLinearGradient(0, size, 0, tipY);
-    const dark = 60 + hash2(i, 17.1) * 30;
-    const light = 200 + hash2(i, 19.3) * 55;
-    grad.addColorStop(0, `rgb(${dark | 0},${dark | 0},${dark | 0})`);
-    grad.addColorStop(1, `rgb(${light | 0},${light | 0},${light | 0})`);
-    ctx.fillStyle = grad;
-
-    ctx.beginPath();
-    ctx.moveTo(baseX - halfWidth, size);
-    ctx.quadraticCurveTo(ctrlX - halfWidth * 0.6, ctrlY, tipX, tipY);
-    ctx.quadraticCurveTo(ctrlX + halfWidth * 0.6, ctrlY, baseX + halfWidth, size);
-    ctx.closePath();
-    ctx.fill();
-  }
-
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
-  tex.anisotropy = 4;
-  return tex;
-}
-
-/**
  * 잎 무리 카드 — 나무 수관을 이걸 여러 장 겹쳐서 만든다.
  *
  * 사진스캔 나무는 한 그루에 수십만 폴리곤이라 브라우저 MMO 에 못 쓴다.

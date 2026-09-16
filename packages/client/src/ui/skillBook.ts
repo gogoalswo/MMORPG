@@ -3,6 +3,7 @@ import {
   SKILLS,
   SKILL_BAR_SIZE,
   canLearn,
+  skillPointCost,
   type JobId,
   type SkillDef,
 } from '@mmo/shared';
@@ -146,12 +147,17 @@ export class SkillBook {
       action.type = 'button';
 
       if (!learned) {
-        const can = reachable && this.state.points > 0;
+        // 테스트 스위치(SKILL_UNLOCK_ALL)가 켜져 있으면 요구 레벨도 포인트도 안 본다.
+        // 서버가 같은 함수를 보므로 여기 회색 처리와 실제 판정이 어긋나지 않는다.
+        const cost = skillPointCost();
+        const can = reachable && this.state.points >= cost;
         action.className = 'sb-btn' + (can ? '' : ' is-locked');
         action.textContent = reachable ? '배우기' : `Lv.${skill.reqLevel}`;
-        action.title = reachable
-          ? '스킬 포인트 1을 씁니다'
-          : `Lv.${skill.reqLevel} 부터 배울 수 있습니다`;
+        action.title = !reachable
+          ? `Lv.${skill.reqLevel} 부터 배울 수 있습니다`
+          : cost > 0
+            ? '스킬 포인트 1을 씁니다'
+            : '테스트 중 — 레벨·포인트 없이 배웁니다';
         if (can) action.addEventListener('click', () => this.onLearn?.(id));
       } else if (onBar) {
         action.className = 'sb-btn is-on';

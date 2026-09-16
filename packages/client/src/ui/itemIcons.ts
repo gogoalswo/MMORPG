@@ -1,4 +1,4 @@
-import { GRADE_MAX, type ItemDef } from '@mmo/shared';
+import { GRADE_MAX, type ItemDef, type JobId } from '@mmo/shared';
 
 /**
  * 아이템 아이콘.
@@ -37,6 +37,8 @@ type Shape =
   | 'shield'
   | 'book'
   | 'quiver'
+  | 'knuckle'
+  | 'bracer'
   | 'armor'
   | 'helmet'
   | 'boots'
@@ -45,15 +47,19 @@ type Shape =
   | 'earring'
   | 'essence';
 
+/** 직업을 타는 두 자리의 그림 */
+const WEAPON_SHAPE: Record<JobId, Shape> = { knight: 'sword', mage: 'staff', archer: 'bow', fighter: 'knuckle' };
+const OFFHAND_SHAPE: Record<JobId, Shape> = { knight: 'shield', mage: 'book', archer: 'quiver', fighter: 'bracer' };
+
 /** 아이템 하나가 어떤 그림을 쓸지 */
 function shapeOf(item: ItemDef): Shape {
   if (item.material) return 'essence';
 
   switch (item.slot) {
     case 'weapon':
-      return item.job === 'mage' ? 'staff' : item.job === 'archer' ? 'bow' : 'sword';
+      return WEAPON_SHAPE[item.job as JobId] ?? 'sword';
     case 'offhand':
-      return item.job === 'mage' ? 'book' : item.job === 'archer' ? 'quiver' : 'shield';
+      return OFFHAND_SHAPE[item.job as JobId] ?? 'shield';
     case 'armor':
       return 'armor';
     case 'helmet':
@@ -75,6 +81,22 @@ function shapeOf(item: ItemDef): Shape {
  */
 function draw(shape: Shape, c: string, d: string): string {
   switch (shape) {
+    case 'knuckle':
+      // 손가락 고리 넷과 쥐는 손잡이
+      return (
+        `<rect x="3.4" y="5.6" width="17.2" height="7.6" rx="3.2" fill="${c}"/>` +
+        `<circle cx="7" cy="9.4" r="1.6" fill="${d}"/>` +
+        `<circle cx="10.4" cy="9.4" r="1.6" fill="${d}"/>` +
+        `<circle cx="13.8" cy="9.4" r="1.6" fill="${d}"/>` +
+        `<circle cx="17.1" cy="9.4" r="1.4" fill="${d}"/>` +
+        `<path d="M6.2 13.4 Q12 20.6 17.8 13.4" stroke="${c}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`
+      );
+    case 'bracer':
+      // 손목 보호대 — 아래로 넓어지는 토시와 조임 끈 둘
+      return (
+        `<path d="M7.2 3.6 L16.8 3.6 L18.6 20.4 L5.4 20.4 Z" fill="${c}"/>` +
+        `<path d="M6.6 9 L17.4 9 M6 14.8 L18 14.8" stroke="${d}" stroke-width="1.4"/>`
+      );
     case 'sword':
       return (
         `<path d="M12 2 L14.6 6 L14.6 15 L12 17.5 L9.4 15 L9.4 6 Z" fill="${c}"/>` +

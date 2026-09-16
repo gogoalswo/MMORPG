@@ -11,21 +11,14 @@ import type { MonsterSpawnDef } from './monsters.ts';
  * 월드 에디터가 생기면 그때 파일/DB 로 옮긴다.
  */
 
-/** 지면에 난 길 하나. 사인 곡선으로 완만하게 사행한다. */
-export interface RoadDef {
-  /** 길이 뻗는 축 */
-  axis: 'x' | 'z';
-  /** 반대 축에서의 중심 위치 */
-  offset: number;
-  /** 길 반폭 */
-  width: number;
-  /** 사행 진폭 */
-  wave: number;
-  /** 사행 주기 */
-  waveFreq: number;
-}
+/**
+ * 바닥 텍스처 종류. 이미지 한 장이 한 종류다 (바르코로 만든 타일 7장,
+ * docs/ASSETS.md). 사냥터 20곳이 이 중 여섯을 나눠 쓰고, 돌판은 마을이 쓴다.
+ */
+export const GROUND_KINDS = ['stone', 'grass', 'snow', 'dirt', 'sand', 'cobble', 'lava'] as const;
+export type GroundKind = (typeof GROUND_KINDS)[number];
 
-/** 존의 분위기 — 색, 안개, 식생 밀도 */
+/** 존의 분위기 — 색, 안개, 바닥 */
 export interface ZoneEnv {
   skyColor: string;
   fogColor: string;
@@ -34,16 +27,20 @@ export interface ZoneEnv {
   sunIntensity: number;
   hemiIntensity: number;
 
+  /**
+   * 하늘·반구광의 땅 쪽 색. 이름은 풀 잎을 심던 때의 것이다 — 풀 잎과 길은
+   * 2026-09-10 에 없앴다(요청: 바닥 이미지만 깐다).
+   */
   grassDark: string;
   grassLight: string;
-  dirt: string;
-  dirtLight: string;
 
-  /** 잔디 인스턴스 수와 배치 반경 */
-  grassCount: number;
-  grassRadius: number;
-
-  roads: RoadDef[];
+  /** 바닥 텍스처 — 존 전체에 이 한 장만 깐다 */
+  ground: GroundKind;
+  /**
+   * 바닥 평균색을 이 색 쪽으로 끌어당긴다. 사냥터 20곳이 텍스처 여섯을
+   * 나눠 쓰므로, 같은 텍스처를 쓰는 곳끼리는 이 색으로 갈린다.
+   */
+  groundTint: string;
 }
 
 /**

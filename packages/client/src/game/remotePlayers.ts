@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { INTERP_DELAY_MS } from '@mmo/shared';
+import { INTERP_DELAY_MS, PLAYER_RADIUS, type Solid } from '@mmo/shared';
 import {
   sampleRemote,
   lerpAngle,
@@ -12,6 +12,7 @@ import type { CharacterRig, WeaponEdge } from './characterRig';
 import { createRig } from './rigFactory';
 import { CLASSES, type ClassId } from './characterClasses';
 import type { NameplateLayer, NameplateTarget } from '../ui/nameplate';
+import type { MapPoint } from '../ui/minimap';
 
 interface Remote {
   entity: RemoteEntity;
@@ -37,6 +38,8 @@ export class RemotePlayers {
   readonly group = new THREE.Group();
 
   private readonly remotes = new Map<string, Remote>();
+  private readonly pointBuffer: MapPoint[] = [];
+  private readonly solidBuffer: Solid[] = [];
   private readonly sample = { x: 0, z: 0, rotY: 0 };
 
   constructor(private readonly nameplates: NameplateLayer) {
@@ -49,8 +52,44 @@ export class RemotePlayers {
   }
 
   /** 피해 숫자를 띄울 위치 */
+  /** 미니맵이 찍을 자리 — 화면에 그려지는 자리를 쓴다. 배열은 다시 쓴다 */
+  points(): MapPoint[] {
+    this.pointBuffer.length = 0;
+    for (const remote of this.remotes.values()) {
+      const at = remote.rig.group.position;
+      this.pointBuffer.push({ x: at.x, z: at.z });
+    }
+    return this.pointBuffer;
+  }
+
+  /**
+   * 지나갈 수 없는 몸들 — 내 이동 예측이 쓴다. 몬스터 쪽(`RemoteMonsters.solids`)과 같은 규칙이다.
+   *
+   * **보간한 자리가 아니라 서버가 마지막으로 보낸 자리**를 쓴다. 서버도 그 값으로 밀어내므로,
+   * 화면에 그리는 자리(`INTERP_DELAY_MS` 만큼 과거)를 쓰면 두 쪽 계산이 어긋나 보정이 튄다.
+   * 다른 캐릭터는 몬스터와 달리 **실제로 움직이므로** 여기서는 차이가 늘 난다 — 반드시 마지막
+   * 스냅샷이어야 한다.
+   *
+   * 죽은 캐릭터는 지나간다 (서버도 같이 뺀다). 배열은 다시 쓴다.
+   */
+  solids(): Solid[] {
+    this.solidBuffer.length = 0;
+    for (const remote of this.remotes.values()) {
+      if (remote.entity.hp <= 0) continue;
+      const last = remote.entity.buffer[remote.entity.buffer.length - 1];
+      if (!last) continue;
+      this.solidBuffer.push({ x: last.x, z: last.z, r: PLAYER_RADIUS });
+    }
+    return this.solidBuffer;
+  }
+
   positionOf(id: string): THREE.Vector3 | null {
     return this.remotes.get(id)?.rig.group.position ?? null;
+  }
+
+  /** 바라보는 방향(모델 정면 +Z 기준 각) — 정면에서 나오는 스킬 그림에 쓴다 */
+  facingOf(id: string): number | null {
+    return this.remotes.get(id)?.rig.group.rotation.y ?? null;
   }
 
   swing(id: string): void {

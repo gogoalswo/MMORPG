@@ -34,7 +34,7 @@ import { createModelCharacterRig, createModelMonsterRig } from './modelRig';
  *
  * 짐승은 언제나 모델을 쓴다. 네발짐승은 등신 개념이 없다.
  */
-const MODEL_RIGS = new Set<string>(['varco_knight', 'varco_mage', 'varco_archer']);
+const MODEL_RIGS = new Set<string>(['varco_knight', 'varco_mage', 'varco_archer', 'varco_fighter']);
 
 let models: Models | null = null;
 

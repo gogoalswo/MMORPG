@@ -51,49 +51,115 @@ export function effectiveCooldown(cooldown: number, attackSpeed: number): number
   return Math.max(1, Math.round(cooldown / (1 + speed)));
 }
 
+/**
+ * 공격 동작이 몸을 묶는 시간 (ms).
+ *
+ * **휘두르는 동안에는 못 움직인다.** 안 묶으면 공격 모션을 튼 채로 그대로 달려서
+ * 발은 달리는데 팔만 휘두르는 그림이 된다. 기본 공격과 스킬이 같은 값을 쓴다.
+ *
+ * 400ms 인 이유: 가장 짧은 공격 간격(격투가 700ms)보다 짧아야 **때리는 사이에
+ * 움직일 틈**이 남는다. 간격과 같거나 길면 한 번 치기 시작한 순간부터 영영 못 움직인다.
+ * `attackRootMs` 가 간격으로 한 번 더 자르는 이유도 같다 — 공격 속도 옵션이 상한까지
+ * 붙으면 간격이 절반(격투가 350ms)이 되어 400ms 아래로 내려간다.
+ *
+ * **판정은 서버가 한다** — `ZoneRoom.handleInput` 이 이 동안 이동 입력을 버리고,
+ * 자동 사냥(`stepAutoPlayer`)도 같은 동안 발을 멈춘다. 클라이언트는 `swing`/`skill`
+ * 메시지에 실려 오는 값으로 예측을 같이 멈춘다 — 안 멈추면 한 발 나갔다가 보정에
+ * 끌려 돌아오기를 반복해 캐릭터가 떤다.
+ */
+export const ATTACK_ROOT_MS = 400;
+
+/** 이번 공격이 몸을 묶는 시간. 다음 공격까지의 간격을 넘지 않는다 */
+export function attackRootMs(cooldownMs: number): number {
+  return Math.max(0, Math.min(ATTACK_ROOT_MS, Math.round(cooldownMs)));
+}
+
+/**
+ * **짐승이 한 번 휘두르는 데 걸리는 시간 (ms).**
+ *
+ * 사람과 달리 이 값이 곧 **공격 클립을 보여 주는 창의 길이**다. 서버는 이 동안
+ * 몬스터를 세워 두고(`server/combat.ts` 의 `rootedUntil`), 클라이언트는 긴 공격
+ * 클립에서 딱 이만큼을 잘라 튼다(`modelRig` 의 `BEAST_ATTACK_WINDOW`). 둘이 같은
+ * 값을 봐야 **동작이 끝나는 순간에 발이 떨어진다** — 어느 한쪽이 길면 휘두르며
+ * 달리거나(서버가 짧을 때) 다 휘두르고도 멈춰 있는다(클립이 짧을 때).
+ *
+ * 650ms 인 근거는 오우거 `Attack` 클립을 FK 로 재서 나왔다: 3.73초짜리 안에
+ * 할퀴기가 네 번 들어 있고, 첫 번째가 0.80~1.45s(정점 1.00s, 손 앞으로 0.39m)다.
+ * 오우거 5종이 같은 클립이라 하나로 맞는다. 몬스터 공격 간격(1000·1200ms)보다
+ * 짧아야 때리는 사이에 쫓아올 틈이 남으므로 `monsterRootMs` 가 한 번 더 자른다.
+ */
+export const MONSTER_SWING_MS = 650;
+
+/** 짐승이 한 번 휘두르는 동안 묶이는 시간. 공격 간격을 넘지 않는다 */
+export function monsterRootMs(cooldownMs: number): number {
+  return Math.max(0, Math.min(MONSTER_SWING_MS, Math.round(cooldownMs)));
+}
+
+/**
+ * **테스트 스위치 — 무적 모드를 쓸 수 있는가.**
+ *
+ * 켜져 있으면 화면 왼쪽 테스트 칸에 "무적" 단추가 나오고, 서버가 `godmode`
+ * 메시지를 받아 준다. 끄면 **단추도 안 보이고 메시지도 무시된다** — 테스트 도구가
+ * 실제 플레이 화면에 남아 있으면 그때부터는 버그다 (스킬 디버그 목록과 같은 규칙).
+ *
+ * 무적이어도 **맞은 것 자체는 그대로 방송한다** (`amount: 0`). 안 그러면 때린
+ * 몬스터의 공격 동작이 `hit` 으로 돌아가는 지금 구조에서 아예 안 보여서,
+ * 정작 동작을 보려고 켠 무적이 동작을 못 보게 만든다 → [combat.md]
+ */
+export const GODMODE_ALLOWED = true;
+
 /** 굴림값(0~1)이 치명타인지 */
 export function rollCrit(chance: number, roll: number): boolean {
   return roll < Math.max(0, Math.min(CRIT_CAP, chance || 0));
 }
 
-interface JobGrowth {
-  /** 치명타·공격 속도는 직업으로 가르지 않으므로 여기 적지 않는다 */
-  base: Omit<Stats, 'crit' | 'critDamage' | 'attackSpeed'>;
-  /** 레벨당 증가분 */
-  perLevel: Partial<Stats>;
-}
-
 /**
- * 직업 성격을 수치로 정한다.
+ * 직업 스탯 표 — **한 줄이 한 직업이다. 직업 스탯은 여기서만 고친다.**
+ *
+ * 열: 체력 · 공격 · 방어 · 사거리(m) · 공격 간격(ms) · 레벨당 체력 · 레벨당 공격 · 레벨당 방어.
+ * `statsFor` 는 `바탕값 + 레벨당 × (레벨 - 1)` 이다. 치명타·공격 속도는 직업으로
+ * 가르지 않으므로 표에 없다 (위 `BASE_CRIT`).
+ *
+ * `Record<JobId, …>` 라서 직업을 `JOB_IDS` 에 넣고 여기 줄을 빠뜨리면 타입 검사가 잡는다.
+ *
+ * 2026-09-11 에 CSV(엑셀) + 변환 스크립트로 옮겼다가 되돌렸다. 변환 단계가 하나 끼면
+ * 잊기 쉽고, 파일이 생기는 순서에 따라 감시 중인 게임 서버와 Vite 가 깨졌다.
+ * 코드 안 표면 이 파일 하나만 고치면 서버와 화면이 곧바로 따라온다.
+ *
+ * 직업 성격:
  *  기사   — 단단하고 오래 버틴다. 사거리는 짧다.
  *  마법사 — 종잇장이지만 한 대가 아프고 멀리 닿는다.
  *  궁수   — 중간. 사거리를 유지하며 꾸준히 넣는다.
+ *  격투가 — 붙어서 가장 자주 친다. 기사보다 무르고 궁수보다 단단하다.
  */
-const JOB_GROWTH: Record<JobId, JobGrowth> = {
-  knight: {
-    base: { maxHp: 140, attack: 12, defense: 8, attackRange: 2.4, attackCooldown: 900 },
-    perLevel: { maxHp: 14, attack: 2.2, defense: 1.4 },
-  },
-  mage: {
-    base: { maxHp: 80, attack: 20, defense: 3, attackRange: 9, attackCooldown: 1300 },
-    perLevel: { maxHp: 6, attack: 3.6, defense: 0.5 },
-  },
-  archer: {
-    base: { maxHp: 100, attack: 15, defense: 5, attackRange: 12, attackCooldown: 800 },
-    perLevel: { maxHp: 9, attack: 2.8, defense: 0.9 },
-  },
+type StatRow = readonly [
+  maxHp: number,
+  attack: number,
+  defense: number,
+  attackRange: number,
+  attackCooldown: number,
+  maxHpPerLevel: number,
+  attackPerLevel: number,
+  defensePerLevel: number,
+];
+
+const JOB_STATS: Record<JobId, StatRow> = {
+  //          체력   공격   방어   사거리   공격간격   레벨당 체력   레벨당 공격   레벨당 방어
+  knight:  [  140,    12,     8,     2.4,      900,         14,          2.2,          1.4 ],
+  mage:    [   80,    20,     3,     9,       1300,          6,          3.6,          0.5 ],
+  archer:  [  100,    15,     5,    12,        800,          9,          2.8,          0.9 ],
+  fighter: [  120,    12,     6,     2.2,      700,         11,          2.4,          1.1 ],
 };
 
 export function statsFor(job: JobId, level: number): Stats {
-  const growth = JOB_GROWTH[job];
+  const [maxHp, attack, defense, attackRange, attackCooldown, hpUp, attackUp, defenseUp] = JOB_STATS[job];
   const steps = Math.max(0, level - 1);
-  const add = growth.perLevel;
   return {
-    maxHp: Math.round(growth.base.maxHp + (add.maxHp ?? 0) * steps),
-    attack: Math.round(growth.base.attack + (add.attack ?? 0) * steps),
-    defense: Math.round(growth.base.defense + (add.defense ?? 0) * steps),
-    attackRange: growth.base.attackRange,
-    attackCooldown: growth.base.attackCooldown,
+    maxHp: Math.round(maxHp + hpUp * steps),
+    attack: Math.round(attack + attackUp * steps),
+    defense: Math.round(defense + defenseUp * steps),
+    attackRange,
+    attackCooldown,
     crit: BASE_CRIT,
     critDamage: BASE_CRIT_DAMAGE,
     attackSpeed: 0,

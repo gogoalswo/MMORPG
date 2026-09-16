@@ -1,4 +1,4 @@
-import { SKILLS, type SkillDef } from '@mmo/shared';
+import { SKILLS, skillCooldown, type SkillDef } from '@mmo/shared';
 
 /**
  * 액션바.
@@ -114,7 +114,8 @@ export class ActionBar {
 
     // 서버 응답을 기다리지 않고 쿨타임을 돌린다 — 연타로 도배되는 걸 막는다.
     // 서버가 거절하면 그냥 쿨타임만 돈 셈이라 손해가 크지 않다.
-    slot.readyAt = performance.now() + slot.skill.cooldown;
+    // 테스트 스위치(SKILL_COOLDOWN_OFF)가 켜져 있으면 0 — 서버와 같은 함수를 본다
+    slot.readyAt = performance.now() + skillCooldown(slot.skill);
     this.onUse?.(slot.skill.id);
     return true;
   }

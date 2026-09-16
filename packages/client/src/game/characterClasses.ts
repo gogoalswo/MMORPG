@@ -10,13 +10,14 @@ import {
  *
  * 쿼터뷰에서 캐릭터는 화면상 100px 남짓이다. 색만 바꾸면 직업이 구분되지 않는다.
  * 그래서 각 직업은 **실루엣**이 다르게 만든다 —
- * 기사는 투구와 넓은 어깨, 마법사는 로브와 긴 지팡이, 궁수는 후드와 등에 멘 화살통.
+ * 기사는 투구와 넓은 어깨, 마법사는 로브와 긴 지팡이, 궁수는 후드와 등에 멘 화살통,
+ * 격투가는 붉은 머리띠와 붕대 감은 빈손.
  *
  * 장비는 손/가슴 본에 붙으므로 애니메이션을 그대로 따라간다.
  * 전부 같은 SkinnedMesh 에 병합되므로 장비를 아무리 붙여도 드로우콜은 1개다.
  */
 
-export type ClassId = 'knight' | 'mage' | 'archer';
+export type ClassId = 'knight' | 'mage' | 'archer' | 'fighter';
 
 /** 오른손 x 좌표 (side = -1 쪽) */
 const RIGHT_X = -ARM_X;
@@ -270,6 +271,62 @@ function equipArcher(add: AddPart, c: CharacterColors): void {
   add(string, 'handL', '#d8d2c0');
 }
 
+// ---------------------------------------------------------------- 격투가
+
+const FIGHTER_COLORS: CharacterColors = {
+  skin: '#d6a785',
+  hair: '#2b2420',
+  tunic: '#e6dfd2', // 흰 도복
+  tunicDark: '#c4bba9',
+  pants: '#dcd4c6',
+  boots: '#4a3b30', // 얇은 천신
+  accent: '#262b33', // 검은 띠
+};
+
+/** 머리띠 — 흰 도복 위에서 눈에 띄는 붉은색 */
+const FIGHTER_RED = '#b8322e';
+/** 손에 감은 붕대 */
+const WRAP = '#efe9dc';
+
+function equipFighter(add: AddPart, c: CharacterColors): void {
+  const headY = Y.chin + HEAD / 2;
+
+  // --- 머리띠: 이마를 두르고 뒤로 두 가닥이 늘어진다 ---
+  // 무기도 투구도 없어서, 위에서 내려다볼 때 실루엣은 이것과 빈손이 만든다
+  const band = new THREE.CylinderGeometry(HEAD / 2 + 0.014, HEAD / 2 + 0.014, 0.035, 14, 1, true);
+  band.translate(0, headY + 0.035, 0);
+  add(band, 'head', FIGHTER_RED, SURFACE.cloth);
+
+  for (const side of [1, -1]) {
+    const tail = new THREE.BoxGeometry(0.03, 0.17, 0.012);
+    tail.rotateZ(side * 0.3);
+    tail.translate(side * 0.035, headY - 0.04, -HEAD / 2 - 0.025);
+    add(tail, 'head', FIGHTER_RED, SURFACE.cloth);
+  }
+
+  // --- 검은 띠와 앞으로 늘어진 매듭 ---
+  const belt = new THREE.CylinderGeometry(0.16, 0.16, 0.055, 12, 1, true);
+  belt.scale(1.1, 1, 0.85);
+  belt.translate(0, Y.waist - 0.03, 0);
+  add(belt, 'hips', c.accent, SURFACE.cloth);
+
+  for (const side of [1, -1]) {
+    const end = new THREE.BoxGeometry(0.045, 0.16, 0.015);
+    end.rotateZ(side * 0.12);
+    end.translate(0.03 + side * 0.03, Y.waist - 0.13, 0.14);
+    add(end, 'hips', c.accent, SURFACE.cloth);
+  }
+
+  // --- 붕대 감은 팔목과 주먹 — 무기가 이것이다 ---
+  for (const side of [1, -1]) {
+    const L = side > 0 ? 'L' : 'R';
+    add(limb(side * ARM_X, Y.crotch + 0.16, Y.crotch + 0.02, 0.05), 'foreArm' + L, WRAP, SURFACE.cloth);
+    const fist = new THREE.SphereGeometry(0.06, 8, 6);
+    fist.translate(side * ARM_X, HAND_Y, 0.01);
+    add(fist, 'hand' + L, WRAP, SURFACE.cloth);
+  }
+}
+
 // ----------------------------------------------------------------
 
 export const CLASSES: Record<ClassId, ClassProfile> = {
@@ -328,6 +385,21 @@ export const CLASSES: Record<ClassId, ClassProfile> = {
     ],
     equip: equipArcher,
   },
+  fighter: {
+    id: 'fighter',
+    label: '격투가',
+    colors: FIGHTER_COLORS,
+    // VARCO 커스텀 워크플로우로 만든 격투가. 없으면 equipFighter 로 떨어진다.
+    model: 'varco_fighter',
+    body: { headwear: 'hair', bulk: 1.02 },
+    weaponHand: 'R', // 오른 주먹
+    // 손목에서 주먹 끝까지 — equipFighter 의 fist 와 같은 자리
+    weaponReach: [
+      [RIGHT_X, HAND_Y + 0.06, 0],
+      [RIGHT_X, HAND_Y - 0.08, 0.02],
+    ],
+    equip: equipFighter,
+  },
 };
 
-export const CLASS_ORDER: ClassId[] = ['knight', 'mage', 'archer'];
+export const CLASS_ORDER: ClassId[] = ['knight', 'mage', 'archer', 'fighter'];

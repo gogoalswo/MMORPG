@@ -6,7 +6,9 @@ import {
   getMonsterKind,
   getSpawn,
   getZone,
+  type JobId,
   type ProjectileKind,
+  type Solid,
   type ZoneDef,
 } from '@mmo/shared';
 import { setupLighting } from './scene/lighting';
@@ -37,10 +39,14 @@ import { ensureBeasts, setModels } from './game/rigFactory';
 import { PostFX } from './render/postfx';
 import { Projectiles } from './scene/projectiles';
 import { SkillFx, skillColor } from './scene/skillFx';
+import { ClickMarker } from './scene/clickMarker';
 import { AoeMarkers } from './scene/aoeMarkers';
 import { SwingTrails } from './scene/swingTrails';
 import { ZoneGate } from './ui/zoneGate';
 import { CraftWindow } from './ui/craftWindow';
+import { Minimap } from './ui/minimap';
+import { SkillDebug } from './ui/skillDebug';
+import { GodMode } from './ui/godMode';
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const overlay = document.getElementById('overlay') as HTMLElement;
@@ -122,6 +128,25 @@ const remotePlayers = new RemotePlayers(nameplates);
 scene.add(remotePlayers.group);
 
 const monsters = new RemoteMonsters(nameplates);
+
+/** 몬스터와 다른 캐릭터를 합친 충돌 목록. 매 프레임 다시 채워 쓴다 (새로 만들면 쓰레기가 쌓인다) */
+const solidBuffer: Solid[] = [];
+const minimap = new Minimap(overlay);
+/**
+ * 테스트용 스킬 목록 (화면 왼쪽). 액션바를 거치지 않고 바로 쏜다 —
+ * 서버도 `SKILL_UNLOCK_ALL` 일 때만 받아 준다. 스위치가 꺼져 있으면 화면에 안 나온다.
+ */
+const skillDebug = new SkillDebug(overlay);
+skillDebug.onCast = (skillId) => {
+  faceTarget(skillAimRange(skillId));
+  connection.useSkill(skillId);
+};
+/**
+ * 무적 단추 (테스트 도구, 스킬 목록 위). 맞아 가며 봐야 하는 것 —
+ * 몬스터 공격 동작·피격 연출 — 을 확인할 때 쓴다. 켜졌는지는 서버가 정한다.
+ */
+const godMode = new GodMode(overlay);
+godMode.onToggle = (want) => connection.setGodMode(want);
 scene.add(monsters.group);
 
 /** 서버가 알려준 명중 좌표를 담아 쓰는 임시 벡터 */
@@ -149,6 +174,10 @@ function trailFor(id: string, tint?: number): void {
 }
 const skillFx = new SkillFx();
 scene.add(skillFx.group);
+
+// 클릭해서 이동할 때 그 자리 바닥에 찍히는 표시
+const clickMarker = new ClickMarker();
+scene.add(clickMarker.group);
 
 const hud = new CombatHud(overlay);
 hud.setVisible(false);
@@ -182,7 +211,6 @@ let myState = {
   exp: 0,
   dead: false,
   auto: false,
-  chasing: false,
 };
 
 let netStatus = '연결 중';
@@ -191,7 +219,7 @@ let accountStatus = '확인 중';
 const connection = new ZoneConnection({
   onSelf: (x, z, lastSeq, status) => {
     // 서버가 모는 동안에는 보정 대신 서버 자세를 그대로 따라간다
-    if (status.auto || status.chasing) player.setServerPose(x, z, status.rotY);
+    if (status.auto) player.setServerPose(x, z, status.rotY);
     else player.reconcile(x, z, lastSeq);
     // 죽고 사는 것은 **바뀌는 순간에만** 처리한다. 매 프레임 부르면
     // 사망 클립이 계속 되감겨 쓰러지다 마는 동작을 반복한다.
@@ -211,6 +239,7 @@ const connection = new ZoneConnection({
     autoHuntToggle.setOn(status.auto);
     player.setGear(status.gear);
     bag.setCharacter(player.job, status.level);
+    skillDebug.setJob(player.job as JobId);
     skillBook.setCharacter(player.job, status.level);
     npcDialog.setCharacter(player.job, status.level);
     zoneGate.setLevel(status.level);
@@ -247,6 +276,12 @@ const connection = new ZoneConnection({
             : 'deal';
     const text = event.heal ? `+${event.amount}` : String(event.amount);
     const crit = event.crit === true;
+    /**
+     * 0 은 안 띄운다. **무적 모드(테스트 도구)** 가 체력을 안 깎는 대신 `hit` 은
+     * 그대로 보내기 때문이다 — 번쩍임과 몬스터 공격 동작은 그대로 보이고,
+     * 숫자만 `0 0 0` 으로 줄줄이 뜨지 않는다.
+     */
+    const silent = !event.heal && event.amount === 0;
 
     // 원거리 공격이면 투사체가 도착할 때 숫자를 띄운다.
     // 쏘자마자 숫자가 뜨면 원거리 직업이 근접처럼 보인다.
@@ -263,9 +298,25 @@ const connection = new ZoneConnection({
      * 시선이 그 캐릭터로 간다. 회복은 맞은 게 아니므로 번쩍이지 않는다.
      */
     if (!event.heal) {
-      if (event.targetKind === 'monster') monsters.flash(event.targetId);
-      else if (event.targetId === connection.sessionId) player.flash();
-      else remotePlayers.flash(event.targetId);
+      if (event.targetKind === 'monster') {
+        monsters.flash(event.targetId);
+      } else {
+        // 캐릭터가 맞았다 — 물들이는 것만으로는 "맞았다" 가 약해서 발톱 자국을 같이 띄운다.
+        // 몬스터가 맞을 때는 안 띄운다 (사냥 내내 화면이 번쩍인다 — skillFx.hurt 참고)
+        if (event.targetId === connection.sessionId) player.flash();
+        else remotePlayers.flash(event.targetId);
+        skillFx.hurt(target);
+        /**
+         * 때린 놈이 몬스터면 그놈의 공격 동작을 여기서 튼다.
+         *
+         * 몬스터는 사람처럼 `swing` 메시지를 따로 보내지 않는다. 상태(`attack`)로
+         * 틀면 사거리 안에 있는 내내 클립이 다시 감겨서 **서버가 세워 두는 구간과
+         * 어긋난 채로 휘두르게 된다** — 때린 순간에 맞춰 틀면 둘이 같다
+         * ([combat.md](docs/features/combat.md) 의 공격 경직).
+         * 사람이 때린 것이면 이 id 는 몬스터 목록에 없어서 그냥 넘어간다.
+         */
+        monsters.swing(event.sourceId);
+      }
     }
 
     /**
@@ -280,14 +331,18 @@ const connection = new ZoneConnection({
       // 대상이 도중에 사라질 수 있으므로 지금 위치를 복사해 둔다
       const landing = target.clone();
       projectiles.spawn(event.projectile as ProjectileKind, source, target, () => {
-        hud.addNumber(landing, text, kind, crit);
+        if (!silent) hud.addNumber(landing, text, kind, crit);
         if (hitSkill) skillFx.impact(landing, skillColor(hitSkill));
       });
       return;
     }
 
-    hud.addNumber(target, text, kind, crit);
-    if (hitSkill) skillFx.impact(target, skillColor(hitSkill));
+    if (!silent) hud.addNumber(target, text, kind, crit);
+    if (hitSkill) {
+      skillFx.impact(target, skillColor(hitSkill));
+      // 스킬 고유 그림(격투가 주먹·발 연타) — 섬광만으로는 칼로 벤 것과 같아 보인다
+      skillFx.signature(target, hitSkill);
+    }
   },
 
   /**
@@ -296,16 +351,18 @@ const connection = new ZoneConnection({
    */
   onAoe: (event) => aoeMarkers.add(event.x, event.z, event.radius, event.delayMs),
 
-  onSwing: (id) => {
-    if (id === connection.sessionId) player.swing();
+  onSwing: (id, rootMs) => {
+    // `rootMs` 동안은 내 발이 묶인다 — 서버가 그 동안의 이동 입력을 버린다.
+    // 남의 캐릭터는 서버가 준 위치를 따라가므로 따로 묶을 게 없다.
+    if (id === connection.sessionId) player.swing(rootMs);
     else remotePlayers.swing(id);
     trailFor(id);
   },
 
-  onSkill: (id, skillId) => {
+  onSkill: (id, skillId, rootMs) => {
     // 스킬도 같은 스윙 모션을 쓴다. 스킬별 전용 모션은 다음 단계.
     const mine = id === connection.sessionId;
-    if (mine) player.swing();
+    if (mine) player.swing(rootMs);
     else remotePlayers.swing(id);
 
     const skill = SKILLS[skillId];
@@ -325,6 +382,13 @@ const connection = new ZoneConnection({
     }
 
     /**
+     * 몬스터가 없어도 시전자 자리에서 나오는 그림 (발 연타·천붕각).
+     * true 면 그 스킬이 자기 이펙트를 전부 그린 것이므로 아래 고리는 건너뛴다.
+     */
+    const facing = mine ? player.group.rotation.y : remotePlayers.facingOf(id);
+    const drawnBySkill = facing !== null && skillFx.castSignature(at, facing, skill);
+
+    /**
      * 시전자 자리에 그리는 건 **자기 주위로 터지는 기술뿐**이다.
      *
      * - 전방위기(`arc >= 2π`) — 사거리만큼 고리를 그린다. 그게 실제 판정 범위다.
@@ -332,12 +396,16 @@ const connection = new ZoneConnection({
      * - 근접기(강타처럼 한 방향으로 내리치는 것) — **여기서는 아무것도 안 그린다.**
      *   발밑에서 고리가 솟으면 "내가 뭔가를 둘렀다"로 보여서, 앞을 내리치는
      *   동작과 전혀 안 맞는다. 맞은 자리에서 터지는 건 `onHit` 이 그린다.
+     * - 자기 이펙트를 스스로 그린 기술(`drawnBySkill`) — 천붕각은 발이 닿는 순간에
+     *   맞춰 고리를 직접 띄운다. 여기서 또 그리면 발보다 고리가 앞서 퍼진다.
      */
-    if (skill.arc >= Math.PI * 2 && !skill.projectile) {
+    if (!drawnBySkill && skill.arc >= Math.PI * 2 && !skill.projectile) {
       skillFx.nova(at, skill.range, color);
     }
   },
 
+  // 무적은 테스트 도구다. 켜졌는지는 서버가 정하고, 단추는 받은 값만 그린다
+  onGodMode: (on) => godMode.setOn(on),
   onNotice: (text) => chat.addMessage({ kind: 'system', from: '', text }),
 
   onInventory: (state) => {
@@ -391,7 +459,7 @@ const connection = new ZoneConnection({
     chat.addMessage({ kind: 'system', from: '', text: `레벨 ${level} 달성!` });
   },
 
-  // 물고 있는 대상은 서버가 정한다 — 죽거나 너무 멀어지면 서버가 놓고 알려준다.
+  // 겨누고 있는 대상은 서버가 정한다 — 죽으면 서버가 놓고 알려준다.
   // 여기서 하는 일은 어느 놈인지 이름표를 밝히는 것뿐이다.
   onTarget: (monsterId) => {
     targetId = monsterId;
@@ -481,16 +549,43 @@ const connection = new ZoneConnection({
 // --- 카메라 & 입력 ---
 const rig = new CameraRig(window.innerWidth / window.innerHeight);
 const input = new Input(canvas, rig.camera);
-// 클릭으로 문 몬스터. 화면 표시용이고 실제 대상은 서버가 들고 있다
+// 클릭으로 겨눈 몬스터. 화면 표시용이고 실제 대상은 서버가 들고 있다
 let targetId: string | null = null;
 input.setTargets(monsters.group, (object) => monsters.idAt(object));
 
-/** 물고 있던 대상을 놓는다 (다른 곳을 클릭, 키보드 이동, 존 이동, 사망) */
+/** 겨누던 대상을 놓는다 (Esc, 존 이동, 사망) */
 function releaseTarget(): void {
-  if (!targetId && !myState.chasing) return;
+  if (!targetId) return;
   targetId = null;
   monsters.setHighlight(null);
   connection.setTarget(null);
+}
+
+/**
+ * 겨누는 놈 쪽으로 몸을 돌린다 — 공격·스킬을 쏘기 직전에 부른다.
+ *
+ * 서버도 같은 각을 잡는다(`ZoneRoom.faceMonster`). 여기서 돌리는 이유는
+ * **예측 중에는 서버가 준 각이 안 내려오기 때문**이다 — 안 돌리면 이펙트만
+ * 마지막으로 걷던 쪽으로 나간다.
+ */
+function faceTarget(aimRange = 0): void {
+  /**
+   * 찍어 둔 게 없으면 **사거리 안 가장 가까운 놈**을 본다 — 서버도 같은 놈을 골라
+   * 판정한다(`ZoneRoom.acquireTarget`). 여기서 안 고르면 이펙트만 마지막으로 걷던
+   * 쪽으로 나가고 판정은 옆에서 난다. 기본 공격은 사거리를 안 넘기므로 예전 그대로
+   * 찍은 놈만 본다.
+   */
+  const id =
+    targetId ?? (aimRange > 0 ? monsters.nearest(player.position.x, player.position.z, aimRange) : null);
+  if (!id) return;
+  const at = monsters.positionOf(id);
+  if (at) player.faceTo(at.x, at.z);
+}
+
+/** 조준 없이 눌렀을 때 자동으로 겨눌 거리 — 때리는 스킬만, 그 스킬 사거리까지 */
+function skillAimRange(skillId: string): number {
+  const skill = SKILLS[skillId];
+  return skill && skill.maxTargets > 0 ? skill.range : 0;
 }
 const transition = new ZoneTransition(overlay);
 const deathOverlay = new DeathOverlay(overlay);
@@ -525,7 +620,10 @@ input.onSkill = (index) => {
   if (createUI.open || selectUI.open || chat.typing || myState.dead) return;
   actionBar.use(index);
 };
-actionBar.onUse = (skillId) => connection.useSkill(skillId);
+actionBar.onUse = (skillId) => {
+  faceTarget(skillAimRange(skillId));
+  connection.useSkill(skillId);
+};
 actionBar.onAutoChange = (ids) => connection.setAutoSkills(ids);
 skillBook.onLearn = (id) => connection.learnSkill(id);
 skillBook.onBar = (ids) => connection.setSkillBar(ids);
@@ -586,7 +684,11 @@ deathOverlay.onReturn = () => travel(START_ZONE, 'default');
 // 차원문에는 여는 단축키가 없다(문을 밟아야 열린다). 닫는 건 Esc 로도 되게 둔다.
 window.addEventListener('keydown', (e) => {
   if (e.code !== 'Escape') return;
-  if (!zoneGate.open && !craftWindow.open) return;
+  // 창이 열려 있으면 창부터 닫고, 아무 창도 없으면 겨누던 대상을 놓는다
+  if (!zoneGate.open && !craftWindow.open) {
+    releaseTarget();
+    return;
+  }
   e.preventDefault();
   zoneGate.close();
   craftWindow.close();
@@ -612,11 +714,11 @@ autoHuntToggle.onToggle = () => {
 };
 
 /**
- * 몬스터를 누르면 그놈을 문다.
+ * 몬스터를 누르면 그놈을 겨눈다.
  *
- * 여기서 하는 일은 "저놈"이라고 알리는 것뿐이다. 붙는 것도 때리는 것도
- * **서버가** 한다 — 폰에서 화면이 꺼지거나 앱을 옮기면 브라우저가 루프를
- * 멈춰서, 클라이언트가 몰면 그 자리에 선다. 자동 사냥과 같은 이유다.
+ * **겨누기만 한다** — 캐릭터는 제자리에 서 있고, 때리는 건 사람이 공격이나
+ * 스킬을 누를 때다. 그때 서버가 그 대상 쪽으로 몸을 돌려 쏜다. 붙어서 알아서
+ * 싸우는 건 자동 사냥 버튼의 일이다.
  */
 input.onPickTarget = (monsterId) => {
   if (createUI.open || selectUI.open || chat.typing || myState.dead) return;
@@ -633,13 +735,32 @@ input.onPickTarget = (monsterId) => {
 //
 // 버튼을 누르고 있으면 이 콜백이 **매 프레임** 온다(커서를 따라가는 이동).
 // 그대로 보내면 초당 60개가 나가므로, 자리가 의미 있게 바뀌었을 때만 보낸다.
+/** 누르고 끄는 동안 클릭 표시를 다시 찍는 간격 */
+const MARK_REPEAT_MS = 500;
+let lastMarkAt = 0;
+
 const MOVE_TO_MIN_GAP_MS = 100;
 const MOVE_TO_MIN_DIST = 0.5;
 let lastMoveToAt = 0;
 const lastMoveTo = new THREE.Vector2();
 
-input.onGroundPoint = (p) => {
-  releaseTarget();
+input.onGroundPoint = (p, pressed) => {
+  // 어디를 눌렀는지 바닥에 찍는다.
+  //
+  // 누른 순간에는 무조건, **누르고 끌고 다니는 동안에는 0.5초에 한 번**만 찍는다.
+  // 이 콜백은 끄는 동안 매 프레임(초당 60번) 오는데 그때마다 다시 찍으면 연출이
+  // 계속 처음으로 되돌아가서 오히려 멈춰 있는 것처럼 보인다.
+  //
+  // 표시 자체가 0.5초짜리라(`clickMarker.ts` 의 `DURATION`) **한 번이 끝나는
+  // 자리에서 다음이 찍힌다** — 잘리지도, 비지도 않는다. 둘은 같이 움직여야 하는
+  // 값이라 한쪽만 바꾸면 겹치거나 뚝뚝 끊긴다.
+  const nowMark = performance.now();
+  if (pressed || nowMark - lastMarkAt >= MARK_REPEAT_MS) {
+    lastMarkAt = nowMark;
+    clickMarker.show(p);
+  }
+  // 땅 클릭은 **이동일 뿐이다.** 겨누던 대상은 그대로 둔다 — 원거리 직업이
+  // 자리를 옮겨 가며 같은 놈을 쏘는 게 자연스럽다. 놓으려면 Esc.
   if (!myState.auto) {
     player.setMoveTarget(p);
     return;
@@ -653,6 +774,7 @@ input.onGroundPoint = (p) => {
 };
 input.onAttack = () => {
   if (createUI.open || selectUI.open || chat.typing || myState.dead) return;
+  faceTarget();
   connection.attack();
 };
 
@@ -777,6 +899,7 @@ async function mountZone(zoneId: string, spawnName?: string, characterId?: strin
   aoeMarkers.clear();
   swingTrails.clear();
   skillFx.clear();
+  clickMarker.clear();
   hud.clear();
   actionBar.reset();
   bag.setOpen(false);
@@ -851,7 +974,6 @@ function dropStaleVisuals(): void {
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) dropStaleVisuals();
 });
-const axis = new THREE.Vector2();
 let fpsWindowStart = performance.now();
 let fpsFrames = 0;
 
@@ -874,28 +996,18 @@ function frame(now: number): void {
   // (ZoneRoom.handleInput) 여기서 예측을 계속하면 한 발 나갔다가 보정에 끌려
   // 돌아오기를 반복해 캐릭터가 떤다. 부활을 기다리는 5초 내내 그렇다.
   if (transition.running || createUI.open || selectUI.open || myState.dead) {
-    axis.set(0, 0);
     player.stop();
   } else {
-    input.moveAxis(axis);
     input.update(); // 마우스를 누르고 있으면 커서 쪽으로 계속 이동
-    // 키보드로 직접 움직이면 자동 사냥도 추격도 끈다
-    if (axis.lengthSq() > 0.0001) {
-      if (myState.auto) connection.setAutoHunt(false);
-      releaseTarget();
-    }
   }
 
-  // 자동 사냥·추격 중에는 서버가 위치를 정한다. 예측을 멈추고 서버 위치를
+  // 자동 사냥 중에는 서버가 위치를 정한다. 예측을 멈추고 서버 위치를
   // 따라간다 — 양쪽이 동시에 움직이면 보정이 계속 싸워서 캐릭터가 떨린다.
-  const driven = myState.auto || myState.chasing;
+  const driven = myState.auto;
   player.setDriven(driven);
-  if (driven) {
-    axis.set(0, 0);
-    player.stop();
-  }
+  if (driven) player.stop();
 
-  const moveInput = player.update(dt, axis, rig.yawAngle);
+  const moveInput = player.update(dt);
   // 정지 중에도 보내야 서버가 마지막 순번을 확인해준다 (보정 기준점 갱신)
   connection.sendInput(moveInput);
   remotePlayers.update(dt);
@@ -904,8 +1016,33 @@ function frame(now: number): void {
   aoeMarkers.update(dt);
   // 궤적은 리그가 이번 프레임 자세를 잡은 **뒤에** 찍어야 한 프레임 밀리지 않는다
   swingTrails.update(dt);
+  /**
+   * 지나갈 수 없는 몸들을 예측에 넘긴다. 몬스터와 **다른 캐릭터** 둘 다다.
+   * **서버가 보는 것과 같은 목록이어야** 보정이 안 튄다 (서버는 `solidsNear` 하나가
+   * 둘을 함께 담고, 여기서는 두 목록을 합친다).
+   */
+  solidBuffer.length = 0;
+  for (const solid of monsters.solids()) solidBuffer.push(solid);
+  for (const solid of remotePlayers.solids()) solidBuffer.push(solid);
+  player.solids = solidBuffer;
+
+  // 옆모습 그림(백호)을 어느 쪽으로 뒤집을지 정하는 데 쓴다 — 카메라는 사용자가 돌린다
+  skillFx.cameraYaw = rig.yawAngle;
   skillFx.update(dt);
+  clickMarker.update(dt);
   npcPrompt.update(zone?.def.npcs ?? [], player.position);
+  /**
+   * 미니맵. 그리는 값이 전부 여기서 가므로 미니맵 자체는 상태를 안 들고 있다.
+   * 카메라 각을 같이 넘겨 **화면과 방향을 맞춘다** (ui/minimap.ts 참고).
+   */
+  minimap.update({
+    me: player.position,
+    facing: player.group.rotation.y,
+    cameraYaw: rig.yawAngle,
+    zone: zone?.def ?? null,
+    players: remotePlayers.points(),
+    monsters: monsters.points(),
+  });
   rig.update(dt, player.position);
   sun.follow(player.position);
 
@@ -952,5 +1089,27 @@ function frame(now: number): void {
     fpsFrames = 0;
   }
 }
+
+/**
+ * 확인용 — 이펙트만 그 자리에서 띄운다. 콘솔에서 `__skillFx('sky_breaker')`.
+ *
+ * 이펙트는 글로 읽을 수가 없는데, 실제로 쓰려면 서버 판정(직업·레벨·액션바)을
+ * 통과해야 한다. 천붕각은 Lv.150 이라 그러지 않으면 확인할 방법이 아예 없다.
+ * **그리기만 한다** — 서버로 아무것도 안 보내고 피해도 없다.
+ * 시전 때 그리는 것만 낸다. 맞았을 때 붙는 그림(`signature`)은 대상이 있어야 한다.
+ */
+(window as unknown as Record<string, unknown>).__skillFx = (skillId: string) => {
+  const skill = SKILLS[skillId];
+  if (!skill) return `없는 스킬: ${skillId}`;
+  const color = skillColor(skill);
+  if (skill.selfHeal) skillFx.heal(player.position, color);
+  else {
+    const drawn = skillFx.castSignature(player.position, player.group.rotation.y, skill);
+    if (!drawn && skill.arc >= Math.PI * 2 && !skill.projectile) {
+      skillFx.nova(player.position, skill.range, color);
+    }
+  }
+  return `${skill.name} (${skill.id})`;
+};
 
 requestAnimationFrame(frame);

@@ -1,6 +1,15 @@
 import * as THREE from 'three';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
-import { RUN_SPEED, TIER_COLOR, getItem, tierIndexOf, type MonsterKind } from '@mmo/shared';
+import {
+  MONSTER_SWING_MS,
+  RUN_SPEED,
+  TIER_COLOR,
+  beastHeadHeight,
+  beastHeight,
+  getItem,
+  tierIndexOf,
+  type MonsterKind,
+} from '@mmo/shared';
 import { CLIP, pickClip, type Models } from '../scene/models';
 import type { CharacterRig, ClassProfile, GearLook } from './characterRig';
 import type { MonsterRig } from './monsterRig';
@@ -31,9 +40,75 @@ const RUN_CLIP_SPEEDS: Record<string, number> = {
   varco_mage: 5.8,
   // 궁수 달리기는 마법사와 같은 클립이다 (46키, 루프 닫기 결과까지 같다)
   varco_archer: 5.8,
+  // 격투가도 같은 클립이다 (46키 → 32키, 구워진 방향 -94.6° 까지 같다)
+  varco_fighter: 5.8,
 };
 /** 공격 중에 남겨두는 이동 동작의 비중 */
 const ATTACK_LOWER = 0.18;
+/**
+ * **사람이 움직이기 시작하면 남은 공격 클립을 끊는다** (캐릭터 리그 전용).
+ *
+ * 공격 경직(`ATTACK_ROOT_MS`, 0.4초)은 클립보다 훨씬 짧다 — 격투가 3.23s ·
+ * 마법사 3.27s. 경직이 풀려 다시 걷기 시작해도 클립은 계속 돌아서, 달리는 몸
+ * 위에 칼질이 얹힌 채로 남는다. 이게 "공격하면서 이동한다" 로 보이던 것의
+ * 나머지 반이다 (앞의 반은 서버가 실제로 옮겨 주던 것).
+ *
+ * **짐승에는 안 건다.** 사람은 자기가 조작해서 멈출 수 있지만, 짐승은 사람이
+ * 한 발짝만 물러나도 서버가 곧바로 쫓게 하므로(`chase`) 매번 휘두르다 만 채로
+ * 동작이 사라진다 — 아래 `createBeastRig` 주석 참고.
+ *
+ * 이 속도(m/s)를 넘으면 끊는다. 0 으로 두면 보정으로 조금씩 흔들리는 것까지
+ * 이동으로 쳐서 제자리 공격이 끊긴다.
+ */
+const ATTACK_CUT_SPEED = 0.6;
+/** 끊을 때 섞어 빼는 시간(초). 0 으로 툭 끄면 상체가 한 프레임에 튄다 */
+const ATTACK_CUT_FADE = 0.15;
+/**
+ * **짐승 공격 클립에서 한 번 휘두르는 구간** (초).
+ *
+ * 바르코가 준 오우거 `Attack` 은 3.73초인데 그 안에 할퀴기가 네 번 들어 있다
+ * (FK 로 잰 자리: 0.90~1.05 · 1.80~1.95 · 2.00~2.20 · 2.95~3.40s). 통째로 틀면
+ * 한 대 때리는 데 3.7초가 걸려서, 서버가 그만큼 세워 둘 수도 없고 안 세우면
+ * **휘두르며 달린다.** 그래서 첫 할퀴기만 잘라 쓴다 — 준비 0.80s 부터 되돌아온
+ * 1.45s 까지, 딱 `MONSTER_SWING_MS`(650ms)다.
+ *
+ * 오우거 5종이 같은 클립이라 한 줄로 맞는다. 표에 없는 짐승은 클립 앞에서
+ * 같은 길이만큼 잘라 쓴다 — **길이는 반드시 서버 경직과 같아야 한다.**
+ */
+const BEAST_ATTACK_WINDOWS: Record<string, { from: number; to: number }> = Object.fromEntries(
+  ['varco_ogre1', 'varco_ogre2', 'varco_ogre3', 'varco_ogre4', 'varco_ogre5'].map((look) => [
+    look,
+    { from: 0.8, to: 0.8 + MONSTER_SWING_MS / 1000 },
+  ])
+);
+/** 표에 없는 짐승 — 클립 앞부터 같은 길이만큼 */
+const BEAST_ATTACK_FALLBACK = { from: 0, to: MONSTER_SWING_MS / 1000 };
+/**
+ * 공격 클립을 어디부터 어디까지 몇 배로 틀지. 없으면 처음부터 끝까지 1배.
+ *
+ * `swing()` 은 칠 때마다 클립을 되감는다. VARCO 격투가 공격은 3.23s 인데 진짜로
+ * 차는 순간(왼발 앞차기, 정면에서 7°)이 1.30s 에 있고, 앞 0.8s 는 몸을 돌려
+ * 자세를 잡는 준비다. 공격 간격(700ms)마다 처음으로 되감으면 준비만 되풀이하고
+ * 발은 한 번도 안 나간다. 준비를 건너뛰고 빨리 틀어 차는 순간을 당긴다 —
+ * 0.8s 부터 1.6배면 0.31s 에 찬다.
+ *
+ * **`to` 에서 잘라 빼는 이유: 안 자르면 발차기가 두 번 나간다.** 2.30s 에 한 바퀴
+ * 도는 뒤돌려차기가 또 있어서, 한 대 치는 데 발이 두 번 나가고 몸이 한 바퀴 돈다.
+ *
+ * **자르는 자리는 페이드까지 포함해서 고른다.** FK 로 재면 왼발 앞차기가 1.15~1.30s
+ * (골반에서 0.52m, 높이 +0.37)에 나가고 1.50s 에 땅에 닿는다. **1.60~1.80s 가 클립에서
+ * 가장 조용한 구간**(프레임 움직임 0.37~0.60, 두 발 다 -0.40)이고, 1.85s 부터 오른발이
+ * 다시 올라가기 시작한다(2.00s 에 +0.27) — 뒤돌려차기 준비다. 그래서 **1.60s 에 끊는다.**
+ * `ATTACK_CUT_FADE`(0.15초)가 덮는 뒤쪽이 통째로 그 조용한 구간 안에 들어와서, 빠지는
+ * 동안 새로 시작되는 동작이 없다. 1.92s 에서 끊었을 때 "앞차기 뒤에 뭘 한 번 더 한다"
+ * 로 보이던 것이 이 준비 동작이었다 (2026-09-15).
+ *
+ * 1.6배라 0.8~1.60s 는 0.5초, 페이드까지 0.65초로 공격 간격(700ms) 안에 끝난다.
+ * 짐승(`BEAST_ATTACK_WINDOWS`)과 같은 방식이고, 끊는 것도 같은 페이드를 쓴다.
+ */
+const ATTACK_CLIPS: Record<string, { from: number; to?: number; speed: number }> = {
+  varco_fighter: { from: 0.8, to: 1.6, speed: 1.6 },
+};
 /**
  * 사람 키(m).
  *
@@ -43,38 +118,19 @@ const ATTACK_LOWER = 0.18;
  */
 const HUMAN_HEIGHT = 1.8;
 /**
- * 짐승 종류별 키(m).
+ * 달리기 클립이 **사람 키(1.8m)일 때** 상정한 이동 속도(m/s). 없는 짐승은 섞는 기준(3)을 쓴다.
  *
- * 높이로 크기를 맞추므로 여기 값이 곧 화면에서 보이는 크기다. 전부 같은 값으로
- * 두면 거미가 티라노사우루스만 해진다. 여기에 몬스터의 `scale`(레벨과 강함으로
- * 정해진다)이 곱해지므로, 보스는 자동으로 더 커진다.
+ * 오우거 달리기는 VARCO 마법사와 같은 클립이라 마법사에서 잰 5.8 을 쓴다
+ * (RUN_CLIP_SPEEDS 참고). 같은 클립이라도 몸이 크면 한 걸음에 더 멀리 가므로
+ * 실제 값은 키에 비례해 늘린다 — 2.2m 오우거면 7.1 이다.
  */
-const BEAST_HEIGHT: Record<string, number> = {
-  // 작은 것들
-  rat: 0.4,
-  frog: 0.45,
-  snake: 0.45,
-  shibainu: 0.55,
-  fox: 0.6,
-  wasp: 0.65,
-  spider: 0.65,
-  // 네발 짐승
-  husky: 0.8,
-  wolf: 0.85,
-  deer: 1.1,
-  bull: 1.15,
-  stag: 1.2,
-  horse: 1.5,
-  horse_white: 1.5,
-  // 큰 것들
-  velociraptor: 1.35,
-  stegosaurus: 1.5,
-  triceratops: 1.5,
-  parasaurolophus: 1.8,
-  trex: 2.4,
-  apatosaurus: 2.6,
+const BEAST_RUN_CLIP_SPEEDS: Record<string, number> = {
+  varco_ogre1: 5.8,
+  varco_ogre2: 5.8,
+  varco_ogre3: 5.8,
+  varco_ogre4: 5.8,
+  varco_ogre5: 5.8,
 };
-const BEAST_HEIGHT_DEFAULT = 0.9;
 
 function loop(action: THREE.AnimationAction | null, weight: number): void {
   if (!action) return;
@@ -134,7 +190,7 @@ function tierColorOf(itemId: string): string | null {
  * 장착한 것만 켠다.
  *
  * 배열은 **단계 순서**다. 앞쪽이 낮은 단계, 뒤쪽이 높은 단계에 붙는다.
- * 아이템 260개에 모델이 하나씩 있을 수는 없으니, 20단계를 목록 길이만큼
+ * 아이템 280개에 모델이 하나씩 있을 수는 없으니, 20단계를 목록 길이만큼
  * 나눠 쓴다 — 절반쯤 오면 무기가 눈에 띄게 바뀐다.
  */
 interface GearMeshes {
@@ -181,6 +237,8 @@ const GEAR_MESHES: Record<string, GearMeshes> = {
   // VARCO 마법사도 같다 — 지팡이·모자가 몸에 구워져 있다
   varco_mage: { weapon: [], offhand: [], helmet: null },
   varco_archer: { weapon: [], offhand: [], helmet: null },
+  // 격투가는 애초에 맨손이다 — 도복·붕대가 몸에 구워져 있다
+  varco_fighter: { weapon: [], offhand: [], helmet: null },
 };
 
 /** 20단계를 목록 길이만큼 나눠 몇 번째 모양을 쓸지 고른다 */
@@ -229,6 +287,7 @@ export function createModelCharacterRig(models: Models, profile: ClassProfile): 
   const attack = act(profile.attackClip ?? CLIP.melee, 'attack');
   const death = act(CLIP.death, 'death');
   const runClipSpeed = RUN_CLIP_SPEEDS[profile.model!] ?? RUN_CLIP_SPEED;
+  const attackTrim = ATTACK_CLIPS[profile.model!];
 
   idle?.play();
   if (run) {
@@ -248,6 +307,8 @@ export function createModelCharacterRig(models: Models, profile: ClassProfile): 
 
   let moveBlend = 0;
   let dying = false;
+  /** 공격 클립을 걷기 때문에 끊었는가 (`ATTACK_CUT_SPEED`) */
+  let attackCut = false;
 
   // --- 장비 메시 ---
   const meshes = GEAR_MESHES[profile.model!] ?? { weapon: [], offhand: [], helmet: null };
@@ -391,7 +452,12 @@ export function createModelCharacterRig(models: Models, profile: ClassProfile): 
 
     swing(): void {
       if (!attack) return;
-      attack.reset();
+      attack.reset(); // 페이드 중이었으면 여기서 풀린다 (stopFading)
+      attackCut = false;
+      if (attackTrim) {
+        attack.time = attackTrim.from;
+        attack.timeScale = attackTrim.speed;
+      }
       attack.setEffectiveWeight(1);
       attack.play();
     },
@@ -497,8 +563,23 @@ export function createModelCharacterRig(models: Models, profile: ClassProfile): 
       const k = 1 - Math.exp(-BLEND_RATE * dt);
       moveBlend += (THREE.MathUtils.clamp(speed / RUN_SPEED, 0, 1) - moveBlend) * k;
 
+      // 다시 걷기 시작하면 남은 공격 클립을 끊는다 (`ATTACK_CUT_SPEED`).
+      // 경직이 클립보다 짧아서, 안 끊으면 달리면서 계속 휘두른다.
+      if (attack && !attackCut && attack.isRunning() && speed > ATTACK_CUT_SPEED) {
+        attackCut = true;
+        attack.fadeOut(ATTACK_CUT_FADE);
+      }
+
+      // 자를 끝(`ATTACK_CLIPS` 의 `to`)이 있으면 거기서 뺀다 — 격투가는 뒤에 붙은
+      // 뒤돌려차기까지 틀면 한 대에 발이 두 번 나간다.
+      if (attack && !attackCut && attackTrim?.to !== undefined && attack.time >= attackTrim.to) {
+        attackCut = true;
+        attack.fadeOut(ATTACK_CUT_FADE);
+      }
+
       // 공격 중에는 이동 동작을 눌러둔다. 아예 0 으로 하면 하체가 굳어 보인다.
-      const attacking = attack?.isRunning() === true;
+      // 끊는 중인 것은 공격으로 치지 않는다 — 안 그러면 페이드가 끝날 때까지 하체가 눌린다.
+      const attacking = attack?.isRunning() === true && !attackCut;
       const base = attacking ? ATTACK_LOWER : 1;
       loop(idle, (1 - moveBlend) * base);
       loop(run, moveBlend * base);
@@ -532,7 +613,7 @@ export function createModelMonsterRig(models: Models, kind: MonsterKind): Monste
 
   const root = cloneSkinned(beast.model.scene) as THREE.Group;
 
-  const target = (BEAST_HEIGHT[kind.look] ?? BEAST_HEIGHT_DEFAULT) * kind.scale;
+  const target = beastHeight(kind.look, kind.scale);
   const fit = beast.model.height > 0 ? target / beast.model.height : 1;
 
   const group = new THREE.Group();
@@ -574,18 +655,43 @@ export function createModelMonsterRig(models: Models, kind: MonsterKind): Monste
     once.clampWhenFinished = true;
   }
 
-  /** 이 클립이 상정한 이동 속도. 실제 속도에 맞춰 재생 속도를 조절한다 */
+  /** 이 속도에서 이동 동작이 다 섞인다 */
   const moveClipSpeed = 3;
+  // 재생 속도는 발이 안 미끄러지는 값에 맞춘다. 잰 값이 없으면 섞는 기준과 같다.
+  // 잰 값을 섞는 기준으로까지 쓰면 오우거(7.1)는 추격 속도(3.6)에서 반쯤 선 채로 달린다.
+  const measured = BEAST_RUN_CLIP_SPEEDS[kind.look];
+  const runClipSpeed = measured ? (measured * target) / HUMAN_HEIGHT : moveClipSpeed;
   let moveBlend = 0;
   let dying = false;
   const beastFlash = new HitFlash(group);
+  /** 이번 휘두르기가 창(`BEAST_ATTACK_WINDOWS`) 끝까지 갔는가 */
+  let swingDone = true;
+  const window = BEAST_ATTACK_WINDOWS[kind.look] ?? BEAST_ATTACK_FALLBACK;
 
   return {
     group,
-    headHeight: target + 0.25,
+    headHeight: beastHeadHeight(kind.look, kind.scale),
 
     flash(): void {
       beastFlash.flash();
+    },
+
+    /**
+     * 한 번 휘두른다. **서버가 사람을 때린 순간**(`hit` 메시지) 불린다 —
+     * 상태(`state === 'attack'`)로 트는 것이 아니다.
+     *
+     * 상태로 틀면 사거리 안에 서 있는 내내 클립이 다시 감기는데, 그 재생이
+     * 경직(`MONSTER_SWING_MS`)과 어긋나서 **경직이 아닌 때에 시작된 휘두르기가
+     * 쫓아가는 동안 이어진다** — 그게 "움직이면서 공격 모션" 으로 보였다.
+     * 때린 순간에 맞춰 틀면 클립이 도는 구간과 서버가 세워 두는 구간이 같다.
+     */
+    swing(): void {
+      if (!attack) return;
+      attack.reset();
+      attack.time = window.from;
+      attack.setEffectiveWeight(1);
+      attack.play();
+      swingDone = false;
     },
 
     update(dt: number, state: string, speed: number): void {
@@ -596,6 +702,7 @@ export function createModelMonsterRig(models: Models, kind: MonsterKind): Monste
           loop(idle, 0);
           loop(move, 0);
           attack?.stop();
+          swingDone = true; // 쓰러진 뒤에 남은 휘두르기를 다시 끝내려 들지 않게
           if (death) {
             death.reset();
             death.setEffectiveWeight(1);
@@ -620,20 +727,25 @@ export function createModelMonsterRig(models: Models, kind: MonsterKind): Monste
       const k = 1 - Math.exp(-BLEND_RATE * dt);
       moveBlend += (Math.min(1, speed / moveClipSpeed) - moveBlend) * k;
 
-      // 공격 중에는 이동 동작을 눌러둔다
-      const striking = attack?.isRunning() === true;
+      /**
+       * **창 끝까지 갔으면 거기서 끝낸다.** ★
+       *
+       * 짐승의 공격 클립은 여러 번 할퀴는 긴 클립이라(오우거 3.73초) 끝까지 두면
+       * 서버가 세워 두는 시간(`MONSTER_SWING_MS`)을 한참 넘겨 **쫓아가면서 계속
+       * 휘두른다.** 한 번 휘두르는 만큼만 틀고 섞어 뺀다 — 이동 때문에 끊는 게
+       * 아니라 **동작이 끝나서** 끝나는 것이라, 도망가도 동작은 온전히 보인다.
+       */
+      if (attack && !swingDone && attack.time >= window.to) {
+        swingDone = true;
+        attack.fadeOut(ATTACK_CUT_FADE);
+      }
+
+      // 휘두르는 동안에는 이동 동작을 눌러둔다 (끝나고 빠지는 중인 것은 빼고)
+      const striking = attack?.isRunning() === true && !swingDone;
       const base = striking ? ATTACK_LOWER : 1;
       loop(idle, (1 - moveBlend) * base);
       loop(move, moveBlend * base);
-      if (move) move.setEffectiveTimeScale(Math.max(0.4, speed / moveClipSpeed));
-
-      // 서버는 공격을 '상태'로 보낸다. 한 번 재생이 끝나면 아직 때리는 중일 때
-      // 다시 튼다 — 상태가 바뀌기를 기다리면 한 대 치고 굳는다.
-      if (state === 'attack' && attack && !attack.isRunning()) {
-        attack.reset();
-        attack.setEffectiveWeight(1);
-        attack.play();
-      }
+      if (move) move.setEffectiveTimeScale(Math.max(0.4, speed / runClipSpeed));
 
       mixer.update(dt);
     },

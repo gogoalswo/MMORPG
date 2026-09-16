@@ -43,6 +43,30 @@ export class PostFX {
     });
     this.composer.addPass(this.gtao);
 
+    /**
+     * 빛나는 효과는 가림(음영) 계산에서 뺀다 ★
+     *
+     * GTAO 는 표면 방향·깊이를 얻으려고 장면을 한 번 더 그리는데, 이때 모든 물체를 같은
+     * 재질로 덮어 그린다. 스프라이트는 여기서 화면을 향해 돌지 않고 **서 있는 판자**로 그려지고,
+     * 그 판자 둘레가 짙게 가려진 것으로 계산돼 까만 네모가 됐다 (2026-09-12 발 연타).
+     * three 는 점·선만 빼 주므로, `userData.noAO` 가 붙은 물체(와 그 자식)도 같이 숨긴다.
+     * three 의 내부 함수(`_overrideVisibility`)에 기대므로 three 를 올리면 이게 그대로인지 볼 것.
+     */
+    const pass = this.gtao as unknown as {
+      _overrideVisibility(): void;
+      _visibilityCache: THREE.Object3D[];
+    };
+    const hidePointsAndLines = pass._overrideVisibility.bind(this.gtao);
+    pass._overrideVisibility = () => {
+      hidePointsAndLines();
+      scene.traverse((object) => {
+        if (object.userData.noAO && object.visible) {
+          object.visible = false;
+          pass._visibilityCache.push(object); // 끝나면 three 가 다시 보이게 돌려놓는다
+        }
+      });
+    };
+
     // 블룸은 아주 약하게. 세게 넣으면 게임이 뿌옇고 싸구려로 보인다.
     const bloom = new UnrealBloomPass(new THREE.Vector2(width, height), 0.14, 0.6, 0.92);
     this.composer.addPass(bloom);

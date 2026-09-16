@@ -1,0 +1,17 @@
+# 개행은 LF 하나로 못 박는다.
+#
+# 여기까지 오게 된 경위: core.autocrlf=true 라 체크아웃한 파일은 CRLF 인데
+# 도구가 새로 쓴 파일은 LF 로 남아, 한 파일 안에서도 섞였다. 그런데 Git Bash 의
+# grep 은 CRLF 를 벗기고 읽어서 어느 쪽인지 알려주지 못한다 — 확인했다고 믿고
+# 짠 패치가 빗나가는 일이 반복됐다 (CLAUDE.md 의 "줄바꿈은 확인하지 않는다").
+# 개인 설정과 무관하게 저장소도 작업 트리도 LF 로 둔다.
+* text=auto eol=lf
+
+*.glb  binary
+*.gltf binary
+*.ktx2 binary
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.webp binary
+*.db   binary

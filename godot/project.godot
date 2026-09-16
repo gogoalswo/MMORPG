@@ -19,3 +19,6 @@ window/stretch/mode="canvas_items"
 
 renderer/rendering_method="mobile"
 renderer/rendering_method.mobile="mobile"
+; 안드로이드 익스포트가 요구한다. 없으면 "ETC2/ASTC texture compression is
+; required for Android export" 로 익스포트가 거부된다.
+textures/vram_compression/import_etc2_astc=true

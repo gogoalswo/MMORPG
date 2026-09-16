@@ -40,7 +40,7 @@ jobs:
           VITE_SERVER_URL: local
           # https://<아이디>.github.io/<저장소>/ 아래에 올라가므로 에셋 경로 앞에 저장소 이름이 붙는다
           VITE_BASE: /${{ github.event.repository.name }}/
-      # 고도 이관본을 같은 사이트의 /godot/ 아래에 같이 올린다.
+      # 고도 이관본을 같은 사이트의 /game/ 아래에 같이 올린다.
       # 웹 클라이언트를 건드리지 않으므로, 이관을 그만두면 이 두 단계만 지우면 된다.
       # 스레드를 끈 빌드여야 한다 — 이유는 godot/export_presets.cfg 참고.
       - name: 고도와 익스포트 템플릿 캐시
@@ -66,14 +66,14 @@ jobs:
           unzip -q /tmp/templates.tpz -d /tmp/tpl
           mv /tmp/tpl/templates "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
 
-      - name: 고도 웹 빌드 → /godot/
+      - name: 고도 웹 빌드 → /game/
         run: |
           set -e
-          mkdir -p packages/client/dist/godot
+          mkdir -p packages/client/dist/game
           ~/godot-bin/godot --headless --path godot --import
           ~/godot-bin/godot --headless --path godot \
-            --export-release "Web" "$GITHUB_WORKSPACE/packages/client/dist/godot/index.html"
-          ls -lh packages/client/dist/godot
+            --export-release "Web" "$GITHUB_WORKSPACE/packages/client/dist/game/index.html"
+          ls -lh packages/client/dist/game
 
       - uses: actions/upload-pages-artifact@v3
         with:

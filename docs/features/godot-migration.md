@@ -15,7 +15,7 @@ three.js 웹 클라이언트를 **고도 엔진으로 갈아타는 중**이다. 
 | `godot/main.tscn` `godot/main.gd` | **빌드 확인용 임시 화면.** 돌아가는 상자와 버전 글자뿐이다. 게임이 들어오면 버린다 |
 | `godot/export_presets.cfg` | 안드로이드·웹 익스포트 설정. **비밀은 없다** — 아래 "서명" 참고 |
 | `.github/workflows/android.yml` | push 하면 APK 를 구워 Actions 산출물로 올린다 |
-| `.github/workflows/pages.yml` | 같은 사이트의 **`/godot/`** 아래에 웹 빌드를 같이 올린다 (웹 클라이언트는 `/` 그대로) |
+| `.github/workflows/pages.yml` | 같은 사이트의 **`/game/`** 아래에 웹 빌드를 같이 올린다 (웹 클라이언트는 `/` 그대로) |
 | `scripts/export-shared.mjs` | (예정) `packages/shared` 의 표를 `godot/data/*.json` 으로 내보낸다 |
 
 ## 규칙
@@ -87,7 +87,7 @@ UI 를 만들기 전에 폰트 리소스를 먼저 붙여야 한다. `main.gd` �
 
 | 어디 | 주소 |
 |---|---|
-| 브라우저 | `https://gogoalswo.github.io/MMORPG/godot/` — 39MB 받는다. 폰 브라우저에서도 열린다 |
+| 브라우저 | `https://gogoalswo.github.io/MMORPG/game/` — 39MB 받는다. 폰 브라우저에서도 열린다 |
 | 안드로이드 | Actions → `Android APK` 실행 → 산출물 `mmorpg-apk` |
 
 **웹 빌드는 스레드를 꺼야 한다.** 스레드를 켜면 `SharedArrayBuffer` 가 필요하고,

@@ -86,6 +86,6 @@ JSON.stringify({ zone, out })
 
 - [godot-migration.md](godot-migration.md) — 고도 이관. **이 로컬 모드 방식(브라우저가
   TS `ZoneRoom` 을 그대로 돌림)은 고도에서 쓸 수 없다.** 고도는 TS 를 실행할 수단이
-  없어서 판정을 GDScript 로 한 벌 다시 쓴다. 같은 사이트의 `/godot/` 에 나란히 올라간다
+  없어서 판정을 GDScript 로 한 벌 다시 쓴다. 같은 사이트의 `/game/` 에 나란히 올라간다
 
 [networking-state.md](networking-state.md) · [persistence.md](persistence.md) · [verification.md](verification.md)

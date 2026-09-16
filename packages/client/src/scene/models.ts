@@ -145,7 +145,7 @@ export async function loadModels(): Promise<Models> {
   await Promise.all(
     SOLO_MODELS.map(async (name) => {
       try {
-        const gltf = await loader.loadAsync(`/assets/models/${name}.glb`);
+        const gltf = await loader.loadAsync(`${import.meta.env.BASE_URL}assets/models/${name}.glb`);
         const scene = gltf.scene as THREE.Group;
         prepare(scene);
         characters[name] = { scene, ...measure(scene), clips: byName(gltf.animations) };
@@ -164,7 +164,7 @@ export async function loadModels(): Promise<Models> {
 
   async function fetchBeast(name: string): Promise<void> {
     try {
-      const gltf = await loader.loadAsync(`/assets/models/${name}.glb`);
+      const gltf = await loader.loadAsync(`${import.meta.env.BASE_URL}assets/models/${name}.glb`);
       const scene = gltf.scene as THREE.Group;
       prepare(scene);
       beasts[name] = { model: { scene, ...measure(scene) }, clips: byName(gltf.animations) };

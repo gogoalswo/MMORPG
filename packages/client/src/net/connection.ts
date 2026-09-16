@@ -1,4 +1,4 @@
-import { Client, type Room } from '@colyseus/sdk';
+import { createTransport, LOCAL_SERVER, type RoomLike } from './transport';
 import type { ItemStack, MoveInput, NpcRole } from '@mmo/shared';
 import type { ChatMessage } from '../ui/chat';
 import type { CharacterSummary } from '../ui/characterSelect';
@@ -85,9 +85,21 @@ function toWebSocketUrl(url: string): string {
  * 다시 빌드해서 다시 배포해야 한다.
  *
  * 우선순위: ?server= 쿼리 > 지난번에 쓴 주소 > 빌드 기본값 > 로컬
+ *
+ * `local` 은 서버 없이 브라우저 안에서 돈다 (transport.ts). GitHub Pages 빌드의
+ * 기본값이다. `?server=local` 은 기억해 둔 주소를 지운다 — 한 번 붙어 본 원격
+ * 주소가 남아 있으면 다시는 로컬로 못 돌아온다.
  */
 export function resolveServerUrl(): string {
   const fromQuery = new URLSearchParams(location.search).get('server');
+  if (fromQuery === LOCAL_SERVER) {
+    try {
+      localStorage.removeItem(SERVER_KEY);
+    } catch {
+      /* 무시 */
+    }
+    return LOCAL_SERVER;
+  }
   if (fromQuery) {
     // 한 번 받은 주소는 기억해둔다. 다음부터는 링크 없이 들어와도 붙는다.
     try {
@@ -106,6 +118,7 @@ export function resolveServerUrl(): string {
   }
 
   const fromEnv = import.meta.env.VITE_SERVER_URL;
+  if (fromEnv === LOCAL_SERVER) return LOCAL_SERVER;
   if (fromEnv) return toWebSocketUrl(fromEnv);
 
   return 'ws://localhost:2567';
@@ -198,9 +211,18 @@ export interface LinkResult {
   switched?: boolean;
 }
 
+/**
+ * 로컬 모드는 토큰·캐릭터를 따로 적는다. 같은 키를 쓰면 로컬 DB 가 모르는
+ * 서버 토큰을 보내 게스트가 새로 생기고, 그 토큰이 서버 토큰을 덮어써서
+ * 서버 계정으로 다시 못 들어간다.
+ */
+function storageKey(key: string): string {
+  return SERVER_URL === LOCAL_SERVER ? `${key}:local` : key;
+}
+
 function readToken(): string | undefined {
   try {
-    return localStorage.getItem(TOKEN_KEY) ?? undefined;
+    return localStorage.getItem(storageKey(TOKEN_KEY)) ?? undefined;
   } catch {
     return undefined;
   }
@@ -209,7 +231,7 @@ function readToken(): string | undefined {
 /** 선택한 캐릭터. 포탈로 존을 옮길 때도 같은 캐릭터로 들어가야 한다 */
 export function readCharacterId(): string | undefined {
   try {
-    return localStorage.getItem(CHARACTER_KEY) ?? undefined;
+    return localStorage.getItem(storageKey(CHARACTER_KEY)) ?? undefined;
   } catch {
     return undefined;
   }
@@ -217,7 +239,7 @@ export function readCharacterId(): string | undefined {
 
 export function writeCharacterId(id: string): void {
   try {
-    localStorage.setItem(CHARACTER_KEY, id);
+    localStorage.setItem(storageKey(CHARACTER_KEY), id);
   } catch {
     /* 무시 */
   }
@@ -225,7 +247,7 @@ export function writeCharacterId(id: string): void {
 
 function writeToken(token: string): void {
   try {
-    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(storageKey(TOKEN_KEY), token);
   } catch {
     /* 저장이 막혀도 이번 세션은 유지된다 */
   }
@@ -286,8 +308,8 @@ export class ZoneConnection {
   readonly remotes = new Map<string, RemoteEntity>();
   readonly monsters = new Map<string, RemoteEntity>();
 
-  private readonly client = new Client(SERVER_URL);
-  private room: Room | null = null;
+  private readonly client = createTransport(SERVER_URL);
+  private room: RoomLike | null = null;
   /** 접속 요청 세대. 늦게 도착한 이전 존의 응답을 버리는 데 쓴다 */
   private generation = 0;
   /**
@@ -300,7 +322,7 @@ export class ZoneConnection {
 
   constructor(private readonly handlers: ConnectionHandlers) {
     // https 페이지에서 ws:// 는 브라우저가 조용히 막는다. 원인을 못 찾으면 한참 헤맨다.
-    if (location.protocol === 'https:' && SERVER_URL.startsWith('ws://')) {
+    if (location.protocol === 'https:' && SERVER_URL.startsWith('ws://') && SERVER_URL !== LOCAL_SERVER) {
       handlers.onError('HTTPS 페이지에서는 wss:// 서버만 접속됩니다 (현재 ' + SERVER_URL + ')');
     }
   }
@@ -328,7 +350,7 @@ export class ZoneConnection {
     const gen = ++this.generation;
     await this.leave();
 
-    let room: Room;
+    let room: RoomLike;
     try {
       // 토큰을 같이 보낸다. 서버가 계정을 알아보거나, 없으면 게스트로 만들어준다.
       room = await this.client.joinOrCreate('zone', {

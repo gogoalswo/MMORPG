@@ -12,6 +12,12 @@
       "runtimeExecutable": "cmd",
       "runtimeArgs": ["/c", "scripts\\dev.cmd", "--port", "5174", "--strictPort"],
       "port": 5174
+    },
+    {
+      "name": "pages-preview",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "preview", "packages/client", "--base", "/MMORPG/", "--port", "4173", "--strictPort"],
+      "port": 4173
     }
   ]
 }

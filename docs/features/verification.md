@@ -32,6 +32,7 @@
 | `scripts/db-peek.mjs` | 저장된 캐릭터를 훑는다 |
 | `scripts/edit.mjs` | **파일 고치기** — 개행(CRLF/LF)을 묻지 않고 부분 치환한다. `grep` 은 이 저장소의 개행을 판정하지 못한다 (CLAUDE.md) |
 | `npm test` | 데이터 규칙 전수 검사 |
+| `__localServer` (콘솔) | **로컬 모드**의 서버 상태 — 룸·플레이어·몬스터를 글로 ([local-mode.md](local-mode.md)) |
 
 ## 헤드리스 클라이언트 (`probe.mjs`)
 

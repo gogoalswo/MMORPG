@@ -55,14 +55,14 @@ export async function loadAssets(renderer: THREE.WebGLRenderer): Promise<Assets>
   // 한 장이 그대로 VRAM 을 먹는다. 트랜스코더가 기기가 지원하는
   // 포맷(ASTC/BC7/ETC2...)으로 변환해준다.
   const loader = new KTX2Loader()
-    .setTranscoderPath('/assets/basis/')
+    .setTranscoderPath(`${import.meta.env.BASE_URL}assets/basis/`)
     .detectSupport(renderer);
   const anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
 
   const ground = async (kind: GroundKind): Promise<GroundMaps> => {
     const [map, normalMap] = await Promise.all([
-      loader.loadAsync(`/assets/textures/ground_${kind}_color.ktx2`),
-      loader.loadAsync(`/assets/textures/ground_${kind}_normal.ktx2`),
+      loader.loadAsync(`${import.meta.env.BASE_URL}assets/textures/ground_${kind}_color.ktx2`),
+      loader.loadAsync(`${import.meta.env.BASE_URL}assets/textures/ground_${kind}_normal.ktx2`),
     ]);
     return {
       map: configure(map, true, anisotropy),
@@ -80,7 +80,7 @@ export async function loadAssets(renderer: THREE.WebGLRenderer): Promise<Assets>
   const [loaded, hdr] = await Promise.all([
     Promise.all(GROUND_KINDS.map(ground)),
     // HDRI 는 PMREM 이 어차피 흐리게 굽는다. 1k 로 충분하다.
-    new HDRLoader().loadAsync('/assets/hdri/sky_1k.hdr'),
+    new HDRLoader().loadAsync(`${import.meta.env.BASE_URL}assets/hdri/sky_1k.hdr`),
   ]);
   const grounds = Object.fromEntries(GROUND_KINDS.map((kind, i) => [kind, loaded[i]!])) as Record<
     GroundKind,

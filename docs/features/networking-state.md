@@ -12,6 +12,7 @@ Colyseus 0.18. 존 하나 = 룸 하나. 서버 권위 + 클라이언트 예측/�
 | `packages/server/src/ZoneRoom.ts` | 룸 본체. 메시지 핸들러 전부 |
 | `packages/server/src/index.ts` | 서버 부팅, 존별 룸 등록 |
 | `packages/client/src/net/connection.ts` | 접속·메시지·보간 샘플링 |
+| `packages/client/src/net/transport.ts` | 통로 — 네트워크(`@colyseus/sdk`) 또는 로컬(브라우저 안 ZoneRoom). [local-mode.md](local-mode.md) |
 | `packages/client/src/game/player.ts` | 예측(`applyMove`)과 보정(`reconcile`) |
 | `packages/shared/src/constants.ts` | `TICK_RATE`, `INTERP_DELAY_MS`, `RUN_SPEED` 등 |
 | `packages/shared/src/movement.ts` | `applyMove` — **서버와 클라가 같은 함수를 쓴다** |
@@ -111,7 +112,9 @@ Colyseus 0.18. 존 하나 = 룸 하나. 서버 권위 + 클라이언트 예측/�
 - 스키마에 필드를 더하면 클라이언트 `ingest`(connection.ts)와 `SelfStatus` 도 같이 고친다.
 - 새 메시지를 추가하면 **서버 `onMessage` 등록 / 클라 `send` 래퍼 / `main.ts` 배선**
   세 군데다. 한 군데를 빼먹으면 조용히 아무 일도 안 일어난다.
+- ZoneRoom 에서 Colyseus·Node API 를 **새로** 쓰면 로컬 모드 대체물(`net/local/shims/`)도
+  채운다 → [local-mode.md](local-mode.md).
 
 ## 관련
 
-[auto-hunt-and-targeting.md](auto-hunt-and-targeting.md) · [combat.md](combat.md) · [persistence.md](persistence.md)
+[auto-hunt-and-targeting.md](auto-hunt-and-targeting.md) · [combat.md](combat.md) · [persistence.md](persistence.md) · [local-mode.md](local-mode.md)

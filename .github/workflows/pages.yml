@@ -1,0 +1,53 @@
+# main 에 올리면 클라이언트를 로컬 모드로 빌드해 GitHub Pages 에 올린다.
+#
+# 로컬 모드 = 게임 서버 없이 브라우저 안에서 ZoneRoom 을 돌린다
+# (docs/features/local-mode.md). 서버를 따로 띄웠으면 주소 뒤에
+# ?server=wss://서버주소 를 붙여 들어가면 그쪽에 붙는다.
+#
+# 처음 한 번: 저장소 Settings → Pages → Source 를 "GitHub Actions" 로 둔다.
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+        env:
+          VITE_SERVER_URL: local
+          # https://<아이디>.github.io/<저장소>/ 아래에 올라가므로 에셋 경로 앞에 저장소 이름이 붙는다
+          VITE_BASE: /${{ github.event.repository.name }}/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: packages/client/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

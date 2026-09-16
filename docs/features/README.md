@@ -30,6 +30,7 @@
 | [auto-hunt-and-targeting.md](auto-hunt-and-targeting.md) | 자동 사냥, **클릭 타겟팅**(겨눈 쪽으로 쏘기), 둘의 관계 |
 | [npc-town.md](npc-town.md) | 마을 NPC, 상점, 대장간(제작·강화·등급) |
 | [networking-state.md](networking-state.md) | Colyseus 스키마, 관심영역, 예측·보정, 메시지 목록 |
+| [local-mode.md](local-mode.md) | **서버 없이 브라우저 안에서** 같은 ZoneRoom 을 돌림, GitHub Pages 배포, Node 모듈 대체물 |
 | [persistence.md](persistence.md) | SQLite 스키마, 마이그레이션, 계정·토큰 |
 | [client-ui.md](client-ui.md) | HUD 레이아웃, 오버레이 규칙, **미니맵**, **클릭 이동 표시**, **테스트 도구(스킬 목록·무적 단추)**, 모바일 대응 |
 | [characters-and-animation.md](characters-and-animation.md) | 캐릭터·몬스터·NPC 외형, 본 구조, 걷기·대기·공격 동작 |

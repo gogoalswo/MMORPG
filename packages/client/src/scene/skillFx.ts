@@ -21,12 +21,12 @@ import type { SkillDef } from '@mmo/shared';
 const MAX_LIVE = 48;
 
 /** 스킬 그림 (까만 바탕이라 가산 혼합으로 바탕이 빠진다) */
-const FIST_URL = '/assets/fx/fist.png';
-const SKY_FOOT_URL = '/assets/fx/sky_foot.png';
-const DUST_URL = '/assets/fx/dust.png';
-const TIGER_URL = '/assets/fx/tiger_roar.png';
-const WHITE_TIGER_URL = '/assets/fx/white_tiger.png';
-const HIT_URL = '/assets/fx/hit.png';
+const FIST_URL = `${import.meta.env.BASE_URL}assets/fx/fist.png`;
+const SKY_FOOT_URL = `${import.meta.env.BASE_URL}assets/fx/sky_foot.png`;
+const DUST_URL = `${import.meta.env.BASE_URL}assets/fx/dust.png`;
+const TIGER_URL = `${import.meta.env.BASE_URL}assets/fx/tiger_roar.png`;
+const WHITE_TIGER_URL = `${import.meta.env.BASE_URL}assets/fx/white_tiger.png`;
+const HIT_URL = `${import.meta.env.BASE_URL}assets/fx/hit.png`;
 
 /**
  * 천붕각 — 위에서 큰 발이 떨어지고, 닿는 순간 지면이 갈라진다.

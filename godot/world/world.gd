@@ -98,6 +98,12 @@ func join(player_id: String) -> void:
 		"stats": stats,
 		"next_attack_at": 0,
 		"rooted_until": 0,
+		# --- 스킬 ---
+		"skills": kept.get("skills", []).duplicate(),
+		"skill_points": int(kept.get("skill_points", level - 1)),
+		"skill_bar": kept.get("skill_bar", []).duplicate(),
+		# 스킬별 다음에 쓸 수 있는 시각
+		"skill_ready_at": {},
 	}
 
 
@@ -215,55 +221,59 @@ func attack(player_id: String) -> void:
 	# 휘두르는 동안 못 움직인다는 통보. 화면이 이 값만큼 동작을 튼다
 	_events.append({"type": "swing", "id": player_id, "root_ms": root})
 
-	var target := _pick_target(player, float(stats.attackRange))
-	if target.is_empty():
+	var picked := _pick_targets(player, float(stats.attackRange), _attack_arc(), 1)
+	if picked.is_empty():
 		return
+	var target: Dictionary = picked[0]
 
-	var damage := Combat.compute_damage(float(stats.attack), target.defense)
-	var crit := Combat.roll_crit(float(stats.crit), _rng.randf())
-	if crit:
-		damage = roundi(damage * float(stats.critDamage))
-
-	target.hp = maxi(0, int(target.hp) - damage)
-	_events.append({
-		"type": "hit",
-		"target": target.id,
-		"amount": damage,
-		"crit": crit,
-		"killed": target.hp <= 0,
-		"x": target.x,
-		"z": target.z,
-	})
-
-	if target.hp <= 0:
-		_kill(player, target, now)
+	_hit_monster(player, target, float(stats.attack), "")
 
 
-## 정면 부채꼴 안에서 가장 가까운 산 몬스터
-func _pick_target(player: Dictionary, attack_range: float) -> Dictionary:
+## 맞을 놈들을 고른다. **가까운 순서로 max_targets 만큼.**
+##
+## origin 이 주어지면 그 자리를 중심으로 한 **원**으로 본다 (원거리 스킬이 날아가
+## 터진 것). 날아가 터진 것에 "시전자 정면"은 의미가 없다. origin 이 없으면
+## 시전자 자리에서 정면 부채꼴로 본다 — 등 뒤는 맞지 않는다.
+func _pick_targets(
+	player: Dictionary,
+	reach: float,
+	arc: float,
+	max_targets: int,
+	origin: Dictionary = {},
+) -> Array:
+	if max_targets <= 0:
+		return []
+	var from_x: float = origin.get("x", player.x)
+	var from_z: float = origin.get("z", player.z)
 	var facing_x := sin(float(player.rot))
 	var facing_z := cos(float(player.rot))
-	var half_arc := float(GameData.combat().get("attackArc", PI * 0.6)) / 2.0
+	var half_arc := arc / 2.0
+	var use_arc := origin.is_empty() and arc < TAU
 
-	var best: Dictionary = {}
-	var best_dist := INF
+	var found: Array = []
 	for monster in _monsters:
 		if int(monster.hp) <= 0:
 			continue
-		var dx: float = monster.x - player.x
-		var dz: float = monster.z - player.z
+		var dx: float = monster.x - from_x
+		var dz: float = monster.z - from_z
 		var dist := sqrt(dx * dx + dz * dz)
-		if dist > attack_range:
+		if dist > reach:
 			continue
-		# 등 뒤는 맞지 않는다
-		if dist >= 1e-3:
+		if use_arc and dist >= 1e-3:
 			var dot := (dx / dist) * facing_x + (dz / dist) * facing_z
 			if acos(clampf(dot, -1.0, 1.0)) > half_arc:
 				continue
-		if dist < best_dist:
-			best_dist = dist
-			best = monster
-	return best
+		found.append({"monster": monster, "dist": dist})
+
+	# 가까운 순서로 — 범위기라도 눈앞의 적부터 맞는 게 자연스럽다
+	found.sort_custom(func(a, b): return a.dist < b.dist)
+
+	var out: Array = []
+	for entry in found:
+		if out.size() >= max_targets:
+			break
+		out.append(entry.monster)
+	return out
 
 
 func _kill(player: Dictionary, target: Dictionary, now: int) -> void:
@@ -280,6 +290,8 @@ func _kill(player: Dictionary, target: Dictionary, now: int) -> void:
 		# 레벨이 오르면 스탯을 다시 만들고 체력을 채운다
 		player.stats = Combat.stats_for(str(player.job), grown.level)
 		player.hp = player.stats.maxHp
+		var per_level := int(GameData.combat().get("skillPointPerLevel", 1))
+		player.skill_points = int(player.skill_points) + (grown.level - before) * per_level
 		_events.append({"type": "levelUp", "level": grown.level})
 
 
@@ -568,6 +580,20 @@ func restore(player_id: String) -> bool:
 	player.hp = clampi(int(saved.get("hp", player.stats.maxHp)), 0, int(player.stats.maxHp))
 	player.gold = int(saved.get("gold", 0))
 	player["dead"] = bool(saved.get("dead", false))
+	# 배운 스킬은 표가 바뀌어도 살아남게 **지금 있는 것만** 되살린다 —
+	# 스킬을 다시 만드는 중이라 없어진 id 가 저장에 남아 있을 수 있다
+	var known := Skills.all()
+	var learned: Array = []
+	for id in saved.get("skills", []):
+		if known.has(str(id)):
+			learned.append(str(id))
+	player.skills = learned
+	player.skill_points = int(saved.get("skill_points", 0))
+	var bar: Array = []
+	for id in saved.get("skill_bar", []):
+		if str(id) in learned:
+			bar.append(str(id))
+	player.skill_bar = bar
 	# 죽은 채로 저장됐으면 자리는 스폰으로 둔다 — 시체 자리에서 시작할 이유가 없다
 	if not player.dead:
 		player.x = clampf(float(saved.get("x", player.x)), -half_size, half_size)
@@ -604,3 +630,148 @@ func npc_open(player_id: String, npc_name: String) -> void:
 			"items": [],
 		})
 		return
+
+
+## 기본 공격이 닿는 정면 각도(라디안). 등 뒤의 적은 맞지 않는다
+func _attack_arc() -> float:
+	return float(GameData.combat().get("attackArc", PI * 0.6))
+
+
+## 스킬을 배운다. **직업·레벨·포인트를 여기서 다시 본다.**
+func learn_skill(player_id: String, skill_id: String) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	var skill := Skills.get_skill(str(player.job), skill_id)
+	if skill.is_empty():
+		_events.append({"type": "notice", "text": "쓸 수 없는 스킬입니다"})
+		return
+	if skill_id in player.skills:
+		return
+	if not Skills.can_learn(skill, str(player.job), int(player.level)):
+		_events.append({"type": "notice", "text": "%d레벨에 배웁니다" % int(skill.get("reqLevel", 1))})
+		return
+	var cost := Skills.point_cost()
+	if int(player.skill_points) < cost:
+		_events.append({"type": "notice", "text": "스킬 포인트가 모자랍니다"})
+		return
+
+	player.skill_points = int(player.skill_points) - cost
+	player.skills.append(skill_id)
+	_events.append({"type": "skills", "learned": player.skills.duplicate()})
+
+
+## 액션바를 정한다. 배운 것만, 칸 수만큼만 올라간다
+func set_skill_bar(player_id: String, ids: Array) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	var size := int(GameData.combat().get("skillBarSize", 4))
+	var bar: Array = []
+	for id in ids:
+		if bar.size() >= size:
+			break
+		if str(id) in player.skills:
+			bar.append(str(id))
+	player.skill_bar = bar
+	_events.append({"type": "skillBar", "bar": bar.duplicate()})
+
+
+## 스킬을 쓴다. 판정은 전부 여기서 한다 — 화면이 보내는 건 "쓰고 싶다" 뿐이다.
+func cast(player_id: String, skill_id: String) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty() or bool(player.dead):
+		return
+
+	# 없는 스킬이거나 다른 직업 스킬
+	var skill := Skills.get_skill(str(player.job), skill_id)
+	if skill.is_empty():
+		return
+
+	# 배워서 액션바에 올린 것만 쓸 수 있다.
+	# **테스트 스위치가 켜져 있으면 액션바를 안 본다** — 스킬창에서 바로 쏴 보려고.
+	# 직업과 쿨타임은 그대로 본다
+	if not Skills.unlock_all() and not (skill_id in player.skill_bar):
+		return
+
+	var now := Time.get_ticks_msec()
+	var ready_at: Dictionary = player.skill_ready_at
+	if now < int(ready_at.get(skill_id, 0)):
+		return
+	ready_at[skill_id] = now + Skills.cooldown_of(skill)
+
+	var stats: Dictionary = player.stats
+
+	# 겨눈 놈 쪽으로 몸을 돌리는 것은 **쿨타임을 돌리기 전이 아니라** 여기서 한다.
+	# 회복기도 대상을 향해 서야 이펙트가 엉뚱한 쪽을 보지 않는다
+	var aim: Dictionary = {}
+	if int(skill.get("maxTargets", 1)) > 0:
+		var near := _pick_targets(player, float(skill.range), TAU, 1)
+		if not near.is_empty():
+			aim = near[0]
+			player.rot = atan2(aim.x - player.x, aim.z - player.z)
+
+	# 스킬도 같은 공격 모션을 쓰므로 같은 동안 발이 묶인다.
+	# **기본 공격 간격으로 자른다** — 스킬 쿨타임(수 초)으로 자르면 걷지도 못하고,
+	# 테스트 스위치로 쿨타임이 0 이 되면 경직까지 0 이 된다
+	var root := Combat.attack_root_ms(
+		Combat.effective_cooldown(stats.attackCooldown, stats.attackSpeed)
+	)
+	player.rooted_until = now + root
+	_events.append({"type": "skill", "id": player_id, "skill": skill_id, "root_ms": root})
+
+	# 회복형은 공격 판정을 하지 않는다
+	var heal := float(skill.get("selfHeal", 0.0))
+	if heal > 0.0:
+		var before := int(player.hp)
+		player.hp = mini(int(stats.maxHp), before + roundi(float(stats.maxHp) * heal))
+		_events.append({
+			"type": "hit",
+			"target": player_id,
+			"target_kind": "player",
+			"amount": int(player.hp) - before,
+			"heal": true,
+			"crit": false,
+			"killed": false,
+			"x": player.x,
+			"z": player.z,
+		})
+		return
+
+	# **겨눈 놈이 있으면 원거리 스킬은 그 자리에서 터진다.** 근접기는 내 몸이
+	# 중심이다 — 내 앞을 베는 동작인데 판정만 저쪽에서 나면 이펙트와 어긋난다
+	var origin: Dictionary = {}
+	var reach := float(skill.range)
+	if not aim.is_empty() and Skills.is_ranged(skill):
+		origin = {"x": aim.x, "z": aim.z}
+		reach = Skills.blast_radius(skill)
+
+	var attack := float(stats.attack) * float(skill.get("power", 1.0))
+	for target in _pick_targets(
+		player, reach, float(skill.arc), int(skill.get("maxTargets", 1)), origin
+	):
+		_hit_monster(player, target, attack, skill_id)
+
+
+## 몬스터 하나를 때린다. 기본 공격과 스킬이 같은 자리를 쓴다
+func _hit_monster(player: Dictionary, target: Dictionary, attack: float, skill_id: String) -> void:
+	var stats: Dictionary = player.stats
+	var damage := Combat.compute_damage(attack, target.defense)
+	var crit := Combat.roll_crit(float(stats.crit), _rng.randf())
+	if crit:
+		damage = roundi(damage * float(stats.critDamage))
+
+	target.hp = maxi(0, int(target.hp) - damage)
+	_events.append({
+		"type": "hit",
+		"target": target.id,
+		"target_kind": "monster",
+		"amount": damage,
+		"crit": crit,
+		"killed": target.hp <= 0,
+		"skill": skill_id,
+		"x": target.x,
+		"z": target.z,
+	})
+	if target.hp <= 0:
+		_kill(player, target, Time.get_ticks_msec())

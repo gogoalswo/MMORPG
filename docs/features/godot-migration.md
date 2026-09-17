@@ -24,6 +24,7 @@ three.js 웹 클라이언트를 **고도 엔진으로 갈아타는 중**이다. 
 | `godot/net/local_transport.gd` | 서버 없이 `World` 를 이 자리에서 돌린다 |
 | `godot/game/game.gd` | 화면. 바닥·카메라·모델·터치 이동. **`World` 를 직접 안 만진다** |
 | `godot/game/rig.gd` | `.glb` 하나를 씌우고 클립을 트는 껍데기. **없으면 `null`** |
+| `godot/game/ground.gd` | 존 바닥 재질 — 텍스처·타일 크기·존 틴트 |
 | `scripts/sync-godot-assets.mjs` | `public/assets` → `godot/assets` 복사. 모델은 텍스처를 줄여 넣는다 (`npm run sync:godot`) |
 | `scripts/shrink-glb-textures.mjs` | `.glb` 안 텍스처를 512px 로 줄인다 |
 | `scripts/build-korean-font.py` | 한글 폰트를 완성형 2350자로 줄인다. 결과물은 커밋한다 |
@@ -135,6 +136,24 @@ varco 모델은 1024² 텍스처를 셋씩 들고 있는데, 고도가 임포트
 절차적 리그다 → [characters-and-animation.md](characters-and-animation.md).
 
 초원 81마리 중 **모델 80 · 기둥 1**(보스)이 이 규칙의 결과다.
+
+### 바닥은 `.ktx2` 를 그대로 쓴다 ★
+
+**고도가 `.ktx2` 를 읽는다** — 시험해 보고 확인했다 (2026-09-17, 512×512 로 들어온다).
+그래서 웹 클라이언트가 쓰는 `public/assets/textures/ground_*.ktx2` 14장(2.5MB)을
+변환 없이 그대로 복사해 쓴다. `index.pck` 가 5.6MB → **8.2MB** 가 됐다.
+
+텍스처 성질(타일 크기·러프니스·평균색·blend·glow)은 **존이 아니라 이미지에 딸린
+것**이라, 웹 클라의 `ground.ts` 에만 있던 `LOOKS` 를 **`shared/zone.ts` 의
+`GROUND_LOOKS` 로 옮겼다.** 두 클라이언트가 나눠 쓰는 수치는 한 곳에 있어야 한다.
+
+틴트는 `ground.ts` 와 **같은 식**이다 — 선형에서 평균색 대비 비율을 내고
+`TINT_PULL` 0.5 만큼 끌어당긴 뒤 `ALBEDO` 0.3 을 곱한다. 마을 (0.413, 0.398, 0.355)
+처럼 세 존을 TS 값과 대조한다 (`ground_test.gd`).
+
+**아직 안 옮긴 것**: `blend`(배율 다른 샘플을 겹쳐 반복을 깨는 것)와 `glow`(용암
+균열이 스스로 빛나는 것)는 셰이더가 필요해서 안 넣었다. 표에는 값이 들어와 있다.
+3단계 때 임시로 깔았던 경계 판은 텍스처를 가려서 뺐다.
 
 ### 얼마나 크게 그릴지는 데이터가 정한다
 
@@ -309,8 +328,9 @@ varco 모델은 1024² 텍스처를 셋씩 들고 있는데, 고도가 임포트
 | 스킬 배우기·액션바·시전 | `... tests/skill_test.gd` |
 | 등급·랜덤옵션·강화·드롭·장착 | `... tests/item_test.gd` |
 | 상점·대장간 (사고팔기·제작·강화·등급) | `... tests/shop_test.gd` |
+| 바닥 텍스처·타일·틴트 | `... tests/ground_test.gd` |
 
-열네 개 다 `pages.yml` 이 배포 전에 돌린다. 하나라도 깨지면 배포까지 가지 않는다.
+열다섯 개 다 `pages.yml` 이 배포 전에 돌린다. 하나라도 깨지면 배포까지 가지 않는다.
 
 **저장을 건드리는 테스트는 끝나면 지운다.** `LocalTransport` 가 저장이 있으면
 이어서 열기 때문에, 남겨 두면 다음 테스트가 엉뚱한 존에서 시작한다.
@@ -360,7 +380,7 @@ godot --headless --path godot --script check.gd # 상태를 글로 찍는다
 | | 파일 | 받는 양 |
 |---|---|---|
 | `index.wasm` (고도 엔진) | 37.7MB | **10.2MB** — 만드는 것과 무관하게 고정 |
-| `index.pck` (게임) | 5.6MB | 5.5MB (이미 압축된 텍스처라 gzip 이 안 먹는다) |
+| `index.pck` (게임) | 8.2MB | 8.2MB (이미 압축된 텍스처라 gzip 이 안 먹는다) |
 
 **엔진은 배포할 때마다 다시 받는다.** 내용이 한 글자도 안 바뀌어도 그렇다 —
 GitHub Pages 가 배포 시각을 ETag 에 넣기 때문이다 (`6aab3f31-25af282` →

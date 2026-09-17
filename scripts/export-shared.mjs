@@ -53,6 +53,8 @@ import {
   NPC_REACH,
   START_ZONE,
   FIELD_ORDER,
+  GROUND_KINDS,
+  GROUND_LOOKS,
   ITEMS,
   EQUIP_SLOTS,
   SLOT_CODE,
@@ -78,7 +80,15 @@ export const OUT_DIR = join(ROOT, 'godot', 'data');
 /** 내보낼 파일 한 벌. 파일명 → 내용 */
 export function buildData() {
   return {
-    'zones.json': { start: START_ZONE, fieldOrder: FIELD_ORDER, zones: ZONES },
+    // groundLooks 는 텍스처에 딸린 성질이다 (타일 크기·러프니스·평균색).
+    // 존이 아니라 이미지가 정하는 것이라 존 표와 나란히 둔다
+    'zones.json': {
+      start: START_ZONE,
+      fieldOrder: FIELD_ORDER,
+      zones: ZONES,
+      groundKinds: GROUND_KINDS,
+      groundLooks: GROUND_LOOKS,
+    },
     // heights 는 모델을 얼마나 키울지 정한다 (모델 높이는 1 로 정규화돼 있다)
     'monsters.json': {
       kinds: MONSTER_KINDS,

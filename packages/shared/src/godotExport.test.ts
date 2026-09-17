@@ -31,7 +31,13 @@ test('내보낸 개수가 문서와 맞는다', () => {
   assert.equal(Object.keys(data['skills.json'].skills).length, 34, '스킬 34종');
 });
 
-test('아이템은 내보내지 않는다 (나중에 다시 만든다)', () => {
-  const names = Object.keys(data);
-  assert.ok(!names.some((n) => n.includes('item')), `아이템 파일이 생겼다: ${names}`);
+test('아이템도 내보낸다 — 등급·랜덤옵션·강화를 그대로 가기로 했다 (2026-09-17)', () => {
+  const items = data['items.json'].items;
+  const ids = Object.keys(items);
+  const materials = ids.filter((id) => items[id].material);
+  assert.equal(ids.length - materials.length, 280, '장비 280종 (단계 20 x 슬롯 13~14)');
+  assert.equal(materials.length, 20, '단계마다 제작 재료 하나');
+  // 드롭이 후보 id 를 만들 때 쓰는 표가 같이 있어야 한다
+  assert.equal(data['items.json'].slots.length, 8, '장비 슬롯 8종');
+  assert.ok(data['items.json'].slotCode.weapon === 'w', '슬롯 코드');
 });

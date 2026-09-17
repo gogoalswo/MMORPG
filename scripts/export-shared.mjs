@@ -5,7 +5,8 @@
  * 존·몬스터·스킬은 TS 의 생성 함수가 원본이고, 고도는 그 **결과만** 읽는다.
  * 덕분에 packages/shared 의 전수 검사(*.test.ts)가 그대로 살아 있다.
  *
- * 아이템은 넣지 않았다 — 나중에 다시 만들기로 했다 (2026-09-16).
+ * 아이템도 내보낸다. 한때 뺐지만(2026-09-16) 등급·랜덤옵션·강화를 그대로 가기로
+ * 해서 생성기가 그대로 유효하다 (2026-09-17). 표를 고치면 다시 내보내면 된다.
  *
  *   node scripts/export-shared.mjs          내보낸다
  *   node scripts/export-shared.mjs --check   파일이 최신인지만 본다 (안 쓴다)
@@ -52,6 +53,23 @@ import {
   NPC_REACH,
   START_ZONE,
   FIELD_ORDER,
+  ITEMS,
+  EQUIP_SLOTS,
+  SLOT_CODE,
+  JOB_SLOTS,
+  INVENTORY_SIZE,
+  GRADE_MIN,
+  GRADE_MAX,
+  MAX_DROP_GRADE,
+  OPTION_KINDS,
+  OPTION_MIN,
+  OPTION_MAX,
+  OPTION_LABEL,
+  MAX_ENHANCE,
+  DROP_CHANCE,
+  BOSS_MATERIALS,
+  FORGE_MATERIALS,
+  TIER_COUNT,
 } from '../packages/shared/src/index.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -93,6 +111,26 @@ export function buildData() {
       skillBlastRatio: SKILL_BLAST_RATIO,
       skillBlastMax: SKILL_BLAST_MAX,
       skillBlastMin: SKILL_BLAST_MIN,
+    },
+    'items.json': {
+      items: ITEMS,
+      slots: EQUIP_SLOTS,
+      // 드롭이 후보 id 를 만들 때 쓴다 (슬롯 코드 + 직업 + 단계)
+      slotCode: SLOT_CODE,
+      jobSlots: JOB_SLOTS,
+      bagSize: INVENTORY_SIZE,
+      gradeMin: GRADE_MIN,
+      gradeMax: GRADE_MAX,
+      maxDropGrade: MAX_DROP_GRADE,
+      optionKinds: OPTION_KINDS,
+      optionMin: OPTION_MIN,
+      optionMax: OPTION_MAX,
+      optionLabel: OPTION_LABEL,
+      maxEnhance: MAX_ENHANCE,
+      dropChance: DROP_CHANCE,
+      bossMaterials: BOSS_MATERIALS,
+      forgeMaterials: FORGE_MATERIALS,
+      tierCount: TIER_COUNT,
     },
     'constants.json': {
       tickRate: TICK_RATE,

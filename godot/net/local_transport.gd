@@ -47,6 +47,10 @@ func send(message: StringName, payload: Dictionary) -> void:
 			_world.set_skill_bar(MY_ID, payload.get("bar", []))
 		&"skill":
 			_world.cast(MY_ID, str(payload.get("skill", "")))
+		&"equip":
+			_world.equip(MY_ID, int(payload.get("index", -1)))
+		&"unequip":
+			_world.unequip(MY_ID, str(payload.get("slot", "")))
 		&"save":
 			_world.save(MY_ID)
 		_:

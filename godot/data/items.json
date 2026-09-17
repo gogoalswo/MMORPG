@@ -1,0 +1,3395 @@
+{
+  "items": {
+    "w_knight_00": {
+      "id": "w_knight_00",
+      "name": "낡은 장검",
+      "slot": "weapon",
+      "level": 1,
+      "job": "knight",
+      "bonus": {
+        "attack": 3
+      },
+      "price": 32
+    },
+    "w_mage_00": {
+      "id": "w_mage_00",
+      "name": "낡은 지팡이",
+      "slot": "weapon",
+      "level": 1,
+      "job": "mage",
+      "bonus": {
+        "attack": 3
+      },
+      "price": 32
+    },
+    "w_archer_00": {
+      "id": "w_archer_00",
+      "name": "낡은 활",
+      "slot": "weapon",
+      "level": 1,
+      "job": "archer",
+      "bonus": {
+        "attack": 3
+      },
+      "price": 32
+    },
+    "w_fighter_00": {
+      "id": "w_fighter_00",
+      "name": "낡은 너클",
+      "slot": "weapon",
+      "level": 1,
+      "job": "fighter",
+      "bonus": {
+        "attack": 3
+      },
+      "price": 32
+    },
+    "o_knight_00": {
+      "id": "o_knight_00",
+      "name": "낡은 방패",
+      "slot": "offhand",
+      "level": 1,
+      "job": "knight",
+      "bonus": {
+        "defense": 1,
+        "maxHp": 7
+      },
+      "price": 32
+    },
+    "o_mage_00": {
+      "id": "o_mage_00",
+      "name": "낡은 마법서",
+      "slot": "offhand",
+      "level": 1,
+      "job": "mage",
+      "bonus": {
+        "attack": 1,
+        "maxHp": 3
+      },
+      "price": 32
+    },
+    "o_archer_00": {
+      "id": "o_archer_00",
+      "name": "낡은 화살통",
+      "slot": "offhand",
+      "level": 1,
+      "job": "archer",
+      "bonus": {
+        "attack": 1,
+        "defense": 0
+      },
+      "price": 32
+    },
+    "o_fighter_00": {
+      "id": "o_fighter_00",
+      "name": "낡은 보호대",
+      "slot": "offhand",
+      "level": 1,
+      "job": "fighter",
+      "bonus": {
+        "attack": 1,
+        "maxHp": 5
+      },
+      "price": 32
+    },
+    "h_00": {
+      "id": "h_00",
+      "name": "낡은 투구",
+      "slot": "helmet",
+      "level": 1,
+      "bonus": {
+        "maxHp": 8,
+        "defense": 1
+      },
+      "price": 32
+    },
+    "a_00": {
+      "id": "a_00",
+      "name": "낡은 갑옷",
+      "slot": "armor",
+      "level": 1,
+      "bonus": {
+        "maxHp": 14,
+        "defense": 1
+      },
+      "price": 32
+    },
+    "b_00": {
+      "id": "b_00",
+      "name": "낡은 신발",
+      "slot": "boots",
+      "level": 1,
+      "bonus": {
+        "maxHp": 6,
+        "defense": 1
+      },
+      "price": 32
+    },
+    "r_00": {
+      "id": "r_00",
+      "name": "낡은 반지",
+      "slot": "ring",
+      "level": 1,
+      "bonus": {
+        "attack": 1,
+        "maxHp": 2
+      },
+      "price": 32
+    },
+    "n_00": {
+      "id": "n_00",
+      "name": "낡은 목걸이",
+      "slot": "necklace",
+      "level": 1,
+      "bonus": {
+        "attack": 1,
+        "maxHp": 3
+      },
+      "price": 32
+    },
+    "e_00": {
+      "id": "e_00",
+      "name": "낡은 귀걸이",
+      "slot": "earring",
+      "level": 1,
+      "bonus": {
+        "defense": 1,
+        "maxHp": 4
+      },
+      "price": 32
+    },
+    "m_00": {
+      "id": "m_00",
+      "name": "낡은 정수",
+      "slot": null,
+      "level": 1,
+      "bonus": {},
+      "price": 13,
+      "material": true
+    },
+    "w_knight_01": {
+      "id": "w_knight_01",
+      "name": "단단한 장검",
+      "slot": "weapon",
+      "level": 10,
+      "job": "knight",
+      "bonus": {
+        "attack": 8
+      },
+      "price": 140
+    },
+    "w_mage_01": {
+      "id": "w_mage_01",
+      "name": "단단한 지팡이",
+      "slot": "weapon",
+      "level": 10,
+      "job": "mage",
+      "bonus": {
+        "attack": 8
+      },
+      "price": 140
+    },
+    "w_archer_01": {
+      "id": "w_archer_01",
+      "name": "단단한 활",
+      "slot": "weapon",
+      "level": 10,
+      "job": "archer",
+      "bonus": {
+        "attack": 8
+      },
+      "price": 140
+    },
+    "w_fighter_01": {
+      "id": "w_fighter_01",
+      "name": "단단한 너클",
+      "slot": "weapon",
+      "level": 10,
+      "job": "fighter",
+      "bonus": {
+        "attack": 8
+      },
+      "price": 140
+    },
+    "o_knight_01": {
+      "id": "o_knight_01",
+      "name": "단단한 방패",
+      "slot": "offhand",
+      "level": 10,
+      "job": "knight",
+      "bonus": {
+        "defense": 5,
+        "maxHp": 25
+      },
+      "price": 140
+    },
+    "o_mage_01": {
+      "id": "o_mage_01",
+      "name": "단단한 마법서",
+      "slot": "offhand",
+      "level": 10,
+      "job": "mage",
+      "bonus": {
+        "attack": 4,
+        "maxHp": 10
+      },
+      "price": 140
+    },
+    "o_archer_01": {
+      "id": "o_archer_01",
+      "name": "단단한 화살통",
+      "slot": "offhand",
+      "level": 10,
+      "job": "archer",
+      "bonus": {
+        "attack": 4,
+        "defense": 2
+      },
+      "price": 140
+    },
+    "o_fighter_01": {
+      "id": "o_fighter_01",
+      "name": "단단한 보호대",
+      "slot": "offhand",
+      "level": 10,
+      "job": "fighter",
+      "bonus": {
+        "attack": 3,
+        "maxHp": 18
+      },
+      "price": 140
+    },
+    "h_01": {
+      "id": "h_01",
+      "name": "단단한 투구",
+      "slot": "helmet",
+      "level": 10,
+      "bonus": {
+        "maxHp": 30,
+        "defense": 3
+      },
+      "price": 140
+    },
+    "a_01": {
+      "id": "a_01",
+      "name": "단단한 갑옷",
+      "slot": "armor",
+      "level": 10,
+      "bonus": {
+        "maxHp": 50,
+        "defense": 5
+      },
+      "price": 140
+    },
+    "b_01": {
+      "id": "b_01",
+      "name": "단단한 신발",
+      "slot": "boots",
+      "level": 10,
+      "bonus": {
+        "maxHp": 20,
+        "defense": 2
+      },
+      "price": 140
+    },
+    "r_01": {
+      "id": "r_01",
+      "name": "단단한 반지",
+      "slot": "ring",
+      "level": 10,
+      "bonus": {
+        "attack": 4,
+        "maxHp": 8
+      },
+      "price": 140
+    },
+    "n_01": {
+      "id": "n_01",
+      "name": "단단한 목걸이",
+      "slot": "necklace",
+      "level": 10,
+      "bonus": {
+        "attack": 4,
+        "maxHp": 10
+      },
+      "price": 140
+    },
+    "e_01": {
+      "id": "e_01",
+      "name": "단단한 귀걸이",
+      "slot": "earring",
+      "level": 10,
+      "bonus": {
+        "defense": 3,
+        "maxHp": 13
+      },
+      "price": 140
+    },
+    "m_01": {
+      "id": "m_01",
+      "name": "단단한 정수",
+      "slot": null,
+      "level": 10,
+      "bonus": {},
+      "price": 56,
+      "material": true
+    },
+    "w_knight_02": {
+      "id": "w_knight_02",
+      "name": "강철 장검",
+      "slot": "weapon",
+      "level": 20,
+      "job": "knight",
+      "bonus": {
+        "attack": 14
+      },
+      "price": 260
+    },
+    "w_mage_02": {
+      "id": "w_mage_02",
+      "name": "강철 지팡이",
+      "slot": "weapon",
+      "level": 20,
+      "job": "mage",
+      "bonus": {
+        "attack": 14
+      },
+      "price": 260
+    },
+    "w_archer_02": {
+      "id": "w_archer_02",
+      "name": "강철 활",
+      "slot": "weapon",
+      "level": 20,
+      "job": "archer",
+      "bonus": {
+        "attack": 14
+      },
+      "price": 260
+    },
+    "w_fighter_02": {
+      "id": "w_fighter_02",
+      "name": "강철 너클",
+      "slot": "weapon",
+      "level": 20,
+      "job": "fighter",
+      "bonus": {
+        "attack": 14
+      },
+      "price": 260
+    },
+    "o_knight_02": {
+      "id": "o_knight_02",
+      "name": "강철 방패",
+      "slot": "offhand",
+      "level": 20,
+      "job": "knight",
+      "bonus": {
+        "defense": 8,
+        "maxHp": 45
+      },
+      "price": 260
+    },
+    "o_mage_02": {
+      "id": "o_mage_02",
+      "name": "강철 마법서",
+      "slot": "offhand",
+      "level": 20,
+      "job": "mage",
+      "bonus": {
+        "attack": 8,
+        "maxHp": 18
+      },
+      "price": 260
+    },
+    "o_archer_02": {
+      "id": "o_archer_02",
+      "name": "강철 화살통",
+      "slot": "offhand",
+      "level": 20,
+      "job": "archer",
+      "bonus": {
+        "attack": 7,
+        "defense": 3
+      },
+      "price": 260
+    },
+    "o_fighter_02": {
+      "id": "o_fighter_02",
+      "name": "강철 보호대",
+      "slot": "offhand",
+      "level": 20,
+      "job": "fighter",
+      "bonus": {
+        "attack": 5,
+        "maxHp": 31
+      },
+      "price": 260
+    },
+    "h_02": {
+      "id": "h_02",
+      "name": "강철 투구",
+      "slot": "helmet",
+      "level": 20,
+      "bonus": {
+        "maxHp": 54,
+        "defense": 5
+      },
+      "price": 260
+    },
+    "a_02": {
+      "id": "a_02",
+      "name": "강철 갑옷",
+      "slot": "armor",
+      "level": 20,
+      "bonus": {
+        "maxHp": 90,
+        "defense": 9
+      },
+      "price": 260
+    },
+    "b_02": {
+      "id": "b_02",
+      "name": "강철 신발",
+      "slot": "boots",
+      "level": 20,
+      "bonus": {
+        "maxHp": 36,
+        "defense": 4
+      },
+      "price": 260
+    },
+    "r_02": {
+      "id": "r_02",
+      "name": "강철 반지",
+      "slot": "ring",
+      "level": 20,
+      "bonus": {
+        "attack": 6,
+        "maxHp": 14
+      },
+      "price": 260
+    },
+    "n_02": {
+      "id": "n_02",
+      "name": "강철 목걸이",
+      "slot": "necklace",
+      "level": 20,
+      "bonus": {
+        "attack": 7,
+        "maxHp": 18
+      },
+      "price": 260
+    },
+    "e_02": {
+      "id": "e_02",
+      "name": "강철 귀걸이",
+      "slot": "earring",
+      "level": 20,
+      "bonus": {
+        "defense": 5,
+        "maxHp": 23
+      },
+      "price": 260
+    },
+    "m_02": {
+      "id": "m_02",
+      "name": "강철 정수",
+      "slot": null,
+      "level": 20,
+      "bonus": {},
+      "price": 104,
+      "material": true
+    },
+    "w_knight_03": {
+      "id": "w_knight_03",
+      "name": "은빛 장검",
+      "slot": "weapon",
+      "level": 30,
+      "job": "knight",
+      "bonus": {
+        "attack": 20
+      },
+      "price": 380
+    },
+    "w_mage_03": {
+      "id": "w_mage_03",
+      "name": "은빛 지팡이",
+      "slot": "weapon",
+      "level": 30,
+      "job": "mage",
+      "bonus": {
+        "attack": 20
+      },
+      "price": 380
+    },
+    "w_archer_03": {
+      "id": "w_archer_03",
+      "name": "은빛 활",
+      "slot": "weapon",
+      "level": 30,
+      "job": "archer",
+      "bonus": {
+        "attack": 20
+      },
+      "price": 380
+    },
+    "w_fighter_03": {
+      "id": "w_fighter_03",
+      "name": "은빛 너클",
+      "slot": "weapon",
+      "level": 30,
+      "job": "fighter",
+      "bonus": {
+        "attack": 20
+      },
+      "price": 380
+    },
+    "o_knight_03": {
+      "id": "o_knight_03",
+      "name": "은빛 방패",
+      "slot": "offhand",
+      "level": 30,
+      "job": "knight",
+      "bonus": {
+        "defense": 12,
+        "maxHp": 65
+      },
+      "price": 380
+    },
+    "o_mage_03": {
+      "id": "o_mage_03",
+      "name": "은빛 마법서",
+      "slot": "offhand",
+      "level": 30,
+      "job": "mage",
+      "bonus": {
+        "attack": 11,
+        "maxHp": 26
+      },
+      "price": 380
+    },
+    "o_archer_03": {
+      "id": "o_archer_03",
+      "name": "은빛 화살통",
+      "slot": "offhand",
+      "level": 30,
+      "job": "archer",
+      "bonus": {
+        "attack": 10,
+        "defense": 4
+      },
+      "price": 380
+    },
+    "o_fighter_03": {
+      "id": "o_fighter_03",
+      "name": "은빛 보호대",
+      "slot": "offhand",
+      "level": 30,
+      "job": "fighter",
+      "bonus": {
+        "attack": 7,
+        "maxHp": 46
+      },
+      "price": 380
+    },
+    "h_03": {
+      "id": "h_03",
+      "name": "은빛 투구",
+      "slot": "helmet",
+      "level": 30,
+      "bonus": {
+        "maxHp": 78,
+        "defense": 8
+      },
+      "price": 380
+    },
+    "a_03": {
+      "id": "a_03",
+      "name": "은빛 갑옷",
+      "slot": "armor",
+      "level": 30,
+      "bonus": {
+        "maxHp": 130,
+        "defense": 13
+      },
+      "price": 380
+    },
+    "b_03": {
+      "id": "b_03",
+      "name": "은빛 신발",
+      "slot": "boots",
+      "level": 30,
+      "bonus": {
+        "maxHp": 52,
+        "defense": 6
+      },
+      "price": 380
+    },
+    "r_03": {
+      "id": "r_03",
+      "name": "은빛 반지",
+      "slot": "ring",
+      "level": 30,
+      "bonus": {
+        "attack": 9,
+        "maxHp": 20
+      },
+      "price": 380
+    },
+    "n_03": {
+      "id": "n_03",
+      "name": "은빛 목걸이",
+      "slot": "necklace",
+      "level": 30,
+      "bonus": {
+        "attack": 10,
+        "maxHp": 26
+      },
+      "price": 380
+    },
+    "e_03": {
+      "id": "e_03",
+      "name": "은빛 귀걸이",
+      "slot": "earring",
+      "level": 30,
+      "bonus": {
+        "defense": 8,
+        "maxHp": 33
+      },
+      "price": 380
+    },
+    "m_03": {
+      "id": "m_03",
+      "name": "은빛 정수",
+      "slot": null,
+      "level": 30,
+      "bonus": {},
+      "price": 152,
+      "material": true
+    },
+    "w_knight_04": {
+      "id": "w_knight_04",
+      "name": "늪지 장검",
+      "slot": "weapon",
+      "level": 40,
+      "job": "knight",
+      "bonus": {
+        "attack": 26
+      },
+      "price": 500
+    },
+    "w_mage_04": {
+      "id": "w_mage_04",
+      "name": "늪지 지팡이",
+      "slot": "weapon",
+      "level": 40,
+      "job": "mage",
+      "bonus": {
+        "attack": 26
+      },
+      "price": 500
+    },
+    "w_archer_04": {
+      "id": "w_archer_04",
+      "name": "늪지 활",
+      "slot": "weapon",
+      "level": 40,
+      "job": "archer",
+      "bonus": {
+        "attack": 26
+      },
+      "price": 500
+    },
+    "w_fighter_04": {
+      "id": "w_fighter_04",
+      "name": "늪지 너클",
+      "slot": "weapon",
+      "level": 40,
+      "job": "fighter",
+      "bonus": {
+        "attack": 26
+      },
+      "price": 500
+    },
+    "o_knight_04": {
+      "id": "o_knight_04",
+      "name": "늪지 방패",
+      "slot": "offhand",
+      "level": 40,
+      "job": "knight",
+      "bonus": {
+        "defense": 15,
+        "maxHp": 85
+      },
+      "price": 500
+    },
+    "o_mage_04": {
+      "id": "o_mage_04",
+      "name": "늪지 마법서",
+      "slot": "offhand",
+      "level": 40,
+      "job": "mage",
+      "bonus": {
+        "attack": 14,
+        "maxHp": 34
+      },
+      "price": 500
+    },
+    "o_archer_04": {
+      "id": "o_archer_04",
+      "name": "늪지 화살통",
+      "slot": "offhand",
+      "level": 40,
+      "job": "archer",
+      "bonus": {
+        "attack": 13,
+        "defense": 5
+      },
+      "price": 500
+    },
+    "o_fighter_04": {
+      "id": "o_fighter_04",
+      "name": "늪지 보호대",
+      "slot": "offhand",
+      "level": 40,
+      "job": "fighter",
+      "bonus": {
+        "attack": 9,
+        "maxHp": 59
+      },
+      "price": 500
+    },
+    "h_04": {
+      "id": "h_04",
+      "name": "늪지 투구",
+      "slot": "helmet",
+      "level": 40,
+      "bonus": {
+        "maxHp": 102,
+        "defense": 10
+      },
+      "price": 500
+    },
+    "a_04": {
+      "id": "a_04",
+      "name": "늪지 갑옷",
+      "slot": "armor",
+      "level": 40,
+      "bonus": {
+        "maxHp": 170,
+        "defense": 17
+      },
+      "price": 500
+    },
+    "b_04": {
+      "id": "b_04",
+      "name": "늪지 신발",
+      "slot": "boots",
+      "level": 40,
+      "bonus": {
+        "maxHp": 68,
+        "defense": 8
+      },
+      "price": 500
+    },
+    "r_04": {
+      "id": "r_04",
+      "name": "늪지 반지",
+      "slot": "ring",
+      "level": 40,
+      "bonus": {
+        "attack": 12,
+        "maxHp": 26
+      },
+      "price": 500
+    },
+    "n_04": {
+      "id": "n_04",
+      "name": "늪지 목걸이",
+      "slot": "necklace",
+      "level": 40,
+      "bonus": {
+        "attack": 13,
+        "maxHp": 34
+      },
+      "price": 500
+    },
+    "e_04": {
+      "id": "e_04",
+      "name": "늪지 귀걸이",
+      "slot": "earring",
+      "level": 40,
+      "bonus": {
+        "defense": 10,
+        "maxHp": 43
+      },
+      "price": 500
+    },
+    "m_04": {
+      "id": "m_04",
+      "name": "늪지 정수",
+      "slot": null,
+      "level": 40,
+      "bonus": {},
+      "price": 200,
+      "material": true
+    },
+    "w_knight_05": {
+      "id": "w_knight_05",
+      "name": "서리 장검",
+      "slot": "weapon",
+      "level": 50,
+      "job": "knight",
+      "bonus": {
+        "attack": 32
+      },
+      "price": 620
+    },
+    "w_mage_05": {
+      "id": "w_mage_05",
+      "name": "서리 지팡이",
+      "slot": "weapon",
+      "level": 50,
+      "job": "mage",
+      "bonus": {
+        "attack": 32
+      },
+      "price": 620
+    },
+    "w_archer_05": {
+      "id": "w_archer_05",
+      "name": "서리 활",
+      "slot": "weapon",
+      "level": 50,
+      "job": "archer",
+      "bonus": {
+        "attack": 32
+      },
+      "price": 620
+    },
+    "w_fighter_05": {
+      "id": "w_fighter_05",
+      "name": "서리 너클",
+      "slot": "weapon",
+      "level": 50,
+      "job": "fighter",
+      "bonus": {
+        "attack": 32
+      },
+      "price": 620
+    },
+    "o_knight_05": {
+      "id": "o_knight_05",
+      "name": "서리 방패",
+      "slot": "offhand",
+      "level": 50,
+      "job": "knight",
+      "bonus": {
+        "defense": 19,
+        "maxHp": 105
+      },
+      "price": 620
+    },
+    "o_mage_05": {
+      "id": "o_mage_05",
+      "name": "서리 마법서",
+      "slot": "offhand",
+      "level": 50,
+      "job": "mage",
+      "bonus": {
+        "attack": 18,
+        "maxHp": 42
+      },
+      "price": 620
+    },
+    "o_archer_05": {
+      "id": "o_archer_05",
+      "name": "서리 화살통",
+      "slot": "offhand",
+      "level": 50,
+      "job": "archer",
+      "bonus": {
+        "attack": 16,
+        "defense": 6
+      },
+      "price": 620
+    },
+    "o_fighter_05": {
+      "id": "o_fighter_05",
+      "name": "서리 보호대",
+      "slot": "offhand",
+      "level": 50,
+      "job": "fighter",
+      "bonus": {
+        "attack": 11,
+        "maxHp": 74
+      },
+      "price": 620
+    },
+    "h_05": {
+      "id": "h_05",
+      "name": "서리 투구",
+      "slot": "helmet",
+      "level": 50,
+      "bonus": {
+        "maxHp": 126,
+        "defense": 13
+      },
+      "price": 620
+    },
+    "a_05": {
+      "id": "a_05",
+      "name": "서리 갑옷",
+      "slot": "armor",
+      "level": 50,
+      "bonus": {
+        "maxHp": 210,
+        "defense": 21
+      },
+      "price": 620
+    },
+    "b_05": {
+      "id": "b_05",
+      "name": "서리 신발",
+      "slot": "boots",
+      "level": 50,
+      "bonus": {
+        "maxHp": 84,
+        "defense": 9
+      },
+      "price": 620
+    },
+    "r_05": {
+      "id": "r_05",
+      "name": "서리 반지",
+      "slot": "ring",
+      "level": 50,
+      "bonus": {
+        "attack": 14,
+        "maxHp": 32
+      },
+      "price": 620
+    },
+    "n_05": {
+      "id": "n_05",
+      "name": "서리 목걸이",
+      "slot": "necklace",
+      "level": 50,
+      "bonus": {
+        "attack": 16,
+        "maxHp": 42
+      },
+      "price": 620
+    },
+    "e_05": {
+      "id": "e_05",
+      "name": "서리 귀걸이",
+      "slot": "earring",
+      "level": 50,
+      "bonus": {
+        "defense": 13,
+        "maxHp": 53
+      },
+      "price": 620
+    },
+    "m_05": {
+      "id": "m_05",
+      "name": "서리 정수",
+      "slot": null,
+      "level": 50,
+      "bonus": {},
+      "price": 248,
+      "material": true
+    },
+    "w_knight_06": {
+      "id": "w_knight_06",
+      "name": "흑단 장검",
+      "slot": "weapon",
+      "level": 60,
+      "job": "knight",
+      "bonus": {
+        "attack": 38
+      },
+      "price": 740
+    },
+    "w_mage_06": {
+      "id": "w_mage_06",
+      "name": "흑단 지팡이",
+      "slot": "weapon",
+      "level": 60,
+      "job": "mage",
+      "bonus": {
+        "attack": 38
+      },
+      "price": 740
+    },
+    "w_archer_06": {
+      "id": "w_archer_06",
+      "name": "흑단 활",
+      "slot": "weapon",
+      "level": 60,
+      "job": "archer",
+      "bonus": {
+        "attack": 38
+      },
+      "price": 740
+    },
+    "w_fighter_06": {
+      "id": "w_fighter_06",
+      "name": "흑단 너클",
+      "slot": "weapon",
+      "level": 60,
+      "job": "fighter",
+      "bonus": {
+        "attack": 38
+      },
+      "price": 740
+    },
+    "o_knight_06": {
+      "id": "o_knight_06",
+      "name": "흑단 방패",
+      "slot": "offhand",
+      "level": 60,
+      "job": "knight",
+      "bonus": {
+        "defense": 23,
+        "maxHp": 125
+      },
+      "price": 740
+    },
+    "o_mage_06": {
+      "id": "o_mage_06",
+      "name": "흑단 마법서",
+      "slot": "offhand",
+      "level": 60,
+      "job": "mage",
+      "bonus": {
+        "attack": 21,
+        "maxHp": 50
+      },
+      "price": 740
+    },
+    "o_archer_06": {
+      "id": "o_archer_06",
+      "name": "흑단 화살통",
+      "slot": "offhand",
+      "level": 60,
+      "job": "archer",
+      "bonus": {
+        "attack": 19,
+        "defense": 8
+      },
+      "price": 740
+    },
+    "o_fighter_06": {
+      "id": "o_fighter_06",
+      "name": "흑단 보호대",
+      "slot": "offhand",
+      "level": 60,
+      "job": "fighter",
+      "bonus": {
+        "attack": 13,
+        "maxHp": 88
+      },
+      "price": 740
+    },
+    "h_06": {
+      "id": "h_06",
+      "name": "흑단 투구",
+      "slot": "helmet",
+      "level": 60,
+      "bonus": {
+        "maxHp": 150,
+        "defense": 15
+      },
+      "price": 740
+    },
+    "a_06": {
+      "id": "a_06",
+      "name": "흑단 갑옷",
+      "slot": "armor",
+      "level": 60,
+      "bonus": {
+        "maxHp": 250,
+        "defense": 25
+      },
+      "price": 740
+    },
+    "b_06": {
+      "id": "b_06",
+      "name": "흑단 신발",
+      "slot": "boots",
+      "level": 60,
+      "bonus": {
+        "maxHp": 100,
+        "defense": 11
+      },
+      "price": 740
+    },
+    "r_06": {
+      "id": "r_06",
+      "name": "흑단 반지",
+      "slot": "ring",
+      "level": 60,
+      "bonus": {
+        "attack": 17,
+        "maxHp": 38
+      },
+      "price": 740
+    },
+    "n_06": {
+      "id": "n_06",
+      "name": "흑단 목걸이",
+      "slot": "necklace",
+      "level": 60,
+      "bonus": {
+        "attack": 19,
+        "maxHp": 50
+      },
+      "price": 740
+    },
+    "e_06": {
+      "id": "e_06",
+      "name": "흑단 귀걸이",
+      "slot": "earring",
+      "level": 60,
+      "bonus": {
+        "defense": 15,
+        "maxHp": 63
+      },
+      "price": 740
+    },
+    "m_06": {
+      "id": "m_06",
+      "name": "흑단 정수",
+      "slot": null,
+      "level": 60,
+      "bonus": {},
+      "price": 296,
+      "material": true
+    },
+    "w_knight_07": {
+      "id": "w_knight_07",
+      "name": "고대 장검",
+      "slot": "weapon",
+      "level": 70,
+      "job": "knight",
+      "bonus": {
+        "attack": 44
+      },
+      "price": 860
+    },
+    "w_mage_07": {
+      "id": "w_mage_07",
+      "name": "고대 지팡이",
+      "slot": "weapon",
+      "level": 70,
+      "job": "mage",
+      "bonus": {
+        "attack": 44
+      },
+      "price": 860
+    },
+    "w_archer_07": {
+      "id": "w_archer_07",
+      "name": "고대 활",
+      "slot": "weapon",
+      "level": 70,
+      "job": "archer",
+      "bonus": {
+        "attack": 44
+      },
+      "price": 860
+    },
+    "w_fighter_07": {
+      "id": "w_fighter_07",
+      "name": "고대 너클",
+      "slot": "weapon",
+      "level": 70,
+      "job": "fighter",
+      "bonus": {
+        "attack": 44
+      },
+      "price": 860
+    },
+    "o_knight_07": {
+      "id": "o_knight_07",
+      "name": "고대 방패",
+      "slot": "offhand",
+      "level": 70,
+      "job": "knight",
+      "bonus": {
+        "defense": 26,
+        "maxHp": 145
+      },
+      "price": 860
+    },
+    "o_mage_07": {
+      "id": "o_mage_07",
+      "name": "고대 마법서",
+      "slot": "offhand",
+      "level": 70,
+      "job": "mage",
+      "bonus": {
+        "attack": 24,
+        "maxHp": 58
+      },
+      "price": 860
+    },
+    "o_archer_07": {
+      "id": "o_archer_07",
+      "name": "고대 화살통",
+      "slot": "offhand",
+      "level": 70,
+      "job": "archer",
+      "bonus": {
+        "attack": 22,
+        "defense": 9
+      },
+      "price": 860
+    },
+    "o_fighter_07": {
+      "id": "o_fighter_07",
+      "name": "고대 보호대",
+      "slot": "offhand",
+      "level": 70,
+      "job": "fighter",
+      "bonus": {
+        "attack": 15,
+        "maxHp": 102
+      },
+      "price": 860
+    },
+    "h_07": {
+      "id": "h_07",
+      "name": "고대 투구",
+      "slot": "helmet",
+      "level": 70,
+      "bonus": {
+        "maxHp": 174,
+        "defense": 17
+      },
+      "price": 860
+    },
+    "a_07": {
+      "id": "a_07",
+      "name": "고대 갑옷",
+      "slot": "armor",
+      "level": 70,
+      "bonus": {
+        "maxHp": 290,
+        "defense": 29
+      },
+      "price": 860
+    },
+    "b_07": {
+      "id": "b_07",
+      "name": "고대 신발",
+      "slot": "boots",
+      "level": 70,
+      "bonus": {
+        "maxHp": 116,
+        "defense": 13
+      },
+      "price": 860
+    },
+    "r_07": {
+      "id": "r_07",
+      "name": "고대 반지",
+      "slot": "ring",
+      "level": 70,
+      "bonus": {
+        "attack": 20,
+        "maxHp": 44
+      },
+      "price": 860
+    },
+    "n_07": {
+      "id": "n_07",
+      "name": "고대 목걸이",
+      "slot": "necklace",
+      "level": 70,
+      "bonus": {
+        "attack": 22,
+        "maxHp": 58
+      },
+      "price": 860
+    },
+    "e_07": {
+      "id": "e_07",
+      "name": "고대 귀걸이",
+      "slot": "earring",
+      "level": 70,
+      "bonus": {
+        "defense": 17,
+        "maxHp": 73
+      },
+      "price": 860
+    },
+    "m_07": {
+      "id": "m_07",
+      "name": "고대 정수",
+      "slot": null,
+      "level": 70,
+      "bonus": {},
+      "price": 344,
+      "material": true
+    },
+    "w_knight_08": {
+      "id": "w_knight_08",
+      "name": "사막 장검",
+      "slot": "weapon",
+      "level": 80,
+      "job": "knight",
+      "bonus": {
+        "attack": 50
+      },
+      "price": 980
+    },
+    "w_mage_08": {
+      "id": "w_mage_08",
+      "name": "사막 지팡이",
+      "slot": "weapon",
+      "level": 80,
+      "job": "mage",
+      "bonus": {
+        "attack": 50
+      },
+      "price": 980
+    },
+    "w_archer_08": {
+      "id": "w_archer_08",
+      "name": "사막 활",
+      "slot": "weapon",
+      "level": 80,
+      "job": "archer",
+      "bonus": {
+        "attack": 50
+      },
+      "price": 980
+    },
+    "w_fighter_08": {
+      "id": "w_fighter_08",
+      "name": "사막 너클",
+      "slot": "weapon",
+      "level": 80,
+      "job": "fighter",
+      "bonus": {
+        "attack": 50
+      },
+      "price": 980
+    },
+    "o_knight_08": {
+      "id": "o_knight_08",
+      "name": "사막 방패",
+      "slot": "offhand",
+      "level": 80,
+      "job": "knight",
+      "bonus": {
+        "defense": 30,
+        "maxHp": 165
+      },
+      "price": 980
+    },
+    "o_mage_08": {
+      "id": "o_mage_08",
+      "name": "사막 마법서",
+      "slot": "offhand",
+      "level": 80,
+      "job": "mage",
+      "bonus": {
+        "attack": 28,
+        "maxHp": 66
+      },
+      "price": 980
+    },
+    "o_archer_08": {
+      "id": "o_archer_08",
+      "name": "사막 화살통",
+      "slot": "offhand",
+      "level": 80,
+      "job": "archer",
+      "bonus": {
+        "attack": 25,
+        "defense": 10
+      },
+      "price": 980
+    },
+    "o_fighter_08": {
+      "id": "o_fighter_08",
+      "name": "사막 보호대",
+      "slot": "offhand",
+      "level": 80,
+      "job": "fighter",
+      "bonus": {
+        "attack": 18,
+        "maxHp": 115
+      },
+      "price": 980
+    },
+    "h_08": {
+      "id": "h_08",
+      "name": "사막 투구",
+      "slot": "helmet",
+      "level": 80,
+      "bonus": {
+        "maxHp": 198,
+        "defense": 20
+      },
+      "price": 980
+    },
+    "a_08": {
+      "id": "a_08",
+      "name": "사막 갑옷",
+      "slot": "armor",
+      "level": 80,
+      "bonus": {
+        "maxHp": 330,
+        "defense": 33
+      },
+      "price": 980
+    },
+    "b_08": {
+      "id": "b_08",
+      "name": "사막 신발",
+      "slot": "boots",
+      "level": 80,
+      "bonus": {
+        "maxHp": 132,
+        "defense": 15
+      },
+      "price": 980
+    },
+    "r_08": {
+      "id": "r_08",
+      "name": "사막 반지",
+      "slot": "ring",
+      "level": 80,
+      "bonus": {
+        "attack": 23,
+        "maxHp": 50
+      },
+      "price": 980
+    },
+    "n_08": {
+      "id": "n_08",
+      "name": "사막 목걸이",
+      "slot": "necklace",
+      "level": 80,
+      "bonus": {
+        "attack": 25,
+        "maxHp": 66
+      },
+      "price": 980
+    },
+    "e_08": {
+      "id": "e_08",
+      "name": "사막 귀걸이",
+      "slot": "earring",
+      "level": 80,
+      "bonus": {
+        "defense": 20,
+        "maxHp": 83
+      },
+      "price": 980
+    },
+    "m_08": {
+      "id": "m_08",
+      "name": "사막 정수",
+      "slot": null,
+      "level": 80,
+      "bonus": {},
+      "price": 392,
+      "material": true
+    },
+    "w_knight_09": {
+      "id": "w_knight_09",
+      "name": "백금 장검",
+      "slot": "weapon",
+      "level": 90,
+      "job": "knight",
+      "bonus": {
+        "attack": 56
+      },
+      "price": 1100
+    },
+    "w_mage_09": {
+      "id": "w_mage_09",
+      "name": "백금 지팡이",
+      "slot": "weapon",
+      "level": 90,
+      "job": "mage",
+      "bonus": {
+        "attack": 56
+      },
+      "price": 1100
+    },
+    "w_archer_09": {
+      "id": "w_archer_09",
+      "name": "백금 활",
+      "slot": "weapon",
+      "level": 90,
+      "job": "archer",
+      "bonus": {
+        "attack": 56
+      },
+      "price": 1100
+    },
+    "w_fighter_09": {
+      "id": "w_fighter_09",
+      "name": "백금 너클",
+      "slot": "weapon",
+      "level": 90,
+      "job": "fighter",
+      "bonus": {
+        "attack": 56
+      },
+      "price": 1100
+    },
+    "o_knight_09": {
+      "id": "o_knight_09",
+      "name": "백금 방패",
+      "slot": "offhand",
+      "level": 90,
+      "job": "knight",
+      "bonus": {
+        "defense": 33,
+        "maxHp": 185
+      },
+      "price": 1100
+    },
+    "o_mage_09": {
+      "id": "o_mage_09",
+      "name": "백금 마법서",
+      "slot": "offhand",
+      "level": 90,
+      "job": "mage",
+      "bonus": {
+        "attack": 31,
+        "maxHp": 74
+      },
+      "price": 1100
+    },
+    "o_archer_09": {
+      "id": "o_archer_09",
+      "name": "백금 화살통",
+      "slot": "offhand",
+      "level": 90,
+      "job": "archer",
+      "bonus": {
+        "attack": 28,
+        "defense": 11
+      },
+      "price": 1100
+    },
+    "o_fighter_09": {
+      "id": "o_fighter_09",
+      "name": "백금 보호대",
+      "slot": "offhand",
+      "level": 90,
+      "job": "fighter",
+      "bonus": {
+        "attack": 20,
+        "maxHp": 130
+      },
+      "price": 1100
+    },
+    "h_09": {
+      "id": "h_09",
+      "name": "백금 투구",
+      "slot": "helmet",
+      "level": 90,
+      "bonus": {
+        "maxHp": 222,
+        "defense": 22
+      },
+      "price": 1100
+    },
+    "a_09": {
+      "id": "a_09",
+      "name": "백금 갑옷",
+      "slot": "armor",
+      "level": 90,
+      "bonus": {
+        "maxHp": 370,
+        "defense": 37
+      },
+      "price": 1100
+    },
+    "b_09": {
+      "id": "b_09",
+      "name": "백금 신발",
+      "slot": "boots",
+      "level": 90,
+      "bonus": {
+        "maxHp": 148,
+        "defense": 17
+      },
+      "price": 1100
+    },
+    "r_09": {
+      "id": "r_09",
+      "name": "백금 반지",
+      "slot": "ring",
+      "level": 90,
+      "bonus": {
+        "attack": 25,
+        "maxHp": 56
+      },
+      "price": 1100
+    },
+    "n_09": {
+      "id": "n_09",
+      "name": "백금 목걸이",
+      "slot": "necklace",
+      "level": 90,
+      "bonus": {
+        "attack": 28,
+        "maxHp": 74
+      },
+      "price": 1100
+    },
+    "e_09": {
+      "id": "e_09",
+      "name": "백금 귀걸이",
+      "slot": "earring",
+      "level": 90,
+      "bonus": {
+        "defense": 22,
+        "maxHp": 93
+      },
+      "price": 1100
+    },
+    "m_09": {
+      "id": "m_09",
+      "name": "백금 정수",
+      "slot": null,
+      "level": 90,
+      "bonus": {},
+      "price": 440,
+      "material": true
+    },
+    "w_knight_10": {
+      "id": "w_knight_10",
+      "name": "유황 장검",
+      "slot": "weapon",
+      "level": 100,
+      "job": "knight",
+      "bonus": {
+        "attack": 62
+      },
+      "price": 1220
+    },
+    "w_mage_10": {
+      "id": "w_mage_10",
+      "name": "유황 지팡이",
+      "slot": "weapon",
+      "level": 100,
+      "job": "mage",
+      "bonus": {
+        "attack": 62
+      },
+      "price": 1220
+    },
+    "w_archer_10": {
+      "id": "w_archer_10",
+      "name": "유황 활",
+      "slot": "weapon",
+      "level": 100,
+      "job": "archer",
+      "bonus": {
+        "attack": 62
+      },
+      "price": 1220
+    },
+    "w_fighter_10": {
+      "id": "w_fighter_10",
+      "name": "유황 너클",
+      "slot": "weapon",
+      "level": 100,
+      "job": "fighter",
+      "bonus": {
+        "attack": 62
+      },
+      "price": 1220
+    },
+    "o_knight_10": {
+      "id": "o_knight_10",
+      "name": "유황 방패",
+      "slot": "offhand",
+      "level": 100,
+      "job": "knight",
+      "bonus": {
+        "defense": 37,
+        "maxHp": 205
+      },
+      "price": 1220
+    },
+    "o_mage_10": {
+      "id": "o_mage_10",
+      "name": "유황 마법서",
+      "slot": "offhand",
+      "level": 100,
+      "job": "mage",
+      "bonus": {
+        "attack": 34,
+        "maxHp": 82
+      },
+      "price": 1220
+    },
+    "o_archer_10": {
+      "id": "o_archer_10",
+      "name": "유황 화살통",
+      "slot": "offhand",
+      "level": 100,
+      "job": "archer",
+      "bonus": {
+        "attack": 31,
+        "defense": 12
+      },
+      "price": 1220
+    },
+    "o_fighter_10": {
+      "id": "o_fighter_10",
+      "name": "유황 보호대",
+      "slot": "offhand",
+      "level": 100,
+      "job": "fighter",
+      "bonus": {
+        "attack": 22,
+        "maxHp": 144
+      },
+      "price": 1220
+    },
+    "h_10": {
+      "id": "h_10",
+      "name": "유황 투구",
+      "slot": "helmet",
+      "level": 100,
+      "bonus": {
+        "maxHp": 246,
+        "defense": 25
+      },
+      "price": 1220
+    },
+    "a_10": {
+      "id": "a_10",
+      "name": "유황 갑옷",
+      "slot": "armor",
+      "level": 100,
+      "bonus": {
+        "maxHp": 410,
+        "defense": 41
+      },
+      "price": 1220
+    },
+    "b_10": {
+      "id": "b_10",
+      "name": "유황 신발",
+      "slot": "boots",
+      "level": 100,
+      "bonus": {
+        "maxHp": 164,
+        "defense": 18
+      },
+      "price": 1220
+    },
+    "r_10": {
+      "id": "r_10",
+      "name": "유황 반지",
+      "slot": "ring",
+      "level": 100,
+      "bonus": {
+        "attack": 28,
+        "maxHp": 62
+      },
+      "price": 1220
+    },
+    "n_10": {
+      "id": "n_10",
+      "name": "유황 목걸이",
+      "slot": "necklace",
+      "level": 100,
+      "bonus": {
+        "attack": 31,
+        "maxHp": 82
+      },
+      "price": 1220
+    },
+    "e_10": {
+      "id": "e_10",
+      "name": "유황 귀걸이",
+      "slot": "earring",
+      "level": 100,
+      "bonus": {
+        "defense": 25,
+        "maxHp": 103
+      },
+      "price": 1220
+    },
+    "m_10": {
+      "id": "m_10",
+      "name": "유황 정수",
+      "slot": null,
+      "level": 100,
+      "bonus": {},
+      "price": 488,
+      "material": true
+    },
+    "w_knight_11": {
+      "id": "w_knight_11",
+      "name": "용암 장검",
+      "slot": "weapon",
+      "level": 110,
+      "job": "knight",
+      "bonus": {
+        "attack": 68
+      },
+      "price": 1340
+    },
+    "w_mage_11": {
+      "id": "w_mage_11",
+      "name": "용암 지팡이",
+      "slot": "weapon",
+      "level": 110,
+      "job": "mage",
+      "bonus": {
+        "attack": 68
+      },
+      "price": 1340
+    },
+    "w_archer_11": {
+      "id": "w_archer_11",
+      "name": "용암 활",
+      "slot": "weapon",
+      "level": 110,
+      "job": "archer",
+      "bonus": {
+        "attack": 68
+      },
+      "price": 1340
+    },
+    "w_fighter_11": {
+      "id": "w_fighter_11",
+      "name": "용암 너클",
+      "slot": "weapon",
+      "level": 110,
+      "job": "fighter",
+      "bonus": {
+        "attack": 68
+      },
+      "price": 1340
+    },
+    "o_knight_11": {
+      "id": "o_knight_11",
+      "name": "용암 방패",
+      "slot": "offhand",
+      "level": 110,
+      "job": "knight",
+      "bonus": {
+        "defense": 41,
+        "maxHp": 225
+      },
+      "price": 1340
+    },
+    "o_mage_11": {
+      "id": "o_mage_11",
+      "name": "용암 마법서",
+      "slot": "offhand",
+      "level": 110,
+      "job": "mage",
+      "bonus": {
+        "attack": 37,
+        "maxHp": 90
+      },
+      "price": 1340
+    },
+    "o_archer_11": {
+      "id": "o_archer_11",
+      "name": "용암 화살통",
+      "slot": "offhand",
+      "level": 110,
+      "job": "archer",
+      "bonus": {
+        "attack": 34,
+        "defense": 14
+      },
+      "price": 1340
+    },
+    "o_fighter_11": {
+      "id": "o_fighter_11",
+      "name": "용암 보호대",
+      "slot": "offhand",
+      "level": 110,
+      "job": "fighter",
+      "bonus": {
+        "attack": 24,
+        "maxHp": 158
+      },
+      "price": 1340
+    },
+    "h_11": {
+      "id": "h_11",
+      "name": "용암 투구",
+      "slot": "helmet",
+      "level": 110,
+      "bonus": {
+        "maxHp": 270,
+        "defense": 27
+      },
+      "price": 1340
+    },
+    "a_11": {
+      "id": "a_11",
+      "name": "용암 갑옷",
+      "slot": "armor",
+      "level": 110,
+      "bonus": {
+        "maxHp": 450,
+        "defense": 45
+      },
+      "price": 1340
+    },
+    "b_11": {
+      "id": "b_11",
+      "name": "용암 신발",
+      "slot": "boots",
+      "level": 110,
+      "bonus": {
+        "maxHp": 180,
+        "defense": 20
+      },
+      "price": 1340
+    },
+    "r_11": {
+      "id": "r_11",
+      "name": "용암 반지",
+      "slot": "ring",
+      "level": 110,
+      "bonus": {
+        "attack": 31,
+        "maxHp": 68
+      },
+      "price": 1340
+    },
+    "n_11": {
+      "id": "n_11",
+      "name": "용암 목걸이",
+      "slot": "necklace",
+      "level": 110,
+      "bonus": {
+        "attack": 34,
+        "maxHp": 90
+      },
+      "price": 1340
+    },
+    "e_11": {
+      "id": "e_11",
+      "name": "용암 귀걸이",
+      "slot": "earring",
+      "level": 110,
+      "bonus": {
+        "defense": 27,
+        "maxHp": 113
+      },
+      "price": 1340
+    },
+    "m_11": {
+      "id": "m_11",
+      "name": "용암 정수",
+      "slot": null,
+      "level": 110,
+      "bonus": {},
+      "price": 536,
+      "material": true
+    },
+    "w_knight_12": {
+      "id": "w_knight_12",
+      "name": "빙하 장검",
+      "slot": "weapon",
+      "level": 120,
+      "job": "knight",
+      "bonus": {
+        "attack": 74
+      },
+      "price": 1460
+    },
+    "w_mage_12": {
+      "id": "w_mage_12",
+      "name": "빙하 지팡이",
+      "slot": "weapon",
+      "level": 120,
+      "job": "mage",
+      "bonus": {
+        "attack": 74
+      },
+      "price": 1460
+    },
+    "w_archer_12": {
+      "id": "w_archer_12",
+      "name": "빙하 활",
+      "slot": "weapon",
+      "level": 120,
+      "job": "archer",
+      "bonus": {
+        "attack": 74
+      },
+      "price": 1460
+    },
+    "w_fighter_12": {
+      "id": "w_fighter_12",
+      "name": "빙하 너클",
+      "slot": "weapon",
+      "level": 120,
+      "job": "fighter",
+      "bonus": {
+        "attack": 74
+      },
+      "price": 1460
+    },
+    "o_knight_12": {
+      "id": "o_knight_12",
+      "name": "빙하 방패",
+      "slot": "offhand",
+      "level": 120,
+      "job": "knight",
+      "bonus": {
+        "defense": 44,
+        "maxHp": 245
+      },
+      "price": 1460
+    },
+    "o_mage_12": {
+      "id": "o_mage_12",
+      "name": "빙하 마법서",
+      "slot": "offhand",
+      "level": 120,
+      "job": "mage",
+      "bonus": {
+        "attack": 41,
+        "maxHp": 98
+      },
+      "price": 1460
+    },
+    "o_archer_12": {
+      "id": "o_archer_12",
+      "name": "빙하 화살통",
+      "slot": "offhand",
+      "level": 120,
+      "job": "archer",
+      "bonus": {
+        "attack": 37,
+        "defense": 15
+      },
+      "price": 1460
+    },
+    "o_fighter_12": {
+      "id": "o_fighter_12",
+      "name": "빙하 보호대",
+      "slot": "offhand",
+      "level": 120,
+      "job": "fighter",
+      "bonus": {
+        "attack": 26,
+        "maxHp": 172
+      },
+      "price": 1460
+    },
+    "h_12": {
+      "id": "h_12",
+      "name": "빙하 투구",
+      "slot": "helmet",
+      "level": 120,
+      "bonus": {
+        "maxHp": 294,
+        "defense": 29
+      },
+      "price": 1460
+    },
+    "a_12": {
+      "id": "a_12",
+      "name": "빙하 갑옷",
+      "slot": "armor",
+      "level": 120,
+      "bonus": {
+        "maxHp": 490,
+        "defense": 49
+      },
+      "price": 1460
+    },
+    "b_12": {
+      "id": "b_12",
+      "name": "빙하 신발",
+      "slot": "boots",
+      "level": 120,
+      "bonus": {
+        "maxHp": 196,
+        "defense": 22
+      },
+      "price": 1460
+    },
+    "r_12": {
+      "id": "r_12",
+      "name": "빙하 반지",
+      "slot": "ring",
+      "level": 120,
+      "bonus": {
+        "attack": 33,
+        "maxHp": 74
+      },
+      "price": 1460
+    },
+    "n_12": {
+      "id": "n_12",
+      "name": "빙하 목걸이",
+      "slot": "necklace",
+      "level": 120,
+      "bonus": {
+        "attack": 37,
+        "maxHp": 98
+      },
+      "price": 1460
+    },
+    "e_12": {
+      "id": "e_12",
+      "name": "빙하 귀걸이",
+      "slot": "earring",
+      "level": 120,
+      "bonus": {
+        "defense": 29,
+        "maxHp": 123
+      },
+      "price": 1460
+    },
+    "m_12": {
+      "id": "m_12",
+      "name": "빙하 정수",
+      "slot": null,
+      "level": 120,
+      "bonus": {},
+      "price": 584,
+      "material": true
+    },
+    "w_knight_13": {
+      "id": "w_knight_13",
+      "name": "뒤틀린 장검",
+      "slot": "weapon",
+      "level": 130,
+      "job": "knight",
+      "bonus": {
+        "attack": 80
+      },
+      "price": 1580
+    },
+    "w_mage_13": {
+      "id": "w_mage_13",
+      "name": "뒤틀린 지팡이",
+      "slot": "weapon",
+      "level": 130,
+      "job": "mage",
+      "bonus": {
+        "attack": 80
+      },
+      "price": 1580
+    },
+    "w_archer_13": {
+      "id": "w_archer_13",
+      "name": "뒤틀린 활",
+      "slot": "weapon",
+      "level": 130,
+      "job": "archer",
+      "bonus": {
+        "attack": 80
+      },
+      "price": 1580
+    },
+    "w_fighter_13": {
+      "id": "w_fighter_13",
+      "name": "뒤틀린 너클",
+      "slot": "weapon",
+      "level": 130,
+      "job": "fighter",
+      "bonus": {
+        "attack": 80
+      },
+      "price": 1580
+    },
+    "o_knight_13": {
+      "id": "o_knight_13",
+      "name": "뒤틀린 방패",
+      "slot": "offhand",
+      "level": 130,
+      "job": "knight",
+      "bonus": {
+        "defense": 48,
+        "maxHp": 265
+      },
+      "price": 1580
+    },
+    "o_mage_13": {
+      "id": "o_mage_13",
+      "name": "뒤틀린 마법서",
+      "slot": "offhand",
+      "level": 130,
+      "job": "mage",
+      "bonus": {
+        "attack": 44,
+        "maxHp": 106
+      },
+      "price": 1580
+    },
+    "o_archer_13": {
+      "id": "o_archer_13",
+      "name": "뒤틀린 화살통",
+      "slot": "offhand",
+      "level": 130,
+      "job": "archer",
+      "bonus": {
+        "attack": 40,
+        "defense": 16
+      },
+      "price": 1580
+    },
+    "o_fighter_13": {
+      "id": "o_fighter_13",
+      "name": "뒤틀린 보호대",
+      "slot": "offhand",
+      "level": 130,
+      "job": "fighter",
+      "bonus": {
+        "attack": 28,
+        "maxHp": 186
+      },
+      "price": 1580
+    },
+    "h_13": {
+      "id": "h_13",
+      "name": "뒤틀린 투구",
+      "slot": "helmet",
+      "level": 130,
+      "bonus": {
+        "maxHp": 318,
+        "defense": 32
+      },
+      "price": 1580
+    },
+    "a_13": {
+      "id": "a_13",
+      "name": "뒤틀린 갑옷",
+      "slot": "armor",
+      "level": 130,
+      "bonus": {
+        "maxHp": 530,
+        "defense": 53
+      },
+      "price": 1580
+    },
+    "b_13": {
+      "id": "b_13",
+      "name": "뒤틀린 신발",
+      "slot": "boots",
+      "level": 130,
+      "bonus": {
+        "maxHp": 212,
+        "defense": 24
+      },
+      "price": 1580
+    },
+    "r_13": {
+      "id": "r_13",
+      "name": "뒤틀린 반지",
+      "slot": "ring",
+      "level": 130,
+      "bonus": {
+        "attack": 36,
+        "maxHp": 80
+      },
+      "price": 1580
+    },
+    "n_13": {
+      "id": "n_13",
+      "name": "뒤틀린 목걸이",
+      "slot": "necklace",
+      "level": 130,
+      "bonus": {
+        "attack": 40,
+        "maxHp": 106
+      },
+      "price": 1580
+    },
+    "e_13": {
+      "id": "e_13",
+      "name": "뒤틀린 귀걸이",
+      "slot": "earring",
+      "level": 130,
+      "bonus": {
+        "defense": 32,
+        "maxHp": 133
+      },
+      "price": 1580
+    },
+    "m_13": {
+      "id": "m_13",
+      "name": "뒤틀린 정수",
+      "slot": null,
+      "level": 130,
+      "bonus": {},
+      "price": 632,
+      "material": true
+    },
+    "w_knight_14": {
+      "id": "w_knight_14",
+      "name": "그림자 장검",
+      "slot": "weapon",
+      "level": 140,
+      "job": "knight",
+      "bonus": {
+        "attack": 86
+      },
+      "price": 1700
+    },
+    "w_mage_14": {
+      "id": "w_mage_14",
+      "name": "그림자 지팡이",
+      "slot": "weapon",
+      "level": 140,
+      "job": "mage",
+      "bonus": {
+        "attack": 86
+      },
+      "price": 1700
+    },
+    "w_archer_14": {
+      "id": "w_archer_14",
+      "name": "그림자 활",
+      "slot": "weapon",
+      "level": 140,
+      "job": "archer",
+      "bonus": {
+        "attack": 86
+      },
+      "price": 1700
+    },
+    "w_fighter_14": {
+      "id": "w_fighter_14",
+      "name": "그림자 너클",
+      "slot": "weapon",
+      "level": 140,
+      "job": "fighter",
+      "bonus": {
+        "attack": 86
+      },
+      "price": 1700
+    },
+    "o_knight_14": {
+      "id": "o_knight_14",
+      "name": "그림자 방패",
+      "slot": "offhand",
+      "level": 140,
+      "job": "knight",
+      "bonus": {
+        "defense": 51,
+        "maxHp": 285
+      },
+      "price": 1700
+    },
+    "o_mage_14": {
+      "id": "o_mage_14",
+      "name": "그림자 마법서",
+      "slot": "offhand",
+      "level": 140,
+      "job": "mage",
+      "bonus": {
+        "attack": 47,
+        "maxHp": 114
+      },
+      "price": 1700
+    },
+    "o_archer_14": {
+      "id": "o_archer_14",
+      "name": "그림자 화살통",
+      "slot": "offhand",
+      "level": 140,
+      "job": "archer",
+      "bonus": {
+        "attack": 43,
+        "defense": 17
+      },
+      "price": 1700
+    },
+    "o_fighter_14": {
+      "id": "o_fighter_14",
+      "name": "그림자 보호대",
+      "slot": "offhand",
+      "level": 140,
+      "job": "fighter",
+      "bonus": {
+        "attack": 30,
+        "maxHp": 200
+      },
+      "price": 1700
+    },
+    "h_14": {
+      "id": "h_14",
+      "name": "그림자 투구",
+      "slot": "helmet",
+      "level": 140,
+      "bonus": {
+        "maxHp": 342,
+        "defense": 34
+      },
+      "price": 1700
+    },
+    "a_14": {
+      "id": "a_14",
+      "name": "그림자 갑옷",
+      "slot": "armor",
+      "level": 140,
+      "bonus": {
+        "maxHp": 570,
+        "defense": 57
+      },
+      "price": 1700
+    },
+    "b_14": {
+      "id": "b_14",
+      "name": "그림자 신발",
+      "slot": "boots",
+      "level": 140,
+      "bonus": {
+        "maxHp": 228,
+        "defense": 26
+      },
+      "price": 1700
+    },
+    "r_14": {
+      "id": "r_14",
+      "name": "그림자 반지",
+      "slot": "ring",
+      "level": 140,
+      "bonus": {
+        "attack": 39,
+        "maxHp": 86
+      },
+      "price": 1700
+    },
+    "n_14": {
+      "id": "n_14",
+      "name": "그림자 목걸이",
+      "slot": "necklace",
+      "level": 140,
+      "bonus": {
+        "attack": 43,
+        "maxHp": 114
+      },
+      "price": 1700
+    },
+    "e_14": {
+      "id": "e_14",
+      "name": "그림자 귀걸이",
+      "slot": "earring",
+      "level": 140,
+      "bonus": {
+        "defense": 34,
+        "maxHp": 143
+      },
+      "price": 1700
+    },
+    "m_14": {
+      "id": "m_14",
+      "name": "그림자 정수",
+      "slot": null,
+      "level": 140,
+      "bonus": {},
+      "price": 680,
+      "material": true
+    },
+    "w_knight_15": {
+      "id": "w_knight_15",
+      "name": "폐허 장검",
+      "slot": "weapon",
+      "level": 150,
+      "job": "knight",
+      "bonus": {
+        "attack": 92
+      },
+      "price": 1820
+    },
+    "w_mage_15": {
+      "id": "w_mage_15",
+      "name": "폐허 지팡이",
+      "slot": "weapon",
+      "level": 150,
+      "job": "mage",
+      "bonus": {
+        "attack": 92
+      },
+      "price": 1820
+    },
+    "w_archer_15": {
+      "id": "w_archer_15",
+      "name": "폐허 활",
+      "slot": "weapon",
+      "level": 150,
+      "job": "archer",
+      "bonus": {
+        "attack": 92
+      },
+      "price": 1820
+    },
+    "w_fighter_15": {
+      "id": "w_fighter_15",
+      "name": "폐허 너클",
+      "slot": "weapon",
+      "level": 150,
+      "job": "fighter",
+      "bonus": {
+        "attack": 92
+      },
+      "price": 1820
+    },
+    "o_knight_15": {
+      "id": "o_knight_15",
+      "name": "폐허 방패",
+      "slot": "offhand",
+      "level": 150,
+      "job": "knight",
+      "bonus": {
+        "defense": 55,
+        "maxHp": 305
+      },
+      "price": 1820
+    },
+    "o_mage_15": {
+      "id": "o_mage_15",
+      "name": "폐허 마법서",
+      "slot": "offhand",
+      "level": 150,
+      "job": "mage",
+      "bonus": {
+        "attack": 51,
+        "maxHp": 122
+      },
+      "price": 1820
+    },
+    "o_archer_15": {
+      "id": "o_archer_15",
+      "name": "폐허 화살통",
+      "slot": "offhand",
+      "level": 150,
+      "job": "archer",
+      "bonus": {
+        "attack": 46,
+        "defense": 18
+      },
+      "price": 1820
+    },
+    "o_fighter_15": {
+      "id": "o_fighter_15",
+      "name": "폐허 보호대",
+      "slot": "offhand",
+      "level": 150,
+      "job": "fighter",
+      "bonus": {
+        "attack": 32,
+        "maxHp": 214
+      },
+      "price": 1820
+    },
+    "h_15": {
+      "id": "h_15",
+      "name": "폐허 투구",
+      "slot": "helmet",
+      "level": 150,
+      "bonus": {
+        "maxHp": 366,
+        "defense": 37
+      },
+      "price": 1820
+    },
+    "a_15": {
+      "id": "a_15",
+      "name": "폐허 갑옷",
+      "slot": "armor",
+      "level": 150,
+      "bonus": {
+        "maxHp": 610,
+        "defense": 61
+      },
+      "price": 1820
+    },
+    "b_15": {
+      "id": "b_15",
+      "name": "폐허 신발",
+      "slot": "boots",
+      "level": 150,
+      "bonus": {
+        "maxHp": 244,
+        "defense": 27
+      },
+      "price": 1820
+    },
+    "r_15": {
+      "id": "r_15",
+      "name": "폐허 반지",
+      "slot": "ring",
+      "level": 150,
+      "bonus": {
+        "attack": 41,
+        "maxHp": 92
+      },
+      "price": 1820
+    },
+    "n_15": {
+      "id": "n_15",
+      "name": "폐허 목걸이",
+      "slot": "necklace",
+      "level": 150,
+      "bonus": {
+        "attack": 46,
+        "maxHp": 122
+      },
+      "price": 1820
+    },
+    "e_15": {
+      "id": "e_15",
+      "name": "폐허 귀걸이",
+      "slot": "earring",
+      "level": 150,
+      "bonus": {
+        "defense": 37,
+        "maxHp": 153
+      },
+      "price": 1820
+    },
+    "m_15": {
+      "id": "m_15",
+      "name": "폐허 정수",
+      "slot": null,
+      "level": 150,
+      "bonus": {},
+      "price": 728,
+      "material": true
+    },
+    "w_knight_16": {
+      "id": "w_knight_16",
+      "name": "창백한 장검",
+      "slot": "weapon",
+      "level": 160,
+      "job": "knight",
+      "bonus": {
+        "attack": 98
+      },
+      "price": 1940
+    },
+    "w_mage_16": {
+      "id": "w_mage_16",
+      "name": "창백한 지팡이",
+      "slot": "weapon",
+      "level": 160,
+      "job": "mage",
+      "bonus": {
+        "attack": 98
+      },
+      "price": 1940
+    },
+    "w_archer_16": {
+      "id": "w_archer_16",
+      "name": "창백한 활",
+      "slot": "weapon",
+      "level": 160,
+      "job": "archer",
+      "bonus": {
+        "attack": 98
+      },
+      "price": 1940
+    },
+    "w_fighter_16": {
+      "id": "w_fighter_16",
+      "name": "창백한 너클",
+      "slot": "weapon",
+      "level": 160,
+      "job": "fighter",
+      "bonus": {
+        "attack": 98
+      },
+      "price": 1940
+    },
+    "o_knight_16": {
+      "id": "o_knight_16",
+      "name": "창백한 방패",
+      "slot": "offhand",
+      "level": 160,
+      "job": "knight",
+      "bonus": {
+        "defense": 59,
+        "maxHp": 325
+      },
+      "price": 1940
+    },
+    "o_mage_16": {
+      "id": "o_mage_16",
+      "name": "창백한 마법서",
+      "slot": "offhand",
+      "level": 160,
+      "job": "mage",
+      "bonus": {
+        "attack": 54,
+        "maxHp": 130
+      },
+      "price": 1940
+    },
+    "o_archer_16": {
+      "id": "o_archer_16",
+      "name": "창백한 화살통",
+      "slot": "offhand",
+      "level": 160,
+      "job": "archer",
+      "bonus": {
+        "attack": 49,
+        "defense": 20
+      },
+      "price": 1940
+    },
+    "o_fighter_16": {
+      "id": "o_fighter_16",
+      "name": "창백한 보호대",
+      "slot": "offhand",
+      "level": 160,
+      "job": "fighter",
+      "bonus": {
+        "attack": 34,
+        "maxHp": 227
+      },
+      "price": 1940
+    },
+    "h_16": {
+      "id": "h_16",
+      "name": "창백한 투구",
+      "slot": "helmet",
+      "level": 160,
+      "bonus": {
+        "maxHp": 390,
+        "defense": 39
+      },
+      "price": 1940
+    },
+    "a_16": {
+      "id": "a_16",
+      "name": "창백한 갑옷",
+      "slot": "armor",
+      "level": 160,
+      "bonus": {
+        "maxHp": 650,
+        "defense": 65
+      },
+      "price": 1940
+    },
+    "b_16": {
+      "id": "b_16",
+      "name": "창백한 신발",
+      "slot": "boots",
+      "level": 160,
+      "bonus": {
+        "maxHp": 260,
+        "defense": 29
+      },
+      "price": 1940
+    },
+    "r_16": {
+      "id": "r_16",
+      "name": "창백한 반지",
+      "slot": "ring",
+      "level": 160,
+      "bonus": {
+        "attack": 44,
+        "maxHp": 98
+      },
+      "price": 1940
+    },
+    "n_16": {
+      "id": "n_16",
+      "name": "창백한 목걸이",
+      "slot": "necklace",
+      "level": 160,
+      "bonus": {
+        "attack": 49,
+        "maxHp": 130
+      },
+      "price": 1940
+    },
+    "e_16": {
+      "id": "e_16",
+      "name": "창백한 귀걸이",
+      "slot": "earring",
+      "level": 160,
+      "bonus": {
+        "defense": 39,
+        "maxHp": 163
+      },
+      "price": 1940
+    },
+    "m_16": {
+      "id": "m_16",
+      "name": "창백한 정수",
+      "slot": null,
+      "level": 160,
+      "bonus": {},
+      "price": 776,
+      "material": true
+    },
+    "w_knight_17": {
+      "id": "w_knight_17",
+      "name": "균열 장검",
+      "slot": "weapon",
+      "level": 170,
+      "job": "knight",
+      "bonus": {
+        "attack": 104
+      },
+      "price": 2060
+    },
+    "w_mage_17": {
+      "id": "w_mage_17",
+      "name": "균열 지팡이",
+      "slot": "weapon",
+      "level": 170,
+      "job": "mage",
+      "bonus": {
+        "attack": 104
+      },
+      "price": 2060
+    },
+    "w_archer_17": {
+      "id": "w_archer_17",
+      "name": "균열 활",
+      "slot": "weapon",
+      "level": 170,
+      "job": "archer",
+      "bonus": {
+        "attack": 104
+      },
+      "price": 2060
+    },
+    "w_fighter_17": {
+      "id": "w_fighter_17",
+      "name": "균열 너클",
+      "slot": "weapon",
+      "level": 170,
+      "job": "fighter",
+      "bonus": {
+        "attack": 104
+      },
+      "price": 2060
+    },
+    "o_knight_17": {
+      "id": "o_knight_17",
+      "name": "균열 방패",
+      "slot": "offhand",
+      "level": 170,
+      "job": "knight",
+      "bonus": {
+        "defense": 62,
+        "maxHp": 345
+      },
+      "price": 2060
+    },
+    "o_mage_17": {
+      "id": "o_mage_17",
+      "name": "균열 마법서",
+      "slot": "offhand",
+      "level": 170,
+      "job": "mage",
+      "bonus": {
+        "attack": 57,
+        "maxHp": 138
+      },
+      "price": 2060
+    },
+    "o_archer_17": {
+      "id": "o_archer_17",
+      "name": "균열 화살통",
+      "slot": "offhand",
+      "level": 170,
+      "job": "archer",
+      "bonus": {
+        "attack": 52,
+        "defense": 21
+      },
+      "price": 2060
+    },
+    "o_fighter_17": {
+      "id": "o_fighter_17",
+      "name": "균열 보호대",
+      "slot": "offhand",
+      "level": 170,
+      "job": "fighter",
+      "bonus": {
+        "attack": 36,
+        "maxHp": 241
+      },
+      "price": 2060
+    },
+    "h_17": {
+      "id": "h_17",
+      "name": "균열 투구",
+      "slot": "helmet",
+      "level": 170,
+      "bonus": {
+        "maxHp": 414,
+        "defense": 41
+      },
+      "price": 2060
+    },
+    "a_17": {
+      "id": "a_17",
+      "name": "균열 갑옷",
+      "slot": "armor",
+      "level": 170,
+      "bonus": {
+        "maxHp": 690,
+        "defense": 69
+      },
+      "price": 2060
+    },
+    "b_17": {
+      "id": "b_17",
+      "name": "균열 신발",
+      "slot": "boots",
+      "level": 170,
+      "bonus": {
+        "maxHp": 276,
+        "defense": 31
+      },
+      "price": 2060
+    },
+    "r_17": {
+      "id": "r_17",
+      "name": "균열 반지",
+      "slot": "ring",
+      "level": 170,
+      "bonus": {
+        "attack": 47,
+        "maxHp": 104
+      },
+      "price": 2060
+    },
+    "n_17": {
+      "id": "n_17",
+      "name": "균열 목걸이",
+      "slot": "necklace",
+      "level": 170,
+      "bonus": {
+        "attack": 52,
+        "maxHp": 138
+      },
+      "price": 2060
+    },
+    "e_17": {
+      "id": "e_17",
+      "name": "균열 귀걸이",
+      "slot": "earring",
+      "level": 170,
+      "bonus": {
+        "defense": 41,
+        "maxHp": 173
+      },
+      "price": 2060
+    },
+    "m_17": {
+      "id": "m_17",
+      "name": "균열 정수",
+      "slot": null,
+      "level": 170,
+      "bonus": {},
+      "price": 824,
+      "material": true
+    },
+    "w_knight_18": {
+      "id": "w_knight_18",
+      "name": "심연 장검",
+      "slot": "weapon",
+      "level": 180,
+      "job": "knight",
+      "bonus": {
+        "attack": 110
+      },
+      "price": 2180
+    },
+    "w_mage_18": {
+      "id": "w_mage_18",
+      "name": "심연 지팡이",
+      "slot": "weapon",
+      "level": 180,
+      "job": "mage",
+      "bonus": {
+        "attack": 110
+      },
+      "price": 2180
+    },
+    "w_archer_18": {
+      "id": "w_archer_18",
+      "name": "심연 활",
+      "slot": "weapon",
+      "level": 180,
+      "job": "archer",
+      "bonus": {
+        "attack": 110
+      },
+      "price": 2180
+    },
+    "w_fighter_18": {
+      "id": "w_fighter_18",
+      "name": "심연 너클",
+      "slot": "weapon",
+      "level": 180,
+      "job": "fighter",
+      "bonus": {
+        "attack": 110
+      },
+      "price": 2180
+    },
+    "o_knight_18": {
+      "id": "o_knight_18",
+      "name": "심연 방패",
+      "slot": "offhand",
+      "level": 180,
+      "job": "knight",
+      "bonus": {
+        "defense": 66,
+        "maxHp": 365
+      },
+      "price": 2180
+    },
+    "o_mage_18": {
+      "id": "o_mage_18",
+      "name": "심연 마법서",
+      "slot": "offhand",
+      "level": 180,
+      "job": "mage",
+      "bonus": {
+        "attack": 61,
+        "maxHp": 146
+      },
+      "price": 2180
+    },
+    "o_archer_18": {
+      "id": "o_archer_18",
+      "name": "심연 화살통",
+      "slot": "offhand",
+      "level": 180,
+      "job": "archer",
+      "bonus": {
+        "attack": 55,
+        "defense": 22
+      },
+      "price": 2180
+    },
+    "o_fighter_18": {
+      "id": "o_fighter_18",
+      "name": "심연 보호대",
+      "slot": "offhand",
+      "level": 180,
+      "job": "fighter",
+      "bonus": {
+        "attack": 39,
+        "maxHp": 255
+      },
+      "price": 2180
+    },
+    "h_18": {
+      "id": "h_18",
+      "name": "심연 투구",
+      "slot": "helmet",
+      "level": 180,
+      "bonus": {
+        "maxHp": 438,
+        "defense": 44
+      },
+      "price": 2180
+    },
+    "a_18": {
+      "id": "a_18",
+      "name": "심연 갑옷",
+      "slot": "armor",
+      "level": 180,
+      "bonus": {
+        "maxHp": 730,
+        "defense": 73
+      },
+      "price": 2180
+    },
+    "b_18": {
+      "id": "b_18",
+      "name": "심연 신발",
+      "slot": "boots",
+      "level": 180,
+      "bonus": {
+        "maxHp": 292,
+        "defense": 33
+      },
+      "price": 2180
+    },
+    "r_18": {
+      "id": "r_18",
+      "name": "심연 반지",
+      "slot": "ring",
+      "level": 180,
+      "bonus": {
+        "attack": 50,
+        "maxHp": 110
+      },
+      "price": 2180
+    },
+    "n_18": {
+      "id": "n_18",
+      "name": "심연 목걸이",
+      "slot": "necklace",
+      "level": 180,
+      "bonus": {
+        "attack": 55,
+        "maxHp": 146
+      },
+      "price": 2180
+    },
+    "e_18": {
+      "id": "e_18",
+      "name": "심연 귀걸이",
+      "slot": "earring",
+      "level": 180,
+      "bonus": {
+        "defense": 44,
+        "maxHp": 183
+      },
+      "price": 2180
+    },
+    "m_18": {
+      "id": "m_18",
+      "name": "심연 정수",
+      "slot": null,
+      "level": 180,
+      "bonus": {},
+      "price": 872,
+      "material": true
+    },
+    "w_knight_19": {
+      "id": "w_knight_19",
+      "name": "종말 장검",
+      "slot": "weapon",
+      "level": 190,
+      "job": "knight",
+      "bonus": {
+        "attack": 116
+      },
+      "price": 2300
+    },
+    "w_mage_19": {
+      "id": "w_mage_19",
+      "name": "종말 지팡이",
+      "slot": "weapon",
+      "level": 190,
+      "job": "mage",
+      "bonus": {
+        "attack": 116
+      },
+      "price": 2300
+    },
+    "w_archer_19": {
+      "id": "w_archer_19",
+      "name": "종말 활",
+      "slot": "weapon",
+      "level": 190,
+      "job": "archer",
+      "bonus": {
+        "attack": 116
+      },
+      "price": 2300
+    },
+    "w_fighter_19": {
+      "id": "w_fighter_19",
+      "name": "종말 너클",
+      "slot": "weapon",
+      "level": 190,
+      "job": "fighter",
+      "bonus": {
+        "attack": 116
+      },
+      "price": 2300
+    },
+    "o_knight_19": {
+      "id": "o_knight_19",
+      "name": "종말 방패",
+      "slot": "offhand",
+      "level": 190,
+      "job": "knight",
+      "bonus": {
+        "defense": 69,
+        "maxHp": 385
+      },
+      "price": 2300
+    },
+    "o_mage_19": {
+      "id": "o_mage_19",
+      "name": "종말 마법서",
+      "slot": "offhand",
+      "level": 190,
+      "job": "mage",
+      "bonus": {
+        "attack": 64,
+        "maxHp": 154
+      },
+      "price": 2300
+    },
+    "o_archer_19": {
+      "id": "o_archer_19",
+      "name": "종말 화살통",
+      "slot": "offhand",
+      "level": 190,
+      "job": "archer",
+      "bonus": {
+        "attack": 58,
+        "defense": 23
+      },
+      "price": 2300
+    },
+    "o_fighter_19": {
+      "id": "o_fighter_19",
+      "name": "종말 보호대",
+      "slot": "offhand",
+      "level": 190,
+      "job": "fighter",
+      "bonus": {
+        "attack": 41,
+        "maxHp": 270
+      },
+      "price": 2300
+    },
+    "h_19": {
+      "id": "h_19",
+      "name": "종말 투구",
+      "slot": "helmet",
+      "level": 190,
+      "bonus": {
+        "maxHp": 462,
+        "defense": 46
+      },
+      "price": 2300
+    },
+    "a_19": {
+      "id": "a_19",
+      "name": "종말 갑옷",
+      "slot": "armor",
+      "level": 190,
+      "bonus": {
+        "maxHp": 770,
+        "defense": 77
+      },
+      "price": 2300
+    },
+    "b_19": {
+      "id": "b_19",
+      "name": "종말 신발",
+      "slot": "boots",
+      "level": 190,
+      "bonus": {
+        "maxHp": 308,
+        "defense": 35
+      },
+      "price": 2300
+    },
+    "r_19": {
+      "id": "r_19",
+      "name": "종말 반지",
+      "slot": "ring",
+      "level": 190,
+      "bonus": {
+        "attack": 52,
+        "maxHp": 116
+      },
+      "price": 2300
+    },
+    "n_19": {
+      "id": "n_19",
+      "name": "종말 목걸이",
+      "slot": "necklace",
+      "level": 190,
+      "bonus": {
+        "attack": 58,
+        "maxHp": 154
+      },
+      "price": 2300
+    },
+    "e_19": {
+      "id": "e_19",
+      "name": "종말 귀걸이",
+      "slot": "earring",
+      "level": 190,
+      "bonus": {
+        "defense": 46,
+        "maxHp": 193
+      },
+      "price": 2300
+    },
+    "m_19": {
+      "id": "m_19",
+      "name": "종말 정수",
+      "slot": null,
+      "level": 190,
+      "bonus": {},
+      "price": 920,
+      "material": true
+    }
+  },
+  "slots": [
+    "weapon",
+    "offhand",
+    "helmet",
+    "armor",
+    "boots",
+    "ring",
+    "necklace",
+    "earring"
+  ],
+  "slotCode": {
+    "weapon": "w",
+    "offhand": "o",
+    "armor": "a",
+    "helmet": "h",
+    "boots": "b",
+    "ring": "r",
+    "necklace": "n",
+    "earring": "e"
+  },
+  "jobSlots": [
+    "weapon",
+    "offhand"
+  ],
+  "bagSize": 200,
+  "gradeMin": 1,
+  "gradeMax": 10,
+  "maxDropGrade": 7,
+  "optionKinds": [
+    "crit",
+    "attackSpeed",
+    "critDamage",
+    "maxHp",
+    "attack",
+    "defense"
+  ],
+  "optionMin": 1,
+  "optionMax": 3,
+  "optionLabel": {
+    "crit": "치명타",
+    "attackSpeed": "공격 속도",
+    "critDamage": "치명타 데미지",
+    "maxHp": "체력",
+    "attack": "공격력",
+    "defense": "방어력"
+  },
+  "maxEnhance": 10,
+  "dropChance": 0.14,
+  "bossMaterials": 3,
+  "forgeMaterials": 5,
+  "tierCount": 20
+}

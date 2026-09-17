@@ -74,7 +74,7 @@
 ## 관련
 
 - [godot-migration.md](godot-migration.md) — 고도 쪽에도 같은 NPC 데이터를 쓴다.
-  닿는 거리(`NPC_REACH` 4.5)를 `World` 가 다시 재는 규칙도 그대로다. 상점·대장간은
-  아이템 표를 다시 만들기로 해서 **창까지만** 있다
+  닿는 거리(`NPC_REACH` 4.5)를 `World` 가 다시 재는 규칙도, 상점이 자기 직업 무기만
+  파는 것도, 대장간 탭 셋도 그대로다. 거르개·제작창 정렬은 아직 단순하다
 
 [items.md](items.md) · [inventory-equipment.md](inventory-equipment.md) · [world-zones.md](world-zones.md)

@@ -30,7 +30,7 @@ three.js 웹 클라이언트를 **고도 엔진으로 갈아타는 중**이다. 
 | `godot/game/rig.gd` | `.glb` 하나를 씌우고 클립을 트는 껍데기. **없으면 `null`** |
 | `godot/game/ground.gd` | 존 바닥 재질 — 텍스처·타일 크기·존 틴트 |
 | `godot/game/hit_fx.gd` | **피격 이펙트.** 맞은 자리의 섬광·파편·피해 숫자. 에셋 없이 코드로 짓는다 |
-| `godot/game/skill_fx.gd` | **스킬 이펙트.** 지금은 할퀴기 자국 하나. 같은 이유로 코드로 짓는다 |
+| `godot/game/skill_fx.gd` | **스킬 이펙트.** 지금은 할퀴기 하나 — `CPUParticles3D` 여섯으로 짓는다 (판 메시 금지) |
 | `godot/game/select_ring.gd` | **골라 둔 몬스터 발밑의 고리.** 반지름·두께·도는 속도가 상수다 |
 | `godot/game/hurt_flash.gd` | 내가 맞았을 때 화면 가장자리 비네트 |
 | `godot/game/camera_rig.gd` | 고정각 쿼터뷰 카메라 |

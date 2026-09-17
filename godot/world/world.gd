@@ -58,42 +58,14 @@ func _spawn_monsters() -> void:
 				half_size,
 				_rng,
 			)
-			_monsters.append({
-				"id": "%s_%d" % [kind.id, _monsters.size()],
-				"kind": kind.id,
-				"x": spot.x,
-				"z": spot.z,
-				"r": radius,
-				"scale": scale,
-				"color": kind.get("bodyColor", "#888888"),
-				"boss": bool(kind.get("boss", false)),
-				"rot": 0.0,
-				"level": int(kind.get("level", 1)),
-				"max_hp": int(kind.get("maxHp", 1)),
-				"hp": int(kind.get("maxHp", 1)),
-				"defense": float(kind.get("defense", 0)),
-				"exp_reward": float(kind.get("expReward", 0)),
-				"respawn_ms": float(pack.get("respawnMs", 10000)),
-				# 죽어 있는 동안 다시 나올 시각. 0 이면 살아 있다
-				"respawn_at": 0,
-				# --- 반격에 쓰는 것들 ---
-				"attack": float(kind.get("attack", 1)),
-				"attack_range": float(kind.get("attackRange", 1.9)),
-				"attack_cooldown": float(kind.get("attackCooldown", 1200)),
-				"aggro": float(kind.get("aggroRange", 9)),
-				"leash": float(kind.get("leashRange", 22)),
-				"speed": float(kind.get("moveSpeed", 3.6)),
-				# 집. 너무 멀어지면 여기로 돌아온다
-				"home_x": spot.x,
-				"home_z": spot.z,
-				"target": "",
-				"state": "idle",
-				"next_attack_at": 0,
-				"rooted_until": 0,
-				# 정확히 겹쳤을 때 밀려날 방향. **서로 달라야 풀린다** —
-				# 같으면 둘 다 같은 자리로 밀려 겹친 채로 남는다
-				"push_angle": float(_monsters.size()) * 0.7,
-			})
+			_monsters.append(make_monster(
+				"%s_%d" % [kind.id, _monsters.size()],
+				kind,
+				spot.x,
+				spot.z,
+				float(pack.get("respawnMs", 10000)),
+				float(_monsters.size()) * 0.7,
+			))
 
 
 func join(player_id: String) -> void:
@@ -321,6 +293,20 @@ func _step_monsters(delta: float, now: int) -> void:
 	for monster in _monsters:
 		if int(monster.hp) <= 0:
 			continue
+
+		# --- 범위 공격을 예고해 둔 상태 ---
+		# 예고한 뒤에는 **그 자리에 선다.** 원은 시전을 시작한 자리에 고정돼 있으므로
+		# 여기서 따라 움직이면 표시와 터지는 자리가 어긋나 붙어 있는 쪽은 피할 방법이
+		# 없다. 리쉬·대상 재탐색보다 먼저 보는 이유도 같다 — 한번 예고한 것은 대상이
+		# 도망가든 죽든 그대로 터진다.
+		if int(monster.burst_at) != 0:
+			monster.state = "cast"
+			if now >= int(monster.burst_at):
+				monster.burst_at = 0
+				monster.rooted_until = now + Combat.monster_root_ms(float(monster.attack_cooldown))
+				_burst_aoe(monster)
+			continue
+
 		# 휘두르는 동안은 못 움직인다. 화면이 공격 클립을 보여 주는 창과 같은 길이다
 		if now < int(monster.rooted_until):
 			continue
@@ -354,6 +340,29 @@ func _step_monsters(delta: float, now: int) -> void:
 			continue
 
 		var dist := Vector2(target.x - monster.x, target.z - monster.z).length()
+
+		# --- 범위 공격 걸기 (보스) ---
+		# 평타 사거리가 아니라 **원 안**에 들어오면 건다. 그래야 "보스 7m 안은
+		# 위험하다"는 한 줄로 설명되고, 멀리서 쏘는 직업은 자기 사거리를 지키는
+		# 것만으로 자연히 피한다.
+		var aoe: Dictionary = monster.aoe
+		if not aoe.is_empty() and now >= int(monster.next_aoe_at) and dist <= float(aoe.radius):
+			monster.next_aoe_at = now + int(aoe.cooldownMs)
+			monster.burst_at = now + int(aoe.windupMs)
+			monster.aoe_x = monster.x
+			monster.aoe_z = monster.z
+			monster.state = "cast"
+			monster.rot = atan2(target.x - monster.x, target.z - monster.z)
+			_events.append({
+				"type": "aoe",
+				"id": monster.id,
+				"x": monster.aoe_x,
+				"z": monster.aoe_z,
+				"radius": float(aoe.radius),
+				"delay_ms": int(aoe.windupMs),
+			})
+			continue
+
 		if dist > float(monster.attack_range):
 			monster.state = "chase"
 			_move_monster(monster, target.x, target.z, float(monster.speed), delta)
@@ -410,8 +419,10 @@ func _move_monster(monster: Dictionary, tx: float, tz: float, speed: float, delt
 	)
 
 
-func _hit_player(player: Dictionary, monster: Dictionary) -> void:
-	var damage := Combat.compute_damage(float(monster.attack), float(player.stats.defense))
+## attack 을 따로 받는 것은 범위 공격이 평타의 power 배로 때리기 때문이다
+func _hit_player(player: Dictionary, monster: Dictionary, attack: float = -1.0) -> void:
+	var power := float(monster.attack) if attack < 0.0 else attack
+	var damage := Combat.compute_damage(power, float(player.stats.defense))
 	player.hp = maxi(0, int(player.hp) - damage)
 	_events.append({
 		"type": "hit",
@@ -445,3 +456,76 @@ func revive(player_id: String) -> void:
 	player_now["dead"] = false
 	player_now["hp"] = player_now.stats.maxHp
 	_events.append({"type": "revived"})
+
+
+## 예고해 둔 원이 터진다. **원 안에 서 있는 사람만** 맞는다 —
+## 예고를 보고 뛰어나갔으면 안 맞아야 하고, 화면에 그린 원과 판정이 같아야 한다
+func _burst_aoe(monster: Dictionary) -> void:
+	var aoe: Dictionary = monster.aoe
+	if aoe.is_empty():
+		return
+	var radius := float(aoe.radius)
+	var power := float(aoe.power)
+	for id in _players:
+		var player: Dictionary = _players[id]
+		if bool(player.get("dead", false)):
+			continue
+		var gap := Vector2(player.x - float(monster.aoe_x), player.z - float(monster.aoe_z)).length()
+		if gap > radius:
+			continue
+		_hit_player(player, monster, roundi(float(monster.attack) * power))
+
+
+## 몬스터 한 마리를 만든다. **스폰과 테스트가 같은 함수를 쓴다** —
+## 테스트가 손으로 만들면 여기 칸을 더할 때마다 조용히 어긋난다 (실제로 그랬다).
+static func make_monster(
+	id: String,
+	kind: Dictionary,
+	x: float,
+	z: float,
+	respawn_ms: float,
+	push_angle: float,
+) -> Dictionary:
+	var scale := float(kind.get("scale", 1.0))
+	return {
+		"id": id,
+		"kind": kind.id,
+		"x": x,
+		"z": z,
+		"rot": 0.0,
+		"r": Movement.monster_radius(scale),
+		"scale": scale,
+		"color": kind.get("bodyColor", "#888888"),
+		"boss": bool(kind.get("boss", false)),
+		"level": int(kind.get("level", 1)),
+		"max_hp": int(kind.get("maxHp", 1)),
+		"hp": int(kind.get("maxHp", 1)),
+		"defense": float(kind.get("defense", 0)),
+		"exp_reward": float(kind.get("expReward", 0)),
+		"respawn_ms": respawn_ms,
+		# 죽어 있는 동안 다시 나올 시각. 0 이면 살아 있다
+		"respawn_at": 0,
+		# --- 반격 ---
+		"attack": float(kind.get("attack", 1)),
+		"attack_range": float(kind.get("attackRange", 1.9)),
+		"attack_cooldown": float(kind.get("attackCooldown", 1200)),
+		"aggro": float(kind.get("aggroRange", 9)),
+		"leash": float(kind.get("leashRange", 22)),
+		"speed": float(kind.get("moveSpeed", 3.6)),
+		# 집. 너무 멀어지면 여기로 돌아온다
+		"home_x": x,
+		"home_z": z,
+		"target": "",
+		"state": "idle",
+		"next_attack_at": 0,
+		"rooted_until": 0,
+		# 정확히 겹쳤을 때 밀려날 방향. **서로 달라야 풀린다**
+		"push_angle": push_angle,
+		# --- 보스 범위 공격 (없는 몬스터는 aoe 가 비어 있다) ---
+		"aoe": kind.get("aoe", {}),
+		"next_aoe_at": 0,
+		# 예고해 둔 것이 터질 시각. 0 이면 시전 중이 아니다
+		"burst_at": 0,
+		"aoe_x": 0.0,
+		"aoe_z": 0.0,
+	}

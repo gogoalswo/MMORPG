@@ -107,12 +107,9 @@ func _fight() -> void:
 	var mobs: Array = w.snapshot().monsters
 	_eq("마을엔 몬스터가 없다", mobs.size(), 0)
 
-	mobs.append({
-		"id": "dummy", "kind": "mob003", "x": 1.5, "z": 0.0,
-		"r": 0.38, "scale": 1.0, "color": "#888888", "boss": false,
-		"level": 3, "max_hp": 100, "hp": 100, "defense": 3.0,
-		"exp_reward": 25.0, "respawn_ms": 10000.0, "respawn_at": 0,
-	})
+	mobs.append(World.make_monster(
+		"dummy", GameData.monster_kind("mob003"), 1.5, 0.0, 10000.0, 0.0
+	))
 
 	# 몬스터 쪽을 보고 친다 (dt 0 이라 제자리에서 방향만 바뀐다)
 	w.input_move("me", 1, 1.0, 0.0, 0.0)

@@ -2,13 +2,13 @@
 
 ## 지금 무엇을 만들고 있나 ★★
 
-**고도(Godot) 엔진으로 옮기는 중이고, 목표는 모바일 앱이다.** 새 작업은 기본적으로
-`godot/` 안에서 한다 — 어느 쪽인지 애매하면 묻는다.
+**고도(Godot) 엔진으로 만든다. 목표는 모바일 앱이다.** 게임은 `godot/` 에만 있다 —
+클라이언트가 한 벌뿐이라 어느 쪽을 고칠지 헷갈릴 일이 없다.
 
 | | |
 |---|---|
 | `godot/` | **지금 만드는 것.** 판정(`world/`) · 화면(`game/`) · 통로(`net/`) · 테스트(`tests/`) |
-| `packages/shared` | **수치와 생성기.** 두 클라이언트가 같이 쓴다. 고치면 `npm run export:godot` |
+| `packages/shared` | **수치와 생성기.** 존·몬스터·아이템·스킬을 여기서 만든다. 고치면 `npm run export:godot` |
 | `packages/server` | 옛 Colyseus 서버. **판정 원본**이라 남겨 뒀다 — 고도 서버를 붙일 때 대조한다 |
 
 옛 three.js 웹 클라이언트(`packages/client`)는 **2026-09-17 에 지웠다** (요청:
@@ -116,7 +116,7 @@ npm run test:godot     # 고도 테스트 — 통과는 한 줄, 실패만 자�
 npm run typecheck && npm test && npm run test:godot
 ```
 
-`npm run build` 는 옛 웹 클라이언트를 굽는 것이다 — 그쪽을 건드렸을 때만 돌린다.
+`npm run build` 는 없다 (웹 클라이언트와 같이 지웠다). 화면은 CI 가 굽는다.
 
 ## 토큰을 아끼는 방식 ★
 

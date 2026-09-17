@@ -18,6 +18,7 @@
     "hit-probe": "node scripts/hit-probe.ts",
     "compress": "node scripts/compress-textures.mjs",
     "export:godot": "node scripts/export-shared.mjs",
+    "sync:godot": "node scripts/sync-godot-assets.mjs",
     "tunnel": "node scripts/tunnel.mjs"
   },
   "devDependencies": {

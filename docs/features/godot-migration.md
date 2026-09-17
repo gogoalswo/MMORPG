@@ -19,7 +19,9 @@ three.js 웹 클라이언트를 **고도 엔진으로 갈아타는 중**이다. 
 | `godot/world/game_data.gd` | `data/*.json` 로더 |
 | `godot/net/transport.gd` | 화면과 판정 사이의 유일한 통로 |
 | `godot/net/local_transport.gd` | 서버 없이 `World` 를 이 자리에서 돌린다 |
-| `godot/game/game.gd` | 화면. 바닥·카메라·캡슐·터치 이동. **`World` 를 직접 안 만진다** |
+| `godot/game/game.gd` | 화면. 바닥·카메라·모델·터치 이동. **`World` 를 직접 안 만진다** |
+| `godot/game/rig.gd` | `.glb` 하나를 씌우고 클립을 트는 껍데기. **없으면 `null`** |
+| `scripts/sync-godot-assets.mjs` | `public/assets/models` → `godot/assets/models` 복사 (`npm run sync:godot`) |
 | `godot/tests/*.gd` | 헤드리스 검사 — 이동 공식·World·터치 이동·몬스터 |
 | `godot/export_presets.cfg` | 안드로이드·웹 익스포트 설정. **비밀은 없다** — 아래 "서명" 참고 |
 | `.github/workflows/android.yml` | push 하면 APK 를 구워 Actions 산출물로 올린다 |
@@ -94,6 +96,40 @@ TS 에 남으니 표가 어긋나면 `npm test` 가 잡는다. 전부 GDScript �
 경로와 비밀번호는 CI 가 `~/.config/godot/editor_settings-4.tres` 로 넣는다.
 스토어에 낼 릴리스 키는 GitHub Secrets 로 간다 (아직 안 만들었다).
 
+### 에셋은 복사해 쓰고 커밋하지 않는다 ★
+
+고도는 프로젝트 폴더(`res://`) 밖의 파일을 임포트하지 못한다. 그렇다고 같은 GLB 를
+저장소에 두 벌 두면 24MB 가 이력에 두 번 쌓이므로, **`godot/assets/` 는 커밋하지 않고
+`npm run sync:godot` 으로 만든다** (`fetch-assets.sh` 와 같은 방식).
+
+**쓰는 것만 복사한다.** 웹 빌드는 `godot/assets/` 를 통째로 담는다 — 지금 두 개
+(기사 3.1MB · 오우거 2.4MB)를 넣어 `index.pck` 가 94KB → **13MB**, 전체 39MB → **51MB**
+가 됐다. 직업이 늘면 `sync-godot-assets.mjs` 의 `MODELS` 에 줄을 더한다.
+(5.5MB 원본이 13MB 가 된 건 고도가 텍스처를 다시 굽기 때문이다. 용량이 문제가 되면
+임포트 설정의 VRAM 압축부터 볼 것 — 아직 안 건드렸다.)
+
+### 모델이 없으면 기둥으로 그린다 ★
+
+`Rig.create` 는 파일이 없으면 **`null` 을 준다.** 화면은 그때 캡슐을 대신 그린다.
+`npm run sync:godot` 을 안 돌린 사람도 게임은 돌아가야 하기 때문이고, 애초에 파일이
+있는 `look` 이 둘뿐이다 — 보스(`trex`)를 비롯한 나머지는 웹 클라이언트에서도
+절차적 리그다 → [characters-and-animation.md](characters-and-animation.md).
+
+초원 81마리 중 **모델 80 · 기둥 1**(보스)이 이 규칙의 결과다.
+
+### 얼마나 크게 그릴지는 데이터가 정한다
+
+모델은 **높이 1 로 정규화돼** 나온다. 사람은 `Rig.HUMAN_HEIGHT`(1.8), 짐승은
+`monsters.json` 의 `heights` × `kind.scale` 이다. 이 표를 쓰려고 `beasts.ts` 의
+`BEAST_HEIGHT` 에 `export` 를 붙여 내보내기에 넣었다 (값은 그대로).
+초원 들늑대 2.2 × 1.01 = **2.22m**.
+
+### 공격 클립 구간은 아직 안 맞췄다
+
+기사 `Attack` 은 5.07초짜리라 통째로 틀면 한 번 휘두르는 데 5초가 걸린다. 웹
+클라이언트는 0.8~1.60초만 1.6배로 트는데(`modelRig` 의 `ATTACK_CLIPS`), 여기서도
+같은 자리에서 시작하기만 했다. **발이 미끄러지거나 동작이 어긋나면 그때 재서 고친다.**
+
 ### 죽으면 저절로 살아나지 않는다 ★
 
 체력이 0 이 되면 `dead` 로 두고 **가만히 둔다.** 사람이 화면을 눌러야 마을에서
@@ -159,8 +195,9 @@ UI 를 만들기 전에 폰트 리소스를 먼저 붙여야 한다. `game.gd` �
 | 몬스터 스폰·충돌·차원문 | `... tests/monster_test.gd` |
 | 전투 공식과 실제 전투 | `... tests/combat_test.gd` |
 | 어그로·추적·반격·사망·부활 | `... tests/aggro_test.gd` |
+| 모델·클립·기둥 대체 | `... tests/model_test.gd` |
 
-여섯 다 `pages.yml` 이 배포 전에 돌린다. 하나라도 깨지면 배포까지 가지 않는다.
+일곱 다 `pages.yml` 이 배포 전에 돌린다. 하나라도 깨지면 배포까지 가지 않는다.
 
 기준값은 `movement.ts` 를 node 로 직접 돌려 뽑았다 (2026-09-16). 두 쪽이 갈라지면
 나중에 서버를 붙였을 때 매 틱 보정이 튄다.
@@ -191,7 +228,8 @@ godot --headless --path godot --script check.gd # 상태를 글로 찍는다
 4. ~~**몬스터** — 스폰·충돌·표시, 임시 차원문~~ 끝 (2026-09-17)
 5. ~~**전투** — 공격·피해·사망·경험치, 되살아나기~~ 끝 (2026-09-17)
 6. ~~**몬스터 반격** — 어그로·추적·공격, 사망·부활~~ 끝 (2026-09-17)
-7. **모델 붙이기** ← 지금 여기. `varco_*.glb` 와 애니메이션
+7. ~~**모델 붙이기** — `varco_*.glb`, 클립, 기둥 대체~~ 끝 (2026-09-17)
+8. **UI** ← 지금 여기. 한글 폰트, 체력바, 사냥터 고르는 화면, 보스 예고 원
 5. **모델·애니메이션** — `varco_*.glb` (아래 참고)
 6. **전투 표현 → UI → 이펙트**
 7. **서버** — 고도 헤드리스. `Transport` 에 구현을 하나 더 끼운다

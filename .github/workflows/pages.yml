@@ -70,8 +70,9 @@ jobs:
       - name: 고도 테스트
         run: |
           set -e
+          npm run sync:godot
           ~/godot-bin/godot --headless --path godot --import
-          for t in movement world touch monster combat aggro; do
+          for t in movement world touch monster combat aggro model; do
             echo "--- $t"
             ~/godot-bin/godot --headless --path godot --script "tests/$t""_test.gd"
           done

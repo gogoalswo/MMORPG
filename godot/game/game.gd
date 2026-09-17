@@ -12,7 +12,13 @@ extends Node3D
 const STOP_DISTANCE := 0.15
 
 var _transport: Transport
-var _player: MeshInstance3D
+var _player: Node3D
+## 기둥은 가운데가 원점이라 반만큼 띄워야 하고, 모델은 발이 원점이다
+var _player_y := 0.9
+## 이번 프레임에 걸었나 (달리기·대기 동작을 고르는 데 쓴다)
+var _moving := false
+## 공격 동작을 언제까지 트나 (서버가 준 경직 시간)
+var _swing_until := 0
 var _camera: Camera3D
 var _label: Label
 var _marker: MeshInstance3D
@@ -49,6 +55,9 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 				"!" if payload.get("crit", false) else "",
 				"  KILL" if payload.get("killed", false) else "",
 			]
+		&"swing":
+			# 휘두르는 동안 발이 묶인다는 통보. 그 시간만큼 공격 동작을 튼다
+			_swing_until = Time.get_ticks_msec() + int(payload.get("root_ms", 400))
 		&"levelUp":
 			_last_event = "LEVEL UP %d" % payload.get("level", 0)
 		&"died":
@@ -62,14 +71,22 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 
 ## 존이 바뀌어도 살아 있는 것들
 func _build_persistent() -> void:
-	_player = MeshInstance3D.new()
-	var body := CapsuleMesh.new()
-	body.radius = Movement.PLAYER_RADIUS
-	body.height = 1.8
-	_player.mesh = body
-	var body_mat := StandardMaterial3D.new()
-	body_mat.albedo_color = Color("#e8d7b0")
-	_player.material_override = body_mat
+	# 모델이 있으면 모델, 없으면 기둥. npm run sync:godot 을 안 돌렸을 수도 있다
+	var rig := Rig.create("varco_knight", Rig.HUMAN_HEIGHT)
+	if rig != null:
+		_player = rig
+		_player_y = 0.0
+	else:
+		var capsule := MeshInstance3D.new()
+		var body := CapsuleMesh.new()
+		body.radius = Movement.PLAYER_RADIUS
+		body.height = 1.8
+		capsule.mesh = body
+		var body_mat := StandardMaterial3D.new()
+		body_mat.albedo_color = Color("#e8d7b0")
+		capsule.material_override = body_mat
+		_player = capsule
+		_player_y = 0.9
 	add_child(_player)
 
 	# 어디를 눌렀는지 보여주는 표시 (웹 클라의 클릭 이동 표시와 같은 역할)
@@ -171,23 +188,31 @@ func _build_zone(zone_id: String) -> void:
 		_zone_node.add_child(portal)
 
 	# 몬스터. 자리는 World 가 정했고 여기서는 그리기만 한다.
-	# 모델은 나중에 붙인다 — 지금은 몸 반지름만큼의 기둥이다
+	# 모델이 있는 look 만 모델이고 나머지는 기둥이다 (웹 클라도 같은 규칙)
 	_mob_nodes.clear()
 	for monster in _transport.snapshot().get("monsters", []):
-		var body := MeshInstance3D.new()
-		var shape := CapsuleMesh.new()
-		shape.radius = monster.r
-		shape.height = maxf(monster.r * 2.0 + 0.1, 1.6 * monster.scale)
-		body.mesh = shape
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = Color(monster.color)
-		if monster.boss:
-			mat.emission_enabled = true
-			mat.emission = Color(monster.color) * 0.6
-		body.material_override = mat
-		body.position = Vector3(monster.x, shape.height * 0.5, monster.z)
-		_zone_node.add_child(body)
-		_mob_nodes[monster.id] = body
+		var kind := GameData.monster_kind(monster.kind)
+		var look := str(kind.get("look", ""))
+		var height := GameData.beast_height(look, float(monster.scale))
+		var node: Node3D = Rig.create(look, height)
+		var foot := 0.0
+		if node == null:
+			var body := MeshInstance3D.new()
+			var shape := CapsuleMesh.new()
+			shape.radius = monster.r
+			shape.height = maxf(monster.r * 2.0 + 0.1, height)
+			body.mesh = shape
+			var mat := StandardMaterial3D.new()
+			mat.albedo_color = Color(monster.color)
+			if monster.boss:
+				mat.emission_enabled = true
+				mat.emission = Color(monster.color) * 0.6
+			body.material_override = mat
+			node = body
+			foot = shape.height * 0.5
+		node.position = Vector3(monster.x, foot, monster.z)
+		_zone_node.add_child(node)
+		_mob_nodes[monster.id] = node
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -238,6 +263,7 @@ func _ground_point(screen: Vector2) -> Vector3:
 
 
 func _process(delta: float) -> void:
+	_moving = false
 	_send_input(delta)
 	_draw_state()
 
@@ -288,7 +314,27 @@ func _chase_and_hit(delta: float) -> void:
 
 func _move(dir: Vector2, delta: float) -> void:
 	_seq += 1
+	_moving = delta > 0.0
 	_transport.send(&"input", {"seq": _seq, "dx": dir.x, "dz": dir.y, "dt": delta})
+
+
+## 죽음 > 공격 > 달리기 > 대기 순으로 고른다.
+##
+## 공격 클립은 5.07초짜리라 통째로 틀면 한 번 휘두르는 데 5초가 걸린다.
+## 웹 클라이언트는 0.8~1.60초 구간만 1.6배로 트는데(`modelRig` 의 ATTACK_CLIPS),
+## 여기서도 같은 자리에서 시작한다. **정확한 구간 맞추기는 아직 안 했다** —
+## 발이 미끄러지거나 동작이 어긋나면 그때 재서 고친다.
+func _play_player_clip(me: Dictionary) -> void:
+	if not _player is Rig:
+		return
+	var rig: Rig = _player
+	if bool(me.get("dead", false)):
+		rig.play("Death")
+		return
+	if Time.get_ticks_msec() < _swing_until:
+		rig.play("Attack", 1.6, 0.8)
+		return
+	rig.play("Run" if _moving else "Idle")
 
 
 func _find_mob(snap: Dictionary, id: String) -> Dictionary:
@@ -318,8 +364,9 @@ func _draw_state() -> void:
 	if me.is_empty():
 		return
 
-	_player.position = Vector3(me.x, 0.9, me.z)
+	_player.position = Vector3(me.x, _player_y, me.z)
 	_player.rotation.y = me.rot
+	_play_player_clip(me)
 
 	# 뒤 위에서 내려다본다. 지금은 고정 각도다
 	_camera.position = _player.position + Vector3(0, 14, 12)
@@ -327,14 +374,23 @@ func _draw_state() -> void:
 
 	# 쫓아오는 놈들이 실제로 움직인다. 자리는 World 가 정하고 여기서는 따라 그린다
 	for monster in snap.get("monsters", []):
-		var node: MeshInstance3D = _mob_nodes.get(monster.id)
+		var node: Node3D = _mob_nodes.get(monster.id)
 		if node == null:
 			continue
 		node.visible = int(monster.hp) > 0
-		if node.visible:
-			node.position.x = monster.x
-			node.position.z = monster.z
-			node.rotation.y = monster.get("rot", 0.0)
+		if not node.visible:
+			continue
+		node.position.x = monster.x
+		node.position.z = monster.z
+		node.rotation.y = monster.get("rot", 0.0)
+		if node is Rig:
+			var state := str(monster.get("state", "idle"))
+			if state == "chase":
+				node.play("Run")
+			elif state == "attack":
+				node.play("Attack")
+			else:
+				node.play("Idle")
 
 	var alive := 0
 	for monster in snap.get("monsters", []):

@@ -15,7 +15,7 @@
  * 두면 거미가 티라노사우루스만 해진다. 여기에 몬스터의 `scale`(레벨과 강함으로
  * 정해진다)이 곱해지므로, 보스는 자동으로 더 커진다.
  */
-const BEAST_HEIGHT: Record<string, number> = {
+export const BEAST_HEIGHT: Record<string, number> = {
   // 작은 것들
   rat: 0.4,
   frog: 0.45,
@@ -46,7 +46,7 @@ const BEAST_HEIGHT: Record<string, number> = {
   varco_ogre4: 2.2,
   varco_ogre5: 2.2,
 };
-const BEAST_HEIGHT_DEFAULT = 0.9;
+export const BEAST_HEIGHT_DEFAULT = 0.9;
 
 /** 이름표를 띄우는 높이는 키보다 조금 위다 (m) */
 const HEAD_MARGIN = 0.25;

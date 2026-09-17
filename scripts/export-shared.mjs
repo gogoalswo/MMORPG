@@ -19,6 +19,8 @@ import { fileURLToPath } from 'node:url';
 import {
   ZONES,
   MONSTER_KINDS,
+  BEAST_HEIGHT,
+  BEAST_HEIGHT_DEFAULT,
   SKILLS,
   JOB_SKILLS,
   JOB_IDS,
@@ -56,7 +58,12 @@ export const OUT_DIR = join(ROOT, 'godot', 'data');
 export function buildData() {
   return {
     'zones.json': { start: START_ZONE, fieldOrder: FIELD_ORDER, zones: ZONES },
-    'monsters.json': { kinds: MONSTER_KINDS },
+    // heights 는 모델을 얼마나 키울지 정한다 (모델 높이는 1 로 정규화돼 있다)
+    'monsters.json': {
+      kinds: MONSTER_KINDS,
+      heights: BEAST_HEIGHT,
+      heightDefault: BEAST_HEIGHT_DEFAULT,
+    },
     'skills.json': { skills: SKILLS, byJob: JOB_SKILLS, projectileSpeed: PROJECTILE_SPEED },
     'combat.json': {
       jobs: JOB_IDS,

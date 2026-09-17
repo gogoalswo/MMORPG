@@ -50,6 +50,14 @@ static func monster_kind(id: String) -> Dictionary:
 		return {}
 	return kinds[id]
 
+## 짐승을 얼마나 크게 그릴지 (m). 모델은 높이 1 로 정규화돼 나온다
+static func beast_height(look: String, scale: float) -> float:
+	var table := load_table("monsters")
+	var heights: Dictionary = table.get("heights", {})
+	var base := float(heights.get(look, table.get("heightDefault", 0.9)))
+	return base * scale
+
+
 ## 사냥터 순서. 지금은 첫 곳만 쓴다 (World 의 임시 게이트)
 static func field_order() -> Array:
 	return zones().get("fieldOrder", [])

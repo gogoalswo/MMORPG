@@ -68,7 +68,11 @@ jobs:
           TRES
 
       - name: 에셋 임포트
-        run: ~/godot-bin/godot --headless --path godot --import
+        run: |
+          set -e
+          npm ci
+          npm run sync:godot
+          ~/godot-bin/godot --headless --path godot --import
 
       - name: APK 빌드
         run: |

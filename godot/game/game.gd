@@ -41,6 +41,9 @@ var _hp_bar: ProgressBar
 var _gate_panel: PanelContainer
 ## 보스 범위 공격 예고. [{node, fill, start, end, radius}, ...]
 var _aoe_marks: Array = []
+var _npc_panel: PanelContainer
+var _npc_title: Label
+var _npc_body: Label
 
 
 func _ready() -> void:
@@ -77,6 +80,10 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			_last_event = "마을에서 되살아났습니다"
 		&"aoe":
 			_show_aoe(payload)
+		&"npc":
+			_show_npc(payload)
+		&"notice":
+			_last_event = str(payload.get("text", ""))
 		&"gate":
 			# 차원문에 섰다. 어디로 갈지는 사람이 고른다
 			_gate_panel.visible = true
@@ -146,6 +153,46 @@ func _build_persistent() -> void:
 	_ui_root.add_child(_hp_bar)
 
 	_build_gate_panel()
+	_build_npc_panel()
+
+
+## NPC 와 말하는 창. 웹 클라의 ui/npcDialog.ts 자리다
+func _build_npc_panel() -> void:
+	_npc_panel = PanelContainer.new()
+	_npc_panel.set_anchors_preset(Control.PRESET_CENTER)
+	_npc_panel.visible = false
+	_ui_root.add_child(_npc_panel)
+
+	var rows := VBoxContainer.new()
+	_npc_panel.add_child(rows)
+
+	_npc_title = Label.new()
+	rows.add_child(_npc_title)
+
+	_npc_body = Label.new()
+	rows.add_child(_npc_body)
+
+	var close := Button.new()
+	close.text = "닫기"
+	close.pressed.connect(func() -> void: _npc_panel.visible = false)
+	rows.add_child(close)
+
+
+func _show_npc(payload: Dictionary) -> void:
+	var role := str(payload.get("role", ""))
+	var title := str(payload.get("title", ""))
+	_npc_title.text = "%s%s" % [
+		payload.get("name", ""),
+		"  (%s)" % title if title != "" else "",
+	]
+	match role:
+		"shop", "smith":
+			# 아이템 표를 다시 만들기로 해서 목록이 비어 있다.
+			# 표가 들어오면 payload.items 가 채워지고 여기에 줄이 선다
+			_npc_body.text = "아이템을 다시 만드는 중입니다.\n표가 들어오면 여기에 목록이 섭니다."
+		_:
+			_npc_body.text = "안녕하세요."
+	_npc_panel.visible = true
 
 
 func _make_theme() -> Theme:
@@ -271,6 +318,29 @@ func _build_zone(zone_id: String) -> void:
 		portal.position = Vector3(float(gate_pos[0]), 0.04, float(gate_pos[1]))
 		_zone_node.add_child(portal)
 
+	# NPC. 모델이 없는 look 뿐이라 기둥에 이름표를 얹는다
+	for npc in _transport.snapshot().get("npcs", []):
+		var post := MeshInstance3D.new()
+		var shape := CapsuleMesh.new()
+		shape.radius = 0.35
+		shape.height = 1.7
+		post.mesh = shape
+		var npc_mat := StandardMaterial3D.new()
+		npc_mat.albedo_color = Color("#d8c48a") if npc.has("role") else Color("#b9b3a6")
+		post.material_override = npc_mat
+		post.position = Vector3(npc.x, shape.height * 0.5, npc.z)
+		_zone_node.add_child(post)
+
+		var plate := Label3D.new()
+		plate.text = "%s\n%s" % [npc.get("name", ""), npc.get("title", "")]
+		plate.font = _ui_root.theme.default_font
+		plate.font_size = 64
+		plate.pixel_size = 0.004
+		plate.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		plate.no_depth_test = true
+		plate.position = Vector3(npc.x, 2.3, npc.z)
+		_zone_node.add_child(plate)
+
 	# 몬스터. 자리는 World 가 정했고 여기서는 그리기만 한다.
 	# 모델이 있는 look 만 모델이고 나머지는 기둥이다 (웹 클라도 같은 규칙)
 	_mob_nodes.clear()
@@ -309,6 +379,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		var hit := _ground_point(event.position)
 		if hit == Vector3.INF:
 			return
+		# NPC 를 눌렀으면 말을 건다. **닿는지는 World 가 다시 본다**
+		var npc := _npc_at(hit)
+		if npc != "":
+			_transport.send(&"npc", {"name": npc})
+			return
 		# 몬스터를 눌렀으면 그놈을 잡으러 간다. 아니면 그 자리로 걸어간다
 		var mob := _mob_at(hit)
 		if mob != "":
@@ -320,6 +395,14 @@ func _unhandled_input(event: InputEvent) -> void:
 			_target = hit
 			_marker.position = hit + Vector3(0, 0.05, 0)
 			_marker.visible = true
+
+
+## 바닥의 그 자리에 NPC 가 있나
+func _npc_at(point: Vector3) -> String:
+	for npc in _transport.snapshot().get("npcs", []):
+		if Vector2(point.x - float(npc.x), point.z - float(npc.z)).length() < 1.2:
+			return str(npc.get("name", ""))
+	return ""
 
 
 ## 바닥의 그 자리에 산 몬스터가 있나. 손가락은 굵으니 반지름에 여유를 준다
@@ -486,13 +569,14 @@ func _draw_state() -> void:
 	_hp_bar.max_value = me.stats.maxHp
 	_hp_bar.value = me.hp
 
-	_label.text = "%s   %d레벨   체력 %d/%d   경험치 %d/%d\n몬스터 %d/%d   %d fps\n%s" % [
+	_label.text = "%s   %d레벨   체력 %d/%d   경험치 %d/%d\n골드 %d   몬스터 %d/%d   %d fps\n%s" % [
 		GameData.zone(zone_now).get("name", zone_now),
 		me.level,
 		me.hp,
 		me.stats.maxHp,
 		me.exp,
 		Combat.exp_to_next(int(me.level)),
+		me.get("gold", 0),
 		alive,
 		snap.get("monsters", []).size(),
 		Engine.get_frames_per_second(),

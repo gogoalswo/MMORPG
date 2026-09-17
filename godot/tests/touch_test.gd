@@ -10,6 +10,8 @@ var _failed := 0
 
 
 func _init() -> void:
+	# 남아 있는 저장이 있으면 엉뚱한 존에서 시작한다 (LocalTransport 가 이어서 연다)
+	Save.clear()
 	root.call_deferred("add_child", load("res://main.tscn").instantiate())
 	_run.call_deferred()
 

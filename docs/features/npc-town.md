@@ -73,4 +73,8 @@
 
 ## 관련
 
+- [godot-migration.md](godot-migration.md) — 고도 쪽에도 같은 NPC 데이터를 쓴다.
+  닿는 거리(`NPC_REACH` 4.5)를 `World` 가 다시 재는 규칙도 그대로다. 상점·대장간은
+  아이템 표를 다시 만들기로 해서 **창까지만** 있다
+
 [items.md](items.md) · [inventory-equipment.md](inventory-equipment.md) · [world-zones.md](world-zones.md)

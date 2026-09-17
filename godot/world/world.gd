@@ -160,32 +160,39 @@ func step(delta: float) -> void:
 	_check_gate()
 
 
-## 차원문에 들어가면 존을 옮긴다.
+## 차원문 안에 서 있으면 **고르는 화면을 띄우라고 알린다.** 어디로 갈지는
+## 사람이 고른다 (웹 클라의 ui/zoneGate.ts 와 같은 자리).
 ##
-## **임시다.** 진짜 게임은 차원문에서 사냥터 20곳을 골라 고르게 되어 있는데
-## (웹 클라의 ui/zoneGate.ts), 그 화면은 UI 단계에서 만든다. 지금은 마을과
-## 첫 사냥터를 오가기만 한다 — 몬스터를 보려면 사냥터로 가야 하기 때문이다.
+## 매 프레임 알리면 화면이 깜빡이므로, 문을 벗어날 때까지 한 번만 알린다.
 func _check_gate() -> void:
 	var gate: Dictionary = zone.get("gate", {})
 	if gate.is_empty():
 		return
 	var position: Array = gate.get("position", [0, 0])
 	var radius := float(gate.get("radius", 2.6))
-	var fields := GameData.field_order()
-	var target: String = GameData.start_zone() if zone_id != GameData.start_zone() else (
-		str(fields[0]) if not fields.is_empty() else ""
-	)
-	if target.is_empty():
-		return
 
 	for id in _players:
 		var player: Dictionary = _players[id]
+		if bool(player.get("dead", false)):
+			continue
 		var gap := Vector2(player.x - float(position[0]), player.z - float(position[1])).length()
-		if gap <= radius:
-			open(target)
-			for who in _players:
-				join(who)
-			return
+		var inside := gap <= radius
+		if inside and not bool(player.get("at_gate", false)):
+			_events.append({"type": "gate"})
+		player["at_gate"] = inside
+
+
+## 고른 곳으로 옮긴다. **있는 존인지 여기서 다시 본다** — 화면이 보내는 건 요청이다
+func travel(player_id: String, target: String) -> void:
+	if not _players.has(player_id):
+		return
+	var all: Dictionary = GameData.zones().get("zones", {})
+	if not all.has(target) or target == zone_id:
+		return
+	open(target)
+	for who in _players:
+		join(who)
+	_events.append({"type": "zone", "zone": target})
 
 
 ## 밖으로 내보내는 상태. 읽기 전용으로 쓴다.

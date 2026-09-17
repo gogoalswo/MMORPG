@@ -90,10 +90,8 @@ func _run_scene() -> void:
 	if not game._player is Rig:
 		_fail("캐릭터가 모델이 아니다")
 
-	# 차원문(9, 0)으로 밀어 넣는다
-	var me: Dictionary = game._transport.snapshot().players[game._transport.my_id()]
-	me.x = 9.0
-	me.z = 0.0
+	# 사냥터를 골라 옮긴다
+	game._transport.send(&"travel", {"zone": "meadow"})
 	for i in 5:
 		await process_frame
 

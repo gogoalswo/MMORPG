@@ -22,25 +22,36 @@ const MODELS = [
   'varco_ogre1.glb', // 초원 몬스터 (mob003 · mob008 의 look)
 ];
 
-const from = join(ROOT, 'public', 'assets', 'models');
-const to = join(ROOT, 'godot', 'assets', 'models');
-mkdirSync(to, { recursive: true });
+/** 한글 폰트. 고도 기본 폰트에는 한글 글리프가 없어 넣지 않으면 네모로 나온다 */
+const FONTS = ['NotoSansKR-subset.ttf'];
+
+const jobs = [
+  { names: MODELS, from: join(ROOT, 'public', 'assets', 'models'), to: join(ROOT, 'godot', 'assets', 'models') },
+  { names: FONTS, from: join(ROOT, 'public', 'assets', 'fonts'), to: join(ROOT, 'godot', 'assets', 'fonts') },
+];
 
 let copied = 0;
-for (const name of MODELS) {
-  const src = join(from, name);
-  if (!existsSync(src)) {
-    console.log(`${name.padEnd(20)} 원본이 없다 — 건너뛴다`);
-    continue;
+for (const job of jobs) copied += run(job);
+console.log(`${copied}개 새로 복사했다 -> godot/assets/`);
+
+function run({ names, from, to }) {
+  mkdirSync(to, { recursive: true });
+  let n = 0;
+  for (const name of names) {
+    const src = join(from, name);
+    if (!existsSync(src)) {
+      console.log(`${name.padEnd(24)} 원본이 없다 — 건너뛴다`);
+      continue;
+    }
+    const dst = join(to, name);
+    // 같은 크기면 다시 쓰지 않는다. 고도가 매번 다시 임포트하지 않게
+    if (existsSync(dst) && statSync(dst).size === statSync(src).size) {
+      console.log(`${name.padEnd(24)} 그대로`);
+      continue;
+    }
+    copyFileSync(src, dst);
+    n++;
+    console.log(`${name.padEnd(24)} ${(statSync(dst).size / 1048576).toFixed(1)}MB 복사`);
   }
-  const dst = join(to, name);
-  // 같은 크기면 다시 쓰지 않는다. 고도가 매번 다시 임포트하지 않게
-  if (existsSync(dst) && statSync(dst).size === statSync(src).size) {
-    console.log(`${name.padEnd(20)} 그대로`);
-    continue;
-  }
-  copyFileSync(src, dst);
-  copied++;
-  console.log(`${name.padEnd(20)} ${(statSync(dst).size / 1048576).toFixed(1)}MB 복사`);
+  return n;
 }
-console.log(`${copied}개 새로 복사했다 -> godot/assets/models/`);

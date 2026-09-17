@@ -36,6 +36,9 @@ var _target_mob := ""
 var _mob_nodes: Dictionary = {}
 ## 마지막으로 일어난 일 한 줄 (맞았다·레벨 올랐다)
 var _last_event := ""
+var _ui_root: Control
+var _hp_bar: ProgressBar
+var _gate_panel: PanelContainer
 
 
 func _ready() -> void:
@@ -50,23 +53,31 @@ func _ready() -> void:
 func _on_event(name: StringName, payload: Dictionary) -> void:
 	match name:
 		&"hit":
-			_last_event = "hit %d%s%s" % [
+			var who := "맞음" if payload.get("target_kind", "") == "player" else "피해"
+			_last_event = "%s %d%s%s" % [
+				who,
 				payload.get("amount", 0),
-				"!" if payload.get("crit", false) else "",
-				"  KILL" if payload.get("killed", false) else "",
+				" 치명타!" if payload.get("crit", false) else "",
+				"  처치!" if payload.get("killed", false) else "",
 			]
+		&"levelUp":
+			_last_event = "레벨 %d 이 되었습니다" % payload.get("level", 0)
 		&"swing":
 			# 휘두르는 동안 발이 묶인다는 통보. 그 시간만큼 공격 동작을 튼다
 			_swing_until = Time.get_ticks_msec() + int(payload.get("root_ms", 400))
-		&"levelUp":
-			_last_event = "LEVEL UP %d" % payload.get("level", 0)
 		&"died":
-			_last_event = "YOU DIED - tap to revive in town"
+			_last_event = "쓰러졌습니다 — 아무 데나 눌러 마을에서 되살아나기"
 			_target = Vector3.INF
 			_target_mob = ""
 			_marker.visible = false
+			_gate_panel.visible = false
 		&"revived":
-			_last_event = "revived"
+			_last_event = "마을에서 되살아났습니다"
+		&"gate":
+			# 차원문에 섰다. 어디로 갈지는 사람이 고른다
+			_gate_panel.visible = true
+		&"zone":
+			_last_event = "%s 에 도착했습니다" % GameData.zone(str(payload.get("zone", ""))).get("name", "")
 
 
 ## 존이 바뀌어도 살아 있는 것들
@@ -109,11 +120,79 @@ func _build_persistent() -> void:
 
 	var ui := CanvasLayer.new()
 	add_child(ui)
+
+	# 한글 폰트를 테마로 깐다. 고도 기본 폰트에는 한글 글리프가 없어서
+	# 안 깔면 "마을" 이 네모로 나온다 (npm run sync:godot 이 복사해 둔다)
+	_ui_root = Control.new()
+	_ui_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	# 화면 아무 데나 눌러 걸어야 하므로 UI 바탕은 터치를 먹지 않는다.
+	# 단추는 제 몫을 따로 먹는다
+	_ui_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ui_root.theme = _make_theme()
+	ui.add_child(_ui_root)
+
 	_label = Label.new()
-	# ASCII 만 쓴다 — 고도 기본 폰트에 한글 글리프가 없다
 	_label.position = Vector2(24, 24)
-	_label.add_theme_font_size_override("font_size", 28)
-	ui.add_child(_label)
+	_ui_root.add_child(_label)
+
+	_hp_bar = ProgressBar.new()
+	_hp_bar.position = Vector2(24, 150)
+	_hp_bar.size = Vector2(360, 34)
+	_hp_bar.show_percentage = false
+	_ui_root.add_child(_hp_bar)
+
+	_build_gate_panel()
+
+
+func _make_theme() -> Theme:
+	var theme := Theme.new()
+	var path := "res://assets/fonts/NotoSansKR-subset.ttf"
+	if ResourceLoader.exists(path):
+		theme.default_font = load(path)
+	theme.default_font_size = 28
+	return theme
+
+
+## 차원문에 서면 뜨는 사냥터 목록. 웹 클라의 ui/zoneGate.ts 와 같은 자리다
+func _build_gate_panel() -> void:
+	_gate_panel = PanelContainer.new()
+	_gate_panel.set_anchors_preset(Control.PRESET_CENTER)
+	_gate_panel.visible = false
+	_ui_root.add_child(_gate_panel)
+
+	var rows := VBoxContainer.new()
+	_gate_panel.add_child(rows)
+
+	var title := Label.new()
+	title.text = "어디로 갈까요"
+	rows.add_child(title)
+
+	var grid := GridContainer.new()
+	grid.columns = 3
+	rows.add_child(grid)
+
+	# 마을 + 사냥터 20곳. 순서는 데이터가 정한다 (zones.json 의 fieldOrder)
+	var ids: Array = [GameData.start_zone()]
+	ids.append_array(GameData.field_order())
+	for id in ids:
+		var zone := GameData.zone(str(id))
+		var button := Button.new()
+		button.text = str(zone.get("name", id))
+		button.pressed.connect(_on_gate_pick.bind(str(id)))
+		grid.add_child(button)
+
+	var close := Button.new()
+	close.text = "닫기"
+	close.pressed.connect(func() -> void: _gate_panel.visible = false)
+	rows.add_child(close)
+
+
+func _on_gate_pick(zone_id: String) -> void:
+	_gate_panel.visible = false
+	_target = Vector3.INF
+	_target_mob = ""
+	_marker.visible = false
+	_transport.send(&"travel", {"zone": zone_id})
 
 
 ## 존 하나를 짓는다. 차원문으로 옮기면 통째로 버리고 다시 짓는다
@@ -397,8 +476,12 @@ func _draw_state() -> void:
 		if int(monster.hp) > 0:
 			alive += 1
 	_player.visible = not bool(me.get("dead", false))
-	_label.text = "%s  Lv%d  hp %d/%d  exp %d/%d\nmobs %d/%d  %d fps\n%s" % [
-		zone_now,
+
+	_hp_bar.max_value = me.stats.maxHp
+	_hp_bar.value = me.hp
+
+	_label.text = "%s   %d레벨   체력 %d/%d   경험치 %d/%d\n몬스터 %d/%d   %d fps\n%s" % [
+		GameData.zone(zone_now).get("name", zone_now),
 		me.level,
 		me.hp,
 		me.stats.maxHp,

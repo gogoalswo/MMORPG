@@ -99,15 +99,38 @@ func _case_block() -> void:
 
 
 func _case_gate() -> void:
+	# 차원문은 **고르라고 알리기만 한다.** 어디로 갈지는 사람이 고른다
 	var w := _world("village")
 	var gate_pos: Array = w.zone.gate.position
 	var me: Dictionary = w.snapshot().players["me"]
 	me.x = float(gate_pos[0])
 	me.z = float(gate_pos[1])
 	w.step(0.016)
+	if w.zone_id != "village":
+		_fail("고르기도 전에 존이 %s 로 바뀌었다" % w.zone_id)
+	var told := false
+	for e in w.drain_events():
+		if e.get("type", "") == "gate":
+			told = true
+	if not told:
+		_fail("차원문에 섰는데 알려 주지 않았다")
+
+	# 문을 벗어나지 않으면 다시 알리지 않는다 (매 프레임 뜨면 깜빡인다)
+	w.step(0.016)
+	for e in w.drain_events():
+		if e.get("type", "") == "gate":
+			_fail("문 안에 서 있는데 또 알렸다")
+
+	# 고른 곳으로 옮긴다
+	w.travel("me", "meadow")
 	if w.zone_id != "meadow":
-		_fail("차원문에 섰는데 존이 %s 그대로다" % w.zone_id)
+		_fail("고른 곳으로 안 갔다 (%s)" % w.zone_id)
 	elif _mobs(w).size() != 81:
 		_fail("옮긴 존에 몬스터가 안 났다")
 	else:
-		print("  차원문 -> %s, 몬스터 %d마리" % [w.zone_id, _mobs(w).size()])
+		print("  차원문 알림 -> 골라서 %s, 몬스터 %d마리" % [w.zone_id, _mobs(w).size()])
+
+	# 없는 존은 거절한다 — 화면이 보내는 건 요청이다
+	w.travel("me", "없는곳")
+	if w.zone_id != "meadow":
+		_fail("없는 존으로 옮겨졌다")

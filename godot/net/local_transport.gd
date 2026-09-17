@@ -34,6 +34,8 @@ func send(message: StringName, payload: Dictionary) -> void:
 			_world.attack(MY_ID)
 		&"revive":
 			_world.revive(MY_ID)
+		&"travel":
+			_world.travel(MY_ID, str(payload.get("zone", "")))
 		_:
 			push_warning("모르는 메시지: %s" % message)
 

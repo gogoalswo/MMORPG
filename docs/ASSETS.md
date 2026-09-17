@@ -10,6 +10,28 @@
 > 나중에 상용화 시점에 "이건 어디서 받았더라"를 역추적하는 건 불가능에 가깝다.
 > 라이선스가 불분명한 에셋은 넣지 않는다.
 
+## 한글 폰트 — Noto Sans KR (SIL OFL 1.1)
+
+출처: Google Fonts (https://fonts.google.com/noto/specimen/Noto+Sans+KR) · **SIL Open Font License 1.1**
+
+CC0 는 아니지만 OFL 은 **임베딩·상업적 사용에 제한이 없다.** 폰트 파일을 팔지만
+않으면 된다. 저작권 표시는 폰트 파일 안에 그대로 들어 있다.
+
+| 파일 | 크기 | 쓰는 곳 |
+|---|---|---|
+| `public/assets/fonts/NotoSansKR-subset.ttf` | 436KB | 고도 클라이언트 UI 전부 |
+
+원본 5.9MB 에서 **완성형(KS X 1001) 2350자 + ASCII 만 남겼다.** 웹 빌드가 이미
+51MB 라 통째로 넣으면 폰에서 받을 것만 늘어난다. 다시 만들려면:
+
+```bash
+pip install fonttools
+python3 scripts/build-korean-font.py 받아둔/NotoSansKR.ttf
+```
+
+**결과물을 커밋하므로 보통은 돌릴 일이 없다.** 글꼴을 바꾸거나 없는 글자가
+네모로 나올 때만 돌린다. 고도가 쓰는 자리로는 `npm run sync:godot` 이 복사한다.
+
 ## 지면 텍스처 — VARCO 생성
 
 출처: 바르코 3D (https://3d.varco.ai) 로 만든 타일 이미지 · **CC0 아님** (약관은 아래 캐릭터 절과 같다)

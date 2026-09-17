@@ -508,7 +508,7 @@ export class ZoneRoom extends Room {
     this.targets.delete(id);
     this.autoRadius.delete(id);
     this.autoSkills.delete(id);
-    for (const skillId of JOB_SKILLS[(this.state.players.get(id)?.job ?? 'knight') as JobId] ?? []) {
+    for (const skillId of JOB_SKILLS[(this.state.players.get(id)?.job ?? 'fighter') as JobId] ?? []) {
       this.skillReadyAt.delete(`${id}:${skillId}`);
     }
     this.combat.grid.remove(id);

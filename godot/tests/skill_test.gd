@@ -17,7 +17,6 @@ func _init() -> void:
 	_case_bar()
 	_case_cast()
 	_case_multi()
-	_case_heal()
 	_case_dead()
 	Save.clear()
 
@@ -74,8 +73,8 @@ func _case_learn() -> void:
 		_fail("없는 스킬이 들어갔다")
 
 	w.drain_events()
-	w.learn_skill("me", "heavy_strike")
-	if not ("heavy_strike" in me.skills):
+	w.learn_skill("me", "rising_kick")
+	if not ("rising_kick" in me.skills):
 		_fail("내 직업 스킬을 못 배웠다")
 	elif _first(w.drain_events(), "skills").is_empty():
 		_fail("배웠다고 알려 주지 않았다")
@@ -92,13 +91,13 @@ func _case_bar() -> void:
 	var size := int(GameData.combat().get("skillBarSize", 4))
 
 	# 안 배운 것은 안 올라간다
-	w.set_skill_bar("me", ["heavy_strike", "whirlwind"])
+	w.set_skill_bar("me", ["rising_kick", "tiger_roar"])
 	if me.skill_bar.size() != 0:
 		_fail("안 배운 스킬이 액션바에 올라갔다")
 
-	for id in Skills.for_job("knight"):
+	for id in Skills.for_job("fighter"):
 		w.learn_skill("me", str(id))
-	w.set_skill_bar("me", Skills.for_job("knight"))
+	w.set_skill_bar("me", Skills.for_job("fighter"))
 	if me.skill_bar.size() != size:
 		_fail("액션바가 %d칸이어야 하는데 %d" % [size, me.skill_bar.size()])
 	else:
@@ -110,11 +109,11 @@ func _case_cast() -> void:
 	var w: World = s[0]
 	var me: Dictionary = s[1]
 	var mob: Dictionary = s[2][0]
-	w.learn_skill("me", "heavy_strike")
-	w.set_skill_bar("me", ["heavy_strike"])
+	w.learn_skill("me", "rising_kick")
+	w.set_skill_bar("me", ["rising_kick"])
 	w.drain_events()
 
-	w.cast("me", "heavy_strike")
+	w.cast("me", "rising_kick")
 	var events := w.drain_events()
 	var used := _first(events, "skill")
 	var hit := _first(events, "hit")
@@ -127,14 +126,15 @@ func _case_cast() -> void:
 		_fail("사거리 안인데 안 맞았다")
 		return
 
-	# 강타 power 2.2, 기사 Lv1 공격 12 -> 26.4, 들늑대 방어 3 -> 25 (치명타면 1.5배)
-	var want: int = 38 if hit.crit else 25
+	# 할퀴기 power 2.8, 격투가 Lv1 공격 12 -> 33.6, 들늑대 방어 3 -> 31 (치명타면 1.5배)
+	# 31.4999… 라 31 로 내려간다 — 33.6 이 이진수로 딱 떨어지지 않는다
+	var want: int = 47 if hit.crit else 31
 	if int(hit.amount) != want:
 		_fail("피해가 %d 여야 하는데 %d" % [want, hit.amount])
-	elif str(hit.get("skill", "")) != "heavy_strike":
+	elif str(hit.get("skill", "")) != "rising_kick":
 		_fail("어느 스킬이었는지 안 실려 왔다")
 	else:
-		print("  강타: %d 피해 (경직 %dms)" % [hit.amount, used.root_ms])
+		print("  할퀴기: %d 피해 (경직 %dms)" % [hit.amount, used.root_ms])
 
 	# 남의 직업 스킬은 써지지 않는다
 	w.cast("me", "fireball")
@@ -143,56 +143,35 @@ func _case_cast() -> void:
 
 
 func _case_multi() -> void:
-	# 회전베기 maxTargets 5, 전방위(arc 2PI) — 앞에 셋을 놓으면 셋 다 맞아야 한다
+	# 호포각 maxTargets 5, 전방위(arc 2PI) — 앞에 셋을 놓으면 셋 다 맞아야 한다
 	var s := _setup(3)
 	var w: World = s[0]
-	w.learn_skill("me", "whirlwind")
-	w.set_skill_bar("me", ["whirlwind"])
+	w.learn_skill("me", "tiger_roar")
+	w.set_skill_bar("me", ["tiger_roar"])
 	w.drain_events()
 
-	w.cast("me", "whirlwind")
+	w.cast("me", "tiger_roar")
 	var hits := 0
 	for e in w.drain_events():
 		if e.get("type", "") == "hit":
 			hits += 1
 	if hits != 3:
-		_fail("회전베기가 3마리를 쳐야 하는데 %d마리" % hits)
+		_fail("호포각이 3마리를 쳐야 하는데 %d마리" % hits)
 	else:
-		print("  회전베기: %d마리 동시" % hits)
+		print("  호포각: %d마리 동시" % hits)
 
 
-func _case_heal() -> void:
-	# 재정비 selfHeal 0.3 — 공격 판정을 하지 않고 체력만 올린다
-	var s := _setup()
-	var w: World = s[0]
-	var me: Dictionary = s[1]
-	var mob: Dictionary = s[2][0]
-	me.hp = 50
-	w.learn_skill("me", "regroup")
-	w.set_skill_bar("me", ["regroup"])
-	w.drain_events()
-
-	w.cast("me", "regroup")
-	var events := w.drain_events()
-	var heal := _first(events, "hit")
-	if int(me.hp) != 92:  # 50 + round(140 * 0.3)
-		_fail("체력이 92 여야 하는데 %d" % me.hp)
-	elif not bool(heal.get("heal", false)):
-		_fail("회복이라고 알려 주지 않았다")
-	elif int(mob.hp) != int(mob.max_hp):
-		_fail("회복기인데 몬스터가 맞았다")
-	else:
-		print("  재정비: 체력 50 -> %d" % me.hp)
-
-
+## 자가 회복 스킬을 확인하던 `_case_heal` 은 **2026-09-17 에 뺐다** — 회복기를
+## 가진 직업이 기사뿐이었고 기사를 지웠다. `selfHeal` 판정은 `World` 에 그대로
+## 있으니, 회복 스킬을 다시 만들면 여기에 한 편 되살린다.
 func _case_dead() -> void:
 	var s := _setup()
 	var w: World = s[0]
 	var me: Dictionary = s[1]
-	w.learn_skill("me", "heavy_strike")
-	w.set_skill_bar("me", ["heavy_strike"])
+	w.learn_skill("me", "rising_kick")
+	w.set_skill_bar("me", ["rising_kick"])
 	me["dead"] = true
 	w.drain_events()
-	w.cast("me", "heavy_strike")
+	w.cast("me", "rising_kick")
 	if not w.drain_events().is_empty():
 		_fail("죽었는데 스킬이 나갔다")

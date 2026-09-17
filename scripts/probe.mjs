@@ -19,7 +19,7 @@
  *   --zone <id>        기본 village
  *   --token <t>        없으면 게스트로 접속한다 (새 계정이 만들어진다)
  *   --character <id>   기존 캐릭터로 들어간다
- *   --name <이름> --job <knight|mage|archer|fighter>
+ *   --name <이름> --job <fighter|mage|archer>
  *   --server <url>     기본 ws://localhost:2567
  *   --seconds <n> / --rounds <n>
  *   --log <path>       기본 logs/probe-<시각>.log

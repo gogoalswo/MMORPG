@@ -99,7 +99,7 @@ func _case_restore_zone() -> void:
 	if absf(back.x + 5.0) > 1e-9 or absf(back.z - 8.0) > 1e-9:
 		_fail("자리가 안 맞다 (%.2f, %.2f)" % [back.x, back.z])
 	# 레벨에 맞는 스탯으로 다시 만들어져야 한다
-	if back.stats.maxHp != Combat.stats_for("knight", 4).maxHp:
+	if back.stats.maxHp != Combat.stats_for("fighter", 4).maxHp:
 		_fail("스탯이 레벨 4 것이 아니다")
 	else:
 		print("  되살림: %s (%.1f, %.1f) %d레벨 체력 %d/%d" % [

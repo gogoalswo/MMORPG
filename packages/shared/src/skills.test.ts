@@ -152,10 +152,10 @@ test('자기 주위로 터지는 기술은 사거리가 짧다', () => {
 });
 
 test('다른 직업 스킬은 걸러진다', () => {
-  const knightSkill = JOB_SKILLS.knight[0]!;
-  assert.ok(skillForJob('knight', knightSkill));
-  assert.equal(skillForJob('mage', knightSkill), null);
-  assert.equal(skillForJob('knight', '없는스킬'), null);
+  const fighterSkill = JOB_SKILLS.fighter[0]!;
+  assert.ok(skillForJob('fighter', fighterSkill));
+  assert.equal(skillForJob('mage', fighterSkill), null);
+  assert.equal(skillForJob('fighter', '없는스킬'), null);
 });
 
 test('배우기 판정이 직업과 레벨을 함께 본다', () => {
@@ -165,7 +165,7 @@ test('배우기 판정이 직업과 레벨을 함께 본다', () => {
   if (!SKILL_UNLOCK_ALL) {
     assert.equal(canLearn(late, 'archer', late.reqLevel - 1), false, '레벨이 모자라면 못 배운다');
   }
-  assert.equal(canLearn(late, 'knight', MAX_LEVEL), false, '다른 직업은 못 배운다');
+  assert.equal(canLearn(late, 'fighter', MAX_LEVEL), false, '다른 직업은 못 배운다');
 });
 
 test('만렙까지 올리면 모든 스킬을 배울 수 있다', () => {

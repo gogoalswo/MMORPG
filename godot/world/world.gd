@@ -25,7 +25,7 @@ var _rng := RandomNumberGenerator.new()
 var _events: Array = []
 
 ## 어느 직업으로 시작하나. 만드는 화면이 없어서 당분간 고정이다
-const DEFAULT_JOB := "knight"
+const DEFAULT_JOB := "fighter"
 
 ## NPC 와 말할 수 있는 거리 (m). **거리는 여기서 다시 잰다** —
 ## 창이 열려 있다고 살 수 있는 게 아니다

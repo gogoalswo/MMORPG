@@ -163,10 +163,10 @@ const VILLAGE: ZoneDef = {
   npcs: [
     // 말을 걸 수 있는 세 사람. 스폰 지점에서 걸어서 바로 닿는 거리에 둔다.
     { name: '상인 보리스', job: 'mage', look: 'merchant', x: -7, z: 4, role: 'shop', title: '상점' },
-    { name: '대장장이 군터', job: 'knight', look: 'smith', x: 0, z: 6.5, role: 'smith', title: '대장간' },
+    { name: '대장장이 군터', job: 'fighter', look: 'smith', x: 0, z: 6.5, role: 'smith', title: '대장간' },
 
     // 배경에 서 있는 마을 사람. 전부 다르게 생겨야 마을로 보인다.
-    { name: '아네트', job: 'knight', look: 'villager_sack', x: -8.7, z: -1.3 },
+    { name: '아네트', job: 'fighter', look: 'villager_sack', x: -8.7, z: -1.3 },
     { name: '요한', job: 'mage', look: 'villager_apron', x: -6.2, z: -3.8, hp: 72 },
     { name: '릴리', job: 'archer', look: 'villager_hood', x: -3.8, z: -6.2 },
     { name: '노인 하르트', job: 'archer', look: 'villager_old', x: -9, z: -12 },

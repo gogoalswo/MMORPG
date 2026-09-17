@@ -3,7 +3,7 @@
 이 프로젝트에 포함된 모든 **외부** 에셋은 **CC0 1.0 (퍼블릭 도메인)** 이다.
 출처 표기 의무가 없고 상업적 사용에 제한이 없다.
 예외는 VARCO 로 직접 생성한 것 — [바닥 텍스처](#지면-텍스처--varco-생성) 7장과
-[캐릭터](#캐릭터-모델--varco-생성-기사마법사궁수격투가) 넷, 오우거 다섯, 격투가 스킬 그림 한 장이다 —
+[캐릭터](#캐릭터-모델--varco-생성-격투가마법사궁수) 셋, 오우거 다섯, 격투가 스킬 그림 한 장이다 —
 받아온 게 아니라 우리가 만든 것이라 라이선스가 아니라 **약관**이 걸린다.
 
 > 새 에셋을 추가할 때는 **반드시 이 표에 먼저 기록한다.**
@@ -74,24 +74,18 @@ Quaternius 짐승·공룡 20종(CC0, 미러 trebeljahr/quaternius-showcase)은
 배치 전까지는 전부 절차적 리그로 나온다. 되살리려면 git 기록에서
 `fetch-assets.sh` 의 `fetch_beast` 줄을 찾는다.
 
-## 캐릭터 모델 — VARCO 생성 (기사·마법사·궁수·격투가)
+## 캐릭터 모델 — VARCO 생성 (격투가·마법사·궁수)
 
-출처: 바르코 3D (https://3d.varco.ai) 커스텀 워크플로우 "기사" 와 마법사·궁수·격투가 결과물 · **CC0 아님**
+출처: 바르코 3D (https://3d.varco.ai) 커스텀 워크플로우 격투가·마법사·궁수 결과물 · **CC0 아님**
 
 받아온 에셋이 아니라 **우리가 그 서비스로 만든 결과물**이다. 그래서 라이선스가
 아니라 VARCO 의 이용약관이 적용된다 — 상용화 전에 생성물 권리 조항을 확인해야
 한다. 위 표들과 성격이 다르므로 절을 따로 뒀다.
 
-| 워크플로우 노드 | 우리 파일 | 쓰는 곳 |
-|---|---|---|
-| Rig(humanoid) 결과 | `assets-src/models/varco/knight_rigged.glb` | 메시·뼈대 |
-| Animate `standing_idle_1` | `anim_idle.glb` | `Idle` (노드는 뒤에 `sprint` 로 바뀜 — 고정 주소로 받는다) |
-| Animate `run` | `anim_run.glb` | `Run` |
-| Animate `sword_slash` | `anim_sword_slash.glb` | `Attack` |
-| Animate `two_hand_attack` | `anim_two_hand_attack.glb` | `Attack_Heavy` (아직 안 씀) |
-| Animate `staff_spin_attack` | `anim_staff_spin.glb` | `Attack_Spin` (아직 안 씀) |
-| Animate `left_side_fall` | `anim_death.glb` | `Death` |
-| 합친 결과 | `public/assets/models/varco_knight.glb` (3.1MB) | 기사 직업 |
+**기사(`varco_knight.glb`)는 2026-09-17 에 지웠다** — 요청대로 격투가를 기본
+캐릭터로 삼으면서 모델 파일과 `fetch-assets.sh` 의 취득 주소(`knight_rigged` ·
+동작 여섯 `anim_*`)를 같이 뺐다. 되살릴 일이 생기면 그 커밋 이전의 `git show` 로
+꺼낸다. 기사만 리깅 결과물을 따로 받았고, 남은 셋은 아래처럼 동작 파일로 왔다.
 
 마법사는 리깅 결과물 없이 **동작 파일 셋**으로 왔다. 대기 파일을 기본(메시·뼈대)으로 쓴다.
 
@@ -230,7 +224,7 @@ assets-src/          원본 — git 에 커밋하지 않는다 (fetch 스크립�
   textures/varco/map1~7.png   바닥 원본 (VARCO, 1024² 색 한 장씩)
   textures/ground_*.jpg       build-ground-textures 가 만든 색·노멀 (KTX2 재인코딩용)
   models/*.glb         KayKit·Quaternius 원본 — 2026-09-10 에 뺀 것. 남아 있으면 지워도 된다
-  models/varco/*.glb   VARCO 워크플로우 결과물 (합치기 전, 기사 6개 83MB + 마법사·궁수·격투가 각 4개 48~51MB 남짓 + 오우거 5종 각 4개 52~60MB)
+  models/varco/*.glb   VARCO 워크플로우 결과물 (합치기 전, 격투가·마법사·궁수 각 4개 48~51MB 남짓 + 오우거 5종 각 4개 52~60MB)
   sky_1k.hdr
 public/assets/       배포되는 파일만
   textures/*.ktx2      압축된 텍스처

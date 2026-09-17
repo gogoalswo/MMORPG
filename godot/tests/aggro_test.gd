@@ -76,7 +76,7 @@ func _case_chase() -> void:
 
 
 func _case_attack() -> void:
-	# 사거리(1.9m) 안이면 때린다. 들늑대 공격 9 vs 기사 Lv1 방어 8 -> 8
+	# 사거리(1.9m) 안이면 때린다. 들늑대 공격 9 vs 격투가 Lv1 방어 6 -> 8
 	var s := _setup(-20.0, 0.0, -20.0, 1.5)
 	var w: World = s[0]
 	var me: Dictionary = s[1]

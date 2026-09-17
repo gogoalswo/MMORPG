@@ -73,7 +73,7 @@ export interface MonsterAoe {
  * - `windupMs: 1600` — 붙어 있던 자리(2.2m)에서 원 밖(7m)까지 4.8m,
  *   `RUN_SPEED = 4.6` 으로 약 1.05초다. 1.6초면 반응할 틈이 있으면서
  *   가만히 서 있으면 반드시 맞는다.
- * - `power: 2.2` — 평타의 두 배가 조금 넘는다. 전 레벨 구간에서 기사는
+ * - `power: 2.2` — 평타의 두 배가 조금 넘는다. 전 레벨 구간에서 격투가는
  *   최대 체력의 5~15%, 마법사는 25~35% 를 잃는다. 종잇장이 더 아픈 건 의도다.
  */
 export const BOSS_AOE: MonsterAoe = {
@@ -174,7 +174,7 @@ export function monsterIdFor(level: number): string {
  *
  * 방어가 √L 인 게 핵심이다. 선형으로 키우면 `computeDamage` 의 감쇠식
  * `def/(def+45)` 가 100% 로 포화해서 고레벨 전투가 한없이 길어진다 —
- * 선형이었을 때 200레벨에서 기사가 43대를 때려야 했다. √L 이면 200까지 10~15대다.
+ * 선형이었을 때 200레벨에서 근접 직업이 43대를 때려야 했다. √L 이면 200까지 10~15대다.
  */
 function statsForLevel(level: number, strong: boolean) {
   return {

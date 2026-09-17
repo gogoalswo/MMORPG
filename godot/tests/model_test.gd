@@ -10,7 +10,7 @@ var _failed := 0
 func _init() -> void:
 	# 남아 있는 저장이 있으면 엉뚱한 존에서 시작한다 (LocalTransport 가 이어서 연다)
 	Save.clear()
-	_case_knight()
+	_case_fighter()
 	_case_ogre()
 	_case_texture_size()
 	_case_missing()
@@ -35,19 +35,19 @@ func _height(rig: Rig) -> float:
 	return box.size.y * model.scale.y
 
 
-func _case_knight() -> void:
-	var rig := Rig.create("varco_knight", Rig.HUMAN_HEIGHT)
+func _case_fighter() -> void:
+	var rig := Rig.create("varco_fighter", Rig.HUMAN_HEIGHT)
 	if rig == null:
-		_fail("기사 모델을 못 만들었다 — npm run sync:godot 을 돌렸나")
+		_fail("격투가 모델을 못 만들었다 — npm run sync:godot 을 돌렸나")
 		return
 	for clip in ["Idle", "Run", "Attack", "Death"]:
 		if not rig.has_clip(clip):
-			_fail("기사에 %s 클립이 없다" % clip)
+			_fail("격투가에 %s 클립이 없다" % clip)
 	var h := _height(rig)
 	if absf(h - 1.8) > 0.02:
-		_fail("기사 키가 1.8 이어야 하는데 %.2f" % h)
+		_fail("격투가 키가 1.8 이어야 하는데 %.2f" % h)
 	else:
-		print("  기사: 키 %.2f m, 클립 %s" % [h, rig.clips()])
+		print("  격투가: 키 %.2f m, 클립 %s" % [h, rig.clips()])
 
 
 func _case_ogre() -> void:
@@ -67,7 +67,7 @@ func _case_ogre() -> void:
 ## 텍스처가 실제로 줄어 있나. 안 줄면 pck 가 13MB 로 돌아간다
 ## (scripts/shrink-glb-textures.mjs — npm run sync:godot 이 돌린다)
 func _case_texture_size() -> void:
-	var rig := Rig.create("varco_knight", Rig.HUMAN_HEIGHT)
+	var rig := Rig.create("varco_fighter", Rig.HUMAN_HEIGHT)
 	if rig == null:
 		return
 	var biggest := 0

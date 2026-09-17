@@ -17,7 +17,7 @@
 
 ### 슬롯 8종
 `weapon · offhand · helmet · armor · boots · ring · necklace · earring`
-- **보조(offhand)는 직업마다 다른 물건**: 기사 방패 / 마법사 마법서 / 궁수 화살통.
+- **보조(offhand)는 직업마다 다른 물건**: 격투가 보호대 / 마법사 마법서 / 궁수 화살통.
   `OFFHAND_NAME` 과 `slotLabel(slot, job)` 이 이름을 갈라 준다.
 - 무기와 보조만 직업을 탄다. 나머지는 아무나 낀다.
 - 착용 조건은 `canEquip(item, job, level)` — **서버가 다시 본다.**

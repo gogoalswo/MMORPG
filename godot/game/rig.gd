@@ -15,7 +15,7 @@ const HUMAN_HEIGHT := 1.8
 
 ## 모델 파일이 있는 look 만 여기 있다. 나머지는 기둥이다
 const FILES := {
-	"varco_knight": "varco_knight.glb",
+	"varco_fighter": "varco_fighter.glb",
 	"varco_ogre1": "varco_ogre1.glb",
 }
 

@@ -21,25 +21,24 @@ import {
 import { JOB_IDS } from './character.ts';
 
 test('직업마다 성격이 수치로 갈린다', () => {
-  const knight = statsFor('knight', 1);
+  const fighter = statsFor('fighter', 1);
   const mage = statsFor('mage', 1);
   const archer = statsFor('archer', 1);
 
-  assert.ok(knight.maxHp > mage.maxHp, '기사가 마법사보다 단단하다');
-  assert.ok(knight.defense > archer.defense, '기사가 궁수보다 방어가 높다');
+  assert.ok(fighter.maxHp > mage.maxHp, '격투가가 마법사보다 단단하다');
+  assert.ok(fighter.defense > archer.defense, '격투가가 궁수보다 방어가 높다');
   assert.ok(mage.attack > archer.attack, '마법사 한 방이 더 아프다');
-  assert.ok(archer.attackRange > knight.attackRange, '궁수가 더 멀리 닿는다');
-  assert.ok(knight.attackCooldown < mage.attackCooldown, '기사가 더 자주 때린다');
+  assert.ok(archer.attackRange > fighter.attackRange, '궁수가 더 멀리 닿는다');
+  assert.ok(fighter.attackCooldown < mage.attackCooldown, '격투가가 더 자주 때린다');
 
-  const fighter = statsFor('fighter', 1);
   assert.ok(fighter.attackCooldown < archer.attackCooldown, '격투가가 가장 자주 때린다');
-  assert.ok(fighter.attackRange < knight.attackRange, '격투가가 가장 붙어서 싸운다');
-  assert.ok(knight.maxHp > fighter.maxHp && fighter.maxHp > archer.maxHp, '격투가는 기사와 궁수 사이로 단단하다');
+  assert.ok(fighter.attackRange < archer.attackRange, '격투가가 가장 붙어서 싸운다');
+  assert.ok(fighter.maxHp > archer.maxHp, '격투가가 궁수보다 단단하다');
 });
 
 test('레벨이 오르면 스탯이 오른다', () => {
-  const low = statsFor('knight', 1);
-  const high = statsFor('knight', 10);
+  const low = statsFor('fighter', 1);
+  const high = statsFor('fighter', 10);
   assert.ok(high.maxHp > low.maxHp);
   assert.ok(high.attack > low.attack);
   // 사거리와 쿨타임은 레벨로 변하지 않는다 (장비/스킬의 몫)

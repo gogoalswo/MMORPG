@@ -19,7 +19,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 /** 복사할 것. 없으면 건너뛰고 화면은 기둥으로 대신 그린다 */
 const MODELS = [
-  'varco_knight.glb', // 캐릭터 (지금은 기사 고정)
+  'varco_fighter.glb', // 캐릭터 (기본 직업 격투가 고정)
   'varco_ogre1.glb', // 초원 몬스터 (mob003 · mob008 의 look)
 ];
 

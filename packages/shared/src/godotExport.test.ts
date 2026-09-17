@@ -28,14 +28,14 @@ for (const [name, value] of Object.entries(data)) {
 test('내보낸 개수가 문서와 맞는다', () => {
   assert.equal(Object.keys(data['zones.json'].zones).length, 21, '존 21곳');
   assert.equal(Object.keys(data['monsters.json'].kinds).length, 60, '몬스터 60종');
-  assert.equal(Object.keys(data['skills.json'].skills).length, 34, '스킬 34종');
+  assert.equal(Object.keys(data['skills.json'].skills).length, 24, '스킬 24종');
 });
 
 test('아이템도 내보낸다 — 등급·랜덤옵션·강화를 그대로 가기로 했다 (2026-09-17)', () => {
   const items = data['items.json'].items;
   const ids = Object.keys(items);
   const materials = ids.filter((id) => items[id].material);
-  assert.equal(ids.length - materials.length, 280, '장비 280종 (단계 20 x 슬롯 13~14)');
+  assert.equal(ids.length - materials.length, 240, '장비 240종 (단계 20 x 슬롯 12 — 직업 셋)');
   assert.equal(materials.length, 20, '단계마다 제작 재료 하나');
   // 드롭이 후보 id 를 만들 때 쓰는 표가 같이 있어야 한다
   assert.equal(data['items.json'].slots.length, 8, '장비 슬롯 8종');

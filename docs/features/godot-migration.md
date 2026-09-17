@@ -65,7 +65,7 @@ three.js 웹 클라이언트를 **고도 엔진으로 갈아타는 중**이다. 
 
 | | 무엇 | 어떻게 |
 |---|---|---|
-| **생성기** | `items.ts` `skills.ts` `monsters.ts` `zones.ts` `beasts.ts` `zone.ts` (약 2,140줄) | **TS 에 그대로 둔다.** 장비 280·재료 20·스킬 34·몬스터 60·존 21 을 JSON 으로 내보내고 고도는 결과만 읽는다 |
+| **생성기** | `items.ts` `skills.ts` `monsters.ts` `zones.ts` `beasts.ts` `zone.ts` (약 2,140줄) | **TS 에 그대로 둔다.** 장비 240·재료 20·스킬 24·몬스터 60·존 21 을 JSON 으로 내보내고 고도는 결과만 읽는다 |
 | **런타임 공식** | `combat.ts` `movement.ts` `spatialGrid.ts` `autoHunt.ts` `character.ts` `constants.ts` (약 830줄) | **GDScript 로 이식.** 피해 공식·정면 판정·경직·경험치 곡선·격자 |
 
 이렇게 가르면 `*.test.ts` 1,559줄(데이터 전수 검사)이 **그대로 살아 있다.** 생성기가
@@ -189,11 +189,14 @@ Q/E 회전과 줌은 아직 안 옮겼다. 웹 쪽에는 있다.
 `BEAST_HEIGHT` 에 `export` 를 붙여 내보내기에 넣었다 (값은 그대로).
 초원 들늑대 2.2 × 1.01 = **2.22m**.
 
-### 공격 클립 구간은 아직 안 맞췄다
+### 공격 클립 구간은 **시작만** 맞췄다
 
-기사 `Attack` 은 5.07초짜리라 통째로 틀면 한 번 휘두르는 데 5초가 걸린다. 웹
-클라이언트는 0.8~1.60초만 1.6배로 트는데(`modelRig` 의 `ATTACK_CLIPS`), 여기서도
-같은 자리에서 시작하기만 했다. **발이 미끄러지거나 동작이 어긋나면 그때 재서 고친다.**
+격투가 `Attack` 은 3.23초짜리다. 앞 0.8초는 자세를 잡는 준비라 공격 간격(700ms)
+마다 되감으면 발이 한 번도 안 나간다. 웹 클라이언트는 0.8~**1.60**초만 1.6배로
+트는데(`modelRig` 의 `ATTACK_CLIPS`), 고도는 **시작(0.8초)과 배속(1.6배)만 같고
+끝을 안 자른다** (`Rig.play` 에 `to` 가 없다). 2.30초에 뒤돌려차기가 한 번 더
+있으므로, 한 대 치는데 발이 두 번 나가 보이면 그 자리를 자르면 된다 →
+[characters-and-animation.md](characters-and-animation.md) 의 격투가 절.
 
 ### 죽으면 저절로 살아나지 않는다 ★
 
@@ -499,11 +502,12 @@ GitHub Pages 가 배포 시각을 ETag 에 넣기 때문이다 (`6aab3f31-25af28
 
 ## 손댈 때
 
-- 에셋은 이미 커밋돼 있다 — `public/assets/models/varco_*.glb` 9개(24MB)와 텍스처.
-  `fetch-assets.sh` 를 다시 돌릴 필요 없다.
-- **`varco_knight.glb` 는 고도에서 23본, 클립 이름이 그대로 나온다** (`Idle` 8.97초 ·
-  `Run` 0.70초 · `Attack` 5.07초 · `Attack_Heavy` 31.97초 · `Attack_Spin` 5.07초 ·
-  `Death` 2.03초). three.js 쪽 문서에 적힌 "이름이 비어 있다" 는 고도에는 해당하지
+- 에셋은 이미 커밋돼 있다 — `public/assets/models/varco_*.glb` 8개와 텍스처.
+  `fetch-assets.sh` 를 다시 돌릴 필요 없다. (`varco_knight.glb` 는 기사를 지운
+  2026-09-17 에 뺐다.)
+- **`varco_fighter.glb` 는 고도에서 23본, 클립 이름이 그대로 나온다**
+  (`Idle` · `Run` · `Attack` · `Death` — `model_test.gd` 가 찍어 준다).
+  three.js 쪽 문서에 적힌 "이름이 비어 있다" 는 고도에는 해당하지
   않는다 → [characters-and-animation.md](characters-and-animation.md).
 - `public/assets/textures/*.ktx2` 는 고도가 그대로 못 읽을 수 있다. 원본에서 다시
   구워야 한다 → [world-zones.md](world-zones.md).

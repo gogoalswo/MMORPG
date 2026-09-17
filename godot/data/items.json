@@ -1,11 +1,11 @@
 {
   "items": {
-    "w_knight_00": {
-      "id": "w_knight_00",
-      "name": "낡은 장검",
+    "w_fighter_00": {
+      "id": "w_fighter_00",
+      "name": "낡은 너클",
       "slot": "weapon",
       "level": 1,
-      "job": "knight",
+      "job": "fighter",
       "bonus": {
         "attack": 3
       },
@@ -33,26 +33,15 @@
       },
       "price": 32
     },
-    "w_fighter_00": {
-      "id": "w_fighter_00",
-      "name": "낡은 너클",
-      "slot": "weapon",
+    "o_fighter_00": {
+      "id": "o_fighter_00",
+      "name": "낡은 보호대",
+      "slot": "offhand",
       "level": 1,
       "job": "fighter",
       "bonus": {
-        "attack": 3
-      },
-      "price": 32
-    },
-    "o_knight_00": {
-      "id": "o_knight_00",
-      "name": "낡은 방패",
-      "slot": "offhand",
-      "level": 1,
-      "job": "knight",
-      "bonus": {
-        "defense": 1,
-        "maxHp": 7
+        "attack": 1,
+        "maxHp": 5
       },
       "price": 32
     },
@@ -77,18 +66,6 @@
       "bonus": {
         "attack": 1,
         "defense": 0
-      },
-      "price": 32
-    },
-    "o_fighter_00": {
-      "id": "o_fighter_00",
-      "name": "낡은 보호대",
-      "slot": "offhand",
-      "level": 1,
-      "job": "fighter",
-      "bonus": {
-        "attack": 1,
-        "maxHp": 5
       },
       "price": 32
     },
@@ -167,12 +144,12 @@
       "price": 13,
       "material": true
     },
-    "w_knight_01": {
-      "id": "w_knight_01",
-      "name": "단단한 장검",
+    "w_fighter_01": {
+      "id": "w_fighter_01",
+      "name": "단단한 너클",
       "slot": "weapon",
       "level": 10,
-      "job": "knight",
+      "job": "fighter",
       "bonus": {
         "attack": 8
       },
@@ -200,26 +177,15 @@
       },
       "price": 140
     },
-    "w_fighter_01": {
-      "id": "w_fighter_01",
-      "name": "단단한 너클",
-      "slot": "weapon",
+    "o_fighter_01": {
+      "id": "o_fighter_01",
+      "name": "단단한 보호대",
+      "slot": "offhand",
       "level": 10,
       "job": "fighter",
       "bonus": {
-        "attack": 8
-      },
-      "price": 140
-    },
-    "o_knight_01": {
-      "id": "o_knight_01",
-      "name": "단단한 방패",
-      "slot": "offhand",
-      "level": 10,
-      "job": "knight",
-      "bonus": {
-        "defense": 5,
-        "maxHp": 25
+        "attack": 3,
+        "maxHp": 18
       },
       "price": 140
     },
@@ -244,18 +210,6 @@
       "bonus": {
         "attack": 4,
         "defense": 2
-      },
-      "price": 140
-    },
-    "o_fighter_01": {
-      "id": "o_fighter_01",
-      "name": "단단한 보호대",
-      "slot": "offhand",
-      "level": 10,
-      "job": "fighter",
-      "bonus": {
-        "attack": 3,
-        "maxHp": 18
       },
       "price": 140
     },
@@ -334,12 +288,12 @@
       "price": 56,
       "material": true
     },
-    "w_knight_02": {
-      "id": "w_knight_02",
-      "name": "강철 장검",
+    "w_fighter_02": {
+      "id": "w_fighter_02",
+      "name": "강철 너클",
       "slot": "weapon",
       "level": 20,
-      "job": "knight",
+      "job": "fighter",
       "bonus": {
         "attack": 14
       },
@@ -367,26 +321,15 @@
       },
       "price": 260
     },
-    "w_fighter_02": {
-      "id": "w_fighter_02",
-      "name": "강철 너클",
-      "slot": "weapon",
+    "o_fighter_02": {
+      "id": "o_fighter_02",
+      "name": "강철 보호대",
+      "slot": "offhand",
       "level": 20,
       "job": "fighter",
       "bonus": {
-        "attack": 14
-      },
-      "price": 260
-    },
-    "o_knight_02": {
-      "id": "o_knight_02",
-      "name": "강철 방패",
-      "slot": "offhand",
-      "level": 20,
-      "job": "knight",
-      "bonus": {
-        "defense": 8,
-        "maxHp": 45
+        "attack": 5,
+        "maxHp": 31
       },
       "price": 260
     },
@@ -411,18 +354,6 @@
       "bonus": {
         "attack": 7,
         "defense": 3
-      },
-      "price": 260
-    },
-    "o_fighter_02": {
-      "id": "o_fighter_02",
-      "name": "강철 보호대",
-      "slot": "offhand",
-      "level": 20,
-      "job": "fighter",
-      "bonus": {
-        "attack": 5,
-        "maxHp": 31
       },
       "price": 260
     },
@@ -501,12 +432,12 @@
       "price": 104,
       "material": true
     },
-    "w_knight_03": {
-      "id": "w_knight_03",
-      "name": "은빛 장검",
+    "w_fighter_03": {
+      "id": "w_fighter_03",
+      "name": "은빛 너클",
       "slot": "weapon",
       "level": 30,
-      "job": "knight",
+      "job": "fighter",
       "bonus": {
         "attack": 20
       },
@@ -534,26 +465,15 @@
       },
       "price": 380
     },
-    "w_fighter_03": {
-      "id": "w_fighter_03",
-      "name": "은빛 너클",
-      "slot": "weapon",
+    "o_fighter_03": {
+      "id": "o_fighter_03",
+      "name": "은빛 보호대",
+      "slot": "offhand",
       "level": 30,
       "job": "fighter",
       "bonus": {
-        "attack": 20
-      },
-      "price": 380
-    },
-    "o_knight_03": {
-      "id": "o_knight_03",
-      "name": "은빛 방패",
-      "slot": "offhand",
-      "level": 30,
-      "job": "knight",
-      "bonus": {
-        "defense": 12,
-        "maxHp": 65
+        "attack": 7,
+        "maxHp": 46
       },
       "price": 380
     },
@@ -578,18 +498,6 @@
       "bonus": {
         "attack": 10,
         "defense": 4
-      },
-      "price": 380
-    },
-    "o_fighter_03": {
-      "id": "o_fighter_03",
-      "name": "은빛 보호대",
-      "slot": "offhand",
-      "level": 30,
-      "job": "fighter",
-      "bonus": {
-        "attack": 7,
-        "maxHp": 46
       },
       "price": 380
     },
@@ -668,12 +576,12 @@
       "price": 152,
       "material": true
     },
-    "w_knight_04": {
-      "id": "w_knight_04",
-      "name": "늪지 장검",
+    "w_fighter_04": {
+      "id": "w_fighter_04",
+      "name": "늪지 너클",
       "slot": "weapon",
       "level": 40,
-      "job": "knight",
+      "job": "fighter",
       "bonus": {
         "attack": 26
       },
@@ -701,26 +609,15 @@
       },
       "price": 500
     },
-    "w_fighter_04": {
-      "id": "w_fighter_04",
-      "name": "늪지 너클",
-      "slot": "weapon",
+    "o_fighter_04": {
+      "id": "o_fighter_04",
+      "name": "늪지 보호대",
+      "slot": "offhand",
       "level": 40,
       "job": "fighter",
       "bonus": {
-        "attack": 26
-      },
-      "price": 500
-    },
-    "o_knight_04": {
-      "id": "o_knight_04",
-      "name": "늪지 방패",
-      "slot": "offhand",
-      "level": 40,
-      "job": "knight",
-      "bonus": {
-        "defense": 15,
-        "maxHp": 85
+        "attack": 9,
+        "maxHp": 59
       },
       "price": 500
     },
@@ -745,18 +642,6 @@
       "bonus": {
         "attack": 13,
         "defense": 5
-      },
-      "price": 500
-    },
-    "o_fighter_04": {
-      "id": "o_fighter_04",
-      "name": "늪지 보호대",
-      "slot": "offhand",
-      "level": 40,
-      "job": "fighter",
-      "bonus": {
-        "attack": 9,
-        "maxHp": 59
       },
       "price": 500
     },
@@ -835,12 +720,12 @@
       "price": 200,
       "material": true
     },
-    "w_knight_05": {
-      "id": "w_knight_05",
-      "name": "서리 장검",
+    "w_fighter_05": {
+      "id": "w_fighter_05",
+      "name": "서리 너클",
       "slot": "weapon",
       "level": 50,
-      "job": "knight",
+      "job": "fighter",
       "bonus": {
         "attack": 32
       },
@@ -868,26 +753,15 @@
       },
       "price": 620
     },
-    "w_fighter_05": {
-      "id": "w_fighter_05",
-      "name": "서리 너클",
-      "slot": "weapon",
+    "o_fighter_05": {
+      "id": "o_fighter_05",
+      "name": "서리 보호대",
+      "slot": "offhand",
       "level": 50,
       "job": "fighter",
       "bonus": {
-        "attack": 32
-      },
-      "price": 620
-    },
-    "o_knight_05": {
-      "id": "o_knight_05",
-      "name": "서리 방패",
-      "slot": "offhand",
-      "level": 50,
-      "job": "knight",
-      "bonus": {
-        "defense": 19,
-        "maxHp": 105
+        "attack": 11,
+        "maxHp": 74
       },
       "price": 620
     },
@@ -912,18 +786,6 @@
       "bonus": {
         "attack": 16,
         "defense": 6
-      },
-      "price": 620
-    },
-    "o_fighter_05": {
-      "id": "o_fighter_05",
-      "name": "서리 보호대",
-      "slot": "offhand",
-      "level": 50,
-      "job": "fighter",
-      "bonus": {
-        "attack": 11,
-        "maxHp": 74
       },
       "price": 620
     },
@@ -1002,12 +864,12 @@
       "price": 248,
       "material": true
     },
-    "w_knight_06": {
-      "id": "w_knight_06",
-      "name": "흑단 장검",
+    "w_fighter_06": {
+      "id": "w_fighter_06",
+      "name": "흑단 너클",
       "slot": "weapon",
       "level": 60,
-      "job": "knight",
+      "job": "fighter",
       "bonus": {
         "attack": 38
       },
@@ -1035,26 +897,15 @@
       },
       "price": 740
     },
-    "w_fighter_06": {
-      "id": "w_fighter_06",
-      "name": "흑단 너클",
-      "slot": "weapon",
+    "o_fighter_06": {
+      "id": "o_fighter_06",
+      "name": "흑단 보호대",
+      "slot": "offhand",
       "level": 60,
       "job": "fighter",
       "bonus": {
-        "attack": 38
-      },
-      "price": 740
-    },
-    "o_knight_06": {
-      "id": "o_knight_06",
-      "name": "흑단 방패",
-      "slot": "offhand",
-      "level": 60,
-      "job": "knight",
-      "bonus": {
-        "defense": 23,
-        "maxHp": 125
+        "attack": 13,
+        "maxHp": 88
       },
       "price": 740
     },
@@ -1079,18 +930,6 @@
       "bonus": {
         "attack": 19,
         "defense": 8
-      },
-      "price": 740
-    },
-    "o_fighter_06": {
-      "id": "o_fighter_06",
-      "name": "흑단 보호대",
-      "slot": "offhand",
-      "level": 60,
-      "job": "fighter",
-      "bonus": {
-        "attack": 13,
-        "maxHp": 88
       },
       "price": 740
     },
@@ -1169,12 +1008,12 @@
       "price": 296,
       "material": true
     },
-    "w_knight_07": {
-      "id": "w_knight_07",
-      "name": "고대 장검",
+    "w_fighter_07": {
+      "id": "w_fighter_07",
+      "name": "고대 너클",
       "slot": "weapon",
       "level": 70,
-      "job": "knight",
+      "job": "fighter",
       "bonus": {
         "attack": 44
       },
@@ -1202,26 +1041,15 @@
       },
       "price": 860
     },
-    "w_fighter_07": {
-      "id": "w_fighter_07",
-      "name": "고대 너클",
-      "slot": "weapon",
+    "o_fighter_07": {
+      "id": "o_fighter_07",
+      "name": "고대 보호대",
+      "slot": "offhand",
       "level": 70,
       "job": "fighter",
       "bonus": {
-        "attack": 44
-      },
-      "price": 860
-    },
-    "o_knight_07": {
-      "id": "o_knight_07",
-      "name": "고대 방패",
-      "slot": "offhand",
-      "level": 70,
-      "job": "knight",
-      "bonus": {
-        "defense": 26,
-        "maxHp": 145
+        "attack": 15,
+        "maxHp": 102
       },
       "price": 860
     },
@@ -1246,18 +1074,6 @@
       "bonus": {
         "attack": 22,
         "defense": 9
-      },
-      "price": 860
-    },
-    "o_fighter_07": {
-      "id": "o_fighter_07",
-      "name": "고대 보호대",
-      "slot": "offhand",
-      "level": 70,
-      "job": "fighter",
-      "bonus": {
-        "attack": 15,
-        "maxHp": 102
       },
       "price": 860
     },
@@ -1336,12 +1152,12 @@
       "price": 344,
       "material": true
     },
-    "w_knight_08": {
-      "id": "w_knight_08",
-      "name": "사막 장검",
+    "w_fighter_08": {
+      "id": "w_fighter_08",
+      "name": "사막 너클",
       "slot": "weapon",
       "level": 80,
-      "job": "knight",
+      "job": "fighter",
       "bonus": {
         "attack": 50
       },
@@ -1369,26 +1185,15 @@
       },
       "price": 980
     },
-    "w_fighter_08": {
-      "id": "w_fighter_08",
-      "name": "사막 너클",
-      "slot": "weapon",
+    "o_fighter_08": {
+      "id": "o_fighter_08",
+      "name": "사막 보호대",
+      "slot": "offhand",
       "level": 80,
       "job": "fighter",
       "bonus": {
-        "attack": 50
-      },
-      "price": 980
-    },
-    "o_knight_08": {
-      "id": "o_knight_08",
-      "name": "사막 방패",
-      "slot": "offhand",
-      "level": 80,
-      "job": "knight",
-      "bonus": {
-        "defense": 30,
-        "maxHp": 165
+        "attack": 18,
+        "maxHp": 115
       },
       "price": 980
     },
@@ -1413,18 +1218,6 @@
       "bonus": {
         "attack": 25,
         "defense": 10
-      },
-      "price": 980
-    },
-    "o_fighter_08": {
-      "id": "o_fighter_08",
-      "name": "사막 보호대",
-      "slot": "offhand",
-      "level": 80,
-      "job": "fighter",
-      "bonus": {
-        "attack": 18,
-        "maxHp": 115
       },
       "price": 980
     },
@@ -1503,12 +1296,12 @@
       "price": 392,
       "material": true
     },
-    "w_knight_09": {
-      "id": "w_knight_09",
-      "name": "백금 장검",
+    "w_fighter_09": {
+      "id": "w_fighter_09",
+      "name": "백금 너클",
       "slot": "weapon",
       "level": 90,
-      "job": "knight",
+      "job": "fighter",
       "bonus": {
         "attack": 56
       },
@@ -1536,26 +1329,15 @@
       },
       "price": 1100
     },
-    "w_fighter_09": {
-      "id": "w_fighter_09",
-      "name": "백금 너클",
-      "slot": "weapon",
+    "o_fighter_09": {
+      "id": "o_fighter_09",
+      "name": "백금 보호대",
+      "slot": "offhand",
       "level": 90,
       "job": "fighter",
       "bonus": {
-        "attack": 56
-      },
-      "price": 1100
-    },
-    "o_knight_09": {
-      "id": "o_knight_09",
-      "name": "백금 방패",
-      "slot": "offhand",
-      "level": 90,
-      "job": "knight",
-      "bonus": {
-        "defense": 33,
-        "maxHp": 185
+        "attack": 20,
+        "maxHp": 130
       },
       "price": 1100
     },
@@ -1580,18 +1362,6 @@
       "bonus": {
         "attack": 28,
         "defense": 11
-      },
-      "price": 1100
-    },
-    "o_fighter_09": {
-      "id": "o_fighter_09",
-      "name": "백금 보호대",
-      "slot": "offhand",
-      "level": 90,
-      "job": "fighter",
-      "bonus": {
-        "attack": 20,
-        "maxHp": 130
       },
       "price": 1100
     },
@@ -1670,12 +1440,12 @@
       "price": 440,
       "material": true
     },
-    "w_knight_10": {
-      "id": "w_knight_10",
-      "name": "유황 장검",
+    "w_fighter_10": {
+      "id": "w_fighter_10",
+      "name": "유황 너클",
       "slot": "weapon",
       "level": 100,
-      "job": "knight",
+      "job": "fighter",
       "bonus": {
         "attack": 62
       },
@@ -1703,26 +1473,15 @@
       },
       "price": 1220
     },
-    "w_fighter_10": {
-      "id": "w_fighter_10",
-      "name": "유황 너클",
-      "slot": "weapon",
+    "o_fighter_10": {
+      "id": "o_fighter_10",
+      "name": "유황 보호대",
+      "slot": "offhand",
       "level": 100,
       "job": "fighter",
       "bonus": {
-        "attack": 62
-      },
-      "price": 1220
-    },
-    "o_knight_10": {
-      "id": "o_knight_10",
-      "name": "유황 방패",
-      "slot": "offhand",
-      "level": 100,
-      "job": "knight",
-      "bonus": {
-        "defense": 37,
-        "maxHp": 205
+        "attack": 22,
+        "maxHp": 144
       },
       "price": 1220
     },
@@ -1747,18 +1506,6 @@
       "bonus": {
         "attack": 31,
         "defense": 12
-      },
-      "price": 1220
-    },
-    "o_fighter_10": {
-      "id": "o_fighter_10",
-      "name": "유황 보호대",
-      "slot": "offhand",
-      "level": 100,
-      "job": "fighter",
-      "bonus": {
-        "attack": 22,
-        "maxHp": 144
       },
       "price": 1220
     },
@@ -1837,12 +1584,12 @@
       "price": 488,
       "material": true
     },
-    "w_knight_11": {
-      "id": "w_knight_11",
-      "name": "용암 장검",
+    "w_fighter_11": {
+      "id": "w_fighter_11",
+      "name": "용암 너클",
       "slot": "weapon",
       "level": 110,
-      "job": "knight",
+      "job": "fighter",
       "bonus": {
         "attack": 68
       },
@@ -1870,26 +1617,15 @@
       },
       "price": 1340
     },
-    "w_fighter_11": {
-      "id": "w_fighter_11",
-      "name": "용암 너클",
-      "slot": "weapon",
+    "o_fighter_11": {
+      "id": "o_fighter_11",
+      "name": "용암 보호대",
+      "slot": "offhand",
       "level": 110,
       "job": "fighter",
       "bonus": {
-        "attack": 68
-      },
-      "price": 1340
-    },
-    "o_knight_11": {
-      "id": "o_knight_11",
-      "name": "용암 방패",
-      "slot": "offhand",
-      "level": 110,
-      "job": "knight",
-      "bonus": {
-        "defense": 41,
-        "maxHp": 225
+        "attack": 24,
+        "maxHp": 158
       },
       "price": 1340
     },
@@ -1914,18 +1650,6 @@
       "bonus": {
         "attack": 34,
         "defense": 14
-      },
-      "price": 1340
-    },
-    "o_fighter_11": {
-      "id": "o_fighter_11",
-      "name": "용암 보호대",
-      "slot": "offhand",
-      "level": 110,
-      "job": "fighter",
-      "bonus": {
-        "attack": 24,
-        "maxHp": 158
       },
       "price": 1340
     },
@@ -2004,12 +1728,12 @@
       "price": 536,
       "material": true
     },
-    "w_knight_12": {
-      "id": "w_knight_12",
-      "name": "빙하 장검",
+    "w_fighter_12": {
+      "id": "w_fighter_12",
+      "name": "빙하 너클",
       "slot": "weapon",
       "level": 120,
-      "job": "knight",
+      "job": "fighter",
       "bonus": {
         "attack": 74
       },
@@ -2037,26 +1761,15 @@
       },
       "price": 1460
     },
-    "w_fighter_12": {
-      "id": "w_fighter_12",
-      "name": "빙하 너클",
-      "slot": "weapon",
+    "o_fighter_12": {
+      "id": "o_fighter_12",
+      "name": "빙하 보호대",
+      "slot": "offhand",
       "level": 120,
       "job": "fighter",
       "bonus": {
-        "attack": 74
-      },
-      "price": 1460
-    },
-    "o_knight_12": {
-      "id": "o_knight_12",
-      "name": "빙하 방패",
-      "slot": "offhand",
-      "level": 120,
-      "job": "knight",
-      "bonus": {
-        "defense": 44,
-        "maxHp": 245
+        "attack": 26,
+        "maxHp": 172
       },
       "price": 1460
     },
@@ -2081,18 +1794,6 @@
       "bonus": {
         "attack": 37,
         "defense": 15
-      },
-      "price": 1460
-    },
-    "o_fighter_12": {
-      "id": "o_fighter_12",
-      "name": "빙하 보호대",
-      "slot": "offhand",
-      "level": 120,
-      "job": "fighter",
-      "bonus": {
-        "attack": 26,
-        "maxHp": 172
       },
       "price": 1460
     },
@@ -2171,12 +1872,12 @@
       "price": 584,
       "material": true
     },
-    "w_knight_13": {
-      "id": "w_knight_13",
-      "name": "뒤틀린 장검",
+    "w_fighter_13": {
+      "id": "w_fighter_13",
+      "name": "뒤틀린 너클",
       "slot": "weapon",
       "level": 130,
-      "job": "knight",
+      "job": "fighter",
       "bonus": {
         "attack": 80
       },
@@ -2204,26 +1905,15 @@
       },
       "price": 1580
     },
-    "w_fighter_13": {
-      "id": "w_fighter_13",
-      "name": "뒤틀린 너클",
-      "slot": "weapon",
+    "o_fighter_13": {
+      "id": "o_fighter_13",
+      "name": "뒤틀린 보호대",
+      "slot": "offhand",
       "level": 130,
       "job": "fighter",
       "bonus": {
-        "attack": 80
-      },
-      "price": 1580
-    },
-    "o_knight_13": {
-      "id": "o_knight_13",
-      "name": "뒤틀린 방패",
-      "slot": "offhand",
-      "level": 130,
-      "job": "knight",
-      "bonus": {
-        "defense": 48,
-        "maxHp": 265
+        "attack": 28,
+        "maxHp": 186
       },
       "price": 1580
     },
@@ -2248,18 +1938,6 @@
       "bonus": {
         "attack": 40,
         "defense": 16
-      },
-      "price": 1580
-    },
-    "o_fighter_13": {
-      "id": "o_fighter_13",
-      "name": "뒤틀린 보호대",
-      "slot": "offhand",
-      "level": 130,
-      "job": "fighter",
-      "bonus": {
-        "attack": 28,
-        "maxHp": 186
       },
       "price": 1580
     },
@@ -2338,12 +2016,12 @@
       "price": 632,
       "material": true
     },
-    "w_knight_14": {
-      "id": "w_knight_14",
-      "name": "그림자 장검",
+    "w_fighter_14": {
+      "id": "w_fighter_14",
+      "name": "그림자 너클",
       "slot": "weapon",
       "level": 140,
-      "job": "knight",
+      "job": "fighter",
       "bonus": {
         "attack": 86
       },
@@ -2371,26 +2049,15 @@
       },
       "price": 1700
     },
-    "w_fighter_14": {
-      "id": "w_fighter_14",
-      "name": "그림자 너클",
-      "slot": "weapon",
+    "o_fighter_14": {
+      "id": "o_fighter_14",
+      "name": "그림자 보호대",
+      "slot": "offhand",
       "level": 140,
       "job": "fighter",
       "bonus": {
-        "attack": 86
-      },
-      "price": 1700
-    },
-    "o_knight_14": {
-      "id": "o_knight_14",
-      "name": "그림자 방패",
-      "slot": "offhand",
-      "level": 140,
-      "job": "knight",
-      "bonus": {
-        "defense": 51,
-        "maxHp": 285
+        "attack": 30,
+        "maxHp": 200
       },
       "price": 1700
     },
@@ -2415,18 +2082,6 @@
       "bonus": {
         "attack": 43,
         "defense": 17
-      },
-      "price": 1700
-    },
-    "o_fighter_14": {
-      "id": "o_fighter_14",
-      "name": "그림자 보호대",
-      "slot": "offhand",
-      "level": 140,
-      "job": "fighter",
-      "bonus": {
-        "attack": 30,
-        "maxHp": 200
       },
       "price": 1700
     },
@@ -2505,12 +2160,12 @@
       "price": 680,
       "material": true
     },
-    "w_knight_15": {
-      "id": "w_knight_15",
-      "name": "폐허 장검",
+    "w_fighter_15": {
+      "id": "w_fighter_15",
+      "name": "폐허 너클",
       "slot": "weapon",
       "level": 150,
-      "job": "knight",
+      "job": "fighter",
       "bonus": {
         "attack": 92
       },
@@ -2538,26 +2193,15 @@
       },
       "price": 1820
     },
-    "w_fighter_15": {
-      "id": "w_fighter_15",
-      "name": "폐허 너클",
-      "slot": "weapon",
+    "o_fighter_15": {
+      "id": "o_fighter_15",
+      "name": "폐허 보호대",
+      "slot": "offhand",
       "level": 150,
       "job": "fighter",
       "bonus": {
-        "attack": 92
-      },
-      "price": 1820
-    },
-    "o_knight_15": {
-      "id": "o_knight_15",
-      "name": "폐허 방패",
-      "slot": "offhand",
-      "level": 150,
-      "job": "knight",
-      "bonus": {
-        "defense": 55,
-        "maxHp": 305
+        "attack": 32,
+        "maxHp": 214
       },
       "price": 1820
     },
@@ -2582,18 +2226,6 @@
       "bonus": {
         "attack": 46,
         "defense": 18
-      },
-      "price": 1820
-    },
-    "o_fighter_15": {
-      "id": "o_fighter_15",
-      "name": "폐허 보호대",
-      "slot": "offhand",
-      "level": 150,
-      "job": "fighter",
-      "bonus": {
-        "attack": 32,
-        "maxHp": 214
       },
       "price": 1820
     },
@@ -2672,12 +2304,12 @@
       "price": 728,
       "material": true
     },
-    "w_knight_16": {
-      "id": "w_knight_16",
-      "name": "창백한 장검",
+    "w_fighter_16": {
+      "id": "w_fighter_16",
+      "name": "창백한 너클",
       "slot": "weapon",
       "level": 160,
-      "job": "knight",
+      "job": "fighter",
       "bonus": {
         "attack": 98
       },
@@ -2705,26 +2337,15 @@
       },
       "price": 1940
     },
-    "w_fighter_16": {
-      "id": "w_fighter_16",
-      "name": "창백한 너클",
-      "slot": "weapon",
+    "o_fighter_16": {
+      "id": "o_fighter_16",
+      "name": "창백한 보호대",
+      "slot": "offhand",
       "level": 160,
       "job": "fighter",
       "bonus": {
-        "attack": 98
-      },
-      "price": 1940
-    },
-    "o_knight_16": {
-      "id": "o_knight_16",
-      "name": "창백한 방패",
-      "slot": "offhand",
-      "level": 160,
-      "job": "knight",
-      "bonus": {
-        "defense": 59,
-        "maxHp": 325
+        "attack": 34,
+        "maxHp": 227
       },
       "price": 1940
     },
@@ -2749,18 +2370,6 @@
       "bonus": {
         "attack": 49,
         "defense": 20
-      },
-      "price": 1940
-    },
-    "o_fighter_16": {
-      "id": "o_fighter_16",
-      "name": "창백한 보호대",
-      "slot": "offhand",
-      "level": 160,
-      "job": "fighter",
-      "bonus": {
-        "attack": 34,
-        "maxHp": 227
       },
       "price": 1940
     },
@@ -2839,12 +2448,12 @@
       "price": 776,
       "material": true
     },
-    "w_knight_17": {
-      "id": "w_knight_17",
-      "name": "균열 장검",
+    "w_fighter_17": {
+      "id": "w_fighter_17",
+      "name": "균열 너클",
       "slot": "weapon",
       "level": 170,
-      "job": "knight",
+      "job": "fighter",
       "bonus": {
         "attack": 104
       },
@@ -2872,26 +2481,15 @@
       },
       "price": 2060
     },
-    "w_fighter_17": {
-      "id": "w_fighter_17",
-      "name": "균열 너클",
-      "slot": "weapon",
+    "o_fighter_17": {
+      "id": "o_fighter_17",
+      "name": "균열 보호대",
+      "slot": "offhand",
       "level": 170,
       "job": "fighter",
       "bonus": {
-        "attack": 104
-      },
-      "price": 2060
-    },
-    "o_knight_17": {
-      "id": "o_knight_17",
-      "name": "균열 방패",
-      "slot": "offhand",
-      "level": 170,
-      "job": "knight",
-      "bonus": {
-        "defense": 62,
-        "maxHp": 345
+        "attack": 36,
+        "maxHp": 241
       },
       "price": 2060
     },
@@ -2916,18 +2514,6 @@
       "bonus": {
         "attack": 52,
         "defense": 21
-      },
-      "price": 2060
-    },
-    "o_fighter_17": {
-      "id": "o_fighter_17",
-      "name": "균열 보호대",
-      "slot": "offhand",
-      "level": 170,
-      "job": "fighter",
-      "bonus": {
-        "attack": 36,
-        "maxHp": 241
       },
       "price": 2060
     },
@@ -3006,12 +2592,12 @@
       "price": 824,
       "material": true
     },
-    "w_knight_18": {
-      "id": "w_knight_18",
-      "name": "심연 장검",
+    "w_fighter_18": {
+      "id": "w_fighter_18",
+      "name": "심연 너클",
       "slot": "weapon",
       "level": 180,
-      "job": "knight",
+      "job": "fighter",
       "bonus": {
         "attack": 110
       },
@@ -3039,26 +2625,15 @@
       },
       "price": 2180
     },
-    "w_fighter_18": {
-      "id": "w_fighter_18",
-      "name": "심연 너클",
-      "slot": "weapon",
+    "o_fighter_18": {
+      "id": "o_fighter_18",
+      "name": "심연 보호대",
+      "slot": "offhand",
       "level": 180,
       "job": "fighter",
       "bonus": {
-        "attack": 110
-      },
-      "price": 2180
-    },
-    "o_knight_18": {
-      "id": "o_knight_18",
-      "name": "심연 방패",
-      "slot": "offhand",
-      "level": 180,
-      "job": "knight",
-      "bonus": {
-        "defense": 66,
-        "maxHp": 365
+        "attack": 39,
+        "maxHp": 255
       },
       "price": 2180
     },
@@ -3083,18 +2658,6 @@
       "bonus": {
         "attack": 55,
         "defense": 22
-      },
-      "price": 2180
-    },
-    "o_fighter_18": {
-      "id": "o_fighter_18",
-      "name": "심연 보호대",
-      "slot": "offhand",
-      "level": 180,
-      "job": "fighter",
-      "bonus": {
-        "attack": 39,
-        "maxHp": 255
       },
       "price": 2180
     },
@@ -3173,12 +2736,12 @@
       "price": 872,
       "material": true
     },
-    "w_knight_19": {
-      "id": "w_knight_19",
-      "name": "종말 장검",
+    "w_fighter_19": {
+      "id": "w_fighter_19",
+      "name": "종말 너클",
       "slot": "weapon",
       "level": 190,
-      "job": "knight",
+      "job": "fighter",
       "bonus": {
         "attack": 116
       },
@@ -3206,26 +2769,15 @@
       },
       "price": 2300
     },
-    "w_fighter_19": {
-      "id": "w_fighter_19",
-      "name": "종말 너클",
-      "slot": "weapon",
+    "o_fighter_19": {
+      "id": "o_fighter_19",
+      "name": "종말 보호대",
+      "slot": "offhand",
       "level": 190,
       "job": "fighter",
       "bonus": {
-        "attack": 116
-      },
-      "price": 2300
-    },
-    "o_knight_19": {
-      "id": "o_knight_19",
-      "name": "종말 방패",
-      "slot": "offhand",
-      "level": 190,
-      "job": "knight",
-      "bonus": {
-        "defense": 69,
-        "maxHp": 385
+        "attack": 41,
+        "maxHp": 270
       },
       "price": 2300
     },
@@ -3250,18 +2802,6 @@
       "bonus": {
         "attack": 58,
         "defense": 23
-      },
-      "price": 2300
-    },
-    "o_fighter_19": {
-      "id": "o_fighter_19",
-      "name": "종말 보호대",
-      "slot": "offhand",
-      "level": 190,
-      "job": "fighter",
-      "bonus": {
-        "attack": 41,
-        "maxHp": 270
       },
       "price": 2300
     },

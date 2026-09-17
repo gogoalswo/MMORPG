@@ -79,7 +79,7 @@ rem  Unlike "npm run sync:godot" this does not shrink textures to
 rem  512px - that is for the phone build. So no Node, no npm.
 echo [3/5] Copying assets to godot\assets
 for %%d in (models fonts ground) do if not exist "%ROOT%\godot\assets\%%d" mkdir "%ROOT%\godot\assets\%%d"
-xcopy /D /Y /Q "%ROOT%\public\assets\models\varco_knight.glb"     "%ROOT%\godot\assets\models\" >nul
+xcopy /D /Y /Q "%ROOT%\public\assets\models\varco_fighter.glb"    "%ROOT%\godot\assets\models\" >nul
 xcopy /D /Y /Q "%ROOT%\public\assets\models\varco_ogre1.glb"      "%ROOT%\godot\assets\models\" >nul
 xcopy /D /Y /Q "%ROOT%\public\assets\fonts\NotoSansKR-subset.ttf" "%ROOT%\godot\assets\fonts\"  >nul
 xcopy /D /Y /Q "%ROOT%\public\assets\textures\ground_*.ktx2"      "%ROOT%\godot\assets\ground\" >nul

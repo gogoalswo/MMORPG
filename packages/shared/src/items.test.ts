@@ -83,7 +83,7 @@ test('모든 아이템이 슬롯과 요구 레벨을 갖는다', () => {
 });
 
 test('무기와 보조만 직업을 탄다', () => {
-  // 보조는 기사 방패 / 궁수 화살통 / 마법사 마법서로 갈린다
+  // 보조는 격투가 보호대 / 궁수 화살통 / 마법사 마법서로 갈린다
   const jobSlots = ['weapon', 'offhand'];
   for (const item of Object.values(ITEMS)) {
     if (item.material) continue;
@@ -105,7 +105,7 @@ test('슬롯 8종이 단계마다 다 갖춰져 있다', () => {
 });
 
 test('보조 슬롯 이름이 직업마다 다르다', () => {
-  assert.equal(slotLabel('offhand', 'knight'), '방패');
+  assert.equal(slotLabel('offhand', 'fighter'), '보호대');
   assert.equal(slotLabel('offhand', 'archer'), '화살통');
   assert.equal(slotLabel('offhand', 'mage'), '마법서');
   assert.equal(slotLabel('helmet'), '투구', '직업과 무관한 슬롯은 이름이 하나다');
@@ -113,20 +113,20 @@ test('보조 슬롯 이름이 직업마다 다르다', () => {
 
 test('직업별 보조 장비는 성격이 다르다', () => {
   const at = (job: string) => ITEMS[`o_${job}_05`]!.bonus;
-  assert.ok((at('knight').defense ?? 0) > 0, '기사 방패는 방어를 준다');
+  assert.ok((at('fighter').maxHp ?? 0) > 0, '격투가 보호대는 체력을 준다');
   assert.ok((at('mage').attack ?? 0) > 0, '마법사 마법서는 공격을 준다');
   assert.ok((at('archer').attack ?? 0) > 0, '궁수 화살통은 공격을 준다');
 });
 
 test('요구 레벨과 직업을 서버가 막는다', () => {
-  const highSword = Object.values(ITEMS).find((i) => i.slot === 'weapon' && i.job === 'knight' && i.level >= 100)!;
-  assert.equal(canEquip(highSword, 'knight', 10), false, '레벨이 모자라면 못 낀다');
-  assert.equal(canEquip(highSword, 'mage', 200), false, '다른 직업 무기는 못 낀다');
-  assert.equal(canEquip(highSword, 'knight', 200), true);
+  const highKnuckle = Object.values(ITEMS).find((i) => i.slot === 'weapon' && i.job === 'fighter' && i.level >= 100)!;
+  assert.equal(canEquip(highKnuckle, 'fighter', 10), false, '레벨이 모자라면 못 낀다');
+  assert.equal(canEquip(highKnuckle, 'mage', 200), false, '다른 직업 무기는 못 낀다');
+  assert.equal(canEquip(highKnuckle, 'fighter', 200), true);
 });
 
 test('장비 능력치가 합산된다', () => {
-  const weapon = ITEMS['w_knight_05']!;
+  const weapon = ITEMS['w_fighter_05']!;
   const armor = ITEMS['a_05']!;
   const total = equipmentStats({
     weapon: { id: weapon.id, grade: 1 },
@@ -149,7 +149,7 @@ test('없는 아이템 id 는 조용히 무시된다', () => {
 test('단계가 높을수록 더 좋다', () => {
   for (const slot of EQUIP_SLOTS) {
     const sorted = Object.values(ITEMS)
-      .filter((i) => !i.material && i.slot === slot && (!i.job || i.job === 'knight'))
+      .filter((i) => !i.material && i.slot === slot && (!i.job || i.job === 'fighter'))
       .sort((a, b) => a.level - b.level);
     const value = (i: (typeof sorted)[number]) => Object.values(i.bonus).reduce((a, b) => a + b, 0);
     for (let i = 1; i < sorted.length; i++) {
@@ -178,7 +178,7 @@ test('드롭은 항상 골드를 주고, 아이템은 가끔 준다', () => {
 
 test('떨어지는 무기는 잡은 사람 직업 것이다', () => {
   // 못 쓰는 무기가 가방을 채우면 정리가 일이 된다
-  for (const job of ['knight', 'mage', 'archer'] as const) {
+  for (const job of ['fighter', 'mage', 'archer'] as const) {
     const drop = rollDrop(50, job, fixed(0.5, 0, 0, 0));
     const item = getItem(drop.item!.id)!;
     assert.equal(item.slot, 'weapon');
@@ -223,7 +223,7 @@ test('등급은 범위를 벗어나도 안전하다', () => {
 test('재료는 착용할 수 없다', () => {
   const material = ITEMS[materialIdFor(0)]!;
   assert.equal(material.material, true);
-  assert.equal(canEquip(material, 'knight', 200), false);
+  assert.equal(canEquip(material, 'fighter', 200), false);
 });
 
 test('보스는 재료를 반드시 준다', () => {
@@ -238,13 +238,13 @@ test('보스는 재료를 반드시 준다', () => {
 
 test('일반 몬스터는 재료를 주지 않는다', () => {
   for (let i = 0; i < 50; i++) {
-    const drop = rollDrop(50, 'knight', fixed(0.5, 0, i / 50, i / 50));
+    const drop = rollDrop(50, 'fighter', fixed(0.5, 0, i / 50, i / 50));
     if (drop.item) assert.ok(!ITEMS[drop.item.id]?.material, '일반 드롭에 재료가 섞였다');
   }
 });
 
 test('제작에는 같은 단계의 재료가 든다', () => {
-  const item = ITEMS['w_knight_05']!;
+  const item = ITEMS['w_fighter_05']!;
   const need = craftRequirement(item, 3)!;
   assert.equal(need.targetGrade, 4);
   assert.equal(need.materialId, materialIdFor(5), '장비와 같은 단계 재료여야 한다');
@@ -275,7 +275,7 @@ test('최고 등급에서는 더 제작할 수 없다', () => {
 });
 
 test('제작 비용은 등급이 오를수록 비싸진다', () => {
-  const item = ITEMS['w_knight_05']!;
+  const item = ITEMS['w_fighter_05']!;
   let previous = 0;
   for (let g = GRADE_MIN; g < GRADE_MAX; g++) {
     const cost = craftRequirement(item, g)!.gold;
@@ -296,8 +296,8 @@ test('드롭 최고 등급에서 제작으로 만렙 등급까지 이어진다',
 });
 
 test('골드는 몬스터 레벨을 따라 오른다', () => {
-  const low = rollDrop(3, 'knight', fixed(0.5, 0.99)).gold;
-  const high = rollDrop(190, 'knight', fixed(0.5, 0.99)).gold;
+  const low = rollDrop(3, 'fighter', fixed(0.5, 0.99)).gold;
+  const high = rollDrop(190, 'fighter', fixed(0.5, 0.99)).gold;
   assert.ok(high > low * 10, `저레벨 ${low} → 고레벨 ${high}`);
 });
 
@@ -352,7 +352,7 @@ test('강화하면 세지고, 최고 수치에서 멈춘다', () => {
 });
 
 test('강화 값은 올라갈수록 비싸진다', () => {
-  const item = ITEMS['w_knight_05']!;
+  const item = ITEMS['w_fighter_05']!;
   let previous = 0;
   for (let level = 0; level < MAX_ENHANCE; level++) {
     const cost = enhanceCost(item, level);
@@ -396,7 +396,7 @@ test('옵션은 1~3개가 종류 겹치지 않게 붙는다', () => {
 });
 
 test('굴린 값은 그 등급의 범위 안에 있다', () => {
-  for (const id of ['a_05', 'w_knight_19', 'r_00']) {
+  for (const id of ['a_05', 'w_fighter_19', 'r_00']) {
     const item = ITEMS[id]!;
     for (let grade = GRADE_MIN; grade <= GRADE_MAX; grade++) {
       for (let seed = 0; seed < 20; seed++) {
@@ -468,7 +468,7 @@ test('옵션이 능력치에 실제로 더해진다', () => {
 
 test('장착한 것들의 옵션이 합산된다', () => {
   const total = equipmentStats({
-    weapon: { id: 'w_knight_05', grade: 1, options: [{ kind: 'crit', value: 5 }] },
+    weapon: { id: 'w_fighter_05', grade: 1, options: [{ kind: 'crit', value: 5 }] },
     armor: { id: 'a_05', grade: 1, options: [{ kind: 'crit', value: 3 }] },
   });
   assert.ok(Math.abs(total.crit - 0.08) < 1e-9, `합이 ${total.crit}`);

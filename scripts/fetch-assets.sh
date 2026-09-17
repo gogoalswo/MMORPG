@@ -27,15 +27,19 @@ echo "  -> public/assets/hdri/sky_2k.hdr"
 
 # ---------------------------------------------------------------- VARCO 캐릭터
 
-# 바르코(3d.varco.ai) 커스텀 워크플로우 "기사" 의 결과물.
-# 리깅된 메시 하나 + 동작 여섯이 **파일 일곱 개**로 나온다. 각 파일에 메시와
-# 2048² 텍스처가 통째로 다시 들어 있어서 그대로 받으면 97MB 다 — 애니메이션만
-# 뽑아 한 파일로 합치고 텍스처를 1024² JPEG 으로 줄여 3MB 로 만든다.
+# 바르코(3d.varco.ai) 커스텀 워크플로우의 결과물로 캐릭터를 만든다.
+# 리깅된 메시 하나 + 동작들이 **파일 여럿**으로 나온다. 각 파일에 메시와
+# 2048² 텍스처가 통째로 다시 들어 있어서 그대로 받으면 수십 MB 다 — 애니메이션만
+# 뽑아 한 파일로 합치고 텍스처를 1024² JPEG 으로 줄인다.
 #
-# 이 주소들은 그 워크플로우를 한 번 돌린 **결과물**이다. 다시 돌리면 다른
+# 박아 두는 주소는 워크플로우를 한 번 돌린 **결과물**이다. 다시 돌리면 다른
 # 캐릭터가 나오므로(생성 모델이라 같은 프롬프트로도 같은 결과가 안 나온다)
 # 프롬프트가 아니라 결과물 주소를 박아 둔다. 주소가 죽으면 워크플로우를
 # 다시 돌리고 여기 해시를 갈아 끼운다.
+#
+# **기사는 2026-09-17 에 지웠다** (요청: 격투가를 기본 캐릭터로). 기사 메시
+# (`knight_rigged`)와 그 동작 여섯(`anim_*`)의 주소도 같이 뺐다 — 되살릴 일이
+# 생기면 이 커밋 이전의 `git show` 로 꺼낸다.
 VARCO="https://3d.varco.ai/api/objects"
 
 fetch_varco() { # $1=객체 해시  $2=출력 이름
@@ -46,13 +50,6 @@ fetch_varco() { # $1=객체 해시  $2=출력 이름
 }
 
 mkdir -p assets-src/models/varco
-fetch_varco 9a40444d68ddcce196fc6fa1ec711441 knight_rigged
-fetch_varco 2a6f6d32f109d27ce2cf512079521170 anim_idle
-fetch_varco 14e6288b273526a4bcb75ca2fb9a8af6 anim_run
-fetch_varco a93c151d72acf6ef215eee6b69e347f8 anim_sword_slash
-fetch_varco cf5ba760a2b2a8cfad130107f63a37b1 anim_two_hand_attack
-fetch_varco b6a60400c72d6338f2fbe0391251bef0 anim_staff_spin
-fetch_varco 81b1f814d822bf04983d4cdbd61f60f3 anim_death
 
 mkdir -p assets-src/textures/varco
 
@@ -90,20 +87,8 @@ fi
 
 # 클립 이름 = 파일. **역슬래시로 줄을 잇지 않는다** — 이 파일은 CRLF 라서
 # 줄 끝 역슬래시 다음에 CR 이 오면 bash 가 줄바꿈이 아니라 CR 이스케이프로 읽고 거기서 끊는다.
-VARCO_CLIPS=()
-# 대기 노드는 뒤에 워크플로우에서 sprint 로 바뀌었다. 주소가 고정이라 상관없다
-VARCO_CLIPS+=("Idle=assets-src/models/varco/anim_idle.glb")
 # #loop = 반복 재생이라 한 주기로 잘라 시작·끝을 맞춘다
-# #face = 클립에 구워진 몸 방향(-83.2°)을 되돌린다 — 둘 다 build 스크립트의 closeLoop
-VARCO_CLIPS+=("Run=assets-src/models/varco/anim_run.glb#loop#face")
-VARCO_CLIPS+=("Attack=assets-src/models/varco/anim_sword_slash.glb")
-VARCO_CLIPS+=("Attack_Heavy=assets-src/models/varco/anim_two_hand_attack.glb")
-VARCO_CLIPS+=("Attack_Spin=assets-src/models/varco/anim_staff_spin.glb")
-# 사망 = Animate left_side_fall. 한 번 재생이라 #loop 없음. #face 는 루프에만 걸리므로
-# 시작 자세에 구워진 몸 방향(-23°)은 그대로 남는다
-VARCO_CLIPS+=("Death=assets-src/models/varco/anim_death.glb")
-
-node scripts/build-varco-character.mjs public/assets/models/varco_knight.glb assets-src/models/varco/knight_rigged.glb "${VARCO_CLIPS[@]}"
+# #face = 클립에 구워진 몸 방향을 되돌린다 — 둘 다 build 스크립트의 closeLoop
 
 # 마법사 — 대기·달리기·공격 세 파일. 리깅 결과물을 따로 안 받고 대기 파일을
 # 기본으로 쓴다: 세 파일의 뼈대가 Root 의 쉬는 위치만 빼고 같고, Root 위치는

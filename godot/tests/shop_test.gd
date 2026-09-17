@@ -65,13 +65,13 @@ func _notice_of(w: World) -> String:
 
 func _case_stock() -> void:
 	# 자기 직업 무기만, 레벨 부근 것만
-	var stock := Items.shop_stock("knight", 1)
-	_eq("기사 Lv1 재고", stock, ["w_knight_00"])
+	var stock := Items.shop_stock("fighter", 1)
+	_eq("격투가 Lv1 재고", stock, ["w_fighter_00"])
 	for id in Items.shop_stock("mage", 40):
 		if not str(id).begins_with("w_mage_"):
 			_fail("마법사 상점에 %s 가 있다" % id)
 			return
-	print("  재고: 기사 Lv1 %s / 마법사 Lv40 %d종" % [str(stock), Items.shop_stock("mage", 40).size()])
+	print("  재고: 격투가 Lv1 %s / 마법사 Lv40 %d종" % [str(stock), Items.shop_stock("mage", 40).size()])
 
 
 func _case_buy() -> void:
@@ -80,14 +80,14 @@ func _case_buy() -> void:
 	var me: Dictionary = s[1]
 
 	# 골드가 없으면 못 산다
-	w.npc_buy("me", "w_knight_00")
+	w.npc_buy("me", "w_fighter_00")
 	if not me.bag.is_empty():
 		_fail("골드 0 인데 샀다")
 	if not _notice_of(w).contains("모자"):
 		_fail("모자란다고 알려 주지 않았다")
 
 	me.gold = 100
-	w.npc_buy("me", "w_knight_00")
+	w.npc_buy("me", "w_fighter_00")
 	_eq("사면 가방에 들어온다", me.bag.size(), 1)
 	_eq("골드가 값만큼 준다", int(me.gold), 68)  # 100 - 32
 	if me.bag[0].options.is_empty():
@@ -97,7 +97,7 @@ func _case_buy() -> void:
 
 	# 파는 목록에 없는 것은 못 산다 — 화면이 보낸 id 를 믿지 않는다
 	w.drain_events()
-	w.npc_buy("me", "w_knight_10")
+	w.npc_buy("me", "w_fighter_10")
 	_eq("목록에 없는 것은 안 팔린다", me.bag.size(), 1)
 
 
@@ -107,7 +107,7 @@ func _case_too_far() -> void:
 	var me: Dictionary = s[1]
 	me.gold = 100
 	me.z = 20.0  # 상인에게서 멀리
-	w.npc_buy("me", "w_knight_00")
+	w.npc_buy("me", "w_fighter_00")
 	if not me.bag.is_empty():
 		_fail("멀리 있는데 샀다")
 	else:
@@ -118,13 +118,13 @@ func _case_sell() -> void:
 	var s := _at("shop")
 	var w: World = s[0]
 	var me: Dictionary = s[1]
-	me.bag.append({"id": "w_knight_00", "grade": 1, "enhance": 0, "options": []})
+	me.bag.append({"id": "w_fighter_00", "grade": 1, "enhance": 0, "options": []})
 	w.npc_sell("me", 0)
 	_eq("1등급 판매가", int(me.gold), 13)
 
 	# 등급이 높으면 더 쳐준다 — 애써 올린 걸 헐값에 넘기면 팔 이유가 없다
 	me.gold = 0
-	me.bag.append({"id": "w_knight_00", "grade": 5, "enhance": 0, "options": []})
+	me.bag.append({"id": "w_fighter_00", "grade": 5, "enhance": 0, "options": []})
 	w.npc_sell("me", 0)
 	_eq("5등급 판매가", int(me.gold), 28)
 	_eq("팔면 가방에서 빠진다", me.bag.size(), 0)
@@ -162,7 +162,7 @@ func _case_enhance() -> void:
 	var w: World = s[0]
 	var me: Dictionary = s[1]
 	me.gold = 10000
-	me.bag.append({"id": "w_knight_00", "grade": 1, "enhance": 0, "options": []})
+	me.bag.append({"id": "w_fighter_00", "grade": 1, "enhance": 0, "options": []})
 
 	# +0 비용 64G, 낮은 구간은 안 부서진다
 	var results := {"success": 0, "keep": 0, "destroy": 0}
@@ -189,7 +189,7 @@ func _case_craft() -> void:
 	var w: World = s[0]
 	var me: Dictionary = s[1]
 	me.gold = 1000
-	me.bag.append({"id": "w_knight_00", "grade": 1, "enhance": 0, "options": []})
+	me.bag.append({"id": "w_fighter_00", "grade": 1, "enhance": 0, "options": []})
 	me.bag.append({"id": "m_00", "grade": 1, "enhance": 0, "options": []})
 
 	w.npc_craft("me", 0)

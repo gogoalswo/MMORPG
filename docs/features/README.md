@@ -37,9 +37,9 @@ ZoneRoom 돌리기) · `DEPLOY.md`(터널로 친구에게 열어주기). 셋 다
 | [world-zones.md](world-zones.md) | 존 21개, 차원문, 맵 크기, 보스 스폰 자리, **바닥 텍스처 7종**(존별 배정·틴트, 풀 잎·길 없음) |
 | [monsters-progression.md](monsters-progression.md) | 몬스터 60종, 능력치 공식, 레벨 곡선, 경험치 |
 | [combat.md](combat.md) | **직업 스탯 표(`combat.ts` 의 `JOB_STATS`)**, 피해 공식, 정면 판정, 치명타·공격 속도, **공격 경직(휘두르는 동안 이동 금지)**, 투사체, 사망·부활 |
-| [items.md](items.md) | 아이템 280종 생성, 등급, **랜덤 옵션**, 강화, 제작, 드롭 |
+| [items.md](items.md) | 아이템 240종 생성, 등급, **랜덤 옵션**, 강화, 제작, 드롭 |
 | [inventory-equipment.md](inventory-equipment.md) | 가방 200칸, 장비 8슬롯, 창 UI |
-| [skills.md](skills.md) | 스킬 34종(격투가는 이펙트 붙은 4개), 스킬창, 액션바 4칸, 자동 시전, **테스트 스위치(쿨타임·레벨 잠금 해제)** |
+| [skills.md](skills.md) | 스킬 24종(격투가는 이펙트 붙은 4개), 스킬창, 액션바 4칸, 자동 시전, **테스트 스위치(쿨타임·레벨 잠금 해제)** |
 | [hit-effects.md](hit-effects.md) | **피격 이펙트** — 섬광·파편·피해 숫자, 맞은 몸 붉히기, 화면 가장자리 비네트. **이펙트는 고도에서 코드로 만든다** |
 | [collision.md](collision.md) | **충돌 셋 다**(캐릭터↔몬스터·캐릭터끼리·몬스터끼리) — 몸 반지름, 미는 쪽, 스폰 자리 잡기, 사거리와의 관계 |
 | [auto-hunt-and-targeting.md](auto-hunt-and-targeting.md) | 자동 사냥, **클릭 타겟팅**(겨눈 쪽으로 쏘기), 둘의 관계 |

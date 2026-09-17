@@ -135,7 +135,7 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 ## 존이 바뀌어도 살아 있는 것들
 func _build_persistent() -> void:
 	# 모델이 있으면 모델, 없으면 기둥. npm run sync:godot 을 안 돌렸을 수도 있다
-	var rig := Rig.create("varco_knight", Rig.HUMAN_HEIGHT)
+	var rig := Rig.create("varco_fighter", Rig.HUMAN_HEIGHT)
 	if rig != null:
 		_player = rig
 		_player_y = 0.0
@@ -330,7 +330,7 @@ func _build_skill_panel() -> void:
 	rows.add_child(grid)
 
 	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
-	for id in Skills.for_job(str(me.get("job", "knight"))):
+	for id in Skills.for_job(str(me.get("job", "fighter"))):
 		var skill: Dictionary = Skills.all().get(str(id), {})
 		var button := Button.new()
 		button.text = "%s\n%d레벨" % [skill.get("name", id), skill.get("reqLevel", 1)]
@@ -842,10 +842,11 @@ func _move(dir: Vector2, delta: float) -> void:
 
 ## 죽음 > 공격 > 달리기 > 대기 순으로 고른다.
 ##
-## 공격 클립은 5.07초짜리라 통째로 틀면 한 번 휘두르는 데 5초가 걸린다.
-## 웹 클라이언트는 0.8~1.60초 구간만 1.6배로 트는데(`modelRig` 의 ATTACK_CLIPS),
-## 여기서도 같은 자리에서 시작한다. **정확한 구간 맞추기는 아직 안 했다** —
-## 발이 미끄러지거나 동작이 어긋나면 그때 재서 고친다.
+## 격투가 공격 클립은 3.23초짜리라 통째로 틀면 한 번 차는 데 3초가 걸린다.
+## 앞 0.8초는 자세를 잡는 준비라, 공격 간격(700ms)마다 처음으로 되감으면 발이
+## 한 번도 안 나간다. 웹 클라이언트는 0.8~1.60초 구간만 1.6배로 트는데
+## (`modelRig` 의 ATTACK_CLIPS), 여기서는 **시작과 배속만 같고 끝을 안 자른다.**
+## 2.30초에 뒤돌려차기가 한 번 더 있어서, 한 대에 발이 두 번 나가 보이면 그 자리다.
 func _play_player_clip(me: Dictionary) -> void:
 	if not _player is Rig:
 		return

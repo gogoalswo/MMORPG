@@ -54,7 +54,7 @@
         },
         {
           "name": "대장장이 군터",
-          "job": "knight",
+          "job": "fighter",
           "look": "smith",
           "x": 0,
           "z": 6.5,
@@ -63,7 +63,7 @@
         },
         {
           "name": "아네트",
-          "job": "knight",
+          "job": "fighter",
           "look": "villager_sack",
           "x": -8.7,
           "z": -1.3

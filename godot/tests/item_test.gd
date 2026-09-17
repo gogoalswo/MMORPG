@@ -63,7 +63,7 @@ func _case_options() -> void:
 
 	# 굴린 옵션은 1~3개, 종류가 겹치지 않고, 범위 안이다
 	var rng := RandomNumberGenerator.new()
-	var item := Items.get_item("w_knight_05")
+	var item := Items.get_item("w_fighter_05")
 	for seed_value in 50:
 		rng.seed = seed_value
 		var rolled := Items.roll_options(item, 4, rng)
@@ -98,18 +98,18 @@ func _case_enhance() -> void:
 	_eq("+9 굴림 0.95", Items.roll_enhance(9, 0.95), "destroy")
 	# 낮은 구간은 안 부서진다 — 처음부터 부서지면 강화를 아예 안 하게 된다
 	_eq("+0 은 파괴 없음", Items.enhance_odds(0).destroy, 0.0)
-	_eq("강화 비용 +0", Items.enhance_cost(Items.get_item("w_knight_00"), 0), 64)
-	_eq("강화 비용 +3", Items.enhance_cost(Items.get_item("w_knight_00"), 3), 256)
+	_eq("강화 비용 +0", Items.enhance_cost(Items.get_item("w_fighter_00"), 0), 64)
+	_eq("강화 비용 +3", Items.enhance_cost(Items.get_item("w_fighter_00"), 3), 256)
 	_eq("+10 이면 못 두드린다", Items.can_enhance(10), false)
 
 
 func _case_stats() -> void:
-	var item := Items.get_item("w_knight_00")
+	var item := Items.get_item("w_fighter_00")
 	_eq("기본 공격", item.bonus.attack, 3)
 	_eq("강화 +5 기본 공격", Items.base_bonus(item, 5).attack, 4)
 
 	var stack := {
-		"id": "w_knight_00", "grade": 3, "enhance": 5,
+		"id": "w_fighter_00", "grade": 3, "enhance": 5,
 		"options": [{"kind": "attack", "value": 4}, {"kind": "crit", "value": 7}],
 	}
 	var stats := Items.stack_stats(stack)
@@ -124,7 +124,7 @@ func _case_drop() -> void:
 	var drops := 0
 	for seed_value in 200:
 		rng.seed = seed_value
-		var loot := Items.roll_drop(35, "knight", rng)
+		var loot := Items.roll_drop(35, "fighter", rng)
 		if int(loot.gold) < 1:
 			_fail("골드가 0 이다")
 			return
@@ -135,7 +135,7 @@ func _case_drop() -> void:
 		if def.is_empty():
 			_fail("없는 아이템이 떨어졌다: %s" % loot.item.id)
 			return
-		if def.has("job") and str(def.job) != "knight":
+		if def.has("job") and str(def.job) != "fighter":
 			_fail("다른 직업 장비가 떨어졌다: %s" % loot.item.id)
 			return
 		# 35레벨 몬스터는 3단계(요구 레벨 30) 물건을 떨군다
@@ -155,7 +155,7 @@ func _case_equip() -> void:
 	var me: Dictionary = w.snapshot().players["me"]
 	var before := int(me.stats.attack)
 
-	me.bag.append({"id": "w_knight_00", "grade": 1, "enhance": 0, "options": [{"kind": "attack", "value": 5}]})
+	me.bag.append({"id": "w_fighter_00", "grade": 1, "enhance": 0, "options": [{"kind": "attack", "value": 5}]})
 	w.equip("me", 0)
 	if me.equipped.get("weapon", {}).is_empty():
 		_fail("무기를 못 꼈다")
@@ -167,13 +167,13 @@ func _case_equip() -> void:
 	# 남의 직업 장비는 못 낀다
 	me.bag.append({"id": "w_mage_00", "grade": 1, "enhance": 0, "options": []})
 	w.equip("me", 0)
-	if not me.equipped.get("weapon", {}).id == "w_knight_00":
+	if not me.equipped.get("weapon", {}).id == "w_fighter_00":
 		_fail("마법사 무기가 끼워졌다")
 
 	# 요구 레벨이 높은 것도 못 낀다
-	me.bag.append({"id": "w_knight_10", "grade": 1, "enhance": 0, "options": []})
+	me.bag.append({"id": "w_fighter_10", "grade": 1, "enhance": 0, "options": []})
 	w.equip("me", me.bag.size() - 1)
-	if str(me.equipped.weapon.id) != "w_knight_00":
+	if str(me.equipped.weapon.id) != "w_fighter_00":
 		_fail("100레벨 장비를 1레벨이 꼈다")
 
 	# 벗으면 되돌아온다

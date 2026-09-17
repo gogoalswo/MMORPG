@@ -35,17 +35,17 @@ func _eq(label: String, got, want) -> void:
 
 
 func _stats() -> void:
-	var k1 := Combat.stats_for("knight", 1)
-	_eq("기사1 체력", k1.maxHp, 140)
-	_eq("기사1 공격", k1.attack, 12)
-	_eq("기사1 방어", k1.defense, 8)
-	_eq("기사1 사거리", k1.attackRange, 2.4)
-	_eq("기사1 간격", k1.attackCooldown, 900.0)
+	var k1 := Combat.stats_for("fighter", 1)
+	_eq("격투가1 체력", k1.maxHp, 120)
+	_eq("격투가1 공격", k1.attack, 12)
+	_eq("격투가1 방어", k1.defense, 6)
+	_eq("격투가1 사거리", k1.attackRange, 2.2)
+	_eq("격투가1 간격", k1.attackCooldown, 700.0)
 
-	var k10 := Combat.stats_for("knight", 10)
-	_eq("기사10 체력", k10.maxHp, 266)
-	_eq("기사10 공격", k10.attack, 32)
-	_eq("기사10 방어", k10.defense, 21)
+	var k10 := Combat.stats_for("fighter", 10)
+	_eq("격투가10 체력", k10.maxHp, 219)
+	_eq("격투가10 공격", k10.attack, 34)
+	_eq("격투가10 방어", k10.defense, 16)
 
 	var m50 := Combat.stats_for("mage", 50)
 	_eq("마법사50 체력", m50.maxHp, 374)
@@ -119,7 +119,7 @@ func _fight() -> void:
 		_fail_text("사거리 안 정면인데 안 맞았다")
 		return
 
-	# 기사 Lv1 공격 12, 들늑대 방어 3 -> 11. 치명타면 1.5배
+	# 격투가 Lv1 공격 12, 들늑대 방어 3 -> 11. 치명타면 1.5배
 	var want: int = 17 if hit.crit else 11
 	_eq("피해량", hit.amount, want)
 	_eq("체력이 그만큼 줄었다", mobs[0].hp, 100 - want)

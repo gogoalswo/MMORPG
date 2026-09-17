@@ -30,6 +30,8 @@ func send(message: StringName, payload: Dictionary) -> void:
 				float(payload.get("dz", 0.0)),
 				float(payload.get("dt", 0.0)),
 			)
+		&"attack":
+			_world.attack(MY_ID)
 		_:
 			push_warning("모르는 메시지: %s" % message)
 
@@ -43,5 +45,9 @@ func my_id() -> String:
 
 
 func _process(delta: float) -> void:
-	if _world != null:
-		_world.step(delta)
+	if _world == null:
+		return
+	_world.step(delta)
+	# 판정이 낸 일들을 화면으로 흘린다. 서버를 붙이면 이 자리가 소켓이 된다
+	for e in _world.drain_events():
+		event.emit(StringName(e.get("type", "?")), e)

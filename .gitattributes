@@ -7,6 +7,11 @@
 # 개인 설정과 무관하게 저장소도 작업 트리도 LF 로 둔다.
 * text=auto eol=lf
 
+# 배치만 예외다 — cmd 는 .bat 을 바이트 위치로 읽어서 LF 만 있으면 줄이 밀린다.
+# 한글까지 겹쳤을 때 `errorlevel` 이 `orlevel` 로 잘려 실행됐다 (2026-09-17).
+# scripts/play.bat 은 그래서 CRLF 에 ASCII 전용이다.
+*.bat text eol=crlf
+
 *.glb  binary
 *.gltf binary
 *.ktx2 binary

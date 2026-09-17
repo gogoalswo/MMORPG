@@ -438,6 +438,12 @@ set GODOT_DIR=D:\godot  둘 곳을 바꾼다 (기본 C:\godot)
 `godot/data/*.json` 은 커밋돼 있으므로 `npm run export:godot` 은 `packages/shared` 를 고쳤을
 때만 돌린다. 이 배치는 테스트를 돌리지 않는다 — 확인은 `npm run test:godot` 의 몫이다.
 
+**배치는 ASCII 전용에 CRLF 다 — 한글도 `chcp` 도 넣지 않는다.** ★ cmd 는 `.bat` 을
+콘솔 코드페이지로, 그것도 바이트 위치를 세어 가며 읽는다. UTF-8 한글이 섞이면 읽는 자리가
+밀려서 `errorlevel` 을 `orlevel` 로 잘라 실행한다 (2026-09-17 에 실제로 났다). 같은 이유로
+`goto`/라벨도 쓰지 않고, `.gitattributes` 에 `*.bat text eol=crlf` 예외를 뒀다 (저장소 기본은
+LF). **화면에 찍는 글은 영어로 둔다** — 안내와 설명은 이 문서가 한다.
+
 ## 단계
 
 1. ~~**골격** — 프로젝트·임시 화면·APK 워크플로우~~ 끝 (2026-09-16)

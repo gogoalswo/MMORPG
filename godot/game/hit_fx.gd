@@ -26,11 +26,14 @@ const SPARKS := 7
 ## **화면에서 몇 px 로 보이는지로 크기를 정한다.** 카메라가 화면 세로 14.3m 를
 ## 보므로 720p 에서 1m 가 41px 다 — 처음에 숫자를 0.38m(16px)로 잡았다가
 ## "맞아도 이펙트가 안 나온다" 는 말을 들었다 (2026-09-17). 아래 미터 값은
-## 전부 그 환산을 거친 것이고, `hit_fx_test.gd` 가 px 로 다시 잰다
-const NUMBER_SIZE := 0.022
-const CRIT_SIZE := 0.034
-const FLASH_RADIUS := 0.6
-const SPARK_SIZE := 0.3
+## 전부 그 환산을 거친 것이고, `hit_fx_test.gd` 가 px 로 다시 잰다.
+##
+## **한 번 키웠다가 반으로 줄인 값이다** — 눈으로 보고 "너무 크다" 고 해서
+## 그대로 반씩 나눴다 (2026-09-17). 숫자 29px 로 HUD 글자(28px)와 비슷하다
+const NUMBER_SIZE := 0.011
+const CRIT_SIZE := 0.017
+const FLASH_RADIUS := 0.3
+const SPARK_SIZE := 0.15
 
 ## 내가 때렸다
 const COLOR_DAMAGE := Color("#ffe6a0")

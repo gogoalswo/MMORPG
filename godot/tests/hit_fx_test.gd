@@ -111,12 +111,13 @@ func _case_visible(game: Node3D, mob: Dictionary) -> void:
 		screen.x, screen.y, per_m, number, flash, spark
 	])
 
-	# HUD 글자가 28px 다. 피해 숫자가 그보다 작으면 읽히지 않는다
-	if number < 40.0:
-		_fail("피해 숫자가 %.0fpx 다 — HUD 글자(28px)보다 커야 읽힌다" % number)
-	if flash < 60.0:
+	# 기준은 **눈으로 보고 정했다** — 16px 은 안 보였고, 58px 은 너무 컸다.
+	# 지금은 HUD 글자(28px)와 비슷한 선이다 (2026-09-17)
+	if number < 24.0:
+		_fail("피해 숫자가 %.0fpx 다 — HUD 글자(28px)만 해야 읽힌다" % number)
+	if flash < 40.0:
 		_fail("섬광이 %.0fpx 다 — 0.2초만 뜨므로 작으면 못 본다" % flash)
-	if spark < 7.0:
+	if spark < 5.0:
 		_fail("파편이 %.0fpx 다 — 점으로도 안 보인다" % spark)
 
 	var waited := 0

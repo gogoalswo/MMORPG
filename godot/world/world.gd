@@ -654,13 +654,20 @@ func npc_open(player_id: String, npc_name: String) -> void:
 		if gap > NPC_REACH:
 			_events.append({"type": "notice", "text": "너무 멉니다"})
 			return
+		var role := str(npc.get("role", ""))
+		var listed: Array = []
+		match role:
+			"shop":
+				listed = Items.shop_stock(str(player.job), int(player.level))
+			"smith":
+				# 만들 수 있는 것이 레벨을 따라 길어진다. 창 쪽에서 거른다
+				listed = Items.forgeable_for(str(player.job), int(player.level))
 		_events.append({
 			"type": "npc",
 			"name": npc_name,
-			"role": str(npc.get("role", "")),
+			"role": role,
 			"title": str(npc.get("title", "")),
-			# 아이템 표가 아직 없어서 목록은 비어 있다. 표가 들어오면 여기가 채워진다
-			"items": [],
+			"items": listed,
 		})
 		return
 
@@ -873,3 +880,193 @@ func unequip(player_id: String, slot: String) -> void:
 	player.equipped.erase(slot)
 	_refresh_stats(player)
 	_events.append({"type": "inventory", "bag": player.bag, "equipped": player.equipped})
+
+
+## 그 역할의 NPC 가 닿는 거리에 있나. **살 때마다 다시 잰다** —
+## 창을 열어 두고 걸어 나가면 살 수 없어야 한다
+func _npc_near(player: Dictionary, role: String) -> bool:
+	for npc in zone.get("npcs", []):
+		if str(npc.get("role", "")) != role:
+			continue
+		if Vector2(player.x - float(npc.x), player.z - float(npc.z)).length() <= NPC_REACH:
+			return true
+	return false
+
+
+func _notice(text: String) -> void:
+	_events.append({"type": "notice", "text": text})
+
+
+func _inventory_changed(player: Dictionary) -> void:
+	_events.append({"type": "inventory", "bag": player.bag, "equipped": player.equipped})
+
+
+## 가방에 든 재료 수
+func _material_count(player: Dictionary, material_id: String) -> int:
+	var n := 0
+	for stack in player.bag:
+		if str(stack.get("id", "")) == material_id:
+			n += 1
+	return n
+
+
+## 재료를 쓴다. 모자라면 아무것도 안 쓰고 false
+func _spend_materials(player: Dictionary, material_id: String, count: int) -> bool:
+	if _material_count(player, material_id) < count:
+		return false
+	var left := count
+	for i in range(player.bag.size() - 1, -1, -1):
+		if left <= 0:
+			break
+		if str(player.bag[i].get("id", "")) == material_id:
+			player.bag.remove_at(i)
+			left -= 1
+	return true
+
+
+## --- 상점 ---
+
+## 산다. **파는 목록에 있는 것만** — 화면이 보낸 id 를 믿지 않는다
+func npc_buy(player_id: String, item_id: String) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty() or not _npc_near(player, "shop"):
+		return
+	if not (item_id in Items.shop_stock(str(player.job), int(player.level))):
+		return
+	var item := Items.get_item(item_id)
+	if item.is_empty():
+		return
+
+	var price := int(item.price)
+	if int(player.gold) < price:
+		_notice("골드가 %d 모자랍니다" % (price - int(player.gold)))
+		return
+	if player.bag.size() >= Items.bag_size():
+		_notice("가방이 가득 찼습니다")
+		return
+
+	player.gold = int(player.gold) - price
+	# 옵션은 **판정하는 쪽이 굴린다.** 물건이 생기는 자리마다 굴려야 빠지는 곳이 없다
+	player.bag.append({
+		"id": item_id, "grade": 1, "enhance": 0, "options": Items.roll_options(item, 1, _rng)
+	})
+	_notice("%s 구입 — %d G" % [item.name, price])
+	_inventory_changed(player)
+
+
+func npc_sell(player_id: String, index: int) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty() or not _npc_near(player, "shop"):
+		return
+	if index < 0 or index >= player.bag.size():
+		return
+	var stack: Dictionary = player.bag[index]
+	var item := Items.get_item(str(stack.id))
+	if item.is_empty():
+		return
+
+	var price := Items.sell_price(item, int(stack.get("grade", 1)))
+	player.bag.remove_at(index)
+	player.gold = int(player.gold) + price
+	_notice("%s 판매 — %d G" % [item.name, price])
+	_inventory_changed(player)
+
+
+## --- 대장간 ---
+
+## 새로 만들기 — 재료와 골드를 내고 1등급을 얻는다
+func npc_forge(player_id: String, item_id: String) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty() or not _npc_near(player, "smith"):
+		return
+	if not (item_id in Items.forgeable_for(str(player.job), int(player.level))):
+		return
+	var item := Items.get_item(item_id)
+	var recipe := Items.forge_recipe(item)
+	if recipe.is_empty():
+		return
+
+	if player.bag.size() >= Items.bag_size():
+		_notice("가방이 가득 찼습니다")
+		return
+	if int(player.gold) < int(recipe.gold):
+		_notice("골드가 %d 모자랍니다" % (int(recipe.gold) - int(player.gold)))
+		return
+	if _material_count(player, str(recipe.materialId)) < int(recipe.materialCount):
+		_notice("%s 가 모자랍니다" % recipe.materialName)
+		return
+
+	_spend_materials(player, str(recipe.materialId), int(recipe.materialCount))
+	player.gold = int(player.gold) - int(recipe.gold)
+	player.bag.append({
+		"id": item_id, "grade": 1, "enhance": 0, "options": Items.roll_options(item, 1, _rng)
+	})
+	_notice("%s 제작 완료" % item.name)
+	_inventory_changed(player)
+
+
+## 강화 — 골드만 쓴다. 성공 / 유지 / 파괴. **굴림은 판정하는 쪽이 한다**
+func npc_enhance(player_id: String, index: int) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty() or not _npc_near(player, "smith"):
+		return
+	if index < 0 or index >= player.bag.size():
+		return
+	var stack: Dictionary = player.bag[index]
+	var item := Items.get_item(str(stack.id))
+	if item.is_empty() or bool(item.get("material", false)):
+		return
+
+	var level := int(stack.get("enhance", 0))
+	if not Items.can_enhance(level):
+		_notice("더 두드릴 수 없습니다")
+		return
+	var cost := Items.enhance_cost(item, level)
+	if int(player.gold) < cost:
+		_notice("골드가 %d 모자랍니다" % (cost - int(player.gold)))
+		return
+
+	player.gold = int(player.gold) - cost
+	var result := Items.roll_enhance(level, _rng.randf())
+	match result:
+		"success":
+			stack.enhance = level + 1
+			_notice("%s +%d 성공" % [item.name, stack.enhance])
+		"keep":
+			_notice("%s +%d 유지" % [item.name, level])
+		"destroy":
+			player.bag.remove_at(index)
+			_notice("%s 가 부서졌습니다" % item.name)
+	_events.append({"type": "enhanceResult", "result": result, "level": stack.get("enhance", level)})
+	_inventory_changed(player)
+
+
+## 등급 올리기 — 같은 단계 재료와 수수료. **옵션을 다시 굴린다**
+func npc_craft(player_id: String, index: int) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty() or not _npc_near(player, "smith"):
+		return
+	if index < 0 or index >= player.bag.size():
+		return
+	var stack: Dictionary = player.bag[index]
+	var item := Items.get_item(str(stack.id))
+	if item.is_empty():
+		return
+
+	var need := Items.craft_requirement(item, int(stack.get("grade", 1)))
+	if need.is_empty():
+		_notice("더 올릴 수 없습니다")
+		return
+	if int(player.gold) < int(need.gold):
+		_notice("골드가 %d 모자랍니다" % (int(need.gold) - int(player.gold)))
+		return
+	if _material_count(player, str(need.materialId)) < int(need.materialCount):
+		_notice("%s 가 %d개 필요합니다" % [need.materialName, need.materialCount])
+		return
+
+	_spend_materials(player, str(need.materialId), int(need.materialCount))
+	player.gold = int(player.gold) - int(need.gold)
+	stack.grade = int(need.targetGrade)
+	stack.options = Items.roll_options(item, stack.grade, _rng)
+	_notice("%s %d등급 완성" % [item.name, stack.grade])
+	_inventory_changed(player)

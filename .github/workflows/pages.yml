@@ -72,7 +72,7 @@ jobs:
           set -e
           npm run sync:godot
           ~/godot-bin/godot --headless --path godot --import
-          for t in movement world touch monster combat aggro model ui aoe save npc skill item; do
+          for t in movement world touch monster combat aggro model ui aoe save npc skill item shop; do
             echo "--- $t"
             ~/godot-bin/godot --headless --path godot --script "tests/$t""_test.gd"
           done

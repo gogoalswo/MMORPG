@@ -263,3 +263,102 @@ static func roll_drop(monster_level: int, job: String, rng: RandomNumberGenerato
 			"options": roll_options(def, grade, rng) if not def.is_empty() else [],
 		},
 	}
+
+
+## 단계 번호에서 재료 id
+static func material_id_for(tier: int) -> String:
+	return "m_%02d" % tier
+
+
+## 아이템 id 끝에 붙은 단계 번호
+static func tier_index_of(item: Dictionary) -> int:
+	var id := str(item.get("id", ""))
+	return int(id.substr(id.length() - 2)) if id.length() >= 2 else 0
+
+
+## 상점에 뜨는 것 — **자기 직업의 무기만.** 방어구·장신구는 사냥으로 줍거나
+## 대장간에서 만든다. 레벨 부근 것만 올린다
+static func shop_stock(job: String, level: int) -> Array:
+	var max_tier := tier_for_level(level)
+	var out: Array = []
+	for id in all():
+		var item: Dictionary = all()[id]
+		if str(item.get("slot", "")) != "weapon":
+			continue
+		if str(item.get("job", "")) != job:
+			continue
+		if int(item.level) <= level and tier_for_level(int(item.level)) >= max_tier - 1:
+			out.append(id)
+	out.sort()
+	return out
+
+
+## 팔 때 받는 값. **등급이 높으면 더 쳐준다** — 애써 올린 걸 헐값에 넘기면
+## 팔 이유가 없다
+static func sell_price(item: Dictionary, grade: int) -> int:
+	return maxi(1, roundi(float(item.get("price", 0)) * 0.4 * grade_multiplier(grade)))
+
+
+## 목표 등급 하나를 만드는 데 드는 재료 수
+static func materials_needed(target_grade: int) -> int:
+	return maxi(1, target_grade - 1)
+
+
+static func craft_cost(item: Dictionary, current_grade: int) -> int:
+	return roundi(float(item.get("price", 0)) * 0.5 * grade_multiplier(current_grade))
+
+
+static func can_craft_up(grade: int) -> bool:
+	return grade >= int(_t().get("gradeMin", 1)) and grade < int(_t().get("gradeMax", 10))
+
+
+## 한 등급 올리는 데 필요한 것. 재료는 **그 장비와 같은 단계**의 것을 쓴다 —
+## 낮은 단계 재료로 최상위 장비를 올릴 수 있으면 초반 보스만 반복하면 끝난다
+static func craft_requirement(item: Dictionary, current_grade: int) -> Dictionary:
+	if not can_craft_up(current_grade) or bool(item.get("material", false)):
+		return {}
+	var material := material_id_for(tier_index_of(item))
+	var target := current_grade + 1
+	return {
+		"targetGrade": target,
+		"materialId": material,
+		"materialName": get_item(material).get("name", material),
+		"materialCount": materials_needed(target),
+		"gold": craft_cost(item, current_grade),
+	}
+
+
+## 새로 만들기 — 없는 걸 마련한다. **등급 올리기보다 재료를 더 쓴다**:
+## 없던 걸 만드는 쪽이 싸면 아무도 줍지 않는다
+static func forge_recipe(item: Dictionary) -> Dictionary:
+	if bool(item.get("material", false)):
+		return {}
+	var material := material_id_for(tier_index_of(item))
+	return {
+		"itemId": item.id,
+		"materialId": material,
+		"materialName": get_item(material).get("name", material),
+		"materialCount": int(_t().get("forgeMaterials", 5)),
+		"gold": roundi(float(item.get("price", 0)) * 1.5),
+	}
+
+
+## 그 캐릭터가 만들 수 있는 것 — 자기 레벨까지의 장비 전부
+static func forgeable_for(job: String, level: int) -> Array:
+	var out: Array = []
+	for id in all():
+		var item: Dictionary = all()[id]
+		if bool(item.get("material", false)):
+			continue
+		if item.has("job") and str(item.job) != job:
+			continue
+		if int(item.level) <= level:
+			out.append(id)
+	out.sort_custom(func(a, b):
+		var ia: Dictionary = all()[a]
+		var ib: Dictionary = all()[b]
+		if int(ia.level) != int(ib.level):
+			return int(ia.level) < int(ib.level)
+		return str(ia.slot) < str(ib.slot)
+	)
+	return out

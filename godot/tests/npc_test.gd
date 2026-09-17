@@ -119,7 +119,13 @@ func _run_scene() -> void:
 	elif not game._npc_title.text.begins_with("상인 보리스"):
 		_fail("창 제목이 다르다: %s" % game._npc_title.text)
 	else:
-		print("  창: '%s' / '%s'" % [game._npc_title.text, game._npc_body.text.split("\n")[0]])
+		# 상점이면 파는 목록이 줄로 서 있어야 한다 (탭 줄 + 단추들)
+		var lines: int = game._npc_rows.get_child_count()
+		print("  창: '%s', 줄 %d개, 파는 것 %d종" % [
+			game._npc_title.text, lines, game._npc_items.size()
+		])
+		if game._npc_items.is_empty():
+			_fail("상점에 파는 것이 없다")
 
 	Save.clear()
 	if _failed == 0:

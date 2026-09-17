@@ -43,7 +43,10 @@ var _gate_panel: PanelContainer
 var _aoe_marks: Array = []
 var _npc_panel: PanelContainer
 var _npc_title: Label
-var _npc_body: Label
+var _npc_rows: VBoxContainer
+var _npc_role := ""
+var _npc_tab := ""
+var _npc_items: Array = []
 ## 액션바 4칸. 눌리면 그 스킬을 쓴다
 var _bar_buttons: Array = []
 var _skill_panel: PanelContainer
@@ -103,6 +106,8 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 		&"inventory":
 			if _bag_panel.visible:
 				_redraw_bag()
+			if _npc_panel.visible:
+				_redraw_npc()
 		&"skillBar":
 			pass
 		&"notice":
@@ -359,13 +364,8 @@ func _build_npc_panel() -> void:
 	_npc_title = Label.new()
 	rows.add_child(_npc_title)
 
-	_npc_body = Label.new()
-	rows.add_child(_npc_body)
-
-	var close := Button.new()
-	close.text = "닫기"
-	close.pressed.connect(func() -> void: _npc_panel.visible = false)
-	rows.add_child(close)
+	_npc_rows = VBoxContainer.new()
+	rows.add_child(_npc_rows)
 
 
 func _show_npc(payload: Dictionary) -> void:
@@ -375,14 +375,128 @@ func _show_npc(payload: Dictionary) -> void:
 		payload.get("name", ""),
 		"  (%s)" % title if title != "" else "",
 	]
-	match role:
-		"shop", "smith":
-			# 아이템 표를 다시 만들기로 해서 목록이 비어 있다.
-			# 표가 들어오면 payload.items 가 채워지고 여기에 줄이 선다
-			_npc_body.text = "아이템을 다시 만드는 중입니다.\n표가 들어오면 여기에 목록이 섭니다."
-		_:
-			_npc_body.text = "안녕하세요."
+	_npc_role = role
+	_npc_items = payload.get("items", [])
+	_npc_tab = "buy" if role == "shop" else "forge"
+	_redraw_npc()
 	_npc_panel.visible = true
+
+
+## 목록은 **열 때마다 다시 그린다** — 사고팔고 두드리는 동안 계속 바뀐다.
+## 웹 클라의 npcDialog(상점) · craftWindow(대장간 탭 3개) 자리다
+func _redraw_npc() -> void:
+	for child in _npc_rows.get_children():
+		child.queue_free()
+
+	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
+	if me.is_empty():
+		return
+
+	var gold := Label.new()
+	gold.text = "골드 %d   가방 %d/%d" % [me.get("gold", 0), me.bag.size(), Items.bag_size()]
+	_npc_rows.add_child(gold)
+
+	var tabs := HBoxContainer.new()
+	_npc_rows.add_child(tabs)
+	var names := {"buy": "사기", "sell": "팔기"} if _npc_role == "shop" else {
+		"forge": "새로 만들기", "enhance": "강화", "craft": "등급 올리기"
+	}
+	for key in names:
+		var tab := Button.new()
+		tab.text = names[key]
+		tab.disabled = (_npc_tab == key)
+		tab.pressed.connect(func() -> void:
+			_npc_tab = str(key)
+			_redraw_npc()
+		)
+		tabs.add_child(tab)
+
+	match _npc_tab:
+		"buy":
+			_list_buy(me)
+		"sell":
+			_list_bag(me, "팔기", func(index: int) -> void:
+				_transport.send(&"npcSell", {"index": index})
+			)
+		"forge":
+			_list_forge(me)
+		"enhance":
+			_list_bag(me, "강화", func(index: int) -> void:
+				_transport.send(&"npcEnhance", {"index": index})
+			)
+		"craft":
+			_list_bag(me, "등급", func(index: int) -> void:
+				_transport.send(&"npcCraft", {"index": index})
+			)
+
+	var close := Button.new()
+	close.text = "닫기"
+	close.pressed.connect(func() -> void: _npc_panel.visible = false)
+	_npc_rows.add_child(close)
+
+
+func _list_buy(me: Dictionary) -> void:
+	for id in _npc_items:
+		var item := Items.get_item(str(id))
+		var button := Button.new()
+		button.text = "%s   %d G" % [item.get("name", id), item.get("price", 0)]
+		button.disabled = int(me.get("gold", 0)) < int(item.get("price", 0))
+		button.pressed.connect(func() -> void:
+			_transport.send(&"npcBuy", {"item": str(id)})
+			_redraw_npc()
+		)
+		_npc_rows.add_child(button)
+
+
+## 만들 수 있는 것이 레벨을 따라 길어진다. **가진 재료로 만들 수 있는 것만** 올린다 —
+## 안 거르면 200레벨에 160줄이 깔려 정작 무엇을 만들 수 있는지가 안 보인다
+func _list_forge(me: Dictionary) -> void:
+	var shown := 0
+	for id in _npc_items:
+		if shown >= 12:
+			break
+		var item := Items.get_item(str(id))
+		var recipe := Items.forge_recipe(item)
+		if recipe.is_empty():
+			continue
+		var have := 0
+		for stack in me.bag:
+			if str(stack.get("id", "")) == str(recipe.materialId):
+				have += 1
+		if have < int(recipe.materialCount):
+			continue
+		shown += 1
+		var button := Button.new()
+		button.text = "%s   %s %d개 + %d G" % [
+			item.get("name", id), recipe.materialName, recipe.materialCount, recipe.gold
+		]
+		button.pressed.connect(func() -> void:
+			_transport.send(&"npcForge", {"item": str(id)})
+			_redraw_npc()
+		)
+		_npc_rows.add_child(button)
+	if shown == 0:
+		var empty := Label.new()
+		empty.text = "만들 수 있는 것이 없습니다 (보스가 재료를 떨굽니다)"
+		_npc_rows.add_child(empty)
+
+
+func _list_bag(me: Dictionary, verb: String, action: Callable) -> void:
+	if me.bag.is_empty():
+		var empty := Label.new()
+		empty.text = "가방이 비었습니다"
+		_npc_rows.add_child(empty)
+		return
+	for index in mini(me.bag.size(), 12):
+		var stack: Dictionary = me.bag[index]
+		var button := Button.new()
+		button.text = "%s  [%s]" % [_stack_label(stack), verb]
+		button.pressed.connect(func() -> void:
+			action.call(index)
+			_redraw_npc()
+		)
+		_npc_rows.add_child(button)
+
 
 
 func _make_theme() -> Theme:

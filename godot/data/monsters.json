@@ -1220,5 +1220,33 @@
         "power": 2.2
       }
     }
-  }
+  },
+  "heights": {
+    "rat": 0.4,
+    "frog": 0.45,
+    "snake": 0.45,
+    "shibainu": 0.55,
+    "fox": 0.6,
+    "wasp": 0.65,
+    "spider": 0.65,
+    "husky": 0.8,
+    "wolf": 0.85,
+    "deer": 1.1,
+    "bull": 1.15,
+    "stag": 1.2,
+    "horse": 1.5,
+    "horse_white": 1.5,
+    "velociraptor": 1.35,
+    "stegosaurus": 1.5,
+    "triceratops": 1.5,
+    "parasaurolophus": 1.8,
+    "trex": 2.4,
+    "apatosaurus": 2.6,
+    "varco_ogre1": 2.2,
+    "varco_ogre2": 2.2,
+    "varco_ogre3": 2.2,
+    "varco_ogre4": 2.2,
+    "varco_ogre5": 2.2
+  },
+  "heightDefault": 0.9
 }

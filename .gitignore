@@ -24,3 +24,6 @@ godot/android/
 *.apk
 *.aab
 *.keystore
+# 고도가 쓰는 에셋은 public/assets 에서 복사해 온다 (npm run sync:godot).
+# 같은 GLB 를 두 벌 커밋하지 않는다.
+godot/assets/

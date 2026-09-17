@@ -41,6 +41,7 @@ func _run() -> void:
 	var body: Node3D = game._mob_nodes.get(str(mob.id))
 
 	await _case_monster(game, mob, body)
+	await _case_visible(game, mob)
 	await _case_crit(game, mob)
 	await _case_gone(game, body)
 	await _case_model(game)
@@ -84,6 +85,46 @@ func _case_monster(game: Node3D, mob: Dictionary, body: Node3D) -> void:
 		print("  맞은 몸 %d장이 붉어짐" % painted)
 
 
+## **화면에서 몇 px 로 보이나.** 이펙트가 서기만 하고 안 보인 적이 있다 —
+## 숫자 16px · 파편 4px 로 잡았다가 "맞아도 이펙트가 안 나온다" 는 말을 들었다
+## (2026-09-17). 미터로는 안 잡히고 px 로 재야 잡힌다
+func _case_visible(game: Node3D, mob: Dictionary) -> void:
+	game._on_event(&"hit", _hit(mob, 44, false, false))
+	await process_frame
+	var fx := _newest(game)
+	if fx == null or fx._number == null or fx._flash == null:
+		_fail("크기를 잴 이펙트가 없다")
+		return
+
+	# **내 캐릭터 자리에서 잰다.** 멀리 있는 보스 자리에서 재면 원근 때문에
+	# 실제보다 크게 나와 검사가 헐거워진다
+	var cam: Camera3D = game._camera
+	var at: Vector3 = game._player.global_position + Vector3.UP
+	# 1m 위를 같이 투영해 환산한다 (카메라 FOV·거리가 그대로 반영된다)
+	var per_m := (cam.unproject_position(at) - cam.unproject_position(at + Vector3.UP)).length()
+	var screen := cam.get_viewport().get_visible_rect().size
+	var number: float = fx._number.font_size * fx._number.pixel_size * per_m
+	# 섬광은 터지면서 2배까지 커진다
+	var flash: float = fx._flash.mesh.radius * 2.0 * 2.0 * per_m
+	var spark: float = HitFx.SPARK_SIZE * per_m
+	print("  화면 %d×%d, 1m=%.0fpx — 숫자 %.0fpx · 섬광 %.0fpx · 파편 %.0fpx" % [
+		screen.x, screen.y, per_m, number, flash, spark
+	])
+
+	# HUD 글자가 28px 다. 피해 숫자가 그보다 작으면 읽히지 않는다
+	if number < 40.0:
+		_fail("피해 숫자가 %.0fpx 다 — HUD 글자(28px)보다 커야 읽힌다" % number)
+	if flash < 60.0:
+		_fail("섬광이 %.0fpx 다 — 0.2초만 뜨므로 작으면 못 본다" % flash)
+	if spark < 7.0:
+		_fail("파편이 %.0fpx 다 — 점으로도 안 보인다" % spark)
+
+	var waited := 0
+	while _newest(game) != null and waited < 240:
+		await process_frame
+		waited += 1
+
+
 ## 치명타는 숫자가 더 크고 느낌표가 붙는다 — 읽지 않아도 크기로 안다
 func _case_crit(game: Node3D, mob: Dictionary) -> void:
 	game._on_event(&"hit", _hit(mob, 91, true, false))
@@ -97,7 +138,9 @@ func _case_crit(game: Node3D, mob: Dictionary) -> void:
 	if fx._number.pixel_size <= 0.006:
 		_fail("치명타가 평타보다 크지 않다 (%.4f)" % fx._number.pixel_size)
 	else:
-		print("  치명타: %s, 글자 %.3f (평타 0.006)" % [fx._number.text, fx._number.pixel_size])
+		print("  치명타: %s, 글자 %.3f (평타 %.3f)" % [
+			fx._number.text, fx._number.pixel_size, HitFx.NUMBER_SIZE
+		])
 
 
 ## 스스로 사라지고 **덧칠도 걷어 간다.** 안 걷으면 몬스터가 영영 빨갛다

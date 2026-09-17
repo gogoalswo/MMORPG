@@ -33,7 +33,8 @@ func _ready() -> void:
 ## 맞았다. `strength` 는 아픈 만큼(0~1) — 스치면 옅게, 크게 맞으면 진하게.
 ## **겹치면 더 진한 쪽을 남긴다** (더하면 연타에 화면이 새빨개진다)
 func hit(strength: float = 1.0) -> void:
-	_alpha = maxf(_alpha, PEAK * clampf(strength, 0.25, 1.0))
+	# 하한 0.55 — 스쳐도 "맞았다" 는 알아야 한다. 0.25 는 화면에서 안 보였다
+	_alpha = maxf(_alpha, PEAK * clampf(strength, 0.55, 1.0))
 	visible = true
 	modulate.a = _alpha
 

@@ -27,9 +27,11 @@ func _eq(label: String, got: float, want: float, slack: float = 1e-4) -> void:
 
 
 func _case_values() -> void:
+	# 각도는 웹 클라와 같아야 한다
 	_eq("피치", CameraRig.PITCH, 42.0)
 	_eq("요", CameraRig.YAW, PI / 4)
-	_eq("거리", CameraRig.DISTANCE, 40.0)
+	# 거리만 웹(40)에서 1.5배 당겼다
+	_eq("거리", CameraRig.DISTANCE, 40.0 / 1.5, 1e-3)
 
 
 func _run_scene() -> void:
@@ -57,11 +59,11 @@ func _run_scene() -> void:
 	# 45도에서 본다 = 가로·세로 치우침이 같다
 	_eq("요 45도", offset.x, offset.z, 0.05)
 
-	# FOV 30 · 거리 40 이면 화면 세로가 약 21m 다. 고도 기본 FOV 75 였을 때는
-	# 61m 라 존(92m)의 3분의 2가 한 화면에 들어왔다 — "멀리까지 보인다" 의 원인
+	# 좁은 FOV 가 쿼터뷰의 핵심이다. 고도 기본 FOV(75)로 두면 원근이 살아나
+	# 지평선까지 보인다 — "멀리까지 보인다" 의 원인이었다
 	var visible_h := 2.0 * CameraRig.DISTANCE * tan(deg_to_rad(cam.fov) / 2.0)
-	if absf(visible_h - 21.4) > 0.3:
-		_fail("화면 세로가 21.4m 여야 하는데 %.1fm" % visible_h)
+	if absf(visible_h - 14.3) > 0.3:
+		_fail("화면 세로가 14.3m 여야 하는데 %.1fm" % visible_h)
 	else:
 		print("  카메라: 내려보기 %.0f도 · 거리 %.0fm · FOV %.0f -> 화면 세로 %.1fm" % [
 			down, offset.length(), cam.fov, visible_h

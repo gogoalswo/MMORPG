@@ -8,6 +8,7 @@
 | 파일 | 역할 |
 |---|---|
 | `godot/game/hit_fx.gd` | 맞은 자리에서 터지는 3D 연출 한 벌 (`HitFx`). 스스로 사라진다 |
+| `godot/game/skill_fx.gd` | **스킬 이펙트** (`SkillFx`). 지금은 할퀴기 자국 — 같은 규칙으로 짓는다 → [skills.md](skills.md) |
 | `godot/game/hurt_flash.gd` | 내가 맞았을 때 화면 가장자리 비네트 (`HurtFlash`) |
 | `godot/game/game.gd` `_show_hit` | `hit` 이벤트를 받아 위 둘을 부르는 **유일한** 자리 |
 | `godot/world/world.gd` `_hit_monster` · `_hit_player` | 이벤트를 내는 자리 (판정) |
@@ -107,4 +108,5 @@ npm run test:godot -- hit_fx
 
 - [combat.md](combat.md) — `hit` 이벤트에 무엇이 들어 있는지 (피해·치명타·처치)
 - [godot-migration.md](godot-migration.md) — 화면과 판정을 가르는 규칙
-- [skills.md](skills.md) — 스킬도 같은 `hit` 을 낸다. 스킬 전용 연출을 붙인다면 이 자리다
+- [skills.md](skills.md) — 스킬도 같은 `hit` 을 낸다. **스킬 전용 연출은
+  `godot/game/skill_fx.gd` 에 있다** (할퀴기 자국, 2026-09-17)

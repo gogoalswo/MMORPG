@@ -106,6 +106,7 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 		&"skill":
 			# 스킬도 같은 공격 동작을 쓴다
 			_swing_until = Time.get_ticks_msec() + int(payload.get("root_ms", 400))
+			_show_skill(payload)
 		&"skills":
 			_last_event = "스킬을 배웠습니다"
 		&"loot":
@@ -971,6 +972,24 @@ func _show_hit(payload: Dictionary) -> void:
 		var max_hp := float(me.get("stats", {}).get("maxHp", 100))
 		# 최대 체력의 4분의 1을 한 번에 맞으면 제일 진하다
 		_hurt.hit(float(payload.get("amount", 0)) / maxf(1.0, max_hp * 0.25))
+
+
+## 스킬 이펙트.
+##
+## **스킬마다 그림이 다르므로 id 로 고른다.** 지금 그리는 것은 할퀴기 하나다
+## (`rising_kick` — 이름은 '올려차기' 에서 바뀌었지만 id 는 저장된 캐릭터 때문에
+## 그대로다). 나머지 셋은 아직 웹 클라이언트에만 있다 → [skills.md](../../docs/features/skills.md).
+##
+## **남이 쓴 것은 아직 안 그린다** — 다른 플레이어를 세우는 자리가 고도에 없다.
+func _show_skill(payload: Dictionary) -> void:
+	if _zone_node == null or str(payload.get("skill", "")) != "rising_kick":
+		return
+	if str(payload.get("id", "")) != _transport.my_id():
+		return
+	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
+	if me.is_empty():
+		return
+	SkillFx.claw(_zone_node, Vector3(me.x, 0.0, me.z), float(me.rot))
 
 
 ## 보스 범위 공격 예고 원.

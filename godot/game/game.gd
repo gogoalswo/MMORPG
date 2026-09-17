@@ -17,9 +17,11 @@ var _player: Node3D
 var _player_y := 0.9
 ## 이번 프레임에 걸었나 (달리기·대기 동작을 고르는 데 쓴다)
 var _moving := false
+## 카메라 스무딩에 쓴다 — _draw_state 가 델타를 따로 안 받는다
+var _last_delta := 0.0
 ## 공격 동작을 언제까지 트나 (서버가 준 경직 시간)
 var _swing_until := 0
-var _camera: Camera3D
+var _camera: CameraRig
 var _label: Label
 var _marker: MeshInstance3D
 
@@ -153,8 +155,7 @@ func _build_persistent() -> void:
 	_marker.visible = false
 	add_child(_marker)
 
-	_camera = Camera3D.new()
-	_camera.current = true
+	_camera = CameraRig.new()
 	add_child(_camera)
 
 	var ui := CanvasLayer.new()
@@ -723,6 +724,7 @@ func _ground_point(screen: Vector2) -> Vector3:
 
 func _process(delta: float) -> void:
 	_moving = false
+	_last_delta = delta
 	_send_input(delta)
 	_draw_state()
 	_tick_aoe()
@@ -816,7 +818,8 @@ func _draw_state() -> void:
 	var snap := _transport.snapshot()
 	# 차원문으로 옮겼으면 존을 통째로 다시 짓는다
 	var zone_now := str(snap.get("zone", ""))
-	if zone_now != "" and zone_now != _shown_zone:
+	var zone_changed := zone_now != "" and zone_now != _shown_zone
+	if zone_changed:
 		_build_zone(zone_now)
 
 	var players: Dictionary = snap.get("players", {})
@@ -829,8 +832,8 @@ func _draw_state() -> void:
 	_play_player_clip(me)
 
 	# 뒤 위에서 내려다본다. 지금은 고정 각도다
-	_camera.position = _player.position + Vector3(0, 14, 12)
-	_camera.look_at(_player.position, Vector3.UP)
+	# 존을 옮긴 프레임에는 보간 없이 곧바로 자리잡는다
+	_camera.follow(_player.position, _last_delta, zone_changed)
 
 	# 쫓아오는 놈들이 실제로 움직인다. 자리는 World 가 정하고 여기서는 따라 그린다
 	for monster in snap.get("monsters", []):

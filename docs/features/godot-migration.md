@@ -19,7 +19,7 @@ three.js 웹 클라이언트를 **고도 엔진으로 갈아타는 중**이다. 
 | `godot/net/transport.gd` | 화면과 판정 사이의 유일한 통로 |
 | `godot/net/local_transport.gd` | 서버 없이 `World` 를 이 자리에서 돌린다 |
 | `godot/game/game.gd` | 화면. 바닥·카메라·캡슐·터치 이동. **`World` 를 직접 안 만진다** |
-| `godot/tests/*.gd` | 헤드리스 검사 — 이동 공식·World·터치 이동 |
+| `godot/tests/*.gd` | 헤드리스 검사 — 이동 공식·World·터치 이동·몬스터 |
 | `godot/export_presets.cfg` | 안드로이드·웹 익스포트 설정. **비밀은 없다** — 아래 "서명" 참고 |
 | `.github/workflows/android.yml` | push 하면 APK 를 구워 Actions 산출물로 올린다 |
 | `.github/workflows/pages.yml` | 같은 사이트의 **`/game/`** 아래에 웹 빌드를 같이 올린다 (웹 클라이언트는 `/` 그대로) |
@@ -93,6 +93,22 @@ TS 에 남으니 표가 어긋나면 `npm test` 가 잡는다. 전부 GDScript �
 경로와 비밀번호는 CI 가 `~/.config/godot/editor_settings-4.tres` 로 넣는다.
 스토어에 낼 릴리스 키는 GitHub Secrets 로 간다 (아직 안 만들었다).
 
+### 차원문은 임시다 ★
+
+진짜 게임은 차원문에서 **사냥터 20곳을 골라** 가게 되어 있다 (웹 클라의
+`ui/zoneGate.ts`). 고르는 화면이 아직 없어서, 지금은 `World._check_gate` 가
+**마을 ↔ 첫 사냥터(초원)** 만 오간다. 마을에는 몬스터 정의가 없어서 사냥터로
+가야 몬스터가 보이기 때문에 넣은 것이다. UI 단계에서 고르는 화면으로 바꾼다.
+
+### 몬스터 자리는 판정하는 쪽이 정한다
+
+`World._spawn_monsters` 가 존 이름으로 난수 씨앗을 고정한다. 같은 존이면 언제나
+같은 자리다 — 나중에 서버를 붙여도 자리를 정하는 건 서버 한 곳이어야 하고,
+지금 테스트도 이것에 기댄다.
+
+무리를 흩을 때 `scatter_spawn` 이 몸 반지름에 `MONSTER_GAP`(0.2)을 더해 자리를
+고른다. 초원 81마리 중 **가장 가까운 둘 사이 여유가 0.213m** 로, 겹친 놈이 없다.
+
 ### 아직 예측·보정이 없다
 
 화면은 `Transport` 가 준 상태를 **그대로 그린다.** 로컬이라 지연이 0 이라서
@@ -115,8 +131,9 @@ UI 를 만들기 전에 폰트 리소스를 먼저 붙여야 한다. `game.gd` �
 | 이동 공식이 TS 와 같은가 | `godot --headless --path godot --script tests/movement_test.gd` |
 | World 와 Transport | `... tests/world_test.gd` |
 | 눌러서 걸어가기 | `... tests/touch_test.gd` |
+| 몬스터 스폰·충돌·차원문 | `... tests/monster_test.gd` |
 
-셋 다 `pages.yml` 이 배포 전에 돌린다. 하나라도 깨지면 배포까지 가지 않는다.
+넷 다 `pages.yml` 이 배포 전에 돌린다. 하나라도 깨지면 배포까지 가지 않는다.
 
 기준값은 `movement.ts` 를 node 로 직접 돌려 뽑았다 (2026-09-16). 두 쪽이 갈라지면
 나중에 서버를 붙였을 때 매 틱 보정이 튄다.
@@ -144,7 +161,8 @@ godot --headless --path godot --script check.gd # 상태를 글로 찍는다
 1. ~~**골격** — 프로젝트·임시 화면·APK 워크플로우~~ 끝 (2026-09-16)
 2. ~~**데이터 내보내기** — `scripts/export-shared.mjs` + 대조 테스트~~ 끝 (2026-09-16)
 3. ~~**`World` 와 걸어다니기** — 판정·Transport·마을 한 곳·터치 이동~~ 끝 (2026-09-16)
-4. **몬스터** ← 지금 여기. 스폰·충돌·표시
+4. ~~**몬스터** — 스폰·충돌·표시, 임시 차원문~~ 끝 (2026-09-17)
+5. **전투** ← 지금 여기. 공격·피해·사망·경험치
 5. **모델·애니메이션** — `varco_*.glb` (아래 참고)
 6. **전투 표현 → UI → 이펙트**
 7. **서버** — 고도 헤드리스. `Transport` 에 구현을 하나 더 끼운다

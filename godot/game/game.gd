@@ -40,6 +40,8 @@ var _mob_nodes: Dictionary = {}
 var _last_event := ""
 var _ui_root: Control
 var _hp_bar: ProgressBar
+## 맞았을 때 화면 가장자리가 붉어지는 비네트 (game/hurt_flash.gd)
+var _hurt: HurtFlash
 var _gate_panel: PanelContainer
 ## 보스 범위 공격 예고. [{node, fill, start, end, radius}, ...]
 var _aoe_marks: Array = []
@@ -68,10 +70,11 @@ func _ready() -> void:
 	)
 
 
-## 판정이 낸 일. 지금은 글자 한 줄로만 보여준다 — 피격 연출은 UI 단계다
+## 판정이 낸 일. 글자 한 줄과 피격 이펙트로 보여준다
 func _on_event(name: StringName, payload: Dictionary) -> void:
 	match name:
 		&"hit":
+			_show_hit(payload)
 			var who := "맞음" if payload.get("target_kind", "") == "player" else "피해"
 			_last_event = "%s %d%s%s" % [
 				who,
@@ -174,6 +177,10 @@ func _build_persistent() -> void:
 	_ui_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_ui_root.theme = _make_theme()
 	ui.add_child(_ui_root)
+
+	# 제일 먼저 넣어 HUD 글자 밑에 깔린다 — 비네트가 체력·상태를 가리면 안 된다
+	_hurt = HurtFlash.new()
+	_ui_root.add_child(_hurt)
 
 	_label = Label.new()
 	_label.position = Vector2(24, 24)
@@ -883,6 +890,35 @@ func _draw_state() -> void:
 		Build.stamp(),
 		_last_event,
 	]
+
+
+## 맞았다. 맞은 자리에서 터뜨리고, 맞은 몸을 붉게 물들이고, 내가 맞았으면
+## 화면 가장자리까지 붉힌다. **판정은 여기서 하지 않는다** — payload 를 그대로 읽는다.
+func _show_hit(payload: Dictionary) -> void:
+	if _zone_node == null:
+		return
+	var on_me := str(payload.get("target_kind", "")) == "player"
+	var body: Node3D = null
+	if on_me:
+		body = _player
+	else:
+		body = _mob_nodes.get(str(payload.get("target", "")), null)
+
+	# 자리는 World 가 준 것을 쓰고, 높이만 그려 둔 몸에서 잰다
+	var at := Vector3(payload.get("x", 0.0), 0.0, payload.get("z", 0.0))
+	at.y = HitFx.chest_y(body, 1.0)
+
+	var font: Font = _ui_root.theme.default_font if _ui_root.theme != null else null
+	var fx := HitFx.spawn(_zone_node, at, payload, font)
+	if body != null and not bool(payload.get("heal", false)):
+		fx.flash_body(body)
+
+	# 회복은 맞은 것이 아니다
+	if on_me and not bool(payload.get("heal", false)):
+		var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
+		var max_hp := float(me.get("stats", {}).get("maxHp", 100))
+		# 최대 체력의 4분의 1을 한 번에 맞으면 제일 진하다
+		_hurt.hit(float(payload.get("amount", 0)) / maxf(1.0, max_hp * 0.25))
 
 
 ## 보스 범위 공격 예고 원.

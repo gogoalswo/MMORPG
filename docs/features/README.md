@@ -40,6 +40,7 @@ ZoneRoom 돌리기) · `DEPLOY.md`(터널로 친구에게 열어주기). 셋 다
 | [items.md](items.md) | 아이템 280종 생성, 등급, **랜덤 옵션**, 강화, 제작, 드롭 |
 | [inventory-equipment.md](inventory-equipment.md) | 가방 200칸, 장비 8슬롯, 창 UI |
 | [skills.md](skills.md) | 스킬 34종(격투가는 이펙트 붙은 4개), 스킬창, 액션바 4칸, 자동 시전, **테스트 스위치(쿨타임·레벨 잠금 해제)** |
+| [hit-effects.md](hit-effects.md) | **피격 이펙트** — 섬광·파편·피해 숫자, 맞은 몸 붉히기, 화면 가장자리 비네트. **이펙트는 고도에서 코드로 만든다** |
 | [collision.md](collision.md) | **충돌 셋 다**(캐릭터↔몬스터·캐릭터끼리·몬스터끼리) — 몸 반지름, 미는 쪽, 스폰 자리 잡기, 사거리와의 관계 |
 | [auto-hunt-and-targeting.md](auto-hunt-and-targeting.md) | 자동 사냥, **클릭 타겟팅**(겨눈 쪽으로 쏘기), 둘의 관계 |
 | [npc-town.md](npc-town.md) | 마을 NPC, 상점, 대장간(제작·강화·등급) |

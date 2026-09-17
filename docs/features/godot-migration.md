@@ -29,6 +29,8 @@ three.js 웹 클라이언트를 **고도 엔진으로 갈아타는 중**이다. 
 | `godot/game/game.gd` | 화면. 바닥·카메라·모델·터치 이동. **`World` 를 직접 안 만진다** |
 | `godot/game/rig.gd` | `.glb` 하나를 씌우고 클립을 트는 껍데기. **없으면 `null`** |
 | `godot/game/ground.gd` | 존 바닥 재질 — 텍스처·타일 크기·존 틴트 |
+| `godot/game/hit_fx.gd` | **피격 이펙트.** 맞은 자리의 섬광·파편·피해 숫자. 에셋 없이 코드로 짓는다 |
+| `godot/game/hurt_flash.gd` | 내가 맞았을 때 화면 가장자리 비네트 |
 | `godot/game/camera_rig.gd` | 고정각 쿼터뷰 카메라 |
 | `godot/world/build.gd` | 빌드 표시와 "새 빌드 있음" 확인 |
 | `scripts/sync-godot-assets.mjs` | `public/assets` → `godot/assets` 복사. 모델은 텍스처를 줄여 넣는다 (`npm run sync:godot`) |
@@ -354,12 +356,13 @@ Q/E 회전과 줌은 아직 안 옮겼다. 웹 쪽에는 있다.
 | 상점·대장간 (사고팔기·제작·강화·등급) | `... tests/shop_test.gd` |
 | 바닥 텍스처·타일·틴트 | `... tests/ground_test.gd` |
 | 쿼터뷰 카메라 각·FOV | `... tests/camera_test.gd` |
+| 피격 이펙트·맞은 몸 붉히기·화면 비네트 | `... tests/hit_fx_test.gd` |
 
 전부 한 번에: **`npm run test:godot`** — 통과는 한 줄로 요약하고 **실패한 것만**
 편다. 테스트를 더해도 `pages.yml` 은 안 고쳐도 된다 (`godot/tests/*_test.gd` 를
 전부 집는다).
 
-열다섯 개 다 `pages.yml` 이 배포 전에 돌린다. 하나라도 깨지면 배포까지 가지 않는다.
+`pages.yml` 이 배포 전에 전부 돌린다. 하나라도 깨지면 배포까지 가지 않는다.
 
 **저장을 건드리는 테스트는 끝나면 지운다.** `LocalTransport` 가 저장이 있으면
 이어서 열기 때문에, 남겨 두면 다음 테스트가 엉뚱한 존에서 시작한다.
@@ -400,7 +403,8 @@ godot --headless --path godot --script check.gd # 상태를 글로 찍는다
 11. ~~**스킬 시스템** — 배우기·액션바·쿨타임·시전 판정~~ 끝 (2026-09-17)
 12. ~~**아이템** — 등급·랜덤옵션·강화·드롭·장착~~ 끝 (2026-09-17)
 13. ~~**상점·대장간** — 사고팔기·제작·강화·등급 올리기~~ 끝 (2026-09-17)
-14. **서버** ← 지금 여기. 고도 헤드리스. `Transport` 에 구현을 하나 더 끼운다
+14. ~~**피격 이펙트** — 섬광·파편·피해 숫자, 맞은 몸 붉히기, 화면 비네트~~ 끝 (2026-09-17)
+15. **서버** ← 지금 여기. 고도 헤드리스. `Transport` 에 구현을 하나 더 끼운다
 
 ## 용량
 
@@ -457,3 +461,4 @@ GitHub Pages 가 배포 시각을 ETag 에 넣기 때문이다 (`6aab3f31-25af28
 - [networking-state.md](networking-state.md) — 메시지 목록. `Transport` 가 나를 대신할 자리
 - [combat.md](combat.md) — 이식할 런타임 공식이 있는 곳
 - [verification.md](verification.md) — 글로 확인하는 방식
+- [hit-effects.md](hit-effects.md) — 피격 이펙트. **이펙트는 고도에서 코드로 만든다**

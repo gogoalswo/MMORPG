@@ -172,7 +172,7 @@ function bonusFor(slot: EquipSlot, level: number, job?: JobId): ItemBonus {
 }
 
 /** 슬롯별 id 앞글자 */
-const SLOT_CODE: Record<EquipSlot, string> = {
+export const SLOT_CODE: Record<EquipSlot, string> = {
   weapon: 'w',
   offhand: 'o',
   armor: 'a',
@@ -184,7 +184,7 @@ const SLOT_CODE: Record<EquipSlot, string> = {
 };
 
 /** 직업을 타는 슬롯 */
-const JOB_SLOTS: EquipSlot[] = ['weapon', 'offhand'];
+export const JOB_SLOTS: EquipSlot[] = ['weapon', 'offhand'];
 
 function buildItems(): Record<string, ItemDef> {
   const out: Record<string, ItemDef> = {};

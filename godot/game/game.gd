@@ -47,6 +47,8 @@ var _npc_body: Label
 ## 액션바 4칸. 눌리면 그 스킬을 쓴다
 var _bar_buttons: Array = []
 var _skill_panel: PanelContainer
+var _bag_panel: PanelContainer
+var _bag_rows: VBoxContainer
 
 
 func _ready() -> void:
@@ -90,6 +92,17 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			_swing_until = Time.get_ticks_msec() + int(payload.get("root_ms", 400))
 		&"skills":
 			_last_event = "스킬을 배웠습니다"
+		&"loot":
+			var got := str(payload.get("item", {}).get("id", ""))
+			if got == "":
+				_last_event = "골드 %d" % payload.get("gold", 0)
+			else:
+				_last_event = "골드 %d, %s" % [
+					payload.get("gold", 0), Items.get_item(got).get("name", got)
+				]
+		&"inventory":
+			if _bag_panel.visible:
+				_redraw_bag()
 		&"skillBar":
 			pass
 		&"notice":
@@ -166,6 +179,85 @@ func _build_persistent() -> void:
 	_build_npc_panel()
 	_build_skill_bar()
 	_build_skill_panel()
+	_build_bag_panel()
+
+
+## 가방과 장비. 웹 클라의 ui/inventory.ts 자리다.
+## 목록은 **열 때마다 다시 그린다** — 줍고 끼는 동안 계속 바뀌기 때문이다
+func _build_bag_panel() -> void:
+	_bag_panel = PanelContainer.new()
+	_bag_panel.set_anchors_preset(Control.PRESET_CENTER)
+	_bag_panel.visible = false
+	_ui_root.add_child(_bag_panel)
+
+	_bag_rows = VBoxContainer.new()
+	_bag_panel.add_child(_bag_rows)
+
+
+func _toggle_bag() -> void:
+	_bag_panel.visible = not _bag_panel.visible
+	if _bag_panel.visible:
+		_redraw_bag()
+
+
+func _redraw_bag() -> void:
+	for child in _bag_rows.get_children():
+		child.queue_free()
+
+	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
+	if me.is_empty():
+		return
+
+	var title := Label.new()
+	title.text = "가방 %d/%d   골드 %d" % [me.bag.size(), Items.bag_size(), me.get("gold", 0)]
+	_bag_rows.add_child(title)
+
+	# 끼고 있는 것 — 누르면 벗는다
+	for slot in Items.slots():
+		var stack: Dictionary = me.equipped.get(slot, {})
+		var button := Button.new()
+		if stack.is_empty():
+			button.text = "[%s] 비었음" % slot
+			button.disabled = true
+		else:
+			button.text = "[%s] %s" % [slot, _stack_label(stack)]
+			button.pressed.connect(func() -> void:
+				_transport.send(&"unequip", {"slot": str(slot)})
+				_redraw_bag()
+			)
+		_bag_rows.add_child(button)
+
+	# 가방 — 누르면 낀다. **낄 수 있는지는 World 가 다시 본다**
+	for index in mini(me.bag.size(), 12):
+		var stack: Dictionary = me.bag[index]
+		var button := Button.new()
+		button.text = _stack_label(stack)
+		button.pressed.connect(func() -> void:
+			_transport.send(&"equip", {"index": index})
+			_redraw_bag()
+		)
+		_bag_rows.add_child(button)
+
+	var close := Button.new()
+	close.text = "닫기"
+	close.pressed.connect(func() -> void: _bag_panel.visible = false)
+	_bag_rows.add_child(close)
+
+
+## "낡은 장검 +3 (5등급) 공격 +7, 치명타 +2%"
+func _stack_label(stack: Dictionary) -> String:
+	var item := Items.get_item(str(stack.get("id", "")))
+	var text := str(item.get("name", stack.get("id", "?")))
+	var enhance := int(stack.get("enhance", 0))
+	if enhance > 0:
+		text += " +%d" % enhance
+	text += " (%d등급)" % int(stack.get("grade", 1))
+	var options: Array = []
+	for option in stack.get("options", []):
+		options.append(Items.describe_option(option))
+	if not options.is_empty():
+		text += "\n" + ", ".join(options)
+	return text
 
 
 ## 액션바. 칸 수는 데이터가 정한다 (combat.json 의 skillBarSize)
@@ -188,6 +280,12 @@ func _build_skill_bar() -> void:
 	open.custom_minimum_size = Vector2(110, 70)
 	open.pressed.connect(func() -> void: _skill_panel.visible = not _skill_panel.visible)
 	row.add_child(open)
+
+	var bag := Button.new()
+	bag.text = "가방"
+	bag.custom_minimum_size = Vector2(110, 70)
+	bag.pressed.connect(_toggle_bag)
+	row.add_child(bag)
 
 
 ## 스킬창 — 내 직업 스킬을 늘어놓고, 누르면 배워서 액션바에 올린다.

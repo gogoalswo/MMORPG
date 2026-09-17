@@ -104,7 +104,11 @@ func join(player_id: String) -> void:
 		"skill_bar": kept.get("skill_bar", []).duplicate(),
 		# 스킬별 다음에 쓸 수 있는 시각
 		"skill_ready_at": {},
+		# --- 아이템 ---
+		"bag": kept.get("bag", []).duplicate(true),
+		"equipped": kept.get("equipped", {}).duplicate(true),
 	}
+	_refresh_stats(_players[player_id])
 
 
 func leave(player_id: String) -> void:
@@ -279,6 +283,17 @@ func _pick_targets(
 func _kill(player: Dictionary, target: Dictionary, now: int) -> void:
 	target.respawn_at = now + int(target.respawn_ms)
 
+	# 보상을 굴린다. **굴리는 쪽은 언제나 판정하는 쪽이다**
+	var loot := Items.roll_drop(int(target.level), str(player.job), _rng)
+	player.gold = int(player.gold) + int(loot.gold)
+	if loot.has("item"):
+		if _give(player, loot.item):
+			_events.append({"type": "loot", "gold": loot.gold, "item": loot.item})
+		else:
+			_events.append({"type": "loot", "gold": loot.gold})
+	else:
+		_events.append({"type": "loot", "gold": loot.gold})
+
 	var gained := Combat.exp_reward(int(target.level), int(player.level), float(target.exp_reward))
 	var before := int(player.level)
 	var grown := Combat.apply_exp(before, int(player.exp), gained)
@@ -288,7 +303,7 @@ func _kill(player: Dictionary, target: Dictionary, now: int) -> void:
 
 	if grown.level > before:
 		# 레벨이 오르면 스탯을 다시 만들고 체력을 채운다
-		player.stats = Combat.stats_for(str(player.job), grown.level)
+		_refresh_stats(player)
 		player.hp = player.stats.maxHp
 		var per_level := int(GameData.combat().get("skillPointPerLevel", 1))
 		player.skill_points = int(player.skill_points) + (grown.level - before) * per_level
@@ -594,6 +609,24 @@ func restore(player_id: String) -> bool:
 		if str(id) in learned:
 			bar.append(str(id))
 	player.skill_bar = bar
+
+	# 가방·장비도 되살린다. 표에 없는 id 는 버린다 — 아이템을 다시 만드는 중이라
+	# 없어진 것이 저장에 남아 있을 수 있다
+	var bag: Array = []
+	for stack in saved.get("bag", []):
+		if not Items.get_item(str(stack.get("id", ""))).is_empty():
+			bag.append(stack)
+	player.bag = bag
+	var worn: Dictionary = {}
+	for slot in saved.get("equipped", {}):
+		var stack: Dictionary = saved.equipped[slot]
+		if not Items.get_item(str(stack.get("id", ""))).is_empty():
+			worn[str(slot)] = stack
+	player.equipped = worn
+	# 장비까지 넣고 나서 스탯을 만든다. 체력 상한이 장비에 걸려 있다
+	_refresh_stats(player)
+	player.hp = clampi(int(saved.get("hp", player.stats.maxHp)), 0, int(player.stats.maxHp))
+
 	# 죽은 채로 저장됐으면 자리는 스폰으로 둔다 — 시체 자리에서 시작할 이유가 없다
 	if not player.dead:
 		player.x = clampf(float(saved.get("x", player.x)), -half_size, half_size)
@@ -775,3 +808,68 @@ func _hit_monster(player: Dictionary, target: Dictionary, attack: float, skill_i
 	})
 	if target.hp <= 0:
 		_kill(player, target, Time.get_ticks_msec())
+
+
+## 직업 스탯에 장비를 더한다. **장비가 바뀔 때마다 다시 만든다** —
+## 어딘가에 합쳐 둔 값을 들고 있으면 반드시 어긋난다
+func _refresh_stats(player: Dictionary) -> void:
+	var stats := Combat.stats_for(str(player.job), int(player.level))
+	var gear := Items.equipment_stats(player.equipped)
+	stats.attack += gear.attack
+	stats.defense += gear.defense
+	stats.maxHp += gear.maxHp
+	# 상한이 있는 것들 — 옵션이 여덟 자리에 붙으므로 안 막으면 치명타 100% 가 나온다
+	var c := GameData.combat()
+	stats.crit = minf(float(stats.crit) + gear.crit, float(c.get("critCap", 0.75)))
+	stats.critDamage += gear.critDamage
+	stats.attackSpeed = minf(
+		float(stats.attackSpeed) + gear.attackSpeed, float(c.get("attackSpeedCap", 1.0))
+	)
+	player.stats = stats
+	player.hp = mini(int(player.hp), int(stats.maxHp))
+
+
+## 가방에 넣는다. 꽉 찼으면 못 넣는다
+func _give(player: Dictionary, stack: Dictionary) -> bool:
+	if player.bag.size() >= Items.bag_size():
+		_events.append({"type": "notice", "text": "가방이 가득 찼습니다"})
+		return false
+	player.bag.append(stack)
+	return true
+
+
+## 가방의 물건을 낀다. **낄 수 있는지 여기서 다시 본다**
+func equip(player_id: String, index: int) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty() or index < 0 or index >= player.bag.size():
+		return
+	var stack: Dictionary = player.bag[index]
+	var item := Items.get_item(str(stack.id))
+	if not Items.can_equip(item, str(player.job), int(player.level)):
+		_events.append({"type": "notice", "text": "낄 수 없는 장비입니다"})
+		return
+
+	var slot := str(item.slot)
+	player.bag.remove_at(index)
+	# 끼고 있던 것은 가방으로 돌아간다
+	var before: Dictionary = player.equipped.get(slot, {})
+	if not before.is_empty():
+		player.bag.append(before)
+	player.equipped[slot] = stack
+
+	_refresh_stats(player)
+	_events.append({"type": "inventory", "bag": player.bag, "equipped": player.equipped})
+
+
+func unequip(player_id: String, slot: String) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	var stack: Dictionary = player.equipped.get(slot, {})
+	if stack.is_empty():
+		return
+	if not _give(player, stack):
+		return  # 가방이 꽉 찼으면 벗지 않는다 — 벗다가 잃으면 안 된다
+	player.equipped.erase(slot)
+	_refresh_stats(player)
+	_events.append({"type": "inventory", "bag": player.bag, "equipped": player.equipped})

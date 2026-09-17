@@ -42,3 +42,14 @@ static func constants() -> Dictionary:
 
 static func combat() -> Dictionary:
 	return load_table("combat")
+
+static func monster_kind(id: String) -> Dictionary:
+	var kinds: Dictionary = load_table("monsters").get("kinds", {})
+	if not kinds.has(id):
+		push_error("없는 몬스터: %s" % id)
+		return {}
+	return kinds[id]
+
+## 사냥터 순서. 지금은 첫 곳만 쓴다 (World 의 임시 게이트)
+static func field_order() -> Array:
+	return zones().get("fieldOrder", [])

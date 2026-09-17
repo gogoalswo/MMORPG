@@ -15,6 +15,17 @@ const MAX_INPUT_DT := 0.1
 ## 캐릭터가 차지하는 반지름 — 충돌 판정에만 쓴다 (모델 크기와는 별개다)
 const PLAYER_RADIUS := 0.4
 
+## **몬스터끼리만** 추가로 벌려 두는 거리. 캐릭터가 낀 판정에는 안 들어간다.
+## 몬스터는 한 사람을 쫓아 우르르 모여서, 몸끼리 딱 붙기만 해도 뭉쳐 보인다.
+const MONSTER_GAP := 0.2
+
+## 몬스터가 차지하는 반지름. 모델 크기(scale)에 비례한다.
+##
+## **0.38 을 곱하는 이유는 붙어서 때릴 수 있어야 하기 때문이다.** 이보다 크게 잡으면
+## 충돌이 공격을 막아 서로 못 때린다 — 몸집이 큰 보스부터 그렇게 된다.
+static func monster_radius(scale: float) -> float:
+	return 0.38 * scale
+
 ## 존 경계까지의 거리 (지면 가장자리에서 조금 안쪽)
 static func zone_half_size(zone_size: float) -> float:
 	return zone_size / 2.0 - 4.0
@@ -80,3 +91,48 @@ static func apply_move(
 	# 움직인 다음에 민다. 먼저 밀면 이미 빠져나온 자리에서 또 밀려 제자리걸음이 된다
 	if not solids.is_empty():
 		push_out_of_solids(state, solids, half_size)
+
+
+## 무리 안에서 **다른 몸과 겹치지 않는 자리**를 고른다. 몬스터 스폰이 쓴다.
+##
+## 그냥 원 안에 무작위로 뿌리면 몇 마리는 반드시 겹치고, 몬스터는 겹친 채로 가만히
+## 서 있으므로 그게 그대로 화면에 남는다. 빈 자리를 tries 번 찍어 보고 전부 겹치면
+## **가장 여유 있는 후보**를 골라 한 번 민다 — "될 때까지" 돌리지 않는다. 그건
+## 서버가 멈추는 길이다.
+static func scatter_spawn(
+	center_x: float,
+	center_z: float,
+	center_radius: float,
+	my_radius: float,
+	taken: Array,
+	half_size: float,
+	rng: RandomNumberGenerator,
+	tries: int = 12,
+) -> Dictionary:
+	var best := {"x": center_x, "z": center_z}
+	var best_clearance := -INF
+
+	for i in tries:
+		var angle := rng.randf() * TAU
+		# 제곱근을 씌워야 원 안에 고르게 퍼진다 (안 씌우면 가운데로 몰린다)
+		var dist := sqrt(rng.randf()) * center_radius
+		var spot := {
+			"x": clampf(center_x + cos(angle) * dist, -half_size, half_size),
+			"z": clampf(center_z + sin(angle) * dist, -half_size, half_size),
+		}
+
+		var clearance := INF
+		for other in taken:
+			var gap: float = (
+				Vector2(spot.x - other.x, spot.z - other.z).length() - (other.r + my_radius)
+			)
+			if gap < clearance:
+				clearance = gap
+		if clearance >= 0.0:
+			return spot
+		if clearance > best_clearance:
+			best_clearance = clearance
+			best = spot
+
+	push_out_of_solids(best, taken, half_size, my_radius)
+	return best

@@ -1,0 +1,107 @@
+extends SceneTree
+
+## 바닥 재질 — 텍스처·타일 크기·존 틴트.
+##
+## 바닥은 원래 **눈으로 봐야 하는 것**이지만(world-zones.md), 색을 정하는 계산은
+## 글로 확인할 수 있다. 기준값은 ground.ts 와 같은 식을 node 로 돌려 뽑았다
+## (2026-09-17).
+##
+##   godot --headless --path godot --script tests/ground_test.gd
+
+var _failed := 0
+
+
+func _init() -> void:
+	_case_textures()
+	_case_looks()
+	_case_tint()
+	_case_material()
+
+	if _failed == 0:
+		print("바닥: 전부 통과")
+		quit(0)
+	else:
+		print("바닥: %d개 실패" % _failed)
+		quit(1)
+
+
+func _fail(text: String) -> void:
+	print("  실패 " + text)
+	_failed += 1
+
+
+func _case_textures() -> void:
+	# 일곱 장을 전부 넣는다 — 존마다 받으면 존 구성이 비동기가 된다
+	var kinds: Array = GameData.zones().get("groundKinds", [])
+	if kinds.size() != 7:
+		_fail("바닥 종류가 7종이어야 하는데 %d종" % kinds.size())
+	var missing: Array = []
+	for kind in kinds:
+		for suffix in ["color", "normal"]:
+			var path := "res://assets/ground/ground_%s_%s.ktx2" % [kind, suffix]
+			if not ResourceLoader.exists(path):
+				missing.append(path.get_file())
+	if not missing.is_empty():
+		_fail("없는 텍스처: %s — npm run sync:godot 을 돌렸나" % str(missing))
+	else:
+		var sample: Texture2D = load("res://assets/ground/ground_grass_color.ktx2")
+		print("  텍스처 %d종 x 2장, 풀 %dx%d" % [kinds.size(), sample.get_width(), sample.get_height()])
+
+
+func _case_looks() -> void:
+	# 텍스처 성질은 shared 의 GROUND_LOOKS 에서 온다 — 두 클라이언트가 같은 값을 쓴다
+	var looks: Dictionary = GameData.zones().get("groundLooks", {})
+	for kind in GameData.zones().get("groundKinds", []):
+		if not looks.has(kind):
+			_fail("%s 의 성질이 없다" % kind)
+			return
+	# 모양이 뚜렷한 것은 섞지 않는다 — 섞으면 판석이 두 겹으로 비친다
+	for kind in ["stone", "cobble", "lava"]:
+		if float(looks[kind].blend) != 0.0:
+			_fail("%s 의 blend 가 0 이 아니다" % kind)
+	if float(looks.lava.glow) <= 0.0:
+		_fail("용암이 안 빛난다")
+	print("  성질: 돌판 타일 %.0fm · 자갈 %.0fm · 용암 %.0fm" % [
+		looks.stone.tile, looks.cobble.tile, looks.lava.tile
+	])
+
+
+func _case_tint() -> void:
+	# ground.ts 와 같은 식이어야 한다 (선형에서 비율, TINT_PULL 0.5, ALBEDO 0.3)
+	var cases := [
+		["village", Vector3(0.4127, 0.3984, 0.3553)],
+		["meadow", Vector3(0.5250, 0.4476, 0.5105)],
+		["saltflat", Vector3(0.3999, 0.5171, 0.5250)],
+	]
+	for row in cases:
+		var zone := GameData.zone(str(row[0]))
+		var env: Dictionary = zone.env
+		var look := Ground.look_of(str(env.ground))
+		var got := Ground.tint_for(str(env.groundTint), str(look.mean)) * Ground.ALBEDO
+		var want: Vector3 = row[1]
+		if (absf(got.r - want.x) > 0.001 or absf(got.g - want.y) > 0.001
+				or absf(got.b - want.z) > 0.001):
+			_fail("%s 틴트가 (%.4f, %.4f, %.4f) 여야 하는데 (%.4f, %.4f, %.4f)" % [
+				row[0], want.x, want.y, want.z, got.r, got.g, got.b
+			])
+		else:
+			print("  %s 틴트 (%.3f, %.3f, %.3f)" % [row[0], got.r, got.g, got.b])
+
+
+func _case_material() -> void:
+	var zone := GameData.zone("meadow")
+	var size := float(zone.size)
+	var mat := Ground.material_for(zone.env, size)
+	if mat.albedo_texture == null:
+		_fail("텍스처가 안 붙었다")
+		return
+	if not mat.normal_enabled or mat.normal_texture == null:
+		_fail("노멀이 안 붙었다")
+	# 초원 92m, 풀 타일 4m -> 23번 반복
+	var want := size / float(Ground.look_of("grass").tile)
+	if absf(mat.uv1_scale.x - want) > 1e-6:
+		_fail("반복이 %.1f 여야 하는데 %.1f" % [want, mat.uv1_scale.x])
+	else:
+		print("  초원 %.0fm 에 풀 타일 %.0fm -> %.0f번 반복" % [
+			size, Ground.look_of("grass").tile, mat.uv1_scale.x
+		])

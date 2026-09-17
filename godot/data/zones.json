@@ -1584,5 +1584,65 @@
         "groundTint": "#3d282e"
       }
     }
+  },
+  "groundKinds": [
+    "stone",
+    "grass",
+    "snow",
+    "dirt",
+    "sand",
+    "cobble",
+    "lava"
+  ],
+  "groundLooks": {
+    "stone": {
+      "tile": 6,
+      "blend": 0,
+      "roughness": 0.85,
+      "mean": "#51504f",
+      "glow": 0
+    },
+    "grass": {
+      "tile": 4,
+      "blend": 0.45,
+      "roughness": 0.95,
+      "mean": "#4e6536",
+      "glow": 0
+    },
+    "snow": {
+      "tile": 6,
+      "blend": 0.45,
+      "roughness": 0.7,
+      "mean": "#d6dee6",
+      "glow": 0
+    },
+    "dirt": {
+      "tile": 6,
+      "blend": 0.45,
+      "roughness": 0.95,
+      "mean": "#9f8467",
+      "glow": 0
+    },
+    "sand": {
+      "tile": 6,
+      "blend": 0.45,
+      "roughness": 0.9,
+      "mean": "#e6ca9d",
+      "glow": 0
+    },
+    "cobble": {
+      "tile": 8,
+      "blend": 0,
+      "roughness": 0.8,
+      "mean": "#746b5c",
+      "glow": 0
+    },
+    "lava": {
+      "tile": 12,
+      "blend": 0,
+      "roughness": 0.9,
+      "mean": "#3e3837",
+      "glow": 1
+    }
   }
 }

@@ -18,6 +18,47 @@ import type { MonsterSpawnDef } from './monsters.ts';
 export const GROUND_KINDS = ['stone', 'grass', 'snow', 'dirt', 'sand', 'cobble', 'lava'] as const;
 export type GroundKind = (typeof GROUND_KINDS)[number];
 
+/**
+ * 바닥 텍스처마다 다른 것 — 이미지가 가진 성질이라 존 데이터가 아니라 여기 둔다.
+ *
+ * 이미지 한 장(1024²)에 무엇이 몇 개 그려져 있느냐가 종류마다 달라서 타일
+ * 크기도 따로다. 돌판은 한 장에 판석이 일고여덟 줄이라 6m 로 펴야 한 장이
+ * 80cm 쯤 되고, 자갈은 스무 개 남짓이라 8m 에 한 알이 35cm 다 — 4m 로 두면
+ * 기본 카메라 거리에서 알이 안 보이고 모래 같은 잡티가 된다. 용암은 재 얼룩이
+ * 크게 몇 개뿐이라 12m 보다 좁히면 얼룩이 격자로 늘어선 게 보인다.
+ */
+export interface GroundLook {
+  /** 타일 한 장이 덮는 실제 크기(m) */
+  tile: number;
+  /**
+   * 배율이 다른 두 샘플을 섞는 비율 (0 = 안 섞음).
+   *
+   * 같은 타일을 스무 번 넘게 깔면 격자가 드러난다. 배율 0.37 짜리를 겹치면
+   * 반복 주기가 어긋나 깨진다 — 풀·눈·모래처럼 무늬가 흩어진 것에만 쓴다.
+   * 돌판·자갈·용암 균열처럼 **모양이 뚜렷한 것**에 쓰면 판석이 두 겹으로
+   * 비쳐 보인다.
+   */
+  blend: number;
+  roughness: number;
+  /**
+   * 텍스처 평균색 (sRGB). build-ground-textures.mjs 가 출력하는 값.
+   * 존 틴트는 "이 색을 그 존의 색 쪽으로" 끌어당기는 비율로 건다.
+   */
+  mean: string;
+  /** 스스로 빛나는 정도 — 용암 균열 */
+  glow: number;
+}
+
+export const GROUND_LOOKS: Record<GroundKind, GroundLook> = {
+  stone: { tile: 6, blend: 0, roughness: 0.85, mean: '#51504f', glow: 0 },
+  grass: { tile: 4, blend: 0.45, roughness: 0.95, mean: '#4e6536', glow: 0 },
+  snow: { tile: 6, blend: 0.45, roughness: 0.7, mean: '#d6dee6', glow: 0 },
+  dirt: { tile: 6, blend: 0.45, roughness: 0.95, mean: '#9f8467', glow: 0 },
+  sand: { tile: 6, blend: 0.45, roughness: 0.9, mean: '#e6ca9d', glow: 0 },
+  cobble: { tile: 8, blend: 0, roughness: 0.8, mean: '#746b5c', glow: 0 },
+  lava: { tile: 12, blend: 0, roughness: 0.9, mean: '#3e3837', glow: 1 },
+};
+
 /** 존의 분위기 — 색, 안개, 바닥 */
 export interface ZoneEnv {
   skyColor: string;

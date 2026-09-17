@@ -160,4 +160,8 @@
 
 ## 관련
 
+- [godot-migration.md](godot-migration.md) — 고도 클라이언트도 같은 `.ktx2` 14장과
+  같은 틴트 식을 쓴다. 이 때문에 텍스처 성질 표(`LOOKS`)가 `ground.ts` 에서
+  `shared/zone.ts` 의 `GROUND_LOOKS` 로 옮겨졌다. `blend`·`glow` 는 고도 쪽에 아직 없다
+
 [monsters-progression.md](monsters-progression.md) · [networking-state.md](networking-state.md)

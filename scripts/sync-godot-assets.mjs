@@ -27,6 +27,15 @@ const MODELS = [
 const FONTS = ['NotoSansKR-subset.ttf'];
 
 /**
+ * 바닥 텍스처 7종(색 + 노멀). **고도가 .ktx2 를 그대로 읽는다** — 시험해 보고
+ * 확인했다 (2026-09-17). 일곱 장을 전부 넣는다: 존마다 받으면 존 구성이
+ * 비동기가 되는데 그만한 크기가 아니다 (14장 2.5MB).
+ */
+const GROUND = [
+  'stone', 'grass', 'snow', 'dirt', 'sand', 'cobble', 'lava',
+].flatMap((kind) => [`ground_${kind}_color.ktx2`, `ground_${kind}_normal.ktx2`]);
+
+/**
  * 모델 텍스처를 얼마나 줄이나. 1024 짜리를 그대로 두면 고도가 두 포맷으로 구워
  * pck 가 13MB 가 된다 (scripts/shrink-glb-textures.mjs 에 재 본 값이 있다).
  * 폰 화면에서 512 와 1024 는 거의 구분되지 않는다.
@@ -41,6 +50,7 @@ const jobs = [
     shrink: true,
   },
   { names: FONTS, from: join(ROOT, 'public', 'assets', 'fonts'), to: join(ROOT, 'godot', 'assets', 'fonts') },
+  { names: GROUND, from: join(ROOT, 'public', 'assets', 'textures'), to: join(ROOT, 'godot', 'assets', 'ground') },
 ];
 
 let copied = 0;

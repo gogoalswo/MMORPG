@@ -588,21 +588,9 @@ func _build_zone(zone_id: String) -> void:
 	var plane := PlaneMesh.new()
 	plane.size = Vector2(size, size)
 	ground.mesh = plane
-	var ground_mat := StandardMaterial3D.new()
-	ground_mat.albedo_color = Color(env.get("groundTint", "#6a665c"))
-	ground.material_override = ground_mat
+	ground.material_override = Ground.material_for(env, size)
 	_zone_node.add_child(ground)
 
-	# 존 경계 — 여기까지만 걸어갈 수 있다 (Movement.zone_half_size)
-	var edge := MeshInstance3D.new()
-	var edge_mesh := PlaneMesh.new()
-	edge_mesh.size = Vector2(_half_size * 2.0, _half_size * 2.0)
-	edge.mesh = edge_mesh
-	var edge_mat := StandardMaterial3D.new()
-	edge_mat.albedo_color = Color(env.get("grassDark", "#5c6a3c"))
-	edge.material_override = edge_mat
-	edge.position.y = 0.01
-	_zone_node.add_child(edge)
 
 	# 차원문. 여기 들어가면 존이 바뀐다 (World._check_gate)
 	var gate: Dictionary = zone.get("gate", {})

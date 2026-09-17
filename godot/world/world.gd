@@ -21,6 +21,11 @@ var _players: Dictionary = {}
 var _monsters: Array = []
 ## 스폰을 매번 같은 자리에 놓는다. 자리를 정하는 건 언제나 판정하는 쪽이다
 var _rng := RandomNumberGenerator.new()
+## 밖으로 내보낼 일들 (맞았다·죽었다·레벨 올랐다). Transport 가 비워 간다
+var _events: Array = []
+
+## 어느 직업으로 시작하나. 만드는 화면이 없어서 당분간 고정이다
+const DEFAULT_JOB := "knight"
 
 
 func open(id: String) -> void:
@@ -62,16 +67,35 @@ func _spawn_monsters() -> void:
 				"scale": scale,
 				"color": kind.get("bodyColor", "#888888"),
 				"boss": bool(kind.get("boss", false)),
+				"level": int(kind.get("level", 1)),
+				"max_hp": int(kind.get("maxHp", 1)),
+				"hp": int(kind.get("maxHp", 1)),
+				"defense": float(kind.get("defense", 0)),
+				"exp_reward": float(kind.get("expReward", 0)),
+				"respawn_ms": float(pack.get("respawnMs", 10000)),
+				# 죽어 있는 동안 다시 나올 시각. 0 이면 살아 있다
+				"respawn_at": 0,
 			})
 
 
 func join(player_id: String) -> void:
 	var spawn: Array = zone.get("spawns", {}).get("default", [0, 0])
+	var kept: Dictionary = _players.get(player_id, {})
+	var level := int(kept.get("level", 1))
+	var stats := Combat.stats_for(DEFAULT_JOB, level)
 	_players[player_id] = {
 		"x": float(spawn[0]),
 		"z": float(spawn[1]),
 		"rot": 0.0,
 		"last_seq": -1,
+		"job": DEFAULT_JOB,
+		"level": level,
+		# 존을 옮겨도 성장은 따라간다
+		"exp": int(kept.get("exp", 0)),
+		"hp": int(kept.get("hp", stats.maxHp)),
+		"stats": stats,
+		"next_attack_at": 0,
+		"rooted_until": 0,
 	}
 
 
@@ -89,6 +113,12 @@ func input_move(player_id: String, seq: int, dx: float, dz: float, dt: float) ->
 	if seq <= int(player.last_seq):
 		return
 
+	# 휘두르는 중이면 발을 묶는다. **순번은 갱신하고 위치만 안 옮긴다** —
+	# 안 갱신하면 나중에 서버를 붙였을 때 클라이언트 보정이 이 구간 내내 멈춘다
+	if Time.get_ticks_msec() < int(player.rooted_until):
+		player.last_seq = seq
+		return
+
 	# 몬스터를 뚫고 못 지나간다. 미는 쪽은 언제나 움직이는 쪽이다
 	Movement.apply_move(player, dx, dz, dt, half_size, _run_speed, _monsters)
 	player.last_seq = seq
@@ -99,6 +129,7 @@ func input_move(player_id: String, seq: int, dx: float, dz: float, dt: float) ->
 
 ## 한 틱. 전투가 들어올 자리다 (5단계).
 func step(_delta: float) -> void:
+	_respawn(Time.get_ticks_msec())
 	_check_gate()
 
 
@@ -139,3 +170,109 @@ func snapshot() -> Dictionary:
 		"monsters": _monsters,
 		"gate": zone.get("gate", {}),
 	}
+
+
+## 기본 공격. **대상은 서버(여기)가 고른다** — 클라이언트가 대상 id 를 보내게 하면
+## 사거리 밖이나 벽 너머의 적을 지정할 수 있다.
+## 정면 부채꼴 안에서 가장 가까운 하나를 친다 (server/combat.ts 의 resolvePlayerAttack).
+func attack(player_id: String) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+
+	var now := Time.get_ticks_msec()
+	if now < int(player.next_attack_at):
+		return
+
+	var stats: Dictionary = player.stats
+	var cooldown := Combat.effective_cooldown(stats.attackCooldown, stats.attackSpeed)
+	player.next_attack_at = now + cooldown
+	var root := Combat.attack_root_ms(cooldown)
+	player.rooted_until = now + root
+	# 휘두르는 동안 못 움직인다는 통보. 화면이 이 값만큼 동작을 튼다
+	_events.append({"type": "swing", "id": player_id, "root_ms": root})
+
+	var target := _pick_target(player, float(stats.attackRange))
+	if target.is_empty():
+		return
+
+	var damage := Combat.compute_damage(float(stats.attack), target.defense)
+	var crit := Combat.roll_crit(float(stats.crit), _rng.randf())
+	if crit:
+		damage = roundi(damage * float(stats.critDamage))
+
+	target.hp = maxi(0, int(target.hp) - damage)
+	_events.append({
+		"type": "hit",
+		"target": target.id,
+		"amount": damage,
+		"crit": crit,
+		"killed": target.hp <= 0,
+		"x": target.x,
+		"z": target.z,
+	})
+
+	if target.hp <= 0:
+		_kill(player, target, now)
+
+
+## 정면 부채꼴 안에서 가장 가까운 산 몬스터
+func _pick_target(player: Dictionary, attack_range: float) -> Dictionary:
+	var facing_x := sin(float(player.rot))
+	var facing_z := cos(float(player.rot))
+	var half_arc := float(GameData.combat().get("attackArc", PI * 0.6)) / 2.0
+
+	var best: Dictionary = {}
+	var best_dist := INF
+	for monster in _monsters:
+		if int(monster.hp) <= 0:
+			continue
+		var dx: float = monster.x - player.x
+		var dz: float = monster.z - player.z
+		var dist := sqrt(dx * dx + dz * dz)
+		if dist > attack_range:
+			continue
+		# 등 뒤는 맞지 않는다
+		if dist >= 1e-3:
+			var dot := (dx / dist) * facing_x + (dz / dist) * facing_z
+			if acos(clampf(dot, -1.0, 1.0)) > half_arc:
+				continue
+		if dist < best_dist:
+			best_dist = dist
+			best = monster
+	return best
+
+
+func _kill(player: Dictionary, target: Dictionary, now: int) -> void:
+	target.respawn_at = now + int(target.respawn_ms)
+
+	var gained := Combat.exp_reward(int(target.level), int(player.level), float(target.exp_reward))
+	var before := int(player.level)
+	var grown := Combat.apply_exp(before, int(player.exp), gained)
+	player.level = grown.level
+	player.exp = grown.exp
+	_events.append({"type": "reward", "exp": gained})
+
+	if grown.level > before:
+		# 레벨이 오르면 스탯을 다시 만들고 체력을 채운다
+		player.stats = Combat.stats_for(str(player.job), grown.level)
+		player.hp = player.stats.maxHp
+		_events.append({"type": "levelUp", "level": grown.level})
+
+
+## 죽은 몬스터를 제 시간에 되살린다
+func _respawn(now: int) -> void:
+	for monster in _monsters:
+		if int(monster.hp) > 0 or int(monster.respawn_at) == 0:
+			continue
+		if now < int(monster.respawn_at):
+			continue
+		monster.hp = monster.max_hp
+		monster.respawn_at = 0
+
+
+## Transport 가 비워 간다. 여기서 비우지 않으면 계속 쌓인다
+func drain_events() -> Array:
+	var out := _events
+	_events = []
+	return out

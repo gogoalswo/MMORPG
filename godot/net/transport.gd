@@ -9,7 +9,7 @@ extends Node
 ##
 ## **화면 코드가 World 를 직접 만지기 시작하면 이 구조가 무의미해진다.**
 
-## 서버 → 클라 메시지에 해당. 지금은 쓰는 곳이 없고 전투가 들어오면 쓴다
+## 서버 → 클라 메시지에 해당 — 맞았다·죽었다·레벨 올랐다
 signal event(name: StringName, payload: Dictionary)
 
 func open(_zone_id: String) -> void:

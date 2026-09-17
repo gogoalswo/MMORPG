@@ -15,6 +15,7 @@ three.js 웹 클라이언트를 **고도 엔진으로 갈아타는 중**이다. 
 | `godot/main.tscn` | 시작 화면. `game/game.gd` 하나를 달고 나머지는 코드가 짓는다 |
 | `godot/world/world.gd` | **판정.** `ZoneRoom.ts` 의 자리다. 네트워크 얘기가 없다 |
 | `godot/world/movement.gd` | `shared/movement.ts` 이식본. TS 와 값이 같아야 한다 |
+| `godot/world/combat.gd` | `shared/combat.ts` 이식본 — 피해·치명타·경직·경험치. **수치는 `data/combat.json` 에서 읽는다** |
 | `godot/world/game_data.gd` | `data/*.json` 로더 |
 | `godot/net/transport.gd` | 화면과 판정 사이의 유일한 통로 |
 | `godot/net/local_transport.gd` | 서버 없이 `World` 를 이 자리에서 돌린다 |
@@ -93,6 +94,16 @@ TS 에 남으니 표가 어긋나면 `npm test` 가 잡는다. 전부 GDScript �
 경로와 비밀번호는 CI 가 `~/.config/godot/editor_settings-4.tres` 로 넣는다.
 스토어에 낼 릴리스 키는 GitHub Secrets 로 간다 (아직 안 만들었다).
 
+### 대상은 서버가 고른다 ★
+
+클라이언트가 "이놈을 쳐라" 하고 **대상 id 를 보내게 하면 사거리 밖이나 벽 너머의
+적을 지정할 수 있다.** 그래서 화면이 보내는 건 `attack` 한 줄뿐이고, 누구를 맞출지는
+`World._pick_target` 이 정한다 — 정면 부채꼴(`attackArc`) 안에서 가장 가까운 하나다.
+
+**무리가 빽빽하면 "노린 놈"보다 가까운 놈이 맞는다.** 이건 판정이 맞는 것이다
+(초원에서 실제로 그랬다). 그래서 전투 테스트는 사냥터 배치에 기대지 않고 마을에
+시험용 한 마리만 놓고 본다.
+
 ### 차원문은 임시다 ★
 
 진짜 게임은 차원문에서 **사냥터 20곳을 골라** 가게 되어 있다 (웹 클라의
@@ -132,8 +143,9 @@ UI 를 만들기 전에 폰트 리소스를 먼저 붙여야 한다. `game.gd` �
 | World 와 Transport | `... tests/world_test.gd` |
 | 눌러서 걸어가기 | `... tests/touch_test.gd` |
 | 몬스터 스폰·충돌·차원문 | `... tests/monster_test.gd` |
+| 전투 공식과 실제 전투 | `... tests/combat_test.gd` |
 
-넷 다 `pages.yml` 이 배포 전에 돌린다. 하나라도 깨지면 배포까지 가지 않는다.
+다섯 다 `pages.yml` 이 배포 전에 돌린다. 하나라도 깨지면 배포까지 가지 않는다.
 
 기준값은 `movement.ts` 를 node 로 직접 돌려 뽑았다 (2026-09-16). 두 쪽이 갈라지면
 나중에 서버를 붙였을 때 매 틱 보정이 튄다.
@@ -162,7 +174,8 @@ godot --headless --path godot --script check.gd # 상태를 글로 찍는다
 2. ~~**데이터 내보내기** — `scripts/export-shared.mjs` + 대조 테스트~~ 끝 (2026-09-16)
 3. ~~**`World` 와 걸어다니기** — 판정·Transport·마을 한 곳·터치 이동~~ 끝 (2026-09-16)
 4. ~~**몬스터** — 스폰·충돌·표시, 임시 차원문~~ 끝 (2026-09-17)
-5. **전투** ← 지금 여기. 공격·피해·사망·경험치
+5. ~~**전투** — 공격·피해·사망·경험치, 되살아나기~~ 끝 (2026-09-17)
+6. **몬스터 반격** ← 지금 여기. 어그로·추적·공격, 캐릭터 사망
 5. **모델·애니메이션** — `varco_*.glb` (아래 참고)
 6. **전투 표현 → UI → 이펙트**
 7. **서버** — 고도 헤드리스. `Transport` 에 구현을 하나 더 끼운다

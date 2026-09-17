@@ -44,6 +44,9 @@ var _aoe_marks: Array = []
 var _npc_panel: PanelContainer
 var _npc_title: Label
 var _npc_body: Label
+## 액션바 4칸. 눌리면 그 스킬을 쓴다
+var _bar_buttons: Array = []
+var _skill_panel: PanelContainer
 
 
 func _ready() -> void:
@@ -82,6 +85,13 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			_show_aoe(payload)
 		&"npc":
 			_show_npc(payload)
+		&"skill":
+			# 스킬도 같은 공격 동작을 쓴다
+			_swing_until = Time.get_ticks_msec() + int(payload.get("root_ms", 400))
+		&"skills":
+			_last_event = "스킬을 배웠습니다"
+		&"skillBar":
+			pass
 		&"notice":
 			_last_event = str(payload.get("text", ""))
 		&"gate":
@@ -154,6 +164,88 @@ func _build_persistent() -> void:
 
 	_build_gate_panel()
 	_build_npc_panel()
+	_build_skill_bar()
+	_build_skill_panel()
+
+
+## 액션바. 칸 수는 데이터가 정한다 (combat.json 의 skillBarSize)
+func _build_skill_bar() -> void:
+	var row := HBoxContainer.new()
+	row.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	row.position = Vector2(-260, -110)
+	_ui_root.add_child(row)
+
+	for slot in int(GameData.combat().get("skillBarSize", 4)):
+		var button := Button.new()
+		button.custom_minimum_size = Vector2(125, 70)
+		button.text = "-"
+		button.pressed.connect(_on_bar_pressed.bind(slot))
+		row.add_child(button)
+		_bar_buttons.append(button)
+
+	var open := Button.new()
+	open.text = "스킬"
+	open.custom_minimum_size = Vector2(110, 70)
+	open.pressed.connect(func() -> void: _skill_panel.visible = not _skill_panel.visible)
+	row.add_child(open)
+
+
+## 스킬창 — 내 직업 스킬을 늘어놓고, 누르면 배워서 액션바에 올린다.
+## **스킬 내용은 다시 만들기로 했다.** 여기는 표를 읽어 줄을 세울 뿐이라
+## 표가 바뀌면 그대로 따라온다
+func _build_skill_panel() -> void:
+	_skill_panel = PanelContainer.new()
+	_skill_panel.set_anchors_preset(Control.PRESET_CENTER)
+	_skill_panel.visible = false
+	_ui_root.add_child(_skill_panel)
+
+	var rows := VBoxContainer.new()
+	_skill_panel.add_child(rows)
+
+	var title := Label.new()
+	title.text = "스킬"
+	rows.add_child(title)
+
+	var grid := GridContainer.new()
+	grid.columns = 3
+	rows.add_child(grid)
+
+	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
+	for id in Skills.for_job(str(me.get("job", "knight"))):
+		var skill: Dictionary = Skills.all().get(str(id), {})
+		var button := Button.new()
+		button.text = "%s\n%d레벨" % [skill.get("name", id), skill.get("reqLevel", 1)]
+		button.pressed.connect(_on_skill_pressed.bind(str(id)))
+		grid.add_child(button)
+
+	var close := Button.new()
+	close.text = "닫기"
+	close.pressed.connect(func() -> void: _skill_panel.visible = false)
+	rows.add_child(close)
+
+
+## 스킬창에서 고르면 배우고 빈 칸에 올린다. **배울 수 있는지는 World 가 다시 본다**
+func _on_skill_pressed(skill_id: String) -> void:
+	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
+	_transport.send(&"learnSkill", {"skill": skill_id})
+
+	var bar: Array = me.get("skill_bar", []).duplicate()
+	if skill_id in bar:
+		return
+	var size := int(GameData.combat().get("skillBarSize", 4))
+	if bar.size() >= size:
+		bar.remove_at(0)
+	bar.append(skill_id)
+	_transport.send(&"setSkillBar", {"bar": bar})
+
+
+func _on_bar_pressed(slot: int) -> void:
+	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
+	var bar: Array = me.get("skill_bar", [])
+	if slot >= bar.size():
+		_skill_panel.visible = true
+		return
+	_transport.send(&"skill", {"skill": str(bar[slot])})
 
 
 ## NPC 와 말하는 창. 웹 클라의 ui/npcDialog.ts 자리다
@@ -568,6 +660,7 @@ func _draw_state() -> void:
 
 	_hp_bar.max_value = me.stats.maxHp
 	_hp_bar.value = me.hp
+	_refresh_bar(me)
 
 	_label.text = "%s   %d레벨   체력 %d/%d   경험치 %d/%d\n골드 %d   몬스터 %d/%d   %d fps\n%s" % [
 		GameData.zone(zone_now).get("name", zone_now),
@@ -632,6 +725,28 @@ func _aoe_material(alpha: float) -> StandardMaterial3D:
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	return mat
+
+
+## 액션바 글자를 상태에 맞춘다. 쿨타임이 남았으면 남은 초를 적는다
+func _refresh_bar(me: Dictionary) -> void:
+	var bar: Array = me.get("skill_bar", [])
+	var ready_at: Dictionary = me.get("skill_ready_at", {})
+	var now := Time.get_ticks_msec()
+	for slot in _bar_buttons.size():
+		var button: Button = _bar_buttons[slot]
+		if slot >= bar.size():
+			button.text = "+"
+			button.disabled = false
+			continue
+		var id := str(bar[slot])
+		var skill: Dictionary = Skills.all().get(id, {})
+		var left := int(ready_at.get(id, 0)) - now
+		if left > 0:
+			button.text = "%s\n%.1f초" % [skill.get("name", id), left / 1000.0]
+			button.disabled = true
+		else:
+			button.text = str(skill.get("name", id))
+			button.disabled = false
 
 
 func _tick_aoe() -> void:

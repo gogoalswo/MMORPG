@@ -23,6 +23,9 @@ import {
   BEAST_HEIGHT_DEFAULT,
   SKILLS,
   JOB_SKILLS,
+  SKILL_COOLDOWN_OFF,
+  SKILL_UNLOCK_ALL,
+  AUTO_SKILL_TEST_GAP,
   JOB_IDS,
   JOB_STATS,
   PROJECTILE_SPEED,
@@ -64,7 +67,15 @@ export function buildData() {
       heights: BEAST_HEIGHT,
       heightDefault: BEAST_HEIGHT_DEFAULT,
     },
-    'skills.json': { skills: SKILLS, byJob: JOB_SKILLS, projectileSpeed: PROJECTILE_SPEED },
+    'skills.json': {
+      skills: SKILLS,
+      byJob: JOB_SKILLS,
+      projectileSpeed: PROJECTILE_SPEED,
+      // 테스트 스위치. 켜져 있으면 쿨타임 0 · 요구 레벨과 포인트 없음
+      cooldownOff: SKILL_COOLDOWN_OFF,
+      unlockAll: SKILL_UNLOCK_ALL,
+      autoTestGapMs: AUTO_SKILL_TEST_GAP,
+    },
     'combat.json': {
       jobs: JOB_IDS,
       // [체력, 공격, 방어, 사거리, 공격간격, 레벨당 체력, 레벨당 공격, 레벨당 방어]

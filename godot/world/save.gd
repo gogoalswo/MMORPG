@@ -31,6 +31,9 @@ static func write(zone_id: String, player: Dictionary) -> void:
 		"hp": player.hp,
 		"dead": player.get("dead", false),
 		"gold": player.get("gold", 0),
+		"skills": player.get("skills", []),
+		"skill_points": player.get("skill_points", 0),
+		"skill_bar": player.get("skill_bar", []),
 	}, "\t"))
 	file.close()
 

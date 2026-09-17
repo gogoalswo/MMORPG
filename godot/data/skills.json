@@ -478,5 +478,8 @@
     "arrow": 34,
     "fireball": 20,
     "spark": 55
-  }
+  },
+  "cooldownOff": true,
+  "unlockAll": true,
+  "autoTestGapMs": 1000
 }

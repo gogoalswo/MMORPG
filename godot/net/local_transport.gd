@@ -41,6 +41,12 @@ func send(message: StringName, payload: Dictionary) -> void:
 			_world.travel(MY_ID, str(payload.get("zone", "")))
 		&"npc":
 			_world.npc_open(MY_ID, str(payload.get("name", "")))
+		&"learnSkill":
+			_world.learn_skill(MY_ID, str(payload.get("skill", "")))
+		&"setSkillBar":
+			_world.set_skill_bar(MY_ID, payload.get("bar", []))
+		&"skill":
+			_world.cast(MY_ID, str(payload.get("skill", "")))
 		&"save":
 			_world.save(MY_ID)
 		_:

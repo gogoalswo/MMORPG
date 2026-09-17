@@ -463,4 +463,4 @@ NPC 가 지금 이걸로 그려지고, 네 직업도 `varco_*.glb` 를 못 받�
 - [godot-migration.md](godot-migration.md) — 고도 쪽에도 같은 모델을 쓴다. 키를 정하는
   `BEAST_HEIGHT` 를 내보내 공유하고, 파일 없는 `look` 은 기둥으로 대신한다
 
-[client-ui.md](client-ui.md) · [npc-town.md](npc-town.md) · [monsters-progression.md](monsters-progression.md) · [verification.md](verification.md)
+옛 client-ui.md(지워짐) · [npc-town.md](npc-town.md) · [monsters-progression.md](monsters-progression.md) · [verification.md](verification.md)

@@ -21,7 +21,7 @@
 |---|---|
 | `npm run probe -- <명령>` (`scripts/probe.mjs`) | **서버 로직** — 접속해서 상태·전투·아이템·메시지를 글로 찍는다 |
 | `scripts/ui-probe.js` | **클라이언트 UI** — DOM 을 글로 뽑는 조각 모음 (콘솔에 붙여 넣는 용도) |
-| 화면 왼쪽 스킬 목록 | **장착 없이 스킬을 쏜다** — 이펙트를 볼 때 스킬창을 오갈 필요가 없다 ([client-ui.md](client-ui.md)) |
+| 화면 왼쪽 스킬 목록 | **장착 없이 스킬을 쏜다** — 이펙트를 볼 때 스킬창을 오갈 필요가 없다 (옛 client-ui.md(지워짐)) |
 | `npm run probe -- state` | 배운 스킬·액션바·포인트도 같이 찍는다 (`[스킬]` 줄) |
 | `npm run probe -- god` | **무적 모드** — 켜고 맞아 보면서 체력이 안 깎이는지, 그래도 `hit` 은 오는지 ([combat.md](combat.md)) |
 | `npm run probe -- root` | **공격 경직** — 사람은 걸으면서 공격을 끼워, 몬스터는 맞은 직후 도망치며 구간별 이동 거리를 잰다 ([combat.md](combat.md)) |
@@ -32,7 +32,7 @@
 | `scripts/db-peek.mjs` | 저장된 캐릭터를 훑는다 |
 | `scripts/edit.mjs` | **파일 고치기** — 개행(CRLF/LF)을 묻지 않고 부분 치환한다. `grep` 은 이 저장소의 개행을 판정하지 못한다 (CLAUDE.md) |
 | `npm test` | 데이터 규칙 전수 검사 |
-| `__localServer` (콘솔) | **로컬 모드**의 서버 상태 — 룸·플레이어·몬스터를 글로 ([local-mode.md](local-mode.md)) |
+| `__localServer` (콘솔) | **로컬 모드**의 서버 상태 — 룸·플레이어·몬스터를 글로 (옛 local-mode.md(지워짐)) |
 
 ## 헤드리스 클라이언트 (`probe.mjs`)
 
@@ -286,4 +286,4 @@ PORT=2599 DB_PATH=<임시경로>/test.db node src/index.ts   # packages/server �
 
 ## 관련
 
-[client-ui.md](client-ui.md) · [networking-state.md](networking-state.md) · [persistence.md](persistence.md)
+옛 client-ui.md(지워짐) · [networking-state.md](networking-state.md) · [persistence.md](persistence.md)

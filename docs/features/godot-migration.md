@@ -4,8 +4,12 @@
 
 three.js 웹 클라이언트를 **고도 엔진으로 갈아타는 중**이다. 목적은 **모바일 앱**이다.
 
-작업은 `godot/` 안에서만 한다. 기존 `packages/client` 는 고도 쪽이 따라잡을 때까지
-그대로 둔다 — 중간에 그만두기로 해도 `godot/` 만 지우면 원래대로다.
+게임은 `godot/` 에 있다. 옛 three.js 웹 클라이언트(`packages/client`)는 **2026-09-17
+에 지웠다** — 고도가 따라잡을 때까지 대조용으로 뒀다가, 두 벌이 있으니 어느 쪽을
+고칠지 헷갈린다는 지적을 받고 치웠다. 필요하면 `git log` 로 꺼내 본다.
+
+`packages/server`(Colyseus)는 **남겨 뒀다.** 화면이 아니라 판정 원본이라, 고도
+서버를 붙일 때 대조한다.
 
 ## 어디
 
@@ -33,7 +37,7 @@ three.js 웹 클라이언트를 **고도 엔진으로 갈아타는 중**이다. 
 | `godot/tests/*.gd` | 헤드리스 검사 — 이동 공식·World·터치 이동·몬스터 |
 | `godot/export_presets.cfg` | 안드로이드·웹 익스포트 설정. **비밀은 없다** — 아래 "서명" 참고 |
 | `.github/workflows/android.yml` | push 하면 APK 를 구워 Actions 산출물로 올린다 |
-| `.github/workflows/pages.yml` | 같은 사이트의 **`/game/`** 아래에 웹 빌드를 같이 올린다 (웹 클라이언트는 `/` 그대로) |
+| `.github/workflows/pages.yml` | 웹 빌드를 GitHub Pages **루트**에 올린다 |
 | `scripts/export-shared.mjs` | `packages/shared` 의 표를 `godot/data/*.json` 으로 내보낸다 (`npm run export:godot`) |
 | `godot/data/*.json` | 내보낸 결과. **손으로 고치지 않는다** — 고치면 테스트가 잡는다 |
 | `packages/shared/src/godotExport.test.ts` | 위 JSON 이 TS 표와 같은지 전수 검사 |
@@ -81,7 +85,7 @@ TS 에 남으니 표가 어긋나면 `npm test` 가 잡는다. 전부 GDScript �
 `World` 를 직접 부르고 나중에 서버용 구현을 하나 더 끼운다.
 
 지금 웹 클라의 `net/transport.ts` `RoomLike` 와 같은 모양이다
-([local-mode.md](local-mode.md)).
+(옛 local-mode.md(지워짐)).
 
 **이 규칙을 어기면 "로컬 먼저" 가 나중에 전면 재작성으로 돌아온다.** 화면 코드가
 `World` 내부 상태를 직접 읽기 시작하면, 서버를 붙일 때 그 자리가 전부 터진다.
@@ -365,7 +369,7 @@ Q/E 회전과 줌은 아직 안 옮겼다. 웹 쪽에는 있다.
 
 | 어디 | 주소 |
 |---|---|
-| 브라우저 | `https://gogoalswo.github.io/MMORPG/game/` — 39MB 받는다. 폰 브라우저에서도 열린다 |
+| 브라우저 | `https://gogoalswo.github.io/MMORPG/` — 약 19MB 받는다. 폰 브라우저에서도 열린다 |
 | 안드로이드 | Actions → `Android APK` 실행 → 산출물 `mmorpg-apk` |
 
 **웹 빌드는 스레드를 꺼야 한다.** 스레드를 켜면 `SharedArrayBuffer` 가 필요하고,
@@ -448,7 +452,7 @@ GitHub Pages 가 배포 시각을 ETag 에 넣기 때문이다 (`6aab3f31-25af28
 
 ## 관련
 
-- [local-mode.md](local-mode.md) — 지금의 로컬 모드. 고도로 가면 이 방식(브라우저가
+- 옛 local-mode.md(지워짐) — 지금의 로컬 모드. 고도로 가면 이 방식(브라우저가
   TS `ZoneRoom` 을 그대로 돌림)은 쓸 수 없다. 고도는 TS 를 실행할 수단이 없다
 - [networking-state.md](networking-state.md) — 메시지 목록. `Transport` 가 나를 대신할 자리
 - [combat.md](combat.md) — 이식할 런타임 공식이 있는 곳

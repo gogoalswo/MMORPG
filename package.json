@@ -6,21 +6,15 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "npm run dev -w @mmo/client",
-    "build": "npm run build -w @mmo/client",
-    "preview": "npm run preview -w @mmo/client",
-    "typecheck": "npm run typecheck -w @mmo/client && npm run typecheck -w @mmo/server",
+    "typecheck": "npm run typecheck -w @mmo/server",
     "test": "node --test \"packages/**/*.test.ts\"",
     "server": "node scripts/serve.mjs",
     "server:raw": "npm run dev -w @mmo/server",
     "probe": "node scripts/probe.mjs",
-    "fx-probe": "node scripts/fx-probe.ts",
-    "hit-probe": "node scripts/hit-probe.ts",
     "compress": "node scripts/compress-textures.mjs",
     "export:godot": "node scripts/export-shared.mjs",
     "sync:godot": "node scripts/sync-godot-assets.mjs",
-    "test:godot": "bash scripts/godot-test.sh",
-    "tunnel": "node scripts/tunnel.mjs"
+    "test:godot": "bash scripts/godot-test.sh"
   },
   "devDependencies": {
     "ktx2-encoder": "^0.6.0",

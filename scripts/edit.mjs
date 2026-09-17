@@ -85,9 +85,10 @@ function locateRange(text, from) {
     const start = text.indexOf(open);
     if (start < 0) continue;
     if (text.indexOf(open, start + 1) >= 0) throw new Error('시작이 두 군데 이상이다: ' + head(open));
+    // 못 찾으면 다른 개행으로 넘어간다. 여는 조각이 한 줄이면 CRLF 판도 그냥
+    // 맞아 버려서, 여기서 바로 멈추면 LF 파일을 영영 못 찾는다
     const end = text.indexOf(close, start + open.length);
-    if (end < 0) throw new Error('끝을 못 찾음: ' + head(parts[1]));
-    return text.slice(start, end + close.length);
+    if (end >= 0) return text.slice(start, end + close.length);
   }
   throw new Error('못 찾음: ' + head(from));
 }

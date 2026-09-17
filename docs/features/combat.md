@@ -129,7 +129,7 @@ computeDamage(attack, defense) = max(1, round(attack * (1 - defense/(defense+45)
 
 ### 무적 모드 (테스트 도구) ★
 `GODMODE_ALLOWED` (`shared/combat.ts`) · 메시지 `godmode` · 화면 왼쪽 단추
-([client-ui.md](client-ui.md))
+(옛 client-ui.md(지워짐))
 
 - 켜면 `ZoneRoom.damagePlayer` 가 **체력을 안 깎는다.** 몬스터 평타·보스 범위 공격이
   전부 이 함수를 타므로 한 군데만 막으면 된다.
@@ -140,7 +140,7 @@ computeDamage(attack, defense) = max(1, round(attack * (1 - defense/(defense+45)
   단추가 안 보이는 것은 안내일 뿐이다. 켜졌는지도 서버가 답으로 알려준다.
 - **존을 옮기면 룸이 새로 생겨 꺼진다.** ★ 세션 집합(`godmode`)이 룸에 붙어 있어서다.
   클라이언트(`Connection.join`)가 룸을 새로 잡을 때마다 단추를 꺼짐으로 되돌린 뒤
-  원했으면 다시 요청한다 → [client-ui.md](client-ui.md).
+  원했으면 다시 요청한다 → 옛 client-ui.md(지워짐).
 - 확인: `npm run probe -- god --zone meadow` ([verification.md](verification.md)).
 
 ### HitEvent

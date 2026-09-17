@@ -9,8 +9,11 @@
 |---|---|
 | `godot/` | **지금 만드는 것.** 판정(`world/`) · 화면(`game/`) · 통로(`net/`) · 테스트(`tests/`) |
 | `packages/shared` | **수치와 생성기.** 두 클라이언트가 같이 쓴다. 고치면 `npm run export:godot` |
-| `packages/client` | 옛 three.js 클라이언트. **대조용으로 남겨 뒀다.** 시키지 않으면 손대지 않는다 |
-| `packages/server` | 옛 Colyseus 서버. 고도 서버는 아직 안 붙였다 |
+| `packages/server` | 옛 Colyseus 서버. **판정 원본**이라 남겨 뒀다 — 고도 서버를 붙일 때 대조한다 |
+
+옛 three.js 웹 클라이언트(`packages/client`)는 **2026-09-17 에 지웠다** (요청:
+"웹페이지 관련된 내용을 삭제해. 그럼 헷갈릴 일도 없어"). `docs/features/` 의 옛
+문서에 `packages/client/...` 경로가 남아 있는데 **이름 단서로만 읽는다.**
 
 무엇이 옮겨졌고 왜 그렇게 했는지는 **[`docs/features/godot-migration.md`](docs/features/godot-migration.md)** 에
 있다. 고도 쪽 일을 시작하면 **이것부터 읽는다.**
@@ -23,7 +26,7 @@ npm run export:godot   # shared 표를 godot/data/*.json 으로
 npm run test:godot     # 고도 테스트 — 통과는 한 줄, 실패만 자세히
 ```
 
-화면은 `https://gogoalswo.github.io/MMORPG/game/` 에서 본다. 밀고 나면
+화면은 `https://gogoalswo.github.io/MMORPG/` 에서 본다. 밀고 나면
 **"배포됐습니다, 새로고침하세요" 와 빌드 표시**(`빌드 <커밋> <시각>`)를 알려 준다 —
 브라우저가 최대 10분 캐시해서 그게 없으면 갱신됐는지 알 수 없다.
 
@@ -102,8 +105,7 @@ npm run test:godot     # 고도 테스트 — 통과는 한 줄, 실패만 자�
 - **고도** → `npm run test:godot`. 새로 확인할 것이 생기면 `godot/tests/` 에 한 편
   더한다 — 화면을 띄워 눌러 보는 것까지 헤드리스로 한다(`touch_test` · `ui_test`).
   **눈으로 봐야 하는 것**(바닥 밝기, 카메라 각)은 고쳐서 밀고 물어본다.
-- 옛 웹 클라 서버 로직 → `npm run probe -- state|fight|walk|send|watch`
-- 옛 웹 클라 UI → `scripts/ui-probe.js` 의 조각을 콘솔에 붙여 DOM 을 읽는다
+- 옛 Colyseus 서버 → `npm run probe -- state|fight|walk|send|watch` (헤드리스 접속)
 - 서버 출력 → `logs/server.log`
 
 확인한 내용은 `logs/` 에 남는다. 자세한 건 [`docs/features/verification.md`](docs/features/verification.md).
@@ -141,9 +143,9 @@ npm run typecheck && npm test && npm run test:godot
 - **명령 출력은 결론만 받는다.** 테스트 열다섯 개를 매번 열다섯 줄로 받지 않는다 —
   `npm run test:godot` 이 통과는 한 줄로 요약하고 **실패한 것만** 편다.
   `npm test` 도 `| grep -E '^# (pass|fail)'` 로 받는다.
-- **스크린샷은 확인이 되는 크기로 한 장.** 대상이 화면에서 작으면 찍어도 못 읽는다 —
-  오프스크린 렌더로 크게 잡거나 `scripts/ui-probe.js` 로 DOM 을 글로 읽는다.
-  확인은 글로 하는 게 기본이다 (위 "확인은 글로 한다" 참고).
+- **스크린샷은 확인이 되는 크기로 한 장.** 대상이 화면에서 작으면 찍어도 못 읽는다.
+  확인은 글로 하는 게 기본이다 (위 "확인은 글로 한다" 참고) — 고도는 헤드리스로
+  화면을 띄워 눌러 보는 것까지 된다(`godot/tests/touch_test.gd`).
 - **줄바꿈은 확인하지 않는다 — `node scripts/edit.mjs` 로 고친다.** ★
   CRLF 와 LF 는 파일마다, 한 파일 안에서도 섞여 있다. 그런데 **Git Bash 의 grep
   으로는 판정할 수 없다**: CRLF 를 벗기고 읽기 때문에 `grep -c $'\r$'` 가 LF 파일에도
@@ -152,7 +154,7 @@ npm run typecheck && npm test && npm run test:godot
   있던 개행을 쓴다.
 
   ```bash
-  node scripts/edit.mjs packages/client/src/game/player.ts <<'EOF'
+  node scripts/edit.mjs godot/game/game.gd <<'EOF'
   찾을 줄들
   @@
   바꿀 줄들

@@ -18,11 +18,17 @@
 
 ## 지금 무엇을 만들고 있나
 
-**고도 엔진으로 옮기는 중이다** (목표는 모바일 앱). 새 작업은 `godot/` 안에서
-하고, 아래 표의 나머지 문서는 **옛 웹 클라이언트 기준으로 쓰였다** — 규칙·수치는
-그대로 유효하고(둘이 `packages/shared` 를 같이 쓴다), 파일 경로만 다르다.
+**고도 엔진으로 만든다** (목표는 모바일 앱). 게임은 `godot/` 에 있다.
 
-무엇이 옮겨졌는지는 [godot-migration.md](godot-migration.md) 의 "단계" 절을 본다.
+옛 three.js 웹 클라이언트(`packages/client`)는 **2026-09-17 에 지웠다** — 두 벌이
+있으니 어느 쪽을 고칠지 헷갈렸다. 아래 표의 문서들은 그 시절에 쓰여서 **`packages/client/...`
+같은 경로가 남아 있다.** 규칙·수치·"왜 그렇게 했는가" 는 그대로 유효하니 **경로는
+이름 단서로만 읽고**, 실제 자리는 [godot-migration.md](godot-migration.md) 에서 찾는다.
+필요하면 `git log` 로 지워진 파일을 꺼내 볼 수 있다.
+
+같이 지운 문서: `client-ui.md`(HUD·오버레이) · `local-mode.md`(브라우저 안에서
+ZoneRoom 돌리기) · `DEPLOY.md`(터널로 친구에게 열어주기). 셋 다 웹 클라이언트
+전용이었다. 본문에 이름이 남아 있으면 "지워짐" 으로 적어 뒀다.
 
 ## 목록
 
@@ -38,9 +44,7 @@
 | [auto-hunt-and-targeting.md](auto-hunt-and-targeting.md) | 자동 사냥, **클릭 타겟팅**(겨눈 쪽으로 쏘기), 둘의 관계 |
 | [npc-town.md](npc-town.md) | 마을 NPC, 상점, 대장간(제작·강화·등급) |
 | [networking-state.md](networking-state.md) | Colyseus 스키마, 관심영역, 예측·보정, 메시지 목록 |
-| [local-mode.md](local-mode.md) | **서버 없이 브라우저 안에서** 같은 ZoneRoom 을 돌림, GitHub Pages 배포, Node 모듈 대체물 |
 | [persistence.md](persistence.md) | SQLite 스키마, 마이그레이션, 계정·토큰 |
-| [client-ui.md](client-ui.md) | HUD 레이아웃, 오버레이 규칙, **미니맵**, **클릭 이동 표시**, **테스트 도구(스킬 목록·무적 단추)**, 모바일 대응 |
 | [characters-and-animation.md](characters-and-animation.md) | 캐릭터·몬스터·NPC 외형, 본 구조, 걷기·대기·공격 동작 |
 | [verification.md](verification.md) | **확인하는 방법** — 헤드리스 클라이언트, DOM 읽기, 로그 |
 | [godot-migration.md](godot-migration.md) | ★ **지금 만드는 것.** 고도 엔진 이관(모바일 앱) — 어디에 무엇이 있는지, `World`·`Transport` 규칙, 옮긴 것과 안 옮긴 것, 빌드·배포·확인 |

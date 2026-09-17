@@ -13,7 +13,7 @@
 | `packages/server/src/db.ts` | 스키마, 마이그레이션, 읽기/쓰기 전부 |
 | `packages/server/src/auth.ts` | 토큰 검증, 게스트 계정 발급, Google 연동 |
 | `packages/server/src/ZoneRoom.ts` | `persist(sessionId)` — 위치·상태를 남긴다 |
-| `packages/client/src/net/local/shims/sqlite.ts` | **로컬 모드** — 같은 db.ts 를 sql.js 로 돌리고 IndexedDB 에 저장 ([local-mode.md](local-mode.md)) |
+| `packages/client/src/net/local/shims/sqlite.ts` | **로컬 모드** — 같은 db.ts 를 sql.js 로 돌리고 IndexedDB 에 저장 (옛 local-mode.md(지워짐)) |
 
 ## 규칙
 

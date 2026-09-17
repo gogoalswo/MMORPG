@@ -1,173 +1,70 @@
-# 웹 MMORPG
+# MMORPG
 
-브라우저에서 도는 실시간 멀티플레이 MMORPG. 로우폴리 3D + 고정 쿼터뷰.
+**고도(Godot) 엔진**으로 만드는 MMORPG. 로우폴리 3D + 고정 쿼터뷰, 목표는 모바일 앱이다.
 
-전체 계획은 [docs/PLAN.md](docs/PLAN.md), 기능별 구현 문서는
-[docs/features/](docs/features/README.md) 참고. **코드를 고치기 전에 기능 문서를 먼저 읽는다**
-([CLAUDE.md](CLAUDE.md)).
+브라우저에서도 확인할 수 있다 — **https://gogoalswo.github.io/MMORPG/**
+
+옛 three.js 웹 클라이언트는 2026-09-17 에 지웠다. 두 벌이 있으니 어느 쪽을 고칠지
+헷갈려서다. 기능별 구현 문서는 [docs/features/](docs/features/README.md) 를 보고,
+**코드를 고치기 전에 문서를 먼저 읽는다** ([CLAUDE.md](CLAUDE.md)).
 
 ## 실행
 
-**Windows 에서는 `start-server.bat` 을 더블클릭하면 된다.** 패키지가 없으면 알아서
-설치하고, 서버가 준비되면 브라우저까지 열어 준다. 터미널을 열고 폴더를 찾아 들어가
-명령을 치는 과정을 없애려고 둔 파일이다 (에셋 준비는 아래 두 줄을 한 번 돌려야 한다).
+고도 에디터로 `godot/` 폴더를 연다. 엔진은 저장소에 없다 — [고도 4.7.2](https://godotengine.org/download)
+를 받아 쓴다.
 
 ```bash
 npm install
-./scripts/fetch-assets.sh   # CC0 에셋 다운로드 (최초 1회)
-npm run compress            # JPEG -> KTX2 압축
-npm run dev
+npm run export:godot   # shared 표를 godot/data/*.json 으로
+npm run sync:godot     # 모델·폰트·바닥 텍스처를 godot/assets 로
+npm run test:godot     # 고도 테스트 (통과는 한 줄, 실패만 자세히)
 ```
-
-http://localhost:5173 접속. 서버는 `:2567`.
-
-`npm run dev` 는 게임 서버(`:2567`)가 안 떠 있으면 **같이 띄운다**
-(`scripts/vite-plugin-game-server.mjs`). 터미널 두 개를 여는 걸 잊어서
-5173 은 열리는데 접속만 안 되는 상태로 헤매는 일이 반복돼서 붙인 것이다.
-이미 `npm run server` 로 띄워 뒀으면 건드리지 않는다 — 그 터미널의 로그를
-빼앗지 않기 위해서다. 서버 로그만 따로 보고 싶으면 터미널 두 개로 나눠도 된다.
 
 | 명령 | 설명 |
 |---|---|
-| `start-server.bat` | **더블클릭용.** Node 확인 → 패키지 설치 → `npm run dev` → 브라우저 열기 |
-| `npm run dev` | 클라이언트 개발 서버 (HMR). 게임 서버가 없으면 같이 띄운다 |
-| `npm run server` | 게임 서버 (Colyseus). 출력을 `logs/server.log` 에도 남긴다 |
-| `npm run probe -- state` | 헤드리스 클라이언트로 접속해 상태를 글로 찍는다 ([문서](docs/features/verification.md)) |
-| `npm run build` | 프로덕션 빌드 |
-| `npm run preview` | 빌드 결과 미리보기 |
-| `npm run typecheck` | 타입 검사 |
+| `npm run export:godot` | `packages/shared` 의 존·몬스터·아이템·스킬 표를 JSON 으로 |
+| `npm run sync:godot` | 에셋을 `godot/assets` 로 (모델은 텍스처를 512px 로 줄인다) |
+| `npm run test:godot` | 고도 테스트 — 판정·화면·모델까지 헤드리스로 |
 | `npm test` | 공유 로직 테스트 (Node 내장 러너) |
+| `npm run typecheck` | 타입 검사 |
+| `npm run server` | 옛 Colyseus 서버. 출력을 `logs/server.log` 에도 남긴다 |
+| `npm run probe -- state` | 그 서버에 헤드리스로 붙어 상태를 글로 찍는다 |
 | `./scripts/fetch-assets.sh` | CC0 에셋 다운로드 |
-| `npm run compress` | 텍스처 KTX2 압축 |
-| `npm run tunnel` | 친구에게 서버 열어주기 ([docs/DEPLOY.md](docs/DEPLOY.md)) |
+| `npm run compress` | 바닥 텍스처 KTX2 압축 |
+
+`main` 에 밀면 CI 가 테스트를 돌리고 **GitHub Pages 에 배포**한다 (약 1분 15초).
+안드로이드 APK 는 Actions 의 `Android APK` 산출물로 나온다.
 
 ## 조작
 
-- **좌클릭** — 클릭 지점으로 이동. 누르고 있으면 커서를 따라 계속 이동한다 (이동은 클릭으로만 한다)
-- **Shift** — 걷기
-- **Enter** — 채팅 (`/w 이름 내용` 으로 귓속말, Esc 로 취소)
-- **Space** — 기본 공격 (정면 부채꼴 안 가장 가까운 적)
-- **1 ~ 4** — 액션바 1~4번 칸의 스킬
-- **P** — 후처리 켜기/끄기
-- **Q / E** — 카메라 45도 회전
-- **휠** — 줌
+폰과 브라우저에서 같다 — **바닥을 누르면** 그리로 걸어가고, **몬스터를 누르면**
+사거리까지 가서 계속 친다. 아래 액션바 네 칸이 스킬, 옆의 `스킬`·`가방` 이 창을 연다.
+마을의 파란 원반(차원문)을 밟으면 사냥터를 고른다.
 
 ## 구조
 
 ```
+godot/            게임 본체
+  world/          판정 — World(존·전투·몬스터 AI) · Combat · Items · Skills · Movement
+  net/            Transport — 화면과 판정 사이의 유일한 통로
+  game/           화면 — 카메라·바닥·모델·UI
+  tests/          헤드리스 테스트 (판정부터 눌러서 걷는 것까지)
+  data/           shared 에서 내보낸 표 (손으로 고치지 않는다)
 packages/
-  server/   Colyseus 권위 서버 — 존당 룸 하나
-    ZoneRoom.ts      입력 처리 + 관심영역(AoI) 필터링
-    state.ts         동기화 스키마
-    auth.ts          게스트 계정 / 구글 연동
-    db.ts            SQLite 저장소 (계정·토큰·캐릭터)
-  shared/   클라·서버 공유 코드
-    constants.ts     이동속도, 틱레이트 등 (예측과 검증이 일치해야 하는 값)
-    spatialGrid.ts   공간 분할 + 관심영역(AoI)
-    movement.ts      이동 계산 — 클라 예측과 서버 검증이 같은 코드를 쓴다
-  client/   Vite + TypeScript + Three.js
-    src/
-      scene/    존 씬 구성 — 지형·잔디·건물·차원문 (전부 절차적 생성)
-      game/     카메라 리그, 입력, 플레이어 컨트롤러, 캐릭터 리그(8등신 스킨드 메시)
-      net/      서버 접속, 스냅샷 버퍼, 보간
-      render/   후처리 (GTAO·블룸·SMAA)
-      ui/       HTML 오버레이 (이름표, 채팅, 캐릭터 생성·선택)
+  shared/         수치와 생성기 — 존 21 · 몬스터 60 · 장비 280 · 스킬 34
+  server/         옛 Colyseus 서버. 판정 원본이라 남겨 뒀다
+scripts/          내보내기·에셋 동기화·테스트 러너
 ```
 
-## 그래픽
+**판정은 `World` 한 곳에서 한다.** 화면이 보내는 건 전부 요청이고, 사거리·쿨타임·
+소지 여부·직업·레벨은 `World` 가 다시 본다. 지금은 로컬에서 직접 부르고, 나중에
+고도 헤드리스 서버가 **같은 코드**를 돌린다 — 그래서 판정이 한 벌로 유지된다.
 
-PBR 기반이다. 지면은 ambientCG 의 CC0 사진 텍스처(알베도·노멀·러프니스)를
-타일링하고 스플랫 마스크로 잔디/흙을 섞는다. 같은 타일이 반복되는 격자 무늬는
-배율이 다른 두 샘플을 섞어서 깬다.
+## 더 볼 것
 
-조명은 Poly Haven HDRI 를 PMREM 으로 구운 환경광 + 방향광 하나다.
-후처리는 GTAO(접촉 그림자) · 약한 블룸 · SMAA · ACES 톤매핑.
-사양이 낮으면 **P** 키로 후처리를 끌 수 있다.
-
-에셋 출처와 라이선스는 [docs/ASSETS.md](docs/ASSETS.md) 에 전부 기록한다.
-
-## 전투
-
-**판정은 전부 서버에서만 한다.** 클라이언트는 "때리겠다"는 의사만 보내고,
-대상 선택·사거리·정면각·피해량·쿨타임을 서버가 계산한다.
-클라이언트가 대상 id 를 지정하게 하면 벽 너머나 사거리 밖의 적을 찍을 수 있다.
-
-- 스탯과 데미지 공식은 `shared/combat.ts` — 클라는 표시용, 서버는 판정용
-- 방어는 비율 감쇠라 아무리 높아도 피해가 0 이 되지 않는다 (전투가 멈추지 않게)
-- 몬스터 AI 는 서버 틱에서만 돈다: 대기 → 어그로 → 추적 → 공격 → 리쉬 복귀
-- 리쉬 범위를 벗어나 복귀하면 체력을 회복한다 (끌고 다니며 안전하게 잡는 걸 막는다)
-
-직업마다 스킬 3종이 같은 뼈대를 공유한다 — 짧은 쿨타임의 단일기, 여러 마리를 치는 범위기,
-긴 쿨타임의 한 방. 기사만 세 번째가 자기 회복이다(버티는 직업이라는 정체성).
-액션바의 쿨타임·마나 표시는 편의일 뿐이고, **소모와 쿨타임은 서버가 다시 검사한다.**
-
-## 계정과 저장
-
-로그인 화면이 없다. **처음 접속하면 게스트 계정이 자동으로 생기고**
-이름·직업을 고르는 캐릭터 생성 화면이 뜬다. 계정당 캐릭터는 **4개**까지 만들 수 있고,
-다음 접속부터는 선택 화면에서 고른다 (마지막에 플레이한 캐릭터가 미리 선택된다). 만들고 나면 토큰이 브라우저에 저장돼서
-다음 접속부터는 바로 그 캐릭터로 들어온다.
-
-이름 규칙(한글·영문·숫자 2~12자)은 `shared/character.ts` 에 있다.
-클라이언트가 입력 즉시 걸러 알려주고, **서버가 다시 검증한다** —
-클라이언트를 우회해서 보낼 수 있기 때문이다. 중복은 서버만 알 수 있으므로 제출 시 확인한다.
-
-- 캐릭터 위치는 15초마다, 그리고 접속 종료 시 저장된다
-- 재접속하면 마지막 존의 마지막 위치에서 시작한다
-- 토큰은 원문이 아니라 SHA-256 해시만 DB 에 남는다
-
-브라우저 데이터를 지우면 게스트 계정을 잃는다. 그래서 **구글 연동**이 있다 —
-연동해두면 다른 기기나 재설치 후에도 이어서 할 수 있다.
-구글 연동은 서버에 `GOOGLE_CLIENT_ID` 환경변수가 있어야 동작한다.
-
-DB 는 SQLite(`packages/server/data/game.db`) 다. Node 24 내장 `node:sqlite` 를 쓰므로
-설치할 게 없다. 여러 서버로 늘릴 때 `db.ts` 의 구현만 Postgres 로 바꾸면 된다.
-
-```bash
-node scripts/db-peek.mjs   # 저장된 계정·캐릭터 확인 (packages/server 에서 실행)
-```
-
-## 친구와 같이 하기
-
-서버는 내 PC 에서 돌리고 Cloudflare Tunnel 로 노출한다.
-웹페이지만 Cloudflare Pages 에 올린다. 둘 다 무료. 자세한 절차는
-[docs/DEPLOY.md](docs/DEPLOY.md).
-
-서버 주소는 빌드에 박지 않고 `?server=wss://...` 쿼리로 받는다 —
-무료 터널은 켤 때마다 주소가 바뀌기 때문이다. 한 번 받은 주소는 브라우저가 기억한다.
-
-## 존과 차원문
-
-월드는 연속된 하나의 공간이 아니라 독립된 존 여러 개(마을 1 + 사냥터 20)이고,
-**차원문**으로 이동한다. 존 정의는 `packages/shared/src/zones.ts` 에 있고
-클라·서버가 함께 쓴다.
-
-- 존끼리는 이어져 있지 않다. 걸어 들어가면 옆 존으로 넘어가던 사슬 포탈은 없앴다
-- 차원문은 **모든 존의 `(9, 0)`** 에 있다. 밟으면 이동하지 않고 목록을 연다 —
-  맨 위가 마을이라 사냥터에서 언제든 돌아올 수 있다
-- 존을 넘어가면 씬을 통째로 해제하고 새로 만든다 (`buildZoneScene` / `dispose`)
-- 지형 색, 안개, 식생 밀도, 길 배치가 전부 존 데이터로 결정된다
-- 문은 반경 밖으로 한 번 나가야 발동한다 — 문 위에 선 채로 창이 계속 열리는 걸 막는다
-
-새 존을 만들려면 `zones.ts` 에 `ZoneDef` 를 하나 추가하면 된다. **`gate` 를 빼먹으면
-들어가서 못 나오는 방이 된다** — `npm test` 가 잡는다.
-
-## 현재 상태 — Phase 1B (멀티플레이)
-
-권위 서버 위에서 여러 명이 같은 존을 돌아다닌다.
-3D 에셋이 아직 없어서 건물·나무·캐릭터를 전부 코드로 생성한다 —
-에셋(.glb) 교체는 게임이 돌아간 뒤에 한다.
-
-### 네트워크 동작 방식
-
-- 클라이언트는 **입력만** 보낸다(`{seq, dx, dz, dt}`). 좌표는 서버가 계산한다.
-- 내 캐릭터는 응답을 기다리지 않고 즉시 움직인다(예측). 서버 확정 위치가 오면
-  아직 확인 안 된 입력만 다시 적용해 차이를 메운다(보정).
-- 다른 플레이어는 120ms 과거를 재생한다(보간). 15Hz 로 오는 위치가 60fps 에서 끊기지 않는다.
-- 주변 3x3 셀에 있는 플레이어만 전송된다(관심영역). 셀 경계에서 깜빡이지 않도록
-  해제 반경을 구독 반경보다 넓게 잡았다.
-
-**교체 예정 지점**
-- `scene/buildings.ts` → 모듈러 건물 킷 glb
-- `scene/trees.ts` → 나무 glb + 인스턴싱
-- `game/characterRig.ts` → .glb 스킨드 메시 + AnimationClip (본 이름을 맞추면 포즈 로직은 그대로 재사용)
+| | |
+|---|---|
+| [docs/features/README.md](docs/features/README.md) | 기능별 문서. **코드를 고치기 전에 여기부터** |
+| [docs/features/godot-migration.md](docs/features/godot-migration.md) | 어디에 무엇이 있는지, 옮긴 것과 안 옮긴 것, 빌드·배포·확인 |
+| [docs/ASSETS.md](docs/ASSETS.md) | 에셋 출처와 라이선스 |
+| [CLAUDE.md](CLAUDE.md) | 이 저장소에서 일하는 방식 |

@@ -48,4 +48,4 @@
 
 ## 관련
 
-[items.md](items.md) · [client-ui.md](client-ui.md) · [npc-town.md](npc-town.md)
+[items.md](items.md) · 옛 client-ui.md(지워짐) · [npc-town.md](npc-town.md)

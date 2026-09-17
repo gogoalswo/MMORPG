@@ -1,8 +1,8 @@
-# main 에 올리면 클라이언트를 로컬 모드로 빌드해 GitHub Pages 에 올린다.
+# main 에 올리면 고도 클라이언트를 웹으로 구워 GitHub Pages 에 올린다.
 #
-# 로컬 모드 = 게임 서버 없이 브라우저 안에서 ZoneRoom 을 돌린다
-# (docs/features/local-mode.md). 서버를 따로 띄웠으면 주소 뒤에
-# ?server=wss://서버주소 를 붙여 들어가면 그쪽에 붙는다.
+# 스레드를 끈 빌드여야 한다 — 켜면 SharedArrayBuffer 가 필요하고 그러려면
+# COOP/COEP 헤더를 서버가 보내야 하는데 Pages 는 헤더를 못 넣는다.
+# 자세한 건 godot/export_presets.cfg 와 docs/features/godot-migration.md.
 #
 # 처음 한 번: 저장소 Settings → Pages → Source 를 "GitHub Actions" 로 둔다.
 name: Pages
@@ -35,14 +35,7 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
-      - run: npm run build
-        env:
-          VITE_SERVER_URL: local
-          # https://<아이디>.github.io/<저장소>/ 아래에 올라가므로 에셋 경로 앞에 저장소 이름이 붙는다
-          VITE_BASE: /${{ github.event.repository.name }}/
-      # 고도 이관본을 같은 사이트의 /game/ 아래에 같이 올린다.
-      # 웹 클라이언트를 건드리지 않으므로, 이관을 그만두면 이 두 단계만 지우면 된다.
-      # 스레드를 끈 빌드여야 한다 — 이유는 godot/export_presets.cfg 참고.
+
       - name: 고도와 익스포트 템플릿 캐시
         id: godot-cache
         uses: actions/cache@v4
@@ -83,26 +76,24 @@ jobs:
           # 테스트를 더해도 여기는 안 고친다. 실패한 것만 자세히 찍는다
           GODOT=~/godot-bin/godot npm run test:godot
 
-      - name: 고도 웹 빌드 → /game/
+      - name: 고도 웹 빌드
         run: |
           set -e
-          mkdir -p packages/client/dist/game
+          mkdir -p site
           ~/godot-bin/godot --headless --path godot --import
           ~/godot-bin/godot --headless --path godot \
-            --export-release "Web" "$GITHUB_WORKSPACE/packages/client/dist/game/index.html"
+            --export-release "Web" "$GITHUB_WORKSPACE/site/index.html"
           # pck 안이 아니라 사이트에 나란히 둔다. 게임이 ?t= 를 붙여 받아
           # 캐시한 이전 빌드를 보고 있는지 스스로 확인한다 (Build.check_latest)
           node -e "
             const b = require('./godot/build.json');
-            require('fs').writeFileSync(
-              'packages/client/dist/game/build.txt', b.commit + ' ' + b.at + '\n'
-            );
+            require('fs').writeFileSync('site/build.txt', b.commit + ' ' + b.at + '\n');
           "
-          ls -lh packages/client/dist/game
+          ls -lh site
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: packages/client/dist
+          path: site
 
   deploy:
     needs: build

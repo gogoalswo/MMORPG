@@ -1,0 +1,63 @@
+{
+  "jobs": [
+    "knight",
+    "mage",
+    "archer",
+    "fighter"
+  ],
+  "jobStats": {
+    "knight": [
+      140,
+      12,
+      8,
+      2.4,
+      900,
+      14,
+      2.2,
+      1.4
+    ],
+    "mage": [
+      80,
+      20,
+      3,
+      9,
+      1300,
+      6,
+      3.6,
+      0.5
+    ],
+    "archer": [
+      100,
+      15,
+      5,
+      12,
+      800,
+      9,
+      2.8,
+      0.9
+    ],
+    "fighter": [
+      120,
+      12,
+      6,
+      2.2,
+      700,
+      11,
+      2.4,
+      1.1
+    ]
+  },
+  "baseCrit": 0.05,
+  "baseCritDamage": 1.5,
+  "critCap": 0.75,
+  "attackSpeedCap": 1,
+  "attackRootMs": 400,
+  "monsterSwingMs": 650,
+  "attackArc": 1.8849555921538759,
+  "maxLevel": 200,
+  "skillBarSize": 4,
+  "skillPointPerLevel": 1,
+  "skillBlastRatio": 0.35,
+  "skillBlastMax": 6,
+  "skillBlastMin": 0.6
+}

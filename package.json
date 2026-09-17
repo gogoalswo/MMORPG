@@ -17,6 +17,7 @@
     "fx-probe": "node scripts/fx-probe.ts",
     "hit-probe": "node scripts/hit-probe.ts",
     "compress": "node scripts/compress-textures.mjs",
+    "export:godot": "node scripts/export-shared.mjs",
     "tunnel": "node scripts/tunnel.mjs"
   },
   "devDependencies": {

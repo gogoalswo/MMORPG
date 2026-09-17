@@ -143,7 +143,7 @@ type StatRow = readonly [
   defensePerLevel: number,
 ];
 
-const JOB_STATS: Record<JobId, StatRow> = {
+export const JOB_STATS: Record<JobId, StatRow> = {
   //          체력   공격   방어   사거리   공격간격   레벨당 체력   레벨당 공격   레벨당 방어
   knight:  [  140,    12,     8,     2.4,      900,         14,          2.2,          1.4 ],
   mage:    [   80,    20,     3,     9,       1300,          6,          3.6,          0.5 ],

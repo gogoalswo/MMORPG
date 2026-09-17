@@ -66,6 +66,16 @@ jobs:
           unzip -q /tmp/templates.tpz -d /tmp/tpl
           mv /tmp/tpl/templates "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
 
+      # 판정이 TS 와 갈라지면 여기서 멈춘다. 배포까지 가지 않는다
+      - name: 고도 테스트
+        run: |
+          set -e
+          ~/godot-bin/godot --headless --path godot --import
+          for t in movement world touch; do
+            echo "--- $t"
+            ~/godot-bin/godot --headless --path godot --script "tests/$t""_test.gd"
+          done
+
       - name: 고도 웹 빌드 → /game/
         run: |
           set -e

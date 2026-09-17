@@ -10,6 +10,7 @@ var _failed := 0
 func _init() -> void:
 	_case_knight()
 	_case_ogre()
+	_case_texture_size()
 	_case_missing()
 	_case_height_table()
 	_run_scene.call_deferred()
@@ -59,6 +60,27 @@ func _case_ogre() -> void:
 		_fail("오우거 키가 %.2f 이어야 하는데 %.2f" % [target, h])
 	else:
 		print("  오우거: 키 %.2f m, 클립 %s" % [h, rig.clips()])
+
+
+## 텍스처가 실제로 줄어 있나. 안 줄면 pck 가 13MB 로 돌아간다
+## (scripts/shrink-glb-textures.mjs — npm run sync:godot 이 돌린다)
+func _case_texture_size() -> void:
+	var rig := Rig.create("varco_knight", Rig.HUMAN_HEIGHT)
+	if rig == null:
+		return
+	var biggest := 0
+	for child in rig.get_child(0).find_children("*", "MeshInstance3D", true):
+		var mesh: Mesh = child.mesh
+		for i in mesh.get_surface_count():
+			var mat := mesh.surface_get_material(i)
+			if mat is BaseMaterial3D and mat.albedo_texture != null:
+				biggest = maxi(biggest, maxi(mat.albedo_texture.get_width(), mat.albedo_texture.get_height()))
+	if biggest == 0:
+		_fail("텍스처를 못 찾았다")
+	elif biggest > 512:
+		_fail("텍스처가 %dpx 다 — 줄이기가 안 돌았다" % biggest)
+	else:
+		print("  텍스처 가장 큰 변 %dpx" % biggest)
 
 
 func _case_missing() -> void:

@@ -21,7 +21,9 @@ three.js 웹 클라이언트를 **고도 엔진으로 갈아타는 중**이다. 
 | `godot/net/local_transport.gd` | 서버 없이 `World` 를 이 자리에서 돌린다 |
 | `godot/game/game.gd` | 화면. 바닥·카메라·모델·터치 이동. **`World` 를 직접 안 만진다** |
 | `godot/game/rig.gd` | `.glb` 하나를 씌우고 클립을 트는 껍데기. **없으면 `null`** |
-| `scripts/sync-godot-assets.mjs` | `public/assets/models` → `godot/assets/models` 복사 (`npm run sync:godot`) |
+| `scripts/sync-godot-assets.mjs` | `public/assets` → `godot/assets` 복사. 모델은 텍스처를 줄여 넣는다 (`npm run sync:godot`) |
+| `scripts/shrink-glb-textures.mjs` | `.glb` 안 텍스처를 512px 로 줄인다 |
+| `scripts/build-korean-font.py` | 한글 폰트를 완성형 2350자로 줄인다. 결과물은 커밋한다 |
 | `godot/tests/*.gd` | 헤드리스 검사 — 이동 공식·World·터치 이동·몬스터 |
 | `godot/export_presets.cfg` | 안드로이드·웹 익스포트 설정. **비밀은 없다** — 아래 "서명" 참고 |
 | `.github/workflows/android.yml` | push 하면 APK 를 구워 Actions 산출물로 올린다 |
@@ -102,11 +104,25 @@ TS 에 남으니 표가 어긋나면 `npm test` 가 잡는다. 전부 GDScript �
 저장소에 두 벌 두면 24MB 가 이력에 두 번 쌓이므로, **`godot/assets/` 는 커밋하지 않고
 `npm run sync:godot` 으로 만든다** (`fetch-assets.sh` 와 같은 방식).
 
-**쓰는 것만 복사한다.** 웹 빌드는 `godot/assets/` 를 통째로 담는다 — 지금 두 개
-(기사 3.1MB · 오우거 2.4MB)를 넣어 `index.pck` 가 94KB → **13MB**, 전체 39MB → **51MB**
-가 됐다. 직업이 늘면 `sync-godot-assets.mjs` 의 `MODELS` 에 줄을 더한다.
-(5.5MB 원본이 13MB 가 된 건 고도가 텍스처를 다시 굽기 때문이다. 용량이 문제가 되면
-임포트 설정의 VRAM 압축부터 볼 것 — 아직 안 건드렸다.)
+**쓰는 것만 복사한다.** 웹 빌드는 `godot/assets/` 를 통째로 담는다. 직업이 늘면
+`sync-godot-assets.mjs` 의 `MODELS` 에 줄을 더한다.
+
+### 텍스처를 512px 로 줄여서 넣는다 ★
+
+varco 모델은 1024² 텍스처를 셋씩 들고 있는데, 고도가 임포트하면서 데스크톱·모바일
+두 포맷으로 구워 **원본 1MB 가 10MB 로 불어난다.** 폰 화면에서 512 와 1024 는 거의
+구분되지 않으므로 `sync-godot-assets.mjs` 가 줄여서 넣는다 —
+**`index.pck` 12.96MB → 5.58MB.**
+
+고도 설정으로 줄이려던 시도는 둘 다 실패했다 (2026-09-17). 다시 하지 말 것:
+
+| 시도 | 결과 |
+|---|---|
+| `gltf/embedded_image_handling=2` (Basis Universal) | pck 13MB → **21.8MB**. 더 커졌다 |
+| 익스포트 프리셋 `vram_texture_compression/for_desktop=false` | 변화 없음 |
+
+원본을 줄이는 쪽이 고도를 판올림해도 안 깨진다. `model_test.gd` 가 텍스처가 512 를
+넘으면 잡는다 — 안 그러면 조용히 13MB 로 돌아간다.
 
 ### 모델이 없으면 기둥으로 그린다 ★
 
@@ -237,6 +253,20 @@ godot --headless --path godot --script check.gd # 상태를 글로 찍는다
 7. ~~**모델 붙이기** — `varco_*.glb`, 클립, 기둥 대체~~ 끝 (2026-09-17)
 8. ~~**UI** — 한글 폰트, 체력바, 사냥터 고르는 화면~~ 끝 (2026-09-17)
 9. **보스 범위 공격** ← 지금 여기. 예고 원과 `MonsterKind.aoe`
+
+## 용량
+
+폰이 받는 양이다. GitHub Pages 가 gzip 으로 보내므로 파일 크기와 다르다.
+
+| | 파일 | 받는 양 |
+|---|---|---|
+| `index.wasm` (고도 엔진) | 37.7MB | **10.2MB** — 만드는 것과 무관하게 고정 |
+| `index.pck` (게임) | 5.6MB | 5.5MB (이미 압축된 텍스처라 gzip 이 안 먹는다) |
+
+캐시는 `max-age=600` 이라 **10분이면 저절로 풀린다.** 그 안에 확인하려면 강력
+새로고침을 한다. 파일명에 해시를 붙이는 방법도 있지만, 고도 로더가 `index.html`
+설정에서 `index.wasm`·`index.pck` 이름을 만들어 내므로 판올림 때 깨지기 쉽다 —
+얻는 게 "10분을 0분으로" 라 하지 않았다.
 5. **모델·애니메이션** — `varco_*.glb` (아래 참고)
 6. **전투 표현 → UI → 이펙트**
 7. **서버** — 고도 헤드리스. `Transport` 에 구현을 하나 더 끼운다

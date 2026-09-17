@@ -27,6 +27,15 @@ var _events: Array = []
 ## 어느 직업으로 시작하나. 만드는 화면이 없어서 당분간 고정이다
 const DEFAULT_JOB := "knight"
 
+## NPC 와 말할 수 있는 거리 (m). **거리는 여기서 다시 잰다** —
+## 창이 열려 있다고 살 수 있는 게 아니다
+const NPC_REACH := 4.5
+
+## 몇 초마다 저장하나
+const SAVE_EVERY_MS := 10000
+
+var _next_save_at := 0
+
 
 func open(id: String) -> void:
 	zone_id = id
@@ -85,6 +94,7 @@ func join(player_id: String) -> void:
 		# 존을 옮겨도 성장은 따라간다
 		"exp": int(kept.get("exp", 0)),
 		"hp": int(kept.get("hp", stats.maxHp)),
+		"gold": int(kept.get("gold", 0)),
 		"stats": stats,
 		"next_attack_at": 0,
 		"rooted_until": 0,
@@ -131,6 +141,12 @@ func step(delta: float) -> void:
 	_step_monsters(delta, now)
 	_check_gate()
 
+	# 주기적으로 남긴다. 탭이 갑자기 닫혀도 최근 것은 지킨다
+	if now >= _next_save_at:
+		_next_save_at = now + SAVE_EVERY_MS
+		for id in _players:
+			save(id)
+
 
 ## 차원문 안에 서 있으면 **고르는 화면을 띄우라고 알린다.** 어디로 갈지는
 ## 사람이 고른다 (웹 클라의 ui/zoneGate.ts 와 같은 자리).
@@ -175,6 +191,7 @@ func snapshot() -> Dictionary:
 		"players": _players,
 		"monsters": _monsters,
 		"gate": zone.get("gate", {}),
+		"npcs": zone.get("npcs", []),
 	}
 
 
@@ -529,3 +546,61 @@ static func make_monster(
 		"aoe_x": 0.0,
 		"aoe_z": 0.0,
 	}
+
+
+## 저장한 것이 있으면 그 자리에서 이어서 시작한다.
+## **없으면 아무 일도 하지 않는다** — 부르는 쪽이 이미 기본값으로 만들어 뒀다.
+func restore(player_id: String) -> bool:
+	var saved := Save.read()
+	if saved.is_empty():
+		return false
+
+	var zone_saved := str(saved.get("zone", ""))
+	var all: Dictionary = GameData.zones().get("zones", {})
+	if all.has(zone_saved) and zone_saved != zone_id:
+		open(zone_saved)
+	join(player_id)
+
+	var player: Dictionary = _players[player_id]
+	player.level = int(saved.get("level", 1))
+	player.stats = Combat.stats_for(str(player.job), player.level)
+	player.exp = int(saved.get("exp", 0))
+	player.hp = clampi(int(saved.get("hp", player.stats.maxHp)), 0, int(player.stats.maxHp))
+	player.gold = int(saved.get("gold", 0))
+	player["dead"] = bool(saved.get("dead", false))
+	# 죽은 채로 저장됐으면 자리는 스폰으로 둔다 — 시체 자리에서 시작할 이유가 없다
+	if not player.dead:
+		player.x = clampf(float(saved.get("x", player.x)), -half_size, half_size)
+		player.z = clampf(float(saved.get("z", player.z)), -half_size, half_size)
+	return true
+
+
+func save(player_id: String) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if not player.is_empty():
+		Save.write(zone_id, player)
+
+
+## NPC 에게 말을 건다. **거리는 여기서 다시 잰다.**
+## 화면이 창을 열어 뒀다고 되는 게 아니다 (NPC_REACH).
+func npc_open(player_id: String, npc_name: String) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty() or bool(player.dead):
+		return
+
+	for npc in zone.get("npcs", []):
+		if str(npc.get("name", "")) != npc_name:
+			continue
+		var gap := Vector2(player.x - float(npc.x), player.z - float(npc.z)).length()
+		if gap > NPC_REACH:
+			_events.append({"type": "notice", "text": "너무 멉니다"})
+			return
+		_events.append({
+			"type": "npc",
+			"name": npc_name,
+			"role": str(npc.get("role", "")),
+			"title": str(npc.get("title", "")),
+			# 아이템 표가 아직 없어서 목록은 비어 있다. 표가 들어오면 여기가 채워진다
+			"items": [],
+		})
+		return

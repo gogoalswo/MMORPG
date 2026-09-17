@@ -8,6 +8,8 @@ var _failed := 0
 
 
 func _init() -> void:
+	# 남아 있는 저장이 있으면 엉뚱한 존에서 시작한다 (LocalTransport 가 이어서 연다)
+	Save.clear()
 	_case_knight()
 	_case_ogre()
 	_case_texture_size()

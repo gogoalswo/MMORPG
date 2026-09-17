@@ -51,6 +51,13 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			]
 		&"levelUp":
 			_last_event = "LEVEL UP %d" % payload.get("level", 0)
+		&"died":
+			_last_event = "YOU DIED - tap to revive in town"
+			_target = Vector3.INF
+			_target_mob = ""
+			_marker.visible = false
+		&"revived":
+			_last_event = "revived"
 
 
 ## 존이 바뀌어도 살아 있는 것들
@@ -186,6 +193,10 @@ func _build_zone(zone_id: String) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	# 터치는 기본 설정이 마우스로 바꿔 주므로 이 한 줄이 폰도 덮는다
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		# 죽어 있으면 어딜 눌러도 부활 요청이다
+		if _am_dead():
+			_transport.send(&"revive", {})
+			return
 		var hit := _ground_point(event.position)
 		if hit == Vector3.INF:
 			return
@@ -232,8 +243,13 @@ func _process(delta: float) -> void:
 
 
 ## 눌러 둔 자리로 향하는 방향을 만들어 보낸다. **요청일 뿐이고 판정은 World 가 한다.**
+func _am_dead() -> bool:
+	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
+	return bool(me.get("dead", false))
+
+
 func _send_input(delta: float) -> void:
-	if _zone_node == null:
+	if _zone_node == null or _am_dead():
 		return
 	if _target_mob != "":
 		_chase_and_hit(delta)
@@ -309,16 +325,22 @@ func _draw_state() -> void:
 	_camera.position = _player.position + Vector3(0, 14, 12)
 	_camera.look_at(_player.position, Vector3.UP)
 
-	# 죽은 놈은 감추고 되살아나면 다시 보인다
+	# 쫓아오는 놈들이 실제로 움직인다. 자리는 World 가 정하고 여기서는 따라 그린다
 	for monster in snap.get("monsters", []):
 		var node: MeshInstance3D = _mob_nodes.get(monster.id)
-		if node != null:
-			node.visible = int(monster.hp) > 0
+		if node == null:
+			continue
+		node.visible = int(monster.hp) > 0
+		if node.visible:
+			node.position.x = monster.x
+			node.position.z = monster.z
+			node.rotation.y = monster.get("rot", 0.0)
 
 	var alive := 0
 	for monster in snap.get("monsters", []):
 		if int(monster.hp) > 0:
 			alive += 1
+	_player.visible = not bool(me.get("dead", false))
 	_label.text = "%s  Lv%d  hp %d/%d  exp %d/%d\nmobs %d/%d  %d fps\n%s" % [
 		zone_now,
 		me.level,

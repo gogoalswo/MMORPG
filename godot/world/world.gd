@@ -67,6 +67,7 @@ func _spawn_monsters() -> void:
 				"scale": scale,
 				"color": kind.get("bodyColor", "#888888"),
 				"boss": bool(kind.get("boss", false)),
+				"rot": 0.0,
 				"level": int(kind.get("level", 1)),
 				"max_hp": int(kind.get("maxHp", 1)),
 				"hp": int(kind.get("maxHp", 1)),
@@ -75,6 +76,23 @@ func _spawn_monsters() -> void:
 				"respawn_ms": float(pack.get("respawnMs", 10000)),
 				# 죽어 있는 동안 다시 나올 시각. 0 이면 살아 있다
 				"respawn_at": 0,
+				# --- 반격에 쓰는 것들 ---
+				"attack": float(kind.get("attack", 1)),
+				"attack_range": float(kind.get("attackRange", 1.9)),
+				"attack_cooldown": float(kind.get("attackCooldown", 1200)),
+				"aggro": float(kind.get("aggroRange", 9)),
+				"leash": float(kind.get("leashRange", 22)),
+				"speed": float(kind.get("moveSpeed", 3.6)),
+				# 집. 너무 멀어지면 여기로 돌아온다
+				"home_x": spot.x,
+				"home_z": spot.z,
+				"target": "",
+				"state": "idle",
+				"next_attack_at": 0,
+				"rooted_until": 0,
+				# 정확히 겹쳤을 때 밀려날 방향. **서로 달라야 풀린다** —
+				# 같으면 둘 다 같은 자리로 밀려 겹친 채로 남는다
+				"push_angle": float(_monsters.size()) * 0.7,
 			})
 
 
@@ -84,10 +102,12 @@ func join(player_id: String) -> void:
 	var level := int(kept.get("level", 1))
 	var stats := Combat.stats_for(DEFAULT_JOB, level)
 	_players[player_id] = {
+		"id": player_id,
 		"x": float(spawn[0]),
 		"z": float(spawn[1]),
 		"rot": 0.0,
 		"last_seq": -1,
+		"dead": bool(kept.get("dead", false)),
 		"job": DEFAULT_JOB,
 		"level": level,
 		# 존을 옮겨도 성장은 따라간다
@@ -113,6 +133,11 @@ func input_move(player_id: String, seq: int, dx: float, dz: float, dt: float) ->
 	if seq <= int(player.last_seq):
 		return
 
+	# 죽어 있으면 위치는 고정하되 순번은 갱신한다
+	if bool(player.dead):
+		player.last_seq = seq
+		return
+
 	# 휘두르는 중이면 발을 묶는다. **순번은 갱신하고 위치만 안 옮긴다** —
 	# 안 갱신하면 나중에 서버를 붙였을 때 클라이언트 보정이 이 구간 내내 멈춘다
 	if Time.get_ticks_msec() < int(player.rooted_until):
@@ -128,8 +153,10 @@ func input_move(player_id: String, seq: int, dx: float, dz: float, dt: float) ->
 
 
 ## 한 틱. 전투가 들어올 자리다 (5단계).
-func step(_delta: float) -> void:
-	_respawn(Time.get_ticks_msec())
+func step(delta: float) -> void:
+	var now := Time.get_ticks_msec()
+	_respawn(now)
+	_step_monsters(delta, now)
 	_check_gate()
 
 
@@ -177,7 +204,7 @@ func snapshot() -> Dictionary:
 ## 정면 부채꼴 안에서 가장 가까운 하나를 친다 (server/combat.ts 의 resolvePlayerAttack).
 func attack(player_id: String) -> void:
 	var player: Dictionary = _players.get(player_id, {})
-	if player.is_empty():
+	if player.is_empty() or bool(player.dead):
 		return
 
 	var now := Time.get_ticks_msec()
@@ -276,3 +303,138 @@ func drain_events() -> Array:
 	var out := _events
 	_events = []
 	return out
+
+
+## 몬스터 상태 기계: idle -> (사람이 다가옴) chase -> (사거리 도달) attack.
+## server/src/combat.ts 의 stepMonsters 이식본이다.
+##
+## 보스의 범위 공격(aoe)은 아직 안 옮겼다 — 예고 원을 그리는 화면이 필요해서
+## UI 단계와 같이 한다.
+func _step_monsters(delta: float, now: int) -> void:
+	for monster in _monsters:
+		if int(monster.hp) <= 0:
+			continue
+		# 휘두르는 동안은 못 움직인다. 화면이 공격 클립을 보여 주는 창과 같은 길이다
+		if now < int(monster.rooted_until):
+			continue
+
+		var home_gap := Vector2(monster.x - monster.home_x, monster.z - monster.home_z).length()
+
+		# 집에서 너무 멀어졌으면 쫓기를 포기하고 돌아간다
+		if home_gap > float(monster.leash):
+			monster.target = ""
+			monster.state = "chase"
+			_move_monster(monster, monster.home_x, monster.home_z, float(monster.speed), delta)
+			continue
+
+		var target: Dictionary = _players.get(str(monster.target), {})
+		if not target.is_empty():
+			var gap := Vector2(target.x - monster.x, target.z - monster.z).length()
+			if bool(target.get("dead", false)) or gap > float(monster.leash):
+				target = {}
+				monster.target = ""
+		if target.is_empty():
+			target = _nearest_player(monster.x, monster.z, float(monster.aggro))
+			monster.target = str(target.get("id", ""))
+
+		if target.is_empty():
+			# 집에서 벗어나 있으면 슬슬 돌아간다
+			if home_gap > 1.5:
+				monster.state = "chase"
+				_move_monster(monster, monster.home_x, monster.home_z, float(monster.speed) * 0.5, delta)
+			else:
+				monster.state = "idle"
+			continue
+
+		var dist := Vector2(target.x - monster.x, target.z - monster.z).length()
+		if dist > float(monster.attack_range):
+			monster.state = "chase"
+			_move_monster(monster, target.x, target.z, float(monster.speed), delta)
+			continue
+
+		monster.state = "attack"
+		monster.rot = atan2(target.x - monster.x, target.z - monster.z)
+		if now >= int(monster.next_attack_at):
+			monster.next_attack_at = now + int(monster.attack_cooldown)
+			monster.rooted_until = now + Combat.monster_root_ms(float(monster.attack_cooldown))
+			_hit_player(target, monster)
+
+
+## 어그로 범위 안에서 가장 가까운 산 사람
+func _nearest_player(x: float, z: float, reach: float) -> Dictionary:
+	var best: Dictionary = {}
+	var best_dist := reach
+	for id in _players:
+		var player: Dictionary = _players[id]
+		if bool(player.get("dead", false)):
+			continue
+		var dist := Vector2(player.x - x, player.z - z).length()
+		if dist <= best_dist:
+			best_dist = dist
+			best = player
+			best["id"] = id
+	return best
+
+
+## 몬스터끼리도 통과하지 않는다. **미는 쪽은 지금 움직인 이 놈**이다 —
+## 캐릭터 충돌과 같은 규칙이라 서 있는 놈은 제자리를 지킨다
+func _move_monster(monster: Dictionary, tx: float, tz: float, speed: float, delta: float) -> void:
+	var dx: float = tx - monster.x
+	var dz: float = tz - monster.z
+	var dist := sqrt(dx * dx + dz * dz)
+	if dist < 1e-3:
+		return
+
+	var step_len := minf(dist, speed * delta)
+	monster.x = clampf(monster.x + (dx / dist) * step_len, -half_size, half_size)
+	monster.z = clampf(monster.z + (dz / dist) * step_len, -half_size, half_size)
+	monster.rot = atan2(dx, dz)
+
+	# 움직인 놈만 민다. 서 있는 80마리까지 매 프레임 밀면 폰에서 버겁다
+	var near: Array = []
+	for other in _monsters:
+		if other.id == monster.id or int(other.hp) <= 0:
+			continue
+		if absf(other.x - monster.x) > 4.0 or absf(other.z - monster.z) > 4.0:
+			continue
+		near.append(other)
+	Movement.push_out_of_solids(
+		monster, near, half_size, float(monster.r), float(monster.push_angle)
+	)
+
+
+func _hit_player(player: Dictionary, monster: Dictionary) -> void:
+	var damage := Combat.compute_damage(float(monster.attack), float(player.stats.defense))
+	player.hp = maxi(0, int(player.hp) - damage)
+	_events.append({
+		"type": "hit",
+		"target": str(player.get("id", "")),
+		"target_kind": "player",
+		"source": monster.id,
+		"amount": damage,
+		"crit": false,
+		"killed": int(player.hp) <= 0,
+		"x": player.x,
+		"z": player.z,
+	})
+
+	if int(player.hp) <= 0:
+		# **시간이 지나도 저절로 살아나지 않는다.** 사람이 사망 화면을 눌러야 한다 —
+		# 5초 뒤 제자리에서 일으켜 세우면 죽은 걸 읽기도 전에 화면이 사라진다
+		player["dead"] = true
+		monster.target = ""
+		_events.append({"type": "died"})
+
+
+## 사망 화면을 눌렀다. 마을에서 되살아난다
+func revive(player_id: String) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty() or not bool(player.get("dead", false)):
+		return
+	if zone_id != GameData.start_zone():
+		open(GameData.start_zone())
+	join(player_id)
+	var player_now: Dictionary = _players[player_id]
+	player_now["dead"] = false
+	player_now["hp"] = player_now.stats.maxHp
+	_events.append({"type": "revived"})

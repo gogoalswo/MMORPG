@@ -28,6 +28,15 @@ static func attack_root_ms(cooldown_ms: float) -> int:
 	return maxi(0, mini(int(_c().get("attackRootMs", 400)), roundi(cooldown_ms)))
 
 
+## 짐승이 한 번 휘두르는 동안 묶이는 시간. 공격 간격을 넘지 않는다.
+##
+## 사람과 달리 이 값이 곧 **공격 클립을 보여 주는 창의 길이**다. 판정과 화면이
+## 같은 값을 봐야 동작이 끝나는 순간에 발이 떨어진다 — 어느 한쪽이 길면
+## 휘두르며 달리거나 다 휘두르고도 멈춰 있는다
+static func monster_root_ms(cooldown_ms: float) -> int:
+	return maxi(0, mini(int(_c().get("monsterSwingMs", 650)), roundi(cooldown_ms)))
+
+
 ## 굴림값(0~1)이 치명타인지
 static func roll_crit(chance: float, roll: float) -> bool:
 	var cap := float(_c().get("critCap", 0.75))

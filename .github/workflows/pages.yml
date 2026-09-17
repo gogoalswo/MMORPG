@@ -71,7 +71,7 @@ jobs:
         run: |
           set -e
           ~/godot-bin/godot --headless --path godot --import
-          for t in movement world touch monster combat; do
+          for t in movement world touch monster combat aggro; do
             echo "--- $t"
             ~/godot-bin/godot --headless --path godot --script "tests/$t""_test.gd"
           done

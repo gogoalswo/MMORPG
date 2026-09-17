@@ -1,5 +1,32 @@
 # 이 저장소에서 일하는 방식
 
+## 지금 무엇을 만들고 있나 ★★
+
+**고도(Godot) 엔진으로 옮기는 중이고, 목표는 모바일 앱이다.** 새 작업은 기본적으로
+`godot/` 안에서 한다 — 어느 쪽인지 애매하면 묻는다.
+
+| | |
+|---|---|
+| `godot/` | **지금 만드는 것.** 판정(`world/`) · 화면(`game/`) · 통로(`net/`) · 테스트(`tests/`) |
+| `packages/shared` | **수치와 생성기.** 두 클라이언트가 같이 쓴다. 고치면 `npm run export:godot` |
+| `packages/client` | 옛 three.js 클라이언트. **대조용으로 남겨 뒀다.** 시키지 않으면 손대지 않는다 |
+| `packages/server` | 옛 Colyseus 서버. 고도 서버는 아직 안 붙였다 |
+
+무엇이 옮겨졌고 왜 그렇게 했는지는 **[`docs/features/godot-migration.md`](docs/features/godot-migration.md)** 에
+있다. 고도 쪽 일을 시작하면 **이것부터 읽는다.**
+
+고도 작업 한 바퀴:
+
+```bash
+npm run sync:godot     # 에셋을 godot/assets 로 (모델은 텍스처를 512 로 줄여서)
+npm run export:godot   # shared 표를 godot/data/*.json 으로
+npm run test:godot     # 고도 테스트 — 통과는 한 줄, 실패만 자세히
+```
+
+화면은 `https://gogoalswo.github.io/MMORPG/game/` 에서 본다. 밀고 나면
+**"배포됐습니다, 새로고침하세요" 와 빌드 표시**(`빌드 <커밋> <시각>`)를 알려 준다 —
+브라우저가 최대 10분 캐시해서 그게 없으면 갱신됐는지 알 수 없다.
+
 ## 사용자와 일하는 규칙 ★★
 
 어느 PC·클라우드 세션에서 열어도 같게 지키도록 여기에 적는다. 전부 실제로 지적받은 것이다.
@@ -72,8 +99,11 @@
 스크린샷은 **사용자가 요청할 때만, 한 장만**. 한 장이 토큰 천 단위인데다,
 브라우저 창이 가려지면 화면이 낡은 채로 굳어서 잘못 읽기까지 한다.
 
-- 서버 로직 → `npm run probe -- state|fight|walk|send|watch` (헤드리스 접속, 결과를 글로)
-- 클라이언트 UI → `scripts/ui-probe.js` 의 조각을 콘솔에 붙여 DOM 을 읽는다
+- **고도** → `npm run test:godot`. 새로 확인할 것이 생기면 `godot/tests/` 에 한 편
+  더한다 — 화면을 띄워 눌러 보는 것까지 헤드리스로 한다(`touch_test` · `ui_test`).
+  **눈으로 봐야 하는 것**(바닥 밝기, 카메라 각)은 고쳐서 밀고 물어본다.
+- 옛 웹 클라 서버 로직 → `npm run probe -- state|fight|walk|send|watch`
+- 옛 웹 클라 UI → `scripts/ui-probe.js` 의 조각을 콘솔에 붙여 DOM 을 읽는다
 - 서버 출력 → `logs/server.log`
 
 확인한 내용은 `logs/` 에 남는다. 자세한 건 [`docs/features/verification.md`](docs/features/verification.md).
@@ -81,8 +111,10 @@
 ## 확인 명령
 
 ```bash
-npm run typecheck && npm test && npm run build
+npm run typecheck && npm test && npm run test:godot
 ```
+
+`npm run build` 는 옛 웹 클라이언트를 굽는 것이다 — 그쪽을 건드렸을 때만 돌린다.
 
 ## 토큰을 아끼는 방식 ★
 

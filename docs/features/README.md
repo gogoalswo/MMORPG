@@ -16,6 +16,14 @@
    달라지는 순간 이 폴더는 쓸모가 없어지고, 다음 사람은 다시 소스를 통독한다.
 3. 새 기능을 만들면 이 표에 줄을 추가하고 문서를 새로 만든다.
 
+## 지금 무엇을 만들고 있나
+
+**고도 엔진으로 옮기는 중이다** (목표는 모바일 앱). 새 작업은 `godot/` 안에서
+하고, 아래 표의 나머지 문서는 **옛 웹 클라이언트 기준으로 쓰였다** — 규칙·수치는
+그대로 유효하고(둘이 `packages/shared` 를 같이 쓴다), 파일 경로만 다르다.
+
+무엇이 옮겨졌는지는 [godot-migration.md](godot-migration.md) 의 "단계" 절을 본다.
+
 ## 목록
 
 | 문서 | 다루는 것 |
@@ -35,7 +43,7 @@
 | [client-ui.md](client-ui.md) | HUD 레이아웃, 오버레이 규칙, **미니맵**, **클릭 이동 표시**, **테스트 도구(스킬 목록·무적 단추)**, 모바일 대응 |
 | [characters-and-animation.md](characters-and-animation.md) | 캐릭터·몬스터·NPC 외형, 본 구조, 걷기·대기·공격 동작 |
 | [verification.md](verification.md) | **확인하는 방법** — 헤드리스 클라이언트, DOM 읽기, 로그 |
-| [godot-migration.md](godot-migration.md) | **고도 엔진 이관**(모바일 앱) — 왜 서버까지 가는지, `shared` 를 생성기/공식으로 가르는 기준, `World`·`Transport` 규칙, APK 빌드 |
+| [godot-migration.md](godot-migration.md) | ★ **지금 만드는 것.** 고도 엔진 이관(모바일 앱) — 어디에 무엇이 있는지, `World`·`Transport` 규칙, 옮긴 것과 안 옮긴 것, 빌드·배포·확인 |
 
 ## 전체를 관통하는 규칙
 

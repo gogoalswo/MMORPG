@@ -412,6 +412,32 @@ godot --headless --path godot --import          # 에셋 임포트
 godot --headless --path godot --script check.gd # 상태를 글로 찍는다
 ```
 
+### PC 에서 플레이한다 ★ (`scripts/play.bat`)
+
+브라우저 배포(캐시 10분)나 APK 를 기다리지 않고 **PC 에서 바로 실제 플레이**할 때 쓴다.
+고도를 설치하지 않는다 — zip 을 받아 **`C:\godot\godot.exe` 하나만 남기고 zip 은 지운다.**
+
+```bat
+scripts\play.bat        최신 코드 받아서 게임 실행
+scripts\play.bat edit   편집기로 열기
+set GODOT_DIR=D:\godot  둘 곳을 바꾼다 (기본 C:\godot)
+```
+
+한 번 돌 때 이 순서다:
+
+1. `C:\godot\godot.exe` 가 없으면 받는다 — `downloads.godotengine.org` 의 `win64.exe.zip`
+   (86MB). 푼 뒤 `godot.exe` 로 이름을 바꾸고 **콘솔용 exe(`..._console.exe`)와 zip 은 지운다.**
+   두 번째 실행부터는 통째로 건너뛴다.
+2. `git pull --ff-only` — **지금 체크아웃된 브랜치**를 받는다. git 이 없으면 있는 코드로 돈다.
+3. 에셋을 `godot/assets` 로 복사한다. `npm run sync:godot` 과 달리 **텍스처를 512 로 줄이지
+   않는다** — 줄이는 건 폰 pck 용량 때문이고 PC 는 원본이 낫다. 덕분에 Node 도 `sharp` 도 필요 없다.
+4. `--headless --import` **를 반드시 먼저 돌린다.** 임포트 캐시(`godot/.godot/`)가 없으면
+   `class_name` 을 못 찾아 `game.gd` 가 파싱 오류로 죽는다 (2026-09-17 에 확인).
+5. `godot --path godot` 으로 띄운다.
+
+`godot/data/*.json` 은 커밋돼 있으므로 `npm run export:godot` 은 `packages/shared` 를 고쳤을
+때만 돌린다. 이 배치는 테스트를 돌리지 않는다 — 확인은 `npm run test:godot` 의 몫이다.
+
 ## 단계
 
 1. ~~**골격** — 프로젝트·임시 화면·APK 워크플로우~~ 끝 (2026-09-16)

@@ -16,6 +16,20 @@
  *
  * `%%` 한 줄로 구분하면 한 번에 여러 곳을 고친다. 찾는 것이 없거나 두 군데
  * 이상이면 **아무것도 쓰지 않고** 멈춘다 — 반쯤 적용된 파일이 제일 비싸다.
+ *
+ * **긴 덩어리는 `...` 한 줄로 가운데를 생략한다** (2026-09-17 에 추가).
+ *
+ *   node scripts/edit.mjs godot/game/game.gd <<'EOF'
+ *   func _show_npc(payload: Dictionary) -> void:
+ *   ...
+ *   	_npc_panel.visible = true
+ *   @@
+ *   새 함수 전체
+ *   EOF
+ *
+ * 없을 때는 파일을 통째로 다시 쓰게 되는데, 그러면 **하네스가 바뀐 파일을
+ * 통째로 되돌려 준다** — 쓴 만큼 다시 받는다. 815줄짜리 items.ts 를 그렇게
+ * 고쳤다가 파일 전체를 되받았다.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 
@@ -33,17 +47,7 @@ for (const block of spec.split('\n%%\n')) {
   const half = block.split('\n@@\n');
   if (half.length !== 2) throw new Error('블록마다 @@ 한 줄이 있어야 한다: ' + head(block));
   const [from, to] = half;
-
-  // 같은 내용의 CRLF 판·LF 판을 차례로 대 본다. 맞는 쪽이 그 자리의 개행이다.
-  let found = null;
-  for (const cand of [from.split('\n').join('\r\n'), from]) {
-    const at = text.indexOf(cand);
-    if (at < 0) continue;
-    if (text.indexOf(cand, at + 1) >= 0) throw new Error('두 군데 이상이다: ' + head(from));
-    found = cand;
-    break;
-  }
-  if (!found) throw new Error('못 찾음: ' + head(from));
+  const found = from.includes('\n...\n') ? locateRange(text, from) : locateExact(text, from);
 
   const nl = found.includes('\r\n') ? '\r\n' : '\n';
   text = text.replace(found, () => to.split('\n').join(nl));
@@ -53,3 +57,37 @@ for (const block of spec.split('\n%%\n')) {
 writeFileSync(file, text);
 console.log(`${file}: ${done.length}곳`);
 for (const d of done) console.log('  · ' + d);
+
+/** 정확히 그 글자를 찾는다. CRLF 판·LF 판을 차례로 대 본다 */
+function locateExact(text, from) {
+  for (const cand of [from.split('\n').join('\r\n'), from]) {
+    const at = text.indexOf(cand);
+    if (at < 0) continue;
+    if (text.indexOf(cand, at + 1) >= 0) throw new Error('두 군데 이상이다: ' + head(from));
+    return cand;
+  }
+  throw new Error('못 찾음: ' + head(from));
+}
+
+/**
+ * `앞 조각 ... 뒤 조각` — 그 사이를 통째로 잡는다.
+ *
+ * 함수 하나를 갈아 끼울 때 가운데를 다시 적지 않아도 된다. 가운데를 적는 값이
+ * 아까워 파일을 통째로 쓰기 시작하면 훨씬 비싸게 친다.
+ */
+function locateRange(text, from) {
+  const parts = from.split('\n...\n');
+  if (parts.length !== 2) throw new Error('`...` 는 한 블록에 한 번만: ' + head(from));
+
+  for (const nl of ['\r\n', '\n']) {
+    const open = parts[0].split('\n').join(nl);
+    const close = parts[1].split('\n').join(nl);
+    const start = text.indexOf(open);
+    if (start < 0) continue;
+    if (text.indexOf(open, start + 1) >= 0) throw new Error('시작이 두 군데 이상이다: ' + head(open));
+    const end = text.indexOf(close, start + open.length);
+    if (end < 0) throw new Error('끝을 못 찾음: ' + head(parts[1]));
+    return text.slice(start, end + close.length);
+  }
+  throw new Error('못 찾음: ' + head(from));
+}

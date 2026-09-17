@@ -72,10 +72,8 @@ jobs:
           set -e
           npm run sync:godot
           ~/godot-bin/godot --headless --path godot --import
-          for t in movement world touch monster combat aggro model ui aoe save npc skill item shop ground; do
-            echo "--- $t"
-            ~/godot-bin/godot --headless --path godot --script "tests/$t""_test.gd"
-          done
+          # 테스트를 더해도 여기는 안 고친다. 실패한 것만 자세히 찍는다
+          GODOT=~/godot-bin/godot npm run test:godot
 
       - name: 고도 웹 빌드 → /game/
         run: |

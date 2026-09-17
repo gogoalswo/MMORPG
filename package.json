@@ -19,6 +19,7 @@
     "compress": "node scripts/compress-textures.mjs",
     "export:godot": "node scripts/export-shared.mjs",
     "sync:godot": "node scripts/sync-godot-assets.mjs",
+    "test:godot": "bash scripts/godot-test.sh",
     "tunnel": "node scripts/tunnel.mjs"
   },
   "devDependencies": {

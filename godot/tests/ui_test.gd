@@ -68,6 +68,11 @@ func _run_scene() -> void:
 	if not game._label.text.begins_with("마을"):
 		_fail("존 이름이 한국어가 아니다: %s" % game._label.text.left(20))
 
+	# 빌드 표시가 화면에 있어야 한다. 이게 없으면 캐시한 이전 빌드를 보고 있는지
+	# 알 방법이 없다 (2026-09-17)
+	if not game._label.text.contains("빌드 "):
+		_fail("빌드 표시가 화면에 없다")
+
 	# 체력바가 스탯을 따라간다
 	var me: Dictionary = game._transport.snapshot().players[game._transport.my_id()]
 	if game._hp_bar.max_value != float(me.stats.maxHp):

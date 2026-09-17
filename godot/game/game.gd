@@ -62,6 +62,10 @@ func _ready() -> void:
 	_transport.open(GameData.start_zone())
 	_transport.event.connect(_on_event)
 	_build_persistent()
+	# 캐시한 이전 빌드를 보고 있으면 화면이 직접 알려 준다
+	Build.check_latest(self, func(latest: String) -> void:
+		_last_event = "새 빌드가 있습니다 (%s) — 새로고침하세요" % latest
+	)
 
 
 ## 판정이 낸 일. 지금은 글자 한 줄로만 보여준다 — 피격 연출은 UI 단계다
@@ -865,7 +869,7 @@ func _draw_state() -> void:
 	_hp_bar.value = me.hp
 	_refresh_bar(me)
 
-	_label.text = "%s   %d레벨   체력 %d/%d   경험치 %d/%d\n골드 %d   몬스터 %d/%d   %d fps\n%s" % [
+	_label.text = "%s   %d레벨   체력 %d/%d   경험치 %d/%d\n골드 %d   몬스터 %d/%d   %d fps   빌드 %s\n%s" % [
 		GameData.zone(zone_now).get("name", zone_now),
 		me.level,
 		me.hp,
@@ -876,6 +880,7 @@ func _draw_state() -> void:
 		alive,
 		snap.get("monsters", []).size(),
 		Engine.get_frames_per_second(),
+		Build.stamp(),
 		_last_event,
 	]
 

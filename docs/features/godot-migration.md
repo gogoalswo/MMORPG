@@ -26,6 +26,7 @@ three.js 웹 클라이언트를 **고도 엔진으로 갈아타는 중**이다. 
 | `godot/game/rig.gd` | `.glb` 하나를 씌우고 클립을 트는 껍데기. **없으면 `null`** |
 | `godot/game/ground.gd` | 존 바닥 재질 — 텍스처·타일 크기·존 틴트 |
 | `godot/game/camera_rig.gd` | 고정각 쿼터뷰 카메라 |
+| `godot/world/build.gd` | 빌드 표시와 "새 빌드 있음" 확인 |
 | `scripts/sync-godot-assets.mjs` | `public/assets` → `godot/assets` 복사. 모델은 텍스처를 줄여 넣는다 (`npm run sync:godot`) |
 | `scripts/shrink-glb-textures.mjs` | `.glb` 안 텍스처를 512px 로 줄인다 |
 | `scripts/build-korean-font.py` | 한글 폰트를 완성형 2350자로 줄인다. 결과물은 커밋한다 |
@@ -406,6 +407,18 @@ godot --headless --path godot --script check.gd # 상태를 글로 찍는다
 |---|---|---|
 | `index.wasm` (고도 엔진) | 37.7MB | **10.2MB** — 만드는 것과 무관하게 고정 |
 | `index.pck` (게임) | 8.2MB | 8.2MB (이미 압축된 텍스처라 gzip 이 안 먹는다) |
+
+### 지금 보는 것이 어느 빌드인지 화면에 찍는다 ★
+
+브라우저가 최대 10분 캐시해서(`max-age=600`) 새로고침해도 이전 것이 나올 수 있다.
+그러면 **"고쳤는데 안 바뀐 것" 인지 "아직 이전 빌드를 보는 것" 인지 구분할 방법이
+없다** (2026-09-17 에 지적받았다). 두 가지로 막는다.
+
+1. **빌드 표시** — 화면 왼쪽 위에 `빌드 a1b2c3d 09-17 05:30` 이 찍힌다. CI 가
+   굽기 직전에 `godot/build.json` 을 쓴다 (커밋하지 않는다 — 개발 중에는 "개발중").
+2. **새 빌드 알림** — 같은 값을 사이트에 `build.txt` 로 나란히 올리고, 게임이
+   시작할 때 `?t=` 를 붙여 받아 대본다. 다르면 화면에 **"새 빌드가 있습니다 —
+   새로고침하세요"** 가 뜬다. 캐시한 것을 보고 있어도 이 20바이트짜리는 새로 받는다.
 
 **엔진은 배포할 때마다 다시 받는다.** 내용이 한 글자도 안 바뀌어도 그렇다 —
 GitHub Pages 가 배포 시각을 ETag 에 넣기 때문이다 (`6aab3f31-25af282` →

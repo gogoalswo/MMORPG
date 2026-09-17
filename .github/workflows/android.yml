@@ -71,6 +71,8 @@ jobs:
         run: |
           set -e
           npm ci
+          printf '{"commit":"%s","at":"%s"}\n' \
+            "$(git rev-parse --short HEAD)" "$(date -u '+%m-%d %H:%M')" > godot/build.json
           npm run sync:godot
           ~/godot-bin/godot --headless --path godot --import
 

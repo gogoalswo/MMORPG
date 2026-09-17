@@ -67,6 +67,14 @@ jobs:
           mv /tmp/tpl/templates "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
 
       # 판정이 TS 와 갈라지면 여기서 멈춘다. 배포까지 가지 않는다
+      # 화면에 찍어 "지금 보는 것이 어느 빌드인가" 를 바로 알 수 있게 한다.
+      # 브라우저가 최대 10분 캐시하므로 이게 없으면 구분할 방법이 없다
+      - name: 빌드 표시 굽기
+        run: |
+          printf '{"commit":"%s","at":"%s"}\n' \
+            "$(git rev-parse --short HEAD)" "$(date -u '+%m-%d %H:%M')" > godot/build.json
+          cat godot/build.json
+
       - name: 고도 테스트
         run: |
           set -e
@@ -82,6 +90,14 @@ jobs:
           ~/godot-bin/godot --headless --path godot --import
           ~/godot-bin/godot --headless --path godot \
             --export-release "Web" "$GITHUB_WORKSPACE/packages/client/dist/game/index.html"
+          # pck 안이 아니라 사이트에 나란히 둔다. 게임이 ?t= 를 붙여 받아
+          # 캐시한 이전 빌드를 보고 있는지 스스로 확인한다 (Build.check_latest)
+          node -e "
+            const b = require('./godot/build.json');
+            require('fs').writeFileSync(
+              'packages/client/dist/game/build.txt', b.commit + ' ' + b.at + '\n'
+            );
+          "
           ls -lh packages/client/dist/game
 
       - uses: actions/upload-pages-artifact@v3

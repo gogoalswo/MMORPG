@@ -39,6 +39,8 @@ var _last_event := ""
 var _ui_root: Control
 var _hp_bar: ProgressBar
 var _gate_panel: PanelContainer
+## 보스 범위 공격 예고. [{node, fill, start, end, radius}, ...]
+var _aoe_marks: Array = []
 
 
 func _ready() -> void:
@@ -73,6 +75,8 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			_gate_panel.visible = false
 		&"revived":
 			_last_event = "마을에서 되살아났습니다"
+		&"aoe":
+			_show_aoe(payload)
 		&"gate":
 			# 차원문에 섰다. 어디로 갈지는 사람이 고른다
 			_gate_panel.visible = true
@@ -199,6 +203,7 @@ func _on_gate_pick(zone_id: String) -> void:
 func _build_zone(zone_id: String) -> void:
 	if _zone_node != null:
 		_zone_node.queue_free()
+	_aoe_marks.clear()
 	_zone_node = Node3D.new()
 	add_child(_zone_node)
 	_shown_zone = zone_id
@@ -345,6 +350,7 @@ func _process(delta: float) -> void:
 	_moving = false
 	_send_input(delta)
 	_draw_state()
+	_tick_aoe()
 
 
 ## 눌러 둔 자리로 향하는 방향을 만들어 보낸다. **요청일 뿐이고 판정은 World 가 한다.**
@@ -492,3 +498,69 @@ func _draw_state() -> void:
 		Engine.get_frames_per_second(),
 		_last_event,
 	]
+
+
+## 보스 범위 공격 예고 원.
+##
+## 바깥 테두리는 **터질 자리와 크기**를 그대로 보여 주고(판정과 같은 반지름),
+## 안쪽 원이 차오르며 남은 시간을 알린다. 다 차면 터진다 — 그 전에 테두리
+## 밖으로 나가면 안 맞는다 (`World._burst_aoe` 가 원으로 다시 자른다).
+func _show_aoe(payload: Dictionary) -> void:
+	if _zone_node == null:
+		return
+	var radius := float(payload.get("radius", 7.0))
+	var here := Vector3(payload.get("x", 0.0), 0.06, payload.get("z", 0.0))
+
+	var mark := Node3D.new()
+	mark.position = here
+	_zone_node.add_child(mark)
+
+	var edge := MeshInstance3D.new()
+	var ring := TorusMesh.new()
+	ring.inner_radius = radius - 0.25
+	ring.outer_radius = radius
+	edge.mesh = ring
+	edge.material_override = _aoe_material(0.85)
+	mark.add_child(edge)
+
+	var fill := MeshInstance3D.new()
+	var disc := CylinderMesh.new()
+	disc.top_radius = 1.0
+	disc.bottom_radius = 1.0
+	disc.height = 0.04
+	fill.mesh = disc
+	fill.material_override = _aoe_material(0.3)
+	mark.add_child(fill)
+
+	var now := Time.get_ticks_msec()
+	_aoe_marks.append({
+		"node": mark,
+		"fill": fill,
+		"start": now,
+		"end": now + int(payload.get("delay_ms", 1600)),
+		"radius": radius,
+	})
+
+
+func _aoe_material(alpha: float) -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.95, 0.25, 0.2, alpha)
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	return mat
+
+
+func _tick_aoe() -> void:
+	var now := Time.get_ticks_msec()
+	var alive: Array = []
+	for mark in _aoe_marks:
+		if not is_instance_valid(mark.node):
+			continue
+		var span: float = maxf(1.0, float(mark.end - mark.start))
+		var ratio := clampf((now - mark.start) / span, 0.0, 1.0)
+		mark.fill.scale = Vector3(mark.radius * ratio, 1.0, mark.radius * ratio)
+		if ratio >= 1.0:
+			mark.node.queue_free()
+			continue
+		alive.append(mark)
+	_aoe_marks = alive

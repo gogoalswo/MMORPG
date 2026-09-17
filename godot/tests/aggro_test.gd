@@ -39,18 +39,10 @@ func _setup(mob_x: float, mob_z: float, player_x: float, player_z: float) -> Arr
 	me.x = player_x
 	me.z = player_z
 	var mobs: Array = w.snapshot().monsters
-	mobs.append({
-		"id": "dummy", "kind": "mob003", "x": mob_x, "z": mob_z, "rot": 0.0,
-		"r": 0.38, "scale": 1.0, "color": "#888888", "boss": false,
-		"level": 3, "max_hp": 100, "hp": 100, "defense": 3.0,
-		"exp_reward": 25.0, "respawn_ms": 10000.0, "respawn_at": 0,
-		# 들늑대 실제 값
-		"attack": 9.0, "attack_range": 1.9, "attack_cooldown": 1200.0,
-		"aggro": 9.1, "leash": 22.2, "speed": 3.6,
-		"home_x": mob_x, "home_z": mob_z,
-		"target": "", "state": "idle", "next_attack_at": 0, "rooted_until": 0,
-		"push_angle": 0.0,
-	})
+	# 들늑대(mob003) 실제 값으로. World 스폰과 같은 함수를 쓴다
+	mobs.append(World.make_monster(
+		"dummy", GameData.monster_kind("mob003"), mob_x, mob_z, 10000.0, 0.0
+	))
 	return [w, me, mobs[0]]
 
 

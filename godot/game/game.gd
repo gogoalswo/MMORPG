@@ -34,6 +34,10 @@ var _zone_node: Node3D
 var _shown_zone := ""
 ## 눌러 둔 몬스터. 사거리에 들 때까지 걸어가서 계속 친다
 var _target_mob := ""
+## 골라 둔 몬스터. 발밑에 고리가 돈다 — **땅을 눌러도 안 풀린다**
+var _selected_mob := ""
+## 골라 둔 놈 발밑의 고리 (game/select_ring.gd). 안 골랐으면 null
+var _ring: SelectRing
 ## 몬스터 id -> 그려 둔 몸. 죽으면 감추고 살아나면 다시 보인다
 var _mob_nodes: Dictionary = {}
 ## 마지막으로 일어난 일 한 줄 (맞았다·레벨 올랐다)
@@ -577,6 +581,11 @@ func _build_zone(zone_id: String) -> void:
 	_half_size = Movement.zone_half_size(size)
 	_target = Vector3.INF
 	_marker.visible = false
+	# 몬스터 id 는 존마다 다시 매겨진다. 고리는 _zone_node 와 같이 사라지므로
+	# 여기서 고른 것도 같이 놓는다
+	_selected_mob = ""
+	_ring = null
+	_target_mob = ""
 
 	var world_env := WorldEnvironment.new()
 	var e := Environment.new()
@@ -691,10 +700,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		# 몬스터를 눌렀으면 그놈을 잡으러 간다. 아니면 그 자리로 걸어간다
 		var mob := _mob_at(hit)
 		if mob != "":
+			_select_mob(mob)
 			_target_mob = mob
 			_target = Vector3.INF
 			_marker.visible = false
 		else:
+			# 땅을 누르면 걸어가기만 한다. **골라 둔 놈은 그대로 둔다** —
+			# 원거리 직업이 자리를 옮겨 가며 같은 놈을 보는 게 자연스럽다
+			# (docs/features/auto-hunt-and-targeting.md 의 "클릭 타겟팅")
 			_target_mob = ""
 			_target = hit
 			_marker.position = hit + Vector3(0, 0.05, 0)
@@ -721,6 +734,42 @@ func _mob_at(point: Vector3) -> String:
 			best_gap = gap
 			best = monster.id
 	return best
+
+
+## 이놈을 골라 둔다. 발밑에 고리를 세우고, 자리는 _tick_ring 이 매 프레임 따라간다.
+##
+## **판정에는 안 보낸다** — 누구를 맞출지는 World 가 정면 부채꼴에서 다시 고른다
+## (docs/features/godot-migration.md 의 "대상은 서버가 고른다")
+func _select_mob(id: String) -> void:
+	if id == _selected_mob and _ring != null and is_instance_valid(_ring):
+		return
+	_clear_selection()
+	_selected_mob = id
+	if _zone_node != null:
+		_ring = SelectRing.create(_zone_node)
+
+
+## 골라 둔 것을 놓는다 (죽었다·내가 죽었다·존을 옮겼다)
+func _clear_selection() -> void:
+	_selected_mob = ""
+	if _ring != null and is_instance_valid(_ring):
+		_ring.queue_free()
+	_ring = null
+
+
+## 골라 둔 놈 발밑으로 고리를 옮긴다. 놓을 자리는 여기 한 군데다 —
+## 몬스터가 죽는 길이 여럿이라 각자 지우게 두면 반드시 한 곳이 빠진다
+func _tick_ring(snap: Dictionary) -> void:
+	if _selected_mob == "":
+		return
+	var me: Dictionary = snap.get("players", {}).get(_transport.my_id(), {})
+	var mob := _find_mob(snap, _selected_mob)
+	if bool(me.get("dead", false)) or mob.is_empty() or int(mob.hp) <= 0:
+		_clear_selection()
+		return
+	if _ring == null or not is_instance_valid(_ring):
+		return
+	_ring.follow(Vector3(mob.x, 0.0, mob.z), float(mob.r), _last_delta)
 
 
 ## 화면의 한 점이 바닥의 어디인지
@@ -865,6 +914,8 @@ func _draw_state() -> void:
 				node.play("Attack")
 			else:
 				node.play("Idle")
+
+	_tick_ring(snap)
 
 	var alive := 0
 	for monster in snap.get("monsters", []):

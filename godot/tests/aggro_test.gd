@@ -47,17 +47,19 @@ func _setup(mob_x: float, mob_z: float, player_x: float, player_z: float) -> Arr
 
 
 func _case_idle() -> void:
-	# 어그로(9.1m) 밖이면 가만히 있는다
+	# 어그로(9.1m) 밖이면 쫓지 않는다. **가만히 서 있는 것은 아니다** —
+	# 집 주변을 서성인다 (순찰은 tests/patrol_test.gd 가 따로 본다)
 	var s := _setup(-20.0, 0.0, -20.0, 15.0)
 	var w: World = s[0]
 	var mob: Dictionary = s[2]
-	var before := Vector2(mob.x, mob.z)
 	for i in 30:
 		w.step(1.0 / 60.0)
-	if Vector2(mob.x, mob.z).distance_to(before) > 1e-6:
-		_fail("어그로 밖인데 움직였다")
-	elif mob.state != "idle":
+	if mob.target != "":
+		_fail("어그로 밖인데 대상을 잡았다")
+	elif mob.state != "idle" and mob.state != "patrol":
 		_fail("어그로 밖인데 상태가 %s" % mob.state)
+	elif Vector2(mob.x - mob.home_x, mob.z - mob.home_z).length() > World.PATROL_RADIUS + 0.1:
+		_fail("어그로 밖인데 집에서 멀어졌다")
 
 
 func _case_chase() -> void:

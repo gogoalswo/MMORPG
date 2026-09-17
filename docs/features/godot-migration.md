@@ -373,6 +373,7 @@ Q/E 회전과 줌은 아직 안 옮겼다. 웹 쪽에는 있다.
 | 몬스터 스폰·충돌·차원문 | `... tests/monster_test.gd` |
 | 전투 공식과 실제 전투 | `... tests/combat_test.gd` |
 | 어그로·추적·반격·사망·부활 | `... tests/aggro_test.gd` |
+| 순찰 (쫓을 사람이 없을 때 집 주변 서성이기) | `... tests/patrol_test.gd` |
 | 모델·클립·기둥 대체 | `... tests/model_test.gd` |
 | 한글 폰트·체력바·사냥터 고르기 | `... tests/ui_test.gd` |
 | 보스 범위 공격 (실제 시간 1.8초를 기다린다) | `... tests/aoe_test.gd` |

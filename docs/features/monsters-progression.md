@@ -11,7 +11,10 @@
 | `packages/shared/src/monsters.ts` | 종류 60개 생성, 능력치 공식 |
 | `packages/shared/src/combat.ts` | 레벨 곡선(`expToNext`), 경험치 보상(`expReward`) |
 | `packages/shared/src/combat.test.ts` | 곡선이 감당 범위인지 검사 |
-| `packages/server/src/combat.ts` | 몬스터 AI (idle → chase → attack → 복귀) |
+| `packages/server/src/combat.ts` | 옛 몬스터 AI (idle → chase → attack → 복귀). 이식 원본 |
+| `godot/world/world.gd` | **지금 도는 몬스터 AI** — `_step_monsters`(상태 기계) · `_patrol`(순찰) |
+| `godot/tests/aggro_test.gd` | 어그로·추적·반격·사망 확인 |
+| `godot/tests/patrol_test.gd` | 순찰 확인 (목적지·반경·쉬는 시각·어그로 우선) |
 
 ## 규칙
 
@@ -35,6 +38,38 @@ expReward = 4 + 7 * level
   그리고 **범위 공격 `aoe: BOSS_AOE`** — 예고하고 터지는 원.
   일반 몬스터에는 붙이지 않는다. 사냥터를 지나다니는 것 자체가 피하기 놀이가
   되면 정작 보스를 만났을 때 특별하지 않다. 규칙은 [combat.md](combat.md).
+
+### 순찰 (쫓을 사람이 없을 때) ★
+
+쫓을 사람이 없는 몬스터는 **집 주변을 서성인다.** `godot/world/world.gd` 의
+`_patrol` 이고, 상수도 그 파일 위쪽에 있다.
+
+| 상수 | 값 | 뜻 |
+|---|---|---|
+| `PATROL_RADIUS` | 4.0 m | 집에서 이 반경 안에서만 돈다 |
+| `PATROL_SPEED` | 0.35 | 제 이동 속도의 이만큼 (걷는 것처럼) |
+| `PATROL_ARRIVE` | 0.3 m | 이만큼 붙으면 도착 |
+| `PATROL_REST_MIN/MAX_MS` | 2000~6000 | 한 다리 걷고 쉬는 시간 |
+
+한 다리 = `[반경×0.4, 반경]` 안의 아무 자리로 걸어가기. 닿으면 다음 자리를 뽑고
+`REST` 만큼 쉰다. 쉬는 동안 상태는 `idle`, 걷는 동안은 `patrol` 이다.
+
+- **왜 돌아다니나** — 선 채로 굳어 있으면 죽은 것처럼 보인다.
+- **왜 반경이 어그로(보통 9m)보다 작나** — 순찰이 사람에게 먼저 닿으면
+  "가만히 있었는데 몬스터가 찾아와 때렸다" 가 된다. 4m 를 다 걸어 나와도
+  어그로 범위 안쪽이라, 먼저 거는 쪽은 여전히 어그로다.
+- **왜 쉬는 시각을 놈마다 다르게 뽑나** — 같으면 무리가 한 몸처럼 움직인다.
+  처음에는 `patrol_rest_until` 이 0 이라 첫 판정에서 곧바로 목적지를 뽑고
+  각자 다른 시각까지 쉬기 시작한다.
+- **왜 쉬는 시간이 있나** — 쉬는 동안은 `_move_monster` 를 안 부르니
+  몬스터끼리 미는 계산도 쉬어 간다. 한 존에 80마리라 폰에서는 이게 크다.
+- 집에서 반경보다 멀리 나와 있으면(쫓다가 대상을 잃은 뒤) 먼저 집 쪽으로
+  **반 속도**로 걸어 돌아온다. 상태는 `patrol` 이다.
+- 순찰보다 먼저 보는 것들: 예고해 둔 범위 공격, 공격 경직, leash 복귀, 대상 탐색.
+  즉 **어그로가 순찰을 언제나 이긴다.**
+
+화면(`godot/game/game.gd`)은 `patrol` 을 **달리기 클립 반 배속**으로 그린다 —
+걷기 클립이 따로 없다.
 
 ### 레벨 곡선
 - `MAX_LEVEL = 200`, `expToNext(L) = round(55 * L^1.2)`.

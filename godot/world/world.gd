@@ -34,6 +34,20 @@ const NPC_REACH := 4.5
 ## 몇 초마다 저장하나
 const SAVE_EVERY_MS := 10000
 
+## --- 순찰 ---
+## 쫓을 사람이 없는 몬스터는 집 주변을 서성인다. 가만히 선 무리는 살아 있는 것처럼
+## 보이지 않아서다. 값은 **어그로(보통 9m)보다 작게** 잡는다 — 순찰 때문에
+## 사람에게 먼저 닿으면 "가만히 있었는데 맞았다"가 된다
+const PATROL_RADIUS := 4.0
+## 걷는 것처럼 보이게 제 속도의 이만큼으로만 움직인다
+const PATROL_SPEED := 0.35
+## 목적지에 이만큼 붙으면 도착으로 본다
+const PATROL_ARRIVE := 0.3
+## 한 다리 걷고 쉬는 시간. 무리가 한꺼번에 움직이지 않게 놈마다 다르게 뽑는다.
+## 쉬는 동안은 idle 이라 **매 프레임 미는 것도 쉬어 간다** (폰 부담)
+const PATROL_REST_MIN_MS := 2000
+const PATROL_REST_MAX_MS := 6000
+
 var _next_save_at := 0
 
 
@@ -375,12 +389,7 @@ func _step_monsters(delta: float, now: int) -> void:
 			monster.target = str(target.get("id", ""))
 
 		if target.is_empty():
-			# 집에서 벗어나 있으면 슬슬 돌아간다
-			if home_gap > 1.5:
-				monster.state = "chase"
-				_move_monster(monster, monster.home_x, monster.home_z, float(monster.speed) * 0.5, delta)
-			else:
-				monster.state = "idle"
+			_patrol(monster, home_gap, delta, now)
 			continue
 
 		var dist := Vector2(target.x - monster.x, target.z - monster.z).length()
@@ -418,6 +427,41 @@ func _step_monsters(delta: float, now: int) -> void:
 			monster.next_attack_at = now + int(monster.attack_cooldown)
 			monster.rooted_until = now + Combat.monster_root_ms(float(monster.attack_cooldown))
 			_hit_player(target, monster)
+
+
+## 쫓을 사람이 없을 때. 집 주변에서 한 다리 걷고 잠시 쉰다 (idle ↔ patrol).
+##
+## 돌아다니게 한 이유는 **선 채로 굳어 있으면 죽은 것처럼 보이기** 때문이다.
+## 반경을 어그로보다 작게 둔 것은 순찰이 사람을 먼저 찾아가지 않게 하려는 것이고,
+## 쉬는 시간을 놈마다 다르게 뽑는 것은 무리가 한 몸처럼 움직이지 않게 하려는 것이다.
+func _patrol(monster: Dictionary, home_gap: float, delta: float, now: int) -> void:
+	# 쫓다가 대상을 잃고 멀리 나와 있으면 먼저 집으로 걸어 돌아온다.
+	# 서성이는 속도로 오면 한참 걸려서 반 속도로 온다
+	if home_gap > PATROL_RADIUS:
+		monster.state = "patrol"
+		monster.patrol_x = monster.home_x
+		monster.patrol_z = monster.home_z
+		monster.patrol_rest_until = 0
+		_move_monster(monster, monster.home_x, monster.home_z, float(monster.speed) * 0.5, delta)
+		return
+
+	if now < int(monster.patrol_rest_until):
+		monster.state = "idle"
+		return
+
+	var gap := Vector2(float(monster.patrol_x) - monster.x, float(monster.patrol_z) - monster.z).length()
+	if gap > PATROL_ARRIVE:
+		monster.state = "patrol"
+		_move_monster(monster, monster.patrol_x, monster.patrol_z, float(monster.speed) * PATROL_SPEED, delta)
+		return
+
+	# 다 걸었다. 집 반경 안에서 다음 자리를 뽑고 쉰다
+	var angle := _rng.randf() * TAU
+	var reach := _rng.randf_range(PATROL_RADIUS * 0.4, PATROL_RADIUS)
+	monster.patrol_x = clampf(float(monster.home_x) + sin(angle) * reach, -half_size, half_size)
+	monster.patrol_z = clampf(float(monster.home_z) + cos(angle) * reach, -half_size, half_size)
+	monster.patrol_rest_until = now + _rng.randi_range(PATROL_REST_MIN_MS, PATROL_REST_MAX_MS)
+	monster.state = "idle"
 
 
 ## 어그로 범위 안에서 가장 가까운 산 사람
@@ -561,6 +605,11 @@ static func make_monster(
 		"home_z": z,
 		"target": "",
 		"state": "idle",
+		# --- 순찰 --- 쫓을 사람이 없을 때 걸어갈 자리와, 다음 다리를 시작할 시각.
+		# 처음에는 제자리·0 이라 첫 판정에서 곧바로 목적지를 뽑고 쉬기 시작한다
+		"patrol_x": x,
+		"patrol_z": z,
+		"patrol_rest_until": 0,
 		"next_attack_at": 0,
 		"rooted_until": 0,
 		# 정확히 겹쳤을 때 밀려날 방향. **서로 달라야 풀린다**

@@ -912,6 +912,9 @@ func _draw_state() -> void:
 			var state := str(monster.get("state", "idle"))
 			if state == "chase":
 				node.play("Run")
+			elif state == "patrol":
+				# 순찰은 걷는 것이다. 걷기 클립이 없으니 달리기를 반 배속으로 돌린다
+				node.play("Run", 0.5)
 			elif state == "attack":
 				node.play("Attack")
 			else:

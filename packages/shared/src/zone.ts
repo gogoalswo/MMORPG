@@ -59,12 +59,15 @@ export const GROUND_LOOKS: Record<GroundKind, GroundLook> = {
   lava: { tile: 12, blend: 0, roughness: 0.9, mean: '#3e3837', glow: 1 },
 };
 
-/** 존의 분위기 — 색, 안개, 바닥 */
+/**
+ * 존의 분위기 — 색, 바닥.
+ *
+ * **안개는 없다** (2026-09-18 요청: "안개를 넣으라고 한 적이 없는데 왜 넣은거야?
+ * 그냥 안개를 없애버려"). `fogColor`/`fogNear`/`fogFar` 를 데이터째 걷어냈다 —
+ * 안개는 곱이 아니라 더하기라 돌 틈처럼 어두운 데를 들어올려 바닥 무늬를 씻는다.
+ */
 export interface ZoneEnv {
   skyColor: string;
-  fogColor: string;
-  fogNear: number;
-  fogFar: number;
   sunIntensity: number;
   hemiIntensity: number;
 

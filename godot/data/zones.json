@@ -93,9 +93,6 @@
       ],
       "env": {
         "skyColor": "#b9c9d8",
-        "fogColor": "#c2c8b8",
-        "fogNear": 70,
-        "fogFar": 190,
         "sunIntensity": 2.7,
         "hemiIntensity": 1.1,
         "grassDark": "#5c6a3c",
@@ -167,9 +164,6 @@
       ],
       "env": {
         "skyColor": "#b4c6cf",
-        "fogColor": "#bcc4ae",
-        "fogNear": 68,
-        "fogFar": 185,
         "sunIntensity": 2.61,
         "hemiIntensity": 1.07,
         "grassDark": "#54663a",
@@ -241,9 +235,6 @@
       ],
       "env": {
         "skyColor": "#5f6b63",
-        "fogColor": "#48544a",
-        "fogNear": 45,
-        "fogFar": 135,
         "sunIntensity": 1.71,
         "hemiIntensity": 0.8,
         "grassDark": "#2f3a28",
@@ -315,9 +306,6 @@
       ],
       "env": {
         "skyColor": "#c4b39a",
-        "fogColor": "#b09c7f",
-        "fogNear": 61,
-        "fogFar": 170,
         "sunIntensity": 2.34,
         "hemiIntensity": 0.99,
         "grassDark": "#6b6142",
@@ -389,9 +377,6 @@
       ],
       "env": {
         "skyColor": "#4a4750",
-        "fogColor": "#3d3a42",
-        "fogNear": 38,
-        "fogFar": 120,
         "sunIntensity": 1.44,
         "hemiIntensity": 0.72,
         "grassDark": "#3a3740",
@@ -463,9 +448,6 @@
       ],
       "env": {
         "skyColor": "#6d7a6a",
-        "fogColor": "#5b6a58",
-        "fogNear": 42,
-        "fogFar": 130,
         "sunIntensity": 1.62,
         "hemiIntensity": 0.77,
         "grassDark": "#37452f",
@@ -537,9 +519,6 @@
       ],
       "env": {
         "skyColor": "#c8d8e4",
-        "fogColor": "#aec2d2",
-        "fogNear": 63,
-        "fogFar": 175,
         "sunIntensity": 2.43,
         "hemiIntensity": 1.02,
         "grassDark": "#6d7f86",
@@ -611,9 +590,6 @@
       ],
       "env": {
         "skyColor": "#39423a",
-        "fogColor": "#2a322b",
-        "fogNear": 33,
-        "fogFar": 110,
         "sunIntensity": 1.26,
         "hemiIntensity": 0.66,
         "grassDark": "#1f2a1c",
@@ -685,9 +661,6 @@
       ],
       "env": {
         "skyColor": "#8f8d86",
-        "fogColor": "#75736c",
-        "fogNear": 54,
-        "fogFar": 155,
         "sunIntensity": 2.07,
         "hemiIntensity": 0.91,
         "grassDark": "#4f5348",
@@ -759,9 +732,6 @@
       ],
       "env": {
         "skyColor": "#d8b98a",
-        "fogColor": "#c9aa76",
-        "fogNear": 65,
-        "fogFar": 180,
         "sunIntensity": 2.52,
         "hemiIntensity": 1.05,
         "grassDark": "#9c7c4a",
@@ -833,9 +803,6 @@
       ],
       "env": {
         "skyColor": "#dcdcd4",
-        "fogColor": "#c3c3ba",
-        "fogNear": 65,
-        "fogFar": 180,
         "sunIntensity": 2.52,
         "hemiIntensity": 1.05,
         "grassDark": "#9a9a8e",
@@ -907,9 +874,6 @@
       ],
       "env": {
         "skyColor": "#a89448",
-        "fogColor": "#8e7c36",
-        "fogNear": 56,
-        "fogFar": 160,
         "sunIntensity": 2.16,
         "hemiIntensity": 0.94,
         "grassDark": "#6e6428",
@@ -981,9 +945,6 @@
       ],
       "env": {
         "skyColor": "#5a4a46",
-        "fogColor": "#463a37",
-        "fogNear": 40,
-        "fogFar": 125,
         "sunIntensity": 1.53,
         "hemiIntensity": 0.74,
         "grassDark": "#3b3230",
@@ -1055,9 +1016,6 @@
       ],
       "env": {
         "skyColor": "#8fa6bb",
-        "fogColor": "#7089a0",
-        "fogNear": 45,
-        "fogFar": 135,
         "sunIntensity": 1.71,
         "hemiIntensity": 0.8,
         "grassDark": "#4a5f6e",
@@ -1129,9 +1087,6 @@
       ],
       "env": {
         "skyColor": "#3f3a2c",
-        "fogColor": "#302c22",
-        "fogNear": 36,
-        "fogFar": 115,
         "sunIntensity": 1.35,
         "hemiIntensity": 0.69,
         "grassDark": "#2c2f1f",
@@ -1203,9 +1158,6 @@
       ],
       "env": {
         "skyColor": "#2e2a3d",
-        "fogColor": "#221f2e",
-        "fogNear": 31,
-        "fogFar": 105,
         "sunIntensity": 1.17,
         "hemiIntensity": 0.63,
         "grassDark": "#232036",
@@ -1277,9 +1229,6 @@
       ],
       "env": {
         "skyColor": "#7d7d80",
-        "fogColor": "#65656a",
-        "fogNear": 49,
-        "fogFar": 145,
         "sunIntensity": 1.89,
         "hemiIntensity": 0.85,
         "grassDark": "#4b4b4d",
@@ -1351,9 +1300,6 @@
       ],
       "env": {
         "skyColor": "#cfd2cf",
-        "fogColor": "#b3b7b4",
-        "fogNear": 61,
-        "fogFar": 170,
         "sunIntensity": 2.34,
         "hemiIntensity": 0.99,
         "grassDark": "#7f857c",
@@ -1425,9 +1371,6 @@
       ],
       "env": {
         "skyColor": "#4a3358",
-        "fogColor": "#392846",
-        "fogNear": 36,
-        "fogFar": 115,
         "sunIntensity": 1.35,
         "hemiIntensity": 0.69,
         "grassDark": "#332a3d",
@@ -1499,9 +1442,6 @@
       ],
       "env": {
         "skyColor": "#25303c",
-        "fogColor": "#1c252f",
-        "fogNear": 29,
-        "fogFar": 100,
         "sunIntensity": 1.08,
         "hemiIntensity": 0.61,
         "grassDark": "#1e2730",
@@ -1573,9 +1513,6 @@
       ],
       "env": {
         "skyColor": "#2e1d22",
-        "fogColor": "#241619",
-        "fogNear": 26,
-        "fogFar": 95,
         "sunIntensity": 0.99,
         "hemiIntensity": 0.58,
         "grassDark": "#26191d",

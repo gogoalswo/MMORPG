@@ -571,10 +571,10 @@ func _on_gate_pick(zone_id: String) -> void:
 ## "안개를 넣으라고 한 적이 없는데 왜 넣은거야? 그냥 안개를 없애버려").
 ##
 ## 안개는 옛 웹 클라이언트에 있던 것이 고도 이관 때 따라온 것이고, 옮기면서
-## 선형(`fogNear` 70 ~ `fogFar` 190)이 near 없는 지수 안개로 바뀌어 카메라 앞
-## 27m 바닥에도 15% 섞이고 있었다. 안개는 곱이 아니라 **더하기**라 돌 틈 같은
-## 어두운 데를 그대로 들어올린다 — 바닥 무늬가 씻기고 화면이 안개색으로 떴다.
-## `env` 의 `fogColor`·`fogNear`·`fogFar` 는 옛 서버가 아직 들고 있어 남겨 뒀다.
+## 선형(70~190m)이 near 없는 지수 안개로 바뀌어 카메라 앞 27m 바닥에도 15%
+## 섞이고 있었다. 안개는 곱이 아니라 **더하기**라 돌 틈 같은 어두운 데를 그대로
+## 들어올린다 — 바닥 무늬가 씻기고 화면이 안개색으로 떴다. 존 데이터의
+## `fogColor`·`fogNear`·`fogFar` 도 같은 날 걷어냈다.
 static func environment_for(env: Dictionary) -> Environment:
 	var e := Environment.new()
 	e.background_mode = Environment.BG_COLOR

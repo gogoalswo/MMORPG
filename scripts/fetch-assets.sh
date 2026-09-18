@@ -148,4 +148,35 @@ for n in 1 2 3 4 5; do
   fi
 done
 
+# ------------------------------------------------------------ 가방·장비 아이콘
+
+# 바르코 커스텀 워크플로우 "인벤토리 UI" 의 출력물 11장. 연한 청백색 선화 한 벌이라
+# 창 안에서 서로 겉돌지 않는다. 배경이 검은 것과 흰 것이 섞여 있어(프롬프트마다 다르다)
+# build-item-icons.mjs 가 걷어내고 128px 로 굽는다 → public/assets/icons (커밋한다).
+#
+# glove·belt 는 **아직 어느 칸에 쓸지 안 정했다** — 받아만 두고 고도로는 안 넘긴다
+# (sync-godot-assets.mjs 의 ICONS). 귀걸이(earring)는 그림이 없어 글자로 나온다.
+mkdir -p assets-src/icons
+
+fetch_icon() { # $1=객체 해시  $2=출력 이름
+  if [ ! -f "assets-src/icons/$2.png" ]; then
+    echo "받는 중: icons/$2.png"
+    curl -sL --max-time 120 -o "assets-src/icons/$2.png" "${VARCO}/$1.png"
+  fi
+}
+
+fetch_icon 5e1236b3e6ad6dc7fec570a9bd187a9f weapon    # 검
+fetch_icon 5c25daa856bca458f26f703fe63424f4 offhand   # 방패
+fetch_icon 756fe1b855b1e5cff5038c21253b244a helmet    # 투구
+fetch_icon 0779fa082cdcbc922c8bf8104e9212ea armor     # 갑옷
+fetch_icon 9fc33631108021fa8ec41db82b8ed378 boots     # 장화
+fetch_icon 7798ba00c5755e15d7a9fa28c38083ef ring      # 반지
+fetch_icon 624e1a1a10e8576c2ce473e0155dd4f0 necklace  # 목걸이
+fetch_icon 5fd4ab55b5c3e682f35f8cf81b2a266d bag       # 가방
+fetch_icon 0f5c8a9b06c498361643b69fc4b3d97c gold      # 동전
+fetch_icon 36ce4590784bd702b644bcd409e50f0b glove     # 장갑 (미사용)
+fetch_icon dbc3fc75337294133bfc32ab2628ba5b belt      # 벨트 (미사용)
+
+node scripts/build-item-icons.mjs
+
 echo "완료. 총 $(du -sh public/assets | cut -f1)"

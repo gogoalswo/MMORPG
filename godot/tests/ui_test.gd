@@ -166,9 +166,115 @@ func _run_scene() -> void:
 	if game._auto_button.text.contains("켜짐"):
 		_fail("껐는데 단추 글자가 '%s'" % game._auto_button.text)
 
+	await _case_bag(game)
+
 	if _failed == 0:
 		print("UI: 전부 통과")
 		quit(0)
 	else:
 		print("UI: %d개 실패" % _failed)
 		quit(1)
+
+
+## 가방·장비 창 — 열리나, 칸이 제대로 깔리나, 골라서 낄 수 있나.
+## 스크린샷을 찍지 않는다: 칸 수와 칸 안의 글자·그림은 노드로 읽을 수 있다
+func _case_bag(game: Node3D) -> void:
+	var me: Dictionary = game._transport.snapshot().players[game._transport.my_id()]
+
+	if game._bag_panel.visible:
+		_fail("아직 안 눌렀는데 가방이 떠 있다")
+	game._toggle_bag()
+	await process_frame
+	if not game._bag_panel.visible:
+		_fail("가방 단추를 눌렀는데 창이 안 떴다")
+		return
+
+	# 장비 8칸 · 가방 최소 25칸
+	var slots: Array = Items.slots()
+	if game._bag_gear.get_child_count() != slots.size():
+		_fail("장비가 %d칸이어야 하는데 %d칸" % [slots.size(), game._bag_gear.get_child_count()])
+	if game._bag_grid.get_child_count() < 25:
+		_fail("가방 격자가 25칸 이상이어야 하는데 %d칸" % game._bag_grid.get_child_count())
+	if game._bag_grid.columns != 5:
+		_fail("가방 격자가 5열이어야 하는데 %d열" % game._bag_grid.columns)
+
+	# 그림이 붙었나. 아이콘이 없으면(sync 를 안 돌렸으면) 칸 이름이 글자로 나와야 한다
+	var drawn := 0
+	var named := 0
+	for index in game._bag_gear.get_child_count():
+		var cell: PanelContainer = game._bag_gear.get_child(index)
+		if cell.get_node("icon").texture != null:
+			drawn += 1
+		elif cell.get_node("text").text != "":
+			named += 1
+	if drawn + named != slots.size():
+		_fail("장비 칸 %d개가 그림도 글자도 없다" % [slots.size() - drawn - named])
+	else:
+		print("  가방 창: 장비 %d칸(그림 %d · 글자 %d), 가방 %d칸" % [
+			slots.size(), drawn, named, game._bag_grid.get_child_count()
+		])
+
+	# 머리 줄과 요약 줄
+	if not game._bag_head.text.contains("/%d" % Items.bag_size()):
+		_fail("머리 줄이 '%s'" % game._bag_head.text)
+	if not game._bag_sum.text.contains("치명타"):
+		_fail("요약 줄에 치명타가 없다: '%s'" % game._bag_sum.text)
+
+	# 아무것도 안 골랐으면 상세 칸은 안내만, 단추는 꺼져 있어야 한다
+	if not game._bag_action.disabled:
+		_fail("아무것도 안 골랐는데 끼기 단추가 켜져 있다")
+
+	# 가방에 하나 넣고 — 골라서 낀다
+	me.bag.append({"id": "w_fighter_00", "grade": 3, "enhance": 2, "options": []})
+	game._redraw_bag()
+	await process_frame
+	var first: PanelContainer = game._bag_grid.get_child(0)
+	if first.get_node("badge").text == "":
+		_fail("가방 첫 칸에 배지가 안 붙었다")
+	elif not first.get_node("badge").text.contains("+2"):
+		_fail("강화 배지가 '+2' 여야 하는데 '%s'" % first.get_node("badge").text)
+
+	first.get_node("hit").pressed.emit()
+	await process_frame
+	if game._bag_action.disabled:
+		_fail("칸을 골랐는데 끼기 단추가 안 켜졌다")
+	if game._bag_action.text != "끼기":
+		_fail("가방 칸을 골랐는데 단추가 '%s'" % game._bag_action.text)
+	if not game._bag_detail.text.contains("등급"):
+		_fail("상세 칸이 '%s'" % game._bag_detail.text.left(30))
+
+	game._on_bag_action()
+	for i in 3:
+		await process_frame
+	if me.equipped.get("weapon", {}).is_empty():
+		_fail("끼기를 눌렀는데 무기가 안 끼워졌다")
+	else:
+		var worn: Dictionary = Items.get_item(str(me.equipped.weapon.id))
+		print("  골라서 끼기: 무기 칸에 '%s'" % worn.get("name", "?"))
+
+	# 창이 화면 안에 들어오나. **눈으로 볼 수 없는 것은 재서 본다** —
+	# 칸을 키우다 720 을 넘기면 폰에서 아래가 잘린다
+	var panel: Vector2 = game._bag_panel.size
+	if panel.x > 1280.0 or panel.y > 720.0:
+		_fail("가방 창이 화면(1280x720)보다 크다: %.0fx%.0f" % [panel.x, panel.y])
+	else:
+		print("  창 크기 %.0fx%.0f — 화면 안에 들어온다" % [panel.x, panel.y])
+
+	# 끼운 칸을 골라 벗긴다
+	var slot_index := slots.find("weapon")
+	game._bag_gear.get_child(slot_index).get_node("hit").pressed.emit()
+	await process_frame
+	if game._bag_action.text != "벗기":
+		_fail("장비 칸을 골랐는데 단추가 '%s'" % game._bag_action.text)
+	game._on_bag_action()
+	for i in 3:
+		await process_frame
+	if not me.equipped.get("weapon", {}).is_empty():
+		_fail("벗기를 눌렀는데 무기가 그대로다")
+	else:
+		print("  골라서 벗기: 무기 칸이 비었다")
+
+	game._toggle_bag()
+	await process_frame
+	if game._bag_panel.visible:
+		_fail("다시 눌렀는데 가방이 안 닫혔다")

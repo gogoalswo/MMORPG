@@ -2891,6 +2891,21 @@
     "necklace",
     "earring"
   ],
+  "slotLabels": {
+    "weapon": "무기",
+    "offhand": "보조",
+    "helmet": "투구",
+    "armor": "갑옷",
+    "boots": "신발",
+    "ring": "반지",
+    "necklace": "목걸이",
+    "earring": "귀걸이"
+  },
+  "offhandNames": {
+    "fighter": "보호대",
+    "mage": "마법서",
+    "archer": "화살통"
+  },
   "slotCode": {
     "weapon": "w",
     "offhand": "o",

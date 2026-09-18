@@ -37,6 +37,7 @@ three.js 웹 클라이언트를 **고도 엔진으로 갈아타는 중**이다. 
 | `godot/world/build.gd` | 빌드 표시와 "새 빌드 있음" 확인 |
 | `scripts/sync-godot-assets.mjs` | `public/assets` → `godot/assets` 복사. 모델은 텍스처를 줄여 넣는다 (`npm run sync:godot`) |
 | `scripts/shrink-glb-textures.mjs` | `.glb` 안 텍스처를 512px 로 줄인다 |
+| `scripts/build-item-icons.mjs` | 바르코 아이콘 원본의 배경을 걷고 128px 로 굽는다 → `public/assets/icons` |
 | `scripts/build-korean-font.py` | 한글 폰트를 완성형 2350자로 줄인다. 결과물은 커밋한다 |
 | `godot/tests/*.gd` | 헤드리스 검사 — 이동 공식·World·터치 이동·몬스터 |
 | `godot/export_presets.cfg` | 안드로이드·웹 익스포트 설정. **비밀은 없다** — 아래 "서명" 참고 |
@@ -120,6 +121,10 @@ TS 에 남으니 표가 어긋나면 `npm test` 가 잡는다. 전부 GDScript �
 
 **쓰는 것만 복사한다.** 웹 빌드는 `godot/assets/` 를 통째로 담는다. 직업이 늘면
 `sync-godot-assets.mjs` 의 `MODELS` 에 줄을 더한다.
+
+가방 창 아이콘은 같은 파일의 `ICONS` 다. **이쪽은 커밋한다** — 128px PNG 열한 장이
+합쳐 140KB 라 이력에 남겨도 부담이 없고, 원본(1024²)만 커밋하지 않는다
+→ [inventory-equipment.md](inventory-equipment.md) 의 "아이콘".
 
 ### 텍스처를 512px 로 줄여서 넣는다 ★
 

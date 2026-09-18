@@ -12,6 +12,7 @@ assets-src/*.hdr
 assets-src/*_1K-JPG/
 assets-src/textures/
 assets-src/models/
+assets-src/icons/
 # 검증·서버 로그
 logs/
 # 코드가 읽는 건 sky_1k.hdr 뿐이다. 2k 는 fetch 스크립트가 받아만 두고

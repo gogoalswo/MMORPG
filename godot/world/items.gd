@@ -25,6 +25,14 @@ static func slots() -> Array:
 	return _t().get("slots", [])
 
 
+## 창에 적는 칸 이름. **보조는 직업마다 물건이 다르다** — 격투가 보호대 /
+## 마법사 마법서 / 궁수 화살통. 표는 shared 의 slotLabel 이 낸다
+static func slot_label(slot: String, job: String = "") -> String:
+	if slot == "offhand" and job != "":
+		return str(_t().get("offhandNames", {}).get(job, "보조"))
+	return str(_t().get("slotLabels", {}).get(slot, slot))
+
+
 static func bag_size() -> int:
 	return int(_t().get("bagSize", 200))
 

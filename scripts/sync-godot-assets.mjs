@@ -27,6 +27,19 @@ const MODELS = [
 const FONTS = ['NotoSansKR-subset.ttf'];
 
 /**
+ * 가방·장비 창 아이콘. 바르코로 만들고 `scripts/build-item-icons.mjs` 가 배경을
+ * 걷어 128px 로 구운 것이다 (public/assets/icons).
+ *
+ * **쓰는 것만 복사한다.** 장비 8칸 중 귀걸이(earring)는 아직 그림이 없어 글자로
+ * 나오고, 받아 둔 장갑(glove)·벨트(belt)는 어느 칸에 쓸지 안 정해서 뺐다.
+ */
+const ICONS = [
+  'weapon.png', 'offhand.png', 'helmet.png', 'armor.png',
+  'boots.png', 'ring.png', 'necklace.png',
+  'bag.png', 'gold.png',
+];
+
+/**
  * 바닥 텍스처 7종(색 + 노멀). **고도가 .ktx2 를 그대로 읽는다** — 시험해 보고
  * 확인했다 (2026-09-17). 일곱 장을 전부 넣는다: 존마다 받으면 존 구성이
  * 비동기가 되는데 그만한 크기가 아니다 (14장 2.5MB).
@@ -50,6 +63,7 @@ const jobs = [
     shrink: true,
   },
   { names: FONTS, from: join(ROOT, 'public', 'assets', 'fonts'), to: join(ROOT, 'godot', 'assets', 'fonts') },
+  { names: ICONS, from: join(ROOT, 'public', 'assets', 'icons'), to: join(ROOT, 'godot', 'assets', 'icons') },
   { names: GROUND, from: join(ROOT, 'public', 'assets', 'textures'), to: join(ROOT, 'godot', 'assets', 'ground') },
 ];
 

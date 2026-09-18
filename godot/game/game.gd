@@ -11,6 +11,16 @@ extends Node3D
 
 const STOP_DISTANCE := 0.15
 
+## 가방·장비 창. 가방 격자는 5열 — 웹 클라의 COLUMNS 와 같다
+## (docs/features/inventory-equipment.md). 장비는 8칸이라 4열 두 줄로 떨어진다
+const BAG_COLUMNS := 5
+const GEAR_COLUMNS := 4
+## 비어 보이지 않게 깔아 두는 최소 칸 수 (5열 × 5줄)
+const BAG_MIN_CELLS := 25
+## 칸 한 변. 1280x720 화면에서 5열이 들어가고 손가락으로 짚을 수 있는 크기다
+const CELL := 84
+const ICON_DIR := "res://assets/icons/"
+
 var _transport: Transport
 var _player: Node3D
 ## 기둥은 가운데가 원점이라 반만큼 띄워야 하고, 모델은 발이 원점이다
@@ -65,8 +75,17 @@ var _bar_buttons: Array = []
 ## 눌린 것으로 지레 바꾸면 판정이 거절했을 때 화면만 켜진 채로 남는다
 var _auto_button: Button
 var _skill_panel: PanelContainer
+## 가방·장비 창. 틀은 한 번만 짓고 `_redraw_bag` 이 내용만 채운다
 var _bag_panel: PanelContainer
-var _bag_rows: VBoxContainer
+var _bag_head: Label
+var _bag_gold: Label
+var _bag_gear: GridContainer
+var _bag_sum: Label
+var _bag_grid: GridContainer
+var _bag_detail: Label
+var _bag_action: Button
+## 고른 칸 — {"where": "equip"|"bag", "index": int}. 비면 아무것도 안 골랐다
+var _bag_pick: Dictionary = {}
 
 
 func _ready() -> void:
@@ -211,16 +230,198 @@ func _build_persistent() -> void:
 	_build_bag_panel()
 
 
-## 가방과 장비. 웹 클라의 ui/inventory.ts 자리다.
-## 목록은 **열 때마다 다시 그린다** — 줍고 끼는 동안 계속 바뀌기 때문이다
+## 가방과 장비 창. 웹 클라의 ui/inventory.ts 자리다.
+##
+## 레이아웃은 문서에 적힌 그대로다 — **장비 8칸 → 요약 줄 → 가방 격자(5열) →
+## 상세 칸** (docs/features/inventory-equipment.md). 칸이 84px 이라 이름을 다
+## 못 쓰므로, 고른 것의 이름·옵션은 아래 상세 칸이 푼다.
+##
+## **틀은 한 번만 짓고 내용만 다시 채운다.** 예전에는 열 때마다 통째로 다시
+## 그렸는데, 칸이 8 + 25개가 되면서 매번 지웠다 만들면 눌러 둔 칸이 풀리고
+## 스크롤이 맨 위로 튄다.
+##
+## 그림은 바르코로 만든 아이콘이다 (assets/icons). **없으면 글자로 나온다** —
+## npm run sync:godot 을 안 돌린 사람도 창은 돌아가야 한다 (모델의 기둥과 같은 규칙)
 func _build_bag_panel() -> void:
 	_bag_panel = PanelContainer.new()
 	_bag_panel.set_anchors_preset(Control.PRESET_CENTER)
 	_bag_panel.visible = false
 	_ui_root.add_child(_bag_panel)
 
-	_bag_rows = VBoxContainer.new()
-	_bag_panel.add_child(_bag_rows)
+	var rows := VBoxContainer.new()
+	_bag_panel.add_child(rows)
+
+	# 머리 줄 — 가방 칸 수와 골드
+	var head := HBoxContainer.new()
+	rows.add_child(head)
+	_add_icon(head, "bag", 44)
+	_bag_head = Label.new()
+	_bag_head.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	head.add_child(_bag_head)
+	_add_icon(head, "gold", 44)
+	_bag_gold = Label.new()
+	_bag_gold.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	head.add_child(_bag_gold)
+
+	# 장비 8칸. **칸 순서는 데이터가 정한다** (items.json 의 slots)
+	rows.add_child(_section_title("장비"))
+	_bag_gear = GridContainer.new()
+	_bag_gear.columns = GEAR_COLUMNS
+	rows.add_child(_bag_gear)
+	for index in Items.slots().size():
+		_bag_gear.add_child(_make_cell(_pick_bag.bind("equip", index)))
+
+	# 요약 줄 — 상태바에 안 나오는 것만 적는다
+	_bag_sum = Label.new()
+	_bag_sum.add_theme_font_size_override("font_size", 22)
+	rows.add_child(_bag_sum)
+
+	rows.add_child(_section_title("가방"))
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(CELL * BAG_COLUMNS, CELL * 2 + 12)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	rows.add_child(scroll)
+	_bag_grid = GridContainer.new()
+	_bag_grid.columns = BAG_COLUMNS
+	scroll.add_child(_bag_grid)
+
+	# 상세 칸
+	_bag_detail = Label.new()
+	_bag_detail.custom_minimum_size = Vector2(CELL * BAG_COLUMNS, 76)
+	_bag_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_bag_detail.add_theme_font_size_override("font_size", 22)
+	rows.add_child(_bag_detail)
+
+	var buttons := HBoxContainer.new()
+	rows.add_child(buttons)
+	_bag_action = Button.new()
+	_bag_action.custom_minimum_size = Vector2(170, 64)
+	_bag_action.pressed.connect(_on_bag_action)
+	buttons.add_child(_bag_action)
+	var close := Button.new()
+	close.text = "닫기"
+	close.custom_minimum_size = Vector2(170, 64)
+	close.pressed.connect(func() -> void: _bag_panel.visible = false)
+	buttons.add_child(close)
+
+
+func _section_title(text: String) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.add_theme_font_size_override("font_size", 22)
+	return label
+
+
+## 아이콘 한 장. **없으면 null** — 부르는 쪽이 글자로 대신한다
+func _icon(name: String) -> Texture2D:
+	if name == "":
+		return null
+	var path := ICON_DIR + name + ".png"
+	if not ResourceLoader.exists(path):
+		return null
+	return load(path)
+
+
+## 줄에 아이콘을 끼운다. 그림이 없으면 아무것도 넣지 않는다 (글자만 남는다)
+func _add_icon(parent: Node, name: String, size: int) -> void:
+	var texture := _icon(name)
+	if texture == null:
+		return
+	var rect := TextureRect.new()
+	rect.texture = texture
+	rect.custom_minimum_size = Vector2(size, size)
+	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	parent.add_child(rect)
+
+
+## 창의 한 칸 — 그림 · 글자 · 배지 · 누르는 자리를 겹쳐 둔다.
+## PanelContainer 는 자식을 모두 칸 전체에 깔기 때문에 정렬만으로 자리를 나눈다
+func _make_cell(on_press: Callable) -> PanelContainer:
+	var cell := PanelContainer.new()
+	cell.custom_minimum_size = Vector2(CELL, CELL)
+
+	var icon := TextureRect.new()
+	icon.name = "icon"
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cell.add_child(icon)
+
+	# 그림이 없는 것(귀걸이·재료)은 이름을 줄여 적는다
+	var text := Label.new()
+	text.name = "text"
+	text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	text.add_theme_font_size_override("font_size", 18)
+	text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cell.add_child(text)
+
+	var badge := Label.new()
+	badge.name = "badge"
+	badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	badge.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	badge.add_theme_font_size_override("font_size", 18)
+	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cell.add_child(badge)
+
+	var hit := Button.new()
+	hit.name = "hit"
+	hit.flat = true
+	hit.pressed.connect(on_press)
+	cell.add_child(hit)
+	return cell
+
+
+## 칸 하나를 채운다. `icon_name` 이 없거나 그림이 없으면 글자로 나온다
+func _fill_cell(cell: PanelContainer, stack: Dictionary, empty_text: String, icon_name: String) -> void:
+	var icon: TextureRect = cell.get_node("icon")
+	var text: Label = cell.get_node("text")
+	var badge: Label = cell.get_node("badge")
+	var texture := _icon(icon_name)
+	icon.texture = texture
+
+	if stack.is_empty():
+		# 빈 칸 — 그림을 죽여 둔다. 그림이 없으면 칸 이름을 적는다
+		icon.modulate = Color(1, 1, 1, 0.22)
+		text.text = "" if texture != null else empty_text
+		badge.text = ""
+		return
+
+	icon.modulate = Color(1, 1, 1, 1)
+	var item := Items.get_item(str(stack.get("id", "")))
+	text.text = "" if texture != null else str(item.get("name", stack.get("id", "?")))
+	badge.text = _stack_badge(stack)
+
+
+## 칸 오른쪽 아래 배지 — 강화 +N · 개수 · 등급. 이름은 상세 칸이 맡는다
+func _stack_badge(stack: Dictionary) -> String:
+	var parts: Array = []
+	var enhance := int(stack.get("enhance", 0))
+	if enhance > 0:
+		parts.append("+%d" % enhance)
+	var count := int(stack.get("count", 1))
+	if count > 1:
+		parts.append("x%d" % count)
+	parts.append("%d" % int(stack.get("grade", 1)))
+	return " ".join(parts)
+
+
+## 격자의 칸 수를 맞춘다. **칸 수가 바뀔 때만 손댄다** — 매번 다시 지으면
+## 눌러 둔 칸이 풀린다. 칸은 뒤에만 붙으므로 bind 해 둔 index 는 그대로 맞다
+func _fit_cells(grid: GridContainer, want: int, where: String) -> void:
+	while grid.get_child_count() > want:
+		var last := grid.get_child(grid.get_child_count() - 1)
+		grid.remove_child(last)
+		last.queue_free()
+	while grid.get_child_count() < want:
+		grid.add_child(_make_cell(_pick_bag.bind(where, grid.get_child_count())))
+
+
+func _pick_bag(where: String, index: int) -> void:
+	_bag_pick = {"where": where, "index": index}
+	_show_bag_detail()
 
 
 func _toggle_bag() -> void:
@@ -230,47 +431,100 @@ func _toggle_bag() -> void:
 
 
 func _redraw_bag() -> void:
-	for child in _bag_rows.get_children():
-		child.queue_free()
-
 	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
 	if me.is_empty():
 		return
+	var job := str(me.get("job", ""))
+	var bag: Array = me.get("bag", [])
+	var equipped: Dictionary = me.get("equipped", {})
 
-	var title := Label.new()
-	title.text = "가방 %d/%d   골드 %d" % [me.bag.size(), Items.bag_size(), me.get("gold", 0)]
-	_bag_rows.add_child(title)
+	_bag_head.text = "가방 %d/%d" % [bag.size(), Items.bag_size()]
+	_bag_gold.text = "%d" % int(me.get("gold", 0))
 
-	# 끼고 있는 것 — 누르면 벗는다
-	for slot in Items.slots():
-		var stack: Dictionary = me.equipped.get(slot, {})
-		var button := Button.new()
-		if stack.is_empty():
-			button.text = "[%s] 비었음" % slot
-			button.disabled = true
-		else:
-			button.text = "[%s] %s" % [slot, _stack_label(stack)]
-			button.pressed.connect(func() -> void:
-				_transport.send(&"unequip", {"slot": str(slot)})
-				_redraw_bag()
-			)
-		_bag_rows.add_child(button)
-
-	# 가방 — 누르면 낀다. **낄 수 있는지는 World 가 다시 본다**
-	for index in mini(me.bag.size(), 12):
-		var stack: Dictionary = me.bag[index]
-		var button := Button.new()
-		button.text = _stack_label(stack)
-		button.pressed.connect(func() -> void:
-			_transport.send(&"equip", {"index": index})
-			_redraw_bag()
+	# 장비 8칸 — 아이콘 이름은 슬롯 이름과 같다 (assets/icons/weapon.png …)
+	var slots: Array = Items.slots()
+	for index in _bag_gear.get_child_count():
+		var slot := str(slots[index])
+		_fill_cell(
+			_bag_gear.get_child(index), equipped.get(slot, {}),
+			Items.slot_label(slot, job), slot
 		)
-		_bag_rows.add_child(button)
 
-	var close := Button.new()
-	close.text = "닫기"
-	close.pressed.connect(func() -> void: _bag_panel.visible = false)
-	_bag_rows.add_child(close)
+	# 요약 줄 — **상태바에 안 나오는 것만** 적는다. 치명타·치명타 피해·공격 속도는
+	# 옵션으로만 붙는 값이라 여기가 없으면 무엇을 끼웠는지 알 방법이 없다
+	var stats: Dictionary = me.get("stats", {})
+	_bag_sum.text = "치명타 %.0f%%   치명타 피해 %.0f%%   공격 속도 +%.0f%%" % [
+		float(stats.get("crit", 0.0)) * 100.0,
+		float(stats.get("critDamage", 0.0)) * 100.0,
+		float(stats.get("attackSpeed", 0.0)) * 100.0,
+	]
+
+	# 가방 격자. 비어 보이지 않게 최소 25칸은 깔아 둔다
+	_fit_cells(_bag_grid, maxi(BAG_MIN_CELLS, bag.size()), "bag")
+	for index in _bag_grid.get_child_count():
+		var stack: Dictionary = bag[index] if index < bag.size() else {}
+		var icon_name := ""
+		if not stack.is_empty():
+			# 재료는 슬롯이 없어 그림도 없다 — 이름으로 나온다
+			icon_name = str(Items.get_item(str(stack.get("id", ""))).get("slot", ""))
+		_fill_cell(_bag_grid.get_child(index), stack, "", icon_name)
+
+	_show_bag_detail()
+
+
+## 상세 칸 — 고른 것의 이름·강화·등급·옵션을 푼다. 고른 칸은 밝게 둔다
+func _show_bag_detail() -> void:
+	for index in _bag_gear.get_child_count():
+		_bag_gear.get_child(index).modulate = _cell_tint("equip", index)
+	for index in _bag_grid.get_child_count():
+		_bag_grid.get_child(index).modulate = _cell_tint("bag", index)
+
+	var stack := _picked_stack()
+	if stack.is_empty():
+		_bag_detail.text = "칸을 고르면 여기에 나옵니다"
+		_bag_action.text = "-"
+		_bag_action.disabled = true
+		return
+	_bag_detail.text = _stack_label(stack)
+	_bag_action.text = "벗기" if str(_bag_pick.get("where", "")) == "equip" else "끼기"
+	_bag_action.disabled = false
+
+
+func _cell_tint(where: String, index: int) -> Color:
+	if str(_bag_pick.get("where", "")) == where and int(_bag_pick.get("index", -1)) == index:
+		return Color(1.35, 1.35, 1.1)
+	return Color(1, 1, 1)
+
+
+func _picked_stack() -> Dictionary:
+	if _bag_pick.is_empty():
+		return {}
+	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
+	if me.is_empty():
+		return {}
+	var index := int(_bag_pick.get("index", -1))
+	if str(_bag_pick.get("where", "")) == "equip":
+		var slots: Array = Items.slots()
+		if index < 0 or index >= slots.size():
+			return {}
+		return me.get("equipped", {}).get(str(slots[index]), {})
+	var bag: Array = me.get("bag", [])
+	if index < 0 or index >= bag.size():
+		return {}
+	return bag[index]
+
+
+## 끼기 / 벗기. **낄 수 있는지는 World 가 다시 본다** — 여기서 거르는 건 안내일 뿐이다
+func _on_bag_action() -> void:
+	var stack := _picked_stack()
+	if stack.is_empty():
+		return
+	if str(_bag_pick.get("where", "")) == "equip":
+		_transport.send(&"unequip", {"slot": str(Items.slots()[int(_bag_pick.index)])})
+	else:
+		_transport.send(&"equip", {"index": int(_bag_pick.index)})
+	_bag_pick = {}
+	_redraw_bag()
 
 
 ## "낡은 장검 +3 (5등급) 공격 +7, 치명타 +2%"

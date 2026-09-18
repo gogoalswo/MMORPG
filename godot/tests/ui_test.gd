@@ -111,6 +111,27 @@ func _run_scene() -> void:
 	else:
 		print("  골라서 이동: %s" % game._label.text.split("\n")[0].strip_edges())
 
+	# 자동 사냥 단추 — 누르면 켜지고 글자가 바뀐다. 실제로 사냥하는지는
+	# tests/auto_hunt_test.gd 가 본다 (여기는 단추와 화면만)
+	me = game._transport.snapshot().players[game._transport.my_id()]
+	game._auto_button.pressed.emit()
+	await process_frame
+	if not bool(me.get("auto", false)):
+		_fail("자동사냥 단추를 눌렀는데 안 켜졌다")
+	elif not game._auto_button.text.contains("켜짐"):
+		_fail("켜졌는데 단추 글자가 '%s'" % game._auto_button.text)
+	elif not game._marker.visible:
+		_fail("켜졌는데 사냥 자리 표시가 없다")
+	else:
+		print("  자동사냥 켜짐 — 앵커 (%.1f, %.1f)" % [me.auto_x, me.auto_z])
+
+	game._auto_button.pressed.emit()
+	await process_frame
+	if bool(me.get("auto", false)):
+		_fail("다시 눌렀는데 안 꺼졌다")
+	if game._auto_button.text.contains("켜짐"):
+		_fail("껐는데 단추 글자가 '%s'" % game._auto_button.text)
+
 	if _failed == 0:
 		print("UI: 전부 통과")
 		quit(0)

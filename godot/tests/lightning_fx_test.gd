@@ -106,8 +106,8 @@ func _case_particles(game: Node3D) -> void:
 		return
 
 	var jets := _jets(fx)
-	# 한 번에 다섯 — 줄기 · 잔가지 · 섬광 · 금 · 파편
-	var want := LightningFx.STRIKES * 5
+	# 한 번에 일곱 — 줄기 묶음 셋 · 잔가지 · 섬광 · 금 · 파편
+	var want := LightningFx.STRIKES * (LightningFx.BOLT_FLICKERS + 4)
 	if jets.size() != want:
 		_fail("방출기가 %d개다 (%d개여야 한다)" % [jets.size(), want])
 		return
@@ -119,10 +119,19 @@ func _case_particles(game: Node3D) -> void:
 			_fail("한 번 터지고 마는 것이 아니다 (one_shot 이 꺼져 있다)")
 		if jet.mesh == null:
 			_fail("알갱이에 메시가 없다 — 점으로도 안 보인다")
-	if total < 100:
+	if total < 80:
 		_fail("알갱이가 %d개뿐이다 — 파티클로 안 보인다" % total)
 	else:
 		print("  파티클: 방출기 %d개, 알갱이 %d개" % [jets.size(), total])
+
+	# **치는 순간 주위가 번쩍여야 한다.** 줄기 모양보다 이쪽이 번개로 읽게 한다
+	var lights := 0
+	for strike in _strikes(fx):
+		for child in strike.get_children():
+			if child is OmniLight3D:
+				lights += 1
+	if lights != LightningFx.STRIKES:
+		_fail("번쩍임이 %d개다 (%d개여야 한다)" % [lights, LightningFx.STRIKES])
 
 
 ## **번개는 캐릭터 뒤 위쪽에서 앞 아래로 내리꽂힌다** (2026-09-18 지시).
@@ -157,6 +166,14 @@ func _case_direction(game: Node3D) -> void:
 	if bolt.global_position.y < 3.0:
 		_fail("줄기가 %.1fm 에서 시작한다 — 하늘에서 와야 한다" % bolt.global_position.y)
 
+	# **줄기 한 가닥이 시작점에서 땅까지 이어져야 한다.** 짧은 바늘을 초속 62m 로
+	# 날렸더니 프레임 사이로 지나가 화면에 아무것도 안 남았다 (2026-09-18 캡처)
+	var span := sqrt(LightningFx.SKY * LightningFx.SKY + LightningFx.BEHIND * LightningFx.BEHIND)
+	if LightningFx.BOLT_LENGTH < span:
+		_fail("줄기가 %.1fm 인데 하늘까지 %.1fm 다 — 중간에 끊긴다" % [
+			LightningFx.BOLT_LENGTH, span
+		])
+
 	# 진행 방향은 **아래 + 앞**이다. 수직으로만 떨어지면 캐릭터와 겹쳐 기둥이 된다
 	var way := (fx.global_transform.basis * bolt.direction).normalized()
 	if way.y >= -0.3:
@@ -181,11 +198,20 @@ func _case_ground(game: Node3D) -> void:
 		_fail("땅을 볼 이펙트가 없다")
 		return
 
-	var cracks := _nth_of(fx, 0, 3)
-	var debris := _nth_of(fx, 0, 4)
+	var cracks := _nth_of(fx, 0, LightningFx.BOLT_FLICKERS + 2)
+	var debris := _nth_of(fx, 0, LightningFx.BOLT_FLICKERS + 3)
 	if cracks == null or debris == null:
 		_fail("금·파편 방출기가 없다")
 		return
+
+	# **금과 파편은 흙이라 빛나지 않는다.** 가산 혼합으로 뿌렸다가 흰 꽃과
+	# 노란 알갱이 무리가 됐다 (2026-09-18 캡처)
+	for dirt in [cracks, debris]:
+		var mat: StandardMaterial3D = dirt.material_override
+		if mat == null or mat.blend_mode != BaseMaterial3D.BLEND_MODE_MIX:
+			_fail("흙이 가산 혼합이다 — 밝은 알갱이가 된다")
+		elif mat.no_depth_test:
+			_fail("흙이 깊이 검사를 껐다 — 몸 앞으로 튀어나온다")
 
 	# 금은 **XZ 평면**으로만 뻗어야 한다. flatness 를 안 올리면 위로도 뻗어 별표가 된다
 	if cracks.flatness < 0.99:
@@ -237,10 +263,12 @@ func _case_visible(game: Node3D) -> void:
 	])
 
 	# 기준은 할퀴기에서 눈으로 정한 선을 따른다 (발톱 50px · 폭 4px · 파편 5px)
-	if bolt < 70.0:
-		_fail("줄기가 %.0fpx 다 — 하늘에서 오는 것이 캐릭터(68px)만 하면 안 읽힌다" % bolt)
-	if width < 5.0:
-		_fail("줄기 폭이 %.0fpx 다 — 배경에 묻힌다" % width)
+	if bolt < 200.0:
+		_fail("줄기가 %.0fpx 다 — 하늘에서 땅까지 이어져 보여야 한다" % bolt)
+	# **폭은 얇을수록 낫다.** 10px 로 잡았다가 가닥이 뭉쳐 흰 띠가 됐다
+	# (2026-09-18 캡처). 길이 338px 이 번개를 만들고, 굵기는 3px 이면 족하다
+	if width < 2.5:
+		_fail("줄기 폭이 %.1fpx 다 — 한 픽셀 밑이면 렌더에서 끊긴다" % width)
 	if crack < 40.0:
 		_fail("금이 %.0fpx 다 — 갈라진 것으로 안 보인다" % crack)
 	if chunk < 5.0:

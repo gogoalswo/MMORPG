@@ -14,7 +14,8 @@
     "compress": "node scripts/compress-textures.mjs",
     "export:godot": "node scripts/export-shared.mjs",
     "sync:godot": "node scripts/sync-godot-assets.mjs",
-    "test:godot": "bash scripts/godot-test.sh"
+    "test:godot": "bash scripts/godot-test.sh",
+    "shot:godot": "bash scripts/godot-shot.sh"
   },
   "devDependencies": {
     "ktx2-encoder": "^0.6.0",

@@ -8,7 +8,8 @@
 | 파일 | 역할 |
 |---|---|
 | `godot/game/hit_fx.gd` | 맞은 자리에서 터지는 3D 연출 한 벌 (`HitFx`). 스스로 사라진다 |
-| `godot/game/skill_fx.gd` | **스킬 이펙트** (`SkillFx`). 지금은 할퀴기 자국 — 같은 규칙으로 짓는다 → [skills.md](skills.md) |
+| `godot/game/skill_fx.gd` | **스킬 이펙트** (`SkillFx`). 할퀴기 자국 — 같은 규칙으로 짓는다. **모양을 짓는 도구**(바늘 메시·가산 재질·곡선)가 여기 있다 → [skills.md](skills.md) |
+| `godot/game/lightning_fx.gd` | **낙뢰**(`LightningFx`) — 번개 세 번 · 갈라지는 땅 · 튀는 파편. 도구는 `skill_fx.gd` 것을 쓴다 → [skills.md](skills.md) |
 | `godot/game/hurt_flash.gd` | 내가 맞았을 때 화면 가장자리 비네트 (`HurtFlash`) |
 | `godot/game/game.gd` `_show_hit` | `hit` 이벤트를 받아 위 둘을 부르는 **유일한** 자리 |
 | `godot/world/world.gd` `_hit_monster` · `_hit_player` | 이벤트를 내는 자리 (판정) |
@@ -118,4 +119,5 @@ npm run test:godot -- hit_fx
 - [combat.md](combat.md) — `hit` 이벤트에 무엇이 들어 있는지 (피해·치명타·처치)
 - [godot-migration.md](godot-migration.md) — 화면과 판정을 가르는 규칙
 - [skills.md](skills.md) — 스킬도 같은 `hit` 을 낸다. **스킬 전용 연출은
-  `godot/game/skill_fx.gd` 에 있다** (할퀴기 자국, 2026-09-17)
+  `godot/game/skill_fx.gd`(할퀴기 자국, 2026-09-17)와
+  `godot/game/lightning_fx.gd`(낙뢰, 2026-09-18)에 있다**

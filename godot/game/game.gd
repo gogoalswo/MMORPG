@@ -1029,20 +1029,28 @@ func _show_hit(payload: Dictionary) -> void:
 
 ## 스킬 이펙트.
 ##
-## **스킬마다 그림이 다르므로 id 로 고른다.** 지금 그리는 것은 할퀴기 하나다
+## **스킬마다 그림이 다르므로 id 로 고른다.** 지금 그리는 것은 할퀴기
 ## (`rising_kick` — 이름은 '올려차기' 에서 바뀌었지만 id 는 저장된 캐릭터 때문에
-## 그대로다). 나머지 셋은 아직 웹 클라이언트에만 있다 → [skills.md](../../docs/features/skills.md).
+## 그대로다)와 **낙뢰**(`thunder_fall`) 둘이다. 나머지 셋은 아직 웹 클라이언트에만
+## 있다 → [skills.md](../../docs/features/skills.md).
 ##
 ## **남이 쓴 것은 아직 안 그린다** — 다른 플레이어를 세우는 자리가 고도에 없다.
 func _show_skill(payload: Dictionary) -> void:
-	if _zone_node == null or str(payload.get("skill", "")) != "rising_kick":
+	if _zone_node == null:
 		return
 	if str(payload.get("id", "")) != _transport.my_id():
+		return
+	var skill := str(payload.get("skill", ""))
+	if not (skill in ["rising_kick", "thunder_fall"]):
 		return
 	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
 	if me.is_empty():
 		return
-	SkillFx.claw(_zone_node, Vector3(me.x, 0.0, me.z), float(me.rot))
+	var here := Vector3(me.x, 0.0, me.z)
+	if skill == "thunder_fall":
+		LightningFx.bolt(_zone_node, here, float(me.rot))
+	else:
+		SkillFx.claw(_zone_node, here, float(me.rot))
 
 
 ## 보스 범위 공격 예고 원.

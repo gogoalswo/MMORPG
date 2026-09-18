@@ -166,13 +166,31 @@ func _case_direction(game: Node3D) -> void:
 	if fell.length() > LightningFx.AHEAD + 0.01:
 		_fail("번개가 %.1fm 떨어져서 친다 — 내가 선 자리여야 한다" % fell.length())
 
-	# 시작점은 **캐릭터보다 뒤 · 하늘**이다
+	# **어느 쪽을 보든 시작점이 화면 밖이어야 한다** (2026-09-18 지적:
+	# "방향에 따라 엄청 짧게 나오기도 하고 번개 시작지점이 보이기도 해").
+	# 캐릭터가 보는 쪽 반대에 두면 카메라가 고정각이라 시작점이 화면 아래로 내려온다
+	var cam: Camera3D = game._camera
+	var worst := -99999.0
+	var worst_at := 0.0
+	for step in 16:
+		var turn := TAU * float(step) / 16.0
+		var sky: Vector3 = here + LightningFx.from_dir(turn) * LightningFx.BEHIND \
+			+ Vector3.UP * LightningFx.SKY
+		var on_screen := cam.unproject_position(sky).y
+		if on_screen > worst:
+			worst = on_screen
+			worst_at = turn
+	if worst > -40.0:
+		_fail("%.0f° 를 볼 때 시작점이 화면 y=%.0f 다 — 화면 밖(음수)이어야 한다" % [
+			rad_to_deg(worst_at), worst
+		])
+	else:
+		print("  시작점: 열여섯 방향 전부 화면 밖 (가장 낮은 것이 y=%.0f)" % worst)
+
 	var start: Vector3 = first.to_global(first._from) - here
 	var high: float = start.y
 	start.y = 0.0
-	var behind: float = -start.dot(facing)
-	if behind <= 0.0:
-		_fail("줄기가 캐릭터 앞(%.1fm)에서 시작한다 — 뒤에서 와야 한다" % -behind)
+	var behind: float = start.length()
 	if high < 3.0:
 		_fail("줄기가 %.1fm 에서 시작한다 — 하늘에서 와야 한다" % high)
 
@@ -181,8 +199,8 @@ func _case_direction(game: Node3D) -> void:
 	if box.size.y < LightningFx.SKY * 0.8:
 		_fail("줄기 메시가 %.1fm 밖에 안 덮는다 (하늘은 %.1fm)" % [box.size.y, LightningFx.SKY])
 	else:
-		print("  줄기: 캐릭터 뒤 %.1fm · 높이 %.1fm 에서 내 자리(앞 %.1fm)로 (%.1fm 를 덮는다)" % [
-			behind, high, fell.length(), box.size.y
+		print("  줄기: %.1fm 떨어진 높이 %.1fm 에서 내 자리로 (%.1fm 를 덮는다)" % [
+			behind, high, box.size.y
 		])
 
 

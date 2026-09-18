@@ -4,13 +4,10 @@ extends RefCounted
 ## 차원문 3D — 돌 아치 모델 하나. 모든 존의 같은 자리(GATE_SPOT)에 선다.
 ##
 ## 모델이 없으면(`npm run sync:godot` 을 안 돌렸으면) 예전처럼 **빛나는 원판**을 그린다.
-## 누른 걸 알아보는 건 `hit` 이다 — 아치는 높이가 있어서 바닥 점만 보면 윗부분을
-## 눌렀을 때 문 뒤의 땅이 잡힌다 (docs/features/portal-ui.md)
+## 누른 걸 알아보는 건 `hit` 이다 — **소용돌이가 도는 원판**만 문이다
+## (docs/features/portal-ui.md)
 
 const MODEL := "res://assets/models/varco_portal.glb"
-
-## 누르는 기둥의 높이. 모델은 폭 = 2 × 반지름으로 맞추므로 높이도 그쯤이다
-const HIT_HEIGHT := 5.0
 
 
 ## 존 노드에 세울 차원문. gate 는 zones.json 의 gate 그대로
@@ -54,17 +51,28 @@ static func create(gate: Dictionary) -> Node3D:
 	return root
 
 
-## 화면에서 쏜 선이 문(반지름 × HIT_HEIGHT 기둥)에 닿나.
-## 선에서 기둥 높이 안에 드는 구간을 잘라 그 구간과 기둥 축의 수평 거리를 잰다
+## 화면에서 쏜 선이 **소용돌이 원판**에 닿나.
+##
+## 2026-09-18 요청: "포탈 클릭 영역을 이펙트 있는 곳 눌러야 UI 열도록, 지금 너무 넓어".
+## 그 전에는 아치 전체를 감싸는 반지름 2.6 × 높이 5 짜리 기둥이라 돌기둥·받침·
+## 아치 위 빈 곳까지 다 문이었다. 지금은 **소용돌이가 도는 그 판**(`PortalSwirl` 의
+## CENTER 높이, SPAN 반지름)만 문이다 — 보이는 것과 누르는 곳이 같아야 한다.
+##
+## 판은 아치와 같은 쪽을 보고 서 있으므로(`CameraRig.YAW`) 선과 판이 만나는
+## 점을 구해 가운데와의 거리를 잰다
 static func hit(from: Vector3, dir: Vector3, gate: Dictionary) -> bool:
-	if gate.is_empty() or absf(dir.y) < 0.0001:
+	if gate.is_empty():
 		return false
 	var pos: Array = gate.get("position", [0, 0])
-	var center := Vector2(float(pos[0]), float(pos[1]))
 	var radius := float(gate.get("radius", 2.6))
-	var t0 := (HIT_HEIGHT - from.y) / dir.y
-	var t1 := (0.0 - from.y) / dir.y
-	var a := from + dir * minf(t0, t1)
-	var b := from + dir * maxf(t0, t1)
-	var closest := Geometry2D.get_closest_point_to_segment(center, Vector2(a.x, a.z), Vector2(b.x, b.z))
-	return closest.distance_to(center) <= radius
+	var model := radius * 2.0
+	var center := Vector3(float(pos[0]), model * PortalSwirl.CENTER, float(pos[1]))
+	# 소용돌이 판의 법선 — 아치가 보는 쪽이다
+	var facing := Vector3(sin(CameraRig.YAW), 0.0, cos(CameraRig.YAW))
+	var toward := dir.dot(facing)
+	if absf(toward) < 0.0001:
+		return false
+	var span := (center - from).dot(facing) / toward
+	if span <= 0.0:
+		return false
+	return (from + dir * span).distance_to(center) <= model * PortalSwirl.SPAN

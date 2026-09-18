@@ -35,9 +35,10 @@ test('아이템도 내보낸다 — 등급·랜덤옵션·강화를 그대로 �
   const items = data['items.json'].items;
   const ids = Object.keys(items);
   const materials = ids.filter((id) => items[id].material);
-  assert.equal(ids.length - materials.length, 240, '장비 240종 (단계 20 x 슬롯 12 — 직업 셋)');
+  // 단계 20 x (무기 3직업 + 나머지 5칸) = 160. 보조·귀걸이를 없애면서 240 에서 줄었다
+  assert.equal(ids.length - materials.length, 160, '장비 160종 (단계 20 x 슬롯 8 — 무기만 직업 셋)');
   assert.equal(materials.length, 20, '단계마다 제작 재료 하나');
   // 드롭이 후보 id 를 만들 때 쓰는 표가 같이 있어야 한다
-  assert.equal(data['items.json'].slots.length, 8, '장비 슬롯 8종');
+  assert.equal(data['items.json'].slots.length, 6, '장비 슬롯 6종');
   assert.ok(data['items.json'].slotCode.weapon === 'w', '슬롯 코드');
 });

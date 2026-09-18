@@ -58,6 +58,7 @@ import {
   ITEMS,
   EQUIP_SLOTS,
   SLOT_CODE,
+  slotLabel,
   JOB_SLOTS,
   INVENTORY_SIZE,
   GRADE_MIN,
@@ -125,6 +126,8 @@ export function buildData() {
     'items.json': {
       items: ITEMS,
       slots: EQUIP_SLOTS,
+      // 창에 적는 칸 이름
+      slotLabels: Object.fromEntries(EQUIP_SLOTS.map((slot) => [slot, slotLabel(slot)])),
       // 드롭이 후보 id 를 만들 때 쓴다 (슬롯 코드 + 직업 + 단계)
       slotCode: SLOT_CODE,
       jobSlots: JOB_SLOTS,

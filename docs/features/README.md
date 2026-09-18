@@ -34,9 +34,11 @@ ZoneRoom 돌리기) · `DEPLOY.md`(터널로 친구에게 열어주기). 셋 다
 
 | 문서 | 다루는 것 |
 |---|---|
+| [portal-ui.md](portal-ui.md) | **차원문 모델과 창** — 돌 아치와 **빨려드는 소용돌이**, 멀리서 눌러도 뜨는 목록(**끌어서 스크롤**), **UI 는 조각을 앵커로 조립** |
 | [world-zones.md](world-zones.md) | 존 21개, 차원문, 맵 크기, 보스 스폰 자리, **바닥 텍스처 7종**(존별 배정·틴트, 풀 잎·길 없음) |
 | [monsters-progression.md](monsters-progression.md) | 몬스터 60종, 능력치 공식, 레벨 곡선, 경험치, **순찰**(쫓을 사람이 없으면 집 주변을 서성인다) |
 | [combat.md](combat.md) | **직업 스탯 표(`combat.ts` 의 `JOB_STATS`)**, 피해 공식, 정면 판정, 치명타·공격 속도, **공격 경직(휘두르는 동안 이동 금지)**, 투사체, 사망·부활 |
+| [stat-balance.md](stat-balance.md) | ★ **스탯 밸런스 설계(2026-09-18)** — 레벨 1~200, 사냥터 20개, 등급 7개, 데미지 공식·강화·드랍률·성장 곡선. 검증은 `python tools/balance_sim.py`. **아직 설계 문서이고 코드에는 안 들어갔다** |
 | [items.md](items.md) | 아이템 240종 생성, 등급, **랜덤 옵션**, 강화, 제작, 드롭 |
 | [inventory-equipment.md](inventory-equipment.md) | 가방 200칸, 장비 8슬롯, 창 UI |
 | [skills.md](skills.md) | 스킬 24종(격투가는 이펙트 붙은 4개), 스킬창, 액션바 4칸, 자동 시전, **테스트 스위치(쿨타임·레벨 잠금 해제)** |

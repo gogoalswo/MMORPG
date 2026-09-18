@@ -262,3 +262,15 @@ HDRI 는 2k → 1k 로 낮춰 5.2MB → 1.4MB.
   2채널 노멀 압축을 쓴다.
 - ~~나무~~: 잎 카드 방식으로 직접 만들었다 (`scene/trees.ts`). 외부 모델 불필요.
 - **물**: 별도 에셋 없이 스크롤 노멀맵 + 깊이 페이드 셰이더로 만드는 게 정석이다.
+
+## 차원문 모델·창 UI — VARCO 생성
+
+출처: 바르코 3D 커스텀 워크플로우 **"포탈"** 결과물 · **CC0 아님** (위 캐릭터 절과 같은 약관).
+받는 주소는 `scripts/fetch-assets.sh`, 쓰는 법은 [features/portal-ui.md](features/portal-ui.md).
+
+| 원본 | 우리 파일 | 쓰는 곳 |
+|---|---|---|
+| 돌 아치 3D (2048 PNG ×3, 10MB) | `public/assets/models/varco_portal.glb` (1024 JPEG, 0.8MB) | 모든 존의 차원문 |
+| 창 바탕 (1024²) | `public/assets/ui/panel.png` (256², 9분할) | 차원문 창 |
+| 소용돌이 칸 | `public/assets/ui/gate_here.png` (128²) | 지금 서 있는 곳 |
+| 별 칸 | `public/assets/ui/gate_go.png` (128²) | 갈 수 있는 곳 |

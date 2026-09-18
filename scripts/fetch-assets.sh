@@ -85,6 +85,24 @@ if [ ! -f assets-src/textures/varco/fx_hit.png ]; then
   curl -sL --max-time 120 -o assets-src/textures/varco/fx_hit.png "${VARCO}/714ba0443e09383d73e4424237ceae53.png"
 fi
 
+# 차원문 — 바르코 워크플로우 "포탈". 3D 는 움직이지 않는 돌 아치 하나(1×1×1 로 정규화,
+# 가운데가 원점). 원본은 2048 PNG 텍스처 셋이라 10MB 인데 1024 JPEG 으로 줄여 커밋한다(0.8MB).
+fetch_varco 9af24ed7f19f04fc1b5d5b0c3bef567a portal
+node scripts/shrink-glb-textures.mjs assets-src/models/varco/portal.glb public/assets/models/varco_portal.glb 1024
+
+# 차원문 창 UI 조각 — 같은 워크플로우. 창 바탕·소용돌이 칸·별 칸을 **따로** 받아 고도에서
+# 조립한다 (docs/features/portal-ui.md). 원화 두 장(9fbb5d1f… 9dfeff2c…)은 3D 를 뽑은 그림이라 안 받는다.
+fetch_ui() { # $1=객체 해시  $2=출력 이름
+  if [ ! -f "assets-src/textures/varco/$2.png" ]; then
+    echo "받는 중: textures/varco/$2.png"
+    curl -sL --max-time 120 -o "assets-src/textures/varco/$2.png" "${VARCO}/$1.png"
+  fi
+}
+fetch_ui df878fd4c5f48b8454dc6c40228e7803 ui_panel
+fetch_ui 4d62d8a36f11dac8d3388b657a8bed00 ui_gate_here
+fetch_ui f97809fc5aefbfd9987fd6e2dcdd5454 ui_gate_go
+node scripts/build-ui.mjs
+
 # 클립 이름 = 파일. **역슬래시로 줄을 잇지 않는다** — 이 파일은 CRLF 라서
 # 줄 끝 역슬래시 다음에 CR 이 오면 bash 가 줄바꿈이 아니라 CR 이스케이프로 읽고 거기서 끊는다.
 # #loop = 반복 재생이라 한 주기로 잘라 시작·끝을 맞춘다
@@ -147,5 +165,39 @@ for n in 1 2 3 4 5; do
     echo "건너뜀: varco_ogre${n} — 원본이 없다"
   fi
 done
+
+# ------------------------------------------------------------ 가방·장비 아이콘
+
+# 바르코 커스텀 워크플로우 "인벤토리 UI" 의 출력물 11장. 연한 청백색 선화 한 벌이라
+# 창 안에서 서로 겉돌지 않는다. 배경이 검은 것과 흰 것이 섞여 있어(프롬프트마다 다르다)
+# build-item-icons.mjs 가 걷어내고 128px 로 굽는다 → public/assets/icons (커밋한다).
+#
+# glove·belt 는 **아직 어느 칸에 쓸지 안 정했다** — 받아만 두고 고도로는 안 넘긴다
+# (sync-godot-assets.mjs 의 ICONS). offhand(방패)는 2026-09-18 에 슬롯 자체를 없애
+# 받기는 하되 고도로 안 넘긴다. 테두리 둘(frame_*)은 같은 워크플로우에서 나중에 만들었다.
+mkdir -p assets-src/icons
+
+fetch_icon() { # $1=객체 해시  $2=출력 이름
+  if [ ! -f "assets-src/icons/$2.png" ]; then
+    echo "받는 중: icons/$2.png"
+    curl -sL --max-time 120 -o "assets-src/icons/$2.png" "${VARCO}/$1.png"
+  fi
+}
+
+fetch_icon 5e1236b3e6ad6dc7fec570a9bd187a9f weapon    # 검
+fetch_icon 5c25daa856bca458f26f703fe63424f4 offhand   # 방패
+fetch_icon 756fe1b855b1e5cff5038c21253b244a helmet    # 투구
+fetch_icon 0779fa082cdcbc922c8bf8104e9212ea armor     # 갑옷
+fetch_icon 9fc33631108021fa8ec41db82b8ed378 boots     # 장화
+fetch_icon 7798ba00c5755e15d7a9fa28c38083ef ring      # 반지
+fetch_icon 624e1a1a10e8576c2ce473e0155dd4f0 necklace  # 목걸이
+fetch_icon 5fd4ab55b5c3e682f35f8cf81b2a266d bag       # 가방
+fetch_icon 0f5c8a9b06c498361643b69fc4b3d97c gold      # 동전
+fetch_icon 36ce4590784bd702b644bcd409e50f0b glove     # 장갑 (미사용)
+fetch_icon dbc3fc75337294133bfc32ab2628ba5b belt      # 벨트 (미사용)
+fetch_icon 59ae33d2067e8eea8811afe7650699de frame_panel  # 창 테두리 (9조각)
+fetch_icon 0e8a03e181a5c41b5f1c0d955c097199 frame_slot   # 칸 테두리 (9조각)
+
+node scripts/build-item-icons.mjs
 
 echo "완료. 총 $(du -sh public/assets | cut -f1)"

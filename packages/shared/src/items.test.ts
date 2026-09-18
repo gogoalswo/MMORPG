@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import type { ItemBonus } from './items.ts';
 import {
   BOSS_MATERIALS,
   slotLabel,
@@ -82,9 +83,9 @@ test('모든 아이템이 슬롯과 요구 레벨을 갖는다', () => {
   }
 });
 
-test('무기와 보조만 직업을 탄다', () => {
-  // 보조는 격투가 보호대 / 궁수 화살통 / 마법사 마법서로 갈린다
-  const jobSlots = ['weapon', 'offhand'];
+test('무기만 직업을 탄다', () => {
+  // 보조(보호대·마법서·화살통)를 없애면서 직업을 타는 자리는 무기만 남았다
+  const jobSlots = ['weapon'];
   for (const item of Object.values(ITEMS)) {
     if (item.material) continue;
     if (jobSlots.includes(item.slot!)) assert.ok(item.job, `${item.id}: ${item.slot} 인데 직업이 없다`);
@@ -92,7 +93,7 @@ test('무기와 보조만 직업을 탄다', () => {
   }
 });
 
-test('슬롯 8종이 단계마다 다 갖춰져 있다', () => {
+test('슬롯 6종이 단계마다 다 갖춰져 있다', () => {
   // 하나라도 비면 그 자리는 영영 빈 채로 남는다
   for (const slot of EQUIP_SLOTS) {
     const levels = new Set(
@@ -104,18 +105,81 @@ test('슬롯 8종이 단계마다 다 갖춰져 있다', () => {
   }
 });
 
-test('보조 슬롯 이름이 직업마다 다르다', () => {
-  assert.equal(slotLabel('offhand', 'fighter'), '보호대');
-  assert.equal(slotLabel('offhand', 'archer'), '화살통');
-  assert.equal(slotLabel('offhand', 'mage'), '마법서');
-  assert.equal(slotLabel('helmet'), '투구', '직업과 무관한 슬롯은 이름이 하나다');
+test('슬롯 이름은 여섯 개뿐이다', () => {
+  // 보조·귀걸이를 없앴다. 남은 것에 이름이 다 붙어 있어야 창이 빈칸으로 안 나온다
+  assert.deepEqual(
+    EQUIP_SLOTS.map((slot) => slotLabel(slot)),
+    ['무기', '갑옷', '투구', '신발', '목걸이', '반지']
+  );
+  assert.equal(EQUIP_SLOTS.length, 6);
 });
 
-test('직업별 보조 장비는 성격이 다르다', () => {
-  const at = (job: string) => ITEMS[`o_${job}_05`]!.bonus;
-  assert.ok((at('fighter').maxHp ?? 0) > 0, '격투가 보호대는 체력을 준다');
-  assert.ok((at('mage').attack ?? 0) > 0, '마법사 마법서는 공격을 준다');
-  assert.ok((at('archer').attack ?? 0) > 0, '궁수 화살통은 공격을 준다');
+test('슬롯 배분이 설계표와 같다 (stat-balance.md)', () => {
+  // 스탯마다 예산을 100% 로 보고 슬롯이 나눠 갖는다. 어긋나면 "갈아입을 자리가
+  // 목적에 따라 갈린다" 는 설계가 무너진다
+  // 단계 레벨은 10 단위(1·10·…·190)라 설계표의 착용 레벨(1·31·61·…)과 자리가 다르다.
+  // 배분은 레벨과 무관하므로 아무 단계에서나 재도 같다
+  const at = (slot: string) => {
+    const item = Object.values(ITEMS).find(
+      (i) => i.slot === slot && i.level === 180 && (i.job ?? 'fighter') === 'fighter'
+    )!;
+    return item.bonus;
+  };
+  const share = (pick: (b: ItemBonus) => number | undefined) => {
+    const total = EQUIP_SLOTS.reduce((sum, s) => sum + (pick(at(s)) ?? 0), 0);
+    return (slot: string) => Math.round(((pick(at(slot)) ?? 0) / total) * 100);
+  };
+
+  const atk = share((b) => b.attack);
+  assert.equal(atk('weapon'), 60, '무기가 공격력 예산의 60%');
+  assert.equal(atk('necklace'), 20);
+  assert.equal(atk('ring'), 20);
+
+  const def = share((b) => b.defense);
+  assert.equal(def('armor'), 40, '갑옷이 방어력 예산의 40%');
+  assert.equal(def('helmet'), 20);
+  assert.equal(def('boots'), 20);
+  assert.equal(def('necklace'), 10);
+  assert.equal(def('ring'), 10);
+
+  // HP 는 방어력과 같은 배분을 쓴다 (둘 다 생존 스탯)
+  const hp = share((b) => b.maxHp);
+  for (const slot of EQUIP_SLOTS) assert.equal(hp(slot), def(slot), `${slot}: HP 배분이 방어력과 다르다`);
+
+  // 치명타는 목걸이, 공격 속도는 반지 전담
+  for (const slot of EQUIP_SLOTS) {
+    assert.equal(at(slot).crit ?? 0, slot === 'necklace' ? 50 : 0, `${slot}: 치명타`);
+    assert.equal(at(slot).attackSpeed ?? 0, slot === 'ring' ? 20 : 0, `${slot}: 공격 속도`);
+  }
+});
+
+test('치확·공속이 설계표의 등급 곡선을 따라간다', () => {
+  // 설계표(stat-balance.md)는 착용 레벨 1·31·61·91·121·151·181 에서
+  // 치확 0·8·17·25·33·42·50%p, 공속 0·3·7·10·13·17·20% 를 적는다.
+  // 단계 레벨은 10 단위라 30·60·… 에서 재는데, 한 칸(1레벨) 차이라 값이 같거나 1 작다
+  const want: Array<[number, number, number]> = [
+    // 레벨, 치확, 공속
+    [30, 8, 3],
+    [60, 17, 7],
+    [90, 25, 10],
+    [120, 33, 13],
+    [150, 41, 17],
+    [180, 50, 20],
+  ];
+  for (const [level, crit, speed] of want) {
+    const neck = Object.values(ITEMS).find((i) => i.slot === 'necklace' && i.level === level)!;
+    const ring = Object.values(ITEMS).find((i) => i.slot === 'ring' && i.level === level)!;
+    assert.equal(neck.bonus.crit, crit, `${level}레벨 목걸이 치확`);
+    assert.equal(ring.bonus.attackSpeed, speed, `${level}레벨 반지 공속`);
+  }
+});
+
+test('보조와 귀걸이는 아이템이 안 나온다', () => {
+  // 없앤 자리의 아이템이 남아 있으면 못 끼는 물건이 가방에 쌓인다
+  for (const item of Object.values(ITEMS)) {
+    assert.ok(item.slot !== 'offhand', `${item.id}: 보조가 남아 있다`);
+    assert.ok(item.slot !== 'earring', `${item.id}: 귀걸이가 남아 있다`);
+  }
 });
 
 test('요구 레벨과 직업을 서버가 막는다', () => {

@@ -11,6 +11,17 @@ extends Node3D
 
 const STOP_DISTANCE := 0.15
 
+## 가방·장비 창. 가방 격자는 5열 — 웹 클라의 COLUMNS 와 같다
+## (docs/features/inventory-equipment.md). 장비는 8칸이라 4열 두 줄로 떨어진다
+const BAG_COLUMNS := 5
+## 장착은 6칸이라 3열 두 줄로 떨어진다
+const GEAR_COLUMNS := 3
+## 가방에서 한 번에 보이는 줄. 나머지는 끌어 올린다
+const BAG_ROWS := 3
+## 칸 한 변. 1280x720 안에 장착 3열 + 가방 5열이 나란히 들어가는 크기다
+const CELL := 88
+const ICON_DIR := "res://assets/icons/"
+
 var _transport: Transport
 var _player: Node3D
 ## 기둥은 가운데가 원점이라 반만큼 띄워야 하고, 모델은 발이 원점이다
@@ -44,13 +55,23 @@ var _selected_mob := ""
 var _ring: SelectRing
 ## 몬스터 id -> 그려 둔 몸. 죽으면 감추고 살아나면 다시 보인다
 var _mob_nodes: Dictionary = {}
+## 내 머리 위 체력 막대 (game/hp_bar_3d.gd). 늘 보인다
+var _player_bar: HpBar3D
+## 몬스터 id -> 머리 위 체력 막대. **골라 뒀거나 내가 때린 놈만** 세운다 —
+## 사냥터 한 무리가 전부 막대를 달면 화면이 붉은 줄로 덮인다
+var _mob_bars: Dictionary = {}
+## 몬스터 id -> 때린 막대를 언제까지 보여 주나(ms). 그 뒤에는 치운다
+var _mob_bar_until: Dictionary = {}
+## 때린 뒤 막대가 남아 있는 시간. 다음 한 대를 칠 때까지는 넉넉히 남아야 하고
+## (제일 느린 무기가 1.2초), 지나간 놈 것이 화면에 쌓이면 안 된다
+const MOB_BAR_MS := 5000
 ## 마지막으로 일어난 일 한 줄 (맞았다·레벨 올랐다)
 var _last_event := ""
 var _ui_root: Control
 var _hp_bar: ProgressBar
 ## 맞았을 때 화면 가장자리가 붉어지는 비네트 (game/hurt_flash.gd)
 var _hurt: HurtFlash
-var _gate_panel: PanelContainer
+var _gate_panel: GatePanel
 ## 보스 범위 공격 예고. [{node, fill, start, end, radius}, ...]
 var _aoe_marks: Array = []
 var _npc_panel: PanelContainer
@@ -65,8 +86,19 @@ var _bar_buttons: Array = []
 ## 눌린 것으로 지레 바꾸면 판정이 거절했을 때 화면만 켜진 채로 남는다
 var _auto_button: Button
 var _skill_panel: PanelContainer
+## 가방·장비 창. 틀은 한 번만 짓고 `_redraw_bag` 이 내용만 채운다
 var _bag_panel: PanelContainer
-var _bag_rows: VBoxContainer
+var _bag_head: Label
+var _bag_gold: Label
+var _bag_gear: GridContainer
+var _bag_sum: Label
+var _bag_grid: GridContainer
+var _bag_detail: Label
+var _bag_action: Button
+## 고른 칸 — {"where": "equip"|"bag", "index": int}. 비면 아무것도 안 골랐다
+var _bag_pick: Dictionary = {}
+## 아이콘을 한 번만 찾아 기억해 둔다 (없는 것도 기억한다)
+var _icon_cache: Dictionary = {}
 
 
 func _ready() -> void:
@@ -135,7 +167,7 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			_last_event = str(payload.get("text", ""))
 		&"gate":
 			# 차원문에 섰다. 어디로 갈지는 사람이 고른다
-			_gate_panel.visible = true
+			_open_gate()
 		&"zone":
 			_last_event = "%s 에 도착했습니다" % GameData.zone(str(payload.get("zone", ""))).get("name", "")
 
@@ -159,6 +191,13 @@ func _build_persistent() -> void:
 		_player = capsule
 		_player_y = 0.9
 	add_child(_player)
+	# 머리 높이를 재려면 먼저 세워야 한다 — 기둥은 원점이 몸 가운데라
+	# 바닥(y=0)에 둔 채로 재면 막대가 배꼽 높이에 뜬다.
+	# 매 프레임 _draw_state 가 다시 넣는 값과 같다
+	_player.position.y = _player_y
+	# 내 체력은 HUD 막대에도 있지만, 눈이 가 있는 곳은 발밑이다.
+	# 존이 바뀌어도 나는 그대로라 여기(_zone_node 밖)에 단다
+	_player_bar = HpBar3D.create(self, _player, HpBar3D.COLOR_PLAYER)
 
 	# 어디를 눌렀는지 보여주는 표시 (웹 클라의 클릭 이동 표시와 같은 역할)
 	_marker = MeshInstance3D.new()
@@ -211,16 +250,262 @@ func _build_persistent() -> void:
 	_build_bag_panel()
 
 
-## 가방과 장비. 웹 클라의 ui/inventory.ts 자리다.
-## 목록은 **열 때마다 다시 그린다** — 줍고 끼는 동안 계속 바뀌기 때문이다
+## 가방과 장비 창. 웹 클라의 ui/inventory.ts 자리다.
+##
+## **왼쪽이 장착, 오른쪽이 가방이다** (2026-09-18 요청). 장착은 6칸이라 3열 두 줄,
+## 가방은 5열로 깔고 세 줄까지 보이며 나머지는 끌어 올린다. 칸이 88px 이라 이름을
+## 다 못 쓰므로 고른 것의 이름·옵션은 아래 상세 칸이 푼다.
+##
+## **창은 화면 한가운데에 둔다.** `set_anchors_preset` 만 부르면 앵커만 바뀌고
+## 오프셋이 0 이라 왼쪽 위에 붙는다 — 폰에서 창이 구석에 박혀 있던 게 이것이었다
+## (2026-09-18). `set_anchors_and_offsets_preset(..., PRESET_MODE_MINSIZE)` 로 준다.
+##
+## **틀은 한 번만 짓고 내용만 다시 채운다.** 칸이 6 + 25개라 매번 지웠다 만들면
+## 눌러 둔 칸이 풀리고 스크롤이 맨 위로 튄다.
+##
+## 그림과 테두리는 바르코로 만든 것이다 (assets/icons). **없으면 글자와 코드로 그린
+## 테두리로 나온다** — npm run sync:godot 을 안 돌린 사람도 창은 돌아가야 한다
+## (모델이 없으면 기둥으로 그리는 것과 같은 규칙)
 func _build_bag_panel() -> void:
-	_bag_panel = PanelContainer.new()
-	_bag_panel.set_anchors_preset(Control.PRESET_CENTER)
-	_bag_panel.visible = false
-	_ui_root.add_child(_bag_panel)
+	# 화면 전체를 덮는 가운데 정렬 상자에 얹는다. 창 크기는 가방에 든 것에 따라
+	# 늘었다 줄었다 하는데, 지을 때 한 번만 맞춰 두면 그만큼 한쪽으로 밀린다
+	# (처음엔 13px 밀려 있었다). 바탕은 터치를 먹지 않는다 — 창 밖을 눌러 걸어야 한다
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ui_root.add_child(center)
 
-	_bag_rows = VBoxContainer.new()
-	_bag_panel.add_child(_bag_rows)
+	_bag_panel = PanelContainer.new()
+	_bag_panel.visible = false
+	_bag_panel.add_theme_stylebox_override("panel", _frame_box("frame_panel", 48, 0.92))
+	center.add_child(_bag_panel)
+
+	var pad := MarginContainer.new()
+	for side in ["left", "right", "top", "bottom"]:
+		pad.add_theme_constant_override("margin_" + side, 26)
+	_bag_panel.add_child(pad)
+
+	var rows := VBoxContainer.new()
+	rows.add_theme_constant_override("separation", 10)
+	pad.add_child(rows)
+
+	# 머리 줄 — 가방 칸 수와 골드
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 10)
+	rows.add_child(head)
+	_add_icon(head, "bag", 40)
+	_bag_head = Label.new()
+	_bag_head.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	head.add_child(_bag_head)
+	_add_icon(head, "gold", 40)
+	_bag_gold = Label.new()
+	_bag_gold.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	head.add_child(_bag_gold)
+
+	# 본문 — 왼쪽 장착 / 오른쪽 가방
+	var body := HBoxContainer.new()
+	body.add_theme_constant_override("separation", 22)
+	rows.add_child(body)
+
+	var left := VBoxContainer.new()
+	body.add_child(left)
+	left.add_child(_section_title("장착"))
+	_bag_gear = GridContainer.new()
+	_bag_gear.columns = GEAR_COLUMNS
+	left.add_child(_bag_gear)
+	# 칸 순서는 데이터가 정한다 (items.json 의 slots)
+	for index in Items.slots().size():
+		_bag_gear.add_child(_make_cell(_pick_bag.bind("equip", index)))
+	# 요약 줄 — 상태바에 안 나오는 것만 적는다
+	_bag_sum = Label.new()
+	_bag_sum.add_theme_font_size_override("font_size", 20)
+	_bag_sum.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_bag_sum.custom_minimum_size = Vector2(CELL * GEAR_COLUMNS, 0)
+	left.add_child(_bag_sum)
+
+	var right := VBoxContainer.new()
+	body.add_child(right)
+	right.add_child(_section_title("가방"))
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(CELL * BAG_COLUMNS, CELL * BAG_ROWS)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	right.add_child(scroll)
+	_bag_grid = GridContainer.new()
+	_bag_grid.columns = BAG_COLUMNS
+	scroll.add_child(_bag_grid)
+
+	# 상세 칸
+	_bag_detail = Label.new()
+	_bag_detail.custom_minimum_size = Vector2(0, 72)
+	_bag_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_bag_detail.add_theme_font_size_override("font_size", 22)
+	rows.add_child(_bag_detail)
+
+	var buttons := HBoxContainer.new()
+	buttons.alignment = BoxContainer.ALIGNMENT_END
+	buttons.add_theme_constant_override("separation", 12)
+	rows.add_child(buttons)
+	_bag_action = Button.new()
+	_bag_action.custom_minimum_size = Vector2(170, 60)
+	_bag_action.pressed.connect(_on_bag_action)
+	buttons.add_child(_bag_action)
+	var close := Button.new()
+	close.text = "닫기"
+	close.custom_minimum_size = Vector2(170, 60)
+	close.pressed.connect(func() -> void: _bag_panel.visible = false)
+	buttons.add_child(close)
+
+
+func _section_title(text: String) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.add_theme_font_size_override("font_size", 22)
+	return label
+
+
+## 테두리. 바르코로 만든 그림을 9조각으로 늘여 쓴다.
+## **그림이 없으면 코드로 그린 테두리**를 준다 — 테두리 없이 뜨는 일은 없어야 한다
+func _frame_box(name: String, margin: int, dim: float) -> StyleBox:
+	var texture := _icon(name)
+	if texture != null:
+		var box := StyleBoxTexture.new()
+		box.texture = texture
+		for side in [SIDE_LEFT, SIDE_RIGHT, SIDE_TOP, SIDE_BOTTOM]:
+			box.set_texture_margin(side, margin)
+		box.modulate_color = Color(1, 1, 1, dim)
+		return box
+	var flat := StyleBoxFlat.new()
+	flat.bg_color = Color(0.05, 0.06, 0.08, dim)
+	flat.border_color = Color(0.72, 0.82, 0.95)
+	flat.set_border_width_all(3)
+	flat.set_corner_radius_all(8)
+	flat.set_content_margin_all(8)
+	return flat
+
+
+## 아이콘 한 장. **없으면 null** — 부르는 쪽이 글자로 대신한다.
+##
+## **`ResourceLoader.exists` 로 먼저 거르지 않는다.** ★ 익스포트에서 PNG 는
+## `.ctex` 로 구워져 들어가고 원본 경로는 리맵으로만 남는데, **웹 템플릿에는
+## 원본 `.png` 를 알아보는 로더가 없어 `exists` 가 false 를 준다.** 그래서 폰에서만
+## 아이콘이 전부 글자로 나왔다 (2026-09-18). 헤드리스로는 잡히지 않는다 —
+## 테스트는 에디터 바이너리로 도는데 거기에는 그 로더가 있다. 바닥(`.ktx2`)은
+## 임포트를 안 거쳐 원본이 그대로 있어서 같은 방식이 거기서는 통했다.
+##
+## `load` 는 리맵을 따라가므로 그대로 부르고 null 인지로 가른다. 한 번 해 본
+## 결과는 이름마다 기억한다 — 없을 때 칸마다 오류가 찍히지 않도록
+func _icon(name: String) -> Texture2D:
+	if name == "":
+		return null
+	if _icon_cache.has(name):
+		return _icon_cache[name]
+	var path := ICON_DIR + name + ".png"
+	var texture := ResourceLoader.load(path, "Texture2D", ResourceLoader.CACHE_MODE_REUSE) as Texture2D
+	_icon_cache[name] = texture
+	return texture
+
+
+## 줄에 아이콘을 끼운다. 그림이 없으면 아무것도 넣지 않는다 (글자만 남는다)
+func _add_icon(parent: Node, name: String, size: int) -> void:
+	var texture := _icon(name)
+	if texture == null:
+		return
+	var rect := TextureRect.new()
+	rect.texture = texture
+	rect.custom_minimum_size = Vector2(size, size)
+	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	parent.add_child(rect)
+
+
+## 창의 한 칸 — 테두리 위에 그림 · 글자 · 배지 · 누르는 자리를 겹쳐 둔다.
+## PanelContainer 는 자식을 모두 칸 전체에 깔기 때문에 정렬만으로 자리를 나눈다
+func _make_cell(on_press: Callable) -> PanelContainer:
+	var cell := PanelContainer.new()
+	cell.custom_minimum_size = Vector2(CELL, CELL)
+	cell.add_theme_stylebox_override("panel", _frame_box("frame_slot", 28, 1.0))
+
+	var icon := TextureRect.new()
+	icon.name = "icon"
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cell.add_child(icon)
+
+	# 그림이 없는 것(재료)은 이름을 줄여 적는다
+	var text := Label.new()
+	text.name = "text"
+	text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	text.add_theme_font_size_override("font_size", 18)
+	text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cell.add_child(text)
+
+	var badge := Label.new()
+	badge.name = "badge"
+	badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	badge.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	badge.add_theme_font_size_override("font_size", 18)
+	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cell.add_child(badge)
+
+	var hit := Button.new()
+	hit.name = "hit"
+	hit.flat = true
+	hit.pressed.connect(on_press)
+	cell.add_child(hit)
+	return cell
+
+
+## 칸 하나를 채운다. `icon_name` 이 없거나 그림이 없으면 글자로 나온다
+func _fill_cell(cell: PanelContainer, stack: Dictionary, empty_text: String, icon_name: String) -> void:
+	var icon: TextureRect = cell.get_node("icon")
+	var text: Label = cell.get_node("text")
+	var badge: Label = cell.get_node("badge")
+	var texture := _icon(icon_name)
+	icon.texture = texture
+
+	if stack.is_empty():
+		# 빈 칸 — 그림을 죽여 둔다. 그림이 없으면 칸 이름을 적는다
+		icon.modulate = Color(1, 1, 1, 0.22)
+		text.text = "" if texture != null else empty_text
+		badge.text = ""
+		return
+
+	icon.modulate = Color(1, 1, 1, 1)
+	var item := Items.get_item(str(stack.get("id", "")))
+	text.text = "" if texture != null else str(item.get("name", stack.get("id", "?")))
+	badge.text = _stack_badge(stack)
+
+
+## 칸 오른쪽 아래 배지 — 강화 +N · 개수 · 등급. 이름은 상세 칸이 맡는다
+func _stack_badge(stack: Dictionary) -> String:
+	var parts: Array = []
+	var enhance := int(stack.get("enhance", 0))
+	if enhance > 0:
+		parts.append("+%d" % enhance)
+	var count := int(stack.get("count", 1))
+	if count > 1:
+		parts.append("x%d" % count)
+	parts.append("%d" % int(stack.get("grade", 1)))
+	return " ".join(parts)
+
+
+## 격자의 칸 수를 맞춘다. **칸 수가 바뀔 때만 손댄다** — 매번 다시 지으면
+## 눌러 둔 칸이 풀린다. 칸은 뒤에만 붙으므로 bind 해 둔 index 는 그대로 맞다
+func _fit_cells(grid: GridContainer, want: int, where: String) -> void:
+	while grid.get_child_count() > want:
+		var last := grid.get_child(grid.get_child_count() - 1)
+		grid.remove_child(last)
+		last.queue_free()
+	while grid.get_child_count() < want:
+		grid.add_child(_make_cell(_pick_bag.bind(where, grid.get_child_count())))
+
+
+func _pick_bag(where: String, index: int) -> void:
+	_bag_pick = {"where": where, "index": index}
+	_show_bag_detail()
 
 
 func _toggle_bag() -> void:
@@ -230,47 +515,99 @@ func _toggle_bag() -> void:
 
 
 func _redraw_bag() -> void:
-	for child in _bag_rows.get_children():
-		child.queue_free()
-
 	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
 	if me.is_empty():
 		return
+	var job := str(me.get("job", ""))
+	var bag: Array = me.get("bag", [])
+	var equipped: Dictionary = me.get("equipped", {})
 
-	var title := Label.new()
-	title.text = "가방 %d/%d   골드 %d" % [me.bag.size(), Items.bag_size(), me.get("gold", 0)]
-	_bag_rows.add_child(title)
+	_bag_head.text = "가방 %d/%d" % [bag.size(), Items.bag_size()]
+	_bag_gold.text = "%d" % int(me.get("gold", 0))
 
-	# 끼고 있는 것 — 누르면 벗는다
-	for slot in Items.slots():
-		var stack: Dictionary = me.equipped.get(slot, {})
-		var button := Button.new()
-		if stack.is_empty():
-			button.text = "[%s] 비었음" % slot
-			button.disabled = true
-		else:
-			button.text = "[%s] %s" % [slot, _stack_label(stack)]
-			button.pressed.connect(func() -> void:
-				_transport.send(&"unequip", {"slot": str(slot)})
-				_redraw_bag()
-			)
-		_bag_rows.add_child(button)
-
-	# 가방 — 누르면 낀다. **낄 수 있는지는 World 가 다시 본다**
-	for index in mini(me.bag.size(), 12):
-		var stack: Dictionary = me.bag[index]
-		var button := Button.new()
-		button.text = _stack_label(stack)
-		button.pressed.connect(func() -> void:
-			_transport.send(&"equip", {"index": index})
-			_redraw_bag()
+	# 장착 6칸 — 아이콘 이름은 슬롯 이름과 같다 (assets/icons/weapon.png …)
+	var slots: Array = Items.slots()
+	for index in _bag_gear.get_child_count():
+		var slot := str(slots[index])
+		_fill_cell(
+			_bag_gear.get_child(index), equipped.get(slot, {}),
+			Items.slot_label(slot, job), slot
 		)
-		_bag_rows.add_child(button)
 
-	var close := Button.new()
-	close.text = "닫기"
-	close.pressed.connect(func() -> void: _bag_panel.visible = false)
-	_bag_rows.add_child(close)
+	# 요약 줄 — **상태바에 안 나오는 것만** 적는다. 치명타·치명타 피해·공격 속도는
+	# 옵션으로만 붙는 값이라 여기가 없으면 무엇을 끼웠는지 알 방법이 없다
+	var stats: Dictionary = me.get("stats", {})
+	_bag_sum.text = "치명타 %.0f%%  치명타 피해 %.0f%%  공격 속도 +%.0f%%" % [
+		float(stats.get("crit", 0.0)) * 100.0,
+		float(stats.get("critDamage", 0.0)) * 100.0,
+		float(stats.get("attackSpeed", 0.0)) * 100.0,
+	]
+
+	# 가방 격자. 비어 보이지 않게 보이는 줄만큼은 깔아 둔다
+	_fit_cells(_bag_grid, maxi(BAG_COLUMNS * BAG_ROWS, bag.size()), "bag")
+	for index in _bag_grid.get_child_count():
+		var stack: Dictionary = bag[index] if index < bag.size() else {}
+		var icon_name := ""
+		if not stack.is_empty():
+			# 재료는 슬롯이 없어 그림도 없다 — 이름으로 나온다
+			icon_name = str(Items.get_item(str(stack.get("id", ""))).get("slot", ""))
+		_fill_cell(_bag_grid.get_child(index), stack, "", icon_name)
+
+	_show_bag_detail()
+
+
+## 상세 칸 — 고른 것의 이름·강화·등급·옵션을 푼다. 고른 칸은 밝게 둔다
+func _show_bag_detail() -> void:
+	for index in _bag_gear.get_child_count():
+		_bag_gear.get_child(index).modulate = _cell_tint("equip", index)
+	for index in _bag_grid.get_child_count():
+		_bag_grid.get_child(index).modulate = _cell_tint("bag", index)
+
+	var stack := _picked_stack()
+	if stack.is_empty():
+		_bag_detail.text = "칸을 고르면 여기에 나옵니다"
+		_bag_action.text = "-"
+		_bag_action.disabled = true
+		return
+	_bag_detail.text = _stack_label(stack)
+	_bag_action.text = "벗기" if str(_bag_pick.get("where", "")) == "equip" else "끼기"
+	_bag_action.disabled = false
+
+
+func _cell_tint(where: String, index: int) -> Color:
+	if str(_bag_pick.get("where", "")) == where and int(_bag_pick.get("index", -1)) == index:
+		return Color(1.35, 1.35, 1.1)
+	return Color(1, 1, 1)
+
+
+func _picked_stack() -> Dictionary:
+	if _bag_pick.is_empty():
+		return {}
+	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
+	if me.is_empty():
+		return {}
+	var index := int(_bag_pick.get("index", -1))
+	if str(_bag_pick.get("where", "")) == "equip":
+		var slots: Array = Items.slots()
+		if index < 0 or index >= slots.size():
+			return {}
+		return me.get("equipped", {}).get(str(slots[index]), {})
+	var bag: Array = me.get("bag", [])
+	if index < 0 or index >= bag.size():
+		return {}
+	return bag[index]
+
+
+func _on_bag_action() -> void:
+	var stack := _picked_stack()
+	if stack.is_empty():
+		return
+	if str(_bag_pick.get("where", "")) == "equip":
+		_transport.send(&"unequip", {"slot": str(Items.slots()[int(_bag_pick.index)])})
+	else:
+		_transport.send(&"equip", {"index": int(_bag_pick.index)})
+	_bag_pick = {}
+	_redraw_bag()
 
 
 ## "낡은 장검 +3 (5등급) 공격 +7, 치명타 +2%"
@@ -553,38 +890,27 @@ func _make_theme() -> Theme:
 	return theme
 
 
-## 차원문에 서면 뜨는 사냥터 목록. 웹 클라의 ui/zoneGate.ts 와 같은 자리다
+## 차원문 창. 조각을 조립하는 건 GatePanel 이 하고, 여기서는 달고 고른 곳을 보내기만 한다
 func _build_gate_panel() -> void:
-	_gate_panel = PanelContainer.new()
-	_gate_panel.set_anchors_preset(Control.PRESET_CENTER)
-	_gate_panel.visible = false
+	_gate_panel = GatePanel.create()
+	_gate_panel.picked.connect(_on_gate_pick)
 	_ui_root.add_child(_gate_panel)
 
-	var rows := VBoxContainer.new()
-	_gate_panel.add_child(rows)
 
-	var title := Label.new()
-	title.text = "어디로 갈까요"
-	rows.add_child(title)
+func _open_gate() -> void:
+	_gate_panel.open(_shown_zone)
 
-	var grid := GridContainer.new()
-	grid.columns = 3
-	rows.add_child(grid)
 
-	# 마을 + 사냥터 20곳. 순서는 데이터가 정한다 (zones.json 의 fieldOrder)
-	var ids: Array = [GameData.start_zone()]
-	ids.append_array(GameData.field_order())
-	for id in ids:
-		var zone := GameData.zone(str(id))
-		var button := Button.new()
-		button.text = str(zone.get("name", id))
-		button.pressed.connect(_on_gate_pick.bind(str(id)))
-		grid.add_child(button)
-
-	var close := Button.new()
-	close.text = "닫기"
-	close.pressed.connect(func() -> void: _gate_panel.visible = false)
-	rows.add_child(close)
+## 문을 눌렀다. **거리와 상관없이 바로 창을 연다** (2026-09-18 요청: "포탈까지
+## 안 걸어가도 클릭하면 UI 열리게"). 예전에는 문 밖에서 누르면 문 가운데로
+## 걸어갔고, 들어서야 `gate` 이벤트가 창을 열었다 — 멀리서 한 번 누르고 기다려야
+## 했다. 걸어가는 길은 그대로 남아 있다: 문 안으로 들어서면 `gate` 이벤트가 연다.
+## **이동하는 건 여전히 travel 요청이고 World 가 다시 본다**
+func _on_gate_tapped() -> void:
+	_target = Vector3.INF
+	_target_mob = ""
+	_marker.visible = false
+	_open_gate()
 
 
 func _on_gate_pick(zone_id: String) -> void:
@@ -634,6 +960,10 @@ func _build_zone(zone_id: String) -> void:
 	_selected_mob = ""
 	_ring = null
 	_target_mob = ""
+	# 막대는 _zone_node 밑이라 같이 사라진다. 몬스터 id 는 존마다 다시 매겨지므로
+	# 때린 기록도 같이 버린다 — 안 버리면 새 존의 같은 id 에 막대가 붙는다
+	_mob_bars.clear()
+	_mob_bar_until.clear()
 
 	var world_env := WorldEnvironment.new()
 	world_env.environment = environment_for(env)
@@ -655,20 +985,7 @@ func _build_zone(zone_id: String) -> void:
 	# 차원문. 여기 들어가면 존이 바뀐다 (World._check_gate)
 	var gate: Dictionary = zone.get("gate", {})
 	if not gate.is_empty():
-		var gate_pos: Array = gate.get("position", [0, 0])
-		var portal := MeshInstance3D.new()
-		var disc := CylinderMesh.new()
-		disc.top_radius = float(gate.get("radius", 2.6))
-		disc.bottom_radius = disc.top_radius
-		disc.height = 0.08
-		portal.mesh = disc
-		var gate_mat := StandardMaterial3D.new()
-		gate_mat.albedo_color = Color(gate.get("color", "#4aa8ff"))
-		gate_mat.emission_enabled = true
-		gate_mat.emission = Color(gate.get("color", "#4aa8ff"))
-		portal.material_override = gate_mat
-		portal.position = Vector3(float(gate_pos[0]), 0.04, float(gate_pos[1]))
-		_zone_node.add_child(portal)
+		_zone_node.add_child(Portal.create(gate))
 
 	# NPC. 모델이 없는 look 뿐이라 기둥에 이름표를 얹는다
 	for npc in _transport.snapshot().get("npcs", []):
@@ -731,6 +1048,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		var hit := _ground_point(event.position)
 		if hit == Vector3.INF:
 			return
+		# 차원문을 눌렀다. 아치는 높이가 있어 바닥 점이 아니라 화면에서 쏜 선으로 본다
+		if _gate_tapped(event.position):
+			_on_gate_tapped()
+			return
 		# NPC 를 눌렀으면 말을 건다. **닿는지는 World 가 다시 본다**
 		var npc := _npc_at(hit)
 		if npc != "":
@@ -751,6 +1072,16 @@ func _unhandled_input(event: InputEvent) -> void:
 			_target = hit
 			_marker.position = hit + Vector3(0, 0.05, 0)
 			_marker.visible = true
+
+
+## 화면의 그 점이 차원문 아치에 닿나
+func _gate_tapped(screen: Vector2) -> bool:
+	if _camera == null:
+		return false
+	return Portal.hit(
+		_camera.project_ray_origin(screen), _camera.project_ray_normal(screen),
+		_transport.snapshot().get("gate", {})
+	)
 
 
 ## 바닥의 그 자리에 NPC 가 있나
@@ -809,6 +1140,35 @@ func _tick_ring(snap: Dictionary) -> void:
 	if _ring == null or not is_instance_valid(_ring):
 		return
 	_ring.follow(Vector3(mob.x, 0.0, mob.z), float(mob.r), _last_delta)
+
+
+## 몬스터 머리 위 체력 막대. **골라 둔 놈과 방금 때린 놈만** 보여 준다
+## (2026-09-18 지시: "몬스터는 나한테 피격을 받은 경우거나 타겟팅 된 경우에만").
+##
+## 세우고 치우는 자리는 여기 한 군데다 — 고리와 같은 이유로, 죽는 길이 여럿이라
+## 각자 지우게 두면 반드시 한 곳이 빠지고 **막대가 시체에 남는다.**
+## 몬스터마다 매 프레임 한 번 불린다 (`_draw_state` 의 몬스터 고리 안).
+func _tick_mob_bar(monster: Dictionary, node: Node3D) -> void:
+	var id := str(monster.id)
+	var hit_until := int(_mob_bar_until.get(id, 0))
+	var show := int(monster.hp) > 0 and (id == _selected_mob or hit_until > Time.get_ticks_msec())
+
+	var bar: HpBar3D = _mob_bars.get(id)
+	if not show:
+		if bar != null and is_instance_valid(bar):
+			bar.queue_free()
+		_mob_bars.erase(id)
+		# 죽었거나 시간이 지났으면 때린 기록도 버린다. 살아나면 처음부터다
+		_mob_bar_until.erase(id)
+		return
+
+	if bar == null or not is_instance_valid(bar):
+		bar = HpBar3D.create(_zone_node, node, HpBar3D.COLOR_MOB)
+		_mob_bars[id] = bar
+	bar.follow(
+		Vector3(monster.x, 0.0, monster.z),
+		float(monster.hp) / maxf(1.0, float(monster.max_hp))
+	)
 
 
 ## 화면의 한 점이 바닥의 어디인지
@@ -952,6 +1312,7 @@ func _draw_state() -> void:
 		if node == null:
 			continue
 		node.visible = int(monster.hp) > 0
+		_tick_mob_bar(monster, node)
 		if not node.visible:
 			continue
 		node.position.x = monster.x
@@ -976,6 +1337,12 @@ func _draw_state() -> void:
 		if int(monster.hp) > 0:
 			alive += 1
 	_player.visible = not bool(me.get("dead", false))
+	# 죽으면 몸과 같이 감춘다 — 시체 위에 빈 막대가 떠 있으면 안 죽은 것처럼 보인다
+	_player_bar.visible = _player.visible
+	if _player_bar.visible:
+		_player_bar.follow(
+			Vector3(me.x, 0.0, me.z), float(me.hp) / maxf(1.0, float(me.stats.maxHp))
+		)
 
 	_hp_bar.max_value = me.stats.maxHp
 	_hp_bar.value = me.hp
@@ -1004,6 +1371,10 @@ func _show_hit(payload: Dictionary) -> void:
 	if _zone_node == null:
 		return
 	var on_me := str(payload.get("target_kind", "")) == "player"
+	# 내가 때린 놈은 잠깐 막대를 보여 준다. 혼자 노는 판이라 몬스터를 때리는 건
+	# 나뿐이므로 때린 사람을 따로 가리지 않는다 (서버가 붙으면 source 를 본다)
+	if not on_me:
+		_mob_bar_until[str(payload.get("target", ""))] = Time.get_ticks_msec() + MOB_BAR_MS
 	var body: Node3D = null
 	if on_me:
 		body = _player

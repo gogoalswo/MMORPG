@@ -92,13 +92,80 @@ func _run_scene() -> void:
 	if not game._gate_panel.visible:
 		_fail("차원문에 섰는데 고르는 화면이 안 떴다")
 	else:
-		# 마을 + 사냥터 20곳 = 21개 단추
-		var grid: GridContainer = game._gate_panel.get_child(0).get_child(1)
-		print("  차원문 화면: 단추 %d개, 첫 줄 '%s'" % [
-			grid.get_child_count(), grid.get_child(0).text
-		])
-		if grid.get_child_count() != 21:
-			_fail("단추가 21개여야 하는데 %d개" % grid.get_child_count())
+		# 마을 + 사냥터 20곳 = 21줄. 맨 위(마을)가 지금 서 있는 곳이라 막혀 있다
+		var panel: GatePanel = game._gate_panel
+		print("  차원문 화면: %d줄, 첫 줄 '%s'" % [panel.row_count(), panel.row(0).text])
+		if panel.row_count() != 21:
+			_fail("줄이 21개여야 하는데 %d개" % panel.row_count())
+		elif not panel.row(0).disabled or panel.row(1).disabled:
+			_fail("서 있는 곳(마을)만 막혀야 한다")
+		elif panel.row(0).icon == panel.row(1).icon:
+			_fail("서 있는 곳과 갈 곳의 칸 아이콘이 같다")
+		elif panel.texture == null:
+			_fail("창 바탕 조각(panel.png)이 없다 — npm run sync:godot 을 돌렸나")
+		# 앵커로만 자리를 잡는다 — 화면 가운데에 있어야 한다
+		var mid := panel.get_global_rect().get_center().x
+		if absf(mid - game.get_viewport().get_visible_rect().size.x * 0.5) > 2.0:
+			_fail("창이 가운데가 아니다 (%.0f)" % mid)
+
+	# 목록은 **끌어서도** 내려간다 (휠 말고) — 2026-09-18 요청
+	var panel2: GatePanel = game._gate_panel
+	var list: ScrollContainer = panel2._scroll
+	# 목록 기준 좌표다. 가운데를 눌러 위로 끈다
+	var grab := list.size * 0.5
+	panel2._on_list_input(_mouse(grab, true))
+	for i in 6:
+		grab.y -= 20
+		panel2._on_list_input(_move(grab))
+		await process_frame
+	var dragged := list.scroll_vertical
+	panel2._on_list_input(_mouse(grab, false))
+	if dragged <= 0:
+		_fail("목록을 끌었는데 안 내려갔다 (스크롤 %d)" % dragged)
+	elif not panel2.visible:
+		_fail("끌기만 했는데 창이 닫혔다 — 끌다가 고른 것으로 친다")
+	else:
+		print("  목록 끌기: %dpx 내려감" % dragged)
+
+	# 끌지 않고 그 자리에서 떼면 그 줄을 고른 것이다
+	list.scroll_vertical = 0
+	await process_frame
+	var row1 := panel2.row(1).get_global_rect().get_center() - list.global_position
+	panel2._on_list_input(_mouse(row1, true))
+	panel2._on_list_input(_mouse(row1, false))
+	if panel2.visible:
+		_fail("줄을 눌렀다 뗐는데 안 골라졌다")
+
+	# 문 아치를 누르면 창이 열린다 — **멀리 서 있어도 바로** 열린다
+	# (2026-09-18 요청: "포탈까지 안 걸어가도 클릭하면 UI 열리게")
+	game._gate_panel.close_panel()
+	me.x = 30.0
+	me.z = 30.0
+	for i in 3:
+		await process_frame
+	# 누르는 곳은 **소용돌이 원판뿐**이다 (2026-09-18: "지금 너무 넓어").
+	# 소용돌이는 문 반지름 2.6 기준 높이 2.44, 반지름 1.14 짜리 판이다
+	var swirl := Vector3(9.0, 2.6 * 2.0 * PortalSwirl.CENTER, 0.0)
+	var on_swirl: Vector2 = game._camera.unproject_position(swirl)
+	if not game._gate_tapped(on_swirl):
+		_fail("소용돌이를 눌렀는데 문으로 안 잡힌다 (%s)" % on_swirl)
+	else:
+		game._on_gate_tapped()
+		if not game._gate_panel.visible:
+			_fail("문에서 멀리 서서 눌렀는데 창이 안 떴다")
+		elif game._marker.visible:
+			_fail("문을 눌렀는데 창 대신 걸어가는 표시가 떴다")
+	# 아치 돌기둥 꼭대기와 받침은 이제 문이 아니다
+	if game._gate_tapped(game._camera.unproject_position(Vector3(9.0, 4.8, 0.0))):
+		_fail("아치 꼭대기가 아직 문으로 잡힌다 — 판이 너무 넓다")
+	if game._gate_tapped(game._camera.unproject_position(Vector3(9.0, 0.1, 0.0))):
+		_fail("문 발치(받침)가 아직 문으로 잡힌다")
+	if game._gate_tapped(game._camera.unproject_position(Vector3(-9.0, 0.0, 0.0))):
+		_fail("문에서 먼 땅이 문으로 잡힌다")
+	if ResourceLoader.exists(Portal.MODEL):
+		print("  차원문 모델: 있음, 소용돌이를 누르면 창")
+	else:
+		_fail("차원문 모델이 없다 — npm run sync:godot 을 돌렸나")
 
 	# 골라서 옮긴다
 	game._on_gate_pick("meadow")
@@ -166,9 +233,152 @@ func _run_scene() -> void:
 	if game._auto_button.text.contains("켜짐"):
 		_fail("껐는데 단추 글자가 '%s'" % game._auto_button.text)
 
+	await _case_bag(game)
+
 	if _failed == 0:
 		print("UI: 전부 통과")
 		quit(0)
 	else:
 		print("UI: %d개 실패" % _failed)
 		quit(1)
+
+
+## 가방·장비 창 — 열리나, 칸이 제대로 깔리나, 골라서 낄 수 있나.
+## 스크린샷을 찍지 않는다: 칸 수와 칸 안의 글자·그림은 노드로 읽을 수 있다
+func _case_bag(game: Node3D) -> void:
+	var me: Dictionary = game._transport.snapshot().players[game._transport.my_id()]
+
+	if game._bag_panel.visible:
+		_fail("아직 안 눌렀는데 가방이 떠 있다")
+	game._toggle_bag()
+	await process_frame
+	if not game._bag_panel.visible:
+		_fail("가방 단추를 눌렀는데 창이 안 떴다")
+		return
+
+	# 장착 6칸(3열) · 가방 5열 세 줄
+	var slots: Array = Items.slots()
+	if slots.size() != 6:
+		_fail("슬롯이 6종이어야 하는데 %d종: %s" % [slots.size(), str(slots)])
+	if game._bag_gear.get_child_count() != slots.size():
+		_fail("장착이 %d칸이어야 하는데 %d칸" % [slots.size(), game._bag_gear.get_child_count()])
+	if game._bag_gear.columns != 3:
+		_fail("장착이 3열이어야 하는데 %d열" % game._bag_gear.columns)
+	if game._bag_grid.get_child_count() < 15:
+		_fail("가방 격자가 15칸 이상이어야 하는데 %d칸" % game._bag_grid.get_child_count())
+	if game._bag_grid.columns != 5:
+		_fail("가방 격자가 5열이어야 하는데 %d열" % game._bag_grid.columns)
+
+	# **왼쪽이 장착, 오른쪽이 가방이다** (2026-09-18 요청)
+	var gear_x: float = game._bag_gear.get_global_rect().position.x
+	var grid_x: float = game._bag_grid.get_global_rect().position.x
+	if gear_x >= grid_x:
+		_fail("장착(%.0f)이 가방(%.0f) 왼쪽에 있어야 한다" % [gear_x, grid_x])
+	else:
+		print("  좌우: 장착 x=%.0f · 가방 x=%.0f" % [gear_x, grid_x])
+
+	# 테두리가 붙었나 — 그림이 없으면 코드로 그린 것이라도 있어야 한다
+	if game._bag_panel.get_theme_stylebox("panel") == null:
+		_fail("창에 테두리가 없다")
+	if game._bag_gear.get_child(0).get_theme_stylebox("panel") == null:
+		_fail("칸에 테두리가 없다")
+
+	# 그림이 붙었나. 아이콘이 없으면(sync 를 안 돌렸으면) 칸 이름이 글자로 나와야 한다
+	var drawn := 0
+	var named := 0
+	for index in game._bag_gear.get_child_count():
+		var cell: PanelContainer = game._bag_gear.get_child(index)
+		if cell.get_node("icon").texture != null:
+			drawn += 1
+		elif cell.get_node("text").text != "":
+			named += 1
+	if drawn + named != slots.size():
+		_fail("장착 칸 %d개가 그림도 글자도 없다" % [slots.size() - drawn - named])
+	else:
+		print("  가방 창: 장착 %d칸(그림 %d · 글자 %d), 가방 %d칸" % [
+			slots.size(), drawn, named, game._bag_grid.get_child_count()
+		])
+
+	# 머리 줄과 요약 줄
+	if not game._bag_head.text.contains("/%d" % Items.bag_size()):
+		_fail("머리 줄이 '%s'" % game._bag_head.text)
+	if not game._bag_sum.text.contains("치명타"):
+		_fail("요약 줄에 치명타가 없다: '%s'" % game._bag_sum.text)
+
+	# 아무것도 안 골랐으면 상세 칸은 안내만, 단추는 꺼져 있어야 한다
+	if not game._bag_action.disabled:
+		_fail("아무것도 안 골랐는데 끼기 단추가 켜져 있다")
+
+	# 가방에 하나 넣고 — 골라서 낀다
+	me.bag.append({"id": "w_fighter_00", "grade": 3, "enhance": 2, "options": []})
+	game._redraw_bag()
+	await process_frame
+	var first: PanelContainer = game._bag_grid.get_child(0)
+	if first.get_node("badge").text == "":
+		_fail("가방 첫 칸에 배지가 안 붙었다")
+	elif not first.get_node("badge").text.contains("+2"):
+		_fail("강화 배지가 '+2' 여야 하는데 '%s'" % first.get_node("badge").text)
+
+	first.get_node("hit").pressed.emit()
+	await process_frame
+	if game._bag_action.disabled:
+		_fail("칸을 골랐는데 끼기 단추가 안 켜졌다")
+	if game._bag_action.text != "끼기":
+		_fail("가방 칸을 골랐는데 단추가 '%s'" % game._bag_action.text)
+	if not game._bag_detail.text.contains("등급"):
+		_fail("상세 칸이 '%s'" % game._bag_detail.text.left(30))
+
+	game._on_bag_action()
+	for i in 3:
+		await process_frame
+	if me.equipped.get("weapon", {}).is_empty():
+		_fail("끼기를 눌렀는데 무기가 안 끼워졌다")
+	else:
+		var worn: Dictionary = Items.get_item(str(me.equipped.weapon.id))
+		print("  골라서 끼기: 무기 칸에 '%s'" % worn.get("name", "?"))
+
+	# 창이 화면 안에, 그리고 **가운데에** 있나. 눈으로 볼 수 없는 것은 재서 본다 —
+	# set_anchors_preset 만 부르면 왼쪽 위에 붙는다 (2026-09-18 에 그랬다)
+	var rect: Rect2 = game._bag_panel.get_global_rect()
+	if rect.size.x > 1280.0 or rect.size.y > 720.0:
+		_fail("가방 창이 화면(1280x720)보다 크다: %.0fx%.0f" % [rect.size.x, rect.size.y])
+	var off: Vector2 = (rect.position + rect.size * 0.5) - Vector2(640, 360)
+	if abs(off.x) > 8.0 or abs(off.y) > 8.0:
+		_fail("가방 창이 가운데가 아니다 — 중심이 (%.0f, %.0f) 만큼 밀렸다" % [off.x, off.y])
+	else:
+		print("  창 %.0fx%.0f, 화면 한가운데" % [rect.size.x, rect.size.y])
+
+	# 끼운 칸을 골라 벗긴다
+	var slot_index := slots.find("weapon")
+	game._bag_gear.get_child(slot_index).get_node("hit").pressed.emit()
+	await process_frame
+	if game._bag_action.text != "벗기":
+		_fail("장비 칸을 골랐는데 단추가 '%s'" % game._bag_action.text)
+	game._on_bag_action()
+	for i in 3:
+		await process_frame
+	if not me.equipped.get("weapon", {}).is_empty():
+		_fail("벗기를 눌렀는데 무기가 그대로다")
+	else:
+		print("  골라서 벗기: 무기 칸이 비었다")
+
+	game._toggle_bag()
+	await process_frame
+	if game._bag_panel.visible:
+		_fail("다시 눌렀는데 가방이 안 닫혔다")
+
+## 목록을 눌렀다/뗐다. 자리는 **목록 기준**이다 (Control 의 gui_input 이 그렇다)
+func _mouse(at: Vector2, pressed: bool) -> InputEventMouseButton:
+	var event := InputEventMouseButton.new()
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.position = at
+	event.pressed = pressed
+	return event
+
+
+## 누른 채로 움직였다
+func _move(at: Vector2) -> InputEventMouseMotion:
+	var event := InputEventMouseMotion.new()
+	event.position = at
+	event.button_mask = MOUSE_BUTTON_MASK_LEFT
+	return event

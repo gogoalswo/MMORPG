@@ -21,10 +21,28 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const MODELS = [
   'varco_fighter.glb', // 캐릭터 (기본 직업 격투가 고정)
   'varco_ogre1.glb', // 초원 몬스터 (mob003 · mob008 의 look)
+  'varco_portal.glb', // 차원문 (모든 존의 GATE_SPOT)
 ];
+
+/** UI 조각. 이미 build-ui.mjs 가 줄여 둔 것이라 그대로 복사한다 */
+const UI = ['panel.png', 'gate_here.png', 'gate_go.png'];
 
 /** 한글 폰트. 고도 기본 폰트에는 한글 글리프가 없어 넣지 않으면 네모로 나온다 */
 const FONTS = ['NotoSansKR-subset.ttf'];
+
+/**
+ * 가방·장착 창 아이콘과 테두리. 바르코로 만들고 `scripts/build-item-icons.mjs` 가
+ * 배경을 걷어 구운 것이다 (public/assets/icons).
+ *
+ * **쓰는 것만 복사한다.** 슬롯 6칸이 전부 그림을 갖췄다. 받아 둔 장갑(glove)·
+ * 벨트(belt)는 어느 칸에 쓸지 안 정해서 뺐고, 보조(offhand)는 슬롯 자체를 없앴다.
+ */
+const ICONS = [
+  'weapon.png', 'armor.png', 'helmet.png',
+  'boots.png', 'necklace.png', 'ring.png',
+  'bag.png', 'gold.png',
+  'frame_panel.png', 'frame_slot.png',
+];
 
 /**
  * 바닥 텍스처 7종(색 + 노멀). **고도가 .ktx2 를 그대로 읽는다** — 시험해 보고
@@ -49,7 +67,9 @@ const jobs = [
     to: join(ROOT, 'godot', 'assets', 'models'),
     shrink: true,
   },
+  { names: UI, from: join(ROOT, 'public', 'assets', 'ui'), to: join(ROOT, 'godot', 'assets', 'ui') },
   { names: FONTS, from: join(ROOT, 'public', 'assets', 'fonts'), to: join(ROOT, 'godot', 'assets', 'fonts') },
+  { names: ICONS, from: join(ROOT, 'public', 'assets', 'icons'), to: join(ROOT, 'godot', 'assets', 'icons') },
   { names: GROUND, from: join(ROOT, 'public', 'assets', 'textures'), to: join(ROOT, 'godot', 'assets', 'ground') },
 ];
 

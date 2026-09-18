@@ -116,12 +116,41 @@ function envFor(theme: FieldTheme): ZoneEnv {
  */
 const BOSS_SPOT: [number, number] = [-12.0, 20.8];
 
-/** 무리를 놓을 자리 — 도착 지점과 차원문을 피해 네 귀퉁이에 둔다 */
+/**
+ * 무리 하나의 마릿수와 반경.
+ *
+ * 밸런스 설계(`docs/features/stat-balance.md`)의 단위가 **한 그룹 50마리**다 —
+ * 범위 스킬로 그 50마리를 15초에 정리하고 HP 50% 를 잃는 것이 전 구간의 기준이다.
+ * 그래서 무리 하나를 50마리로 놓는다. 존 하나 = 사냥터 하나에 무리 넷 + 보스 하나.
+ *
+ * 반경 8 에 50마리를 넣으면 `scatterSpawn` 이 빈 자리를 못 찾는다. 한 마리가
+ * 차지하는 넓이가 같으려면 반경이 √(50/20) = 1.58 배라야 한다 → 8 × 1.58 ≈ 13.
+ * 네 귀퉁이 간격이 40 이므로 반경 13 끼리는 여전히 안 닿는다.
+ */
+const PACK_COUNT = 50;
+const PACK_RADIUS = 13;
+
+/**
+ * 무리를 놓을 자리 — 도착 지점과 차원문을 피해 네 귀퉁이에 둔다.
+ *
+ * 20 → 28 로 물렸다. 무리가 50마리로 커지며 반경이 8 → 13 이 됐고, 두 가지가 걸린다.
+ *
+ * 1. 도착 지점(0,0)은 무리의 **반경 + 인식 범위** 밖이라야 한다 — 안 그러면 사냥터에
+ *    들어서는 순간 50마리가 달려든다. 고레벨 몬스터의 인식 범위가 16 이라 ±20(거리
+ *    28.3)에서는 13 + 16 = 29 로 모자랐다. ±28 이면 거리 39.6 이라 10m 가 남는다.
+ * 2. 자동 사냥은 **무리 하나만** 돌아야 한다(`world.gd` 의 `HUNT_RADIUS`). 무리 하나가
+ *    통째로 들어오려면 반경이 지름 26 이상, 옆 무리가 안 들어오려면 "무리 간격 − 26"
+ *    미만이라야 한다. ±24(간격 48)면 22 < 26 이라 **만족하는 반경이 없다.**
+ *    ±28(간격 56)이면 30 > 26 이라 27 로 잡을 자리가 생긴다.
+ *
+ * 무리 바깥 끝이 중심에서 41 이고 존 절반이 46 이라 벽까지 5m 남는다.
+ * `zones.test.ts` 와 `godot/tests/auto_hunt_test.gd` 가 둘 다 잡는다.
+ */
 const PACKS: [number, number][] = [
-  [-20, -20],
-  [20, -20],
-  [-20, 20],
-  [20, 20],
+  [-28, -28],
+  [28, -28],
+  [-28, 28],
+  [28, 28],
 ];
 
 function buildField(theme: FieldTheme, index: number): ZoneDef {
@@ -138,10 +167,10 @@ function buildField(theme: FieldTheme, index: number): ZoneDef {
     monsters: [
       // 보스는 사냥터마다 한 마리, 7시 방향에 선다. 15분에 한 번 나온다.
       { kind: bossIdFor(index), x: BOSS_SPOT[0], z: BOSS_SPOT[1], radius: 3, count: 1, respawnMs: 900000 },
-      { kind: monsterIdFor(weak), x: PACKS[0]![0], z: PACKS[0]![1], radius: 8, count: 20, respawnMs: 10000 },
-      { kind: monsterIdFor(weak), x: PACKS[1]![0], z: PACKS[1]![1], radius: 8, count: 20, respawnMs: 10000 },
-      { kind: monsterIdFor(strong), x: PACKS[2]![0], z: PACKS[2]![1], radius: 8, count: 20, respawnMs: 10000 },
-      { kind: monsterIdFor(strong), x: PACKS[3]![0], z: PACKS[3]![1], radius: 8, count: 20, respawnMs: 10000 },
+      { kind: monsterIdFor(weak), x: PACKS[0]![0], z: PACKS[0]![1], radius: PACK_RADIUS, count: PACK_COUNT, respawnMs: 10000 },
+      { kind: monsterIdFor(weak), x: PACKS[1]![0], z: PACKS[1]![1], radius: PACK_RADIUS, count: PACK_COUNT, respawnMs: 10000 },
+      { kind: monsterIdFor(strong), x: PACKS[2]![0], z: PACKS[2]![1], radius: PACK_RADIUS, count: PACK_COUNT, respawnMs: 10000 },
+      { kind: monsterIdFor(strong), x: PACKS[3]![0], z: PACKS[3]![1], radius: PACK_RADIUS, count: PACK_COUNT, respawnMs: 10000 },
     ],
     env: envFor(theme),
   };

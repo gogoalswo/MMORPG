@@ -195,8 +195,16 @@ fetch_icon 5fd4ab55b5c3e682f35f8cf81b2a266d bag       # 가방
 fetch_icon 0f5c8a9b06c498361643b69fc4b3d97c gold      # 동전
 fetch_icon 36ce4590784bd702b644bcd409e50f0b glove     # 장갑 (미사용)
 fetch_icon dbc3fc75337294133bfc32ab2628ba5b belt      # 벨트 (미사용)
-fetch_icon 59ae33d2067e8eea8811afe7650699de frame_panel  # 창 테두리 (9조각)
-fetch_icon 0e8a03e181a5c41b5f1c0d955c097199 frame_slot   # 칸 테두리 (9조각)
+# 창을 짓는 그림. 전부 9조각으로 늘여 쓴다 (game.gd 의 _frame_box).
+# 처음 구운 frame_panel·frame_slot 은 2026-09-18 에 ui_* 한 벌로 갈아치웠다 —
+# 판·칸·탭·단추가 한 벌로 맞아야 창이 임시로 안 보인다.
+fetch_icon 6ecd356dcbf97b3a0c7e58010874a2b4 ui_panel     # 창 바탕 (모서리 꺾쇠)
+fetch_icon 3ac9dd6dfb3952573be25c0f99776506 ui_subpanel  # 이름표·스탯 상자
+fetch_icon 53ee3759bc42f67a8b116959a4a7fc89 ui_slot      # 칸
+fetch_icon 3323d42e0714394022e89571f96c36ca ui_tab_on    # 고른 탭
+fetch_icon a3646f67b96a22b45f2a278cd673ce01 ui_tab_off   # 안 고른 탭
+fetch_icon 300f7941dbf1b49c7a4cdbd608796663 ui_button    # 단추
+fetch_icon 43d4cd084d0fe8d2eeb46a61755b3b33 ui_figure    # 장착 칸 사이 캐릭터 그림자
 
 node scripts/build-item-icons.mjs
 

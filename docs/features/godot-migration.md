@@ -124,9 +124,9 @@ TS 에 남으니 표가 어긋나면 `npm test` 가 잡는다. 전부 GDScript �
 **쓰는 것만 복사한다.** 웹 빌드는 `godot/assets/` 를 통째로 담는다. 직업이 늘면
 `sync-godot-assets.mjs` 의 `MODELS` 에 줄을 더한다.
 
-가방 창 아이콘은 같은 파일의 `ICONS` 다. **이쪽은 커밋한다** — 128px PNG 열한 장이
-합쳐 140KB 라 이력에 남겨도 부담이 없고, 원본(1024²)만 커밋하지 않는다
-→ [inventory-equipment.md](inventory-equipment.md) 의 "아이콘".
+가방 창 아이콘과 창을 짓는 그림(`ui_*`)은 같은 파일의 `ICONS` 다. **이쪽은 커밋한다**
+— 128~384px PNG 열다섯 장이 합쳐 376KB 라 이력에 남겨도 부담이 없고, 원본(1024²)만
+커밋하지 않는다 → [inventory-equipment.md](inventory-equipment.md) 의 "아이콘".
 
 ### 텍스처를 512px 로 줄여서 넣는다 ★
 

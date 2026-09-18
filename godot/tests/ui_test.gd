@@ -260,17 +260,16 @@ func _case_bag(game: Node3D) -> void:
 	var slots: Array = Items.slots()
 	if slots.size() != 6:
 		_fail("슬롯이 6종이어야 하는데 %d종: %s" % [slots.size(), str(slots)])
-	if game._bag_gear.get_child_count() != slots.size():
-		_fail("장착이 %d칸이어야 하는데 %d칸" % [slots.size(), game._bag_gear.get_child_count()])
-	if game._bag_gear.columns != 3:
-		_fail("장착이 3열이어야 하는데 %d열" % game._bag_gear.columns)
+	var gear: Array = game._gear_cells
+	if gear.size() != slots.size():
+		_fail("장착이 %d칸이어야 하는데 %d칸" % [slots.size(), gear.size()])
 	if game._bag_grid.get_child_count() < 15:
 		_fail("가방 격자가 15칸 이상이어야 하는데 %d칸" % game._bag_grid.get_child_count())
 	if game._bag_grid.columns != 5:
 		_fail("가방 격자가 5열이어야 하는데 %d열" % game._bag_grid.columns)
 
 	# **왼쪽이 장착, 오른쪽이 가방이다** (2026-09-18 요청)
-	var gear_x: float = game._bag_gear.get_global_rect().position.x
+	var gear_x: float = gear[0].get_global_rect().position.x
 	var grid_x: float = game._bag_grid.get_global_rect().position.x
 	if gear_x >= grid_x:
 		_fail("장착(%.0f)이 가방(%.0f) 왼쪽에 있어야 한다" % [gear_x, grid_x])
@@ -280,14 +279,14 @@ func _case_bag(game: Node3D) -> void:
 	# 테두리가 붙었나 — 그림이 없으면 코드로 그린 것이라도 있어야 한다
 	if game._bag_panel.get_theme_stylebox("panel") == null:
 		_fail("창에 테두리가 없다")
-	if game._bag_gear.get_child(0).get_theme_stylebox("panel") == null:
+	if gear[0].get_theme_stylebox("panel") == null:
 		_fail("칸에 테두리가 없다")
 
 	# 그림이 붙었나. 아이콘이 없으면(sync 를 안 돌렸으면) 칸 이름이 글자로 나와야 한다
 	var drawn := 0
 	var named := 0
-	for index in game._bag_gear.get_child_count():
-		var cell: PanelContainer = game._bag_gear.get_child(index)
+	for index in gear.size():
+		var cell: PanelContainer = gear[index]
 		if cell.get_node("icon").texture != null:
 			drawn += 1
 		elif cell.get_node("text").text != "":
@@ -299,11 +298,30 @@ func _case_bag(game: Node3D) -> void:
 			slots.size(), drawn, named, game._bag_grid.get_child_count()
 		])
 
-	# 머리 줄과 요약 줄
+	# 칸 수·레벨·스탯 상자
 	if not game._bag_head.text.contains("/%d" % Items.bag_size()):
-		_fail("머리 줄이 '%s'" % game._bag_head.text)
-	if not game._bag_sum.text.contains("치명타"):
-		_fail("요약 줄에 치명타가 없다: '%s'" % game._bag_sum.text)
+		_fail("가방 칸 수가 '%s'" % game._bag_head.text)
+	if not game._bag_level.text.begins_with("LV."):
+		_fail("이름표가 'LV.' 로 시작해야 하는데 '%s'" % game._bag_level.text)
+	var stat_names: Array = game.STAT_NAMES
+	var stat_labels: Array = game._stat_labels
+	if stat_labels.size() != stat_names.size():
+		_fail("스탯이 %d개여야 하는데 %d개" % [stat_names.size(), stat_labels.size()])
+	else:
+		var wrote := ""
+		for index in stat_labels.size():
+			var want := str(stat_names[index])
+			if not str(stat_labels[index].text).begins_with(want):
+				_fail("%d번째 스탯이 '%s' 여야 하는데 '%s'" % [index, want, stat_labels[index].text])
+			wrote += stat_labels[index].text + "  "
+		print("  스탯 상자: %s" % wrote.strip_edges())
+
+	# 탭 — 다섯 개, 고른 것만 바뀐다
+	var tabs: Array = game._tab_buttons
+	if tabs.size() != 5:
+		_fail("탭이 5개여야 하는데 %d개" % tabs.size())
+	elif game._bag_tab != 0:
+		_fail("처음에는 '전체' 가 골라져 있어야 한다 (%d)" % game._bag_tab)
 
 	# 아무것도 안 골랐으면 상세 칸은 안내만, 단추는 꺼져 있어야 한다
 	if not game._bag_action.disabled:
@@ -350,7 +368,7 @@ func _case_bag(game: Node3D) -> void:
 
 	# 끼운 칸을 골라 벗긴다
 	var slot_index := slots.find("weapon")
-	game._bag_gear.get_child(slot_index).get_node("hit").pressed.emit()
+	game._gear_cells[slot_index].get_node("hit").pressed.emit()
 	await process_frame
 	if game._bag_action.text != "벗기":
 		_fail("장비 칸을 골랐는데 단추가 '%s'" % game._bag_action.text)
@@ -361,6 +379,26 @@ func _case_bag(game: Node3D) -> void:
 		_fail("벗기를 눌렀는데 무기가 그대로다")
 	else:
 		print("  골라서 벗기: 무기 칸이 비었다")
+
+	# 탭으로 거르면 **칸 번호와 가방 번호가 어긋난다** — 거기서 끼면 엉뚱한 게 끼워진다
+	me.bag.clear()
+	me.bag.append({"id": "m_00", "grade": 1, "enhance": 0, "options": []})
+	me.bag.append({"id": "w_fighter_00", "grade": 3, "enhance": 0, "options": []})
+	game._pick_tab(1)  # 무기
+	await process_frame
+	if game._bag_view != [1]:
+		_fail("무기 탭인데 보이는 것이 %s (가방 1번만 나와야 한다)" % str(game._bag_view))
+	game._bag_grid.get_child(0).get_node("hit").pressed.emit()
+	await process_frame
+	game._on_bag_action()
+	for i in 3:
+		await process_frame
+	if me.equipped.get("weapon", {}).is_empty():
+		_fail("무기 탭에서 골라 꼈는데 무기 칸이 비어 있다")
+	else:
+		print("  탭으로 거른 칸을 골라도 제대로 끼워진다")
+	game._pick_tab(0)
+	await process_frame
 
 	game._toggle_bag()
 	await process_frame

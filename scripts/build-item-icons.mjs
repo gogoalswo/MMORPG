@@ -47,13 +47,48 @@ const THIN_MARGIN = 0.25;
  * 뭉갠다. 그래서 칸 테두리는 128, 창 테두리는 넓으니 256 으로 굽는다
  */
 const SIZE = 128;
-const FRAME_SIZE = { 'frame_panel.png': 256, 'frame_slot.png': 128 };
+const FRAME_SIZE = {
+  'frame_panel.png': 256,
+  'frame_slot.png': 128,
+  'ui_panel.png': 256,
+  'ui_subpanel.png': 192,
+  'ui_slot.png': 128,
+  'ui_tab_on.png': 192,
+  'ui_tab_off.png': 192,
+  'ui_button.png': 192,
+  'ui_figure.png': 384,
+};
+/**
+ * **알파 경계로 잘라내는 것.** 바르코는 그림 둘레에 배경을 넉넉히 남기는데,
+ * 9조각으로 늘여 쓰려면 테가 그림 가장자리에 닿아 있어야 여백을 재기 쉽다.
+ * 배경을 걷은 다음 남은 부분에 딱 맞게 자른다. 비율은 그대로 두고 긴 변을 맞춘다
+ */
+const TRIM = /^ui_/;
 /**
  * **안쪽도 뚫는 것.** 칸 테두리는 가운데가 흰 판으로 차 있는데, 테두리에서
  * 번져 들어가는 채우기로는 닿지 못한다 (테가 막고 있다). 이 이름들은 한가운데에서
  * 한 번 더 번지게 한다. 창 테두리(frame_panel)는 **안쪽을 남긴다** — 그게 창 바탕이다
  */
 const HOLLOW = new Set(['frame_slot.png']);
+
+/** 알파가 남아 있는 칸의 바깥 테두리 상자 */
+function alphaBounds(data, width, height) {
+  let x0 = width;
+  let y0 = height;
+  let x1 = -1;
+  let y1 = -1;
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (data[(y * width + x) * 4 + 3] <= 8) continue;
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (y < y0) y0 = y;
+      if (y > y1) y1 = y;
+    }
+  }
+  if (x1 < 0) return null;
+  return { left: x0, top: y0, width: x1 - x0 + 1, height: y1 - y0 + 1 };
+}
 
 /**
  * 가장자리에서 시작해 배경색과 비슷한 픽셀을 따라 번지며 알파를 0 으로 만든다.
@@ -174,10 +209,30 @@ for (const name of readdirSync(SRC).filter((f) => f.endsWith('.png')).sort()) {
   if (HOLLOW.has(name)) cut += cutCenter(data, info.width, info.height);
   const out = join(DST, basename(name));
   const size = FRAME_SIZE[name] ?? SIZE;
-  await sharp(data, { raw: { width: info.width, height: info.height, channels: 4 } })
-    .resize(size, size, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-    .png({ compressionLevel: 9 })
-    .toFile(out);
+  const raw = { width: info.width, height: info.height, channels: 4 };
+  let image = sharp(data, { raw });
+  let note = '';
+
+  if (TRIM.test(name)) {
+    // 남은 그림에 딱 맞게 자르고, 비율을 지킨 채 긴 변을 맞춘다
+    const box = alphaBounds(data, info.width, info.height);
+    if (box != null) {
+      image = image.extract(box);
+      const scale = size / Math.max(box.width, box.height);
+      image = image.resize(
+        Math.max(1, Math.round(box.width * scale)),
+        Math.max(1, Math.round(box.height * scale))
+      );
+      note = ` ${Math.round(box.width * scale)}x${Math.round(box.height * scale)}`;
+    }
+  } else {
+    image = image.resize(size, size, {
+      fit: 'contain',
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    });
+  }
+
+  await image.png({ compressionLevel: 9 }).toFile(out);
   const share = ((cut / (info.width * info.height)) * 100).toFixed(0);
-  console.log(`  -> public/assets/icons/${basename(name)} (배경 ${share}% 걷어냄)`);
+  console.log(`  -> public/assets/icons/${basename(name)} (배경 ${share}% 걷어냄)${note}`);
 }

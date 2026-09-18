@@ -41,7 +41,11 @@ const ICONS = [
   'weapon.png', 'armor.png', 'helmet.png',
   'boots.png', 'necklace.png', 'ring.png',
   'bag.png', 'gold.png',
-  'frame_panel.png', 'frame_slot.png',
+  // 창을 짓는 그림들. 9조각으로 늘여 쓴다 (game.gd 의 _frame_box)
+  'ui_panel.png', 'ui_subpanel.png', 'ui_slot.png',
+  'ui_tab_on.png', 'ui_tab_off.png', 'ui_button.png',
+  // 장착 칸 사이에 서는 캐릭터 그림자
+  'ui_figure.png',
 ];
 
 /**

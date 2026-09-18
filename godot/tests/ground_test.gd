@@ -94,24 +94,15 @@ func _case_contrast() -> void:
 	])
 
 
-## 안개가 바닥 무늬를 씻지 않는지. 안개는 곱이 아니라 더하기라, 카메라 거리에
-## 걸리면 돌 틈처럼 어두운 데가 그대로 들려 무늬가 사라진다 (2026-09-18)
+## 안개를 켜지 않는다 (2026-09-18 요청). 안개는 곱이 아니라 더하기라 돌 틈처럼
+## 어두운 데를 그대로 들어올려서, 켜면 바닥 무늬가 씻긴다
 func _case_fog() -> void:
-	var env: Dictionary = GameData.zone("village").env
-	var e: Environment = Game.environment_for(env)
-	if e.fog_mode != Environment.FOG_MODE_DEPTH:
-		_fail("안개가 깊이 안개가 아니다 — 지수 안개는 카메라 앞부터 낀다")
-		return
-	var near := float(env.get("fogNear", 70))
-	if absf(e.fog_depth_begin - near) > 1e-6:
-		_fail("안개 시작이 %.0fm 여야 하는데 %.0fm" % [near, e.fog_depth_begin])
-	# 카메라는 초점에서 이만큼 떨어져 있다. 바닥은 그보다 가까이도 온다
-	if CameraRig.DISTANCE >= e.fog_depth_begin:
-		_fail("카메라 거리 %.1fm 가 안개 시작 %.0fm 안에 있다" % [
-			CameraRig.DISTANCE, e.fog_depth_begin])
-	else:
-		print("  안개 %.0f~%.0fm (카메라 거리 %.1fm — 바닥에는 안 낀다)" % [
-			e.fog_depth_begin, e.fog_depth_end, CameraRig.DISTANCE])
+	for id in ["village", "meadow", "canyon"]:
+		var e: Environment = Game.environment_for(GameData.zone(id).env)
+		if e.fog_enabled:
+			_fail("%s 에 안개가 켜져 있다" % id)
+			return
+	print("  안개 없음 (존 세 곳 확인)")
 
 
 func _case_tint() -> void:

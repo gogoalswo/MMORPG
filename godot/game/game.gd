@@ -567,15 +567,14 @@ func _on_gate_pick(zone_id: String) -> void:
 	_transport.send(&"travel", {"zone": zone_id})
 
 
-## 존 분위기 — 하늘색·환경광·안개.
+## 존 분위기 — 하늘색과 환경광. **안개는 켜지 않는다** (2026-09-18 요청:
+## "안개를 넣으라고 한 적이 없는데 왜 넣은거야? 그냥 안개를 없애버려").
 ##
-## **안개는 `fogNear` 앞에서는 없어야 한다.** 존 데이터가 주는 건 선형 안개
-## (마을은 70m 에서 시작해 190m 에서 완전히 잠긴다)인데, 고도로 옮길 때
-## near 가 없는 지수 안개(`fog_density`)로 깔았다. 그러면 카메라 바로 앞
-## (27m) 바닥에도 안개가 15% 섞인다. 안개는 곱이 아니라 **더하기**라
-## 돌 틈 같은 어두운 데를 그대로 들어올려서, 바닥 무늬가 씻기고 화면이
-## 안개색으로 뜬다 (2026-09-18 지적: "같은 리소스인데 선명하지 않다").
-## 그래서 깊이 안개로 되돌렸다 — 존이 92m 라 사실상 안 보이는 게 맞다.
+## 안개는 옛 웹 클라이언트에 있던 것이 고도 이관 때 따라온 것이고, 옮기면서
+## 선형(`fogNear` 70 ~ `fogFar` 190)이 near 없는 지수 안개로 바뀌어 카메라 앞
+## 27m 바닥에도 15% 섞이고 있었다. 안개는 곱이 아니라 **더하기**라 돌 틈 같은
+## 어두운 데를 그대로 들어올린다 — 바닥 무늬가 씻기고 화면이 안개색으로 떴다.
+## `env` 의 `fogColor`·`fogNear`·`fogFar` 는 옛 서버가 아직 들고 있어 남겨 뒀다.
 static func environment_for(env: Dictionary) -> Environment:
 	var e := Environment.new()
 	e.background_mode = Environment.BG_COLOR
@@ -583,12 +582,7 @@ static func environment_for(env: Dictionary) -> Environment:
 	e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	e.ambient_light_color = Color(env.get("skyColor", "#b9c9d8"))
 	e.ambient_light_energy = float(env.get("hemiIntensity", 1.1))
-	e.fog_enabled = true
-	e.fog_mode = Environment.FOG_MODE_DEPTH
-	e.fog_light_color = Color(env.get("fogColor", "#c2c8b8"))
-	e.fog_depth_begin = float(env.get("fogNear", 70))
-	e.fog_depth_end = float(env.get("fogFar", 190))
-	e.fog_depth_curve = 1.0
+	e.fog_enabled = false
 	return e
 
 

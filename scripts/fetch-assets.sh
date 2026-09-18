@@ -85,6 +85,24 @@ if [ ! -f assets-src/textures/varco/fx_hit.png ]; then
   curl -sL --max-time 120 -o assets-src/textures/varco/fx_hit.png "${VARCO}/714ba0443e09383d73e4424237ceae53.png"
 fi
 
+# 차원문 — 바르코 워크플로우 "포탈". 3D 는 움직이지 않는 돌 아치 하나(1×1×1 로 정규화,
+# 가운데가 원점). 원본은 2048 PNG 텍스처 셋이라 10MB 인데 1024 JPEG 으로 줄여 커밋한다(0.8MB).
+fetch_varco 9af24ed7f19f04fc1b5d5b0c3bef567a portal
+node scripts/shrink-glb-textures.mjs assets-src/models/varco/portal.glb public/assets/models/varco_portal.glb 1024
+
+# 차원문 창 UI 조각 — 같은 워크플로우. 창 바탕·소용돌이 칸·별 칸을 **따로** 받아 고도에서
+# 조립한다 (docs/features/portal-ui.md). 원화 두 장(9fbb5d1f… 9dfeff2c…)은 3D 를 뽑은 그림이라 안 받는다.
+fetch_ui() { # $1=객체 해시  $2=출력 이름
+  if [ ! -f "assets-src/textures/varco/$2.png" ]; then
+    echo "받는 중: textures/varco/$2.png"
+    curl -sL --max-time 120 -o "assets-src/textures/varco/$2.png" "${VARCO}/$1.png"
+  fi
+}
+fetch_ui df878fd4c5f48b8454dc6c40228e7803 ui_panel
+fetch_ui 4d62d8a36f11dac8d3388b657a8bed00 ui_gate_here
+fetch_ui f97809fc5aefbfd9987fd6e2dcdd5454 ui_gate_go
+node scripts/build-ui.mjs
+
 # 클립 이름 = 파일. **역슬래시로 줄을 잇지 않는다** — 이 파일은 CRLF 라서
 # 줄 끝 역슬래시 다음에 CR 이 오면 bash 가 줄바꿈이 아니라 CR 이스케이프로 읽고 거기서 끊는다.
 # #loop = 반복 재생이라 한 주기로 잘라 시작·끝을 맞춘다

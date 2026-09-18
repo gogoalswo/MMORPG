@@ -92,13 +92,72 @@ func _run_scene() -> void:
 	if not game._gate_panel.visible:
 		_fail("차원문에 섰는데 고르는 화면이 안 떴다")
 	else:
-		# 마을 + 사냥터 20곳 = 21개 단추
-		var grid: GridContainer = game._gate_panel.get_child(0).get_child(1)
-		print("  차원문 화면: 단추 %d개, 첫 줄 '%s'" % [
-			grid.get_child_count(), grid.get_child(0).text
-		])
-		if grid.get_child_count() != 21:
-			_fail("단추가 21개여야 하는데 %d개" % grid.get_child_count())
+		# 마을 + 사냥터 20곳 = 21줄. 맨 위(마을)가 지금 서 있는 곳이라 막혀 있다
+		var panel: GatePanel = game._gate_panel
+		print("  차원문 화면: %d줄, 첫 줄 '%s'" % [panel.row_count(), panel.row(0).text])
+		if panel.row_count() != 21:
+			_fail("줄이 21개여야 하는데 %d개" % panel.row_count())
+		elif not panel.row(0).disabled or panel.row(1).disabled:
+			_fail("서 있는 곳(마을)만 막혀야 한다")
+		elif panel.row(0).icon == panel.row(1).icon:
+			_fail("서 있는 곳과 갈 곳의 칸 아이콘이 같다")
+		elif panel.texture == null:
+			_fail("창 바탕 조각(panel.png)이 없다 — npm run sync:godot 을 돌렸나")
+		# 앵커로만 자리를 잡는다 — 화면 가운데에 있어야 한다
+		var mid := panel.get_global_rect().get_center().x
+		if absf(mid - game.get_viewport().get_visible_rect().size.x * 0.5) > 2.0:
+			_fail("창이 가운데가 아니다 (%.0f)" % mid)
+
+	# 목록은 **끌어서도** 내려간다 (휠 말고) — 2026-09-18 요청
+	var panel2: GatePanel = game._gate_panel
+	var list: ScrollContainer = panel2._scroll
+	# 목록 기준 좌표다. 가운데를 눌러 위로 끈다
+	var grab := list.size * 0.5
+	panel2._on_list_input(_mouse(grab, true))
+	for i in 6:
+		grab.y -= 20
+		panel2._on_list_input(_move(grab))
+		await process_frame
+	var dragged := list.scroll_vertical
+	panel2._on_list_input(_mouse(grab, false))
+	if dragged <= 0:
+		_fail("목록을 끌었는데 안 내려갔다 (스크롤 %d)" % dragged)
+	elif not panel2.visible:
+		_fail("끌기만 했는데 창이 닫혔다 — 끌다가 고른 것으로 친다")
+	else:
+		print("  목록 끌기: %dpx 내려감" % dragged)
+
+	# 끌지 않고 그 자리에서 떼면 그 줄을 고른 것이다
+	list.scroll_vertical = 0
+	await process_frame
+	var row1 := panel2.row(1).get_global_rect().get_center() - list.global_position
+	panel2._on_list_input(_mouse(row1, true))
+	panel2._on_list_input(_mouse(row1, false))
+	if panel2.visible:
+		_fail("줄을 눌렀다 뗐는데 안 골라졌다")
+
+	# 문 아치를 누르면 창이 열린다 — **멀리 서 있어도 바로** 열린다
+	# (2026-09-18 요청: "포탈까지 안 걸어가도 클릭하면 UI 열리게")
+	game._gate_panel.close_panel()
+	me.x = 30.0
+	me.z = 30.0
+	for i in 3:
+		await process_frame
+	var top: Vector2 = game._camera.unproject_position(Vector3(9.0, 3.5, 0.0))
+	if not game._gate_tapped(top):
+		_fail("아치 윗부분을 눌렀는데 문으로 안 잡힌다 (%s)" % top)
+	else:
+		game._on_gate_tapped()
+		if not game._gate_panel.visible:
+			_fail("문에서 멀리 서서 눌렀는데 창이 안 떴다")
+		elif game._marker.visible:
+			_fail("문을 눌렀는데 창 대신 걸어가는 표시가 떴다")
+	if game._gate_tapped(game._camera.unproject_position(Vector3(-9.0, 0.0, 0.0))):
+		_fail("문에서 먼 땅이 문으로 잡힌다")
+	if ResourceLoader.exists(Portal.MODEL):
+		print("  차원문 모델: 있음, 아치를 누르면 창")
+	else:
+		_fail("차원문 모델이 없다 — npm run sync:godot 을 돌렸나")
 
 	# 골라서 옮긴다
 	game._on_gate_pick("meadow")
@@ -278,3 +337,19 @@ func _case_bag(game: Node3D) -> void:
 	await process_frame
 	if game._bag_panel.visible:
 		_fail("다시 눌렀는데 가방이 안 닫혔다")
+
+## 목록을 눌렀다/뗐다. 자리는 **목록 기준**이다 (Control 의 gui_input 이 그렇다)
+func _mouse(at: Vector2, pressed: bool) -> InputEventMouseButton:
+	var event := InputEventMouseButton.new()
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.position = at
+	event.pressed = pressed
+	return event
+
+
+## 누른 채로 움직였다
+func _move(at: Vector2) -> InputEventMouseMotion:
+	var event := InputEventMouseMotion.new()
+	event.position = at
+	event.button_mask = MOUSE_BUTTON_MASK_LEFT
+	return event

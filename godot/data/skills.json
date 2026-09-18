@@ -306,6 +306,18 @@
       "maxTargets": 10,
       "reqLevel": 20,
       "description": "뛰어올라 내리찍어 일대를 무너뜨린다."
+    },
+    "thunder_fall": {
+      "id": "thunder_fall",
+      "name": "낙뢰",
+      "job": "fighter",
+      "cooldown": 12000,
+      "range": 4,
+      "arc": 1.8849555921538759,
+      "power": 4.2,
+      "maxTargets": 4,
+      "reqLevel": 30,
+      "description": "번개를 세 번 내리꽂아 땅을 가른다."
     }
   },
   "byJob": {
@@ -313,7 +325,8 @@
       "rising_kick",
       "tiger_roar",
       "white_tiger",
-      "sky_breaker"
+      "sky_breaker",
+      "thunder_fall"
     ],
     "mage": [
       "fireball",

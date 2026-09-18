@@ -390,17 +390,21 @@ def player(L, cls='ref', grade=None, gear=1.0, enh=None):
 
 
 def ref_gear(L):
-    """그 레벨에서 현실적으로 갖고 있는 (풀세트 완성도, 강화 단계).
-    등급1 드랍 사냥터에 들어가기 전에는 시작 장비(무기 START_GEAR_SLOTS개, 무강) 뿐이다."""
+    """그 레벨에서 현실적으로 갖고 있는 (착용 슬롯, 강화 단계). 풀세트면 worn=None.
+    등급1 드랍 사냥터에 들어가기 전에는 시작 장비(무기 START_GEAR_SLOTS개, 무강) 뿐이다.
+    이때 "풀셋 완성도 1/6" 같은 스칼라로 두면 안 된다 — 무기 한 자루가 방어력·HP 까지
+    주게 된다. 슬롯별 착용(worn)으로 계산해야 SLOT_STATS 배분이 그대로 걸려서
+    무기는 공격력 예산의 60% 만 준다(방어력·HP 0)."""
     if L < drop_levels(1)[0]:
-        return P['START_GEAR_SLOTS'] / SLOT_TOTAL, 1
-    return 1.0, enh_ref_step(L)
+        worn = dict((s, (1, 1)) for s in SLOT_ORDER[:P['START_GEAR_SLOTS']])
+        return worn, 1
+    return None, enh_ref_step(L)
 
 
 def ref_player(L):
     """몬스터 역산의 기준. 기준 등급(보간) + 그 레벨에서 현실적인 장비 상태"""
-    gear, enh = ref_gear(L)
-    return _build(L, 'ref', ref_grade(L), gear, enh)
+    worn, enh = ref_gear(L)
+    return _build(L, 'ref', ref_grade(L), 1.0, enh, worn=worn)
 
 
 # ---------------------------------------------------------------- 전투

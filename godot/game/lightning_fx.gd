@@ -41,11 +41,15 @@ const JITTER: Array[Vector2] = [Vector2.ZERO, Vector2(0.3, -0.2), Vector2(-0.24,
 ## 떨어지는데 내 위치에서 떨어지도록 해"). 앞 2.8m 에 떨어뜨렸더니 내가 부른
 ## 것이 아니라 저쪽에 떨어진 것으로 보였다. 0 이 아닌 값을 주면 그만큼 앞이다
 const AHEAD := 0.0
-## 줄기가 시작하는 높이 (720p 에서 266px — 캐릭터 키의 네 배)
-const SKY := 7.0
-## 시작점이 떨어지는 자리보다 얼마나 뒤인가. `AHEAD` 보다 크므로
-## **시작점은 캐릭터보다 2.2m 뒤**다 — 그래서 번개가 뒤에서 앞으로 지나간다
-const BEHIND := 5.0
+## 줄기가 시작하는 높이 (720p 에서 342px — 캐릭터 키의 다섯 배)
+const SKY := 9.0
+## 시작점이 얼마나 멀리 있나. 높이와 합쳐 **화면 밖**이 되어야 한다
+const BEHIND := 6.5
+## 화면에서 **가로로 미는 정도.** 0 이면 화면에서 수직으로 내려와 캐릭터와
+## 겹쳐 기둥으로 보인다 — 최소한 이만큼은 기울어야 한다
+const LEAN := 0.55
+## 보는 쪽에 따라 기울기를 더 흔드는 폭. 늘 똑같은 대각선이면 그것대로 심심하다
+const SWAY := 0.35
 
 ## 경로를 몇 토막으로 나누나. 잘게 나눌수록 잔 떨림이 는다
 ## 토막이 잘면 **폭보다 짧아져** 꺾인 자리가 겹친다. 8.6m 를 열둘로 나누면
@@ -189,6 +193,23 @@ func _process(delta: float) -> void:
 	_t += delta
 	if _t >= _span:
 		queue_free()
+
+
+## 번개가 오는 쪽(수평, 월드). **화면 위쪽 밖**이다.
+##
+## 캐릭터가 보는 쪽의 반대에 두었더니 **방향에 따라 번개가 엄청 짧아지거나
+## 시작점이 화면 안에 보였다** (2026-09-18 지적). 카메라가 고정각이라,
+## 캐릭터가 카메라 쪽을 보면 시작점이 화면 **아래**로 내려온다.
+##
+## 카메라에서 **멀어지는** 수평 방향이 곧 화면에서 위쪽이므로 그쪽에 둔다.
+## 규칙 문서(3절)의 "방향은 캐릭터 기준" 과 어긋나 보이지만, 거기서 거절된 것은
+## **늘 왼쪽→오른쪽으로 보이는** 것이었다 — 여기서는 보는 쪽에 따라 `SWAY`
+## 만큼 좌우로 트니 매번 같은 대각선은 아니다
+static func from_dir(facing: float) -> Vector3:
+	var away := Vector3(-sin(CameraRig.YAW), 0.0, -cos(CameraRig.YAW)).normalized()
+	# 화면 가로 방향 — 이쪽으로 밀어야 화면에서 대각선이 된다
+	var side := away.cross(Vector3.UP).normalized()
+	return (away + side * (LEAN + sin(facing) * SWAY)).normalized()
 
 
 ## 카메라가 보는 쪽(월드). 요 45°·피치 42° 로 고정이라 상수에서 바로 나온다
@@ -471,12 +492,8 @@ class Strike:
 		swell = swell_
 		at = at_
 		position = Vector3(shake.x, 0.0, shake.y)
-		# 시작점은 **캐릭터 뒤 위쪽**이다 (보는 쪽의 반대로 BEHIND 만큼)
-		_from = Vector3(
-			-sin(facing) * LightningFx.BEHIND,
-			LightningFx.SKY,
-			-cos(facing) * LightningFx.BEHIND
-		)
+		# 시작점은 **화면 위쪽 밖**이다 — 캐릭터가 어느 쪽을 보든 같다
+		_from = LightningFx.from_dir(facing) * LightningFx.BEHIND + Vector3.UP * LightningFx.SKY
 
 		# 넓은 헤일로 → 색 빛 → 가는 흰 심 순으로 쌓는다
 		_halo = _sheet(LightningFx.glow(LightningFx.COLOR_HALO))

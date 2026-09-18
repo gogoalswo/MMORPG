@@ -98,7 +98,7 @@ ROLES = {
     'elite':  dict(hp=3.0, atk=2.0),
     'boss':   dict(hp=7.0, atk=5.0),
 }
-# 슬롯 6개, 가중치 균등. 한 칸을 갈아입어도 전체의 1/6 (약 17%) 만 오른다
+# 슬롯 6개. 가중치는 균등이 아니라 SLOT_STATS 배분이다 (무기가 공격력 예산의 60%)
 SLOT_ORDER = ['weapon', 'chest', 'helm', 'boots', 'necklace', 'ring']
 SLOT_KR = dict(weapon='무기', chest='갑옷', helm='투구', boots='신발',
                necklace='목걸이', ring='반지')

@@ -23,6 +23,16 @@ const SHOTS := [2, 5, 9, 14, 20, 30]
 ## 요구 레벨과 포인트를 안 보고 배우게 해 준다 (스킬창을 누를 사람이 없다)
 const LEVEL := 200
 
+## `portal` 로 찍을 때 — 문에서 몇 미터 앞에 서나(반지름 2.6 밖이어야 창이 안 뜬다)
+const PORTAL_STAND := 6.0
+## 카메라가 보는 높이. 아치가 5.2m 라 가운데를 봐야 문이 화면에 든다
+const PORTAL_LOOK := 2.4
+## 문까지의 거리. 게임 각(요 45·피치 42)은 그대로 두고 가까이만 당긴다 —
+## 소용돌이가 화면에서 작으면 찍어도 못 읽는다 (CLAUDE.md 의 "확인이 되는 크기로")
+const PORTAL_DISTANCE := 9.0
+## 몇 프레임째를 찍나. 소용돌이는 계속 돌므로 한 바퀴를 고르게 나눈다
+const PORTAL_SHOTS := [4, 12, 20, 28]
+
 
 func _init() -> void:
 	Save.clear()
@@ -39,6 +49,11 @@ func _run() -> void:
 	await process_frame
 	var game: Node3D = root.get_node("Game")
 	await process_frame
+
+	# 차원문은 스킬이 아니라 **늘 켜져 있는** 이펙트다 — 시전 대신 문 앞에 세우고 찍는다
+	if skill == "portal":
+		await _portal(game)
+		return
 
 	var player: Dictionary = game._transport._world._players[game._transport.my_id()]
 	player["level"] = LEVEL
@@ -67,4 +82,40 @@ func _run() -> void:
 			img.save_png("res://../logs/shot_%02d.png" % frame)
 			taken += 1
 			print("logs/shot_%02d.png  (%.2f초쯤)" % [frame, float(frame) * 0.15 * SLOW])
+	quit(0)
+
+
+## 차원문 소용돌이. 문 **밖**에 서야 한다 — 안에 서면 `gate` 이벤트가 창을 열어
+## 화면을 덮는다. 문을 화면 가운데에 두려고 카메라 초점만 문 쪽으로 당겨 놓는다
+func _portal(game: Node3D) -> void:
+	var gate: Dictionary = game._transport.snapshot().get("gate", {})
+	var pos: Array = gate.get("position", [0, 0])
+	var at := Vector3(float(pos[0]), 0.0, float(pos[1]))
+	var player: Dictionary = game._transport._world._players[game._transport.my_id()]
+	player["x"] = at.x
+	player["z"] = at.z + PORTAL_STAND
+	await process_frame
+	await process_frame
+
+	# **게임의 _process 를 멈춘다** — 안 그러면 카메라가 매 프레임 캐릭터를 다시 쫓아가
+	# 문이 화면 구석으로 밀린다. 소용돌이는 제 노드에서 도니까 그대로 움직인다
+	game.set_process(false)
+	var focus := at + Vector3(0, PORTAL_LOOK, 0)
+	var pitch := deg_to_rad(CameraRig.PITCH)
+	var away := Vector3(cos(pitch) * sin(CameraRig.YAW), sin(pitch), cos(pitch) * cos(CameraRig.YAW))
+	game._camera.position = focus + away * PORTAL_DISTANCE
+	game._camera.look_at(focus, Vector3.UP)
+
+	# 돌아가는 소용돌이라 **시간을 늦출 필요가 없다** — 한 바퀴를 고르게 나눠 찍는다
+	var frame := 0
+	var taken := 0
+	while taken < PORTAL_SHOTS.size():
+		await process_frame
+		frame += 1
+		if frame in PORTAL_SHOTS:
+			await RenderingServer.frame_post_draw
+			var img := root.get_texture().get_image()
+			img.save_png("res://../logs/shot_%02d.png" % frame)
+			taken += 1
+			print("logs/shot_%02d.png" % frame)
 	quit(0)

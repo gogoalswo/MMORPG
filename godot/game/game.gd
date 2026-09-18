@@ -581,23 +581,16 @@ func _open_gate() -> void:
 	_gate_panel.open(_shown_zone)
 
 
-## 문을 눌렀다. 문 안이면 바로 창을 열고, 멀면 걸어간다 — 들어서면 World 의
-## `gate` 이벤트가 창을 연다. **이동하는 건 여전히 travel 요청이고 World 가 다시 본다**
+## 문을 눌렀다. **거리와 상관없이 바로 창을 연다** (2026-09-18 요청: "포탈까지
+## 안 걸어가도 클릭하면 UI 열리게"). 예전에는 문 밖에서 누르면 문 가운데로
+## 걸어갔고, 들어서야 `gate` 이벤트가 창을 열었다 — 멀리서 한 번 누르고 기다려야
+## 했다. 걸어가는 길은 그대로 남아 있다: 문 안으로 들어서면 `gate` 이벤트가 연다.
+## **이동하는 건 여전히 travel 요청이고 World 가 다시 본다**
 func _on_gate_tapped() -> void:
-	var gate: Dictionary = _transport.snapshot().get("gate", {})
-	var pos: Array = gate.get("position", [0, 0])
-	var center := Vector3(float(pos[0]), 0.0, float(pos[1]))
-	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
-	var mine := Vector3(float(me.get("x", 0.0)), 0.0, float(me.get("z", 0.0)))
-	if mine.distance_to(center) <= float(gate.get("radius", 2.6)):
-		_target = Vector3.INF
-		_marker.visible = false
-		_open_gate()
-		return
+	_target = Vector3.INF
 	_target_mob = ""
-	_target = center
-	_marker.position = center + Vector3(0, 0.05, 0)
-	_marker.visible = true
+	_marker.visible = false
+	_open_gate()
 
 
 func _on_gate_pick(zone_id: String) -> void:

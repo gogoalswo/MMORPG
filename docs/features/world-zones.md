@@ -16,6 +16,7 @@
 | `packages/client/src/scene/{ground,sky,portal,lighting}.ts` | 지면·하늘·차원문·광원 |
 | `packages/client/src/scene/ground.ts` | **바닥 셰이더** — 텍스처 종류별 `LOOKS`(타일 크기·섞기·러프니스·평균색·발광), 존 틴트 |
 | `packages/client/src/scene/assets.ts` | 바닥 7종(색+노멀 KTX2)을 부팅 때 전부 받는다 |
+| `godot/game/game.gd` | `environment_for` — 존 분위기(하늘·환경광·**안개**)를 만든다 |
 | `godot/game/ground.gd` | **고도 바닥 재질** — 틴트·대비·노멀 세기·타일 반복을 셰이더에 넣는다 |
 | `godot/game/ground.gdshader` | 바닥 셰이더 — 아니소트로픽 필터, 무늬 대비, 노멀 세기 |
 | `scripts/build-ground-textures.mjs` | 바닥 이미지 7장 → 512² 색 + 밝기로 만든 노멀 JPEG (→ `npm run compress`) |
@@ -131,6 +132,17 @@
 - 이미지에 노멀·러프니스 맵이 없다. 노멀은 빌드 때 **밝기를 높이로 봐서** 만들고
   (`build-ground-textures.mjs`, 이음새가 안 생기게 반대편 가장자리와 이어서 계산),
   러프니스는 종류별 상수다.
+- **안개가 바닥 무늬를 씻지 않게 한다** ★ — 존 데이터가 주는 안개는 **선형**이다
+  (마을 `fogNear` 70 → `fogFar` 190). 고도로 옮길 때 near 가 없는 지수 안개
+  (`fog_density` 0.006)로 깔았는데, 그러면 **카메라 바로 앞(27m) 바닥에도 안개가
+  15% 섞인다.** 안개는 곱이 아니라 **더하기**라 돌 틈처럼 어두운 데를 그대로
+  들어올린다 — 돌판 틈과 판면이 화면(sRGB)에서 0.15 대 0.37 이던 것이 0.34 대
+  0.45 가 돼 무늬가 거의 사라지고, 화면 전체가 안개색(`#c2c8b8`)으로 뜬다.
+  2026-09-18 에 "같은 엔진·같은 리소스인데 선명하지 않다" 는 지적을 받고
+  `Environment.FOG_MODE_DEPTH` + `fog_depth_begin/end` 로 되돌렸다
+  (`game.gd` 의 `environment_for`). 존이 92m 라 **안개는 사실상 안 보이는 게 맞다.**
+  조명(태양·환경광)은 반사율에 곱해지므로 무늬 대비 비율을 안 건드린다.
+  대비를 깨는 건 더하기로 들어오는 안개뿐이다.
 - **고도는 바닥을 셰이더로 깐다**(`godot/game/ground.gdshader`). 2026-09-17 에
   "이미지로는 재질이 잘 보이는데 깔아 놓으면 돌 틈·풀이 너무 희미하다" 는 지적을
   받아 `StandardMaterial3D` 에서 옮겼다. 표준 재질로는 아래 셋 중 어느 것도 못 준다.

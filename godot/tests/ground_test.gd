@@ -8,6 +8,8 @@ extends SceneTree
 ##
 ##   godot --headless --path godot --script tests/ground_test.gd
 
+const Game := preload("res://game/game.gd")
+
 var _failed := 0
 
 
@@ -17,6 +19,7 @@ func _init() -> void:
 	_case_tint()
 	_case_material()
 	_case_contrast()
+	_case_fog()
 
 	if _failed == 0:
 		print("바닥: 전부 통과")
@@ -89,6 +92,26 @@ func _case_contrast() -> void:
 	print("  돌판 밝기 폭 %.1f배 -> %.1f배 (대비 %.2f · 노멀 %.1f)" % [
 		0.102 / 0.016, hi / lo, contrast, float(sm.get_shader_parameter("normal_depth"))
 	])
+
+
+## 안개가 바닥 무늬를 씻지 않는지. 안개는 곱이 아니라 더하기라, 카메라 거리에
+## 걸리면 돌 틈처럼 어두운 데가 그대로 들려 무늬가 사라진다 (2026-09-18)
+func _case_fog() -> void:
+	var env: Dictionary = GameData.zone("village").env
+	var e: Environment = Game.environment_for(env)
+	if e.fog_mode != Environment.FOG_MODE_DEPTH:
+		_fail("안개가 깊이 안개가 아니다 — 지수 안개는 카메라 앞부터 낀다")
+		return
+	var near := float(env.get("fogNear", 70))
+	if absf(e.fog_depth_begin - near) > 1e-6:
+		_fail("안개 시작이 %.0fm 여야 하는데 %.0fm" % [near, e.fog_depth_begin])
+	# 카메라는 초점에서 이만큼 떨어져 있다. 바닥은 그보다 가까이도 온다
+	if CameraRig.DISTANCE >= e.fog_depth_begin:
+		_fail("카메라 거리 %.1fm 가 안개 시작 %.0fm 안에 있다" % [
+			CameraRig.DISTANCE, e.fog_depth_begin])
+	else:
+		print("  안개 %.0f~%.0fm (카메라 거리 %.1fm — 바닥에는 안 낀다)" % [
+			e.fog_depth_begin, e.fog_depth_end, CameraRig.DISTANCE])
 
 
 func _case_tint() -> void:

@@ -567,6 +567,31 @@ func _on_gate_pick(zone_id: String) -> void:
 	_transport.send(&"travel", {"zone": zone_id})
 
 
+## 존 분위기 — 하늘색·환경광·안개.
+##
+## **안개는 `fogNear` 앞에서는 없어야 한다.** 존 데이터가 주는 건 선형 안개
+## (마을은 70m 에서 시작해 190m 에서 완전히 잠긴다)인데, 고도로 옮길 때
+## near 가 없는 지수 안개(`fog_density`)로 깔았다. 그러면 카메라 바로 앞
+## (27m) 바닥에도 안개가 15% 섞인다. 안개는 곱이 아니라 **더하기**라
+## 돌 틈 같은 어두운 데를 그대로 들어올려서, 바닥 무늬가 씻기고 화면이
+## 안개색으로 뜬다 (2026-09-18 지적: "같은 리소스인데 선명하지 않다").
+## 그래서 깊이 안개로 되돌렸다 — 존이 92m 라 사실상 안 보이는 게 맞다.
+static func environment_for(env: Dictionary) -> Environment:
+	var e := Environment.new()
+	e.background_mode = Environment.BG_COLOR
+	e.background_color = Color(env.get("skyColor", "#b9c9d8"))
+	e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	e.ambient_light_color = Color(env.get("skyColor", "#b9c9d8"))
+	e.ambient_light_energy = float(env.get("hemiIntensity", 1.1))
+	e.fog_enabled = true
+	e.fog_mode = Environment.FOG_MODE_DEPTH
+	e.fog_light_color = Color(env.get("fogColor", "#c2c8b8"))
+	e.fog_depth_begin = float(env.get("fogNear", 70))
+	e.fog_depth_end = float(env.get("fogFar", 190))
+	e.fog_depth_curve = 1.0
+	return e
+
+
 ## 존 하나를 짓는다. 차원문으로 옮기면 통째로 버리고 다시 짓는다
 func _build_zone(zone_id: String) -> void:
 	if _zone_node != null:
@@ -589,16 +614,7 @@ func _build_zone(zone_id: String) -> void:
 	_target_mob = ""
 
 	var world_env := WorldEnvironment.new()
-	var e := Environment.new()
-	e.background_mode = Environment.BG_COLOR
-	e.background_color = Color(env.get("skyColor", "#b9c9d8"))
-	e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	e.ambient_light_color = Color(env.get("skyColor", "#b9c9d8"))
-	e.ambient_light_energy = float(env.get("hemiIntensity", 1.1))
-	e.fog_enabled = true
-	e.fog_light_color = Color(env.get("fogColor", "#c2c8b8"))
-	e.fog_density = 0.006
-	world_env.environment = e
+	world_env.environment = environment_for(env)
 	_zone_node.add_child(world_env)
 
 	var sun := DirectionalLight3D.new()

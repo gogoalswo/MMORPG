@@ -143,19 +143,27 @@ func _run_scene() -> void:
 	me.z = 30.0
 	for i in 3:
 		await process_frame
-	var top: Vector2 = game._camera.unproject_position(Vector3(9.0, 3.5, 0.0))
-	if not game._gate_tapped(top):
-		_fail("아치 윗부분을 눌렀는데 문으로 안 잡힌다 (%s)" % top)
+	# 누르는 곳은 **소용돌이 원판뿐**이다 (2026-09-18: "지금 너무 넓어").
+	# 소용돌이는 문 반지름 2.6 기준 높이 2.44, 반지름 1.14 짜리 판이다
+	var swirl := Vector3(9.0, 2.6 * 2.0 * PortalSwirl.CENTER, 0.0)
+	var on_swirl: Vector2 = game._camera.unproject_position(swirl)
+	if not game._gate_tapped(on_swirl):
+		_fail("소용돌이를 눌렀는데 문으로 안 잡힌다 (%s)" % on_swirl)
 	else:
 		game._on_gate_tapped()
 		if not game._gate_panel.visible:
 			_fail("문에서 멀리 서서 눌렀는데 창이 안 떴다")
 		elif game._marker.visible:
 			_fail("문을 눌렀는데 창 대신 걸어가는 표시가 떴다")
+	# 아치 돌기둥 꼭대기와 받침은 이제 문이 아니다
+	if game._gate_tapped(game._camera.unproject_position(Vector3(9.0, 4.8, 0.0))):
+		_fail("아치 꼭대기가 아직 문으로 잡힌다 — 판이 너무 넓다")
+	if game._gate_tapped(game._camera.unproject_position(Vector3(9.0, 0.1, 0.0))):
+		_fail("문 발치(받침)가 아직 문으로 잡힌다")
 	if game._gate_tapped(game._camera.unproject_position(Vector3(-9.0, 0.0, 0.0))):
 		_fail("문에서 먼 땅이 문으로 잡힌다")
 	if ResourceLoader.exists(Portal.MODEL):
-		print("  차원문 모델: 있음, 아치를 누르면 창")
+		print("  차원문 모델: 있음, 소용돌이를 누르면 창")
 	else:
 		_fail("차원문 모델이 없다 — npm run sync:godot 을 돌렸나")
 

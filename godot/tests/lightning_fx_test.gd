@@ -277,8 +277,15 @@ func _case_visible(game: Node3D) -> void:
 		_fail("코어가 %.1fpx 다 — 한 픽셀 밑이면 렌더에서 끊긴다" % core)
 	if crack < 40.0:
 		_fail("금이 %.0fpx 다 — 갈라진 것으로 안 보인다" % crack)
-	if chunk < 5.0:
-		_fail("파편이 %.0fpx 다 — 안 보인다" % chunk)
+	# **작고 많아야 한다.** 8px 짜리 상자 열 개를 굴렸더니 "입자가 너무 크고
+	# 두껍고 사각사각하다" 는 말을 들었다 (2026-09-18) — 크기를 반으로 줄인 만큼
+	# 개수를 늘렸으니, 하한도 개수와 함께 본다
+	if chunk < 3.0:
+		_fail("파편이 %.1fpx 다 — 한 픽셀 밑이면 안 보인다" % chunk)
+	if chunk > 7.0:
+		_fail("파편이 %.0fpx 다 — 크면 덩어리로 보인다" % chunk)
+	if LightningFx.DEBRIS_COUNT < 20:
+		_fail("알갱이가 %d개뿐이다 — 작게 줄인 만큼 많아야 한다" % LightningFx.DEBRIS_COUNT)
 	if sky < 150.0:
 		_fail("시작 높이가 %.0fpx 다 — 하늘에서 오는 것으로 안 보인다" % sky)
 

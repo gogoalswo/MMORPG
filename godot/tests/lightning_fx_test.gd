@@ -133,6 +133,13 @@ func _case_ribbon(game: Node3D) -> void:
 	if first._crack.material_override.blend_mode != BaseMaterial3D.BLEND_MODE_MIX:
 		_fail("금이 가산 혼합이다 — 흙은 빛나지 않는다")
 
+	# **가장자리를 죄는 것은 텍스처다** (`FxTex.streak`). 꼭짓점 알파로만 죄면
+	# 삼각형 안에서 직선으로 줄어들어 가운데 심이 각져 보인다
+	for pair in [["halo", first._halo], ["코어", first._core], ["금", first._crack]]:
+		var mat: StandardMaterial3D = pair[1].material_override
+		if mat.albedo_texture == null:
+			_fail("%s 에 폭 방향 텍스처가 없다 — 가장자리가 또렷해진다" % pair[0])
+
 	var faces: int = first._core.mesh.get_faces().size() / 3
 	print("  리본: halo %.2fm · 코어 %.2fm, 줄기 삼각형 %d개" % [
 		LightningFx.HALO_WIDTH, LightningFx.CORE_WIDTH, faces
@@ -230,6 +237,16 @@ func _case_ground(game: Node3D) -> void:
 	# 번쩍임 — 줄기 모양만으로는 번개로 안 읽힌다
 	if first._light == null:
 		_fail("번쩍임(조명)이 없다")
+
+	# 그을림 — **불규칙한 얼룩 텍스처**여야 판 모서리가 사각형으로 보이지 않는다
+	if first._stain.material_override.albedo_texture == null:
+		_fail("그을림에 얼룩 텍스처가 없다 — 사각형 판으로 보인다")
+	if first._stain.rotation.x != 0.0 and absf(first._stain.get_aabb().size.y) > 0.1:
+		_fail("그을림이 지면에 안 눕는다")
+
+	# 섬광은 **퍼지지 않고 제자리에서 사그라든다** (규칙 3절)
+	if LightningFx.FLARE_SWELL > 1.5:
+		_fail("섬광이 %.2f배까지 퍼진다 — 충격 파동 고리가 된다" % LightningFx.FLARE_SWELL)
 
 	print("  땅: 금 %d갈래(가지 포함)가 %.0fms 에 걸쳐 자라고, 파편 %d개가 중력 %.0f 로 떨어진다" % [
 		first._crack_paths.size(), LightningFx.CRACK_GROW * 1000.0,

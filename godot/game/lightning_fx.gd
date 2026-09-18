@@ -111,6 +111,16 @@ const DEBRIS_SPREAD := 52.0
 const DEBRIS_LIFE := 0.55
 const DEBRIS_GRAVITY := -16.0
 
+## 꽂힌 자리의 섬광 판. **퍼지지 않고 제자리에서 사그라든다** (규칙 3절) —
+## 살짝만 부푼다. 1.6m = 61px
+const FLARE_SIZE := 2.6
+const FLARE_SWELL := 1.25
+const FLARE_LIFE := 0.3
+
+## 지면 그을림. 금보다 조금 넓게 깔리고 **금과 함께 마지막 0.8초에 흐려진다**
+const STAIN_SIZE := 4.4
+const STAIN_ALPHA := 0.45
+
 ## **치는 순간 주위가 번쩍인다.** 번개로 읽게 하는 것은 줄기 모양만이 아니다
 const LIGHT_RANGE := 9.0
 const LIGHT_ENERGY := 7.0
@@ -122,6 +132,7 @@ const COLOR_CORE := Color("#ffffff")
 const COLOR_HALO := Color("#4a90ff")
 const COLOR_SHEEN := Color("#9fd0ff")
 const COLOR_CRACK := Color("#241a12")
+const COLOR_STAIN := Color("#2a2118")
 const COLOR_DEBRIS := Color("#9c8163")
 
 var _t := 0.0
@@ -274,8 +285,8 @@ static func ribbon(paths: Array, head: float, tail: float, flat: bool) -> ArrayM
 			# 알파로 채우면 양쪽에 또렷한 선이 생겨 **테두리를 두른 것**처럼
 			# 보인다 (2026-09-18 에 지적받았다). 그래서 한 토막을 좌우 반으로
 			# 나눠 바깥 꼭짓점의 알파를 0 으로 둔다
-			_half(tool, a - wa, a, b - wb, b)
-			_half(tool, a + wa, a, b + wb, b)
+			_half(tool, a - wa, a, b - wb, b, 0.0)
+			_half(tool, a + wa, a, b + wb, b, 1.0)
 			drawn += 1
 	if drawn == 0:
 		return ArrayMesh.new()
@@ -286,20 +297,21 @@ static func ribbon(paths: Array, head: float, tail: float, flat: bool) -> ArrayM
 ## 이 그라디언트가 **테두리를 지운다**. 앞뒤 어느 쪽에서 봐도 보여야 하므로
 ## 재질에서 컬링을 끈다
 static func _half(tool: SurfaceTool, a_edge: Vector3, a_mid: Vector3,
-		b_edge: Vector3, b_mid: Vector3) -> void:
-	var clear := Color(1.0, 1.0, 1.0, 0.0)
-	var solid := Color(1.0, 1.0, 1.0, 1.0)
-	tool.set_color(clear)
+		b_edge: Vector3, b_mid: Vector3, edge_u: float) -> void:
+	# **가장자리를 죄는 것은 이제 텍스처다** (`FxTex.streak`). 꼭짓점 알파로
+	# 죄면 삼각형 안에서 직선으로 줄어들어 가운데 심이 각져 보인다 —
+	# 텍스처는 감쇠 곡선을 그대로 준다
+	tool.set_uv(Vector2(edge_u, 0.0))
 	tool.add_vertex(a_edge)
-	tool.set_color(solid)
+	tool.set_uv(Vector2(0.5, 0.0))
 	tool.add_vertex(a_mid)
-	tool.set_color(clear)
+	tool.set_uv(Vector2(edge_u, 1.0))
 	tool.add_vertex(b_edge)
-	tool.set_color(clear)
+	tool.set_uv(Vector2(edge_u, 1.0))
 	tool.add_vertex(b_edge)
-	tool.set_color(solid)
+	tool.set_uv(Vector2(0.5, 0.0))
 	tool.add_vertex(a_mid)
-	tool.set_color(solid)
+	tool.set_uv(Vector2(0.5, 1.0))
 	tool.add_vertex(b_mid)
 
 
@@ -313,7 +325,8 @@ static func glow(color: Color) -> StandardMaterial3D:
 	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	mat.no_depth_test = true
-	mat.vertex_color_use_as_albedo = true
+	# 폭 방향으로 가운데가 진하고 양끝이 사라지는 띠 — 테두리를 지우는 자리다
+	mat.albedo_texture = FxTex.streak()
 	mat.albedo_color = color
 	return mat
 
@@ -325,7 +338,44 @@ static func dirt(color: Color) -> StandardMaterial3D:
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat.albedo_texture = FxTex.streak()
+	mat.albedo_color = color
+	return mat
+
+
+## 흙덩이용 — 텍스처 없이 불투명하다. 띠가 아니라 덩어리라 폭 방향 감쇠가 없다
+static func chunk(color: Color) -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	mat.vertex_color_use_as_albedo = true
+	mat.albedo_color = color
+	return mat
+
+
+## 섬광 판 — **카메라를 늘 마주 본다.** 방사형 글로우라 가장자리가 없다.
+## 규칙(3절)대로 **퍼지지 않고 제자리에서 사그라든다**
+static func flare(color: Color) -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat.no_depth_test = true
+	mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	mat.albedo_texture = FxTex.glow()
+	mat.albedo_color = color
+	return mat
+
+
+## 지면 그을림 — **불규칙한 얼룩**이라 동그란 고리로 안 보인다
+static func stain(color: Color) -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat.albedo_texture = FxTex.scorch()
 	mat.albedo_color = color
 	return mat
 
@@ -348,6 +398,8 @@ class Strike:
 	var _core: MeshInstance3D
 	var _crack: MeshInstance3D
 	var _crack_paths: Array = []
+	var _flare: MeshInstance3D
+	var _stain: MeshInstance3D
 	var _light: OmniLight3D
 	var _debris: CPUParticles3D
 
@@ -372,9 +424,20 @@ class Strike:
 		_halo = _sheet(LightningFx.glow(LightningFx.COLOR_HALO))
 		_sheen = _sheet(LightningFx.glow(LightningFx.COLOR_SHEEN))
 		_core = _sheet(LightningFx.glow(LightningFx.COLOR_CORE))
+		# 그을림을 먼저 깔고 그 위에 금을 얹는다 — 같은 높이면 서로 깜빡인다
+		_stain = _sheet(LightningFx.stain(LightningFx.COLOR_STAIN))
+		_stain.mesh = _flat_quad(LightningFx.STAIN_SIZE * swell)
+		_stain.position = Vector3(0.0, LightningFx.GROUND, 0.0)
 		_crack = _sheet(LightningFx.dirt(LightningFx.COLOR_CRACK))
-		_crack.position = Vector3(0.0, LightningFx.GROUND, 0.0)
+		_crack.position = Vector3(0.0, LightningFx.GROUND + 0.01, 0.0)
 		_crack_paths = _plan_cracks()
+
+		# 꽂힌 자리의 섬광 — 카메라를 늘 마주 보는 판이다
+		_flare = _sheet(LightningFx.flare(LightningFx.COLOR_SHEEN))
+		var glare := QuadMesh.new()
+		glare.size = Vector2(LightningFx.FLARE_SIZE, LightningFx.FLARE_SIZE) * swell
+		_flare.mesh = glare
+		_flare.position = Vector3(0.0, LightningFx.GROUND + 0.5, 0.0)
 
 		_light = OmniLight3D.new()
 		_light.position = Vector3(0.0, 1.2, 0.0)
@@ -395,6 +458,13 @@ class Strike:
 		node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(node)
 		return node
+
+	## 지면에 눕는 판 — `QuadMesh` 는 세로로 서 있으므로 눕혀서 만든다
+	func _flat_quad(side: float) -> QuadMesh:
+		var quad := QuadMesh.new()
+		quad.size = Vector2(side, side)
+		quad.orientation = PlaneMesh.FACE_Y
+		return quad
 
 	## 금은 **한 번 정해 두고 자라기만 한다** — 매 프레임 다시 흩으면 갈라진
 	## 자국이 꿈틀거린다. 갈래마다 한 번 더 갈라져 나뭇가지가 된다
@@ -439,7 +509,7 @@ class Strike:
 		debris.scale_amount_min = 0.6
 		debris.scale_amount_max = 1.3
 		debris.color = LightningFx.COLOR_DEBRIS
-		debris.material_override = LightningFx.dirt(LightningFx.COLOR_DEBRIS)
+		debris.material_override = LightningFx.chunk(LightningFx.COLOR_DEBRIS)
 		return debris
 
 	func _process(delta: float) -> void:
@@ -453,8 +523,21 @@ class Strike:
 			_reshape()
 
 		_show_bolt(age)
+		_show_flare(age)
 		_show_crack(age)
 		_show_light(age)
+
+	## 섬광은 **살짝만 부풀고 제자리에서 꺼진다.** 크게 퍼뜨리면 규칙이 쓰지
+	## 말라고 한 충격 파동 고리와 같은 것이 된다
+	func _show_flare(age: float) -> void:
+		if age >= LightningFx.FLARE_LIFE:
+			_flare.visible = false
+			return
+		var t := age / LightningFx.FLARE_LIFE
+		_flare.scale = Vector3.ONE * lerpf(0.75, LightningFx.FLARE_SWELL, sqrt(t))
+		_flare.material_override.albedo_color = Color(
+			LightningFx.COLOR_SHEEN.r, LightningFx.COLOR_SHEEN.g, LightningFx.COLOR_SHEEN.b,
+			pow(1.0 - t, 1.2))
 
 	## 줄기는 **지글거리며 꺼진다.** 45ms 마다 경로를 새로 잡는다 —
 	## 가만히 서 있으면 붙여 놓은 그림과 다를 게 없다
@@ -503,6 +586,7 @@ class Strike:
 	func _show_crack(age: float) -> void:
 		if age >= LightningFx.CRACK_LIFE:
 			_crack.visible = false
+			_stain.visible = false
 			return
 		var grow := clampf(age / LightningFx.CRACK_GROW, 0.0, 1.0)
 		if grow < 1.0 or _crack.mesh == null:
@@ -515,6 +599,11 @@ class Strike:
 		var fade := clampf((LightningFx.CRACK_LIFE - age) / LightningFx.CRACK_FADE, 0.0, 1.0)
 		_crack.material_override.albedo_color = Color(
 			LightningFx.COLOR_CRACK.r, LightningFx.COLOR_CRACK.g, LightningFx.COLOR_CRACK.b, fade)
+		# 그을림은 금이 자라는 동안 같이 넓어진다 (규칙 3절)
+		_stain.scale = Vector3.ONE * lerpf(0.5, 1.0, grow)
+		_stain.material_override.albedo_color = Color(
+			LightningFx.COLOR_STAIN.r, LightningFx.COLOR_STAIN.g, LightningFx.COLOR_STAIN.b,
+			fade * LightningFx.STAIN_ALPHA)
 
 	## 번쩍임은 **세게 켜고 빠르게 죈다.** 일정하게 켜 두면 조명이 하나 놓인 것이다
 	func _show_light(age: float) -> void:

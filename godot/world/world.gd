@@ -34,6 +34,47 @@ const NPC_REACH := 4.5
 ## 몇 초마다 저장하나
 const SAVE_EVERY_MS := 10000
 
+## --- 순찰 ---
+## 쫓을 사람이 없는 몬스터는 집 주변을 서성인다. 가만히 선 무리는 살아 있는 것처럼
+## 보이지 않아서다. 값은 **어그로(보통 9m)보다 작게** 잡는다 — 순찰 때문에
+## 사람에게 먼저 닿으면 "가만히 있었는데 맞았다"가 된다
+const PATROL_RADIUS := 4.0
+## 걷는 것처럼 보이게 제 속도의 이만큼으로만 움직인다
+const PATROL_SPEED := 0.35
+## 목적지에 이만큼 붙으면 도착으로 본다
+const PATROL_ARRIVE := 0.3
+## 한 다리 걷고 쉬는 시간. 무리가 한꺼번에 움직이지 않게 놈마다 다르게 뽑는다.
+## 쉬는 동안은 idle 이라 **매 프레임 미는 것도 쉬어 간다** (폰 부담)
+const PATROL_REST_MIN_MS := 2000
+const PATROL_REST_MAX_MS := 6000
+
+## --- 자동 사냥 ---
+## 켠 자리(앵커)에서 이만큼 안의 몬스터만 잡는다.
+##
+## **한 무리가 통째로 들어오는 크기다.** 사냥터의 무리는 반지름 8m 원에 흩어져
+## 있고(zones.json 의 `monsters[].radius`), 무리끼리는 40m 떨어져 있다. 무리 안
+## 어디에 서서 켜도 그 무리 전체가 들어오려면 8 × 2 = 16 이 필요하고, 여유를 얹어
+## 18 로 잡았다. 옆 무리는 아무리 가까워도 40 - 8 - 8 = 24m 라 끌려오지 않는다
+const HUNT_RADIUS := 18.0
+## 잡고 있던 놈은 이 거리까지는 계속 잡는다. 반경과 같으면 경계에 걸친 놈을
+## 잡았다 놓았다 반복한다
+const HUNT_LEASH := HUNT_RADIUS + 6.0
+## 사거리를 꽉 채우고 서면 몬스터가 조금만 움직여도 빠진다. 이만큼 안으로 붙는다
+const HUNT_STANDOFF := 0.7
+## 목적지에 이만큼 붙으면 도착으로 본다
+const HUNT_ARRIVE := 0.5
+## 잡을 것이 없을 때 앵커 주변을 서성이는 반경. **무리가 흩어져 있는 만큼**(8m)만
+## 돈다 — 더 넓게 돌면 리스폰을 기다리다 옆 무리까지 걸어가 끌고 온다
+const HUNT_PATROL_RADIUS := 8.0
+## 한 다리 걷고 쉬는 시간. 몬스터 순찰(2~6초)보다 짧다 — 사람 캐릭터가 오래
+## 멈춰 서 있으면 자동 사냥이 멈춘 것처럼 보인다
+const HUNT_PATROL_REST_MS := 1200
+## 사람이 조작하면 이만큼 자동 사냥이 손을 뗀다. 이동 입력은 매 프레임 오므로
+## 손을 떼면 곧바로(0.4초) 자동 사냥이 이어받는다 —
+## 화면이 멈춰서 입력이 끊긴 것과 손을 뗀 것을 구별할 방법이 없고, 구별할 필요도
+## 없다. 둘 다 "사람이 안 몰고 있다"이다
+const MANUAL_HOLD_MS := 400
+
 var _next_save_at := 0
 
 
@@ -98,6 +139,19 @@ func join(player_id: String) -> void:
 		"stats": stats,
 		"next_attack_at": 0,
 		"rooted_until": 0,
+		# --- 자동 사냥 ---
+		# **존을 옮기면 꺼진다** (join 을 다시 타므로). 앵커가 지난 존의 자리라
+		# 남겨 두면 켜 둔 채로 엉뚱한 데를 향해 걷는다
+		"auto": false,
+		"auto_x": float(spawn[0]),
+		"auto_z": float(spawn[1]),
+		"auto_target": "",
+		# 잡을 것이 없을 때 서성이는 자리와 쉬는 시각
+		"auto_patrol_x": float(spawn[0]),
+		"auto_patrol_z": float(spawn[1]),
+		"auto_rest_until": 0,
+		# 사람이 몰고 있는 동안은 자동 사냥이 손을 뗀다
+		"manual_until": 0,
 		# --- 스킬 ---
 		"skills": kept.get("skills", []).duplicate(),
 		"skill_points": int(kept.get("skill_points", level - 1)),
@@ -130,9 +184,16 @@ func input_move(player_id: String, seq: int, dx: float, dz: float, dt: float) ->
 		player.last_seq = seq
 		return
 
+	var now := Time.get_ticks_msec()
+	# **사람이 몰면 사람이 이긴다.** 자동 사냥은 손을 뗀다 (_take_manual).
+	# 휘두르는 중이라 발이 묶여 있어도 먼저 잡는다 — 안 그러면 경직(400ms)마다
+	# 자동 사냥이 한 번씩 끼어들어 조작하던 방향과 다른 데로 몸이 돈다
+	if sqrt(dx * dx + dz * dz) > 1e-4:
+		_take_manual(player, now)
+
 	# 휘두르는 중이면 발을 묶는다. **순번은 갱신하고 위치만 안 옮긴다** —
 	# 안 갱신하면 나중에 서버를 붙였을 때 클라이언트 보정이 이 구간 내내 멈춘다
-	if Time.get_ticks_msec() < int(player.rooted_until):
+	if now < int(player.rooted_until):
 		player.last_seq = seq
 		return
 
@@ -142,6 +203,10 @@ func input_move(player_id: String, seq: int, dx: float, dz: float, dt: float) ->
 
 	if sqrt(dx * dx + dz * dz) > 1e-4:
 		player.rot = atan2(dx, dz)
+		# **걸어간 자리가 새 사냥터다.** 앵커를 안 옮기면 손을 떼는 순간 자동
+		# 사냥이 원래 자리로 도로 끌고 간다 — 조작이 이긴 것처럼 보이지 않는다
+		if bool(player.get("auto", false)):
+			_anchor_here(player)
 
 
 ## 한 틱. 전투가 들어올 자리다 (5단계).
@@ -149,6 +214,7 @@ func step(delta: float) -> void:
 	var now := Time.get_ticks_msec()
 	_respawn(now)
 	_step_monsters(delta, now)
+	_drive_auto(delta, now)
 	_check_gate()
 
 	# 주기적으로 남긴다. 탭이 갑자기 닫혀도 최근 것은 지킨다
@@ -280,6 +346,152 @@ func _pick_targets(
 	return out
 
 
+## 자동 사냥을 켜고 끈다. **켠 자리를 앵커로 잡는다** — 앵커가 없으면 몬스터를
+## 따라 맵 끝까지 끌려간다.
+func set_auto(player_id: String, on: bool) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	player.auto = on
+	player.auto_target = ""
+	if on:
+		_anchor_here(player)
+
+
+## 앵커를 지금 서 있는 자리로 잡는다 (켤 때와 사람이 몰고 다닌 뒤).
+func _anchor_here(player: Dictionary) -> void:
+	player.auto_x = player.x
+	player.auto_z = player.z
+	player.auto_patrol_x = player.x
+	player.auto_patrol_z = player.z
+	player.auto_target = ""
+	player.auto_rest_until = 0
+
+
+## 사람이 몰기 시작했다. **조작이 자동 사냥보다 먼저다** — 켜 둔 채로 잠깐
+## 자리를 옮기거나 위험한 놈을 피하는 것이 가장 흔한 조작이라, 그때마다 끄게
+## 하면 단추를 두 번 더 눌러야 한다.
+##
+## 앵커를 옮기는 것은 **발을 옮긴 뒤**다 (input_move 끝) — 걸어간 자리가 새
+## 사냥터이기 때문이다. 여기서 같이 옮기면 한 프레임씩 뒤처진다.
+func _take_manual(player: Dictionary, now: int) -> void:
+	player.manual_until = now + MANUAL_HOLD_MS
+
+
+## 자동 사냥 한 틱. 고르고 → 붙고 → 친다. 잡을 것이 없으면 앵커 주변을 서성인다.
+## **사람이 몰고 있는 동안은 통째로 쉰다** (조작이 먼저다).
+##
+## **판정하는 쪽(여기)이 몬다.** 화면(`_process`)이 몰면 탭을 옮기거나 폰 화면이
+## 꺼지는 순간 0~1Hz 로 떨어져 캐릭터가 그 자리에 선다
+## → docs/features/auto-hunt-and-targeting.md 의 "왜 자동 사냥은 서버가 하나"
+func _drive_auto(delta: float, now: int) -> void:
+	for id in _players:
+		var player: Dictionary = _players[id]
+		if not bool(player.get("auto", false)) or bool(player.get("dead", false)):
+			continue
+		# 사람이 몰고 있는 동안은 손을 뗀다. 둘이 같이 밀면 캐릭터가 두 목적지
+		# 사이에서 떨고, 조작한 쪽이 진 것처럼 보인다
+		if now < int(player.get("manual_until", 0)):
+			continue
+
+		var target := _pick_hunt_target(player)
+		if target.is_empty():
+			# 아무도 없다. 앵커 주변을 서성이며 기다린다
+			player.auto_target = ""
+			_patrol_auto(player, delta, now)
+			continue
+
+		player.auto_target = str(target.id)
+		# 사거리를 꽉 채우고 서면 상대가 조금만 움직여도 빠진다. 안쪽으로 붙는다
+		var reach := float(player.stats.attackRange)
+		_walk_auto(player, float(target.x), float(target.z), delta, now, reach * HUNT_STANDOFF)
+		# 치기 전에 그쪽을 본다. 판정 부채꼴이 rot 를 보기 때문이다 —
+		# 안 돌리면 마지막으로 걷던 쪽으로 헛친다 (attack 은 정면에서 다시 고른다)
+		player.rot = atan2(float(target.x) - player.x, float(target.z) - player.z)
+		# **사거리 안일 때만 휘두른다.** 멀리서 헛휘두르면 그때마다 경직(400ms)이
+		# 걸려 한 발짝도 못 나간다 — 붙기 전에 제자리에서 팔만 돌게 된다
+		if Vector2(float(target.x) - player.x, float(target.z) - player.z).length() <= reach:
+			attack(id)
+
+
+## 앵커 반경 안에서 **가장 가까운** 산 몬스터. 잡고 있던 놈은 리쉬까지 봐준다 —
+## 반경과 같으면 경계에 걸친 놈을 잡았다 놓았다 반복하고, 놓을 때마다 앵커로
+## 걸어 돌아가려다 다시 붙는 그림이 된다.
+func _pick_hunt_target(player: Dictionary) -> Dictionary:
+	var anchor := Vector2(float(player.auto_x), float(player.auto_z))
+	var current := str(player.get("auto_target", ""))
+	var best: Dictionary = {}
+	var best_gap := INF
+
+	for monster in _monsters:
+		if int(monster.hp) <= 0:
+			continue
+		var from_anchor := Vector2(monster.x - anchor.x, monster.z - anchor.y).length()
+		# 잡고 있던 놈이면 리쉬 안까지 계속 잡는다 (대상을 바꾸지 않는다)
+		if str(monster.id) == current:
+			if from_anchor <= HUNT_LEASH:
+				return monster
+			continue
+		if from_anchor > HUNT_RADIUS:
+			continue
+		var gap := Vector2(monster.x - player.x, monster.z - player.z).length()
+		if gap < best_gap:
+			best_gap = gap
+			best = monster
+
+	return best
+
+
+## 잡을 것이 없을 때. 앵커 주변에서 한 다리 걷고 잠시 쉰다 — 몬스터 순찰(`_patrol`)과
+## 같은 모양이다.
+##
+## **선 채로 기다리지 않는 이유**는 두 가지다. 가만히 서 있으면 자동 사냥이 멈춘
+## 것처럼 보이고, 리스폰을 기다리는 동안 한 발짝도 안 움직이면 무리 반대편에 새로
+## 나온 놈을 사거리 안에 두는 데 그만큼 더 걸린다.
+func _patrol_auto(player: Dictionary, delta: float, now: int) -> void:
+	var anchor := Vector2(float(player.auto_x), float(player.auto_z))
+	var here := Vector2(player.x, player.z)
+
+	# 쫓다가 반경 밖까지 나와 있으면 먼저 앵커 쪽으로 돌아온다.
+	# 안 돌아가면 마지막으로 쫓던 자리에 눌러앉아 무리 밖에서 서성인다
+	if here.distance_to(anchor) > HUNT_PATROL_RADIUS:
+		player.auto_rest_until = 0
+		_walk_auto(player, anchor.x, anchor.y, delta, now, HUNT_PATROL_RADIUS * 0.5)
+		return
+
+	if now < int(player.auto_rest_until):
+		return
+
+	var goal := Vector2(float(player.auto_patrol_x), float(player.auto_patrol_z))
+	if here.distance_to(goal) > HUNT_ARRIVE:
+		_walk_auto(player, goal.x, goal.y, delta, now, HUNT_ARRIVE)
+		return
+
+	# 다 걸었다. 앵커 반경 안에서 다음 자리를 뽑고 쉰다
+	var angle := _rng.randf() * TAU
+	var reach := _rng.randf_range(HUNT_PATROL_RADIUS * 0.4, HUNT_PATROL_RADIUS)
+	player.auto_patrol_x = clampf(anchor.x + sin(angle) * reach, -half_size, half_size)
+	player.auto_patrol_z = clampf(anchor.y + cos(angle) * reach, -half_size, half_size)
+	player.auto_rest_until = now + HUNT_PATROL_REST_MS
+
+
+## 자동 사냥이 발을 옮기는 자리. 사람이 모는 입력(`input_move`)과 **같은 규칙**으로
+## 움직인다 — 경계와 몬스터 충돌은 Movement 가 본다.
+func _walk_auto(
+	player: Dictionary, tx: float, tz: float, delta: float, now: int, stop_at: float
+) -> void:
+	# 휘두르는 동안에는 발을 멈춘다. 안 막으면 자동 사냥만 미끄러지면서 친다
+	# (사람이 모는 쪽은 input_move 가 같은 자리에서 막는다)
+	if now < int(player.rooted_until):
+		return
+	var to := Vector2(tx - player.x, tz - player.z)
+	if to.length() <= stop_at:
+		return
+	var dir := to.normalized()
+	Movement.apply_move(player, dir.x, dir.y, delta, half_size, _run_speed, _monsters)
+	player.rot = atan2(dir.x, dir.y)
+
+
 func _kill(player: Dictionary, target: Dictionary, now: int) -> void:
 	target.respawn_at = now + int(target.respawn_ms)
 
@@ -375,12 +587,7 @@ func _step_monsters(delta: float, now: int) -> void:
 			monster.target = str(target.get("id", ""))
 
 		if target.is_empty():
-			# 집에서 벗어나 있으면 슬슬 돌아간다
-			if home_gap > 1.5:
-				monster.state = "chase"
-				_move_monster(monster, monster.home_x, monster.home_z, float(monster.speed) * 0.5, delta)
-			else:
-				monster.state = "idle"
+			_patrol(monster, home_gap, delta, now)
 			continue
 
 		var dist := Vector2(target.x - monster.x, target.z - monster.z).length()
@@ -418,6 +625,41 @@ func _step_monsters(delta: float, now: int) -> void:
 			monster.next_attack_at = now + int(monster.attack_cooldown)
 			monster.rooted_until = now + Combat.monster_root_ms(float(monster.attack_cooldown))
 			_hit_player(target, monster)
+
+
+## 쫓을 사람이 없을 때. 집 주변에서 한 다리 걷고 잠시 쉰다 (idle ↔ patrol).
+##
+## 돌아다니게 한 이유는 **선 채로 굳어 있으면 죽은 것처럼 보이기** 때문이다.
+## 반경을 어그로보다 작게 둔 것은 순찰이 사람을 먼저 찾아가지 않게 하려는 것이고,
+## 쉬는 시간을 놈마다 다르게 뽑는 것은 무리가 한 몸처럼 움직이지 않게 하려는 것이다.
+func _patrol(monster: Dictionary, home_gap: float, delta: float, now: int) -> void:
+	# 쫓다가 대상을 잃고 멀리 나와 있으면 먼저 집으로 걸어 돌아온다.
+	# 서성이는 속도로 오면 한참 걸려서 반 속도로 온다
+	if home_gap > PATROL_RADIUS:
+		monster.state = "patrol"
+		monster.patrol_x = monster.home_x
+		monster.patrol_z = monster.home_z
+		monster.patrol_rest_until = 0
+		_move_monster(monster, monster.home_x, monster.home_z, float(monster.speed) * 0.5, delta)
+		return
+
+	if now < int(monster.patrol_rest_until):
+		monster.state = "idle"
+		return
+
+	var gap := Vector2(float(monster.patrol_x) - monster.x, float(monster.patrol_z) - monster.z).length()
+	if gap > PATROL_ARRIVE:
+		monster.state = "patrol"
+		_move_monster(monster, monster.patrol_x, monster.patrol_z, float(monster.speed) * PATROL_SPEED, delta)
+		return
+
+	# 다 걸었다. 집 반경 안에서 다음 자리를 뽑고 쉰다
+	var angle := _rng.randf() * TAU
+	var reach := _rng.randf_range(PATROL_RADIUS * 0.4, PATROL_RADIUS)
+	monster.patrol_x = clampf(float(monster.home_x) + sin(angle) * reach, -half_size, half_size)
+	monster.patrol_z = clampf(float(monster.home_z) + cos(angle) * reach, -half_size, half_size)
+	monster.patrol_rest_until = now + _rng.randi_range(PATROL_REST_MIN_MS, PATROL_REST_MAX_MS)
+	monster.state = "idle"
 
 
 ## 어그로 범위 안에서 가장 가까운 산 사람
@@ -561,6 +803,11 @@ static func make_monster(
 		"home_z": z,
 		"target": "",
 		"state": "idle",
+		# --- 순찰 --- 쫓을 사람이 없을 때 걸어갈 자리와, 다음 다리를 시작할 시각.
+		# 처음에는 제자리·0 이라 첫 판정에서 곧바로 목적지를 뽑고 쉬기 시작한다
+		"patrol_x": x,
+		"patrol_z": z,
+		"patrol_rest_until": 0,
 		"next_attack_at": 0,
 		"rooted_until": 0,
 		# 정확히 겹쳤을 때 밀려날 방향. **서로 달라야 풀린다**

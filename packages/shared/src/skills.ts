@@ -431,6 +431,30 @@ const SKILL_LIST: SkillDef[] = [
     reqLevel: 20,
     description: '뛰어올라 내리찍어 일대를 무너뜨린다.',
   },
+  {
+    /**
+     * 앞쪽 한 지점에 번개가 **세 번 겹쳐** 떨어지고, 떨어진 자리에서 땅이 갈라지며
+     * 파편이 튄다 (`LightningFx.bolt`). 줄기는 **시전자 뒤 위쪽에서 앞으로** 내리꽂힌다 —
+     * 화면에서 캐릭터를 지나 앞쪽 땅으로 꽂히는 대각선이라 "내가 불렀다" 가 읽힌다.
+     *
+     * 투사체를 두지 않았다 — 번개는 날아가는 것이 보이는 게 아니라 이미 꽂혀 있다.
+     * 그래서 **손이 닿는 사거리(4m)** 로 둔다: 그보다 길면 `skills.test.ts` 의
+     * "한 방향으로 쏘는 스킬에는 투사체가 붙어 있다" 에 걸리고, 실제로도 아무것도
+     * 안 날아가는데 멀리서 맞는 것이 된다. 번개는 **시전자가 선 자리**에 떨어지므로
+     * (`LightningFx.AHEAD` 0) 판정 부채꼴의 한가운데다 — 2026-09-18 에 앞 2.8m 에서
+     * 옮겼다.
+     */
+    id: 'thunder_fall',
+    name: '낙뢰',
+    job: 'fighter',
+    cooldown: 12000,
+    range: 4.0,
+    arc: Math.PI * 0.6,
+    power: 4.2,
+    maxTargets: 4,
+    reqLevel: 30,
+    description: '번개를 세 번 내리꽂아 땅을 가른다.',
+  },
 ];
 
 export const SKILLS: Record<string, SkillDef> = Object.fromEntries(

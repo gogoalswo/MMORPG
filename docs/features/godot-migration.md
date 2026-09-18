@@ -30,7 +30,7 @@ three.js 웹 클라이언트를 **고도 엔진으로 갈아타는 중**이다. 
 | `godot/game/rig.gd` | `.glb` 하나를 씌우고 클립을 트는 껍데기. **없으면 `null`** |
 | `godot/game/ground.gd` | 존 바닥 재질 — 텍스처·타일 크기·존 틴트 |
 | `godot/game/hit_fx.gd` | **피격 이펙트.** 맞은 자리의 섬광·파편·피해 숫자. 에셋 없이 코드로 짓는다 |
-| `godot/game/skill_fx.gd` | **스킬 이펙트.** 지금은 할퀴기 자국 하나. 같은 이유로 코드로 짓는다 |
+| `godot/game/skill_fx.gd` | **스킬 이펙트.** 지금은 할퀴기 하나 — `CPUParticles3D` 여섯으로 짓는다 (판 메시 금지) |
 | `godot/game/portal.gd` · `gate_panel.gd` | **차원문 아치와 창.** 창은 조각을 앵커로 조립한다 → [portal-ui.md](portal-ui.md) |
 | `godot/game/select_ring.gd` | **골라 둔 몬스터 발밑의 고리.** 반지름·두께·도는 속도가 상수다 |
 | `godot/game/hurt_flash.gd` | 내가 맞았을 때 화면 가장자리 비네트 |
@@ -328,6 +328,20 @@ Q/E 회전과 줌은 아직 안 옮겼다. 웹 쪽에는 있다.
   `scale` 로 한다. 두께 0.22m 는 720p 에서 9px 다 ([hit-effects.md](hit-effects.md)
   의 "크기는 px 로 정한다" 와 같은 환산).
 
+### 자동 사냥은 무리 하나만 돈다 ★
+
+단추(`자동사냥`)로 켜면 **켠 자리(앵커) 반경 18m** 안의 몬스터를 알아서 고르고,
+붙어서 치고, 잡을 것이 없으면 앵커 주변(8m)을 서성이며 리스폰을 기다린다.
+미는 것은 화면이 아니라 `World._drive_auto` 다 — 폰 화면이 꺼지면 `_process` 는
+멈추지만 판정은 돌아야 한다.
+
+반경 18 은 **사냥터 무리 하나가 통째로 들어오고 옆 무리는 안 들어오는 크기**다
+(무리 양 끝 15.7m, 옆 무리 24.3m).
+
+**켜 둔 채로 조작하면 사람이 이긴다.** 이동 입력이 들어오는 동안 자동 사냥은 손을
+떼고(0.4초 유예), 걸어간 자리가 새 앵커가 된다. 규칙·수치·안 옮긴 것은
+→ [auto-hunt-and-targeting.md](auto-hunt-and-targeting.md) 의 "고도(Godot) 쪽 자동 사냥".
+
 ### 차원문은 알리기만 한다 ★
 
 `World._check_gate` 는 문 안에 서면 **`gate` 이벤트를 한 번 보낼 뿐**이고, 어디로
@@ -375,6 +389,7 @@ Q/E 회전과 줌은 아직 안 옮겼다. 웹 쪽에는 있다.
 | 몬스터 스폰·충돌·차원문 | `... tests/monster_test.gd` |
 | 전투 공식과 실제 전투 | `... tests/combat_test.gd` |
 | 어그로·추적·반격·사망·부활 | `... tests/aggro_test.gd` |
+| 순찰 (쫓을 사람이 없을 때 집 주변 서성이기) | `... tests/patrol_test.gd` |
 | 모델·클립·기둥 대체 | `... tests/model_test.gd` |
 | 한글 폰트·체력바·사냥터 고르기 | `... tests/ui_test.gd` |
 | 보스 범위 공격 (실제 시간 1.8초를 기다린다) | `... tests/aoe_test.gd` |

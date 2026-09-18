@@ -37,6 +37,8 @@ func send(message: StringName, payload: Dictionary) -> void:
 			_world.attack(MY_ID)
 		&"revive":
 			_world.revive(MY_ID)
+		&"autoHunt":
+			_world.set_auto(MY_ID, bool(payload.get("on", false)))
 		&"travel":
 			_world.travel(MY_ID, str(payload.get("zone", "")))
 		&"npc":

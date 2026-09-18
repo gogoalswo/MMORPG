@@ -29,3 +29,5 @@ godot/android/
 godot/assets/
 # 빌드 표시 — CI 가 굽기 직전에 쓴다 (커밋하지 않는다)
 godot/build.json
+# 파이썬 — 밸런스 시뮬레이터(tools/balance_sim.py)를 import 하면 생긴다
+__pycache__/

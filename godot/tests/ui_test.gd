@@ -135,6 +135,61 @@ func _run_scene() -> void:
 	else:
 		print("  골라서 이동: %s" % game._label.text.split("\n")[0].strip_edges())
 
+	# 자동 사냥 단추 — 누르면 켜지고 글자가 바뀐다. 실제로 사냥하는지는
+	# tests/auto_hunt_test.gd 가 본다 (여기는 단추와 화면만)
+	me = game._transport.snapshot().players[game._transport.my_id()]
+	game._auto_button.pressed.emit()
+	await process_frame
+	if not bool(me.get("auto", false)):
+		_fail("자동사냥 단추를 눌렀는데 안 켜졌다")
+	elif not game._auto_button.text.contains("켜짐"):
+		_fail("켜졌는데 단추 글자가 '%s'" % game._auto_button.text)
+	elif not game._marker.visible:
+		_fail("켜졌는데 사냥 자리 표시가 없다")
+	else:
+		print("  자동사냥 켜짐 — 앵커 (%.1f, %.1f)" % [me.auto_x, me.auto_z])
+
+	# 판정이 발을 옮기는 동안에도 **달리기 동작**이 나와야 한다. 입력(_move)만
+	# 세면 자동 사냥은 대기 자세로 미끄러진다 (2026-09-18 에 지적받았다)
+	var mobs: Array = game._transport.snapshot().monsters
+	mobs.append(World.make_monster(
+		"uitest", GameData.monster_kind("mob003"), me.x + 6.0, me.z, 10000.0, 0.0
+	))
+	var ran := false
+	for i in 30:
+		await process_frame
+		if game._moving:
+			ran = true
+			break
+	if not ran:
+		_fail("자동 사냥으로 움직이는데 달리기 동작이 안 나온다 (_moving 이 false)")
+	else:
+		print("  자동 사냥으로 걷는 동안 달리기 동작이 나온다")
+
+	# 켜 둔 채로 땅을 누르면 **조작이 이긴다** — 화면이 탭을 삼키면 안 된다
+	# (판정 쪽은 tests/auto_hunt_test.gd 의 _case_manual_wins 가 본다)
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	press.position = Vector2(200, 200)
+	game._unhandled_input(press)
+	if game._target == Vector3.INF:
+		_fail("자동사냥 중에 땅을 눌렀는데 화면이 무시했다")
+	var was := Vector2(me.x, me.z)
+	for i in 30:
+		await process_frame
+	if Vector2(me.x, me.z).distance_to(was) < 0.3:
+		_fail("자동사냥 중에 눌렀는데 그쪽으로 안 걸었다")
+	else:
+		print("  켜 둔 채로 누른 자리로 걸어간다 (%.2f m)" % Vector2(me.x, me.z).distance_to(was))
+
+	game._auto_button.pressed.emit()
+	await process_frame
+	if bool(me.get("auto", false)):
+		_fail("다시 눌렀는데 안 꺼졌다")
+	if game._auto_button.text.contains("켜짐"):
+		_fail("껐는데 단추 글자가 '%s'" % game._auto_button.text)
+
 	if _failed == 0:
 		print("UI: 전부 통과")
 		quit(0)

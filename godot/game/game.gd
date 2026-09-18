@@ -15,8 +15,12 @@ var _transport: Transport
 var _player: Node3D
 ## 기둥은 가운데가 원점이라 반만큼 띄워야 하고, 모델은 발이 원점이다
 var _player_y := 0.9
-## 이번 프레임에 걸었나 (달리기·대기 동작을 고르는 데 쓴다)
+## 이번 프레임에 걸었나 (달리기·대기 동작을 고르는 데 쓴다).
+## 내가 민 것(`_move`)과 **판정이 옮긴 것(자동 사냥)을 둘 다** 센다 — `_draw_state` 참고
 var _moving := false
+## 몇 m/s 이상 움직였으면 달리는 것으로 보나. 달리기는 4.6m/s 라 넉넉하고,
+## 서버 좌표가 한 번 튀는 정도로는 안 걸린다
+const RUN_SPEED_EPS := 0.5
 ## 카메라 스무딩에 쓴다 — _draw_state 가 델타를 따로 안 받는다
 var _last_delta := 0.0
 ## 공격 동작을 언제까지 트나 (서버가 준 경직 시간)
@@ -57,6 +61,9 @@ var _npc_tab := ""
 var _npc_items: Array = []
 ## 액션바 4칸. 눌리면 그 스킬을 쓴다
 var _bar_buttons: Array = []
+## 자동 사냥 토글. 글자와 색은 **서버가 준 me.auto** 로만 정한다 —
+## 눌린 것으로 지레 바꾸면 판정이 거절했을 때 화면만 켜진 채로 남는다
+var _auto_button: Button
 var _skill_panel: PanelContainer
 var _bag_panel: PanelContainer
 var _bag_rows: VBoxContainer
@@ -297,6 +304,12 @@ func _build_skill_bar() -> void:
 		row.add_child(button)
 		_bar_buttons.append(button)
 
+	_auto_button = Button.new()
+	_auto_button.custom_minimum_size = Vector2(130, 70)
+	_auto_button.text = "자동사냥"
+	_auto_button.pressed.connect(_toggle_auto)
+	row.add_child(_auto_button)
+
 	var open := Button.new()
 	open.text = "스킬"
 	open.custom_minimum_size = Vector2(110, 70)
@@ -357,6 +370,21 @@ func _on_skill_pressed(skill_id: String) -> void:
 		bar.remove_at(0)
 	bar.append(skill_id)
 	_transport.send(&"setSkillBar", {"bar": bar})
+
+
+## 자동 사냥을 켜고 끈다. **켜고 끄는 것도 요청일 뿐이다** — 실제 상태는
+## World 가 정하고, 버튼 글자는 다음 프레임에 스냅샷을 보고 따라온다.
+##
+## 켜는 순간 화면이 몰던 것(눌러 둔 자리·쫓던 놈)을 놓는다. 켜자마자 옛 목적지로
+## 걸어가면 어디를 중심으로 도는지 알 수 없다. **켠 뒤에 다시 조작하는 것은
+## 막지 않는다** — 그때는 사람이 이기고, 손을 떼면 그 자리에서 이어서 사냥한다
+func _toggle_auto() -> void:
+	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
+	var on := not bool(me.get("auto", false))
+	if on:
+		_target_mob = ""
+		_target = Vector3.INF
+	_transport.send(&"autoHunt", {"on": on})
 
 
 func _on_bar_pressed(slot: int) -> void:
@@ -563,6 +591,25 @@ func _on_gate_pick(zone_id: String) -> void:
 	_transport.send(&"travel", {"zone": zone_id})
 
 
+## 존 분위기 — 하늘색과 환경광. **안개는 켜지 않는다** (2026-09-18 요청:
+## "안개를 넣으라고 한 적이 없는데 왜 넣은거야? 그냥 안개를 없애버려").
+##
+## 안개는 옛 웹 클라이언트에 있던 것이 고도 이관 때 따라온 것이고, 옮기면서
+## 선형(70~190m)이 near 없는 지수 안개로 바뀌어 카메라 앞 27m 바닥에도 15%
+## 섞이고 있었다. 안개는 곱이 아니라 **더하기**라 돌 틈 같은 어두운 데를 그대로
+## 들어올린다 — 바닥 무늬가 씻기고 화면이 안개색으로 떴다. 존 데이터의
+## `fogColor`·`fogNear`·`fogFar` 도 같은 날 걷어냈다.
+static func environment_for(env: Dictionary) -> Environment:
+	var e := Environment.new()
+	e.background_mode = Environment.BG_COLOR
+	e.background_color = Color(env.get("skyColor", "#b9c9d8"))
+	e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	e.ambient_light_color = Color(env.get("skyColor", "#b9c9d8"))
+	e.ambient_light_energy = float(env.get("hemiIntensity", 1.1))
+	e.fog_enabled = false
+	return e
+
+
 ## 존 하나를 짓는다. 차원문으로 옮기면 통째로 버리고 다시 짓는다
 func _build_zone(zone_id: String) -> void:
 	if _zone_node != null:
@@ -585,16 +632,7 @@ func _build_zone(zone_id: String) -> void:
 	_target_mob = ""
 
 	var world_env := WorldEnvironment.new()
-	var e := Environment.new()
-	e.background_mode = Environment.BG_COLOR
-	e.background_color = Color(env.get("skyColor", "#b9c9d8"))
-	e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	e.ambient_light_color = Color(env.get("skyColor", "#b9c9d8"))
-	e.ambient_light_energy = float(env.get("hemiIntensity", 1.1))
-	e.fog_enabled = true
-	e.fog_light_color = Color(env.get("fogColor", "#c2c8b8"))
-	e.fog_density = 0.006
-	world_env.environment = e
+	world_env.environment = environment_for(env)
 	_zone_node.add_child(world_env)
 
 	var sun := DirectionalLight3D.new()
@@ -886,7 +924,18 @@ func _draw_state() -> void:
 	if me.is_empty():
 		return
 
-	_player.position = Vector3(me.x, _player_y, me.z)
+	# **판정이 옮긴 것도 걷는 것이다.** 자동 사냥은 내가 입력을 안 보내므로
+	# `_moving`(=_move 가 켠다)만 보면 대기 자세로 미끄러진다. 실제로 움직인
+	# 거리에서 되돌린다 — 웹 클라이언트가 서버 주도 이동에서 쓰던 방법과 같다
+	# (docs/features/auto-hunt-and-targeting.md 의 "클라이언트가 하는 일" 3번)
+	var walked_to := Vector3(me.x, _player_y, me.z)
+	if not _moving and not zone_changed and _last_delta > 0.0:
+		var step := Vector2(
+			walked_to.x - _player.position.x, walked_to.z - _player.position.z
+		).length()
+		_moving = step / _last_delta > RUN_SPEED_EPS
+
+	_player.position = walked_to
 	_player.rotation.y = me.rot
 	_play_player_clip(me)
 
@@ -909,6 +958,9 @@ func _draw_state() -> void:
 			var state := str(monster.get("state", "idle"))
 			if state == "chase":
 				node.play("Run")
+			elif state == "patrol":
+				# 순찰은 걷는 것이다. 걷기 클립이 없으니 달리기를 반 배속으로 돌린다
+				node.play("Run", 0.5)
 			elif state == "attack":
 				node.play("Attack")
 			else:
@@ -925,6 +977,7 @@ func _draw_state() -> void:
 	_hp_bar.max_value = me.stats.maxHp
 	_hp_bar.value = me.hp
 	_refresh_bar(me)
+	_refresh_auto(me)
 
 	_label.text = "%s   %d레벨   체력 %d/%d   경험치 %d/%d\n골드 %d   몬스터 %d/%d   %d fps   빌드 %s\n%s" % [
 		GameData.zone(zone_now).get("name", zone_now),
@@ -973,20 +1026,28 @@ func _show_hit(payload: Dictionary) -> void:
 
 ## 스킬 이펙트.
 ##
-## **스킬마다 그림이 다르므로 id 로 고른다.** 지금 그리는 것은 할퀴기 하나다
+## **스킬마다 그림이 다르므로 id 로 고른다.** 지금 그리는 것은 할퀴기
 ## (`rising_kick` — 이름은 '올려차기' 에서 바뀌었지만 id 는 저장된 캐릭터 때문에
-## 그대로다). 나머지 셋은 아직 웹 클라이언트에만 있다 → [skills.md](../../docs/features/skills.md).
+## 그대로다)와 **낙뢰**(`thunder_fall`) 둘이다. 나머지 셋은 아직 웹 클라이언트에만
+## 있다 → [skills.md](../../docs/features/skills.md).
 ##
 ## **남이 쓴 것은 아직 안 그린다** — 다른 플레이어를 세우는 자리가 고도에 없다.
 func _show_skill(payload: Dictionary) -> void:
-	if _zone_node == null or str(payload.get("skill", "")) != "rising_kick":
+	if _zone_node == null:
 		return
 	if str(payload.get("id", "")) != _transport.my_id():
+		return
+	var skill := str(payload.get("skill", ""))
+	if not (skill in ["rising_kick", "thunder_fall"]):
 		return
 	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
 	if me.is_empty():
 		return
-	SkillFx.claw(_zone_node, Vector3(me.x, 0.0, me.z), float(me.rot))
+	var here := Vector3(me.x, 0.0, me.z)
+	if skill == "thunder_fall":
+		LightningFx.bolt(_zone_node, here, float(me.rot))
+	else:
+		SkillFx.claw(_zone_node, here, float(me.rot))
 
 
 ## 보스 범위 공격 예고 원.
@@ -1059,6 +1120,26 @@ func _refresh_bar(me: Dictionary) -> void:
 		else:
 			button.text = str(skill.get("name", id))
 			button.disabled = false
+
+
+## 자동 사냥 버튼 글자와 사냥 자리 표시. **상태는 스냅샷(me.auto)만 보고 그린다** —
+## 누른 것으로 지레 바꾸면 판정이 거절했을 때 화면만 켜진 채로 남는다.
+##
+## 사람이 몰고 있지 않을 때만 파란 고리가 **앵커**(사냥하며 서성이는 중심)를
+## 가리킨다. 어디를 중심으로 도는지 안 보이면 왜 저기서 멈추는지 알 수 없다.
+## 조작 중에는 같은 고리가 "눌러 둔 자리"라 건드리지 않는다 — 한 고리가 두 가지를
+## 가리키면 걸어가는 도중에 표시가 발밑으로 튄다 (앵커가 따라오기 때문이다)
+func _refresh_auto(me: Dictionary) -> void:
+	var on := bool(me.get("auto", false))
+	_auto_button.text = "자동사냥\n켜짐" if on else "자동사냥"
+	_auto_button.modulate = Color("#7ce08a") if on else Color.WHITE
+	if _target != Vector3.INF or _target_mob != "":
+		return
+	if on:
+		_marker.position = Vector3(float(me.get("auto_x", 0.0)), 0.05, float(me.get("auto_z", 0.0)))
+		_marker.visible = true
+	else:
+		_marker.visible = false
 
 
 func _tick_aoe() -> void:

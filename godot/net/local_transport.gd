@@ -39,10 +39,6 @@ func send(message: StringName, payload: Dictionary) -> void:
 			_world.revive(MY_ID)
 		&"autoHunt":
 			_world.set_auto(MY_ID, bool(payload.get("on", false)))
-		&"huntAnchor":
-			_world.set_hunt_anchor(
-				MY_ID, float(payload.get("x", 0.0)), float(payload.get("z", 0.0))
-			)
 		&"travel":
 			_world.travel(MY_ID, str(payload.get("zone", "")))
 		&"npc":

@@ -125,6 +125,23 @@ func _run_scene() -> void:
 	else:
 		print("  자동사냥 켜짐 — 앵커 (%.1f, %.1f)" % [me.auto_x, me.auto_z])
 
+	# 켜 둔 채로 땅을 누르면 **조작이 이긴다** — 화면이 탭을 삼키면 안 된다
+	# (판정 쪽은 tests/auto_hunt_test.gd 의 _case_manual_wins 가 본다)
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	press.position = Vector2(200, 200)
+	game._unhandled_input(press)
+	if game._target == Vector3.INF:
+		_fail("자동사냥 중에 땅을 눌렀는데 화면이 무시했다")
+	var was := Vector2(me.x, me.z)
+	for i in 30:
+		await process_frame
+	if Vector2(me.x, me.z).distance_to(was) < 0.3:
+		_fail("자동사냥 중에 눌렀는데 그쪽으로 안 걸었다")
+	else:
+		print("  켜 둔 채로 누른 자리로 걸어간다 (%.2f m)" % Vector2(me.x, me.z).distance_to(was))
+
 	game._auto_button.pressed.emit()
 	await process_frame
 	if bool(me.get("auto", false)):

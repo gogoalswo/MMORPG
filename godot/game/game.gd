@@ -371,8 +371,9 @@ func _on_skill_pressed(skill_id: String) -> void:
 ## 자동 사냥을 켜고 끈다. **켜고 끄는 것도 요청일 뿐이다** — 실제 상태는
 ## World 가 정하고, 버튼 글자는 다음 프레임에 스냅샷을 보고 따라온다.
 ##
-## 켜면 화면이 몰던 것(눌러 둔 자리·쫓던 놈)을 놓는다. 둘이 같이 밀면
-## 캐릭터가 두 목적지 사이에서 떤다
+## 켜는 순간 화면이 몰던 것(눌러 둔 자리·쫓던 놈)을 놓는다. 켜자마자 옛 목적지로
+## 걸어가면 어디를 중심으로 도는지 알 수 없다. **켠 뒤에 다시 조작하는 것은
+## 막지 않는다** — 그때는 사람이 이기고, 손을 떼면 그 자리에서 이어서 사냥한다
 func _toggle_auto() -> void:
 	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
 	var on := not bool(me.get("auto", false))
@@ -380,11 +381,6 @@ func _toggle_auto() -> void:
 		_target_mob = ""
 		_target = Vector3.INF
 	_transport.send(&"autoHunt", {"on": on})
-
-
-func _auto_on() -> bool:
-	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
-	return bool(me.get("auto", false))
 
 
 func _on_bar_pressed(slot: int) -> void:
@@ -740,18 +736,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		var mob := _mob_at(hit)
 		if mob != "":
 			_select_mob(mob)
-			# 자동 사냥 중에는 고리만 세운다. 누구를 칠지는 World 가 고른다
-			# (docs/features/godot-migration.md 의 "대상은 서버가 고른다")
-			if _auto_on():
-				return
 			_target_mob = mob
 			_target = Vector3.INF
 			_marker.visible = false
-		elif _auto_on():
-			# 자동 사냥 중 땅 누르기 = **사냥할 자리를 저기로 옮겨라.**
-			# 켠 채로 사냥터를 옮겨 다닐 방법이 이것뿐이다 (끄고 걸어가서 다시 켜는
-			# 대신). 앵커가 옮겨졌으니 대상이 없으면 그 자리로 걸어간다
-			_transport.send(&"huntAnchor", {"x": hit.x, "z": hit.z})
 		else:
 			# 땅을 누르면 걸어가기만 한다. **골라 둔 놈은 그대로 둔다** —
 			# 원거리 직업이 자리를 옮겨 가며 같은 놈을 보는 게 자연스럽다
@@ -846,9 +833,6 @@ func _am_dead() -> bool:
 
 func _send_input(delta: float) -> void:
 	if _zone_node == null or _am_dead():
-		return
-	# 자동 사냥 중에는 발을 World 가 옮긴다. 여기서도 밀면 두 목적지 사이에서 떤다
-	if _auto_on():
 		return
 	if _target_mob != "":
 		_chase_and_hit(delta)
@@ -1121,16 +1105,20 @@ func _refresh_bar(me: Dictionary) -> void:
 ## 자동 사냥 버튼 글자와 사냥 자리 표시. **상태는 스냅샷(me.auto)만 보고 그린다** —
 ## 누른 것으로 지레 바꾸면 판정이 거절했을 때 화면만 켜진 채로 남는다.
 ##
-## 켜져 있는 동안 파란 고리는 "눌러 둔 자리"가 아니라 **앵커**(사냥할 자리)다.
-## 어디를 중심으로 도는지 안 보이면 왜 저기서 멈추는지 알 수 없다
+## 사람이 몰고 있지 않을 때만 파란 고리가 **앵커**(사냥하며 서성이는 중심)를
+## 가리킨다. 어디를 중심으로 도는지 안 보이면 왜 저기서 멈추는지 알 수 없다.
+## 조작 중에는 같은 고리가 "눌러 둔 자리"라 건드리지 않는다 — 한 고리가 두 가지를
+## 가리키면 걸어가는 도중에 표시가 발밑으로 튄다 (앵커가 따라오기 때문이다)
 func _refresh_auto(me: Dictionary) -> void:
 	var on := bool(me.get("auto", false))
 	_auto_button.text = "자동사냥\n켜짐" if on else "자동사냥"
 	_auto_button.modulate = Color("#7ce08a") if on else Color.WHITE
+	if _target != Vector3.INF or _target_mob != "":
+		return
 	if on:
 		_marker.position = Vector3(float(me.get("auto_x", 0.0)), 0.05, float(me.get("auto_z", 0.0)))
 		_marker.visible = true
-	elif _target == Vector3.INF:
+	else:
 		_marker.visible = false
 
 

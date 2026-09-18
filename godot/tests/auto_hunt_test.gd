@@ -17,11 +17,11 @@ func _init() -> void:
 	_case_radius_covers_one_pack()
 	_case_anchor_on_toggle()
 	_case_walks_in_and_hits()
-	_case_back_to_anchor()
+	_case_patrol_when_empty()
 	_case_outside_radius()
 	_case_off_stops()
 	_case_dead()
-	_case_anchor_move()
+	_case_manual_wins()
 
 	if _failed == 0:
 		print("자동 사냥: 전부 통과")
@@ -147,23 +147,41 @@ func _case_walks_in_and_hits() -> void:
 		_fail("대상을 안 잡았다 (%s)" % me.auto_target)
 
 
-## 대상이 없으면 앵커로 돌아가 기다린다. 안 돌아가면 마지막으로 쫓던 자리에
-## 눌러앉아 무리 밖에 서 있게 된다
-func _case_back_to_anchor() -> void:
+## 잡을 것이 없으면 앵커 주변을 서성인다 — 선 채로 굳어 있으면 멈춘 것처럼 보인다.
+##
+## 쉬는 시간(1.2초)은 진짜 시계라 헤드리스에서는 안 지나간다. 몬스터 순찰
+## 테스트와 같은 방식으로 쉬는 시각을 직접 밀어 준다
+func _case_patrol_when_empty() -> void:
 	var s := _setup(60.0, 60.0)
 	var w: World = s[0]
 	var me: Dictionary = s[1]
 	w.set_auto("me", true)
+	# 쫓다가 반경 밖까지 나와 있는 자리에서 시작한다
 	me.x = 12.0
 	me.z = 0.0
 
-	for i in 300:
+	var anchor := Vector2(float(me.auto_x), float(me.auto_z))
+	var walked := 0.0
+	var worst := 0.0
+	var before := Vector2(me.x, me.z)
+	for i in 1200:
+		me.auto_rest_until = 0
 		w.step(1.0 / 60.0)
-	var gap := Vector2(me.x - float(me.auto_x), me.z - float(me.auto_z)).length()
-	if gap > World.HUNT_ARRIVE + 1e-3:
-		_fail("앵커로 안 돌아왔다 (남은 거리 %.2f m)" % gap)
+		var here := Vector2(me.x, me.z)
+		walked += here.distance_to(before)
+		before = here
+		# 앵커로 돌아오기 전(첫 몇 초)은 반경 밖이라 세지 않는다
+		if i > 300:
+			worst = maxf(worst, here.distance_to(anchor))
+
+	if walked < 5.0:
+		_fail("서성이지 않았다 (%.1f m 만 걸었다)" % walked)
+	elif worst > World.HUNT_PATROL_RADIUS + 1e-3:
+		_fail("앵커에서 %.1f m 까지 벗어났다 (순찰 반경 %.1f)" % [
+			worst, World.HUNT_PATROL_RADIUS
+		])
 	else:
-		print("  대상이 없자 앵커로 돌아와 섰다 (%.2f m)" % gap)
+		print("  잡을 것이 없자 앵커 %.1f m 안에서 %.1f m 를 서성였다" % [worst, walked])
 
 
 ## 반경 밖의 놈은 안 잡는다 — 잡으면 앵커를 둔 뜻이 없다
@@ -175,11 +193,13 @@ func _case_outside_radius() -> void:
 	w.set_auto("me", true)
 
 	for i in 300:
+		me.auto_rest_until = 0
 		w.step(1.0 / 60.0)
 	if str(me.auto_target) != "":
 		_fail("반경 밖(%.1f m)의 놈을 잡았다" % _gap(me, mob))
-	if Vector2(me.x, me.z).length() > World.HUNT_ARRIVE + 1e-3:
-		_fail("반경 밖의 놈에게 걸어갔다 (%.2f, %.2f)" % [me.x, me.z])
+	# 서성이기는 하지만 순찰 반경 밖으로는 안 나간다 (=그놈에게 걸어가지 않았다)
+	if Vector2(me.x, me.z).length() > World.HUNT_PATROL_RADIUS + 1e-3:
+		_fail("반경 밖의 놈 쪽으로 걸어갔다 (%.2f, %.2f)" % [me.x, me.z])
 
 
 ## 끄면 그 자리에 선다
@@ -216,26 +236,40 @@ func _case_dead() -> void:
 		_fail("죽었는데 움직였다")
 
 
-## 땅을 누르면 사냥할 자리가 옮겨진다. **꺼져 있으면 안 듣는다** —
-## 남겨 두면 다음에 켤 때 엉뚱한 데로 걷는다
-func _case_anchor_move() -> void:
-	var s := _setup(60.0, 60.0)
+## **켜 둔 채로 조작하면 사람이 이긴다.** 몬스터를 두고 반대쪽으로 몰아 본다 —
+## 자동 사냥이 이기면 몬스터 쪽(+x)으로 끌려간다.
+##
+## 손을 떼면 0.4초(MANUAL_HOLD_MS) 뒤에 자동 사냥이 이어받는다. 그 시간은 진짜
+## 시계라 헤드리스에서도 실제로 기다려야 한다 (한 번, 0.45초)
+func _case_manual_wins() -> void:
+	var s := _setup(10.0, 0.0)
 	var w: World = s[0]
 	var me: Dictionary = s[1]
-
-	w.set_hunt_anchor("me", 9.0, 9.0)
-	if absf(float(me.auto_x)) > 1e-6 or absf(float(me.auto_z)) > 1e-6:
-		_fail("꺼져 있는데 앵커가 옮겨졌다")
-
 	w.set_auto("me", true)
-	w.set_hunt_anchor("me", 9.0, 9.0)
-	if absf(float(me.auto_x) - 9.0) > 1e-6:
-		_fail("앵커가 안 옮겨졌다 (%.1f, %.1f)" % [me.auto_x, me.auto_z])
 
-	for i in 300:
+	# 몬스터 반대쪽(-x)으로 몬다
+	var seq := 0
+	for i in 60:
+		seq += 1
+		w.input_move("me", seq, -1.0, 0.0, 1.0 / 60.0)
 		w.step(1.0 / 60.0)
-	var gap := Vector2(me.x - 9.0, me.z - 9.0).length()
-	if gap > World.HUNT_ARRIVE + 1e-3:
-		_fail("옮긴 자리로 안 걸어갔다 (남은 거리 %.2f m)" % gap)
+
+	if me.x > -0.5:
+		_fail("조작한 쪽으로 안 갔다 (x %.2f) — 자동 사냥이 이겼다" % me.x)
 	else:
-		print("  누른 자리로 걸어가 섰다 (%.2f m)" % gap)
+		print("  조작이 이긴다: 1초 몰아 x %.2f 로 (몬스터는 +10 쪽)" % me.x)
+	# 걸어간 자리가 새 사냥터다. 안 옮기면 손을 떼는 순간 도로 끌려간다
+	if absf(float(me.auto_x) - me.x) > 1e-3 or absf(float(me.auto_z) - me.z) > 1e-3:
+		_fail("앵커가 안 따라왔다 (%.2f, %.2f)" % [me.auto_x, me.auto_z])
+
+	# 손을 뗀다. 유예가 지나면 다시 자동 사냥이 몬다
+	OS.delay_msec(World.MANUAL_HOLD_MS + 50)
+	var before := float(me.x)
+	for i in 60:
+		w.step(1.0 / 60.0)
+	if me.x <= before:
+		_fail("손을 뗐는데 자동 사냥이 안 이어받았다 (x %.2f -> %.2f)" % [before, me.x])
+	else:
+		print("  손을 떼자 %.1f초 뒤 자동 사냥이 이어받았다 (x %.2f -> %.2f)" % [
+			World.MANUAL_HOLD_MS / 1000.0, before, me.x
+		])

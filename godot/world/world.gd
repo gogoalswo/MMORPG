@@ -61,8 +61,19 @@ const HUNT_RADIUS := 18.0
 const HUNT_LEASH := HUNT_RADIUS + 6.0
 ## 사거리를 꽉 채우고 서면 몬스터가 조금만 움직여도 빠진다. 이만큼 안으로 붙는다
 const HUNT_STANDOFF := 0.7
-## 앵커로 돌아갈 때 이만큼 붙으면 도착으로 본다
+## 목적지에 이만큼 붙으면 도착으로 본다
 const HUNT_ARRIVE := 0.5
+## 잡을 것이 없을 때 앵커 주변을 서성이는 반경. **무리가 흩어져 있는 만큼**(8m)만
+## 돈다 — 더 넓게 돌면 리스폰을 기다리다 옆 무리까지 걸어가 끌고 온다
+const HUNT_PATROL_RADIUS := 8.0
+## 한 다리 걷고 쉬는 시간. 몬스터 순찰(2~6초)보다 짧다 — 사람 캐릭터가 오래
+## 멈춰 서 있으면 자동 사냥이 멈춘 것처럼 보인다
+const HUNT_PATROL_REST_MS := 1200
+## 사람이 조작하면 이만큼 자동 사냥이 손을 뗀다. 이동 입력은 매 프레임 오므로
+## 손을 떼면 곧바로(0.4초) 자동 사냥이 이어받는다 —
+## 화면이 멈춰서 입력이 끊긴 것과 손을 뗀 것을 구별할 방법이 없고, 구별할 필요도
+## 없다. 둘 다 "사람이 안 몰고 있다"이다
+const MANUAL_HOLD_MS := 400
 
 var _next_save_at := 0
 
@@ -135,6 +146,12 @@ func join(player_id: String) -> void:
 		"auto_x": float(spawn[0]),
 		"auto_z": float(spawn[1]),
 		"auto_target": "",
+		# 잡을 것이 없을 때 서성이는 자리와 쉬는 시각
+		"auto_patrol_x": float(spawn[0]),
+		"auto_patrol_z": float(spawn[1]),
+		"auto_rest_until": 0,
+		# 사람이 몰고 있는 동안은 자동 사냥이 손을 뗀다
+		"manual_until": 0,
 		# --- 스킬 ---
 		"skills": kept.get("skills", []).duplicate(),
 		"skill_points": int(kept.get("skill_points", level - 1)),
@@ -167,9 +184,16 @@ func input_move(player_id: String, seq: int, dx: float, dz: float, dt: float) ->
 		player.last_seq = seq
 		return
 
+	var now := Time.get_ticks_msec()
+	# **사람이 몰면 사람이 이긴다.** 자동 사냥은 손을 뗀다 (_take_manual).
+	# 휘두르는 중이라 발이 묶여 있어도 먼저 잡는다 — 안 그러면 경직(400ms)마다
+	# 자동 사냥이 한 번씩 끼어들어 조작하던 방향과 다른 데로 몸이 돈다
+	if sqrt(dx * dx + dz * dz) > 1e-4:
+		_take_manual(player, now)
+
 	# 휘두르는 중이면 발을 묶는다. **순번은 갱신하고 위치만 안 옮긴다** —
 	# 안 갱신하면 나중에 서버를 붙였을 때 클라이언트 보정이 이 구간 내내 멈춘다
-	if Time.get_ticks_msec() < int(player.rooted_until):
+	if now < int(player.rooted_until):
 		player.last_seq = seq
 		return
 
@@ -179,6 +203,10 @@ func input_move(player_id: String, seq: int, dx: float, dz: float, dt: float) ->
 
 	if sqrt(dx * dx + dz * dz) > 1e-4:
 		player.rot = atan2(dx, dz)
+		# **걸어간 자리가 새 사냥터다.** 앵커를 안 옮기면 손을 떼는 순간 자동
+		# 사냥이 원래 자리로 도로 끌고 간다 — 조작이 이긴 것처럼 보이지 않는다
+		if bool(player.get("auto", false)):
+			_anchor_here(player)
 
 
 ## 한 틱. 전투가 들어올 자리다 (5단계).
@@ -327,24 +355,31 @@ func set_auto(player_id: String, on: bool) -> void:
 	player.auto = on
 	player.auto_target = ""
 	if on:
-		player.auto_x = player.x
-		player.auto_z = player.z
+		_anchor_here(player)
 
 
-## 사냥할 자리를 옮긴다 (화면에서 땅을 누른 것). 켜져 있을 때만 듣는다 —
-## 꺼진 채로 앵커만 옮겨 두면 다음에 켤 때 엉뚱한 데로 걷는다.
-func set_hunt_anchor(player_id: String, x: float, z: float) -> void:
-	var player: Dictionary = _players.get(player_id, {})
-	if player.is_empty() or not bool(player.get("auto", false)):
-		return
-	if not is_finite(x) or not is_finite(z):
-		return
-	player.auto_x = clampf(x, -half_size, half_size)
-	player.auto_z = clampf(z, -half_size, half_size)
+## 앵커를 지금 서 있는 자리로 잡는다 (켤 때와 사람이 몰고 다닌 뒤).
+func _anchor_here(player: Dictionary) -> void:
+	player.auto_x = player.x
+	player.auto_z = player.z
+	player.auto_patrol_x = player.x
+	player.auto_patrol_z = player.z
 	player.auto_target = ""
+	player.auto_rest_until = 0
 
 
-## 자동 사냥 한 틱. 고르고 → 붙고 → 친다. 대상이 없으면 앵커로 돌아가 기다린다.
+## 사람이 몰기 시작했다. **조작이 자동 사냥보다 먼저다** — 켜 둔 채로 잠깐
+## 자리를 옮기거나 위험한 놈을 피하는 것이 가장 흔한 조작이라, 그때마다 끄게
+## 하면 단추를 두 번 더 눌러야 한다.
+##
+## 앵커를 옮기는 것은 **발을 옮긴 뒤**다 (input_move 끝) — 걸어간 자리가 새
+## 사냥터이기 때문이다. 여기서 같이 옮기면 한 프레임씩 뒤처진다.
+func _take_manual(player: Dictionary, now: int) -> void:
+	player.manual_until = now + MANUAL_HOLD_MS
+
+
+## 자동 사냥 한 틱. 고르고 → 붙고 → 친다. 잡을 것이 없으면 앵커 주변을 서성인다.
+## **사람이 몰고 있는 동안은 통째로 쉰다** (조작이 먼저다).
 ##
 ## **판정하는 쪽(여기)이 몬다.** 화면(`_process`)이 몰면 탭을 옮기거나 폰 화면이
 ## 꺼지는 순간 0~1Hz 로 떨어져 캐릭터가 그 자리에 선다
@@ -354,13 +389,16 @@ func _drive_auto(delta: float, now: int) -> void:
 		var player: Dictionary = _players[id]
 		if not bool(player.get("auto", false)) or bool(player.get("dead", false)):
 			continue
+		# 사람이 몰고 있는 동안은 손을 뗀다. 둘이 같이 밀면 캐릭터가 두 목적지
+		# 사이에서 떨고, 조작한 쪽이 진 것처럼 보인다
+		if now < int(player.get("manual_until", 0)):
+			continue
 
 		var target := _pick_hunt_target(player)
 		if target.is_empty():
-			# 아무도 없다. 앵커로 돌아가 기다린다 — 안 돌아가면 마지막으로 쫓던
-			# 자리에 눌러앉아 무리 밖에서 서 있게 된다
+			# 아무도 없다. 앵커 주변을 서성이며 기다린다
 			player.auto_target = ""
-			_walk_auto(player, float(player.auto_x), float(player.auto_z), delta, now, HUNT_ARRIVE)
+			_patrol_auto(player, delta, now)
 			continue
 
 		player.auto_target = str(target.id)
@@ -402,6 +440,39 @@ func _pick_hunt_target(player: Dictionary) -> Dictionary:
 			best = monster
 
 	return best
+
+
+## 잡을 것이 없을 때. 앵커 주변에서 한 다리 걷고 잠시 쉰다 — 몬스터 순찰(`_patrol`)과
+## 같은 모양이다.
+##
+## **선 채로 기다리지 않는 이유**는 두 가지다. 가만히 서 있으면 자동 사냥이 멈춘
+## 것처럼 보이고, 리스폰을 기다리는 동안 한 발짝도 안 움직이면 무리 반대편에 새로
+## 나온 놈을 사거리 안에 두는 데 그만큼 더 걸린다.
+func _patrol_auto(player: Dictionary, delta: float, now: int) -> void:
+	var anchor := Vector2(float(player.auto_x), float(player.auto_z))
+	var here := Vector2(player.x, player.z)
+
+	# 쫓다가 반경 밖까지 나와 있으면 먼저 앵커 쪽으로 돌아온다.
+	# 안 돌아가면 마지막으로 쫓던 자리에 눌러앉아 무리 밖에서 서성인다
+	if here.distance_to(anchor) > HUNT_PATROL_RADIUS:
+		player.auto_rest_until = 0
+		_walk_auto(player, anchor.x, anchor.y, delta, now, HUNT_PATROL_RADIUS * 0.5)
+		return
+
+	if now < int(player.auto_rest_until):
+		return
+
+	var goal := Vector2(float(player.auto_patrol_x), float(player.auto_patrol_z))
+	if here.distance_to(goal) > HUNT_ARRIVE:
+		_walk_auto(player, goal.x, goal.y, delta, now, HUNT_ARRIVE)
+		return
+
+	# 다 걸었다. 앵커 반경 안에서 다음 자리를 뽑고 쉰다
+	var angle := _rng.randf() * TAU
+	var reach := _rng.randf_range(HUNT_PATROL_RADIUS * 0.4, HUNT_PATROL_RADIUS)
+	player.auto_patrol_x = clampf(anchor.x + sin(angle) * reach, -half_size, half_size)
+	player.auto_patrol_z = clampf(anchor.y + cos(angle) * reach, -half_size, half_size)
+	player.auto_rest_until = now + HUNT_PATROL_REST_MS
 
 
 ## 자동 사냥이 발을 옮기는 자리. 사람이 모는 입력(`input_move`)과 **같은 규칙**으로

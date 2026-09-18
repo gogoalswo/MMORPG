@@ -44,6 +44,16 @@ var _selected_mob := ""
 var _ring: SelectRing
 ## 몬스터 id -> 그려 둔 몸. 죽으면 감추고 살아나면 다시 보인다
 var _mob_nodes: Dictionary = {}
+## 내 머리 위 체력 막대 (game/hp_bar_3d.gd). 늘 보인다
+var _player_bar: HpBar3D
+## 몬스터 id -> 머리 위 체력 막대. **골라 뒀거나 내가 때린 놈만** 세운다 —
+## 사냥터 한 무리가 전부 막대를 달면 화면이 붉은 줄로 덮인다
+var _mob_bars: Dictionary = {}
+## 몬스터 id -> 때린 막대를 언제까지 보여 주나(ms). 그 뒤에는 치운다
+var _mob_bar_until: Dictionary = {}
+## 때린 뒤 막대가 남아 있는 시간. 다음 한 대를 칠 때까지는 넉넉히 남아야 하고
+## (제일 느린 무기가 1.2초), 지나간 놈 것이 화면에 쌓이면 안 된다
+const MOB_BAR_MS := 5000
 ## 마지막으로 일어난 일 한 줄 (맞았다·레벨 올랐다)
 var _last_event := ""
 var _ui_root: Control
@@ -159,6 +169,13 @@ func _build_persistent() -> void:
 		_player = capsule
 		_player_y = 0.9
 	add_child(_player)
+	# 머리 높이를 재려면 먼저 세워야 한다 — 기둥은 원점이 몸 가운데라
+	# 바닥(y=0)에 둔 채로 재면 막대가 배꼽 높이에 뜬다.
+	# 매 프레임 _draw_state 가 다시 넣는 값과 같다
+	_player.position.y = _player_y
+	# 내 체력은 HUD 막대에도 있지만, 눈이 가 있는 곳은 발밑이다.
+	# 존이 바뀌어도 나는 그대로라 여기(_zone_node 밖)에 단다
+	_player_bar = HpBar3D.create(self, _player, HpBar3D.COLOR_PLAYER)
 
 	# 어디를 눌렀는지 보여주는 표시 (웹 클라의 클릭 이동 표시와 같은 역할)
 	_marker = MeshInstance3D.new()
@@ -630,6 +647,10 @@ func _build_zone(zone_id: String) -> void:
 	_selected_mob = ""
 	_ring = null
 	_target_mob = ""
+	# 막대는 _zone_node 밑이라 같이 사라진다. 몬스터 id 는 존마다 다시 매겨지므로
+	# 때린 기록도 같이 버린다 — 안 버리면 새 존의 같은 id 에 막대가 붙는다
+	_mob_bars.clear()
+	_mob_bar_until.clear()
 
 	var world_env := WorldEnvironment.new()
 	world_env.environment = environment_for(env)
@@ -808,6 +829,35 @@ func _tick_ring(snap: Dictionary) -> void:
 	_ring.follow(Vector3(mob.x, 0.0, mob.z), float(mob.r), _last_delta)
 
 
+## 몬스터 머리 위 체력 막대. **골라 둔 놈과 방금 때린 놈만** 보여 준다
+## (2026-09-18 지시: "몬스터는 나한테 피격을 받은 경우거나 타겟팅 된 경우에만").
+##
+## 세우고 치우는 자리는 여기 한 군데다 — 고리와 같은 이유로, 죽는 길이 여럿이라
+## 각자 지우게 두면 반드시 한 곳이 빠지고 **막대가 시체에 남는다.**
+## 몬스터마다 매 프레임 한 번 불린다 (`_draw_state` 의 몬스터 고리 안).
+func _tick_mob_bar(monster: Dictionary, node: Node3D) -> void:
+	var id := str(monster.id)
+	var hit_until := int(_mob_bar_until.get(id, 0))
+	var show := int(monster.hp) > 0 and (id == _selected_mob or hit_until > Time.get_ticks_msec())
+
+	var bar: HpBar3D = _mob_bars.get(id)
+	if not show:
+		if bar != null and is_instance_valid(bar):
+			bar.queue_free()
+		_mob_bars.erase(id)
+		# 죽었거나 시간이 지났으면 때린 기록도 버린다. 살아나면 처음부터다
+		_mob_bar_until.erase(id)
+		return
+
+	if bar == null or not is_instance_valid(bar):
+		bar = HpBar3D.create(_zone_node, node, HpBar3D.COLOR_MOB)
+		_mob_bars[id] = bar
+	bar.follow(
+		Vector3(monster.x, 0.0, monster.z),
+		float(monster.hp) / maxf(1.0, float(monster.max_hp))
+	)
+
+
 ## 화면의 한 점이 바닥의 어디인지
 func _ground_point(screen: Vector2) -> Vector3:
 	if _camera == null:
@@ -949,6 +999,7 @@ func _draw_state() -> void:
 		if node == null:
 			continue
 		node.visible = int(monster.hp) > 0
+		_tick_mob_bar(monster, node)
 		if not node.visible:
 			continue
 		node.position.x = monster.x
@@ -973,6 +1024,12 @@ func _draw_state() -> void:
 		if int(monster.hp) > 0:
 			alive += 1
 	_player.visible = not bool(me.get("dead", false))
+	# 죽으면 몸과 같이 감춘다 — 시체 위에 빈 막대가 떠 있으면 안 죽은 것처럼 보인다
+	_player_bar.visible = _player.visible
+	if _player_bar.visible:
+		_player_bar.follow(
+			Vector3(me.x, 0.0, me.z), float(me.hp) / maxf(1.0, float(me.stats.maxHp))
+		)
 
 	_hp_bar.max_value = me.stats.maxHp
 	_hp_bar.value = me.hp
@@ -1001,6 +1058,10 @@ func _show_hit(payload: Dictionary) -> void:
 	if _zone_node == null:
 		return
 	var on_me := str(payload.get("target_kind", "")) == "player"
+	# 내가 때린 놈은 잠깐 막대를 보여 준다. 혼자 노는 판이라 몬스터를 때리는 건
+	# 나뿐이므로 때린 사람을 따로 가리지 않는다 (서버가 붙으면 source 를 본다)
+	if not on_me:
+		_mob_bar_until[str(payload.get("target", ""))] = Time.get_ticks_msec() + MOB_BAR_MS
 	var body: Node3D = null
 	if on_me:
 		body = _player

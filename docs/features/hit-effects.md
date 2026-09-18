@@ -120,6 +120,8 @@ npm run test:godot -- hit_fx
 ## 같이 볼 것
 
 - [combat.md](combat.md) — `hit` 이벤트에 무엇이 들어 있는지 (피해·치명타·처치)
+- [godot-migration.md](godot-migration.md) 의 "머리 위에 체력 막대가 뜬다" —
+  **몬스터 막대를 띄우는 것도 이 `hit` 이벤트다** (때린 뒤 5초)
 - [godot-migration.md](godot-migration.md) — 화면과 판정을 가르는 규칙
 - [skills.md](skills.md) — 스킬도 같은 `hit` 을 낸다. **스킬 전용 연출은
   `godot/game/skill_fx.gd`(할퀴기 자국, 2026-09-17)와

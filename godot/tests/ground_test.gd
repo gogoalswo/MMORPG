@@ -16,6 +16,7 @@ func _init() -> void:
 	_case_looks()
 	_case_tint()
 	_case_material()
+	_case_contrast()
 
 	if _failed == 0:
 		print("바닥: 전부 통과")
@@ -66,6 +67,30 @@ func _case_looks() -> void:
 	])
 
 
+## 무늬가 얼마나 또렷해지는지. 텍스처 자체는 대비가 있는데(돌판은 밝기 폭이 6배)
+## 화면에서 희미하다는 지적을 받아 셰이더에서 벌린다 (2026-09-17)
+func _case_contrast() -> void:
+	var mat := Ground.material_for(GameData.zone("village").env, 92.0)
+	if not (mat is ShaderMaterial):
+		_fail("마을 바닥이 셰이더 재질이 아니다")
+		return
+	var sm := mat as ShaderMaterial
+	var contrast := float(sm.get_shader_parameter("contrast"))
+	if contrast <= 1.0:
+		_fail("대비가 1.0 이하다 — 벌리지 않으면 무늬가 희미하다")
+	if float(sm.get_shader_parameter("normal_depth")) <= 1.0:
+		_fail("노멀 세기가 1.0 이하다")
+	# 평균색을 축으로 벌리므로 평균 밝기는 그대로다.
+	# 돌판 텍스처의 어두운 쪽(선형 0.016)과 밝은 쪽(0.102)이 얼마나 벌어지나
+	var mean: Color = sm.get_shader_parameter("mean_color")
+	var m := 0.299 * mean.r + 0.587 * mean.g + 0.114 * mean.b
+	var lo: float = m * pow(0.016 / m, contrast)
+	var hi: float = m * pow(0.102 / m, contrast)
+	print("  돌판 밝기 폭 %.1f배 -> %.1f배 (대비 %.2f · 노멀 %.1f)" % [
+		0.102 / 0.016, hi / lo, contrast, float(sm.get_shader_parameter("normal_depth"))
+	])
+
+
 func _case_tint() -> void:
 	# ground.ts 와 같은 식이어야 한다 (선형에서 비율, TINT_PULL 0.5, ALBEDO 0.3)
 	var cases := [
@@ -92,16 +117,21 @@ func _case_material() -> void:
 	var zone := GameData.zone("meadow")
 	var size := float(zone.size)
 	var mat := Ground.material_for(zone.env, size)
-	if mat.albedo_texture == null:
+	if not (mat is ShaderMaterial):
+		_fail("바닥이 셰이더 재질이 아니다 — 대비·아니소트로픽을 못 준다")
+		return
+	var sm := mat as ShaderMaterial
+	if sm.get_shader_parameter("albedo_tex") == null:
 		_fail("텍스처가 안 붙었다")
 		return
-	if not mat.normal_enabled or mat.normal_texture == null:
+	if not bool(sm.get_shader_parameter("has_normal")) or sm.get_shader_parameter("normal_tex") == null:
 		_fail("노멀이 안 붙었다")
 	# 초원 92m, 풀 타일 4m -> 23번 반복
 	var want := size / float(Ground.look_of("grass").tile)
-	if absf(mat.uv1_scale.x - want) > 1e-6:
-		_fail("반복이 %.1f 여야 하는데 %.1f" % [want, mat.uv1_scale.x])
+	var tiling: Vector2 = sm.get_shader_parameter("tiling")
+	if absf(tiling.x - want) > 1e-6:
+		_fail("반복이 %.1f 여야 하는데 %.1f" % [want, tiling.x])
 	else:
 		print("  초원 %.0fm 에 풀 타일 %.0fm -> %.0f번 반복" % [
-			size, Ground.look_of("grass").tile, mat.uv1_scale.x
+			size, Ground.look_of("grass").tile, tiling.x
 		])

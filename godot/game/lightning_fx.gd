@@ -50,10 +50,10 @@ const BEHIND := 5.0
 ## 토막이 잘면 **폭보다 짧아져** 꺾인 자리가 겹친다. 8.6m 를 열둘로 나누면
 ## 토막 0.7m 로 halo(0.95m)와 비슷해 이음새가 자연스럽다
 const SEGMENTS := 12
-## 주 줄기 몇 가닥. 하나면 심심하고, 셋 넘으면 다발로 뭉친다. 둘은 서로
-## 조금 떨어진 자리에서 시작해 한 점으로 모인다
-const BOLTS := 2
-const BOLT_APART := 1.8
+## **주 줄기는 하나다.** 둘을 따로 세웠더니 한 줄기가 여러 줄로 갈라져 보였다 —
+## 굵게 보이려면 가닥을 늘리는 게 아니라 **폭만 다른 겹**을 쌓는다
+## ([effect-rules.md](../../docs/features/effect-rules.md) 의 5절)
+const BOLTS := 1
 ## 굽이치는 폭(m). 크면 번개가 아니라 리본이 나부낀다
 const WOBBLE := 0.9
 ## **굵어야 번개다.** 코어 0.18m = 7px, halo 0.5m = 19px 이고 끝으로 갈수록
@@ -62,20 +62,30 @@ const WOBBLE := 0.9
 ## **얇게** (2026-09-18 지시). 굵은 리본은 번개가 아니라 띠로 보인다 —
 ## 다만 파티클로 만들던 때처럼 3px 까지 깎지는 않는다. 그때 실이 된 것은
 ## 굵기가 아니라 **가닥이 뭉쳐서**였다
-const CORE_WIDTH := 0.11
+const CORE_WIDTH := 0.09
 ## halo 는 코어를 감싸는 **번짐**이다. 가장자리가 투명해지므로 굵어도 선이
 ## 지지 않는다
-const HALO_WIDTH := 0.45
+const HALO_WIDTH := 0.5
+## 가운데 **색 빛** — 헤일로와 흰 심 사이. 한 줄기를 굵게 보이려면
+## **폭만 다른 3겹**(넓은 헤일로 + 색 빛 + 가는 흰 심)으로 쌓는다
+const SHEEN_WIDTH := 0.2
 ## 줄기가 살아 있는 시간과 **지글거리는 주기.** 45ms 마다 경로를 다시 만든다
 const BOLT_LIFE := 0.3
 const FLICK := 0.045
-## 주 줄기에서 갈라지는 곁가지. 허공에서 끝난다
+## 곁줄기 — **따로 기울이지 않는다.** 따로 기울였더니 한 줄기가 세 줄로 갈라져
+## 보이고, 길게 뻗은 가지는 별개의 번개처럼 화면을 가로질렀다. **같은 길을 조금
+## 더 흔든 것**이라야 한 줄기가 굵어 보인다 (규칙 5절)
 const FORKS := 2
-const FORK_LENGTH := 2.4
+## 곁줄기가 주 줄기에서 얼마나 어긋나나(m). **조금이어야 한다** — 주 줄기의
+## 1.7배로 새로 뽑았더니 규칙이 경고한 그대로 한 줄기가 세 줄로 갈라졌다
+## (2026-09-18 캡처). 0.22m 는 화면에서 8px 다
+const FORK_DRIFT := 0.22
 
 ## 갈라지는 땅. **중심에서 가지를 치며 뻗고 가늘어진다** — 파티클로 방사했더니
 ## 고른 별표가 됐다 (2026-09-18). 갈래마다 한 번 더 갈라진다
 const CRACKS := 7
+## **캐릭터 키(1.8m)의 1.5~4배** 여야 한다 (규칙 3절). 갈래마다 0.85~1.35 를
+## 곱하고 연타마다 굵어지므로 2.7~5.7m 가 된다
 const CRACK_LENGTH := 3.2
 ## 금은 **한 겹이다.** 둘레에 밝은 돌빛을 한 겹 깔아 봤더니 갈라진 틈이 아니라
 ## **테두리를 두른 그림**이 됐다 (2026-09-18 에 지적받았다) — 가장자리는
@@ -85,7 +95,9 @@ const CRACK_SEGMENTS := 5
 ## 금이 자라는 시간 — 0.14초에 걸쳐 중심에서 바깥으로 뻗는다.
 ## 한 번에 다 그리면 갈라진 것이 아니라 그려진 그림이다
 const CRACK_GROW := 0.14
-const CRACK_LIFE := 0.6
+## 자국은 **오래 남다가 마지막 0.8초에 흐려진다** (규칙 3절)
+const CRACK_LIFE := 1.5
+const CRACK_FADE := 0.8
 
 ## 금과 파편이 나는 높이. 0 으로 두면 지면과 같은 면이라 깜빡인다
 const GROUND := 0.05
@@ -108,6 +120,7 @@ const LIGHT_LIFE := 0.16
 ## 치명타(주황)·피격(붉은색)과 한 화면에서 갈려야 한다
 const COLOR_CORE := Color("#ffffff")
 const COLOR_HALO := Color("#4a90ff")
+const COLOR_SHEEN := Color("#9fd0ff")
 const COLOR_CRACK := Color("#241a12")
 const COLOR_DEBRIS := Color("#9c8163")
 
@@ -184,6 +197,21 @@ static func trail(from: Vector3, to: Vector3, segments: int, wobble: float,
 		var hold := sin(t * PI)
 		path.append(from + span * t + (side * drift_a + other * drift_b) * wobble * hold)
 	return path
+
+
+## **같은 길을 조금 흔든** 사본. 새로 뽑으면 다른 번개가 되어 화면을 가로지른다 —
+## 곁줄기는 주 줄기를 따라가며 살짝 어긋나기만 해야 한 줄기가 굵어 보인다
+## ([effect-rules.md](../../docs/features/effect-rules.md) 의 5절)
+static func jitter(path: PackedVector3Array, amount: float,
+		rng: RandomNumberGenerator) -> PackedVector3Array:
+	var out := PackedVector3Array()
+	var drift := Vector3.ZERO
+	var last := maxi(path.size() - 1, 1)
+	for i in path.size():
+		drift += Vector3(rng.randfn(0.0, 1.0), rng.randfn(0.0, 1.0), rng.randfn(0.0, 1.0)) * amount * 0.4
+		# 양 끝은 주 줄기와 붙어 있어야 한 줄기로 읽힌다
+		out.append(path[i] + drift * sin(float(i) / float(last) * PI))
+	return out
 
 
 ## 경로 앞쪽 `grow`(0~1) 만큼만 남긴다 — 금이 **자라나게** 하는 데 쓴다
@@ -316,6 +344,7 @@ class Strike:
 	var _flick := 0.0
 	var _from := Vector3.ZERO
 	var _halo: MeshInstance3D
+	var _sheen: MeshInstance3D
 	var _core: MeshInstance3D
 	var _crack: MeshInstance3D
 	var _crack_paths: Array = []
@@ -339,7 +368,9 @@ class Strike:
 			-cos(facing) * LightningFx.BEHIND
 		)
 
+		# 넓은 헤일로 → 색 빛 → 가는 흰 심 순으로 쌓는다
 		_halo = _sheet(LightningFx.glow(LightningFx.COLOR_HALO))
+		_sheen = _sheet(LightningFx.glow(LightningFx.COLOR_SHEEN))
 		_core = _sheet(LightningFx.glow(LightningFx.COLOR_CORE))
 		_crack = _sheet(LightningFx.dirt(LightningFx.COLOR_CRACK))
 		_crack.position = Vector3(0.0, LightningFx.GROUND, 0.0)
@@ -372,7 +403,7 @@ class Strike:
 		var turn := TAU / float(LightningFx.CRACKS)
 		for i in LightningFx.CRACKS:
 			var angle := turn * float(i) + _rng.randf_range(-turn * 0.35, turn * 0.35)
-			var reach := LightningFx.CRACK_LENGTH * _rng.randf_range(0.6, 1.2) * swell
+			var reach := LightningFx.CRACK_LENGTH * _rng.randf_range(0.85, 1.35) * swell
 			var tip := Vector3(sin(angle), 0.0, cos(angle)) * reach
 			var path := LightningFx.trail(Vector3.ZERO, tip, LightningFx.CRACK_SEGMENTS,
 				reach * 0.16, _rng, true)
@@ -431,6 +462,7 @@ class Strike:
 		var left := 1.0 - age / LightningFx.BOLT_LIFE
 		if left <= 0.0:
 			_halo.visible = false
+			_sheen.visible = false
 			_core.visible = false
 			return
 		_flick += get_process_delta_time()
@@ -441,30 +473,28 @@ class Strike:
 		# 가장 투명한 순간과 겹친다
 		var fade := clampf(left * 1.6, 0.0, 1.0)
 		_halo.material_override.albedo_color = Color(
-			LightningFx.COLOR_HALO.r, LightningFx.COLOR_HALO.g, LightningFx.COLOR_HALO.b, fade * 0.75)
+			LightningFx.COLOR_HALO.r, LightningFx.COLOR_HALO.g, LightningFx.COLOR_HALO.b, fade * 0.6)
+		_sheen.material_override.albedo_color = Color(
+			LightningFx.COLOR_SHEEN.r, LightningFx.COLOR_SHEEN.g, LightningFx.COLOR_SHEEN.b, fade * 0.9)
 		_core.material_override.albedo_color = Color(1.0, 1.0, 1.0, fade)
 
+	## **한 줄기를 폭만 다른 3겹으로 쌓는다.** 가닥을 늘려 굵게 만들면 한 줄기가
+	## 여러 줄로 갈라져 보인다 — 곁줄기도 따로 기울이지 않고 **같은 길을 조금 더
+	## 흔든 것**으로 둔다 (`effect-rules.md` 5절)
 	func _reshape() -> void:
 		var paths: Array = []
 		for b in LightningFx.BOLTS:
-			# 가닥마다 시작점을 옆으로 벌린다 — 같은 자리에서 시작하면 겹쳐서
-			# 한 가닥으로 보인다. 꽂히는 자리는 같으니 아래로 갈수록 모인다
-			var apart := (float(b) - float(LightningFx.BOLTS - 1) * 0.5) * LightningFx.BOLT_APART
-			var from := _from + Vector3(apart, 0.0, apart * 0.5)
-			var path := LightningFx.trail(from, Vector3.ZERO, LightningFx.SEGMENTS,
+			var path := LightningFx.trail(_from, Vector3.ZERO, LightningFx.SEGMENTS,
 				LightningFx.WOBBLE * swell, _rng)
-			paths.append([path, 1.0 if b == 0 else 0.8])
-			# 곁가지 — 주 줄기 중간에서 갈라져 허공에서 끝난다. 줄기만 있으면
-			# 막대가 떨어진 것 같다
+			paths.append([path, 1.0])
+			# 곁줄기 — **같은 길을 조금 흔든 사본**이다. 새로 뽑거나 따로
+			# 기울이면 별개의 번개가 화면을 가로지른다
 			for f in LightningFx.FORKS:
-				var at_i := int(path.size() * _rng.randf_range(0.25, 0.7))
-				var root: Vector3 = path[at_i]
-				var away := (Vector3.ZERO - from).normalized().rotated(
-					Vector3.UP, _rng.randf_range(-1.1, 1.1))
-				var tip := root + away * LightningFx.FORK_LENGTH * _rng.randf_range(0.6, 1.0)
-				paths.append([LightningFx.trail(root, tip, 5, 0.35, _rng), 0.45])
+				paths.append([LightningFx.jitter(path, LightningFx.FORK_DRIFT * swell, _rng), 0.45])
 		_halo.mesh = LightningFx.ribbon(paths, LightningFx.HALO_WIDTH * swell,
 			LightningFx.HALO_WIDTH * 0.25 * swell, false)
+		_sheen.mesh = LightningFx.ribbon(paths, LightningFx.SHEEN_WIDTH * swell,
+			LightningFx.SHEEN_WIDTH * 0.25 * swell, false)
 		_core.mesh = LightningFx.ribbon(paths, LightningFx.CORE_WIDTH * swell,
 			LightningFx.CORE_WIDTH * 0.2 * swell, false)
 
@@ -481,9 +511,8 @@ class Strike:
 				cut.append([LightningFx.cut(entry[0], grow), entry[1]])
 			_crack.mesh = LightningFx.ribbon(cut, LightningFx.CRACK_WIDTH * swell,
 				LightningFx.CRACK_WIDTH * 0.15 * swell, true)
-		# 끝에서만 옅어진다 — 금은 남는 자국이라 오래 버틴다
-		var left := 1.0 - age / LightningFx.CRACK_LIFE
-		var fade := clampf(left * 3.0, 0.0, 1.0)
+		# **마지막 0.8초에만 흐려진다** — 금은 남는 자국이라 오래 버틴다 (규칙 3절)
+		var fade := clampf((LightningFx.CRACK_LIFE - age) / LightningFx.CRACK_FADE, 0.0, 1.0)
 		_crack.material_override.albedo_color = Color(
 			LightningFx.COLOR_CRACK.r, LightningFx.COLOR_CRACK.g, LightningFx.COLOR_CRACK.b, fade)
 

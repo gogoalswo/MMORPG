@@ -159,11 +159,12 @@ func _case_direction(game: Node3D) -> void:
 	var here := Vector3(me.x, 0.0, me.z)
 	var facing := Vector3(sin(float(me.rot)), 0.0, cos(float(me.rot)))
 
-	# 떨어지는 자리는 **보는 쪽 앞**이다
+	# 떨어지는 자리는 **내가 선 자리**다 (2026-09-18 지시). 앞에 떨어뜨렸더니
+	# 내가 부른 것이 아니라 저쪽에 떨어진 것으로 보였다
 	var fell := fx.global_position - here
 	fell.y = 0.0
-	if fell.normalized().dot(facing) < 0.9:
-		_fail("번개가 앞쪽에 안 떨어진다 (보는 쪽과 %.2f)" % fell.normalized().dot(facing))
+	if fell.length() > LightningFx.AHEAD + 0.01:
+		_fail("번개가 %.1fm 떨어져서 친다 — 내가 선 자리여야 한다" % fell.length())
 
 	# 시작점은 **캐릭터보다 뒤 · 하늘**이다
 	var start: Vector3 = first.to_global(first._from) - here
@@ -180,7 +181,7 @@ func _case_direction(game: Node3D) -> void:
 	if box.size.y < LightningFx.SKY * 0.8:
 		_fail("줄기 메시가 %.1fm 밖에 안 덮는다 (하늘은 %.1fm)" % [box.size.y, LightningFx.SKY])
 	else:
-		print("  줄기: 캐릭터 뒤 %.1fm · 높이 %.1fm 에서 앞 %.1fm 지점으로 (%.1fm 를 덮는다)" % [
+		print("  줄기: 캐릭터 뒤 %.1fm · 높이 %.1fm 에서 내 자리(앞 %.1fm)로 (%.1fm 를 덮는다)" % [
 			behind, high, fell.length(), box.size.y
 		])
 

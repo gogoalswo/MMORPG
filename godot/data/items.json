@@ -50,7 +50,7 @@
       "slot": "helmet",
       "level": 1,
       "bonus": {
-        "maxHp": 8,
+        "maxHp": 7,
         "defense": 1
       },
       "price": 32
@@ -61,7 +61,7 @@
       "slot": "boots",
       "level": 1,
       "bonus": {
-        "maxHp": 6,
+        "maxHp": 7,
         "defense": 1
       },
       "price": 32
@@ -73,7 +73,9 @@
       "level": 1,
       "bonus": {
         "attack": 1,
-        "maxHp": 3
+        "maxHp": 4,
+        "defense": 0,
+        "crit": 0
       },
       "price": 32
     },
@@ -84,7 +86,9 @@
       "level": 1,
       "bonus": {
         "attack": 1,
-        "maxHp": 2
+        "maxHp": 4,
+        "defense": 0,
+        "attackSpeed": 0
       },
       "price": 32
     },
@@ -147,7 +151,7 @@
       "slot": "helmet",
       "level": 10,
       "bonus": {
-        "maxHp": 30,
+        "maxHp": 25,
         "defense": 3
       },
       "price": 140
@@ -158,8 +162,8 @@
       "slot": "boots",
       "level": 10,
       "bonus": {
-        "maxHp": 20,
-        "defense": 2
+        "maxHp": 25,
+        "defense": 3
       },
       "price": 140
     },
@@ -169,8 +173,10 @@
       "slot": "necklace",
       "level": 10,
       "bonus": {
-        "attack": 4,
-        "maxHp": 10
+        "attack": 3,
+        "maxHp": 13,
+        "defense": 1,
+        "crit": 3
       },
       "price": 140
     },
@@ -180,8 +186,10 @@
       "slot": "ring",
       "level": 10,
       "bonus": {
-        "attack": 4,
-        "maxHp": 8
+        "attack": 3,
+        "maxHp": 13,
+        "defense": 1,
+        "attackSpeed": 1
       },
       "price": 140
     },
@@ -244,7 +252,7 @@
       "slot": "helmet",
       "level": 20,
       "bonus": {
-        "maxHp": 54,
+        "maxHp": 45,
         "defense": 5
       },
       "price": 260
@@ -255,8 +263,8 @@
       "slot": "boots",
       "level": 20,
       "bonus": {
-        "maxHp": 36,
-        "defense": 4
+        "maxHp": 45,
+        "defense": 5
       },
       "price": 260
     },
@@ -266,8 +274,10 @@
       "slot": "necklace",
       "level": 20,
       "bonus": {
-        "attack": 7,
-        "maxHp": 18
+        "attack": 5,
+        "maxHp": 23,
+        "defense": 2,
+        "crit": 6
       },
       "price": 260
     },
@@ -277,8 +287,10 @@
       "slot": "ring",
       "level": 20,
       "bonus": {
-        "attack": 6,
-        "maxHp": 14
+        "attack": 5,
+        "maxHp": 23,
+        "defense": 2,
+        "attackSpeed": 2
       },
       "price": 260
     },
@@ -341,8 +353,8 @@
       "slot": "helmet",
       "level": 30,
       "bonus": {
-        "maxHp": 78,
-        "defense": 8
+        "maxHp": 65,
+        "defense": 7
       },
       "price": 380
     },
@@ -352,8 +364,8 @@
       "slot": "boots",
       "level": 30,
       "bonus": {
-        "maxHp": 52,
-        "defense": 6
+        "maxHp": 65,
+        "defense": 7
       },
       "price": 380
     },
@@ -363,8 +375,10 @@
       "slot": "necklace",
       "level": 30,
       "bonus": {
-        "attack": 10,
-        "maxHp": 26
+        "attack": 7,
+        "maxHp": 33,
+        "defense": 3,
+        "crit": 8
       },
       "price": 380
     },
@@ -374,8 +388,10 @@
       "slot": "ring",
       "level": 30,
       "bonus": {
-        "attack": 9,
-        "maxHp": 20
+        "attack": 7,
+        "maxHp": 33,
+        "defense": 3,
+        "attackSpeed": 3
       },
       "price": 380
     },
@@ -438,8 +454,8 @@
       "slot": "helmet",
       "level": 40,
       "bonus": {
-        "maxHp": 102,
-        "defense": 10
+        "maxHp": 85,
+        "defense": 9
       },
       "price": 500
     },
@@ -449,8 +465,8 @@
       "slot": "boots",
       "level": 40,
       "bonus": {
-        "maxHp": 68,
-        "defense": 8
+        "maxHp": 85,
+        "defense": 9
       },
       "price": 500
     },
@@ -460,8 +476,10 @@
       "slot": "necklace",
       "level": 40,
       "bonus": {
-        "attack": 13,
-        "maxHp": 34
+        "attack": 9,
+        "maxHp": 43,
+        "defense": 4,
+        "crit": 11
       },
       "price": 500
     },
@@ -471,8 +489,10 @@
       "slot": "ring",
       "level": 40,
       "bonus": {
-        "attack": 12,
-        "maxHp": 26
+        "attack": 9,
+        "maxHp": 43,
+        "defense": 4,
+        "attackSpeed": 4
       },
       "price": 500
     },
@@ -535,8 +555,8 @@
       "slot": "helmet",
       "level": 50,
       "bonus": {
-        "maxHp": 126,
-        "defense": 13
+        "maxHp": 105,
+        "defense": 11
       },
       "price": 620
     },
@@ -546,8 +566,8 @@
       "slot": "boots",
       "level": 50,
       "bonus": {
-        "maxHp": 84,
-        "defense": 9
+        "maxHp": 105,
+        "defense": 11
       },
       "price": 620
     },
@@ -557,8 +577,10 @@
       "slot": "necklace",
       "level": 50,
       "bonus": {
-        "attack": 16,
-        "maxHp": 42
+        "attack": 11,
+        "maxHp": 53,
+        "defense": 5,
+        "crit": 14
       },
       "price": 620
     },
@@ -568,8 +590,10 @@
       "slot": "ring",
       "level": 50,
       "bonus": {
-        "attack": 14,
-        "maxHp": 32
+        "attack": 11,
+        "maxHp": 53,
+        "defense": 5,
+        "attackSpeed": 6
       },
       "price": 620
     },
@@ -632,8 +656,8 @@
       "slot": "helmet",
       "level": 60,
       "bonus": {
-        "maxHp": 150,
-        "defense": 15
+        "maxHp": 125,
+        "defense": 13
       },
       "price": 740
     },
@@ -643,8 +667,8 @@
       "slot": "boots",
       "level": 60,
       "bonus": {
-        "maxHp": 100,
-        "defense": 11
+        "maxHp": 125,
+        "defense": 13
       },
       "price": 740
     },
@@ -654,8 +678,10 @@
       "slot": "necklace",
       "level": 60,
       "bonus": {
-        "attack": 19,
-        "maxHp": 50
+        "attack": 13,
+        "maxHp": 63,
+        "defense": 6,
+        "crit": 17
       },
       "price": 740
     },
@@ -665,8 +691,10 @@
       "slot": "ring",
       "level": 60,
       "bonus": {
-        "attack": 17,
-        "maxHp": 38
+        "attack": 13,
+        "maxHp": 63,
+        "defense": 6,
+        "attackSpeed": 7
       },
       "price": 740
     },
@@ -729,8 +757,8 @@
       "slot": "helmet",
       "level": 70,
       "bonus": {
-        "maxHp": 174,
-        "defense": 17
+        "maxHp": 145,
+        "defense": 15
       },
       "price": 860
     },
@@ -740,8 +768,8 @@
       "slot": "boots",
       "level": 70,
       "bonus": {
-        "maxHp": 116,
-        "defense": 13
+        "maxHp": 145,
+        "defense": 15
       },
       "price": 860
     },
@@ -751,8 +779,10 @@
       "slot": "necklace",
       "level": 70,
       "bonus": {
-        "attack": 22,
-        "maxHp": 58
+        "attack": 15,
+        "maxHp": 73,
+        "defense": 7,
+        "crit": 19
       },
       "price": 860
     },
@@ -762,8 +792,10 @@
       "slot": "ring",
       "level": 70,
       "bonus": {
-        "attack": 20,
-        "maxHp": 44
+        "attack": 15,
+        "maxHp": 73,
+        "defense": 7,
+        "attackSpeed": 8
       },
       "price": 860
     },
@@ -826,8 +858,8 @@
       "slot": "helmet",
       "level": 80,
       "bonus": {
-        "maxHp": 198,
-        "defense": 20
+        "maxHp": 165,
+        "defense": 17
       },
       "price": 980
     },
@@ -837,8 +869,8 @@
       "slot": "boots",
       "level": 80,
       "bonus": {
-        "maxHp": 132,
-        "defense": 15
+        "maxHp": 165,
+        "defense": 17
       },
       "price": 980
     },
@@ -848,8 +880,10 @@
       "slot": "necklace",
       "level": 80,
       "bonus": {
-        "attack": 25,
-        "maxHp": 66
+        "attack": 17,
+        "maxHp": 83,
+        "defense": 8,
+        "crit": 22
       },
       "price": 980
     },
@@ -859,8 +893,10 @@
       "slot": "ring",
       "level": 80,
       "bonus": {
-        "attack": 23,
-        "maxHp": 50
+        "attack": 17,
+        "maxHp": 83,
+        "defense": 8,
+        "attackSpeed": 9
       },
       "price": 980
     },
@@ -923,8 +959,8 @@
       "slot": "helmet",
       "level": 90,
       "bonus": {
-        "maxHp": 222,
-        "defense": 22
+        "maxHp": 185,
+        "defense": 19
       },
       "price": 1100
     },
@@ -934,8 +970,8 @@
       "slot": "boots",
       "level": 90,
       "bonus": {
-        "maxHp": 148,
-        "defense": 17
+        "maxHp": 185,
+        "defense": 19
       },
       "price": 1100
     },
@@ -945,8 +981,10 @@
       "slot": "necklace",
       "level": 90,
       "bonus": {
-        "attack": 28,
-        "maxHp": 74
+        "attack": 19,
+        "maxHp": 93,
+        "defense": 9,
+        "crit": 25
       },
       "price": 1100
     },
@@ -956,8 +994,10 @@
       "slot": "ring",
       "level": 90,
       "bonus": {
-        "attack": 25,
-        "maxHp": 56
+        "attack": 19,
+        "maxHp": 93,
+        "defense": 9,
+        "attackSpeed": 10
       },
       "price": 1100
     },
@@ -1020,8 +1060,8 @@
       "slot": "helmet",
       "level": 100,
       "bonus": {
-        "maxHp": 246,
-        "defense": 25
+        "maxHp": 205,
+        "defense": 21
       },
       "price": 1220
     },
@@ -1031,8 +1071,8 @@
       "slot": "boots",
       "level": 100,
       "bonus": {
-        "maxHp": 164,
-        "defense": 18
+        "maxHp": 205,
+        "defense": 21
       },
       "price": 1220
     },
@@ -1042,8 +1082,10 @@
       "slot": "necklace",
       "level": 100,
       "bonus": {
-        "attack": 31,
-        "maxHp": 82
+        "attack": 21,
+        "maxHp": 103,
+        "defense": 10,
+        "crit": 28
       },
       "price": 1220
     },
@@ -1053,8 +1095,10 @@
       "slot": "ring",
       "level": 100,
       "bonus": {
-        "attack": 28,
-        "maxHp": 62
+        "attack": 21,
+        "maxHp": 103,
+        "defense": 10,
+        "attackSpeed": 11
       },
       "price": 1220
     },
@@ -1117,8 +1161,8 @@
       "slot": "helmet",
       "level": 110,
       "bonus": {
-        "maxHp": 270,
-        "defense": 27
+        "maxHp": 225,
+        "defense": 23
       },
       "price": 1340
     },
@@ -1128,8 +1172,8 @@
       "slot": "boots",
       "level": 110,
       "bonus": {
-        "maxHp": 180,
-        "defense": 20
+        "maxHp": 225,
+        "defense": 23
       },
       "price": 1340
     },
@@ -1139,8 +1183,10 @@
       "slot": "necklace",
       "level": 110,
       "bonus": {
-        "attack": 34,
-        "maxHp": 90
+        "attack": 23,
+        "maxHp": 113,
+        "defense": 11,
+        "crit": 30
       },
       "price": 1340
     },
@@ -1150,8 +1196,10 @@
       "slot": "ring",
       "level": 110,
       "bonus": {
-        "attack": 31,
-        "maxHp": 68
+        "attack": 23,
+        "maxHp": 113,
+        "defense": 11,
+        "attackSpeed": 12
       },
       "price": 1340
     },
@@ -1214,8 +1262,8 @@
       "slot": "helmet",
       "level": 120,
       "bonus": {
-        "maxHp": 294,
-        "defense": 29
+        "maxHp": 245,
+        "defense": 25
       },
       "price": 1460
     },
@@ -1225,8 +1273,8 @@
       "slot": "boots",
       "level": 120,
       "bonus": {
-        "maxHp": 196,
-        "defense": 22
+        "maxHp": 245,
+        "defense": 25
       },
       "price": 1460
     },
@@ -1236,8 +1284,10 @@
       "slot": "necklace",
       "level": 120,
       "bonus": {
-        "attack": 37,
-        "maxHp": 98
+        "attack": 25,
+        "maxHp": 123,
+        "defense": 12,
+        "crit": 33
       },
       "price": 1460
     },
@@ -1247,8 +1297,10 @@
       "slot": "ring",
       "level": 120,
       "bonus": {
-        "attack": 33,
-        "maxHp": 74
+        "attack": 25,
+        "maxHp": 123,
+        "defense": 12,
+        "attackSpeed": 13
       },
       "price": 1460
     },
@@ -1311,8 +1363,8 @@
       "slot": "helmet",
       "level": 130,
       "bonus": {
-        "maxHp": 318,
-        "defense": 32
+        "maxHp": 265,
+        "defense": 27
       },
       "price": 1580
     },
@@ -1322,8 +1374,8 @@
       "slot": "boots",
       "level": 130,
       "bonus": {
-        "maxHp": 212,
-        "defense": 24
+        "maxHp": 265,
+        "defense": 27
       },
       "price": 1580
     },
@@ -1333,8 +1385,10 @@
       "slot": "necklace",
       "level": 130,
       "bonus": {
-        "attack": 40,
-        "maxHp": 106
+        "attack": 27,
+        "maxHp": 133,
+        "defense": 13,
+        "crit": 36
       },
       "price": 1580
     },
@@ -1344,8 +1398,10 @@
       "slot": "ring",
       "level": 130,
       "bonus": {
-        "attack": 36,
-        "maxHp": 80
+        "attack": 27,
+        "maxHp": 133,
+        "defense": 13,
+        "attackSpeed": 14
       },
       "price": 1580
     },
@@ -1408,8 +1464,8 @@
       "slot": "helmet",
       "level": 140,
       "bonus": {
-        "maxHp": 342,
-        "defense": 34
+        "maxHp": 285,
+        "defense": 29
       },
       "price": 1700
     },
@@ -1419,8 +1475,8 @@
       "slot": "boots",
       "level": 140,
       "bonus": {
-        "maxHp": 228,
-        "defense": 26
+        "maxHp": 285,
+        "defense": 29
       },
       "price": 1700
     },
@@ -1430,8 +1486,10 @@
       "slot": "necklace",
       "level": 140,
       "bonus": {
-        "attack": 43,
-        "maxHp": 114
+        "attack": 29,
+        "maxHp": 143,
+        "defense": 14,
+        "crit": 39
       },
       "price": 1700
     },
@@ -1441,8 +1499,10 @@
       "slot": "ring",
       "level": 140,
       "bonus": {
-        "attack": 39,
-        "maxHp": 86
+        "attack": 29,
+        "maxHp": 143,
+        "defense": 14,
+        "attackSpeed": 15
       },
       "price": 1700
     },
@@ -1505,8 +1565,8 @@
       "slot": "helmet",
       "level": 150,
       "bonus": {
-        "maxHp": 366,
-        "defense": 37
+        "maxHp": 305,
+        "defense": 31
       },
       "price": 1820
     },
@@ -1516,8 +1576,8 @@
       "slot": "boots",
       "level": 150,
       "bonus": {
-        "maxHp": 244,
-        "defense": 27
+        "maxHp": 305,
+        "defense": 31
       },
       "price": 1820
     },
@@ -1527,8 +1587,10 @@
       "slot": "necklace",
       "level": 150,
       "bonus": {
-        "attack": 46,
-        "maxHp": 122
+        "attack": 31,
+        "maxHp": 153,
+        "defense": 15,
+        "crit": 41
       },
       "price": 1820
     },
@@ -1538,8 +1600,10 @@
       "slot": "ring",
       "level": 150,
       "bonus": {
-        "attack": 41,
-        "maxHp": 92
+        "attack": 31,
+        "maxHp": 153,
+        "defense": 15,
+        "attackSpeed": 17
       },
       "price": 1820
     },
@@ -1602,8 +1666,8 @@
       "slot": "helmet",
       "level": 160,
       "bonus": {
-        "maxHp": 390,
-        "defense": 39
+        "maxHp": 325,
+        "defense": 33
       },
       "price": 1940
     },
@@ -1613,8 +1677,8 @@
       "slot": "boots",
       "level": 160,
       "bonus": {
-        "maxHp": 260,
-        "defense": 29
+        "maxHp": 325,
+        "defense": 33
       },
       "price": 1940
     },
@@ -1624,8 +1688,10 @@
       "slot": "necklace",
       "level": 160,
       "bonus": {
-        "attack": 49,
-        "maxHp": 130
+        "attack": 33,
+        "maxHp": 163,
+        "defense": 16,
+        "crit": 44
       },
       "price": 1940
     },
@@ -1635,8 +1701,10 @@
       "slot": "ring",
       "level": 160,
       "bonus": {
-        "attack": 44,
-        "maxHp": 98
+        "attack": 33,
+        "maxHp": 163,
+        "defense": 16,
+        "attackSpeed": 18
       },
       "price": 1940
     },
@@ -1699,8 +1767,8 @@
       "slot": "helmet",
       "level": 170,
       "bonus": {
-        "maxHp": 414,
-        "defense": 41
+        "maxHp": 345,
+        "defense": 35
       },
       "price": 2060
     },
@@ -1710,8 +1778,8 @@
       "slot": "boots",
       "level": 170,
       "bonus": {
-        "maxHp": 276,
-        "defense": 31
+        "maxHp": 345,
+        "defense": 35
       },
       "price": 2060
     },
@@ -1721,8 +1789,10 @@
       "slot": "necklace",
       "level": 170,
       "bonus": {
-        "attack": 52,
-        "maxHp": 138
+        "attack": 35,
+        "maxHp": 173,
+        "defense": 17,
+        "crit": 47
       },
       "price": 2060
     },
@@ -1732,8 +1802,10 @@
       "slot": "ring",
       "level": 170,
       "bonus": {
-        "attack": 47,
-        "maxHp": 104
+        "attack": 35,
+        "maxHp": 173,
+        "defense": 17,
+        "attackSpeed": 19
       },
       "price": 2060
     },
@@ -1796,8 +1868,8 @@
       "slot": "helmet",
       "level": 180,
       "bonus": {
-        "maxHp": 438,
-        "defense": 44
+        "maxHp": 365,
+        "defense": 37
       },
       "price": 2180
     },
@@ -1807,8 +1879,8 @@
       "slot": "boots",
       "level": 180,
       "bonus": {
-        "maxHp": 292,
-        "defense": 33
+        "maxHp": 365,
+        "defense": 37
       },
       "price": 2180
     },
@@ -1818,8 +1890,10 @@
       "slot": "necklace",
       "level": 180,
       "bonus": {
-        "attack": 55,
-        "maxHp": 146
+        "attack": 37,
+        "maxHp": 183,
+        "defense": 18,
+        "crit": 50
       },
       "price": 2180
     },
@@ -1829,8 +1903,10 @@
       "slot": "ring",
       "level": 180,
       "bonus": {
-        "attack": 50,
-        "maxHp": 110
+        "attack": 37,
+        "maxHp": 183,
+        "defense": 18,
+        "attackSpeed": 20
       },
       "price": 2180
     },
@@ -1893,8 +1969,8 @@
       "slot": "helmet",
       "level": 190,
       "bonus": {
-        "maxHp": 462,
-        "defense": 46
+        "maxHp": 385,
+        "defense": 39
       },
       "price": 2300
     },
@@ -1904,8 +1980,8 @@
       "slot": "boots",
       "level": 190,
       "bonus": {
-        "maxHp": 308,
-        "defense": 35
+        "maxHp": 385,
+        "defense": 39
       },
       "price": 2300
     },
@@ -1915,8 +1991,10 @@
       "slot": "necklace",
       "level": 190,
       "bonus": {
-        "attack": 58,
-        "maxHp": 154
+        "attack": 39,
+        "maxHp": 193,
+        "defense": 19,
+        "crit": 52
       },
       "price": 2300
     },
@@ -1926,8 +2004,10 @@
       "slot": "ring",
       "level": 190,
       "bonus": {
-        "attack": 52,
-        "maxHp": 116
+        "attack": 39,
+        "maxHp": 193,
+        "defense": 19,
+        "attackSpeed": 21
       },
       "price": 2300
     },

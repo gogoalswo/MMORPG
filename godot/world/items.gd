@@ -167,6 +167,10 @@ static func base_bonus(item: Dictionary, enhance: int = 0) -> Dictionary:
 		"attack": roundi(float(bonus.get("attack", 0)) * m),
 		"defense": roundi(float(bonus.get("defense", 0)) * m),
 		"maxHp": roundi(float(bonus.get("maxHp", 0)) * m),
+		# **강화는 공격·방어·HP 에만 곱한다** — 치확·공속까지 곱하면 목걸이·반지
+		# 두 자리가 강화 한 번에 다른 슬롯 넷을 합친 값을 넘어선다
+		"crit": int(bonus.get("crit", 0)),
+		"attackSpeed": int(bonus.get("attackSpeed", 0)),
 	}
 
 
@@ -185,6 +189,9 @@ static func stack_stats(stack: Dictionary) -> Dictionary:
 	total.attack = base.attack
 	total.defense = base.defense
 	total.maxHp = base.maxHp
+	# 치확·공속은 퍼센트 정수로 들어 있다 (목걸이 50 = +50%p)
+	total.crit = base.crit / 100.0
+	total.attackSpeed = base.attackSpeed / 100.0
 
 	for option in stack.get("options", []):
 		var value := int(option.value)

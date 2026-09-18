@@ -57,6 +57,10 @@ export interface ItemBonus {
   attack?: number;
   defense?: number;
   maxHp?: number;
+  /** 치명타 확률, **퍼센트 포인트 정수** (50 = +50%p). 목걸이 전담 */
+  crit?: number;
+  /** 공격 속도, **퍼센트 정수** (20 = +20%). 반지 전담 */
+  attackSpeed?: number;
 }
 
 export interface ItemDef {
@@ -124,19 +128,40 @@ export function tierName(index: number): string {
 }
 
 /**
- * 슬롯마다 성격이 다르다.
+ * 슬롯마다 성격이 다르다. **배분은 설계 문서의 슬롯 표를 그대로 쓴다**
+ * ([stat-balance.md](../../../docs/features/stat-balance.md) 의 "슬롯 6개").
+ * 스탯마다 예산을 100% 로 보고 슬롯이 나눠 갖는다:
  *
- * 무기는 공격, 갑옷 계열은 체력·방어, 장신구는 공격 위주다. 보조는 직업이
- * 갈리는 자리라 마법사와 궁수는 공격을 얻고, 격투가는 공격과 체력을 반반 얻는다.
- * 같은 단계 안에서 갑옷 > 투구 > 신발 순으로 무게를 준다.
+ * | 슬롯 | 공격력 | 방어력·HP | 치명타 | 공속 |
+ * |---|---|---|---|---|
+ * | 무기 | **60%** | — | — | — |
+ * | 갑옷 | — | **40%** | — | — |
+ * | 투구 | — | 20% | — | — |
+ * | 신발 | — | 20% | — | — |
+ * | 목걸이 | 20% | 10% | **100%** | — |
+ * | 반지 | 20% | 10% | — | **100%** |
  *
- * 장신구가 원래 마나를 주던 자리였다. 마나를 걷어내면서 그 몫을 공격과
- * 체력으로 옮겼다 — 안 그러면 반지·목걸이·귀걸이 세 자리가 빈 물건이 된다.
+ * 2026-09-18 에 맞췄다. 그전에는 무기가 공격 예산의 51% 였고 **치확·공속은 아예
+ * 안 줬다** — 랜덤 옵션으로만 붙었다. 그래서 목걸이와 반지가 "공격 조금 주는
+ * 물건" 으로 겹쳐 있었는데, 지금은 치명타는 목걸이, 공격 속도는 반지 전담이라
+ * 갈아입을 자리가 목적에 따라 갈린다.
+ *
+ * 치확·공속 계수는 설계표의 등급별 수치를 **레벨 선형으로 정확히 재현한다** —
+ * 착용 레벨 1·31·61·91·121·151·181 에서 치확 0·8·17·25·33·42·50%p,
+ * 공속 0·3·7·10·13·17·20% 가 그대로 나온다.
+ *
+ * 이동속도(설계표에서 신발 100%)는 **아직 안 넣었다** — 지금 스탯 모델에 이동속도가
+ * 없고, 넣으면 movement 와 예측 보정까지 같이 봐야 한다.
  */
-function bonusFor(slot: EquipSlot, level: number, job?: JobId): ItemBonus {
+function bonusFor(slot: EquipSlot, level: number, _job?: JobId): ItemBonus {
   const hp = (k: number) => Math.round((10 + level * 4) * k);
   const def = (k: number) => Math.round((1 + level * 0.4) * k);
   const atk = (k: number) => Math.round((2 + level * 0.6) * k);
+  // 무기를 1 로 두면 공격 예산 합이 1.667 이라 무기 지분이 정확히 60% 가 된다.
+  // 방어·HP 도 갑옷을 1 로 두면 합이 2.5 라 갑옷이 40% 다
+  const ATK_SIDE = 1 / 3; // 목걸이·반지가 각각 20%
+  const GEAR_MID = 0.5; // 투구·신발이 각각 20%
+  const GEAR_SIDE = 0.25; // 목걸이·반지가 각각 10%
 
   switch (slot) {
     case 'weapon':
@@ -144,13 +169,23 @@ function bonusFor(slot: EquipSlot, level: number, job?: JobId): ItemBonus {
     case 'armor':
       return { maxHp: hp(1), defense: def(1) };
     case 'helmet':
-      return { maxHp: hp(0.6), defense: def(0.6) };
+      return { maxHp: hp(GEAR_MID), defense: def(GEAR_MID) };
     case 'boots':
-      return { maxHp: hp(0.4), defense: def(0.45) };
-    case 'ring':
-      return { attack: atk(0.45), maxHp: hp(0.15) };
+      return { maxHp: hp(GEAR_MID), defense: def(GEAR_MID) };
     case 'necklace':
-      return { attack: atk(0.5), maxHp: hp(0.2) };
+      return {
+        attack: atk(ATK_SIDE),
+        maxHp: hp(GEAR_SIDE),
+        defense: def(GEAR_SIDE),
+        crit: Math.round(level * 0.276),
+      };
+    case 'ring':
+      return {
+        attack: atk(ATK_SIDE),
+        maxHp: hp(GEAR_SIDE),
+        defense: def(GEAR_SIDE),
+        attackSpeed: Math.round(level * 0.11),
+      };
   }
 }
 
@@ -521,6 +556,10 @@ export function baseBonus(item: ItemDef, enhance = 0): Required<ItemBonus> {
     attack: Math.round((item.bonus.attack ?? 0) * m),
     defense: Math.round((item.bonus.defense ?? 0) * m),
     maxHp: Math.round((item.bonus.maxHp ?? 0) * m),
+    // **강화는 공격·방어·HP 에만 곱한다.** 치확·공속까지 곱하면 목걸이·반지 두 자리가
+    // 강화 한 번에 다른 슬롯 넷을 합친 값을 넘어선다 (설계 문서와 시뮬레이터가 같다)
+    crit: item.bonus.crit ?? 0,
+    attackSpeed: item.bonus.attackSpeed ?? 0,
   };
 }
 
@@ -556,6 +595,8 @@ export function stackStats(stack: ItemStack): ItemStats {
   total.attack = base.attack;
   total.defense = base.defense;
   total.maxHp = base.maxHp;
+  total.crit = base.crit / 100;
+  total.attackSpeed = base.attackSpeed / 100;
 
   for (const option of stack.options ?? []) {
     switch (option.kind) {

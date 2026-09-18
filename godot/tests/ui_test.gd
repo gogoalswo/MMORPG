@@ -125,6 +125,23 @@ func _run_scene() -> void:
 	else:
 		print("  자동사냥 켜짐 — 앵커 (%.1f, %.1f)" % [me.auto_x, me.auto_z])
 
+	# 판정이 발을 옮기는 동안에도 **달리기 동작**이 나와야 한다. 입력(_move)만
+	# 세면 자동 사냥은 대기 자세로 미끄러진다 (2026-09-18 에 지적받았다)
+	var mobs: Array = game._transport.snapshot().monsters
+	mobs.append(World.make_monster(
+		"uitest", GameData.monster_kind("mob003"), me.x + 6.0, me.z, 10000.0, 0.0
+	))
+	var ran := false
+	for i in 30:
+		await process_frame
+		if game._moving:
+			ran = true
+			break
+	if not ran:
+		_fail("자동 사냥으로 움직이는데 달리기 동작이 안 나온다 (_moving 이 false)")
+	else:
+		print("  자동 사냥으로 걷는 동안 달리기 동작이 나온다")
+
 	# 켜 둔 채로 땅을 누르면 **조작이 이긴다** — 화면이 탭을 삼키면 안 된다
 	# (판정 쪽은 tests/auto_hunt_test.gd 의 _case_manual_wins 가 본다)
 	var press := InputEventMouseButton.new()

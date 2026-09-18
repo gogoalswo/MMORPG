@@ -15,8 +15,12 @@ var _transport: Transport
 var _player: Node3D
 ## 기둥은 가운데가 원점이라 반만큼 띄워야 하고, 모델은 발이 원점이다
 var _player_y := 0.9
-## 이번 프레임에 걸었나 (달리기·대기 동작을 고르는 데 쓴다)
+## 이번 프레임에 걸었나 (달리기·대기 동작을 고르는 데 쓴다).
+## 내가 민 것(`_move`)과 **판정이 옮긴 것(자동 사냥)을 둘 다** 센다 — `_draw_state` 참고
 var _moving := false
+## 몇 m/s 이상 움직였으면 달리는 것으로 보나. 달리기는 4.6m/s 라 넉넉하고,
+## 서버 좌표가 한 번 튀는 정도로는 안 걸린다
+const RUN_SPEED_EPS := 0.5
 ## 카메라 스무딩에 쓴다 — _draw_state 가 델타를 따로 안 받는다
 var _last_delta := 0.0
 ## 공격 동작을 언제까지 트나 (서버가 준 경직 시간)
@@ -923,7 +927,18 @@ func _draw_state() -> void:
 	if me.is_empty():
 		return
 
-	_player.position = Vector3(me.x, _player_y, me.z)
+	# **판정이 옮긴 것도 걷는 것이다.** 자동 사냥은 내가 입력을 안 보내므로
+	# `_moving`(=_move 가 켠다)만 보면 대기 자세로 미끄러진다. 실제로 움직인
+	# 거리에서 되돌린다 — 웹 클라이언트가 서버 주도 이동에서 쓰던 방법과 같다
+	# (docs/features/auto-hunt-and-targeting.md 의 "클라이언트가 하는 일" 3번)
+	var walked_to := Vector3(me.x, _player_y, me.z)
+	if not _moving and not zone_changed and _last_delta > 0.0:
+		var step := Vector2(
+			walked_to.x - _player.position.x, walked_to.z - _player.position.z
+		).length()
+		_moving = step / _last_delta > RUN_SPEED_EPS
+
+	_player.position = walked_to
 	_player.rotation.y = me.rot
 	_play_player_clip(me)
 

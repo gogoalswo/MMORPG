@@ -31,16 +31,17 @@ const UI = ['panel.png', 'gate_here.png', 'gate_go.png'];
 const FONTS = ['NotoSansKR-subset.ttf'];
 
 /**
- * 가방·장비 창 아이콘. 바르코로 만들고 `scripts/build-item-icons.mjs` 가 배경을
- * 걷어 128px 로 구운 것이다 (public/assets/icons).
+ * 가방·장착 창 아이콘과 테두리. 바르코로 만들고 `scripts/build-item-icons.mjs` 가
+ * 배경을 걷어 구운 것이다 (public/assets/icons).
  *
- * **쓰는 것만 복사한다.** 장비 8칸 중 귀걸이(earring)는 아직 그림이 없어 글자로
- * 나오고, 받아 둔 장갑(glove)·벨트(belt)는 어느 칸에 쓸지 안 정해서 뺐다.
+ * **쓰는 것만 복사한다.** 슬롯 6칸이 전부 그림을 갖췄다. 받아 둔 장갑(glove)·
+ * 벨트(belt)는 어느 칸에 쓸지 안 정해서 뺐고, 보조(offhand)는 슬롯 자체를 없앴다.
  */
 const ICONS = [
-  'weapon.png', 'offhand.png', 'helmet.png', 'armor.png',
-  'boots.png', 'ring.png', 'necklace.png',
+  'weapon.png', 'armor.png', 'helmet.png',
+  'boots.png', 'necklace.png', 'ring.png',
   'bag.png', 'gold.png',
+  'frame_panel.png', 'frame_slot.png',
 ];
 
 /**

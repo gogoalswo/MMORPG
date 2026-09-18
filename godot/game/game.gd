@@ -14,11 +14,12 @@ const STOP_DISTANCE := 0.15
 ## 가방·장비 창. 가방 격자는 5열 — 웹 클라의 COLUMNS 와 같다
 ## (docs/features/inventory-equipment.md). 장비는 8칸이라 4열 두 줄로 떨어진다
 const BAG_COLUMNS := 5
-const GEAR_COLUMNS := 4
-## 비어 보이지 않게 깔아 두는 최소 칸 수 (5열 × 5줄)
-const BAG_MIN_CELLS := 25
-## 칸 한 변. 1280x720 화면에서 5열이 들어가고 손가락으로 짚을 수 있는 크기다
-const CELL := 84
+## 장착은 6칸이라 3열 두 줄로 떨어진다
+const GEAR_COLUMNS := 3
+## 가방에서 한 번에 보이는 줄. 나머지는 끌어 올린다
+const BAG_ROWS := 3
+## 칸 한 변. 1280x720 안에 장착 3열 + 가방 5열이 나란히 들어가는 크기다
+const CELL := 88
 const ICON_DIR := "res://assets/icons/"
 
 var _transport: Transport
@@ -96,6 +97,8 @@ var _bag_detail: Label
 var _bag_action: Button
 ## 고른 칸 — {"where": "equip"|"bag", "index": int}. 비면 아무것도 안 골랐다
 var _bag_pick: Dictionary = {}
+## 아이콘을 한 번만 찾아 기억해 둔다 (없는 것도 기억한다)
+var _icon_cache: Dictionary = {}
 
 
 func _ready() -> void:
@@ -249,75 +252,106 @@ func _build_persistent() -> void:
 
 ## 가방과 장비 창. 웹 클라의 ui/inventory.ts 자리다.
 ##
-## 레이아웃은 문서에 적힌 그대로다 — **장비 8칸 → 요약 줄 → 가방 격자(5열) →
-## 상세 칸** (docs/features/inventory-equipment.md). 칸이 84px 이라 이름을 다
-## 못 쓰므로, 고른 것의 이름·옵션은 아래 상세 칸이 푼다.
+## **왼쪽이 장착, 오른쪽이 가방이다** (2026-09-18 요청). 장착은 6칸이라 3열 두 줄,
+## 가방은 5열로 깔고 세 줄까지 보이며 나머지는 끌어 올린다. 칸이 88px 이라 이름을
+## 다 못 쓰므로 고른 것의 이름·옵션은 아래 상세 칸이 푼다.
 ##
-## **틀은 한 번만 짓고 내용만 다시 채운다.** 예전에는 열 때마다 통째로 다시
-## 그렸는데, 칸이 8 + 25개가 되면서 매번 지웠다 만들면 눌러 둔 칸이 풀리고
-## 스크롤이 맨 위로 튄다.
+## **창은 화면 한가운데에 둔다.** `set_anchors_preset` 만 부르면 앵커만 바뀌고
+## 오프셋이 0 이라 왼쪽 위에 붙는다 — 폰에서 창이 구석에 박혀 있던 게 이것이었다
+## (2026-09-18). `set_anchors_and_offsets_preset(..., PRESET_MODE_MINSIZE)` 로 준다.
 ##
-## 그림은 바르코로 만든 아이콘이다 (assets/icons). **없으면 글자로 나온다** —
-## npm run sync:godot 을 안 돌린 사람도 창은 돌아가야 한다 (모델의 기둥과 같은 규칙)
+## **틀은 한 번만 짓고 내용만 다시 채운다.** 칸이 6 + 25개라 매번 지웠다 만들면
+## 눌러 둔 칸이 풀리고 스크롤이 맨 위로 튄다.
+##
+## 그림과 테두리는 바르코로 만든 것이다 (assets/icons). **없으면 글자와 코드로 그린
+## 테두리로 나온다** — npm run sync:godot 을 안 돌린 사람도 창은 돌아가야 한다
+## (모델이 없으면 기둥으로 그리는 것과 같은 규칙)
 func _build_bag_panel() -> void:
+	# 화면 전체를 덮는 가운데 정렬 상자에 얹는다. 창 크기는 가방에 든 것에 따라
+	# 늘었다 줄었다 하는데, 지을 때 한 번만 맞춰 두면 그만큼 한쪽으로 밀린다
+	# (처음엔 13px 밀려 있었다). 바탕은 터치를 먹지 않는다 — 창 밖을 눌러 걸어야 한다
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ui_root.add_child(center)
+
 	_bag_panel = PanelContainer.new()
-	_bag_panel.set_anchors_preset(Control.PRESET_CENTER)
 	_bag_panel.visible = false
-	_ui_root.add_child(_bag_panel)
+	_bag_panel.add_theme_stylebox_override("panel", _frame_box("frame_panel", 48, 0.92))
+	center.add_child(_bag_panel)
+
+	var pad := MarginContainer.new()
+	for side in ["left", "right", "top", "bottom"]:
+		pad.add_theme_constant_override("margin_" + side, 26)
+	_bag_panel.add_child(pad)
 
 	var rows := VBoxContainer.new()
-	_bag_panel.add_child(rows)
+	rows.add_theme_constant_override("separation", 10)
+	pad.add_child(rows)
 
 	# 머리 줄 — 가방 칸 수와 골드
 	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 10)
 	rows.add_child(head)
-	_add_icon(head, "bag", 44)
+	_add_icon(head, "bag", 40)
 	_bag_head = Label.new()
 	_bag_head.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	head.add_child(_bag_head)
-	_add_icon(head, "gold", 44)
+	_add_icon(head, "gold", 40)
 	_bag_gold = Label.new()
 	_bag_gold.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	head.add_child(_bag_gold)
 
-	# 장비 8칸. **칸 순서는 데이터가 정한다** (items.json 의 slots)
-	rows.add_child(_section_title("장비"))
+	# 본문 — 왼쪽 장착 / 오른쪽 가방
+	var body := HBoxContainer.new()
+	body.add_theme_constant_override("separation", 22)
+	rows.add_child(body)
+
+	var left := VBoxContainer.new()
+	body.add_child(left)
+	left.add_child(_section_title("장착"))
 	_bag_gear = GridContainer.new()
 	_bag_gear.columns = GEAR_COLUMNS
-	rows.add_child(_bag_gear)
+	left.add_child(_bag_gear)
+	# 칸 순서는 데이터가 정한다 (items.json 의 slots)
 	for index in Items.slots().size():
 		_bag_gear.add_child(_make_cell(_pick_bag.bind("equip", index)))
-
 	# 요약 줄 — 상태바에 안 나오는 것만 적는다
 	_bag_sum = Label.new()
-	_bag_sum.add_theme_font_size_override("font_size", 22)
-	rows.add_child(_bag_sum)
+	_bag_sum.add_theme_font_size_override("font_size", 20)
+	_bag_sum.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_bag_sum.custom_minimum_size = Vector2(CELL * GEAR_COLUMNS, 0)
+	left.add_child(_bag_sum)
 
-	rows.add_child(_section_title("가방"))
+	var right := VBoxContainer.new()
+	body.add_child(right)
+	right.add_child(_section_title("가방"))
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(CELL * BAG_COLUMNS, CELL * 2 + 12)
+	scroll.custom_minimum_size = Vector2(CELL * BAG_COLUMNS, CELL * BAG_ROWS)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	rows.add_child(scroll)
+	right.add_child(scroll)
 	_bag_grid = GridContainer.new()
 	_bag_grid.columns = BAG_COLUMNS
 	scroll.add_child(_bag_grid)
 
 	# 상세 칸
 	_bag_detail = Label.new()
-	_bag_detail.custom_minimum_size = Vector2(CELL * BAG_COLUMNS, 76)
+	_bag_detail.custom_minimum_size = Vector2(0, 72)
 	_bag_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_bag_detail.add_theme_font_size_override("font_size", 22)
 	rows.add_child(_bag_detail)
 
 	var buttons := HBoxContainer.new()
+	buttons.alignment = BoxContainer.ALIGNMENT_END
+	buttons.add_theme_constant_override("separation", 12)
 	rows.add_child(buttons)
 	_bag_action = Button.new()
-	_bag_action.custom_minimum_size = Vector2(170, 64)
+	_bag_action.custom_minimum_size = Vector2(170, 60)
 	_bag_action.pressed.connect(_on_bag_action)
 	buttons.add_child(_bag_action)
 	var close := Button.new()
 	close.text = "닫기"
-	close.custom_minimum_size = Vector2(170, 64)
+	close.custom_minimum_size = Vector2(170, 60)
 	close.pressed.connect(func() -> void: _bag_panel.visible = false)
 	buttons.add_child(close)
 
@@ -329,14 +363,43 @@ func _section_title(text: String) -> Label:
 	return label
 
 
-## 아이콘 한 장. **없으면 null** — 부르는 쪽이 글자로 대신한다
+## 테두리. 바르코로 만든 그림을 9조각으로 늘여 쓴다.
+## **그림이 없으면 코드로 그린 테두리**를 준다 — 테두리 없이 뜨는 일은 없어야 한다
+func _frame_box(name: String, margin: int, dim: float) -> StyleBox:
+	var texture := _icon(name)
+	if texture != null:
+		var box := StyleBoxTexture.new()
+		box.texture = texture
+		for side in [SIDE_LEFT, SIDE_RIGHT, SIDE_TOP, SIDE_BOTTOM]:
+			box.set_texture_margin(side, margin)
+		box.modulate_color = Color(1, 1, 1, dim)
+		return box
+	var flat := StyleBoxFlat.new()
+	flat.bg_color = Color(0.05, 0.06, 0.08, dim)
+	flat.border_color = Color(0.72, 0.82, 0.95)
+	flat.set_border_width_all(3)
+	flat.set_corner_radius_all(8)
+	flat.set_content_margin_all(8)
+	return flat
+
+
+## 아이콘 한 장. **없으면 null** — 부르는 쪽이 글자로 대신한다.
+##
+## `ResourceLoader.exists` 로 먼저 거르지 않는다: 익스포트에서 PNG 는 `.ctex` 로
+## 바뀌어 들어가고 원본 경로는 리맵으로만 남는다. `load` 는 리맵을 따라가므로
+## 그대로 부르고 null 인지로 가른다. 한 번 해 본 결과는 이름마다 기억한다 —
+## 없을 때 칸마다 오류가 찍히지 않도록
 func _icon(name: String) -> Texture2D:
 	if name == "":
 		return null
+	if _icon_cache.has(name):
+		return _icon_cache[name]
 	var path := ICON_DIR + name + ".png"
-	if not ResourceLoader.exists(path):
-		return null
-	return load(path)
+	var texture: Texture2D = null
+	if ResourceLoader.exists(path):
+		texture = load(path) as Texture2D
+	_icon_cache[name] = texture
+	return texture
 
 
 ## 줄에 아이콘을 끼운다. 그림이 없으면 아무것도 넣지 않는다 (글자만 남는다)
@@ -352,11 +415,12 @@ func _add_icon(parent: Node, name: String, size: int) -> void:
 	parent.add_child(rect)
 
 
-## 창의 한 칸 — 그림 · 글자 · 배지 · 누르는 자리를 겹쳐 둔다.
+## 창의 한 칸 — 테두리 위에 그림 · 글자 · 배지 · 누르는 자리를 겹쳐 둔다.
 ## PanelContainer 는 자식을 모두 칸 전체에 깔기 때문에 정렬만으로 자리를 나눈다
 func _make_cell(on_press: Callable) -> PanelContainer:
 	var cell := PanelContainer.new()
 	cell.custom_minimum_size = Vector2(CELL, CELL)
+	cell.add_theme_stylebox_override("panel", _frame_box("frame_slot", 28, 1.0))
 
 	var icon := TextureRect.new()
 	icon.name = "icon"
@@ -365,7 +429,7 @@ func _make_cell(on_press: Callable) -> PanelContainer:
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cell.add_child(icon)
 
-	# 그림이 없는 것(귀걸이·재료)은 이름을 줄여 적는다
+	# 그림이 없는 것(재료)은 이름을 줄여 적는다
 	var text := Label.new()
 	text.name = "text"
 	text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -458,7 +522,7 @@ func _redraw_bag() -> void:
 	_bag_head.text = "가방 %d/%d" % [bag.size(), Items.bag_size()]
 	_bag_gold.text = "%d" % int(me.get("gold", 0))
 
-	# 장비 8칸 — 아이콘 이름은 슬롯 이름과 같다 (assets/icons/weapon.png …)
+	# 장착 6칸 — 아이콘 이름은 슬롯 이름과 같다 (assets/icons/weapon.png …)
 	var slots: Array = Items.slots()
 	for index in _bag_gear.get_child_count():
 		var slot := str(slots[index])
@@ -470,14 +534,14 @@ func _redraw_bag() -> void:
 	# 요약 줄 — **상태바에 안 나오는 것만** 적는다. 치명타·치명타 피해·공격 속도는
 	# 옵션으로만 붙는 값이라 여기가 없으면 무엇을 끼웠는지 알 방법이 없다
 	var stats: Dictionary = me.get("stats", {})
-	_bag_sum.text = "치명타 %.0f%%   치명타 피해 %.0f%%   공격 속도 +%.0f%%" % [
+	_bag_sum.text = "치명타 %.0f%%  치명타 피해 %.0f%%  공격 속도 +%.0f%%" % [
 		float(stats.get("crit", 0.0)) * 100.0,
 		float(stats.get("critDamage", 0.0)) * 100.0,
 		float(stats.get("attackSpeed", 0.0)) * 100.0,
 	]
 
-	# 가방 격자. 비어 보이지 않게 최소 25칸은 깔아 둔다
-	_fit_cells(_bag_grid, maxi(BAG_MIN_CELLS, bag.size()), "bag")
+	# 가방 격자. 비어 보이지 않게 보이는 줄만큼은 깔아 둔다
+	_fit_cells(_bag_grid, maxi(BAG_COLUMNS * BAG_ROWS, bag.size()), "bag")
 	for index in _bag_grid.get_child_count():
 		var stack: Dictionary = bag[index] if index < bag.size() else {}
 		var icon_name := ""
@@ -531,7 +595,6 @@ func _picked_stack() -> Dictionary:
 	return bag[index]
 
 
-## 끼기 / 벗기. **낄 수 있는지는 World 가 다시 본다** — 여기서 거르는 건 안내일 뿐이다
 func _on_bag_action() -> void:
 	var stack := _picked_stack()
 	if stack.is_empty():

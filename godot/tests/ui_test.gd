@@ -256,14 +256,32 @@ func _case_bag(game: Node3D) -> void:
 		_fail("가방 단추를 눌렀는데 창이 안 떴다")
 		return
 
-	# 장비 8칸 · 가방 최소 25칸
+	# 장착 6칸(3열) · 가방 5열 세 줄
 	var slots: Array = Items.slots()
+	if slots.size() != 6:
+		_fail("슬롯이 6종이어야 하는데 %d종: %s" % [slots.size(), str(slots)])
 	if game._bag_gear.get_child_count() != slots.size():
-		_fail("장비가 %d칸이어야 하는데 %d칸" % [slots.size(), game._bag_gear.get_child_count()])
-	if game._bag_grid.get_child_count() < 25:
-		_fail("가방 격자가 25칸 이상이어야 하는데 %d칸" % game._bag_grid.get_child_count())
+		_fail("장착이 %d칸이어야 하는데 %d칸" % [slots.size(), game._bag_gear.get_child_count()])
+	if game._bag_gear.columns != 3:
+		_fail("장착이 3열이어야 하는데 %d열" % game._bag_gear.columns)
+	if game._bag_grid.get_child_count() < 15:
+		_fail("가방 격자가 15칸 이상이어야 하는데 %d칸" % game._bag_grid.get_child_count())
 	if game._bag_grid.columns != 5:
 		_fail("가방 격자가 5열이어야 하는데 %d열" % game._bag_grid.columns)
+
+	# **왼쪽이 장착, 오른쪽이 가방이다** (2026-09-18 요청)
+	var gear_x: float = game._bag_gear.get_global_rect().position.x
+	var grid_x: float = game._bag_grid.get_global_rect().position.x
+	if gear_x >= grid_x:
+		_fail("장착(%.0f)이 가방(%.0f) 왼쪽에 있어야 한다" % [gear_x, grid_x])
+	else:
+		print("  좌우: 장착 x=%.0f · 가방 x=%.0f" % [gear_x, grid_x])
+
+	# 테두리가 붙었나 — 그림이 없으면 코드로 그린 것이라도 있어야 한다
+	if game._bag_panel.get_theme_stylebox("panel") == null:
+		_fail("창에 테두리가 없다")
+	if game._bag_gear.get_child(0).get_theme_stylebox("panel") == null:
+		_fail("칸에 테두리가 없다")
 
 	# 그림이 붙었나. 아이콘이 없으면(sync 를 안 돌렸으면) 칸 이름이 글자로 나와야 한다
 	var drawn := 0
@@ -275,9 +293,9 @@ func _case_bag(game: Node3D) -> void:
 		elif cell.get_node("text").text != "":
 			named += 1
 	if drawn + named != slots.size():
-		_fail("장비 칸 %d개가 그림도 글자도 없다" % [slots.size() - drawn - named])
+		_fail("장착 칸 %d개가 그림도 글자도 없다" % [slots.size() - drawn - named])
 	else:
-		print("  가방 창: 장비 %d칸(그림 %d · 글자 %d), 가방 %d칸" % [
+		print("  가방 창: 장착 %d칸(그림 %d · 글자 %d), 가방 %d칸" % [
 			slots.size(), drawn, named, game._bag_grid.get_child_count()
 		])
 
@@ -319,13 +337,16 @@ func _case_bag(game: Node3D) -> void:
 		var worn: Dictionary = Items.get_item(str(me.equipped.weapon.id))
 		print("  골라서 끼기: 무기 칸에 '%s'" % worn.get("name", "?"))
 
-	# 창이 화면 안에 들어오나. **눈으로 볼 수 없는 것은 재서 본다** —
-	# 칸을 키우다 720 을 넘기면 폰에서 아래가 잘린다
-	var panel: Vector2 = game._bag_panel.size
-	if panel.x > 1280.0 or panel.y > 720.0:
-		_fail("가방 창이 화면(1280x720)보다 크다: %.0fx%.0f" % [panel.x, panel.y])
+	# 창이 화면 안에, 그리고 **가운데에** 있나. 눈으로 볼 수 없는 것은 재서 본다 —
+	# set_anchors_preset 만 부르면 왼쪽 위에 붙는다 (2026-09-18 에 그랬다)
+	var rect: Rect2 = game._bag_panel.get_global_rect()
+	if rect.size.x > 1280.0 or rect.size.y > 720.0:
+		_fail("가방 창이 화면(1280x720)보다 크다: %.0fx%.0f" % [rect.size.x, rect.size.y])
+	var off: Vector2 = (rect.position + rect.size * 0.5) - Vector2(640, 360)
+	if abs(off.x) > 8.0 or abs(off.y) > 8.0:
+		_fail("가방 창이 가운데가 아니다 — 중심이 (%.0f, %.0f) 만큼 밀렸다" % [off.x, off.y])
 	else:
-		print("  창 크기 %.0fx%.0f — 화면 안에 들어온다" % [panel.x, panel.y])
+		print("  창 %.0fx%.0f, 화면 한가운데" % [rect.size.x, rect.size.y])
 
 	# 끼운 칸을 골라 벗긴다
 	var slot_index := slots.find("weapon")

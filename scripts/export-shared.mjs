@@ -58,7 +58,6 @@ import {
   ITEMS,
   EQUIP_SLOTS,
   SLOT_CODE,
-  OFFHAND_NAME,
   slotLabel,
   JOB_SLOTS,
   INVENTORY_SIZE,
@@ -127,10 +126,8 @@ export function buildData() {
     'items.json': {
       items: ITEMS,
       slots: EQUIP_SLOTS,
-      // 창에 적는 칸 이름. 보조는 직업마다 물건이 달라 따로 낸다
-      // (격투가 보호대 / 마법사 마법서 / 궁수 화살통)
+      // 창에 적는 칸 이름
       slotLabels: Object.fromEntries(EQUIP_SLOTS.map((slot) => [slot, slotLabel(slot)])),
-      offhandNames: OFFHAND_NAME,
       // 드롭이 후보 id 를 만들 때 쓴다 (슬롯 코드 + 직업 + 단계)
       slotCode: SLOT_CODE,
       jobSlots: JOB_SLOTS,

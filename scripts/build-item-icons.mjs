@@ -41,8 +41,19 @@ const LAYERS = 3;
  * 검처럼 바깥이 얇은 여백(7%)일 때만 한 겹 더 들어간다
  */
 const THIN_MARGIN = 0.25;
-/** 내보낼 한 변 크기 */
+/**
+ * 내보낼 한 변 크기. 테두리는 9조각으로 늘여 쓴다 — **모서리 조각은 원본 픽셀
+ * 크기 그대로 그려지므로** 칸(88px)보다 큰 텍스처를 쓰면 모서리가 서로 겹쳐
+ * 뭉갠다. 그래서 칸 테두리는 128, 창 테두리는 넓으니 256 으로 굽는다
+ */
 const SIZE = 128;
+const FRAME_SIZE = { 'frame_panel.png': 256, 'frame_slot.png': 128 };
+/**
+ * **안쪽도 뚫는 것.** 칸 테두리는 가운데가 흰 판으로 차 있는데, 테두리에서
+ * 번져 들어가는 채우기로는 닿지 못한다 (테가 막고 있다). 이 이름들은 한가운데에서
+ * 한 번 더 번지게 한다. 창 테두리(frame_panel)는 **안쪽을 남긴다** — 그게 창 바탕이다
+ */
+const HOLLOW = new Set(['frame_slot.png']);
 
 /**
  * 가장자리에서 시작해 배경색과 비슷한 픽셀을 따라 번지며 알파를 0 으로 만든다.
@@ -118,6 +129,34 @@ function cutBackground(data, width, height) {
   return cut.reduce((sum, v) => sum + v, 0);
 }
 
+/** 한가운데에서 번지며 같은 색이 이어지는 만큼 뚫는다 (테 안쪽 판을 걷을 때) */
+function cutCenter(data, width, height) {
+  const count = width * height;
+  const start = (height >> 1) * width + (width >> 1);
+  const i0 = start * 4;
+  if (data[i0 + 3] === 0) return 0;
+  const near = (p) => {
+    const i = p * 4;
+    return data[i + 3] !== 0
+      && Math.abs(data[i] - data[i0]) + Math.abs(data[i + 1] - data[i0 + 1])
+        + Math.abs(data[i + 2] - data[i0 + 2]) <= TOLERANCE;
+  };
+  const queue = [start];
+  let n = 0;
+  while (queue.length > 0) {
+    const p = queue.pop();
+    if (!near(p)) continue;
+    data[p * 4 + 3] = 0;
+    n += 1;
+    const x = p % width;
+    if (x > 0) queue.push(p - 1);
+    if (x < width - 1) queue.push(p + 1);
+    if (p >= width) queue.push(p - width);
+    if (p + width < count) queue.push(p + width);
+  }
+  return n;
+}
+
 if (!existsSync(SRC)) {
   console.log(`건너뜀: 아이콘 원본이 없다 (${SRC}) — scripts/fetch-assets.sh 를 돌린다`);
   process.exit(0);
@@ -131,10 +170,12 @@ for (const name of readdirSync(SRC).filter((f) => f.endsWith('.png')).sort()) {
     .ensureAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });
-  const cut = cutBackground(data, info.width, info.height);
+  let cut = cutBackground(data, info.width, info.height);
+  if (HOLLOW.has(name)) cut += cutCenter(data, info.width, info.height);
   const out = join(DST, basename(name));
+  const size = FRAME_SIZE[name] ?? SIZE;
   await sharp(data, { raw: { width: info.width, height: info.height, channels: 4 } })
-    .resize(SIZE, SIZE, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .resize(size, size, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
     .png({ compressionLevel: 9 })
     .toFile(out);
   const share = ((cut / (info.width * info.height)) * 100).toFixed(0);

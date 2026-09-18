@@ -173,7 +173,8 @@ done
 # build-item-icons.mjs 가 걷어내고 128px 로 굽는다 → public/assets/icons (커밋한다).
 #
 # glove·belt 는 **아직 어느 칸에 쓸지 안 정했다** — 받아만 두고 고도로는 안 넘긴다
-# (sync-godot-assets.mjs 의 ICONS). 귀걸이(earring)는 그림이 없어 글자로 나온다.
+# (sync-godot-assets.mjs 의 ICONS). offhand(방패)는 2026-09-18 에 슬롯 자체를 없애
+# 받기는 하되 고도로 안 넘긴다. 테두리 둘(frame_*)은 같은 워크플로우에서 나중에 만들었다.
 mkdir -p assets-src/icons
 
 fetch_icon() { # $1=객체 해시  $2=출력 이름
@@ -194,6 +195,8 @@ fetch_icon 5fd4ab55b5c3e682f35f8cf81b2a266d bag       # 가방
 fetch_icon 0f5c8a9b06c498361643b69fc4b3d97c gold      # 동전
 fetch_icon 36ce4590784bd702b644bcd409e50f0b glove     # 장갑 (미사용)
 fetch_icon dbc3fc75337294133bfc32ab2628ba5b belt      # 벨트 (미사용)
+fetch_icon 59ae33d2067e8eea8811afe7650699de frame_panel  # 창 테두리 (9조각)
+fetch_icon 0e8a03e181a5c41b5f1c0d955c097199 frame_slot   # 칸 테두리 (9조각)
 
 node scripts/build-item-icons.mjs
 

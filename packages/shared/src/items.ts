@@ -14,50 +14,42 @@ import type { JobId } from './character.ts';
 
 export type EquipSlot =
   | 'weapon'
-  | 'offhand'
   | 'armor'
   | 'helmet'
   | 'boots'
   | 'ring'
-  | 'necklace'
-  | 'earring';
-
-/** 창에 놓이는 순서 */
-export const EQUIP_SLOTS: EquipSlot[] = [
-  'weapon',
-  'offhand',
-  'helmet',
-  'armor',
-  'boots',
-  'ring',
-  'necklace',
-  'earring',
-];
+  | 'necklace';
 
 /**
- * 보조 슬롯은 직업마다 다른 물건이 들어간다.
- * 격투가는 보호대를 차고, 궁수는 화살통, 마법사는 마법서를 든다.
+ * 창에 놓이는 순서. **여섯 자리다** — 2026-09-18 에 보조(보호대·마법서·화살통)와
+ * 귀걸이를 없앴다 (요청: "슬롯은 무기, 갑옷, 투구, 신발, 목걸이, 반지 이렇게야").
+ * 그 둘을 없애면서 아이템이 240종에서 180종이 됐고, 직업을 타는 자리는 무기 하나만
+ * 남았다. 되살리려면 이 커밋을 뒤집는 게 빠르다.
  */
-export const OFFHAND_NAME: Record<JobId, string> = {
-  fighter: '보호대',
-  mage: '마법서',
-  archer: '화살통',
-};
+export const EQUIP_SLOTS: EquipSlot[] = [
+  'weapon',
+  'armor',
+  'helmet',
+  'boots',
+  'necklace',
+  'ring',
+];
 
-const FIXED_SLOT_LABEL: Record<Exclude<EquipSlot, 'offhand'>, string> = {
+const SLOT_LABEL: Record<EquipSlot, string> = {
   weapon: '무기',
   armor: '갑옷',
   helmet: '투구',
   boots: '신발',
   ring: '반지',
   necklace: '목걸이',
-  earring: '귀걸이',
 };
 
-/** 슬롯 이름. 보조는 직업을 알아야 제대로 부를 수 있다 */
-export function slotLabel(slot: EquipSlot, job?: JobId): string {
-  if (slot !== 'offhand') return FIXED_SLOT_LABEL[slot];
-  return job ? OFFHAND_NAME[job] : '보조';
+/**
+ * 슬롯 이름. `job` 을 받던 자리는 보조 때문이었는데 보조를 없애 쓰이지 않는다 —
+ * 부르는 쪽(창·내보내기)을 다 고치지 않아도 되도록 인자는 남겨 두고 무시한다
+ */
+export function slotLabel(slot: EquipSlot, _job?: JobId): string {
+  return SLOT_LABEL[slot];
 }
 
 /** 장비가 더해주는 능력치 */
@@ -149,10 +141,6 @@ function bonusFor(slot: EquipSlot, level: number, job?: JobId): ItemBonus {
   switch (slot) {
     case 'weapon':
       return { attack: atk(1) };
-    case 'offhand':
-      if (job === 'fighter') return { attack: atk(0.35), maxHp: hp(0.35) }; // 격투가 보호대 — 치면서 버틴다
-      if (job === 'mage') return { attack: atk(0.55), maxHp: hp(0.2) }; // 마법서
-      return { attack: atk(0.5), defense: def(0.3) }; // 궁수 화살통
     case 'armor':
       return { maxHp: hp(1), defense: def(1) };
     case 'helmet':
@@ -163,25 +151,21 @@ function bonusFor(slot: EquipSlot, level: number, job?: JobId): ItemBonus {
       return { attack: atk(0.45), maxHp: hp(0.15) };
     case 'necklace':
       return { attack: atk(0.5), maxHp: hp(0.2) };
-    case 'earring':
-      return { defense: def(0.6), maxHp: hp(0.25) };
   }
 }
 
 /** 슬롯별 id 앞글자 */
 export const SLOT_CODE: Record<EquipSlot, string> = {
   weapon: 'w',
-  offhand: 'o',
   armor: 'a',
   helmet: 'h',
   boots: 'b',
   ring: 'r',
   necklace: 'n',
-  earring: 'e',
 };
 
-/** 직업을 타는 슬롯 */
-export const JOB_SLOTS: EquipSlot[] = ['weapon', 'offhand'];
+/** 직업을 타는 슬롯. 보조를 없애 무기 하나만 남았다 */
+export const JOB_SLOTS: EquipSlot[] = ['weapon'];
 
 function buildItems(): Record<string, ItemDef> {
   const out: Record<string, ItemDef> = {};
@@ -198,7 +182,7 @@ function buildItems(): Record<string, ItemDef> {
       if (JOB_SLOTS.includes(slot)) {
         for (const job of jobs) {
           const id = `${code}_${job}_${tag}`;
-          const base = slot === 'weapon' ? WEAPON_NAME[job] : OFFHAND_NAME[job];
+          const base = WEAPON_NAME[job];
           out[id] = {
             id,
             name: `${prefix} ${base}`,

@@ -108,15 +108,50 @@ func _run_scene() -> void:
 		if absf(mid - game.get_viewport().get_visible_rect().size.x * 0.5) > 2.0:
 			_fail("창이 가운데가 아니다 (%.0f)" % mid)
 
-	# 문 아치를 누르면 창이 열린다 — 문 안에서 누르면 바로
+	# 목록은 **끌어서도** 내려간다 (휠 말고) — 2026-09-18 요청
+	var panel2: GatePanel = game._gate_panel
+	var list: ScrollContainer = panel2._scroll
+	# 목록 기준 좌표다. 가운데를 눌러 위로 끈다
+	var grab := list.size * 0.5
+	panel2._on_list_input(_mouse(grab, true))
+	for i in 6:
+		grab.y -= 20
+		panel2._on_list_input(_move(grab))
+		await process_frame
+	var dragged := list.scroll_vertical
+	panel2._on_list_input(_mouse(grab, false))
+	if dragged <= 0:
+		_fail("목록을 끌었는데 안 내려갔다 (스크롤 %d)" % dragged)
+	elif not panel2.visible:
+		_fail("끌기만 했는데 창이 닫혔다 — 끌다가 고른 것으로 친다")
+	else:
+		print("  목록 끌기: %dpx 내려감" % dragged)
+
+	# 끌지 않고 그 자리에서 떼면 그 줄을 고른 것이다
+	list.scroll_vertical = 0
+	await process_frame
+	var row1 := panel2.row(1).get_global_rect().get_center() - list.global_position
+	panel2._on_list_input(_mouse(row1, true))
+	panel2._on_list_input(_mouse(row1, false))
+	if panel2.visible:
+		_fail("줄을 눌렀다 뗐는데 안 골라졌다")
+
+	# 문 아치를 누르면 창이 열린다 — **멀리 서 있어도 바로** 열린다
+	# (2026-09-18 요청: "포탈까지 안 걸어가도 클릭하면 UI 열리게")
 	game._gate_panel.close_panel()
+	me.x = 30.0
+	me.z = 30.0
+	for i in 3:
+		await process_frame
 	var top: Vector2 = game._camera.unproject_position(Vector3(9.0, 3.5, 0.0))
 	if not game._gate_tapped(top):
 		_fail("아치 윗부분을 눌렀는데 문으로 안 잡힌다 (%s)" % top)
 	else:
 		game._on_gate_tapped()
 		if not game._gate_panel.visible:
-			_fail("문 안에서 문을 눌렀는데 창이 안 떴다")
+			_fail("문에서 멀리 서서 눌렀는데 창이 안 떴다")
+		elif game._marker.visible:
+			_fail("문을 눌렀는데 창 대신 걸어가는 표시가 떴다")
 	if game._gate_tapped(game._camera.unproject_position(Vector3(-9.0, 0.0, 0.0))):
 		_fail("문에서 먼 땅이 문으로 잡힌다")
 	if ResourceLoader.exists(Portal.MODEL):
@@ -196,3 +231,20 @@ func _run_scene() -> void:
 	else:
 		print("UI: %d개 실패" % _failed)
 		quit(1)
+
+
+## 목록을 눌렀다/뗐다. 자리는 **목록 기준**이다 (Control 의 gui_input 이 그렇다)
+func _mouse(at: Vector2, pressed: bool) -> InputEventMouseButton:
+	var event := InputEventMouseButton.new()
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.position = at
+	event.pressed = pressed
+	return event
+
+
+## 누른 채로 움직였다
+func _move(at: Vector2) -> InputEventMouseMotion:
+	var event := InputEventMouseMotion.new()
+	event.position = at
+	event.button_mask = MOUSE_BUTTON_MASK_LEFT
+	return event

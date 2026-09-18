@@ -28,11 +28,20 @@ const FONT_SIZE := 30
 const TEXT_COLOR := Color("#f2f2f2")
 ## 지금 서 있는 곳은 누를 수 없고 흐리게 (참고 그림의 맨 윗줄)
 const HERE_COLOR := Color("#8c8c8c")
+## 끌기로 치는 최소 거리(px). 이만큼 움직이면 고르기가 아니라 스크롤이다
+const DEADZONE := 14
+## 스크롤 막대 굵기 — 손가락으로 집을 수 있어야 한다 (기본은 폰에서 너무 가늘다)
+const BAR_WIDTH := 18
 
 var _rows: VBoxContainer
 var _scroll: ScrollContainer
 var _here_icon: Texture2D
 var _go_icon: Texture2D
+## 끌기 — 누른 자리(창 기준 세로), 누를 때의 스크롤, 데드존을 넘겼나
+var _hold := false
+var _hold_y := 0.0
+var _hold_scroll := 0
+var _dragging := false
 
 
 static func create() -> GatePanel:
@@ -96,6 +105,12 @@ func _build() -> void:
 	_scroll = ScrollContainer.new()
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	# **끌어서 내린다** (2026-09-18 요청: "UI 스크롤이 마우스 휠로만 되는데,
+	# 클릭해서 내릴 수 있게"). 엔진에도 끌기가 있지만 **터치 화면일 때만** 켜지고,
+	# 그러면 폰에서는 손가락 이벤트와 흉내 낸 마우스 이벤트가 겹쳐 두 배로 내려간다.
+	# 그래서 목록에 오는 입력을 여기서 직접 받는다 (`_on_list_input`)
+	_scroll.gui_input.connect(_on_list_input)
+	_scroll.get_v_scroll_bar().custom_minimum_size.x = BAR_WIDTH
 	column.add_child(_scroll)
 
 	_rows = VBoxContainer.new()
@@ -147,10 +162,57 @@ func _fill(current_zone: String) -> void:
 		button.add_theme_color_override("font_disabled_color", HERE_COLOR)
 		button.custom_minimum_size = Vector2(0, ICON + 4)
 		button.disabled = here
-		# 손가락으로 목록을 끌어 올릴 수 있게 누름을 스크롤에도 넘긴다
-		button.mouse_filter = Control.MOUSE_FILTER_PASS
-		button.pressed.connect(_on_pick.bind(str(id)))
+		# **줄은 입력을 받지 않는다.** 누른 것이 고르기인지 끌기인지는 목록 쪽에서
+		# 판정한다 — 줄이 먼저 받으면 끌다가 손을 뗀 자리의 줄로 떠나 버린다
+		button.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		button.set_meta("zone", str(id))
 		_rows.add_child(button)
+
+
+## 목록에 온 입력. **누르고 끌면 스크롤, 누르고 그 자리에서 떼면 고르기**다.
+##
+## 휠은 건드리지 않고 `ScrollContainer` 에 그대로 넘긴다 (`accept_event` 를 안 부른다).
+## 손가락 이벤트도 넘기지 않고 **삼킨다** — 고도는 기본으로 같은 손짓을 마우스로도
+## 흉내 내 보내므로(`emulate_mouse_from_touch`), 둘 다 받으면 두 배로 내려간다
+func _on_list_input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch or event is InputEventScreenDrag:
+		accept_event()
+		return
+	var click := event as InputEventMouseButton
+	if click != null and click.button_index == MOUSE_BUTTON_LEFT:
+		if click.pressed:
+			_hold = true
+			_dragging = false
+			_hold_y = click.position.y
+			_hold_scroll = _scroll.scroll_vertical
+		elif _hold:
+			_hold = false
+			if not _dragging:
+				_pick_at(click.position)
+		accept_event()
+		return
+	var move := event as InputEventMouseMotion
+	if move != null and _hold:
+		var moved := move.position.y - _hold_y
+		if not _dragging and absf(moved) > DEADZONE:
+			_dragging = true
+		if _dragging:
+			# 손을 따라간다 — 위로 끌면 목록이 올라온다. 범위는 고도가 죈다
+			_scroll.scroll_vertical = _hold_scroll - int(moved)
+			accept_event()
+
+
+## 그 자리에서 뗐다 — 손가락 밑의 줄을 고른다. `position` 은 목록 기준이라
+## 화면 기준으로 옮겨서 줄 상자와 견준다 (줄은 스크롤만큼 밀려 있다)
+func _pick_at(at: Vector2) -> void:
+	var point := _scroll.global_position + at
+	for child in _rows.get_children():
+		var button := child as Button
+		if button == null or button.disabled:
+			continue
+		if button.get_global_rect().has_point(point):
+			_on_pick(str(button.get_meta("zone", "")))
+			return
 
 
 func _on_pick(zone_id: String) -> void:

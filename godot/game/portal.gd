@@ -32,6 +32,7 @@ static func create(gate: Dictionary) -> Node3D:
 		model.position.y = 0.5 * s
 		model.rotation.y = CameraRig.YAW
 		root.add_child(model)
+		root.add_child(PortalSwirl.create(radius, color, CameraRig.YAW))
 		return root
 
 	var disc := MeshInstance3D.new()
@@ -47,6 +48,9 @@ static func create(gate: Dictionary) -> Node3D:
 	disc.material_override = mat
 	disc.position.y = 0.04
 	root.add_child(disc)
+	# 모델이 없어도 소용돌이는 돈다 — 이펙트는 에셋을 안 받은 사람에게도 보여야 한다
+	# (docs/features/effect-rules.md 1절)
+	root.add_child(PortalSwirl.create(radius, color, CameraRig.YAW))
 	return root
 
 

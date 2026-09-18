@@ -55,6 +55,12 @@ P = dict(
     # 타수를 3타로 두면 너무 거칠어서 장비 한 등급 갱신(DPS +36%)이 정리 시간을
     # 전혀 줄이지 못한다(3타->2타 에는 +50% 필요). 6타면 계단이 절반으로 촘촘해진다.
     TTK_HITS=6,           # 범위 스킬이 몬스터 한 마리에 들어가는 타격 횟수
+    TTK_MARGIN=0.005,     # 몬스터 HP 를 정확히 TTK_HITS 타분으로 잡으면 기준과 같은 장비가
+                          # 늘 올림 경계에 얹힌다 — 0.4% 만 모자라도 한 타가 더 든다
+                          # (풀세트에서 슬롯 하나가 덜 찬 상태가 바로 그것이다).
+                          # HP 를 이만큼 깎아 경계에서 떨어뜨린다. 0.5% 면 그 한 슬롯을 흡수하고,
+                          # 그 이상(2%)은 다른 구간의 천장을 대신 무너뜨린다 — 계단은 없앨 수
+                          # 없고 옮길 수만 있으므로, 흡수에 필요한 최소값을 쓴다
     CLEAR_TIME=15.0,      # 한 그룹을 정리하는 목표 시간(초)
     # 스폰 수 / 범위 타격 수 / 동시 피격 수는 스킬 해금 단계에 따라 달라진다 (SKILL_STAGES)
     HP_LOSS_PER_CLEAR=0.5,  # 한 그룹 정리하는 동안 잃는 HP 비율.
@@ -427,7 +433,7 @@ def monster(L, role='normal'):
           MELEE_ATTACKERS 마리가 동시에 때린다고 보므로 1마리 공격력은 그만큼 작아진다"""
     ref = ref_player(L)
     df = ref['df'] * P['MON_DEF_RATIO']
-    hp = P['TTK_HITS'] * damage(ref['atk'], L, df) * ref['crit']
+    hp = P['TTK_HITS'] * (1 - P['TTK_MARGIN']) * damage(ref['atk'], L, df) * ref['crit']
     # 받아야 하는 총 피해 / 초
     dps_in = ref['hp'] * P['HP_LOSS_PER_CLEAR'] / P['CLEAR_TIME']
     want = dps_in * P['MON_ATTACK_INTERVAL'] / melee_attackers(L)   # 1마리 1타 피해

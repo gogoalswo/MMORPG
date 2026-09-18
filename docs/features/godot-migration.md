@@ -31,6 +31,7 @@ three.js 웹 클라이언트를 **고도 엔진으로 갈아타는 중**이다. 
 | `godot/game/ground.gd` | 존 바닥 재질 — 텍스처·타일 크기·존 틴트 |
 | `godot/game/hit_fx.gd` | **피격 이펙트.** 맞은 자리의 섬광·파편·피해 숫자. 에셋 없이 코드로 짓는다 |
 | `godot/game/skill_fx.gd` | **스킬 이펙트.** 지금은 할퀴기 자국 하나. 같은 이유로 코드로 짓는다 |
+| `godot/game/portal.gd` · `gate_panel.gd` | **차원문 아치와 창.** 창은 조각을 앵커로 조립한다 → [portal-ui.md](portal-ui.md) |
 | `godot/game/select_ring.gd` | **골라 둔 몬스터 발밑의 고리.** 반지름·두께·도는 속도가 상수다 |
 | `godot/game/hurt_flash.gd` | 내가 맞았을 때 화면 가장자리 비네트 |
 | `godot/game/camera_rig.gd` | 고정각 쿼터뷰 카메라 |
@@ -334,7 +335,8 @@ Q/E 회전과 줌은 아직 안 옮겼다. 웹 쪽에는 있다.
 고른 곳은 `travel` 로 요청하고 **있는 존인지 `World` 가 다시 본다.**
 
 매 프레임 알리면 화면이 깜빡이므로 문을 벗어날 때까지 한 번만 알린다
-(`player.at_gate`).
+(`player.at_gate`). 그래서 문 안에서 창을 닫았으면 **아치를 눌러** 다시 연다
+→ [portal-ui.md](portal-ui.md).
 
 ### 몬스터 자리는 판정하는 쪽이 정한다
 

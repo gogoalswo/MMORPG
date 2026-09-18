@@ -92,13 +92,37 @@ func _run_scene() -> void:
 	if not game._gate_panel.visible:
 		_fail("차원문에 섰는데 고르는 화면이 안 떴다")
 	else:
-		# 마을 + 사냥터 20곳 = 21개 단추
-		var grid: GridContainer = game._gate_panel.get_child(0).get_child(1)
-		print("  차원문 화면: 단추 %d개, 첫 줄 '%s'" % [
-			grid.get_child_count(), grid.get_child(0).text
-		])
-		if grid.get_child_count() != 21:
-			_fail("단추가 21개여야 하는데 %d개" % grid.get_child_count())
+		# 마을 + 사냥터 20곳 = 21줄. 맨 위(마을)가 지금 서 있는 곳이라 막혀 있다
+		var panel: GatePanel = game._gate_panel
+		print("  차원문 화면: %d줄, 첫 줄 '%s'" % [panel.row_count(), panel.row(0).text])
+		if panel.row_count() != 21:
+			_fail("줄이 21개여야 하는데 %d개" % panel.row_count())
+		elif not panel.row(0).disabled or panel.row(1).disabled:
+			_fail("서 있는 곳(마을)만 막혀야 한다")
+		elif panel.row(0).icon == panel.row(1).icon:
+			_fail("서 있는 곳과 갈 곳의 칸 아이콘이 같다")
+		elif panel.texture == null:
+			_fail("창 바탕 조각(panel.png)이 없다 — npm run sync:godot 을 돌렸나")
+		# 앵커로만 자리를 잡는다 — 화면 가운데에 있어야 한다
+		var mid := panel.get_global_rect().get_center().x
+		if absf(mid - game.get_viewport().get_visible_rect().size.x * 0.5) > 2.0:
+			_fail("창이 가운데가 아니다 (%.0f)" % mid)
+
+	# 문 아치를 누르면 창이 열린다 — 문 안에서 누르면 바로
+	game._gate_panel.close_panel()
+	var top: Vector2 = game._camera.unproject_position(Vector3(9.0, 3.5, 0.0))
+	if not game._gate_tapped(top):
+		_fail("아치 윗부분을 눌렀는데 문으로 안 잡힌다 (%s)" % top)
+	else:
+		game._on_gate_tapped()
+		if not game._gate_panel.visible:
+			_fail("문 안에서 문을 눌렀는데 창이 안 떴다")
+	if game._gate_tapped(game._camera.unproject_position(Vector3(-9.0, 0.0, 0.0))):
+		_fail("문에서 먼 땅이 문으로 잡힌다")
+	if ResourceLoader.exists(Portal.MODEL):
+		print("  차원문 모델: 있음, 아치를 누르면 창")
+	else:
+		_fail("차원문 모델이 없다 — npm run sync:godot 을 돌렸나")
 
 	# 골라서 옮긴다
 	game._on_gate_pick("meadow")

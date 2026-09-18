@@ -21,7 +21,11 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const MODELS = [
   'varco_fighter.glb', // 캐릭터 (기본 직업 격투가 고정)
   'varco_ogre1.glb', // 초원 몬스터 (mob003 · mob008 의 look)
+  'varco_portal.glb', // 차원문 (모든 존의 GATE_SPOT)
 ];
+
+/** UI 조각. 이미 build-ui.mjs 가 줄여 둔 것이라 그대로 복사한다 */
+const UI = ['panel.png', 'gate_here.png', 'gate_go.png'];
 
 /** 한글 폰트. 고도 기본 폰트에는 한글 글리프가 없어 넣지 않으면 네모로 나온다 */
 const FONTS = ['NotoSansKR-subset.ttf'];
@@ -49,6 +53,7 @@ const jobs = [
     to: join(ROOT, 'godot', 'assets', 'models'),
     shrink: true,
   },
+  { names: UI, from: join(ROOT, 'public', 'assets', 'ui'), to: join(ROOT, 'godot', 'assets', 'ui') },
   { names: FONTS, from: join(ROOT, 'public', 'assets', 'fonts'), to: join(ROOT, 'godot', 'assets', 'fonts') },
   { names: GROUND, from: join(ROOT, 'public', 'assets', 'textures'), to: join(ROOT, 'godot', 'assets', 'ground') },
 ];

@@ -46,7 +46,7 @@ var _ui_root: Control
 var _hp_bar: ProgressBar
 ## 맞았을 때 화면 가장자리가 붉어지는 비네트 (game/hurt_flash.gd)
 var _hurt: HurtFlash
-var _gate_panel: PanelContainer
+var _gate_panel: GatePanel
 ## 보스 범위 공격 예고. [{node, fill, start, end, radius}, ...]
 var _aoe_marks: Array = []
 var _npc_panel: PanelContainer
@@ -128,7 +128,7 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			_last_event = str(payload.get("text", ""))
 		&"gate":
 			# 차원문에 섰다. 어디로 갈지는 사람이 고른다
-			_gate_panel.visible = true
+			_open_gate()
 		&"zone":
 			_last_event = "%s 에 도착했습니다" % GameData.zone(str(payload.get("zone", ""))).get("name", "")
 
@@ -525,38 +525,34 @@ func _make_theme() -> Theme:
 	return theme
 
 
-## 차원문에 서면 뜨는 사냥터 목록. 웹 클라의 ui/zoneGate.ts 와 같은 자리다
+## 차원문 창. 조각을 조립하는 건 GatePanel 이 하고, 여기서는 달고 고른 곳을 보내기만 한다
 func _build_gate_panel() -> void:
-	_gate_panel = PanelContainer.new()
-	_gate_panel.set_anchors_preset(Control.PRESET_CENTER)
-	_gate_panel.visible = false
+	_gate_panel = GatePanel.create()
+	_gate_panel.picked.connect(_on_gate_pick)
 	_ui_root.add_child(_gate_panel)
 
-	var rows := VBoxContainer.new()
-	_gate_panel.add_child(rows)
 
-	var title := Label.new()
-	title.text = "어디로 갈까요"
-	rows.add_child(title)
+func _open_gate() -> void:
+	_gate_panel.open(_shown_zone)
 
-	var grid := GridContainer.new()
-	grid.columns = 3
-	rows.add_child(grid)
 
-	# 마을 + 사냥터 20곳. 순서는 데이터가 정한다 (zones.json 의 fieldOrder)
-	var ids: Array = [GameData.start_zone()]
-	ids.append_array(GameData.field_order())
-	for id in ids:
-		var zone := GameData.zone(str(id))
-		var button := Button.new()
-		button.text = str(zone.get("name", id))
-		button.pressed.connect(_on_gate_pick.bind(str(id)))
-		grid.add_child(button)
-
-	var close := Button.new()
-	close.text = "닫기"
-	close.pressed.connect(func() -> void: _gate_panel.visible = false)
-	rows.add_child(close)
+## 문을 눌렀다. 문 안이면 바로 창을 열고, 멀면 걸어간다 — 들어서면 World 의
+## `gate` 이벤트가 창을 연다. **이동하는 건 여전히 travel 요청이고 World 가 다시 본다**
+func _on_gate_tapped() -> void:
+	var gate: Dictionary = _transport.snapshot().get("gate", {})
+	var pos: Array = gate.get("position", [0, 0])
+	var center := Vector3(float(pos[0]), 0.0, float(pos[1]))
+	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
+	var mine := Vector3(float(me.get("x", 0.0)), 0.0, float(me.get("z", 0.0)))
+	if mine.distance_to(center) <= float(gate.get("radius", 2.6)):
+		_target = Vector3.INF
+		_marker.visible = false
+		_open_gate()
+		return
+	_target_mob = ""
+	_target = center
+	_marker.position = center + Vector3(0, 0.05, 0)
+	_marker.visible = true
 
 
 func _on_gate_pick(zone_id: String) -> void:
@@ -617,20 +613,7 @@ func _build_zone(zone_id: String) -> void:
 	# 차원문. 여기 들어가면 존이 바뀐다 (World._check_gate)
 	var gate: Dictionary = zone.get("gate", {})
 	if not gate.is_empty():
-		var gate_pos: Array = gate.get("position", [0, 0])
-		var portal := MeshInstance3D.new()
-		var disc := CylinderMesh.new()
-		disc.top_radius = float(gate.get("radius", 2.6))
-		disc.bottom_radius = disc.top_radius
-		disc.height = 0.08
-		portal.mesh = disc
-		var gate_mat := StandardMaterial3D.new()
-		gate_mat.albedo_color = Color(gate.get("color", "#4aa8ff"))
-		gate_mat.emission_enabled = true
-		gate_mat.emission = Color(gate.get("color", "#4aa8ff"))
-		portal.material_override = gate_mat
-		portal.position = Vector3(float(gate_pos[0]), 0.04, float(gate_pos[1]))
-		_zone_node.add_child(portal)
+		_zone_node.add_child(Portal.create(gate))
 
 	# NPC. 모델이 없는 look 뿐이라 기둥에 이름표를 얹는다
 	for npc in _transport.snapshot().get("npcs", []):
@@ -693,6 +676,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		var hit := _ground_point(event.position)
 		if hit == Vector3.INF:
 			return
+		# 차원문을 눌렀다. 아치는 높이가 있어 바닥 점이 아니라 화면에서 쏜 선으로 본다
+		if _gate_tapped(event.position):
+			_on_gate_tapped()
+			return
 		# NPC 를 눌렀으면 말을 건다. **닿는지는 World 가 다시 본다**
 		var npc := _npc_at(hit)
 		if npc != "":
@@ -713,6 +700,16 @@ func _unhandled_input(event: InputEvent) -> void:
 			_target = hit
 			_marker.position = hit + Vector3(0, 0.05, 0)
 			_marker.visible = true
+
+
+## 화면의 그 점이 차원문 아치에 닿나
+func _gate_tapped(screen: Vector2) -> bool:
+	if _camera == null:
+		return false
+	return Portal.hit(
+		_camera.project_ray_origin(screen), _camera.project_ray_normal(screen),
+		_transport.snapshot().get("gate", {})
+	)
 
 
 ## 바닥의 그 자리에 NPC 가 있나

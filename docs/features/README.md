@@ -34,6 +34,7 @@ ZoneRoom 돌리기) · `DEPLOY.md`(터널로 친구에게 열어주기). 셋 다
 
 | 문서 | 다루는 것 |
 |---|---|
+| [portal-ui.md](portal-ui.md) | **차원문 모델과 창** — 돌 아치, 누르면 뜨는 목록, **UI 는 조각을 앵커로 조립** |
 | [world-zones.md](world-zones.md) | 존 21개, 차원문, 맵 크기, 보스 스폰 자리, **바닥 텍스처 7종**(존별 배정·틴트, 풀 잎·길 없음) |
 | [monsters-progression.md](monsters-progression.md) | 몬스터 60종, 능력치 공식, 레벨 곡선, 경험치 |
 | [combat.md](combat.md) | **직업 스탯 표(`combat.ts` 의 `JOB_STATS`)**, 피해 공식, 정면 판정, 치명타·공격 속도, **공격 경직(휘두르는 동안 이동 금지)**, 투사체, 사망·부활 |

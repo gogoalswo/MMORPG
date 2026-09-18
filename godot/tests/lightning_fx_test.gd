@@ -252,10 +252,12 @@ func _case_visible(game: Node3D) -> void:
 		per_m, halo, core, sky, crack, chunk
 	])
 
-	if halo < 12.0:
-		_fail("halo 가 %.0fpx 다 — 번개는 굵다 (얇게 깎았다가 실이 됐다)" % halo)
-	if core < 4.0:
-		_fail("코어가 %.0fpx 다 — 흰 심이 안 보인다" % core)
+	# **얇은 쪽이 낫다** (2026-09-18 지시). 다만 파티클로 만들던 때처럼 3px 까지
+	# 깎지는 않는다 — 그때 실이 된 것은 굵기가 아니라 가닥이 뭉쳐서였다
+	if halo < 10.0:
+		_fail("halo 가 %.0fpx 다 — 코어를 감싸는 번짐이 안 보인다" % halo)
+	if core < 3.0:
+		_fail("코어가 %.1fpx 다 — 한 픽셀 밑이면 렌더에서 끊긴다" % core)
 	if crack < 40.0:
 		_fail("금이 %.0fpx 다 — 갈라진 것으로 안 보인다" % crack)
 	if chunk < 5.0:

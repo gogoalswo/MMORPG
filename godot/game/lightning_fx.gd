@@ -59,10 +59,13 @@ const WOBBLE := 0.9
 ## **굵어야 번개다.** 코어 0.18m = 7px, halo 0.5m = 19px 이고 끝으로 갈수록
 ## 가늘어진다. 얇게 깎았더니 실이 됐다 (2026-09-18 에 두 번 헛돌았다) —
 ## 뭉쳐 보이는 원인은 굵기가 아니라 **가닥 수**였다
-const CORE_WIDTH := 0.18
-## halo 가 코어보다 **한참** 굵어야 테두리가 보인다. 0.5m(19px)로는 코어에
-## 묻혀 흰 리본 하나로 보였다 (2026-09-18 캡처)
-const HALO_WIDTH := 0.95
+## **얇게** (2026-09-18 지시). 굵은 리본은 번개가 아니라 띠로 보인다 —
+## 다만 파티클로 만들던 때처럼 3px 까지 깎지는 않는다. 그때 실이 된 것은
+## 굵기가 아니라 **가닥이 뭉쳐서**였다
+const CORE_WIDTH := 0.11
+## halo 는 코어를 감싸는 **번짐**이다. 가장자리가 투명해지므로 굵어도 선이
+## 지지 않는다
+const HALO_WIDTH := 0.45
 ## 줄기가 살아 있는 시간과 **지글거리는 주기.** 45ms 마다 경로를 다시 만든다
 const BOLT_LIFE := 0.3
 const FLICK := 0.045
@@ -74,10 +77,10 @@ const FORK_LENGTH := 2.4
 ## 고른 별표가 됐다 (2026-09-18). 갈래마다 한 번 더 갈라진다
 const CRACKS := 7
 const CRACK_LENGTH := 3.2
-const CRACK_WIDTH := 0.32
-## 금은 **두 겹이다** — 어두운 틈 둘레에 부서진 돌빛 테두리가 있어야 파인
-## 것으로 보인다. 한 겹 어두운 선은 바닥색과 섞여 그냥 얼룩이다
-const CRACK_EDGE := 2.1
+## 금은 **한 겹이다.** 둘레에 밝은 돌빛을 한 겹 깔아 봤더니 갈라진 틈이 아니라
+## **테두리를 두른 그림**이 됐다 (2026-09-18 에 지적받았다) — 가장자리는
+## 그라디언트로만 죈다
+const CRACK_WIDTH := 0.34
 const CRACK_SEGMENTS := 5
 ## 금이 자라는 시간 — 0.14초에 걸쳐 중심에서 바깥으로 뻗는다.
 ## 한 번에 다 그리면 갈라진 것이 아니라 그려진 그림이다
@@ -106,7 +109,6 @@ const LIGHT_LIFE := 0.16
 const COLOR_CORE := Color("#ffffff")
 const COLOR_HALO := Color("#4a90ff")
 const COLOR_CRACK := Color("#241a12")
-const COLOR_CRACK_EDGE := Color("#cabda6")
 const COLOR_DEBRIS := Color("#9c8163")
 
 var _t := 0.0
@@ -240,21 +242,42 @@ static func ribbon(paths: Array, head: float, tail: float, flat: bool) -> ArrayM
 			var wb: Vector3 = across[i + 1] * lerpf(head, tail, float(i + 1) / float(last)) * scale * 0.5
 			var a := path[i]
 			var b := path[i + 1]
-			# 앞뒤 어느 쪽에서 봐도 보여야 한다 (재질에서 컬링을 끈다)
-			tool.add_vertex(a - wa)
-			tool.add_vertex(a + wa)
-			tool.add_vertex(b - wb)
-			tool.add_vertex(b - wb)
-			tool.add_vertex(a + wa)
-			tool.add_vertex(b + wb)
+			# **가운데는 진하고 가장자리로 갈수록 투명하다.** 폭 전체를 같은
+			# 알파로 채우면 양쪽에 또렷한 선이 생겨 **테두리를 두른 것**처럼
+			# 보인다 (2026-09-18 에 지적받았다). 그래서 한 토막을 좌우 반으로
+			# 나눠 바깥 꼭짓점의 알파를 0 으로 둔다
+			_half(tool, a - wa, a, b - wb, b)
+			_half(tool, a + wa, a, b + wb, b)
 			drawn += 1
 	if drawn == 0:
 		return ArrayMesh.new()
 	return tool.commit()
 
 
+## 리본 한 토막의 반쪽. `edge` 쪽 꼭짓점은 투명하고 `mid` 쪽은 진하다 —
+## 이 그라디언트가 **테두리를 지운다**. 앞뒤 어느 쪽에서 봐도 보여야 하므로
+## 재질에서 컬링을 끈다
+static func _half(tool: SurfaceTool, a_edge: Vector3, a_mid: Vector3,
+		b_edge: Vector3, b_mid: Vector3) -> void:
+	var clear := Color(1.0, 1.0, 1.0, 0.0)
+	var solid := Color(1.0, 1.0, 1.0, 1.0)
+	tool.set_color(clear)
+	tool.add_vertex(a_edge)
+	tool.set_color(solid)
+	tool.add_vertex(a_mid)
+	tool.set_color(clear)
+	tool.add_vertex(b_edge)
+	tool.set_color(clear)
+	tool.add_vertex(b_edge)
+	tool.set_color(solid)
+	tool.add_vertex(a_mid)
+	tool.set_color(solid)
+	tool.add_vertex(b_mid)
+
+
 ## 조명을 안 받는 가산 혼합. 겹칠수록 밝아지고 어두운 사냥터에서도 같게 읽힌다.
-## **깊이 검사를 끈다** — 몸 앞을 지나므로 켜 두면 몸통이 가린다
+## **깊이 검사를 끈다** — 몸 앞을 지나므로 켜 두면 몸통이 가린다.
+## 꼭짓점 알파로 가장자리를 죄므로 `vertex_color_use_as_albedo` 를 켠다
 static func glow(color: Color) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -262,6 +285,7 @@ static func glow(color: Color) -> StandardMaterial3D:
 	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	mat.no_depth_test = true
+	mat.vertex_color_use_as_albedo = true
 	mat.albedo_color = color
 	return mat
 
@@ -273,6 +297,7 @@ static func dirt(color: Color) -> StandardMaterial3D:
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat.vertex_color_use_as_albedo = true
 	mat.albedo_color = color
 	return mat
 
@@ -293,7 +318,6 @@ class Strike:
 	var _halo: MeshInstance3D
 	var _core: MeshInstance3D
 	var _crack: MeshInstance3D
-	var _crack_rim: MeshInstance3D
 	var _crack_paths: Array = []
 	var _light: OmniLight3D
 	var _debris: CPUParticles3D
@@ -317,11 +341,8 @@ class Strike:
 
 		_halo = _sheet(LightningFx.glow(LightningFx.COLOR_HALO))
 		_core = _sheet(LightningFx.glow(LightningFx.COLOR_CORE))
-		# 테두리를 먼저 깔고 그 위에 틈을 얹는다 — 같은 높이면 서로 깜빡인다
-		_crack_rim = _sheet(LightningFx.dirt(LightningFx.COLOR_CRACK_EDGE))
-		_crack_rim.position = Vector3(0.0, LightningFx.GROUND, 0.0)
 		_crack = _sheet(LightningFx.dirt(LightningFx.COLOR_CRACK))
-		_crack.position = Vector3(0.0, LightningFx.GROUND + 0.01, 0.0)
+		_crack.position = Vector3(0.0, LightningFx.GROUND, 0.0)
 		_crack_paths = _plan_cracks()
 
 		_light = OmniLight3D.new()
@@ -452,16 +473,12 @@ class Strike:
 	func _show_crack(age: float) -> void:
 		if age >= LightningFx.CRACK_LIFE:
 			_crack.visible = false
-			_crack_rim.visible = false
 			return
 		var grow := clampf(age / LightningFx.CRACK_GROW, 0.0, 1.0)
 		if grow < 1.0 or _crack.mesh == null:
 			var cut: Array = []
 			for entry in _crack_paths:
 				cut.append([LightningFx.cut(entry[0], grow), entry[1]])
-			_crack_rim.mesh = LightningFx.ribbon(cut,
-				LightningFx.CRACK_WIDTH * LightningFx.CRACK_EDGE * swell,
-				LightningFx.CRACK_WIDTH * 0.3 * swell, true)
 			_crack.mesh = LightningFx.ribbon(cut, LightningFx.CRACK_WIDTH * swell,
 				LightningFx.CRACK_WIDTH * 0.15 * swell, true)
 		# 끝에서만 옅어진다 — 금은 남는 자국이라 오래 버틴다
@@ -469,9 +486,6 @@ class Strike:
 		var fade := clampf(left * 3.0, 0.0, 1.0)
 		_crack.material_override.albedo_color = Color(
 			LightningFx.COLOR_CRACK.r, LightningFx.COLOR_CRACK.g, LightningFx.COLOR_CRACK.b, fade)
-		_crack_rim.material_override.albedo_color = Color(
-			LightningFx.COLOR_CRACK_EDGE.r, LightningFx.COLOR_CRACK_EDGE.g,
-			LightningFx.COLOR_CRACK_EDGE.b, fade * 0.85)
 
 	## 번쩍임은 **세게 켜고 빠르게 죈다.** 일정하게 켜 두면 조명이 하나 놓인 것이다
 	func _show_light(age: float) -> void:

@@ -181,12 +181,12 @@ func _run_scene() -> void:
 	# 자동 사냥 단추 — 누르면 켜지고 글자가 바뀐다. 실제로 사냥하는지는
 	# tests/auto_hunt_test.gd 가 본다 (여기는 단추와 화면만)
 	me = game._transport.snapshot().players[game._transport.my_id()]
-	game._auto_button.pressed.emit()
+	game._auto_cell.find_child("hit", true, false).pressed.emit()
 	await process_frame
 	if not bool(me.get("auto", false)):
-		_fail("자동사냥 단추를 눌렀는데 안 켜졌다")
-	elif not game._auto_button.text.contains("켜짐"):
-		_fail("켜졌는데 단추 글자가 '%s'" % game._auto_button.text)
+		_fail("자동사냥 칸을 눌렀는데 안 켜졌다")
+	elif not game._auto_spin.visible:
+		_fail("켜졌는데 화살표 고리가 안 보인다")
 	elif not game._marker.visible:
 		_fail("켜졌는데 사냥 자리 표시가 없다")
 	else:
@@ -226,13 +226,23 @@ func _run_scene() -> void:
 	else:
 		print("  켜 둔 채로 누른 자리로 걸어간다 (%.2f m)" % Vector2(me.x, me.z).distance_to(was))
 
-	game._auto_button.pressed.emit()
+	# 켜져 있는 동안 고리가 돈다 — 각이 그대로면 멈춘 그림이다
+	var spun: float = game._auto_spin.rotation
+	for i in 5:
+		await process_frame
+	if is_equal_approx(game._auto_spin.rotation, spun):
+		_fail("자동사냥을 켰는데 화살표가 안 돈다 (각 %.2f 그대로)" % spun)
+	else:
+		print("  자동사냥 고리가 돈다 (%.2f → %.2f)" % [spun, game._auto_spin.rotation])
+
+	game._auto_cell.find_child("hit", true, false).pressed.emit()
 	await process_frame
 	if bool(me.get("auto", false)):
 		_fail("다시 눌렀는데 안 꺼졌다")
-	if game._auto_button.text.contains("켜짐"):
-		_fail("껐는데 단추 글자가 '%s'" % game._auto_button.text)
+	if game._auto_spin.visible:
+		_fail("껐는데 화살표 고리가 남아 있다")
 
+	await _case_status(game)
 	await _case_bag(game)
 	await _case_skills(game)
 
@@ -242,6 +252,61 @@ func _run_scene() -> void:
 	else:
 		print("UI: %d개 실패" % _failed)
 		quit(1)
+
+
+## 왼쪽 위 상태판과 오른쪽 위 메뉴 — 자리, 숫자, 누르면 창이 열리나 (2026-09-19 요청).
+## 화면 밖으로 나가거나 서로 겹치는 것은 수치로 잡힌다 — 찍어서 볼 것은 결뿐이다
+func _case_status(game: Node3D) -> void:
+	var me: Dictionary = game._transport.snapshot().players[game._transport.my_id()]
+	var screen := Vector2(1280, 720)
+
+	# 레벨·체력·경험치가 스냅샷을 그대로 보여 준다
+	if game._level_label.text != "Lv.%d" % int(me.level):
+		_fail("레벨 글자가 '%s'" % game._level_label.text)
+	if game._hp_text.text != "%d / %d" % [int(me.hp), int(me.stats.maxHp)]:
+		_fail("체력 글자가 '%s' (스냅샷은 %d/%d)" % [game._hp_text.text, me.hp, me.stats.maxHp])
+	var need := Combat.exp_to_next(int(me.level))
+	if game._exp_bar.max_value != float(maxi(1, need)):
+		_fail("경험치 막대 최대치가 %d 이어야 하는데 %d" % [need, game._exp_bar.max_value])
+
+	# 막대가 줄어든다 — 반쯤 깎아 보고 채움 폭이 아니라 값으로 본다
+	me.hp = int(me.stats.maxHp) / 2
+	await process_frame
+	if game._hp_bar.value != float(me.hp):
+		_fail("체력을 깎았는데 막대가 %d" % game._hp_bar.value)
+
+	# 왼쪽 위 안에 있고 화면 밖으로 안 나간다
+	var hp_rect: Rect2 = game._hp_bar.get_global_rect()
+	var exp_rect: Rect2 = game._exp_bar.get_global_rect()
+	if hp_rect.position.x < 0.0 or hp_rect.position.y < 0.0 or exp_rect.end.x > screen.x / 2.0:
+		_fail("상태판이 왼쪽 위에 안 들어간다: %s / %s" % [hp_rect, exp_rect])
+	if exp_rect.position.y <= hp_rect.position.y:
+		_fail("경험치 막대가 체력 막대 아래가 아니다")
+
+	# 오른쪽 위 메뉴 — 화면 안, 상태판과 안 겹침
+	if game._menu_cells.size() != 2:
+		_fail("오른쪽 위 단추가 2개여야 하는데 %d개" % game._menu_cells.size())
+		return
+	var skill_rect: Rect2 = game._menu_cells[0].get_global_rect()
+	var bag_rect: Rect2 = game._menu_cells[1].get_global_rect()
+	if bag_rect.end.x > screen.x or skill_rect.position.y < 0.0 or bag_rect.position.y > 120.0:
+		_fail("메뉴 단추가 오른쪽 위에 안 붙었다: %s / %s" % [skill_rect, bag_rect])
+	if skill_rect.intersects(exp_rect) or skill_rect.intersects(hp_rect):
+		_fail("메뉴 단추가 상태판과 겹친다")
+
+	# 눌러서 창이 열린다
+	game._menu_cells[0].find_child("hit", true, false).pressed.emit()
+	await process_frame
+	if not game._skill_panel.visible:
+		_fail("오른쪽 위 스킬 단추를 눌렀는데 스킬창이 안 열렸다")
+	game._toggle_skills()
+	game._menu_cells[1].find_child("hit", true, false).pressed.emit()
+	await process_frame
+	if not game._bag_panel.visible:
+		_fail("오른쪽 위 가방 단추를 눌렀는데 가방이 안 열렸다")
+	game._toggle_bag()
+	await process_frame
+	print("  상태판: 체력 %s · 경험치 %s · %s" % [game._hp_text.text, game._exp_text.text, game._level_label.text])
 
 
 ## 가방·장비 창 — 열리나, 칸이 제대로 깔리나, 골라서 낄 수 있나.
@@ -419,11 +484,15 @@ func _case_skills(game: Node3D) -> void:
 		return
 	var first: Rect2 = quick[0].get_global_rect()
 	var last: Rect2 = quick[3].get_global_rect()
-	var middle := (first.position.x + last.end.x) / 2.0
+	# 자동사냥 칸까지 **다섯 칸 한 줄**이 아래 가운데다 (2026-09-19 요청)
+	var auto_rect: Rect2 = game._auto_cell.get_global_rect()
+	var middle := (first.position.x + auto_rect.end.x) / 2.0
 	if absf(middle - screen.x / 2.0) > 2.0 or last.end.y > screen.y or last.end.y < screen.y - 60:
 		_fail("퀵슬롯이 아래 가운데가 아니다: %s ~ %s" % [first, last])
-	if last.intersects(game._auto_button.get_global_rect()):
-		_fail("퀵슬롯이 자동사냥 단추와 겹친다")
+	if last.intersects(auto_rect):
+		_fail("퀵슬롯이 자동사냥 칸과 겹친다")
+	if auto_rect.position.x < last.end.x:
+		_fail("자동사냥 칸이 퀵슬롯 옆이 아니다: %s" % auto_rect)
 
 	# 처음에는 액션바가 비어 있을 수 있다 — 앞의 넷을 올려 두고 시작한다
 	game._send_bar(Skills.for_job(str(me.job)).slice(0, 4))

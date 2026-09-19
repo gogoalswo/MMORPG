@@ -214,6 +214,15 @@ fetch_icon 3335dffd51390210007c5b2eb5a8adb7 skill_tiger_roar
 fetch_icon 844c2e93d9c7b8f9d6c3717b2334b9ca skill_white_tiger
 fetch_icon 3d66ba0be1ec8bec0bc0b2a11fcce4f9 skill_sky_breaker
 fetch_icon 627417215a6f50209f7d0a20cbd1c607 skill_thunder_fall
+# 메인 HUD (2026-09-19). 왼쪽 위 상태판·오른쪽 위 메뉴·자동사냥 칸 조각이다.
+# 막대 채움은 **흰 것 한 장**이고 붉은 체력·금빛 경험치는 색만 입혀 쓴다
+fetch_icon 029c2be72082608b40dfaf00bebe782a ui_portrait    # 초상 테두리 (안쪽을 뚫는다)
+fetch_icon 976675b91690aad8bf6486cb59756a76 ui_bar_frame   # 막대 홈 (안쪽을 뚫는다)
+fetch_icon a44b7c2e62dca25a1f77ab76b1182dbe ui_bar_fill    # 막대 채움 (색은 코드가 입힌다)
+fetch_icon 43a642bb211e382584e79a65547d86d4 ui_icon_skill  # 오른쪽 위 스킬 단추
+fetch_icon c0462e650711225a3abde372e637406a ui_icon_bag    # 오른쪽 위 가방 단추
+fetch_icon a32516d65c3087185bef1c63a9c80425 ui_icon_auto   # 자동사냥 칸
+fetch_icon 0062d6e64d3dcf66ad041979c5001b38 ui_auto_spin   # 자동사냥 고리 (도는 화살표 둘)
 
 node scripts/build-item-icons.mjs
 

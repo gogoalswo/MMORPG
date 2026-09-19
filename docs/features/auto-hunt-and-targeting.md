@@ -212,7 +212,7 @@ tryAutoSkill(...) || (거리 <= attackRange && handleAttack(...))
 |---|---|
 | `godot/world/world.gd` | `set_auto` / `_drive_auto` / `_pick_hunt_target` / `_walk_auto` / `_patrol_auto` / `_take_manual` / `_anchor_here`, 상수 `HUNT_*` · `MANUAL_HOLD_MS` |
 | `godot/net/local_transport.gd` | 메시지 `autoHunt {on}` |
-| `godot/game/game.gd` | 단추와 표시 — `_toggle_auto` / `_refresh_auto` |
+| `godot/game/game.gd` | 칸과 표시 — `_toggle_auto` / `_refresh_auto`. **퀵슬롯 옆 다섯 번째 칸**이고 켜면 화살표 고리가 돈다 (2026-09-19) → [hud.md](hud.md) |
 | `godot/tests/auto_hunt_test.gd` | 반경·붙어서 때리기·순찰·리쉬·끄기·조작 우선 |
 
 ### 반경은 무리 하나 크기로 고정이다 ★

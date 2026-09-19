@@ -24,6 +24,25 @@ const SKILL_CELL := 100
 const SKILL_COLUMNS := 4
 const SKILL_GAP := 10
 const SKILL_INSET := 11
+## 왼쪽 위 상태판. 초상 한 변과 막대 길이 — 1280x720 에서 화면 너비의 1/3 을 안 넘는다
+const STATUS_X := 20
+const STATUS_Y := 18
+const PORTRAIT := 92
+const BAR_W := 300
+const HP_BAR_H := 32
+## 경험치 막대는 체력보다 얇지만 **글자가 들어갈 만큼은 돼야 한다** — 22 로 뒀더니
+## 다섯 자리 숫자가 위아래로 잘렸다 (2026-09-19, 찍어서 봤다)
+const EXP_BAR_H := 27
+## 막대 테두리 안쪽 여백 — 채움이 테를 덮으면 홈이 아니라 판으로 보인다
+const BAR_PAD := 5
+## 오른쪽 위 메뉴 단추 (스킬·가방). 엄지로 누르니 퀵슬롯과 비슷한 크기다
+const MENU_BTN := 84
+const MENU_INSET := 13
+## 자동사냥 고리가 한 바퀴 도는 속도(라디안/초)
+const SPIN_SPEED := 1.6
+## 자동사냥 칸의 아이콘만 더 물린다. 퀵슬롯과 같은 11 로 두면 **고리가 아이콘 위를
+## 덮어** 검도 과녁도 안 보였다 (2026-09-19, 찍어서 봤다)
+const AUTO_INSET := 27
 const ICON_DIR := "res://assets/icons/"
 ## 가방 탭. 0 은 전체, 나머지는 `_tab_keeps` 가 슬롯으로 가른다
 const BAG_TABS := ["전체", "무기", "방어구", "장신구", "재료"]
@@ -45,6 +64,7 @@ var _last_delta := 0.0
 ## 공격 동작을 언제까지 트나 (서버가 준 경직 시간)
 var _swing_until := 0
 var _camera: CameraRig
+## 존 이름·골드·fps·빌드가 적히는 줄. 상태판 아래에 깔린다
 var _label: Label
 var _marker: MeshInstance3D
 
@@ -76,7 +96,12 @@ const MOB_BAR_MS := 5000
 ## 마지막으로 일어난 일 한 줄 (맞았다·레벨 올랐다)
 var _last_event := ""
 var _ui_root: Control
-var _hp_bar: ProgressBar
+## 왼쪽 위 상태판 — 초상 안 레벨, 체력 막대, 경험치 막대
+var _level_label: Label
+var _hp_bar: TextureProgressBar
+var _hp_text: Label
+var _exp_bar: TextureProgressBar
+var _exp_text: Label
 ## 맞았을 때 화면 가장자리가 붉어지는 비네트 (game/hurt_flash.gd)
 var _hurt: HurtFlash
 var _gate_panel: GatePanel
@@ -92,9 +117,14 @@ var _npc_items: Array = []
 var _bar_buttons: Array = []
 ## 칸마다 지난 프레임에 쿨타임이 돌고 있었나 — 끝나는 순간을 잡아 번쩍인다
 var _bar_cooling: Array = []
-## 자동 사냥 토글. 글자와 색은 **서버가 준 me.auto** 로만 정한다 —
-## 눌린 것으로 지레 바꾸면 판정이 거절했을 때 화면만 켜진 채로 남는다
-var _auto_button: Button
+## 자동 사냥 칸. 퀵슬롯 옆에 같은 모양으로 붙는다. 켜짐 표시는 **서버가 준
+## me.auto** 로만 정한다 — 눌린 것으로 지레 바꾸면 판정이 거절했을 때 화면만
+## 켜진 채로 남는다
+var _auto_cell: PanelContainer
+## 켜져 있는 동안 칸 위에서 도는 화살표 고리
+var _auto_spin: TextureRect
+## 오른쪽 위 메뉴 단추 둘 (스킬·가방)
+var _menu_cells: Array = []
 var _skill_panel: PanelContainer
 ## 스킬창. 틀은 한 번 짓고 `_redraw_skills` 가 채운다
 var _skill_big: PanelContainer
@@ -272,21 +302,184 @@ func _build_persistent() -> void:
 	_hurt = HurtFlash.new()
 	_ui_root.add_child(_hurt)
 
-	_label = Label.new()
-	_label.position = Vector2(24, 24)
-	_ui_root.add_child(_label)
+	_build_status()
 
-	_hp_bar = ProgressBar.new()
-	_hp_bar.position = Vector2(24, 150)
-	_hp_bar.size = Vector2(360, 34)
-	_hp_bar.show_percentage = false
-	_ui_root.add_child(_hp_bar)
+	# 존 이름·골드·몬스터 수·fps·빌드. **체력·레벨·경험치는 여기서 지웠다** —
+	# 상태판 막대가 보여 준다. 빌드 표시는 남긴다 (지금 보는 것이 어느 빌드인지)
+	_label = Label.new()
+	_label.position = Vector2(STATUS_X, STATUS_Y + PORTRAIT + 14)
+	_label.add_theme_font_size_override("font_size", 18)
+	_ui_root.add_child(_label)
 
 	_build_gate_panel()
 	_build_npc_panel()
 	_build_skill_bar()
 	_build_skill_panel()
 	_build_bag_panel()
+
+
+## 왼쪽 위 상태판 — 초상·레벨·체력 막대·경험치 막대. 2026-09-19 요청으로
+## 글자 한 줄이던 것을 조각으로 갈아 끼웠다.
+##
+## ```
+## HBox ─ [초상 ui_portrait · 안에 ui_figure · 아래 Lv.N] [VBox ─ 체력 / 경험치]
+## ```
+##
+## **막대 채움은 흰 그림 한 장을 색만 바꿔 쓴다** (`tint_progress`) — 붉은 것과
+## 금빛 것을 따로 뽑으면 같은 광택을 두 번 맞춰야 한다. 조각이 없으면(sync:godot
+## 을 안 돌렸어도) 코드로 그린 테와 흰 판으로 나온다 — 창과 같은 규칙이다
+func _build_status() -> void:
+	var row := HBoxContainer.new()
+	row.position = Vector2(STATUS_X, STATUS_Y)
+	row.add_theme_constant_override("separation", 12)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ui_root.add_child(row)
+
+	var face := PanelContainer.new()
+	face.custom_minimum_size = Vector2(PORTRAIT, PORTRAIT)
+	face.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	face.add_theme_stylebox_override("panel", _frame_box("ui_portrait", 26, 0))
+	row.add_child(face)
+
+	var face_inset := MarginContainer.new()
+	face_inset.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for side in ["left", "right", "top", "bottom"]:
+		face_inset.add_theme_constant_override("margin_" + side, 10)
+	face.add_child(face_inset)
+	_add_icon(face_inset, "ui_figure", PORTRAIT - 20)
+
+	# 레벨은 초상 아래 가운데. PanelContainer 는 자식을 칸 전체에 깔기 때문에
+	# 자리는 정렬로만 잡는다 (칸·창에서 쓰는 것과 같은 방법)
+	_level_label = Label.new()
+	_level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_level_label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	_level_label.add_theme_font_size_override("font_size", 20)
+	_level_label.add_theme_constant_override("outline_size", 6)
+	_level_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	_level_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_level_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	# 테두리 위에 걸치지 않게 아래로 한 뼘 띄운다
+	var level_pad := MarginContainer.new()
+	level_pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	level_pad.add_theme_constant_override("margin_bottom", 9)
+	level_pad.add_child(_level_label)
+	face.add_child(level_pad)
+
+	var bars := VBoxContainer.new()
+	bars.add_theme_constant_override("separation", 7)
+	bars.alignment = BoxContainer.ALIGNMENT_CENTER
+	bars.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(bars)
+
+	var hp := _make_bar(HP_BAR_H, Color("#d2402c"), 18)
+	_hp_bar = hp["bar"]
+	_hp_text = hp["text"]
+	bars.add_child(hp["frame"])
+
+	var exp_bar := _make_bar(EXP_BAR_H, Color("#e8c14a"), 14)
+	_exp_bar = exp_bar["bar"]
+	_exp_text = exp_bar["text"]
+	bars.add_child(exp_bar["frame"])
+
+
+## 막대 하나 — 홈(9조각) 안에 채움을 깔고 그 위에 숫자를 얹는다.
+## `{"frame": PanelContainer, "bar": TextureProgressBar, "text": Label}`
+func _make_bar(height: int, tint: Color, font: int) -> Dictionary:
+	var frame := PanelContainer.new()
+	frame.custom_minimum_size = Vector2(BAR_W, height)
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame.add_theme_stylebox_override("panel", _frame_box("ui_bar_frame", 18, BAR_PAD))
+
+	var bar := TextureProgressBar.new()
+	bar.fill_mode = TextureProgressBar.FILL_LEFT_TO_RIGHT
+	# 채움은 끝이 둥근 캡슐이라 통째로 늘이면 끝이 뭉개진다 — 9조각으로 가운데만 늘인다
+	bar.nine_patch_stretch = true
+	bar.set_stretch_margin(SIDE_LEFT, 24)
+	bar.set_stretch_margin(SIDE_RIGHT, 24)
+	var fill := _icon("ui_bar_fill")
+	bar.texture_progress = fill if fill != null else _white(16)
+	bar.tint_progress = tint
+	bar.step = 0.0
+	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame.add_child(bar)
+
+	var text := Label.new()
+	text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	text.add_theme_font_size_override("font_size", font)
+	text.add_theme_constant_override("outline_size", 5)
+	text.add_theme_color_override("font_outline_color", Color.BLACK)
+	text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	text.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bar.add_child(text)
+
+	return {"frame": frame, "bar": bar, "text": text}
+
+
+## 오른쪽 위 메뉴 단추 하나 — `ui_button` 테두리에 심볼을 얹고 누르는 자리를 덮는다.
+## 심볼이 없으면 글자가 대신 나온다
+func _icon_button(icon_name: String, text: String, on_press: Callable) -> PanelContainer:
+	var cell := PanelContainer.new()
+	cell.custom_minimum_size = Vector2(MENU_BTN, MENU_BTN)
+	cell.add_theme_stylebox_override("panel", _frame_box("ui_button", 26, 0))
+
+	var inset := MarginContainer.new()
+	inset.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for side in ["left", "right", "top", "bottom"]:
+		inset.add_theme_constant_override("margin_" + side, MENU_INSET)
+	cell.add_child(inset)
+
+	var texture := _icon(icon_name)
+	if texture != null:
+		var rect := TextureRect.new()
+		rect.texture = texture
+		rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		inset.add_child(rect)
+	else:
+		var label := Label.new()
+		label.text = text
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		inset.add_child(label)
+
+	var hit := Button.new()
+	hit.name = "hit"
+	hit.flat = true
+	hit.tooltip_text = text
+	hit.pressed.connect(on_press)
+	cell.add_child(hit)
+	return cell
+
+
+## 고리 그림이 없을 때 대신 도는 화살표 둘. 칸 둘레를 따라 반원씩 긋고
+## 끝에 삼각 머리를 단다 — 돌리는 것은 부모(`_auto_spin`)가 한다
+class SpinRing extends Control:
+	const ARC := PI * 0.72
+
+	func _draw() -> void:
+		var mid := size / 2.0
+		var radius := minf(size.x, size.y) / 2.0 - 3.0
+		var color := Color(0.45, 0.92, 1.0, 0.95)
+		for half in 2:
+			var from := half * PI + 0.1
+			draw_arc(mid, radius, from, from + ARC, 24, color, 4.0, true)
+			var tip := from + ARC
+			var head := mid + Vector2(cos(tip), sin(tip)) * radius
+			var side := Vector2(-sin(tip), cos(tip))
+			var back := -Vector2(cos(tip), sin(tip))
+			draw_colored_polygon(
+				PackedVector2Array(
+					[
+						head + side * 9.0,
+						head + back * 7.0 + side * 1.0,
+						head + back * 1.0 - side * 7.0,
+					]
+				),
+				color
+			)
 
 
 ## 가방과 장착 창. 웹 클라의 ui/inventory.ts 자리다.
@@ -812,6 +1005,36 @@ func _build_skill_bar() -> void:
 		dock.add_child(cell)
 		_bar_buttons.append(cell)
 		_bar_cooling.append(false)
+
+	# 자동사냥도 같은 칸이다 — 엄지가 퀵슬롯과 같은 높이에서 닿는다 (2026-09-19 요청).
+	# 켜지면 칸 위에서 화살표 고리가 돈다
+	_auto_cell = _make_skill_cell(QUICK_CELL, "ui_skill_slot", _toggle_auto)
+	var auto_icon: TextureRect = _auto_cell.find_child("icon", true, false)
+	auto_icon.texture = _icon("ui_icon_auto")
+	if auto_icon.texture == null:
+		_auto_cell.find_child("text", true, false).text = "자동\n사냥"
+	var auto_inset: MarginContainer = auto_icon.get_parent()
+	for side in ["left", "right", "top", "bottom"]:
+		auto_inset.add_theme_constant_override("margin_" + side, AUTO_INSET)
+	dock.add_child(_auto_cell)
+
+	_auto_spin = TextureRect.new()
+	_auto_spin.texture = _icon("ui_auto_spin")
+	_auto_spin.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_auto_spin.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_auto_spin.visible = false
+	_auto_spin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# 고리 그림이 없으면 코드로 그린 화살표 둘이 돈다 — 에셋을 안 받은 사람도 보여야 한다
+	if _auto_spin.texture == null:
+		var drawn := SpinRing.new()
+		drawn.name = "drawn"
+		drawn.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		drawn.set_anchors_preset(Control.PRESET_FULL_RECT)
+		_auto_spin.add_child(drawn)
+	_auto_cell.add_child(_auto_spin)
+	# 아이콘 바로 위, 글자 아래로 넣는다 — 맨 뒤에 두면 고리가 "자동"·"켜짐" 을 덮는다
+	_auto_cell.move_child(_auto_spin, 1)
+
 	dock.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM, Control.PRESET_MODE_MINSIZE, 20)
 	dock.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	dock.grow_vertical = Control.GROW_DIRECTION_BEGIN
@@ -820,26 +1043,16 @@ func _build_skill_bar() -> void:
 	menu.add_theme_constant_override("separation", 8)
 	_ui_root.add_child(menu)
 
-	_auto_button = Button.new()
-	_auto_button.custom_minimum_size = Vector2(120, 70)
-	_auto_button.text = "자동사냥"
-	_auto_button.pressed.connect(_toggle_auto)
-	menu.add_child(_auto_button)
-
-	var open := Button.new()
-	open.text = "스킬"
-	open.custom_minimum_size = Vector2(100, 70)
-	open.pressed.connect(_toggle_skills)
-	menu.add_child(open)
-
-	var bag := Button.new()
-	bag.text = "가방"
-	bag.custom_minimum_size = Vector2(100, 70)
-	bag.pressed.connect(_toggle_bag)
-	menu.add_child(bag)
-	menu.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, 20)
+	# 오른쪽 위 — 스킬·가방. 아이콘만 남기고 글자를 뺐다 (2026-09-19 요청).
+	# 무엇인지는 그림으로 알린다 — 그림이 없으면 글자가 대신 나온다
+	_menu_cells = [
+		_icon_button("ui_icon_skill", "스킬", _toggle_skills),
+		_icon_button("ui_icon_bag", "가방", _toggle_bag),
+	]
+	for cell in _menu_cells:
+		menu.add_child(cell)
+	menu.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE, 20)
 	menu.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	menu.grow_vertical = Control.GROW_DIRECTION_BEGIN
 
 
 ## 스킬 칸 하나 — 퀵슬롯·창 안 장착 칸·목록 칸·설명 쪽 큰 아이콘이 전부 이것이다.
@@ -1798,6 +2011,10 @@ func _process(delta: float) -> void:
 	_send_input(delta)
 	_draw_state()
 	_tick_aoe()
+	if _auto_spin != null and _auto_spin.visible:
+		# PanelContainer 가 자식 크기를 칸에 맞춰 다시 잡는다 — 축은 그때마다 가운데로
+		_auto_spin.pivot_offset = _auto_spin.size / 2.0
+		_auto_spin.rotation += delta * SPIN_SPEED
 
 
 ## 눌러 둔 자리로 향하는 방향을 만들어 보낸다. **요청일 뿐이고 판정은 World 가 한다.**
@@ -1955,18 +2172,12 @@ func _draw_state() -> void:
 			Vector3(me.x, 0.0, me.z), float(me.hp) / maxf(1.0, float(me.stats.maxHp))
 		)
 
-	_hp_bar.max_value = me.stats.maxHp
-	_hp_bar.value = me.hp
+	_refresh_status(me)
 	_refresh_bar(me)
 	_refresh_auto(me)
 
-	_label.text = "%s   %d레벨   체력 %d/%d   경험치 %d/%d\n골드 %d   몬스터 %d/%d   %d fps   빌드 %s\n%s" % [
+	_label.text = "%s   골드 %d   몬스터 %d/%d   %d fps   빌드 %s\n%s" % [
 		GameData.zone(zone_now).get("name", zone_now),
-		me.level,
-		me.hp,
-		me.stats.maxHp,
-		me.exp,
-		Combat.exp_to_next(int(me.level)),
 		me.get("gold", 0),
 		alive,
 		snap.get("monsters", []).size(),
@@ -2086,6 +2297,20 @@ func _aoe_material(alpha: float) -> StandardMaterial3D:
 
 
 ## 퀵슬롯을 상태에 맞춘다. 쿨타임이 남았으면 어둠을 덮고 남은 초를 적는다
+## 왼쪽 위 상태판을 스냅샷에 맞춘다. 레벨·체력·경험치는 **여기 한 곳에서만** 그린다
+func _refresh_status(me: Dictionary) -> void:
+	_level_label.text = "Lv.%d" % int(me.level)
+	var max_hp := maxf(1.0, float(me.stats.maxHp))
+	_hp_bar.max_value = max_hp
+	_hp_bar.value = float(me.hp)
+	_hp_text.text = "%d / %d" % [int(me.hp), int(max_hp)]
+	# 다음 레벨까지 필요한 양. 만렙이면 0 이 와서 0 으로 나누게 된다
+	var need := maxi(1, Combat.exp_to_next(int(me.level)))
+	_exp_bar.max_value = need
+	_exp_bar.value = mini(int(me.exp), need)
+	_exp_text.text = "%d / %d" % [int(me.exp), need]
+
+
 func _refresh_bar(me: Dictionary) -> void:
 	var bar: Array = me.get("skill_bar", [])
 	var ready_at: Dictionary = me.get("skill_ready_at", {})
@@ -2135,8 +2360,14 @@ func _flash_ready(cell: PanelContainer) -> void:
 ## 가리키면 걸어가는 도중에 표시가 발밑으로 튄다 (앵커가 따라오기 때문이다)
 func _refresh_auto(me: Dictionary) -> void:
 	var on := bool(me.get("auto", false))
-	_auto_button.text = "자동사냥\n켜짐" if on else "자동사냥"
-	_auto_button.modulate = Color("#7ce08a") if on else Color.WHITE
+	# 켜져 있는 동안만 고리가 보이고 돈다 (_process). 끄면 각도를 되돌려
+	# 다음에 켤 때 늘 같은 자리에서 시작한다
+	_auto_spin.visible = on
+	if not on:
+		_auto_spin.rotation = 0.0
+	# 켜진 것은 **고리가 알린다** — 칸까지 초록으로 물들이면 고리와 아이콘이
+	# 한 덩어리로 보여 무엇이 도는지 알 수 없었다 (2026-09-19, 찍어서 봤다)
+	_auto_cell.find_child("badge", true, false).text = "켜짐" if on else "자동"
 	if _target != Vector3.INF or _target_mob != "":
 		return
 	if on:

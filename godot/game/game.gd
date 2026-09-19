@@ -1147,7 +1147,7 @@ func _build_skill_panel() -> void:
 	buttons.add_child(_skill_equip)
 
 
-## 테스트 스위치 단추 — 오른쪽 위. 누르면 World 에 요청하고, 글자는 표의 지금 값을 따른다
+## 테스트 스위치 단추 — 왼쪽 아래 (2026-09-19 에 오른쪽 위에서 옮겼다, 요청). 누르면 World 에 요청하고, 글자는 표의 지금 값을 따른다
 ## (`_refresh_switches`). 스위치를 없애면 이 단추들도 걷는다 → skills.md "테스트 스위치"
 ##
 ## **쿨타임 0 하나만 단다.** 레벨 잠금 해제 단추는 2026-09-19 에 걷었다 (요청).
@@ -1166,8 +1166,8 @@ func _build_test_switches() -> void:
 		column.add_child(button)
 		_switch_buttons[name] = button
 	_refresh_switches()
-	column.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE, 20)
-	column.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	column.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 20)
+	column.grow_vertical = Control.GROW_DIRECTION_BEGIN
 
 
 func _on_switch_pressed(name: String) -> void:

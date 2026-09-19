@@ -47,6 +47,8 @@ func send(message: StringName, payload: Dictionary) -> void:
 			_world.learn_skill(MY_ID, str(payload.get("skill", "")))
 		&"setSkillBar":
 			_world.set_skill_bar(MY_ID, payload.get("bar", []))
+		&"invincible":
+			_world.set_invincible(MY_ID, bool(payload.get("on", false)))
 		&"testSwitch":
 			_world.set_test_switch(str(payload.get("name", "")), bool(payload.get("on", false)))
 		&"skill":

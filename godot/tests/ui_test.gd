@@ -535,8 +535,10 @@ func _case_skills(game: Node3D) -> void:
 		if read.call() != was:
 			_fail("%s 단추를 두 번 눌렀는데 원래대로 안 돌아온다" % name)
 	var corner: Rect2 = game._switch_buttons["cooldownOff"].get_global_rect()
-	if corner.end.x > 1280 or corner.position.y < 0 or corner.position.x < 640:
-		_fail("스위치 단추가 오른쪽 위가 아니다: %s" % corner)
+	if corner.position.x > 40 or corner.end.y > 720 or corner.end.y < 660:
+		_fail("스위치 단추가 왼쪽 아래가 아니다: %s" % corner)
+	if corner.intersects(game._bar_buttons[0].get_global_rect()):
+		_fail("스위치 단추가 퀵슬롯과 겹친다")
 	print("  테스트 스위치 단추 %d개: 켜고 끄기 확인 (%s)" % [game._switch_buttons.size(), corner])
 
 	# 새 문구 글자가 폰트에 있나 (부분집합이라 빠질 수 있다)

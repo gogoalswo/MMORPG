@@ -146,6 +146,9 @@ func join(player_id: String) -> void:
 		"auto_x": float(spawn[0]),
 		"auto_z": float(spawn[1]),
 		"auto_target": "",
+		# --- 테스트: 무적 --- 켜면 몬스터에게 맞아도 HP 가 안 준다.
+		# 존을 옮겨도 유지한다 (테스트 중에 존마다 다시 켜면 번거롭다)
+		"invincible": bool(kept.get("invincible", false)),
 		# 잡을 것이 없을 때 서성이는 자리와 쉬는 시각
 		"auto_patrol_x": float(spawn[0]),
 		"auto_patrol_z": float(spawn[1]),
@@ -709,6 +712,8 @@ func _move_monster(monster: Dictionary, tx: float, tz: float, speed: float, delt
 func _hit_player(player: Dictionary, monster: Dictionary, attack: float = -1.0) -> void:
 	var power := float(monster.attack) if attack < 0.0 else attack
 	var damage := Combat.compute_damage(power, float(player.stats.defense))
+	if bool(player.get("invincible", false)):
+		damage = 0
 	player.hp = maxi(0, int(player.hp) - damage)
 	_events.append({
 		"type": "hit",
@@ -954,6 +959,15 @@ func set_test_switch(name: String, on: bool) -> void:
 		return
 	var label := "쿨타임 0" if name == "cooldownOff" else "레벨 잠금 해제"
 	_events.append({"type": "notice", "text": "%s %s" % [label, "켬" if on else "끔"]})
+
+
+## 테스트용 무적. 맞는 판정·이벤트는 그대로 두고 피해만 0 으로 만든다 (`_hit_player`)
+func set_invincible(player_id: String, on: bool) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	player.invincible = on
+	_events.append({"type": "notice", "text": "무적 %s" % ("켬" if on else "끔")})
 
 
 ## 액션바를 정한다. 배운 것만, 칸 수만큼만 올라간다

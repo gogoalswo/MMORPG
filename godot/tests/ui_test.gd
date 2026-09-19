@@ -541,10 +541,28 @@ func _case_skills(game: Node3D) -> void:
 		_fail("스위치 단추가 퀵슬롯과 겹친다")
 	print("  테스트 스위치 단추 %d개: 켜고 끄기 확인 (%s)" % [game._switch_buttons.size(), corner])
 
+	# 무적 단추 — 왼쪽 아래 줄에 있고, 켜면 맞아도 HP 가 그대로다
+	var world = game._transport._world
+	var hero: Dictionary = world.snapshot().players[game._transport.my_id()]
+	var shield: Rect2 = game._invincible_button.get_global_rect()
+	if shield.position.x > 40 or shield.end.y > corner.position.y:
+		_fail("무적 단추가 쿨타임 단추 위(왼쪽 아래)가 아니다: %s" % shield)
+	game._invincible_button.pressed.emit()
+	if not bool(hero.get("invincible", false)):
+		_fail("무적 단추를 눌렀는데 안 켜졌다")
+	var hp_before := int(hero.hp)
+	world._hit_player(hero, {"id": "test", "attack": 999.0})
+	if int(hero.hp) != hp_before:
+		_fail("무적인데 HP 가 줄었다: %d → %d" % [hp_before, int(hero.hp)])
+	game._invincible_button.pressed.emit()
+	if bool(hero.get("invincible", false)):
+		_fail("무적 단추를 다시 눌렀는데 안 꺼졌다")
+	print("  무적 단추: 켜면 피해 0, 다시 누르면 꺼짐 (%s)" % shield)
+
 	# 새 문구 글자가 폰트에 있나 (부분집합이라 빠질 수 있다)
 	var font: Font = load(FONT)
 	var missing := ""
-	for ch in "장착 해제 취소 스킬 목록 바꿀 칸을 누르세요 요구 레벨 재사용 사거리 주위 대상 배움 습득 테스트 쿨타임 잠금 해제 켬 끔":
+	for ch in "장착 해제 취소 스킬 목록 바꿀 칸을 누르세요 요구 레벨 재사용 사거리 주위 대상 배움 습득 테스트 쿨타임 잠금 해제 켬 끔 무적":
 		if ch != " " and not font.has_char(ch.unicode_at(0)):
 			missing += ch
 	if missing != "":

@@ -94,6 +94,8 @@ var _bar_buttons: Array = []
 var _bar_cooling: Array = []
 ## 테스트 스위치 단추 — 이름 → Button
 var _switch_buttons: Dictionary = {}
+## 테스트 무적 단추. 글자는 **스냅샷(me.invincible)** 만 보고 그린다 (자동사냥과 같다)
+var _invincible_button: Button
 ## 자동 사냥 토글. 글자와 색은 **서버가 준 me.auto** 로만 정한다 —
 ## 눌린 것으로 지레 바꾸면 판정이 거절했을 때 화면만 켜진 채로 남는다
 var _auto_button: Button
@@ -1165,6 +1167,14 @@ func _build_test_switches() -> void:
 		button.pressed.connect(_on_switch_pressed.bind(name))
 		column.add_child(button)
 		_switch_buttons[name] = button
+	# 무적은 플레이어 값이라 표 스위치와 따로 논다 — 요청은 `invincible`
+	_invincible_button = Button.new()
+	_invincible_button.custom_minimum_size = Vector2(230, 52)
+	_invincible_button.add_theme_font_size_override("font_size", 18)
+	_invincible_button.text = "테스트: 무적  끔"
+	_invincible_button.pressed.connect(_toggle_invincible)
+	column.add_child(_invincible_button)
+	column.move_child(_invincible_button, 0)
 	_refresh_switches()
 	column.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 20)
 	column.grow_vertical = Control.GROW_DIRECTION_BEGIN
@@ -1176,6 +1186,17 @@ func _on_switch_pressed(name: String) -> void:
 	_refresh_switches()
 	if _skill_panel.visible:
 		_redraw_skills()
+
+
+func _toggle_invincible() -> void:
+	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
+	_transport.send(&"invincible", {"on": not bool(me.get("invincible", false))})
+
+
+func _refresh_invincible(me: Dictionary) -> void:
+	var on := bool(me.get("invincible", false))
+	_invincible_button.text = "테스트: 무적  %s" % ("켬" if on else "끔")
+	_invincible_button.modulate = Color("#7ce08a") if on else Color.WHITE
 
 
 func _refresh_switches() -> void:
@@ -2000,6 +2021,7 @@ func _draw_state() -> void:
 	_hp_bar.value = me.hp
 	_refresh_bar(me)
 	_refresh_auto(me)
+	_refresh_invincible(me)
 
 	_label.text = "%s   %d레벨   체력 %d/%d   경험치 %d/%d\n골드 %d   몬스터 %d/%d   %d fps   빌드 %s\n%s" % [
 		GameData.zone(zone_now).get("name", zone_now),

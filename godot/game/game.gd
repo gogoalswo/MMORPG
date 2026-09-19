@@ -92,6 +92,8 @@ var _npc_items: Array = []
 var _bar_buttons: Array = []
 ## 칸마다 지난 프레임에 쿨타임이 돌고 있었나 — 끝나는 순간을 잡아 번쩍인다
 var _bar_cooling: Array = []
+## 테스트 스위치 단추 — 이름 → Button
+var _switch_buttons: Dictionary = {}
 ## 자동 사냥 토글. 글자와 색은 **서버가 준 me.auto** 로만 정한다 —
 ## 눌린 것으로 지레 바꾸면 판정이 거절했을 때 화면만 켜진 채로 남는다
 var _auto_button: Button
@@ -286,6 +288,7 @@ func _build_persistent() -> void:
 	_build_npc_panel()
 	_build_skill_bar()
 	_build_skill_panel()
+	_build_test_switches()
 	_build_bag_panel()
 
 
@@ -1142,6 +1145,40 @@ func _build_skill_panel() -> void:
 	buttons.add_child(_skill_unequip)
 	_skill_equip = _make_button("장착", _on_skill_equip)
 	buttons.add_child(_skill_equip)
+
+
+## 테스트 스위치 단추 — 오른쪽 위. 누르면 World 에 요청하고, 글자는 표의 지금 값을 따른다
+## (`_refresh_switches`). 스위치를 없애면 이 단추들도 걷는다 → skills.md "테스트 스위치"
+func _build_test_switches() -> void:
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 6)
+	_ui_root.add_child(column)
+	_switch_buttons.clear()
+	for name in Skills.SWITCHES:
+		var button := Button.new()
+		button.custom_minimum_size = Vector2(230, 52)
+		button.add_theme_font_size_override("font_size", 18)
+		button.pressed.connect(_on_switch_pressed.bind(name))
+		column.add_child(button)
+		_switch_buttons[name] = button
+	_refresh_switches()
+	column.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE, 20)
+	column.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+
+
+func _on_switch_pressed(name: String) -> void:
+	var on := Skills.cooldown_off() if name == "cooldownOff" else Skills.unlock_all()
+	_transport.send(&"testSwitch", {"name": name, "on": not on})
+	_refresh_switches()
+	if _skill_panel.visible:
+		_redraw_skills()
+
+
+func _refresh_switches() -> void:
+	for name in _switch_buttons:
+		var on := Skills.cooldown_off() if name == "cooldownOff" else Skills.unlock_all()
+		var label := "테스트: 쿨타임 0" if name == "cooldownOff" else "테스트: 레벨 잠금 해제"
+		_switch_buttons[name].text = "%s  %s" % [label, "켬" if on else "끔"]
 
 
 ## 테두리 상자 안에 세로 줄을 하나 만들어 돌려준다.

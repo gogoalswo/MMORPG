@@ -522,10 +522,25 @@ func _case_skills(game: Node3D) -> void:
 	if panel.visible:
 		_fail("닫기를 눌렀는데 스킬창이 안 닫혔다")
 
+	# 테스트 스위치 단추 — 누르면 뒤집히고, 다시 누르면 돌아온다
+	for name in Skills.SWITCHES:
+		var read := func() -> bool: return Skills.cooldown_off() if name == "cooldownOff" else Skills.unlock_all()
+		var was: bool = read.call()
+		game._switch_buttons[name].pressed.emit()
+		if read.call() == was or not game._switch_buttons[name].text.ends_with("켬" if not was else "끔"):
+			_fail("%s 단추를 눌렀는데 안 바뀐다: %s" % [name, game._switch_buttons[name].text])
+		game._switch_buttons[name].pressed.emit()
+		if read.call() != was:
+			_fail("%s 단추를 두 번 눌렀는데 원래대로 안 돌아온다" % name)
+	var corner: Rect2 = game._switch_buttons["cooldownOff"].get_global_rect()
+	if corner.end.x > 1280 or corner.position.y < 0 or corner.position.x < 640:
+		_fail("스위치 단추가 오른쪽 위가 아니다: %s" % corner)
+	print("  테스트 스위치 단추 %d개: 켜고 끄기 확인 (%s)" % [Skills.SWITCHES.size(), corner])
+
 	# 새 문구 글자가 폰트에 있나 (부분집합이라 빠질 수 있다)
 	var font: Font = load(FONT)
 	var missing := ""
-	for ch in "장착 해제 취소 스킬 목록 바꿀 칸을 누르세요 요구 레벨 재사용 사거리 주위 대상 배움 습득":
+	for ch in "장착 해제 취소 스킬 목록 바꿀 칸을 누르세요 요구 레벨 재사용 사거리 주위 대상 배움 습득 테스트 쿨타임 잠금 해제 켬 끔":
 		if ch != " " and not font.has_char(ch.unicode_at(0)):
 			missing += ch
 	if missing != "":

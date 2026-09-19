@@ -948,6 +948,14 @@ func learn_skill(player_id: String, skill_id: String) -> void:
 	_events.append({"type": "skills", "learned": player.skills.duplicate()})
 
 
+## 테스트 스위치(쿨타임 0 · 레벨 잠금 해제)를 켜고 끈다. 이름은 Skills.SWITCHES 만 받는다
+func set_test_switch(name: String, on: bool) -> void:
+	if not Skills.set_switch(name, on):
+		return
+	var label := "쿨타임 0" if name == "cooldownOff" else "레벨 잠금 해제"
+	_events.append({"type": "notice", "text": "%s %s" % [label, "켬" if on else "끔"]})
+
+
 ## 액션바를 정한다. 배운 것만, 칸 수만큼만 올라간다
 func set_skill_bar(player_id: String, ids: Array) -> void:
 	var player: Dictionary = _players.get(player_id, {})

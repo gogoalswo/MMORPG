@@ -90,6 +90,8 @@ var _npc_tab := ""
 var _npc_items: Array = []
 ## 액션바 4칸. 눌리면 그 스킬을 쓴다
 var _bar_buttons: Array = []
+## 칸마다 지난 프레임에 쿨타임이 돌고 있었나 — 끝나는 순간을 잡아 번쩍인다
+var _bar_cooling: Array = []
 ## 자동 사냥 토글. 글자와 색은 **서버가 준 me.auto** 로만 정한다 —
 ## 눌린 것으로 지레 바꾸면 판정이 거절했을 때 화면만 켜진 채로 남는다
 var _auto_button: Button
@@ -806,8 +808,10 @@ func _build_skill_bar() -> void:
 	_bar_buttons.clear()
 	for slot in int(GameData.combat().get("skillBarSize", 4)):
 		var cell := _make_skill_cell(QUICK_CELL, "ui_skill_slot", _on_bar_pressed.bind(slot))
+		cell.find_child("key", true, false).text = str(slot + 1)
 		dock.add_child(cell)
 		_bar_buttons.append(cell)
+		_bar_cooling.append(false)
 	dock.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM, Control.PRESET_MODE_MINSIZE, 20)
 	dock.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	dock.grow_vertical = Control.GROW_DIRECTION_BEGIN
@@ -879,17 +883,25 @@ func _make_skill_cell(size: int, frame: String, on_press: Callable) -> PanelCont
 	text.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	inset.add_child(text)
 
-	# 쿨타임 — 남은 만큼 어둡게, 시계 방향으로 걷힌다
+	# 쿨타임 — 남은 만큼 어둡다. 12시에서 **시계 방향으로 밝은 쪽이 넓어진다**
+	# (어둠을 반시계로 채워야 경계가 시계 방향으로 돈다)
 	var cool := TextureProgressBar.new()
 	cool.name = "cool"
-	cool.fill_mode = TextureProgressBar.FILL_CLOCKWISE
+	cool.fill_mode = TextureProgressBar.FILL_COUNTER_CLOCKWISE
 	cool.texture_progress = _white(size - SKILL_INSET * 2)
-	cool.tint_progress = Color(0, 0, 0, 0.62)
+	cool.tint_progress = Color(0, 0, 0, 0.68)
 	cool.max_value = 1.0
 	cool.step = 0.0
 	cool.visible = false
 	cool.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	inset.add_child(cool)
+
+	# 어둠과 밝은 쪽의 경계에서 도는 빛 바늘
+	var edge := CoolEdge.new()
+	edge.name = "edge"
+	edge.visible = false
+	edge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	inset.add_child(edge)
 
 	var secs := Label.new()
 	secs.name = "secs"
@@ -901,19 +913,44 @@ func _make_skill_cell(size: int, frame: String, on_press: Callable) -> PanelCont
 	secs.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	inset.add_child(secs)
 
+	# 다 쓰고 돌아왔을 때 번쩍 — 쿨타임이 끝난 것을 눈으로 알린다 (_flash_ready)
+	var flash := ColorRect.new()
+	flash.name = "flash"
+	flash.color = Color(1.0, 0.95, 0.8, 0.0)
+	flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	inset.add_child(flash)
+
+	# 가운데 아래 — 목록 칸의 "Lv.N 습득"
 	var badge := Label.new()
 	badge.name = "badge"
-	badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	badge.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
-	badge.add_theme_font_size_override("font_size", 17)
+	badge.add_theme_font_size_override("font_size", 15)
 	badge.add_theme_constant_override("outline_size", 5)
 	badge.add_theme_color_override("font_outline_color", Color.BLACK)
 	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# 왼쪽 위 — 퀵슬롯 단축키 번호
+	var key := Label.new()
+	key.name = "key"
+	key.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	key.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	key.add_theme_font_size_override("font_size", 20)
+	key.add_theme_constant_override("outline_size", 6)
+	key.add_theme_color_override("font_outline_color", Color.BLACK)
+	key.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var badge_pad := MarginContainer.new()
 	badge_pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	badge_pad.add_theme_constant_override("margin_right", SKILL_INSET)
-	badge_pad.add_theme_constant_override("margin_bottom", SKILL_INSET - 4)
-	badge_pad.add_child(badge)
+	badge_pad.add_theme_constant_override("margin_left", SKILL_INSET + 2)
+	badge_pad.add_theme_constant_override("margin_right", 4)
+	badge_pad.add_theme_constant_override("margin_top", SKILL_INSET)
+	badge_pad.add_theme_constant_override("margin_bottom", SKILL_INSET - 3)
+	var badge_layer := Control.new()
+	badge_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	badge_pad.add_child(badge_layer)
+	badge.set_anchors_preset(Control.PRESET_FULL_RECT)
+	key.set_anchors_preset(Control.PRESET_FULL_RECT)
+	badge_layer.add_child(badge)
+	badge_layer.add_child(key)
 	cell.add_child(badge_pad)
 
 	var pick := Panel.new()
@@ -949,6 +986,24 @@ func _pick_box() -> StyleBox:
 	flat.set_border_width_all(4)
 	flat.set_corner_radius_all(6)
 	return flat
+
+
+## 쿨타임 경계의 빛 바늘. 가운데에서 칸 끝까지 긋고, 끝에 작은 불씨를 단다.
+## `ratio` 는 남은 몫(1 → 0) — 어둠이 12시에서 반시계로 그만큼 덮고 있으므로
+## 바늘은 12시에서 반시계로 ratio 바퀴 돈 자리다. 줄어들수록 시계 방향으로 12시에 다가간다
+class CoolEdge extends Control:
+	var ratio := 0.0
+
+	func _draw() -> void:
+		var half := size / 2.0
+		var angle := -PI / 2.0 - ratio * TAU
+		var dir := Vector2(cos(angle), sin(angle))
+		# 네모 칸 끝까지 닿는 길이
+		var reach := minf(half.x / maxf(absf(dir.x), 0.001), half.y / maxf(absf(dir.y), 0.001))
+		var tip := half + dir * reach
+		draw_line(half, tip, Color(0.55, 0.85, 1.0, 0.28), 7.0, true)
+		draw_line(half, tip, Color(0.9, 0.97, 1.0, 0.95), 2.0, true)
+		draw_circle(tip, 4.0, Color(1.0, 1.0, 1.0, 0.9))
 
 
 ## 쿨타임 어둠에 쓰는 흰 판. 둥근 채우기는 늘이면 안 그려지므로 칸 크기 그대로 만든다
@@ -1089,10 +1144,15 @@ func _build_skill_panel() -> void:
 	buttons.add_child(_skill_equip)
 
 
-## 테두리 상자(ui_subpanel) 안에 세로 줄을 하나 만들어 돌려준다
+## 테두리 상자 안에 세로 줄을 하나 만들어 돌려준다.
+##
+## **`ui_subpanel` 을 쓰지 않는다.** ★ 그 그림은 가운데에 얇은 판이 있고 둘레가 넓은
+## 빛번짐이라, 9조각으로 늘이면 판은 글자보다 작게, 빛번짐만 상자 크기로 그려진다 —
+## 능력·설명 글자가 상자 밖으로 삐져나와 보였다 (2026-09-19). 테가 그림 가장자리에
+## 붙어 있는 `ui_slot` 은 어떤 크기로 늘여도 테가 상자 끝에 온다
 func _sub_box(parent: Node, fill: bool) -> VBoxContainer:
 	var box := PanelContainer.new()
-	box.add_theme_stylebox_override("panel", _frame_box("ui_subpanel", 24, 8))
+	box.add_theme_stylebox_override("panel", _frame_box("ui_slot", 26, 10))
 	if fill:
 		box.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	parent.add_child(box)
@@ -1153,8 +1213,9 @@ func _redraw_skills() -> void:
 		var cell: PanelContainer = _skill_cells[index]
 		var skill: Dictionary = Skills.all().get(id, {})
 		_fill_skill_cell(cell, id, "")
+		# 안 배운 것만 "Lv.N 습득". 배웠으면 지운다. 장착 번호는 적지 않는다 — 번호는 퀵슬롯에 있다
 		var badge: Label = cell.find_child("badge", true, false)
-		badge.text = "%d번" % (bar.find(id) + 1) if id in bar else "Lv.%d" % int(skill.get("reqLevel", 1))
+		badge.text = "" if id in learned else "Lv.%d 습득" % int(skill.get("reqLevel", 1))
 		# 아직 배울 수 없는 것은 흐리게
 		var open: bool = id in learned or Skills.can_learn(skill, job, level)
 		cell.modulate = Color.WHITE if open else Color(0.5, 0.5, 0.5)
@@ -1582,6 +1643,13 @@ func _build_zone(zone_id: String) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	# 퀵슬롯 단축키 1~4. 칸 왼쪽 위에 적힌 번호와 같다
+	if event is InputEventKey and event.pressed and not event.echo:
+		var slot: int = event.keycode - KEY_1
+		if slot >= 0 and slot < _bar_buttons.size():
+			_on_bar_pressed(slot)
+			get_viewport().set_input_as_handled()
+			return
 	# 터치는 기본 설정이 마우스로 바꿔 주므로 이 한 줄이 폰도 덮는다
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		# 죽어 있으면 어딜 눌러도 부활 요청이다
@@ -2029,13 +2097,33 @@ func _refresh_bar(me: Dictionary) -> void:
 		var cool: TextureProgressBar = cell.find_child("cool", true, false)
 		var secs: Label = cell.find_child("secs", true, false)
 		var left := int(ready_at.get(id, 0)) - now if id != "" else 0
-		cool.visible = left > 0
-		if left > 0:
+		var cooling := left > 0
+		cool.visible = cooling
+		var edge: CoolEdge = cell.find_child("edge", true, false)
+		edge.visible = cooling
+		if cooling:
 			var total := maxf(float(Skills.all().get(id, {}).get("cooldown", 0)), float(left))
 			cool.value = left / total
-			secs.text = str(ceili(left / 1000.0))
+			edge.ratio = cool.value
+			edge.queue_redraw()
+			# 1초 아래로는 소수 한 자리 — 막 돌아오는 순간이 보인다
+			secs.text = "%.1f" % (left / 1000.0) if left < 1000 else str(ceili(left / 1000.0))
 		else:
 			secs.text = ""
+		if _bar_cooling[slot] and not cooling:
+			_flash_ready(cell)
+		_bar_cooling[slot] = cooling
+
+
+## 쿨타임이 끝났다 — 칸이 번쩍이며 살짝 튀었다 가라앉는다
+func _flash_ready(cell: PanelContainer) -> void:
+	var flash: ColorRect = cell.find_child("flash", true, false)
+	cell.pivot_offset = cell.size / 2.0
+	var tween := cell.create_tween().set_parallel()
+	flash.color.a = 0.75
+	tween.tween_property(flash, "color:a", 0.0, 0.35).set_ease(Tween.EASE_OUT)
+	cell.scale = Vector2.ONE * 1.12
+	tween.tween_property(cell, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
 ## 자동 사냥 버튼 글자와 사냥 자리 표시. **상태는 스냅샷(me.auto)만 보고 그린다** —

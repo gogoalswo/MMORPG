@@ -443,8 +443,17 @@ func _case_skills(game: Node3D) -> void:
 	game._refresh_bar(me)
 	if not quick[0].find_child("cool", true, false).visible or quick[0].find_child("secs", true, false).text != "3":
 		_fail("쿨타임 3초가 퀵슬롯에 안 나온다")
+	if not quick[0].find_child("edge", true, false).visible:
+		_fail("쿨타임이 도는데 경계 바늘이 없다")
 	me.skill_ready_at[used] = 0
 	game._refresh_bar(me)
+	# 끝나는 순간 번쩍인다
+	if quick[0].find_child("flash", true, false).color.a <= 0.0:
+		_fail("쿨타임이 끝났는데 칸이 안 번쩍인다")
+	# 단축키 번호가 왼쪽 위에 1~4
+	for slot in quick.size():
+		if quick[slot].find_child("key", true, false).text != str(slot + 1):
+			_fail("%d번 퀵슬롯에 단축키 번호가 없다" % (slot + 1))
 
 	# 빈 칸을 누르면 창이 열린다
 	game._toggle_skills()
@@ -480,6 +489,12 @@ func _case_skills(game: Node3D) -> void:
 		_fail("고른 스킬(%s)이 설명에 안 나온다: '%s'" % [last_id, game._skill_name.text])
 	if not game._skill_cells[ids.size() - 1].get_node("pick").visible:
 		_fail("고른 칸에 테두리가 안 뜬다")
+	# 배운 것은 레벨 글자를 지우고, 안 배운 것은 "Lv.N 습득"
+	for index in ids.size():
+		var badge: String = game._skill_cells[index].find_child("badge", true, false).text
+		var want := "" if str(ids[index]) in me.skills else "Lv.%d 습득" % int(Skills.all()[str(ids[index])].reqLevel)
+		if badge != want:
+			_fail("%s 칸 글자가 '%s' 여야 하는데 '%s'" % [ids[index], want, badge])
 
 	# 해제 → 빈 칸에 장착 → 가득 찼으면 바꿀 칸을 골라 끼운다
 	var bar: Array = me.skill_bar
@@ -510,7 +525,7 @@ func _case_skills(game: Node3D) -> void:
 	# 새 문구 글자가 폰트에 있나 (부분집합이라 빠질 수 있다)
 	var font: Font = load(FONT)
 	var missing := ""
-	for ch in "장착 해제 취소 스킬 목록 바꿀 칸을 누르세요 요구 레벨 재사용 사거리 주위 대상 배움 번":
+	for ch in "장착 해제 취소 스킬 목록 바꿀 칸을 누르세요 요구 레벨 재사용 사거리 주위 대상 배움 습득":
 		if ch != " " and not font.has_char(ch.unicode_at(0)):
 			missing += ch
 	if missing != "":

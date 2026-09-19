@@ -10,7 +10,7 @@ extends RefCounted
 ## 텍스처 성질(타일 크기·러프니스·평균색)은 존이 아니라 **이미지에 딸린 것**이라
 ## `zones.json` 의 `groundLooks` 에서 읽는다 (shared 의 `GROUND_LOOKS`).
 
-const DIR := "res://assets/ground/"
+const DIR := "res://assets/textures/"
 
 ## 바닥 반사율 배율. 바르코 이미지는 이미 화면에 보일 밝기로 그려져 있어서
 ## 그대로 깔면 눈·모래가 하얗게 날아가 무늬가 사라진다

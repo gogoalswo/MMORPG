@@ -78,7 +78,9 @@ const jobs = [
   { names: UI, from: join(ROOT, 'public', 'assets', 'ui'), to: join(ROOT, 'godot', 'assets', 'ui') },
   { names: FONTS, from: join(ROOT, 'public', 'assets', 'fonts'), to: join(ROOT, 'godot', 'assets', 'fonts') },
   { names: ICONS, from: join(ROOT, 'public', 'assets', 'icons'), to: join(ROOT, 'godot', 'assets', 'icons') },
-  { names: GROUND, from: join(ROOT, 'public', 'assets', 'textures'), to: join(ROOT, 'godot', 'assets', 'ground') },
+  // 보내는 쪽과 받는 쪽 폴더 이름을 같게 둔다 — play.bat 이 public/assets 를 통째로
+  // 미러링하므로, 이름이 어긋나면 PC 에서만 바닥이 빠진다 (2026-09-19 에 맞췄다)
+  { names: GROUND, from: join(ROOT, 'public', 'assets', 'textures'), to: join(ROOT, 'godot', 'assets', 'textures') },
 ];
 
 let copied = 0;

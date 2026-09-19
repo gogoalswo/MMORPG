@@ -483,8 +483,16 @@ set GODOT_DIR=D:\godot  둘 곳을 바꾼다 (기본 C:\godot)
    (86MB). 푼 뒤 `godot.exe` 로 이름을 바꾸고 **콘솔용 exe(`..._console.exe`)와 zip 은 지운다.**
    두 번째 실행부터는 통째로 건너뛴다.
 2. `git pull --ff-only` — **지금 체크아웃된 브랜치**를 받는다. git 이 없으면 있는 코드로 돈다.
-3. 에셋을 `godot/assets` 로 복사한다. `npm run sync:godot` 과 달리 **텍스처를 512 로 줄이지
-   않는다** — 줄이는 건 폰 pck 용량 때문이고 PC 는 원본이 낫다. 덕분에 Node 도 `sharp` 도 필요 없다.
+3. **`public/assets` 를 통째로 미러링한다** (`xcopy /E`). 폴더를 손으로 나열하다가
+   `icons/`·`ui/` 를 빠뜨려 PC 실행이 빨간 오류와 맨 글자로 떴다 (2026-09-19). 이제
+   **새 에셋 폴더가 생겨도 이 배치는 안 고쳐도 된다.**
+   - 그래서 양쪽 폴더 이름을 같게 맞췄다 — 고도가 찾던 `assets/ground` 를
+     **`assets/textures`** 로 바꿔 원본(`public/assets/textures`)과 같게 했다.
+     이름이 어긋나면 미러링에 예외가 생기고, 예외가 바로 빠뜨리는 자리가 된다.
+   - `npm run sync:godot` 과 달리 **텍스처를 512 로 줄이지 않고 빼는 것도 없다** —
+     줄이고 거르는 건 폰 pck 용량 때문이고 PC 는 원본이 낫다. Node 도 `sharp` 도 필요 없다.
+   - 그래서 `play.bat` 뒤에 바로 `npm run test:godot` 을 돌리면 `model_test` 가
+     "텍스처가 1024px 다" 로 걸린다. 검사가 맞는 것이니 **테스트 전에 `npm run sync:godot`** 을 돌린다.
 4. `--headless --import` **를 반드시 먼저 돌린다.** 임포트 캐시(`godot/.godot/`)가 없으면
    `class_name` 을 못 찾아 `game.gd` 가 파싱 오류로 죽는다 (2026-09-17 에 확인).
 5. `godot --path godot` 으로 띄운다.

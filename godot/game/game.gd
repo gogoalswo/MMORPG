@@ -499,22 +499,29 @@ func _frame_box(name: String, margin: int, content: int) -> StyleBox:
 
 ## 아이콘 한 장. **없으면 null** — 부르는 쪽이 글자나 코드로 그린 판으로 대신한다.
 ##
-## **`ResourceLoader.exists` 로 먼저 거르지 않는다.** ★ 익스포트에서 PNG 는
-## `.ctex` 로 구워져 들어가고 원본 경로는 리맵으로만 남는데, **웹 템플릿에는
-## 원본 `.png` 를 알아보는 로더가 없어 `exists` 가 false 를 준다.** 그래서 폰에서만
-## 아이콘이 전부 글자로 나왔다 (2026-09-18). 헤드리스로는 잡히지 않는다 —
-## 테스트는 에디터 바이너리로 도는데 거기에는 그 로더가 있다. 바닥(`.ktx2`)은
-## 임포트를 안 거쳐 원본이 그대로 있어서 같은 방식이 거기서는 통했다.
+## **있는지는 `.import` 가 있는지로 본다.** ★ 두 번 틀린 자리다 (2026-09-18):
 ##
-## `load` 는 리맵을 따라가므로 그대로 부르고 null 인지로 가른다. 한 번 해 본
-## 결과는 이름마다 기억한다 — 없을 때 칸마다 오류가 찍히지 않도록
+## | 방법 | PC(에셋 있음) | PC(sync 안 함) | 웹 익스포트 |
+## |---|---|---|---|
+## | `ResourceLoader.exists` | 있다 | 없다 | **없다고 한다** — 폰에서 전부 글자로 나왔다 |
+## | 안 거르고 `load` | 있다 | **오류 쏟아짐** | 있다 |
+## | `.png` 또는 `.png.import` | 있다 | 없다 | 있다 |
+##
+## 익스포트에서 PNG 는 `.ctex` 로 구워져 들어가고 원본 `.png` 는 빠지는데
+## **`.png.import` 는 팩에 그대로 들어간다.** `load` 는 리맵을 따라가므로,
+## 임포트 파일이 있으면 불러도 된다. 바닥(`.ktx2`)은 임포트를 안 거쳐 원본이
+## 그대로 있어서 예전 방식이 거기서는 통했다.
+##
+## 한 번 해 본 결과는 이름마다 기억한다 — 칸마다 다시 찾지 않도록
 func _icon(name: String) -> Texture2D:
 	if name == "":
 		return null
 	if _icon_cache.has(name):
 		return _icon_cache[name]
 	var path := ICON_DIR + name + ".png"
-	var texture := ResourceLoader.load(path, "Texture2D", ResourceLoader.CACHE_MODE_REUSE) as Texture2D
+	var texture: Texture2D = null
+	if FileAccess.file_exists(path) or FileAccess.file_exists(path + ".import"):
+		texture = load(path) as Texture2D
 	_icon_cache[name] = texture
 	return texture
 

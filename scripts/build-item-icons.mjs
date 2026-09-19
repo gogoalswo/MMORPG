@@ -59,6 +59,12 @@ const FRAME_SIZE = {
   'ui_figure.png': 384,
   'ui_skill_slot.png': 128,
   'ui_slot_pick.png': 128,
+  // HUD 조각 (2026-09-19). 막대는 가로로 길어 긴 변을 256 으로 맞춘다 —
+  // 9조각으로 늘여 쓰므로 끝 모서리가 원본 픽셀 크기 그대로 그려진다
+  'ui_portrait.png': 192,
+  'ui_bar_frame.png': 256,
+  'ui_bar_fill.png': 256,
+  'ui_auto_spin.png': 192,
 };
 /**
  * **배경을 걷지 않는 것.** 스킬 아이콘은 칸을 꽉 채운 그림이라 가장자리가 곧 그림이다.
@@ -77,7 +83,15 @@ const TRIM = /^ui_/;
  * 번져 들어가는 채우기로는 닿지 못한다 (테가 막고 있다). 이 이름들은 한가운데에서
  * 한 번 더 번지게 한다. 창 테두리(frame_panel)는 **안쪽을 남긴다** — 그게 창 바탕이다
  */
-const HOLLOW = new Set(['frame_slot.png', 'ui_slot_pick.png']);
+const HOLLOW = new Set([
+  'frame_slot.png',
+  'ui_slot_pick.png',
+  // HUD 조각 — 초상 안쪽·막대 홈 안쪽·고리 한가운데는 **비어야 한다**.
+  // 채움과 초상 그림이 그 자리에 들어가고, 고리는 칸 아이콘 위에서 돈다
+  'ui_portrait.png',
+  'ui_bar_frame.png',
+  'ui_auto_spin.png',
+]);
 
 /** 알파가 남아 있는 칸의 바깥 테두리 상자 */
 function alphaBounds(data, width, height) {

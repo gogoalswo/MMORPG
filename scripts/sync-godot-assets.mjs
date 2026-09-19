@@ -50,6 +50,10 @@ const ICONS = [
   'ui_skill_slot.png', 'ui_slot_pick.png',
   'skill_rising_kick.png', 'skill_tiger_roar.png', 'skill_white_tiger.png',
   'skill_sky_breaker.png', 'skill_thunder_fall.png',
+  // 메인 HUD — 왼쪽 위 상태판(초상 테두리·막대 홈·막대 채움),
+  // 오른쪽 위 메뉴 단추 둘, 자동사냥 칸과 켜졌을 때 도는 고리
+  'ui_portrait.png', 'ui_bar_frame.png', 'ui_bar_fill.png',
+  'ui_icon_skill.png', 'ui_icon_bag.png', 'ui_icon_auto.png', 'ui_auto_spin.png',
 ];
 
 /**

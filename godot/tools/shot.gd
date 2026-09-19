@@ -32,6 +32,8 @@ const PORTAL_LOOK := 2.4
 const PORTAL_DISTANCE := 9.0
 ## 몇 프레임째를 찍나. 소용돌이는 계속 돌므로 한 바퀴를 고르게 나눈다
 const PORTAL_SHOTS := [4, 12, 20, 28]
+## `hud` 로 찍을 때. 고리가 도는지 보려면 몇 프레임 떨어뜨려 찍어야 한다
+const HUD_SHOTS := [6, 20, 40]
 
 
 func _init() -> void:
@@ -53,6 +55,12 @@ func _run() -> void:
 	# 차원문은 스킬이 아니라 **늘 켜져 있는** 이펙트다 — 시전 대신 문 앞에 세우고 찍는다
 	if skill == "portal":
 		await _portal(game)
+		return
+
+	# HUD 는 시전할 것이 없다 — 액션바를 채우고 자동사냥을 켠 채로 찍는다
+	# (켜져 있어야 자동사냥 칸에서 고리가 돈다)
+	if skill == "hud":
+		await _hud(game)
 		return
 
 	var player: Dictionary = game._transport._world._players[game._transport.my_id()]
@@ -82,6 +90,35 @@ func _run() -> void:
 			img.save_png("res://../logs/shot_%02d.png" % frame)
 			taken += 1
 			print("logs/shot_%02d.png  (%.2f초쯤)" % [frame, float(frame) * 0.15 * SLOW])
+	quit(0)
+
+
+## 메인 HUD — 왼쪽 위 상태판, 오른쪽 위 메뉴, 아래 가운데 퀵슬롯과 자동사냥 칸.
+## **고리가 도는 것을 보려면 여러 장이 필요하다** — 한 장만으로는 멈춘 그림과 같다
+func _hud(game: Node3D) -> void:
+	var player: Dictionary = game._transport._world._players[game._transport.my_id()]
+	player["level"] = LEVEL
+	player["skill_points"] = 99
+	player["exp"] = int(Combat.exp_to_next(LEVEL) * 0.4)
+	for skill in Skills.for_job(str(player.get("job", "fighter"))).slice(0, 4):
+		game._transport.send(&"learnSkill", {"skill": skill})
+	game._transport.send(&"setSkillBar", {"bar": Skills.for_job(str(player.get("job", "fighter"))).slice(0, 4)})
+	game._transport.send(&"autoHunt", {"on": true})
+	# 체력이 가득이면 막대가 줄어드는 모습을 못 본다 — 3/5 로 깎아 둔다
+	await process_frame
+	player["hp"] = int(float(player["hp"]) * 0.6)
+
+	var frame := 0
+	var taken := 0
+	while taken < HUD_SHOTS.size():
+		await process_frame
+		frame += 1
+		if frame in HUD_SHOTS:
+			await RenderingServer.frame_post_draw
+			var img := root.get_texture().get_image()
+			img.save_png("res://../logs/shot_%02d.png" % frame)
+			taken += 1
+			print("logs/shot_%02d.png  (고리 각 %.2f)" % [frame, game._auto_spin.rotation])
 	quit(0)
 
 

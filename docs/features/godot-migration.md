@@ -485,6 +485,9 @@ set GODOT_DIR=D:\godot  둘 곳을 바꾼다 (기본 C:\godot)
 2. `git pull --ff-only` — **지금 체크아웃된 브랜치**를 받는다. git 이 없으면 있는 코드로 돈다.
 3. 에셋을 `godot/assets` 로 복사한다. `npm run sync:godot` 과 달리 **텍스처를 512 로 줄이지
    않는다** — 줄이는 건 폰 pck 용량 때문이고 PC 는 원본이 낫다. 덕분에 Node 도 `sharp` 도 필요 없다.
+   **`sync-godot-assets.mjs` 와 짝을 맞춰 둬야 한다** ★ — 거기 폴더를 더하면 여기도
+   줄을 더한다. 안 그러면 PC 실행에서 빨간 `Resource file not found` 가 쏟아지고 그림이
+   글자로 나온다. `icons/` 와 `ui/` 가 그렇게 빠져 있었다 (2026-09-19).
 4. `--headless --import` **를 반드시 먼저 돌린다.** 임포트 캐시(`godot/.godot/`)가 없으면
    `class_name` 을 못 찾아 `game.gd` 가 파싱 오류로 죽는다 (2026-09-17 에 확인).
 5. `godot --path godot` 으로 띄운다.

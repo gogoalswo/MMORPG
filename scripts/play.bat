@@ -77,12 +77,21 @@ if errorlevel 1 (
 rem ---- 3. assets, copied straight from public/assets ---------
 rem  Unlike "npm run sync:godot" this does not shrink textures to
 rem  512px - that is for the phone build. So no Node, no npm.
+rem
+rem  KEEP THIS IN STEP WITH sync-godot-assets.mjs. A new folder
+rem  there needs a line here too, or the PC run shows red
+rem  "Resource file not found" spam and falls back to text -
+rem  icons/ and ui/ were missed that way (2026-09-19).
+rem  The *.png wildcard also brings the few images the phone
+rem  build leaves out (belt, glove); on a PC the size is nothing.
 echo [3/5] Copying assets to godot\assets
-for %%d in (models fonts ground) do if not exist "%ROOT%\godot\assets\%%d" mkdir "%ROOT%\godot\assets\%%d"
+for %%d in (models fonts ground icons ui) do if not exist "%ROOT%\godot\assets\%%d" mkdir "%ROOT%\godot\assets\%%d"
 xcopy /D /Y /Q "%ROOT%\public\assets\models\varco_fighter.glb"    "%ROOT%\godot\assets\models\" >nul
 xcopy /D /Y /Q "%ROOT%\public\assets\models\varco_ogre1.glb"      "%ROOT%\godot\assets\models\" >nul
 xcopy /D /Y /Q "%ROOT%\public\assets\fonts\NotoSansKR-subset.ttf" "%ROOT%\godot\assets\fonts\"  >nul
 xcopy /D /Y /Q "%ROOT%\public\assets\textures\ground_*.ktx2"      "%ROOT%\godot\assets\ground\" >nul
+xcopy /D /Y /Q "%ROOT%\public\assets\icons\*.png"                 "%ROOT%\godot\assets\icons\"  >nul
+xcopy /D /Y /Q "%ROOT%\public\assets\ui\*.png"                    "%ROOT%\godot\assets\ui\"     >nul
 
 rem ---- 4. import: without the cache class_name lookups fail ---
 echo [4/5] Importing assets - the first run takes a few minutes

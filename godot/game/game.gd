@@ -1149,12 +1149,16 @@ func _build_skill_panel() -> void:
 
 ## 테스트 스위치 단추 — 오른쪽 위. 누르면 World 에 요청하고, 글자는 표의 지금 값을 따른다
 ## (`_refresh_switches`). 스위치를 없애면 이 단추들도 걷는다 → skills.md "테스트 스위치"
+##
+## **쿨타임 0 하나만 단다.** 레벨 잠금 해제 단추는 2026-09-19 에 걷었다 (요청).
+## 스위치 자체와 World 쪽 처리는 그대로다 — 켜고 끄려면 `skills.json` 을 고친다
+const SWITCH_BUTTONS := ["cooldownOff"]
 func _build_test_switches() -> void:
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 6)
 	_ui_root.add_child(column)
 	_switch_buttons.clear()
-	for name in Skills.SWITCHES:
+	for name in SWITCH_BUTTONS:
 		var button := Button.new()
 		button.custom_minimum_size = Vector2(230, 52)
 		button.add_theme_font_size_override("font_size", 18)

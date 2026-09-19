@@ -523,7 +523,9 @@ func _case_skills(game: Node3D) -> void:
 		_fail("닫기를 눌렀는데 스킬창이 안 닫혔다")
 
 	# 테스트 스위치 단추 — 누르면 뒤집히고, 다시 누르면 돌아온다
-	for name in Skills.SWITCHES:
+	if game._switch_buttons.has("unlockAll"):
+		_fail("레벨 잠금 해제 단추는 걷었는데 아직 있다")
+	for name in game._switch_buttons:
 		var read := func() -> bool: return Skills.cooldown_off() if name == "cooldownOff" else Skills.unlock_all()
 		var was: bool = read.call()
 		game._switch_buttons[name].pressed.emit()
@@ -535,7 +537,7 @@ func _case_skills(game: Node3D) -> void:
 	var corner: Rect2 = game._switch_buttons["cooldownOff"].get_global_rect()
 	if corner.end.x > 1280 or corner.position.y < 0 or corner.position.x < 640:
 		_fail("스위치 단추가 오른쪽 위가 아니다: %s" % corner)
-	print("  테스트 스위치 단추 %d개: 켜고 끄기 확인 (%s)" % [Skills.SWITCHES.size(), corner])
+	print("  테스트 스위치 단추 %d개: 켜고 끄기 확인 (%s)" % [game._switch_buttons.size(), corner])
 
 	# 새 문구 글자가 폰트에 있나 (부분집합이라 빠질 수 있다)
 	var font: Font = load(FONT)

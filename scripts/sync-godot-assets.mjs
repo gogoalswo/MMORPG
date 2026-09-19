@@ -46,6 +46,10 @@ const ICONS = [
   'ui_tab_on.png', 'ui_tab_off.png', 'ui_button.png',
   // 장착 칸 사이에 서는 캐릭터 그림자
   'ui_figure.png',
+  // 스킬창·퀵슬롯 — 칸 테두리, 고른 칸 표시, 격투가 스킬 아이콘 (이름 = skill_<id>)
+  'ui_skill_slot.png', 'ui_slot_pick.png',
+  'skill_rising_kick.png', 'skill_tiger_roar.png', 'skill_white_tiger.png',
+  'skill_sky_breaker.png', 'skill_thunder_fall.png',
 ];
 
 /**

@@ -57,7 +57,15 @@ const FRAME_SIZE = {
   'ui_tab_off.png': 192,
   'ui_button.png': 192,
   'ui_figure.png': 384,
+  'ui_skill_slot.png': 128,
+  'ui_slot_pick.png': 128,
 };
+/**
+ * **배경을 걷지 않는 것.** 스킬 아이콘은 칸을 꽉 채운 그림이라 가장자리가 곧 그림이다.
+ * 테두리에서 번지는 채우기를 돌리면 가장자리와 비슷한 색(어두운 연기·하늘)을 따라
+ * 그림 속까지 파먹는다. 줄이기만 한다
+ */
+const FULL = /^skill_/;
 /**
  * **알파 경계로 잘라내는 것.** 바르코는 그림 둘레에 배경을 넉넉히 남기는데,
  * 9조각으로 늘여 쓰려면 테가 그림 가장자리에 닿아 있어야 여백을 재기 쉽다.
@@ -69,7 +77,7 @@ const TRIM = /^ui_/;
  * 번져 들어가는 채우기로는 닿지 못한다 (테가 막고 있다). 이 이름들은 한가운데에서
  * 한 번 더 번지게 한다. 창 테두리(frame_panel)는 **안쪽을 남긴다** — 그게 창 바탕이다
  */
-const HOLLOW = new Set(['frame_slot.png']);
+const HOLLOW = new Set(['frame_slot.png', 'ui_slot_pick.png']);
 
 /** 알파가 남아 있는 칸의 바깥 테두리 상자 */
 function alphaBounds(data, width, height) {
@@ -205,7 +213,7 @@ for (const name of readdirSync(SRC).filter((f) => f.endsWith('.png')).sort()) {
     .ensureAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });
-  let cut = cutBackground(data, info.width, info.height);
+  let cut = FULL.test(name) ? 0 : cutBackground(data, info.width, info.height);
   if (HOLLOW.has(name)) cut += cutCenter(data, info.width, info.height);
   const out = join(DST, basename(name));
   const size = FRAME_SIZE[name] ?? SIZE;

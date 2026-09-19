@@ -205,6 +205,15 @@ fetch_icon 3323d42e0714394022e89571f96c36ca ui_tab_on    # 고른 탭
 fetch_icon a3646f67b96a22b45f2a278cd673ce01 ui_tab_off   # 안 고른 탭
 fetch_icon 300f7941dbf1b49c7a4cdbd608796663 ui_button    # 단추
 fetch_icon 43d4cd084d0fe8d2eeb46a61755b3b33 ui_figure    # 장착 칸 사이 캐릭터 그림자
+# 스킬창·퀵슬롯 (2026-09-19). 조각 둘은 ui_slot 을 참고 그림으로 넣어 결을 맞췄다.
+# 스킬 아이콘은 **꽉 찬 그림**이라 배경을 걷지 않는다 (build-item-icons.mjs 의 FULL)
+fetch_icon dbb28d8e48eb77a991386e0b74fcfb5e ui_skill_slot  # HUD 퀵슬롯 칸
+fetch_icon 51f78be51010dd1155b29627876adee6 ui_slot_pick   # 고른 칸 테두리 (안쪽을 뚫는다)
+fetch_icon 6688952f8b0187efe7f96935796fa7a8 skill_rising_kick
+fetch_icon 3335dffd51390210007c5b2eb5a8adb7 skill_tiger_roar
+fetch_icon 844c2e93d9c7b8f9d6c3717b2334b9ca skill_white_tiger
+fetch_icon 3d66ba0be1ec8bec0bc0b2a11fcce4f9 skill_sky_breaker
+fetch_icon 627417215a6f50209f7d0a20cbd1c607 skill_thunder_fall
 
 node scripts/build-item-icons.mjs
 

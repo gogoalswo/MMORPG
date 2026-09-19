@@ -234,6 +234,7 @@ func _run_scene() -> void:
 		_fail("껐는데 단추 글자가 '%s'" % game._auto_button.text)
 
 	await _case_bag(game)
+	await _case_skills(game)
 
 	if _failed == 0:
 		print("UI: 전부 통과")
@@ -404,6 +405,117 @@ func _case_bag(game: Node3D) -> void:
 	await process_frame
 	if game._bag_panel.visible:
 		_fail("다시 눌렀는데 가방이 안 닫혔다")
+
+## 퀵슬롯과 스킬창 — 자리, 크기, 그림, 장착·해제·바꾸기.
+## 창은 **왼쪽이 설명, 오른쪽이 고르기** 다 (2026-09-19 요청)
+func _case_skills(game: Node3D) -> void:
+	var me: Dictionary = game._transport.snapshot().players[game._transport.my_id()]
+	var screen := Vector2(1280, 720)
+
+	# 퀵슬롯 4칸이 화면 아래 가운데에, 오른쪽 단추들과 겹치지 않게
+	var quick: Array = game._bar_buttons
+	if quick.size() != 4:
+		_fail("퀵슬롯이 4칸이어야 하는데 %d칸" % quick.size())
+		return
+	var first: Rect2 = quick[0].get_global_rect()
+	var last: Rect2 = quick[3].get_global_rect()
+	var middle := (first.position.x + last.end.x) / 2.0
+	if absf(middle - screen.x / 2.0) > 2.0 or last.end.y > screen.y or last.end.y < screen.y - 60:
+		_fail("퀵슬롯이 아래 가운데가 아니다: %s ~ %s" % [first, last])
+	if last.intersects(game._auto_button.get_global_rect()):
+		_fail("퀵슬롯이 자동사냥 단추와 겹친다")
+
+	# 처음에는 액션바가 비어 있을 수 있다 — 앞의 넷을 올려 두고 시작한다
+	game._send_bar(Skills.for_job(str(me.job)).slice(0, 4))
+	if me.skill_bar.size() != 4:
+		_fail("앞의 넷을 올렸는데 액션바가 %d칸" % me.skill_bar.size())
+		return
+	game._refresh_bar(me)
+	var icons := 0
+	for cell in quick:
+		if cell.find_child("icon", true, false).texture != null:
+			icons += 1
+	print("  퀵슬롯: 가운데 x=%.0f, 아이콘 %d/4" % [middle, icons])
+
+	# 쿨타임 — 쓰고 나면 어둠이 덮이고 초가 뜬다
+	var used := str(me.skill_bar[0])
+	me.skill_ready_at[used] = Time.get_ticks_msec() + 3000
+	game._refresh_bar(me)
+	if not quick[0].find_child("cool", true, false).visible or quick[0].find_child("secs", true, false).text != "3":
+		_fail("쿨타임 3초가 퀵슬롯에 안 나온다")
+	me.skill_ready_at[used] = 0
+	game._refresh_bar(me)
+
+	# 빈 칸을 누르면 창이 열린다
+	game._toggle_skills()
+	await process_frame
+	var panel: Control = game._skill_panel
+	if not panel.visible:
+		_fail("스킬 단추를 눌렀는데 창이 안 떴다")
+		return
+	var box: Rect2 = panel.get_global_rect()
+	if not Rect2(Vector2.ZERO, screen).encloses(box):
+		_fail("스킬창 %s 이 화면 밖으로 나간다" % box)
+
+	# 왼쪽 설명, 오른쪽 목록
+	var ids: Array = Skills.for_job(str(me.job))
+	if game._skill_cells.size() != ids.size():
+		_fail("목록이 %d칸이어야 하는데 %d칸" % [ids.size(), game._skill_cells.size()])
+		return
+	var big_x: float = game._skill_big.get_global_rect().position.x
+	var list_x: float = game._skill_grid.get_global_rect().position.x
+	if big_x >= list_x:
+		_fail("설명(%.0f)이 목록(%.0f) 왼쪽에 있어야 한다" % [big_x, list_x])
+	var drawn := 0
+	for cell in game._skill_cells:
+		if cell.find_child("icon", true, false).texture != null or cell.find_child("text", true, false).text != "":
+			drawn += 1
+	if drawn != ids.size():
+		_fail("목록 칸 %d개가 그림도 글자도 없다" % (ids.size() - drawn))
+
+	# 고르면 왼쪽 설명이 따라온다
+	var last_id := str(ids[ids.size() - 1])
+	game._pick_skill(ids.size() - 1)
+	if game._skill_name.text != str(Skills.all()[last_id].name) or game._skill_desc.text == "":
+		_fail("고른 스킬(%s)이 설명에 안 나온다: '%s'" % [last_id, game._skill_name.text])
+	if not game._skill_cells[ids.size() - 1].get_node("pick").visible:
+		_fail("고른 칸에 테두리가 안 뜬다")
+
+	# 해제 → 빈 칸에 장착 → 가득 찼으면 바꿀 칸을 골라 끼운다
+	var bar: Array = me.skill_bar
+	var before := bar.size()
+	game._skill_pick = str(bar[0])
+	game._on_skill_unequip()
+	if me.skill_bar.size() != before - 1:
+		_fail("해제했는데 액션바가 %d칸 그대로다" % me.skill_bar.size())
+	game._on_skill_equip()
+	if me.skill_bar.size() != before:
+		_fail("빈 칸이 있는데 장착이 안 됐다")
+	if me.skill_bar.size() == 4 and not (last_id in me.skill_bar):
+		game._pick_skill(ids.size() - 1)
+		game._on_skill_equip()
+		if not game._skill_swap or game._skill_state.text != "바꿀 칸을 누르세요":
+			_fail("4칸이 다 찼는데 바꿀 칸을 묻지 않는다")
+		game._pick_slot(2)
+		if str(me.skill_bar[2]) != last_id:
+			_fail("3번 칸을 골랐는데 %s 가 들어갔다" % str(me.skill_bar[2]))
+		else:
+			print("  스킬창: 목록 %d칸, 해제·장착·바꾸기(3번 칸 → %s) 확인" % [ids.size(), last_id])
+
+	game._toggle_skills()
+	await process_frame
+	if panel.visible:
+		_fail("닫기를 눌렀는데 스킬창이 안 닫혔다")
+
+	# 새 문구 글자가 폰트에 있나 (부분집합이라 빠질 수 있다)
+	var font: Font = load(FONT)
+	var missing := ""
+	for ch in "장착 해제 취소 스킬 목록 바꿀 칸을 누르세요 요구 레벨 재사용 사거리 주위 대상 배움 번":
+		if ch != " " and not font.has_char(ch.unicode_at(0)):
+			missing += ch
+	if missing != "":
+		_fail("스킬창 글자가 폰트에 없다: %s" % missing)
+
 
 ## 목록을 눌렀다/뗐다. 자리는 **목록 기준**이다 (Control 의 gui_input 이 그렇다)
 func _mouse(at: Vector2, pressed: bool) -> InputEventMouseButton:

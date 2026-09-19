@@ -107,37 +107,33 @@ const CRACK_FADE := 0.8
 ## 금과 파편이 나는 높이. 0 으로 두면 지면과 같은 면이라 깜빡인다
 const GROUND := 0.05
 
-## 튀는 흙 파편 — **여기만 파티클이다.** 위로 솟아 중력으로 떨어진다
-## 잔 알갱이 — **작고 많고 둥글다.** 0.2m(8px) 짜리 `BoxMesh` 열 개를 굴렸더니
-## "입자가 너무 크고 두껍고 사각사각하다" 는 말을 들었다 (2026-09-18).
-## 지금은 **카메라를 마주 보는 점**(`FxTex.glow`)이라 모서리가 없다
-const DEBRIS_COUNT := 26
-const DEBRIS_SIZE := 0.14
-## 느리면 섬광 안에 머물러 안 보인다 (2026-09-18 캡처)
-const DEBRIS_SPEED_MIN := 6.5
-const DEBRIS_SPEED_MAX := 14.0
-const DEBRIS_SPREAD := 58.0
-const DEBRIS_LIFE := 0.55
-const DEBRIS_GRAVITY := -14.0
+## 터지는 **전기 불똥** — 흙 알갱이를 대신한다 (2026-09-19 지시: "바닥에 먼지가
+## 아니라 번개가 터지는 이펙트로"). 흙이 아니라 빛이라 **가산 혼합**이고
+## **거의 안 떨어진다** — 중력을 세게 주면 흙처럼 보인다.
+## 카메라를 마주 보는 둥근 점(`FxTex.glow`)이라 모서리가 없다
+const SPARK_COUNT := 30
+const SPARK_SIZE := 0.17
+## 느리면 섬광 안에 머물러 안 보인다
+const SPARK_SPEED_MIN := 9.0
+const SPARK_SPEED_MAX := 20.0
+const SPARK_SPREAD := 72.0
+const SPARK_LIFE := 0.32
+const SPARK_GRAVITY := -3.0
 
-## 먼지 — **알갱이보다 크고 옅고 느리다.** 낮게 퍼지며 피어오르다 사라진다.
-## 알갱이만 있으면 튄 것은 보여도 **흙이 인 것**으로는 안 보인다
-const DUST_COUNT := 16
-const DUST_SIZE := 0.7
-const DUST_SPEED_MIN := 2.2
-const DUST_SPEED_MAX := 5.5
-const DUST_SPREAD := 82.0
-const DUST_LIFE := 0.85
-## 먼지는 떠오른다 — 중력이 아주 약하게 위로
-const DUST_RISE := 0.9
-## 피어오르며 커진다
-const DUST_GROW := 2.2
-## 먼지 진하기. 옅어야 흙먼지로 보인다
-const DUST_ALPHA := 0.45
+## 지면을 타고 뻗는 **전기 가닥** — 먼지를 대신한다. 줄기와 같은 리본 메시라
+## 알갱이가 아니고, 금(`_crack`)과 달리 **밝고 지글거리다 빨리 꺼진다**
+const ARCS := 6
+const ARC_LENGTH := 2.8
+const ARC_SEGMENTS := 5
+const ARC_CORE := 0.09
+const ARC_HALO := 0.45
+const ARC_LIFE := 0.26
+## 지면에서 띄우는 높이. 금(`GROUND`)보다 위라야 안 묻힌다
+const ARC_HEIGHT := 0.09
 
 ## 꽂힌 자리의 섬광 판. **퍼지지 않고 제자리에서 사그라든다** (규칙 3절) —
 ## 살짝만 부푼다. 1.6m = 61px
-const FLARE_SIZE := 2.0
+const FLARE_SIZE := 1.7
 const FLARE_SWELL := 1.25
 const FLARE_LIFE := 0.3
 
@@ -159,8 +155,8 @@ const COLOR_CRACK := Color("#241a12")
 const COLOR_STAIN := Color("#2a2118")
 ## **밝은 바닥과 섬광 위에서 보이려면 어두워야 한다** — 밝은 흙빛으로 뿌렸더니
 ## 섬광에 묻혀 사라졌다 (2026-09-18 캡처)
-const COLOR_DEBRIS := Color("#5f4c36")
-const COLOR_DUST := Color("#9c8a70")
+## 전기 불똥은 줄기와 같은 빛이다 — 흙빛(`#5f4c36`)에서 바꿨다
+const COLOR_SPARK := Color("#8fc8ff")
 
 var _t := 0.0
 var _span := 0.0
@@ -390,7 +386,9 @@ static func dirt(color: Color) -> StandardMaterial3D:
 ## 흙 알갱이·먼지용 — **카메라를 마주 보는 둥근 점.** 모서리가 없어야 한다
 ## (`BoxMesh` 를 굴렸더니 "사각사각하다" 는 말을 들었다, 2026-09-18).
 ## 빛이 아니라 흙이라 가산이 아닌 알파 혼합이다
-static func mote(color: Color) -> StandardMaterial3D:
+## `additive` 면 **빛**이다 — 전기 불똥처럼 겹칠수록 밝아지고 깊이 검사를 끈다.
+## 아니면 흙이라 알파 혼합이다
+static func mote(color: Color, additive := false) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -399,6 +397,9 @@ static func mote(color: Color) -> StandardMaterial3D:
 	mat.vertex_color_use_as_albedo = true
 	mat.albedo_texture = FxTex.glow()
 	mat.albedo_color = color
+	if additive:
+		mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+		mat.no_depth_test = true
 	return mat
 
 
@@ -478,13 +479,15 @@ class Strike:
 	var _flare: MeshInstance3D
 	var _stain: MeshInstance3D
 	var _light: OmniLight3D
-	var _debris: CPUParticles3D
-	var _dust: CPUParticles3D
+	var _sparks: CPUParticles3D
+	var _arc_halo: MeshInstance3D
+	var _arc_core: MeshInstance3D
+	var _arc_flick := 0.0
 
 	## 몇 초짜리인가
 	func span() -> float:
 		return maxf(LightningFx.BOLT_LIFE, maxf(LightningFx.CRACK_LIFE,
-			maxf(LightningFx.DEBRIS_LIFE, LightningFx.DUST_LIFE))) + 0.1
+			maxf(LightningFx.SPARK_LIFE, LightningFx.ARC_LIFE))) + 0.1
 
 	func plan(order: int, swell_: float, at_: float, shake: Vector2, facing: float) -> void:
 		# **씨앗을 박아 둔다** — 같은 낙뢰가 늘 같은 모양이어야 테스트가 읽는다
@@ -521,12 +524,15 @@ class Strike:
 		_light.visible = false
 		add_child(_light)
 
-		_debris = _make_debris()
-		_debris.emitting = false
-		add_child(_debris)
-		_dust = _make_dust()
-		_dust.emitting = false
-		add_child(_dust)
+		_sparks = _make_sparks()
+		_sparks.emitting = false
+		add_child(_sparks)
+
+		# 지면 전기 가닥 — 줄기와 같은 두 겹 리본이다
+		_arc_halo = _sheet(LightningFx.glow(LightningFx.COLOR_HALO))
+		_arc_halo.position = Vector3(0.0, LightningFx.ARC_HEIGHT, 0.0)
+		_arc_core = _sheet(LightningFx.glow(LightningFx.COLOR_CORE))
+		_arc_core.position = Vector3(0.0, LightningFx.ARC_HEIGHT + 0.01, 0.0)
 
 		visible = false
 
@@ -563,48 +569,60 @@ class Strike:
 			out.append([LightningFx.trail(mid, branch, 3, reach * 0.1, _rng, true), 0.5])
 		return out
 
-	## 잔 알갱이 — 빠르게 튀어 중력으로 떨어진다.
+	## 터지는 전기 불똥 — 사방으로 튀고 **거의 안 떨어진다.**
 	##
-	## **모서리가 없어야 한다.** `BoxMesh` 를 굴렸더니 "입자가 너무 크고 두껍고
-	## 사각사각하다" 는 말을 들었다 (2026-09-18). 지금은 카메라를 마주 보는
-	## 둥근 점(`FxTex.glow`)이고, 작게 많이 뿌린다
-	func _make_debris() -> CPUParticles3D:
-		var debris := _motes(LightningFx.DEBRIS_COUNT, LightningFx.DEBRIS_LIFE,
-			LightningFx.DEBRIS_SIZE, LightningFx.COLOR_DEBRIS)
-		debris.direction = Vector3(0.0, 1.0, 0.0)
-		debris.spread = LightningFx.DEBRIS_SPREAD
-		debris.initial_velocity_min = LightningFx.DEBRIS_SPEED_MIN
-		debris.initial_velocity_max = LightningFx.DEBRIS_SPEED_MAX
-		debris.gravity = Vector3(0.0, LightningFx.DEBRIS_GRAVITY, 0.0)
-		# 튀어 오를 때 굵고 떨어지며 잦아든다
-		debris.scale_amount_min = 0.55
-		debris.scale_amount_max = 1.25
-		debris.scale_amount_curve = LightningFx.fade_curve()
-		return debris
+	## 흙 알갱이였던 자리다 (2026-09-19 지시). 흙이면 중력으로 떨어져야 하지만
+	## 빛은 그 자리에서 꺼진다 — 중력을 세게 주면 도로 흙으로 보인다.
+	## **모서리가 없어야 한다** — 카메라를 마주 보는 둥근 점(`FxTex.glow`)이다
+	func _make_sparks() -> CPUParticles3D:
+		var sparks := _motes(LightningFx.SPARK_COUNT, LightningFx.SPARK_LIFE,
+			LightningFx.SPARK_SIZE, LightningFx.COLOR_SPARK, 1.0, true)
+		sparks.direction = Vector3(0.0, 1.0, 0.0)
+		sparks.spread = LightningFx.SPARK_SPREAD
+		sparks.initial_velocity_min = LightningFx.SPARK_SPEED_MIN
+		sparks.initial_velocity_max = LightningFx.SPARK_SPEED_MAX
+		sparks.gravity = Vector3(0.0, LightningFx.SPARK_GRAVITY, 0.0)
+		# 튈 때 굵고 꺼지며 잦아든다
+		sparks.scale_amount_min = 0.55
+		sparks.scale_amount_max = 1.25
+		sparks.scale_amount_curve = LightningFx.fade_curve()
+		return sparks
 
-	## 먼지 — 낮게 퍼지며 **피어오르다** 사라진다. 알갱이만 있으면 튄 것은
-	## 보여도 흙이 인 것으로는 안 보인다
-	func _make_dust() -> CPUParticles3D:
-		# 옅게 — 진하면 흙먼지가 아니라 검은 구름이 된다 (2026-09-18 캡처)
-		var dust := _motes(LightningFx.DUST_COUNT, LightningFx.DUST_LIFE,
-			LightningFx.DUST_SIZE, LightningFx.COLOR_DUST, LightningFx.DUST_ALPHA)
-		dust.direction = Vector3(0.0, 0.5, 0.0)
-		dust.spread = LightningFx.DUST_SPREAD
-		dust.initial_velocity_min = LightningFx.DUST_SPEED_MIN
-		dust.initial_velocity_max = LightningFx.DUST_SPEED_MAX
-		# 떠오른다 — 알갱이와 반대다
-		dust.gravity = Vector3(0.0, LightningFx.DUST_RISE, 0.0)
-		# 약하게 죈다 — 세게 죄면 제자리에 뭉쳐 덩어리가 된다
-		dust.damping_min = 1.0
-		dust.damping_max = 2.6
-		# 퍼지며 커진다
-		dust.scale_amount_min = 0.7
-		dust.scale_amount_max = 1.4
-		dust.scale_amount_curve = LightningFx.grow_curve(LightningFx.DUST_GROW)
-		return dust
+	## 지면을 타고 뻗는 전기 가닥의 **경로를 다시 잡는다.** 줄기와 같은 리본이라
+	## 알갱이가 아니고, 금과 달리 **지글거린다** — 금은 남는 자국이라 한 번
+	## 정해 두지만 전기는 살아 있는 동안 계속 흔들린다
+	func _reshape_arcs() -> void:
+		var paths: Array = []
+		var turn := TAU / float(LightningFx.ARCS)
+		for i in LightningFx.ARCS:
+			var angle := turn * float(i) + _rng.randf_range(-turn * 0.4, turn * 0.4)
+			var reach := LightningFx.ARC_LENGTH * _rng.randf_range(0.6, 1.25) * swell
+			var tip := Vector3(sin(angle), 0.0, cos(angle)) * reach
+			paths.append([LightningFx.trail(Vector3.ZERO, tip, LightningFx.ARC_SEGMENTS,
+				reach * 0.2, _rng, true), 1.0])
+		_arc_halo.mesh = LightningFx.ribbon(paths, LightningFx.ARC_HALO * swell,
+			LightningFx.ARC_HALO * 0.2 * swell, true)
+		_arc_core.mesh = LightningFx.ribbon(paths, LightningFx.ARC_CORE * swell,
+			LightningFx.ARC_CORE * 0.2 * swell, true)
+
+	## 전기 가닥은 **지글거리다 빨리 꺼진다**
+	func _show_arcs(age: float) -> void:
+		if age >= LightningFx.ARC_LIFE:
+			_arc_halo.visible = false
+			_arc_core.visible = false
+			return
+		_arc_flick += get_process_delta_time()
+		if _arc_flick >= LightningFx.FLICK:
+			_arc_flick = 0.0
+			_reshape_arcs()
+		var fade := clampf((1.0 - age / LightningFx.ARC_LIFE) * 1.5, 0.0, 1.0)
+		_arc_halo.material_override.albedo_color = Color(
+			LightningFx.COLOR_HALO.r, LightningFx.COLOR_HALO.g, LightningFx.COLOR_HALO.b, fade * 0.6)
+		_arc_core.material_override.albedo_color = Color(1.0, 1.0, 1.0, fade)
 
 	## 둥근 점 방출기 한 벌 — 알갱이와 먼지가 같은 뼈대를 쓴다
-	func _motes(count: int, life: float, size: float, color: Color, peak := 1.0) -> CPUParticles3D:
+	func _motes(count: int, life: float, size: float, color: Color, peak := 1.0,
+			additive := false) -> CPUParticles3D:
 		var motes := CPUParticles3D.new()
 		motes.amount = count
 		motes.lifetime = life
@@ -621,7 +639,7 @@ class Strike:
 		motes.angular_velocity_max = 160.0
 		motes.color = color
 		motes.color_ramp = LightningFx.fade_ramp(color, peak)
-		motes.material_override = LightningFx.mote(color)
+		motes.material_override = LightningFx.mote(color, additive)
 		return motes
 
 	func _process(delta: float) -> void:
@@ -631,12 +649,13 @@ class Strike:
 		var age := _t - at
 		if not visible:
 			visible = true
-			_debris.emitting = true
-			_dust.emitting = true
+			_sparks.emitting = true
+			_reshape_arcs()
 			_reshape()
 
 		_show_bolt(age)
 		_show_flare(age)
+		_show_arcs(age)
 		_show_crack(age)
 		_show_light(age)
 

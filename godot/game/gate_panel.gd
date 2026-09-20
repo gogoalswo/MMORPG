@@ -28,6 +28,29 @@ const FONT_SIZE := 30
 const TEXT_COLOR := Color("#f2f2f2")
 ## 지금 서 있는 곳은 누를 수 없고 흐리게 (참고 그림의 맨 윗줄)
 const HERE_COLOR := Color("#8c8c8c")
+
+## 줄 한 칸의 **틀 색.** 기본 단추(회색 네모)를 그대로 쓰면 게임 화면에서 혼자
+## 사무용 UI 로 보인다 (2026-09-20 지적: "스타일도 다른 UI와 아트풍 비슷하게").
+## 차원문·아이콘 조각과 같은 **검푸른 바탕 + 푸른 테**로 맞춘다.
+## 그림을 새로 받지 않고 `StyleBoxFlat` 으로 짓는 이유는 이펙트 텍스처와 같다 —
+## 에셋을 안 받은 사람도 보이고, 색·두께가 상수라 고쳐서 바로 확인할 수 있다
+const ROW_FILL := Color("#141d2e")
+const ROW_RIM := Color("#31507e")
+## 누른 동안. 테가 밝아지고 바탕이 푸르게 달아오른다
+const ROW_PRESS_FILL := Color("#1f3f6b")
+const ROW_PRESS_RIM := Color("#79bdff")
+## 지금 서 있는 곳 — 누를 수 없으니 테도 죽인다
+const ROW_HERE_FILL := Color("#0e1420")
+const ROW_HERE_RIM := Color("#22314a")
+const ROW_RADIUS := 8
+const ROW_RIM_WIDTH := 2
+## 줄 안쪽 여백(가로, 세로)
+const ROW_PAD := Vector2(12, 6)
+## **누르면 내용이 이만큼 내려앉는다.** 색만 바뀌면 눌렸는지 눈에 안 들어온다
+const ROW_SINK := 3
+## 제목·테두리 금색. 차원문의 푸른색과 대비를 준다
+const TITLE_COLOR := Color("#ffd98a")
+const HEAD_LINE := Color("#31507e")
 ## 끌기로 치는 최소 거리(px). 이만큼 움직이면 고르기가 아니라 스크롤이다
 const DEADZONE := 14
 ## 스크롤 막대 굵기 — 손가락으로 집을 수 있어야 한다 (기본은 폰에서 너무 가늘다)
@@ -42,6 +65,8 @@ var _hold := false
 var _hold_y := 0.0
 var _hold_scroll := 0
 var _dragging := false
+## 지금 눌려 있는 줄 (뗄 때까지 밝은 틀로 둔다)
+var _held: Button = null
 
 
 static func create() -> GatePanel:
@@ -93,14 +118,28 @@ func _build() -> void:
 	column.add_child(head)
 	var title := Label.new()
 	title.text = "차원문"
-	title.add_theme_color_override("font_color", Color("#4aa8ff"))
+	title.add_theme_color_override("font_color", TITLE_COLOR)
+	title.add_theme_font_size_override("font_size", FONT_SIZE + 4)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(title)
 	var close := Button.new()
 	close.name = "Close"
 	close.text = "닫기"
+	# 닫기도 줄과 같은 틀이다 — 창 안에 기본 회색 단추 하나만 남으면 그게 튄다
+	close.add_theme_stylebox_override("normal", _row_box(ROW_FILL, ROW_RIM, 0))
+	close.add_theme_stylebox_override("hover", _row_box(ROW_FILL, ROW_PRESS_RIM, 0))
+	close.add_theme_stylebox_override("pressed", _row_box(ROW_PRESS_FILL, ROW_PRESS_RIM, ROW_SINK))
+	close.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	close.add_theme_color_override("font_color", TEXT_COLOR)
 	close.pressed.connect(close_panel)
 	head.add_child(close)
+
+	# 제목과 목록을 가르는 금
+	var line := ColorRect.new()
+	line.color = HEAD_LINE
+	line.custom_minimum_size = Vector2(0, 2)
+	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(line)
 
 	_scroll = ScrollContainer.new()
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -123,11 +162,20 @@ func _build() -> void:
 func open(current_zone: String) -> void:
 	_fill(current_zone)
 	_scroll.scroll_vertical = 0
+	_forget_hold()
 	visible = true
 
 
 func close_panel() -> void:
+	_forget_hold()
 	visible = false
+
+
+## 누르던 것을 잊는다 — 창을 여닫는 사이에 손을 뗐을 수 있다
+func _forget_hold() -> void:
+	_hold = false
+	_dragging = false
+	_press(null)
 
 
 ## 줄 수 (테스트용)
@@ -150,7 +198,6 @@ func _fill(current_zone: String) -> void:
 	for id in ids:
 		var here := str(id) == current_zone
 		var button := Button.new()
-		button.flat = true
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		button.text = str(GameData.zone(str(id)).get("name", id))
 		button.icon = _here_icon if here else _go_icon
@@ -158,8 +205,14 @@ func _fill(current_zone: String) -> void:
 		button.add_theme_constant_override("h_separation", 22)
 		button.add_theme_font_size_override("font_size", FONT_SIZE)
 		button.add_theme_color_override("font_color", TEXT_COLOR)
-		button.add_theme_color_override("font_hover_color", Color.WHITE)
 		button.add_theme_color_override("font_disabled_color", HERE_COLOR)
+		# **줄 하나가 칸 하나다.** 검푸른 바탕에 푸른 테 — 누르면 `_press` 가
+		# 밝은 틀로 바꿔 끼운다 (`normal` 을 갈아 끼운다: 이 단추는 입력을 안 받아
+		# 고도의 pressed 상태가 오지 않는다)
+		if here:
+			button.add_theme_stylebox_override("disabled", _row_box(ROW_HERE_FILL, ROW_HERE_RIM, 0))
+		else:
+			button.add_theme_stylebox_override("normal", _row_box(ROW_FILL, ROW_RIM, 0))
 		button.custom_minimum_size = Vector2(0, ICON + 4)
 		button.disabled = here
 		# **줄은 입력을 받지 않는다.** 누른 것이 고르기인지 끌기인지는 목록 쪽에서
@@ -185,10 +238,16 @@ func _on_list_input(event: InputEvent) -> void:
 			_dragging = false
 			_hold_y = click.position.y
 			_hold_scroll = _scroll.scroll_vertical
+			# 누른 줄을 **눌린 틀**로 바꾼다
+			_press(_row_at(click.position))
 		elif _hold:
 			_hold = false
-			if not _dragging:
-				_pick_at(click.position)
+			var row_under := _row_at(click.position)
+			var held := _held
+			_press(null)
+			# 누른 줄에서 뗐을 때만 고른다 — 다른 줄로 미끄러졌으면 취소다
+			if not _dragging and held != null and held == row_under:
+				_on_pick(str(held.get_meta("zone", "")))
 		accept_event()
 		return
 	var move := event as InputEventMouseMotion
@@ -196,23 +255,54 @@ func _on_list_input(event: InputEvent) -> void:
 		var moved := move.position.y - _hold_y
 		if not _dragging and absf(moved) > DEADZONE:
 			_dragging = true
+			# 끌기 시작 = 고르기 취소. 눌린 자국을 지운다
+			_press(null)
 		if _dragging:
 			# 손을 따라간다 — 위로 끌면 목록이 올라온다. 범위는 고도가 죈다
 			_scroll.scroll_vertical = _hold_scroll - int(moved)
 			accept_event()
 
 
-## 그 자리에서 뗐다 — 손가락 밑의 줄을 고른다. `position` 은 목록 기준이라
-## 화면 기준으로 옮겨서 줄 상자와 견준다 (줄은 스크롤만큼 밀려 있다)
-func _pick_at(at: Vector2) -> void:
-	var point := _scroll.global_position + at
+## 그 자리의 줄. **줄 전체가 누르는 자리다** (2026-09-20 요청: "해당 라인을 전체
+## 클릭 영역으로") — 가로는 따지지 않고(목록 안이면 다 그 줄이다) 세로만 본다.
+## 줄 사이 틈(ROW_GAP)도 가까운 줄에 붙여 준다. `at` 은 목록 기준이라 화면
+## 기준으로 옮겨서 견준다 (줄은 스크롤만큼 밀려 있다)
+func _row_at(at: Vector2) -> Button:
+	var y: float = _scroll.global_position.y + at.y
 	for child in _rows.get_children():
 		var button := child as Button
 		if button == null or button.disabled:
 			continue
-		if button.get_global_rect().has_point(point):
-			_on_pick(str(button.get_meta("zone", "")))
-			return
+		var box := button.get_global_rect()
+		if y >= box.position.y - ROW_GAP * 0.5 and y <= box.end.y + ROW_GAP * 0.5:
+			return button
+	return null
+
+
+## 눌린 틀로 바꿔 끼운다. `row` 가 null 이면 눌린 자국을 지운다.
+## 누름을 **보이게** 하는 자리다 (2026-09-20 요청: 누를 때와 뗄 때가 달라야 한다)
+func _press(row: Button) -> void:
+	if _held == row:
+		return
+	if _held != null and is_instance_valid(_held):
+		_held.add_theme_stylebox_override("normal", _row_box(ROW_FILL, ROW_RIM, 0))
+	_held = row
+	if _held != null:
+		_held.add_theme_stylebox_override("normal", _row_box(ROW_PRESS_FILL, ROW_PRESS_RIM, ROW_SINK))
+
+
+## 줄 한 칸의 틀. `sink` 만큼 내용이 내려앉는다 — 누른 줄에 준다
+func _row_box(fill: Color, rim: Color, sink: int) -> StyleBoxFlat:
+	var box := StyleBoxFlat.new()
+	box.bg_color = fill
+	box.border_color = rim
+	box.set_border_width_all(ROW_RIM_WIDTH)
+	box.set_corner_radius_all(ROW_RADIUS)
+	box.content_margin_left = ROW_PAD.x
+	box.content_margin_right = ROW_PAD.x
+	box.content_margin_top = ROW_PAD.y + sink
+	box.content_margin_bottom = maxf(ROW_PAD.y - sink, 0.0)
+	return box
 
 
 func _on_pick(zone_id: String) -> void:

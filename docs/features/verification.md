@@ -168,6 +168,7 @@ npm run probe -- god --zone meadow              # 무적 모드 — 안 깎이�
 npm run shot:godot                   # 낙뢰(thunder_fall)
 npm run shot:godot -- rising_kick    # 스킬 id 를 주면 그것
 npm run shot:godot -- portal         # 차원문 소용돌이 (스킬이 아니라 늘 켜진 이펙트)
+npm run shot:godot -- gate           # 차원문 창 (logs/gate_off.png · gate_on.png=줄 누른 채)
 ```
 
 - **`--headless` 로는 아무것도 안 그려진다.** 헤드리스는 더미 렌더러라 화면이

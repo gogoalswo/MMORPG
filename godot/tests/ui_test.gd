@@ -127,14 +127,24 @@ func _run_scene() -> void:
 	else:
 		print("  목록 끌기: %dpx 내려감" % dragged)
 
-	# 끌지 않고 그 자리에서 떼면 그 줄을 고른 것이다
+	# 끌지 않고 그 자리에서 떼면 그 줄을 고른 것이다.
+	# **줄 오른쪽 끝**을 누른다 — 아이콘이 아니라 줄 전체가 누르는 자리여야 한다
+	# (2026-09-20 요청: "해당 라인을 전체 클릭 영역으로 잡어")
 	list.scroll_vertical = 0
 	await process_frame
-	var row1 := panel2.row(1).get_global_rect().get_center() - list.global_position
-	panel2._on_list_input(_mouse(row1, true))
-	panel2._on_list_input(_mouse(row1, false))
+	var box := panel2.row(1).get_global_rect()
+	var far := Vector2(list.size.x - 8.0, box.get_center().y - list.global_position.y)
+	panel2._on_list_input(_mouse(far, true))
+	# 누르고 있는 동안은 **눌린 틀**이다
+	if panel2._held != panel2.row(1):
+		_fail("줄을 눌렀는데 눌린 표시가 안 난다")
+	panel2._on_list_input(_mouse(far, false))
+	if panel2._held != null:
+		_fail("뗐는데 눌린 표시가 남아 있다")
 	if panel2.visible:
-		_fail("줄을 눌렀다 뗐는데 안 골라졌다")
+		_fail("줄 오른쪽 끝을 눌렀다 뗐는데 안 골라졌다")
+	else:
+		print("  줄 오른쪽 끝(%.0fpx)으로 고르기, 누름 표시 붙었다 떨어진다" % far.x)
 
 	# 문 아치를 누르면 창이 열린다 — **멀리 서 있어도 바로** 열린다
 	# (2026-09-18 요청: "포탈까지 안 걸어가도 클릭하면 UI 열리게")

@@ -560,6 +560,8 @@ func _respawn(now: int) -> void:
 			continue
 		monster.hp = monster.max_hp
 		monster.respawn_at = 0
+		# 죽은 자리에서 다시 선다. 집에서 멀면 다음 틱의 리쉬 검사가 도로 켠다
+		monster.leashing = false
 
 
 ## Transport 가 비워 간다. 여기서 비우지 않으면 계속 쌓인다
@@ -598,9 +600,25 @@ func _step_monsters(delta: float, now: int) -> void:
 
 		var home_gap := Vector2(monster.x - monster.home_x, monster.z - monster.home_z).length()
 
-		# 집에서 너무 멀어졌으면 쫓기를 포기하고 돌아간다
+		# --- 집으로 돌아가는 중 ---
+		# **도착할 때까지 아무도 안 쫓는다.** 한 걸음 걷고 리쉬 안으로 들어오자마자
+		# 대상을 다시 찾으면 경계에서 앞뒤로 떤다 (2026-09-20 에 지적받았다)
+		if bool(monster.get("leashing", false)):
+			if home_gap <= PATROL_ARRIVE:
+				monster.leashing = false
+				monster.state = "idle"
+				continue
+			monster.state = "chase"
+			_move_monster(monster, monster.home_x, monster.home_z, float(monster.speed), delta)
+			continue
+
+		# 집에서 너무 멀어졌으면 쫓기를 포기하고 **체력을 채워** 돌아간다.
+		# 깎아 놓고 도망친 놈을 다음에 만났을 때 반피로 서 있으면, 리쉬 밖에서
+		# 때렸다 빠지기를 되풀이해 위험 없이 잡을 수 있다
 		if home_gap > float(monster.leash):
+			monster.leashing = true
 			monster.target = ""
+			monster.hp = monster.max_hp
 			monster.state = "chase"
 			_move_monster(monster, monster.home_x, monster.home_z, float(monster.speed), delta)
 			continue
@@ -834,6 +852,8 @@ static func make_monster(
 		# 집. 너무 멀어지면 여기로 돌아온다
 		"home_x": x,
 		"home_z": z,
+		# 집으로 돌아가는 중인가. 돌아가는 동안은 아무도 안 쫓는다 (_step_monsters)
+		"leashing": false,
 		"target": "",
 		"state": "idle",
 		# --- 순찰 --- 쫓을 사람이 없을 때 걸어갈 자리와, 다음 다리를 시작할 시각.

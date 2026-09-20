@@ -74,8 +74,29 @@ const HUNT_PATROL_REST_MS := 1200
 ## 화면이 멈춰서 입력이 끊긴 것과 손을 뗀 것을 구별할 방법이 없고, 구별할 필요도
 ## 없다. 둘 다 "사람이 안 몰고 있다"이다
 const MANUAL_HOLD_MS := 400
+## 캐릭터를 막는 몸을 훑는 반경. ZoneRoom.ts 의 SOLID_SCAN_RANGE 와 같은 값이다
+const SOLID_SCAN_RANGE := 4.0
 
 var _next_save_at := 0
+
+
+## 그 자리에서 캐릭터를 막는 몸들. **죽은 것은 빼고 4m 안만** 본다.
+##
+## 시체를 안 빼면 화면에서 사라진 놈이 보이지 않는 벽으로 남아 "왜 안 가지" 가
+## 된다 (docs/features/collision.md 의 "죽은 것은 지나간다"). 몬스터끼리는
+## `_move_monster` 가 이미 빼고 있었는데 **캐릭터 이동만 통째로 넘기고 있었다.**
+## ZoneRoom.ts 의 solidsNear 와 같은 순서·같은 조건이다
+func _solids_near(x: float, z: float) -> Array:
+	var near: Array = []
+	for monster in _monsters:
+		if int(monster.hp) <= 0:
+			continue
+		var dx: float = float(monster.x) - x
+		var dz: float = float(monster.z) - z
+		if dx * dx + dz * dz > SOLID_SCAN_RANGE * SOLID_SCAN_RANGE:
+			continue
+		near.append(monster)
+	return near
 
 
 func open(id: String) -> void:
@@ -200,8 +221,11 @@ func input_move(player_id: String, seq: int, dx: float, dz: float, dt: float) ->
 		player.last_seq = seq
 		return
 
-	# 몬스터를 뚫고 못 지나간다. 미는 쪽은 언제나 움직이는 쪽이다
-	Movement.apply_move(player, dx, dz, dt, half_size, _run_speed, _monsters)
+	# 몬스터를 뚫고 못 지나간다. 미는 쪽은 언제나 움직이는 쪽이다.
+	# **시체는 빼고 넘긴다** — 넣으면 보이지 않는 벽이 된다 (_solids_near)
+	Movement.apply_move(
+		player, dx, dz, dt, half_size, _run_speed, _solids_near(player.x, player.z)
+	)
 	player.last_seq = seq
 
 	if sqrt(dx * dx + dz * dz) > 1e-4:
@@ -491,7 +515,9 @@ func _walk_auto(
 	if to.length() <= stop_at:
 		return
 	var dir := to.normalized()
-	Movement.apply_move(player, dir.x, dir.y, delta, half_size, _run_speed, _monsters)
+	Movement.apply_move(
+		player, dir.x, dir.y, delta, half_size, _run_speed, _solids_near(player.x, player.z)
+	)
 	player.rot = atan2(dir.x, dir.y)
 
 

@@ -226,9 +226,12 @@ fetch_icon 9824f75b67284f12e744b40c4b54921f ui_bar_frame   # 체력 막대 홈 (
 fetch_icon b58dcdbd6894b815fcfa09d0cb7e7340 ui_bar_fill    # 막대 채움 (색은 코드가 입힌다)
 fetch_icon c41890b49bcfb31cf91861287fe65fd5 ui_level_badge # 레벨 배지 (얇은 금색 원)
 fetch_icon 66d3b2ea079339e5a22b09546c956903 ui_quick_slot  # 퀵슬롯·자동사냥 칸 (얇은 선)
-fetch_icon 20be4c3fa633c7862e5d970a69c02f8b ui_icon_skill  # 오른쪽 위 스킬 (선화, 테 없음)
-fetch_icon 74b3a3ec0e05345aed7d1a981b6af984 ui_icon_bag    # 오른쪽 위 가방 (선화, 테 없음)
-fetch_icon e259161864911eba8ccd8ff6c784c22d ui_icon_auto   # 자동사냥 — 검 두 자루가 X자
+# 아이콘 셋은 **밝게 칠한 것**이다 — 선화로 뽑았더니 어두운 실루엣이 되어
+# 밤 사냥터에서 묻혔다 (2026-09-20 지적). 프롬프트에 "FULLY COLORED and BRIGHT,
+# NOT a dark silhouette, NOT black" 을 넣어야 칠해서 준다
+fetch_icon a565d9d8185a27a28a7b938c094ba367 ui_icon_skill  # 오른쪽 위 스킬 (금테 책 + 룬)
+fetch_icon 4f6cbe226e41777bf6aa0393bf6ccb6c ui_icon_bag    # 오른쪽 위 가방 (황갈색 배낭)
+fetch_icon bfe674eb94721287927d24bbc88053e1 ui_icon_auto   # 자동사냥 — 검 두 자루가 X자
 fetch_icon 5f5eec112390d85ef8910b43bb94d9ab ui_auto_spin   # 자동사냥 고리 (얇은 선 화살표)
 fetch_icon 029c2be72082608b40dfaf00bebe782a ui_portrait    # 옛 초상 테두리 (미사용 — 상태판을 내리면서 빠졌다)
 

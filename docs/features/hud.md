@@ -99,6 +99,22 @@
 **존 이름·골드·몬스터 수·fps·빌드 표시**다. 빌드 표시는 지우면 안 된다
 ([godot-migration.md](godot-migration.md) 의 "지금 보는 것이 어느 빌드인지").
 
+### 크기는 한 번 줄였다 ★
+
+2026-09-20 에 "UI 크기를 좀 줄여" 라는 요청으로 HUD 만 한 뼘씩 줄였다.
+**창 칸(`SKILL_CELL` 100)은 그대로다** — 창은 열었을 때 크게 보는 것이라 다르다.
+
+| | 전 | 후 |
+|---|---|---|
+| 퀵슬롯 칸 `QUICK_CELL` | 104 | 84 |
+| 메뉴 단추 `MENU_BTN` | 84 | 62 |
+| 레벨 배지 `LEVEL_BADGE` | 86 | 64 |
+| 체력 막대 높이 `HP_BAR_H` | 40 | 30 |
+| 레벨 글자 · 경험치 · 체력 | 30 · 17 · 18 | 23 · 15 · 15 |
+
+칸이 작아지면 **칸 안 글자도 같이 내려야 한다** — "켜짐" 배지를 여백 13 으로 두었더니
+가운데로 올라와 검 손잡이와 겹쳤다. 지금은 바닥에서 4 다.
+
 ### 테두리 두께는 조각마다 다르다 ★
 
 `_frame_box(name, margin, content)` 의 `margin` 은 **그림에서 테가 차지하는
@@ -153,9 +169,13 @@
   `extremely thin pale gold hairline outline, no thick metal, no rivets, no ornament,
   the inside filled with flat dark charcoal grey`
 - **메뉴 아이콘은 테두리가 아예 없다.** 크림색 선화 문장(紋章)만 떠 있다:
-  `flat line-art emblem in creamy ivory and pale gold, thin clean outlines,
-  it must NOT sit on any disc, circle, plate, badge, frame or panel`
-  — 이 마지막 문장을 안 넣으면 **아이콘이 크림색 원판 위에 앉아 나온다.**
+  `it must NOT sit on any disc, circle, plate, badge, frame or panel`
+  — 이 문장을 안 넣으면 **아이콘이 크림색 원판 위에 앉아 나온다.**
+- **아이콘은 밝게 칠한다.** ★ "선화(line-art)" 로 시켰더니 검은 실루엣에 금색
+  윤곽만 남아 **밤 사냥터 바닥에 묻혔다** (2026-09-20 지적). 테 없는 아이콘은
+  제 색으로 서 있어야 보인다:
+  `FULLY COLORED and BRIGHT, warm ivory and gold with soft highlights,
+  NOT a dark silhouette, NOT black, NOT a flat outline drawing`
 
 **퀵슬롯 칸은 `ui_quick_slot` 으로 따로 둔다** ★ `ui_skill_slot` 을 덮으면
 스킬창의 장착 칸까지 같이 바뀌어, 그 옆 목록 칸(`ui_slot`, 옛 청록)과 창 안에서
@@ -167,9 +187,9 @@
 | `ui_bar_fill` | 광택 캡슐 (흰색) | 256 |
 | `ui_level_badge` | 레벨 배지 (얇은 금색 원 + 어두운 판) | 192 · 한 겹만 걷는다 |
 | `ui_quick_slot` | 퀵슬롯·자동사냥 칸 (얇은 선, 위 모서리 잘림) | 128 · 한 겹만 걷는다 |
-| `ui_icon_skill` | 룬이 떠 있는 책 (선화) | 128 |
-| `ui_icon_bag` | 배낭 (선화) | 128 |
-| `ui_icon_auto` | **검 두 자루가 X자** (선화) | 128 |
+| `ui_icon_skill` | 룬이 떠 있는 책 (칠한 것) | 128 |
+| `ui_icon_bag` | 배낭 (칠한 것) | 128 |
+| `ui_icon_auto` | **검 두 자루가 X자** (칠한 것) | 128 |
 | `ui_auto_spin` | 얇은 선 화살표 고리 | 192 · 가운데를 뚫는다 |
 | `ui_portrait` | 옛 초상 테두리 (**미사용**) | 192 |
 

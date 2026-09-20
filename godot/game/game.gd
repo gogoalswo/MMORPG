@@ -18,26 +18,27 @@ const BAG_COLUMNS := 5
 const BAG_ROWS := 3
 ## 칸 한 변. 1280x720 안에 장착 두 줄 + 캐릭터 + 가방 5열이 들어가는 크기다
 const CELL := 88
-## 스킬 칸. 퀵슬롯은 엄지로 누르니 조금 더 크다. 아이콘은 테두리 안쪽으로 SKILL_INSET 만큼 물린다
-const QUICK_CELL := 104
+## 스킬 칸. 퀵슬롯은 엄지로 누르니 조금 더 크다. 아이콘은 테두리 안쪽으로 SKILL_INSET 만큼 물린다.
+## **HUD 는 2026-09-20 에 한 번 줄였다** — 화면을 너무 먹었다. 창 칸(SKILL_CELL)은 그대로다
+const QUICK_CELL := 84
 const SKILL_CELL := 100
 const SKILL_COLUMNS := 4
 const SKILL_GAP := 10
-const SKILL_INSET := 11
+const SKILL_INSET := 9
 ## 퀵슬롯 위 한 묶음 (2026-09-20 요청). 레벨 배지 한 변과 체력 막대 높이다.
 ## **막대 길이는 안 정한다** — 세로 상자가 가장 넓은 자식(퀵슬롯 줄)에 맞춰 준다.
 ## 막대는 **테두리 두께의 두 배보다 높아야 한다** — 34 에 여백 18 을 주었더니
 ## 위아래 조각이 겹쳐 홈이 안 보였다 (2026-09-20, 찍어서 봤다)
-const LEVEL_BADGE := 86
-const HP_BAR_H := 40
+const LEVEL_BADGE := 64
+const HP_BAR_H := 30
 ## 막대 테두리 그림에서 테가 차지하는 두께 (9조각 여백). 얇은 선이라 작게 준다
 const BAR_FRAME_MARGIN := 7
 ## 막대 테두리 안쪽 여백 — 채움이 테를 덮으면 홈이 아니라 판으로 보인다
 const BAR_PAD := 5
 ## 오른쪽 위 메뉴 단추 (스킬·가방). 엄지로 누르니 퀵슬롯과 비슷한 크기다.
 ## **테두리가 없다** — 받은 그림이 그렇다 (2026-09-20). 그래서 아이콘을 거의 꽉 채운다
-const MENU_BTN := 84
-const MENU_INSET := 4
+const MENU_BTN := 62
+const MENU_INSET := 3
 ## 퀵슬롯 칸 테두리가 차지하는 두께. 받은 그림의 칸은 **머리카락처럼 얇은 선**이라
 ## 26 으로 그리면 테가 칸을 먹는다 (2026-09-20 지적). 창 칸은 26 그대로다
 const QUICK_MARGIN := 10
@@ -45,7 +46,7 @@ const QUICK_MARGIN := 10
 const SPIN_SPEED := 1.6
 ## 자동사냥 칸의 아이콘만 더 물린다. 퀵슬롯과 같은 11 로 두면 고리가 아이콘 위를
 ## 덮어 검이 안 보였다 (2026-09-19). 고리가 얇아진 뒤로는 덜 물려도 된다 (2026-09-20)
-const AUTO_INSET := 18
+const AUTO_INSET := 14
 const ICON_DIR := "res://assets/icons/"
 ## 가방 탭. 0 은 전체, 나머지는 `_tab_keeps` 가 슬롯으로 가른다
 const BAG_TABS := ["전체", "무기", "방어구", "장신구", "재료"]
@@ -312,7 +313,7 @@ func _build_persistent() -> void:
 	# 퀵슬롯 위 묶음이 보여 준다. 빌드 표시는 남긴다 (지금 보는 것이 어느 빌드인지)
 	_label = Label.new()
 	_label.position = Vector2(24, 24)
-	_label.add_theme_font_size_override("font_size", 18)
+	_label.add_theme_font_size_override("font_size", 16)
 	_ui_root.add_child(_label)
 
 	_build_gate_panel()
@@ -350,7 +351,7 @@ func _build_level_badge(parent: Node) -> void:
 	_level_label.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_level_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_level_label.add_theme_font_size_override("font_size", 30)
+	_level_label.add_theme_font_size_override("font_size", 23)
 	_level_label.add_theme_constant_override("outline_size", 7)
 	_level_label.add_theme_color_override("font_outline_color", Color.BLACK)
 	_level_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -358,7 +359,7 @@ func _build_level_badge(parent: Node) -> void:
 
 	_exp_text = Label.new()
 	_exp_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_exp_text.add_theme_font_size_override("font_size", 17)
+	_exp_text.add_theme_font_size_override("font_size", 15)
 	_exp_text.add_theme_constant_override("outline_size", 6)
 	_exp_text.add_theme_color_override("font_outline_color", Color.BLACK)
 	_exp_text.add_theme_color_override("font_color", Color("#e8c14a"))
@@ -987,19 +988,19 @@ func _build_skill_bar() -> void:
 	# (2026-09-20 요청). 왼쪽 위에 따로 있던 상태판을 여기로 내렸다.
 	# 세로 상자에 담아야 막대가 퀵슬롯 줄과 같은 길이로 늘어난다
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 5)
+	column.add_theme_constant_override("separation", 4)
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_ui_root.add_child(column)
 
 	_build_level_badge(column)
 
-	var hp := _make_bar(HP_BAR_H, Color("#c33122"), 18)
+	var hp := _make_bar(HP_BAR_H, Color("#c33122"), 15)
 	_hp_bar = hp["bar"]
 	_hp_text = hp["text"]
 	column.add_child(hp["frame"])
 
 	var dock := HBoxContainer.new()
-	dock.add_theme_constant_override("separation", 12)
+	dock.add_theme_constant_override("separation", 9)
 	column.add_child(dock)
 	_bar_buttons.clear()
 	for slot in int(GameData.combat().get("skillBarSize", 4)):
@@ -1021,7 +1022,8 @@ func _build_skill_bar() -> void:
 		auto_inset.add_theme_constant_override("margin_" + side, AUTO_INSET)
 	# "자동"·"켜짐" 을 칸 테두리 위로 올린다 — 금테 칸은 테가 두꺼워 글자가 걸렸다
 	var auto_badge: MarginContainer = _auto_cell.find_child("badge", true, false).get_parent().get_parent()
-	auto_badge.add_theme_constant_override("margin_bottom", SKILL_INSET + 4)
+	# 칸이 작아진 뒤로는 바닥에 바짝 붙인다 — 가운데로 올라오면 검 손잡이와 겹친다
+	auto_badge.add_theme_constant_override("margin_bottom", 4)
 	dock.add_child(_auto_cell)
 
 	_auto_spin = TextureRect.new()
@@ -1046,7 +1048,7 @@ func _build_skill_bar() -> void:
 	column.grow_vertical = Control.GROW_DIRECTION_BEGIN
 
 	var menu := HBoxContainer.new()
-	menu.add_theme_constant_override("separation", 8)
+	menu.add_theme_constant_override("separation", 6)
 	_ui_root.add_child(menu)
 
 	# 오른쪽 위 — 스킬·가방. 아이콘만 남기고 글자를 뺐다 (2026-09-19 요청).
@@ -1144,7 +1146,7 @@ func _make_skill_cell(size: int, frame: String, on_press: Callable, margin: int 
 	badge.name = "badge"
 	badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	badge.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
-	badge.add_theme_font_size_override("font_size", 15)
+	badge.add_theme_font_size_override("font_size", 13)
 	badge.add_theme_constant_override("outline_size", 5)
 	badge.add_theme_color_override("font_outline_color", Color.BLACK)
 	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1153,7 +1155,7 @@ func _make_skill_cell(size: int, frame: String, on_press: Callable, margin: int 
 	key.name = "key"
 	key.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	key.vertical_alignment = VERTICAL_ALIGNMENT_TOP
-	key.add_theme_font_size_override("font_size", 20)
+	key.add_theme_font_size_override("font_size", 17)
 	key.add_theme_constant_override("outline_size", 6)
 	key.add_theme_color_override("font_outline_color", Color.BLACK)
 	key.mouse_filter = Control.MOUSE_FILTER_IGNORE

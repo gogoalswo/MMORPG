@@ -254,20 +254,21 @@ func _run_scene() -> void:
 		quit(1)
 
 
-## 왼쪽 위 상태판과 오른쪽 위 메뉴 — 자리, 숫자, 누르면 창이 열리나 (2026-09-19 요청).
+## 퀵슬롯 위 묶음과 오른쪽 위 메뉴 — 자리, 숫자, 누르면 창이 열리나.
+## 2026-09-20 요청으로 레벨·경험치·체력이 왼쪽 위에서 **퀵슬롯 위**로 내려왔다.
 ## 화면 밖으로 나가거나 서로 겹치는 것은 수치로 잡힌다 — 찍어서 볼 것은 결뿐이다
 func _case_status(game: Node3D) -> void:
 	var me: Dictionary = game._transport.snapshot().players[game._transport.my_id()]
 	var screen := Vector2(1280, 720)
 
-	# 레벨·체력·경험치가 스냅샷을 그대로 보여 준다
-	if game._level_label.text != "Lv.%d" % int(me.level):
-		_fail("레벨 글자가 '%s'" % game._level_label.text)
+	# 레벨·체력·경험치가 스냅샷을 그대로 보여 준다. 레벨은 배지 안이라 **숫자만**이고,
+	# 경험치는 막대가 아니라 퍼센트다
+	if game._level_label.text != str(int(me.level)):
+		_fail("레벨 글자가 '%s' (스냅샷은 %d)" % [game._level_label.text, me.level])
 	if game._hp_text.text != "%d / %d" % [int(me.hp), int(me.stats.maxHp)]:
 		_fail("체력 글자가 '%s' (스냅샷은 %d/%d)" % [game._hp_text.text, me.hp, me.stats.maxHp])
-	var need := Combat.exp_to_next(int(me.level))
-	if game._exp_bar.max_value != float(maxi(1, need)):
-		_fail("경험치 막대 최대치가 %d 이어야 하는데 %d" % [need, game._exp_bar.max_value])
+	if not game._exp_text.text.begins_with("경험치 ") or not game._exp_text.text.ends_with("%"):
+		_fail("경험치가 퍼센트가 아니다: '%s'" % game._exp_text.text)
 
 	# 막대가 줄어든다 — 반쯤 깎아 보고 채움 폭이 아니라 값으로 본다
 	me.hp = int(me.stats.maxHp) / 2
@@ -275,15 +276,25 @@ func _case_status(game: Node3D) -> void:
 	if game._hp_bar.value != float(me.hp):
 		_fail("체력을 깎았는데 막대가 %d" % game._hp_bar.value)
 
-	# 왼쪽 위 안에 있고 화면 밖으로 안 나간다
-	var hp_rect: Rect2 = game._hp_bar.get_global_rect()
-	var exp_rect: Rect2 = game._exp_bar.get_global_rect()
-	if hp_rect.position.x < 0.0 or hp_rect.position.y < 0.0 or exp_rect.end.x > screen.x / 2.0:
-		_fail("상태판이 왼쪽 위에 안 들어간다: %s / %s" % [hp_rect, exp_rect])
-	if exp_rect.position.y <= hp_rect.position.y:
-		_fail("경험치 막대가 체력 막대 아래가 아니다")
+	# 퀵슬롯 바로 위에, 퀵슬롯과 같은 길이로 깔린다.
+	# **테두리(부모) 기준이다** — 채움은 안쪽 여백만큼 좁다
+	var hp_frame: Control = game._hp_bar.get_parent()
+	var hp_rect: Rect2 = hp_frame.get_global_rect()
+	var quick: Rect2 = game._bar_buttons[0].get_global_rect()
+	var badge: Rect2 = game._level_label.get_global_rect()
+	if hp_rect.end.y > quick.position.y + 1.0 or quick.position.y - hp_rect.end.y > 24.0:
+		_fail("체력 막대가 퀵슬롯 바로 위가 아니다: 막대 %s · 퀵슬롯 %s" % [hp_rect, quick])
+	if absf(hp_rect.get_center().x - screen.x / 2.0) > 2.0:
+		_fail("체력 막대가 화면 가운데가 아니다: %s" % hp_rect)
+	if absf(hp_rect.size.x - float(game._auto_cell.get_global_rect().end.x - quick.position.x)) > 6.0:
+		_fail("체력 막대가 퀵슬롯 줄과 길이가 다르다 (%.0f)" % hp_rect.size.x)
+	if badge.end.y > hp_rect.position.y or badge.position.y < 0.0:
+		_fail("레벨 배지가 막대 위에 안 올라갔다: %s" % badge)
+	var exp_rect: Rect2 = game._exp_text.get_global_rect()
+	if exp_rect.position.y < badge.end.y - 2.0 or exp_rect.end.y > hp_rect.position.y + 2.0:
+		_fail("경험치가 레벨과 막대 사이가 아니다: %s" % exp_rect)
 
-	# 오른쪽 위 메뉴 — 화면 안, 상태판과 안 겹침
+	# 오른쪽 위 메뉴 — 화면 안, 묶음과 안 겹침
 	if game._menu_cells.size() != 2:
 		_fail("오른쪽 위 단추가 2개여야 하는데 %d개" % game._menu_cells.size())
 		return
@@ -291,8 +302,8 @@ func _case_status(game: Node3D) -> void:
 	var bag_rect: Rect2 = game._menu_cells[1].get_global_rect()
 	if bag_rect.end.x > screen.x or skill_rect.position.y < 0.0 or bag_rect.position.y > 120.0:
 		_fail("메뉴 단추가 오른쪽 위에 안 붙었다: %s / %s" % [skill_rect, bag_rect])
-	if skill_rect.intersects(exp_rect) or skill_rect.intersects(hp_rect):
-		_fail("메뉴 단추가 상태판과 겹친다")
+	if skill_rect.intersects(hp_rect) or skill_rect.intersects(badge):
+		_fail("메뉴 단추가 퀵슬롯 위 묶음과 겹친다")
 
 	# 눌러서 창이 열린다
 	game._menu_cells[0].find_child("hit", true, false).pressed.emit()
@@ -306,7 +317,7 @@ func _case_status(game: Node3D) -> void:
 		_fail("오른쪽 위 가방 단추를 눌렀는데 가방이 안 열렸다")
 	game._toggle_bag()
 	await process_frame
-	print("  상태판: 체력 %s · 경험치 %s · %s" % [game._hp_text.text, game._exp_text.text, game._level_label.text])
+	print("  퀵슬롯 위: Lv.%s · %s · 체력 %s (막대 %.0fpx)" % [game._level_label.text, game._exp_text.text, game._hp_text.text, hp_rect.size.x])
 
 
 ## 가방·장비 창 — 열리나, 칸이 제대로 깔리나, 골라서 낄 수 있나.

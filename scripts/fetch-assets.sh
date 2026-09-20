@@ -214,15 +214,21 @@ fetch_icon 3335dffd51390210007c5b2eb5a8adb7 skill_tiger_roar
 fetch_icon 844c2e93d9c7b8f9d6c3717b2334b9ca skill_white_tiger
 fetch_icon 3d66ba0be1ec8bec0bc0b2a11fcce4f9 skill_sky_breaker
 fetch_icon 627417215a6f50209f7d0a20cbd1c607 skill_thunder_fall
-# 메인 HUD (2026-09-19). 왼쪽 위 상태판·오른쪽 위 메뉴·자동사냥 칸 조각이다.
-# 막대 채움은 **흰 것 한 장**이고 붉은 체력·금빛 경험치는 색만 입혀 쓴다
-fetch_icon 029c2be72082608b40dfaf00bebe782a ui_portrait    # 초상 테두리 (안쪽을 뚫는다)
-fetch_icon 976675b91690aad8bf6486cb59756a76 ui_bar_frame   # 막대 홈 (안쪽을 뚫는다)
-fetch_icon a44b7c2e62dca25a1f77ab76b1182dbe ui_bar_fill    # 막대 채움 (색은 코드가 입힌다)
+# 메인 HUD (2026-09-19). 오른쪽 위 메뉴와 자동사냥 칸 조각이다.
 fetch_icon 43a642bb211e382584e79a65547d86d4 ui_icon_skill  # 오른쪽 위 스킬 단추
 fetch_icon c0462e650711225a3abde372e637406a ui_icon_bag    # 오른쪽 위 가방 단추
 fetch_icon a32516d65c3087185bef1c63a9c80425 ui_icon_auto   # 자동사냥 칸
 fetch_icon 0062d6e64d3dcf66ad041979c5001b38 ui_auto_spin   # 자동사냥 고리 (도는 화살표 둘)
+fetch_icon 029c2be72082608b40dfaf00bebe782a ui_portrait    # 옛 초상 테두리 (미사용 — 상태판을 내리면서 빠졌다)
+# HUD 아트를 **어두운 쇠 + 금테**로 갈아 끼웠다 (2026-09-20, 받은 그림대로).
+# 막대 채움은 **흰 것 한 장**이고 붉은 체력은 색만 입혀 쓴다.
+# 퀵슬롯 칸은 `ui_quick_slot` 으로 따로 둔다 — `ui_skill_slot` 을 덮으면
+# 스킬창 장착 칸까지 바뀌어 창 안에서 목록 칸(ui_slot)과 결이 어긋난다
+fetch_icon 92541f792a7dbb24b8af339da1e55b8d ui_bar_frame   # 체력 막대 홈 (안쪽을 뚫는다)
+fetch_icon b58dcdbd6894b815fcfa09d0cb7e7340 ui_bar_fill    # 막대 채움 (색은 코드가 입힌다)
+fetch_icon a45ebf6b9fc7007391b58cb5ec89a4c9 ui_level_badge # 레벨 배지 (안쪽을 뚫는다)
+fetch_icon e5e6a4e3f110ddaabb525e5686f74624 ui_quick_slot  # 퀵슬롯·자동사냥 칸
+fetch_icon 1a2329841752e028ace7a530970d958b ui_menu_btn    # 오른쪽 위 단추 테두리
 
 node scripts/build-item-icons.mjs
 

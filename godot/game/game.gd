@@ -24,15 +24,14 @@ const SKILL_CELL := 100
 const SKILL_COLUMNS := 4
 const SKILL_GAP := 10
 const SKILL_INSET := 11
-## 왼쪽 위 상태판. 초상 한 변과 막대 길이 — 1280x720 에서 화면 너비의 1/3 을 안 넘는다
-const STATUS_X := 20
-const STATUS_Y := 18
-const PORTRAIT := 92
-const BAR_W := 300
-const HP_BAR_H := 32
-## 경험치 막대는 체력보다 얇지만 **글자가 들어갈 만큼은 돼야 한다** — 22 로 뒀더니
-## 다섯 자리 숫자가 위아래로 잘렸다 (2026-09-19, 찍어서 봤다)
-const EXP_BAR_H := 27
+## 퀵슬롯 위 한 묶음 (2026-09-20 요청). 레벨 배지 한 변과 체력 막대 높이다.
+## **막대 길이는 안 정한다** — 세로 상자가 가장 넓은 자식(퀵슬롯 줄)에 맞춰 준다.
+## 막대는 **테두리 두께의 두 배보다 높아야 한다** — 34 에 여백 18 을 주었더니
+## 위아래 조각이 겹쳐 홈이 안 보였다 (2026-09-20, 찍어서 봤다)
+const LEVEL_BADGE := 86
+const HP_BAR_H := 40
+## 막대 테두리 그림에서 테가 차지하는 두께 (9조각 여백)
+const BAR_FRAME_MARGIN := 12
 ## 막대 테두리 안쪽 여백 — 채움이 테를 덮으면 홈이 아니라 판으로 보인다
 const BAR_PAD := 5
 ## 오른쪽 위 메뉴 단추 (스킬·가방). 엄지로 누르니 퀵슬롯과 비슷한 크기다
@@ -96,11 +95,10 @@ const MOB_BAR_MS := 5000
 ## 마지막으로 일어난 일 한 줄 (맞았다·레벨 올랐다)
 var _last_event := ""
 var _ui_root: Control
-## 왼쪽 위 상태판 — 초상 안 레벨, 체력 막대, 경험치 막대
+## 퀵슬롯 위 한 묶음 — 레벨 배지 안 숫자, 체력 막대와 그 위 숫자, 경험치 퍼센트
 var _level_label: Label
 var _hp_bar: TextureProgressBar
 var _hp_text: Label
-var _exp_bar: TextureProgressBar
 var _exp_text: Label
 ## 맞았을 때 화면 가장자리가 붉어지는 비네트 (game/hurt_flash.gd)
 var _hurt: HurtFlash
@@ -306,12 +304,10 @@ func _build_persistent() -> void:
 	_hurt = HurtFlash.new()
 	_ui_root.add_child(_hurt)
 
-	_build_status()
-
 	# 존 이름·골드·몬스터 수·fps·빌드. **체력·레벨·경험치는 여기서 지웠다** —
-	# 상태판 막대가 보여 준다. 빌드 표시는 남긴다 (지금 보는 것이 어느 빌드인지)
+	# 퀵슬롯 위 묶음이 보여 준다. 빌드 표시는 남긴다 (지금 보는 것이 어느 빌드인지)
 	_label = Label.new()
-	_label.position = Vector2(STATUS_X, STATUS_Y + PORTRAIT + 14)
+	_label.position = Vector2(24, 24)
 	_label.add_theme_font_size_override("font_size", 18)
 	_ui_root.add_child(_label)
 
@@ -323,77 +319,57 @@ func _build_persistent() -> void:
 	_build_bag_panel()
 
 
-## 왼쪽 위 상태판 — 초상·레벨·체력 막대·경험치 막대. 2026-09-19 요청으로
-## 글자 한 줄이던 것을 조각으로 갈아 끼웠다.
-##
-## ```
-## HBox ─ [초상 ui_portrait · 안에 ui_figure · 아래 Lv.N] [VBox ─ 체력 / 경험치]
-## ```
-##
-## **막대 채움은 흰 그림 한 장을 색만 바꿔 쓴다** (`tint_progress`) — 붉은 것과
-## 금빛 것을 따로 뽑으면 같은 광택을 두 번 맞춰야 한다. 조각이 없으면(sync:godot
-## 을 안 돌렸어도) 코드로 그린 테와 흰 판으로 나온다 — 창과 같은 규칙이다
-func _build_status() -> void:
-	var row := HBoxContainer.new()
-	row.position = Vector2(STATUS_X, STATUS_Y)
-	row.add_theme_constant_override("separation", 12)
-	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_ui_root.add_child(row)
+## 레벨 배지와 경험치 — **퀵슬롯 위 묶음의 맨 윗 두 줄**이다 (2026-09-20 요청,
+## 받은 그림대로). 배지 안에 레벨 숫자를 크게 넣고, 바로 아래에 경험치를
+## 퍼센트로 적는다. 막대로 두지 않은 것도 요청이다 — 받은 그림이 그렇다
+func _build_level_badge(parent: Node) -> void:
+	# **배지는 9조각으로 늘이지 않는다** ★ 9조각은 가운데를 늘여 채우므로 둥근 테가
+	# 사라지고 좌우 날개만 남았다 (2026-09-20, 찍어서 봤다). 그림 한 장을 비율 그대로
+	# 깔고 그 위에 숫자를 얹는다 — 창 테두리(늘여 쓰는 것)와 다른 쓰임이다
+	var badge := Control.new()
+	badge.custom_minimum_size = Vector2(LEVEL_BADGE, LEVEL_BADGE)
+	badge.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(badge)
 
-	var face := PanelContainer.new()
-	face.custom_minimum_size = Vector2(PORTRAIT, PORTRAIT)
-	face.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	face.add_theme_stylebox_override("panel", _frame_box("ui_portrait", 26, 0))
-	row.add_child(face)
+	var ring := _icon("ui_level_badge")
+	if ring != null:
+		var rect := TextureRect.new()
+		rect.texture = ring
+		rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+		badge.add_child(rect)
 
-	var face_inset := MarginContainer.new()
-	face_inset.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	for side in ["left", "right", "top", "bottom"]:
-		face_inset.add_theme_constant_override("margin_" + side, 10)
-	face.add_child(face_inset)
-	_add_icon(face_inset, "ui_figure", PORTRAIT - 20)
-
-	# 레벨은 초상 아래 가운데. PanelContainer 는 자식을 칸 전체에 깔기 때문에
-	# 자리는 정렬로만 잡는다 (칸·창에서 쓰는 것과 같은 방법)
 	_level_label = Label.new()
+	_level_label.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_level_label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
-	_level_label.add_theme_font_size_override("font_size", 20)
-	_level_label.add_theme_constant_override("outline_size", 6)
+	_level_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_level_label.add_theme_font_size_override("font_size", 30)
+	_level_label.add_theme_constant_override("outline_size", 7)
 	_level_label.add_theme_color_override("font_outline_color", Color.BLACK)
 	_level_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_level_label.set_anchors_preset(Control.PRESET_FULL_RECT)
-	# 테두리 위에 걸치지 않게 아래로 한 뼘 띄운다
-	var level_pad := MarginContainer.new()
-	level_pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	level_pad.add_theme_constant_override("margin_bottom", 9)
-	level_pad.add_child(_level_label)
-	face.add_child(level_pad)
+	badge.add_child(_level_label)
 
-	var bars := VBoxContainer.new()
-	bars.add_theme_constant_override("separation", 7)
-	bars.alignment = BoxContainer.ALIGNMENT_CENTER
-	bars.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(bars)
-
-	var hp := _make_bar(HP_BAR_H, Color("#d2402c"), 18)
-	_hp_bar = hp["bar"]
-	_hp_text = hp["text"]
-	bars.add_child(hp["frame"])
-
-	var exp_bar := _make_bar(EXP_BAR_H, Color("#e8c14a"), 14)
-	_exp_bar = exp_bar["bar"]
-	_exp_text = exp_bar["text"]
-	bars.add_child(exp_bar["frame"])
+	_exp_text = Label.new()
+	_exp_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_exp_text.add_theme_font_size_override("font_size", 17)
+	_exp_text.add_theme_constant_override("outline_size", 6)
+	_exp_text.add_theme_color_override("font_outline_color", Color.BLACK)
+	_exp_text.add_theme_color_override("font_color", Color("#e8c14a"))
+	_exp_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(_exp_text)
 
 
 ## 막대 하나 — 홈(9조각) 안에 채움을 깔고 그 위에 숫자를 얹는다.
 ## `{"frame": PanelContainer, "bar": TextureProgressBar, "text": Label}`
 func _make_bar(height: int, tint: Color, font: int) -> Dictionary:
 	var frame := PanelContainer.new()
-	frame.custom_minimum_size = Vector2(BAR_W, height)
+	# 가로 길이는 안 정한다 — 세로 상자가 퀵슬롯 줄 너비에 맞춰 늘여 준다
+	frame.custom_minimum_size = Vector2(0, height)
 	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame.add_theme_stylebox_override("panel", _frame_box("ui_bar_frame", 18, BAR_PAD))
+	frame.add_theme_stylebox_override("panel", _frame_box("ui_bar_frame", BAR_FRAME_MARGIN, BAR_PAD))
 
 	var bar := TextureProgressBar.new()
 	bar.fill_mode = TextureProgressBar.FILL_LEFT_TO_RIGHT
@@ -404,6 +380,9 @@ func _make_bar(height: int, tint: Color, font: int) -> Dictionary:
 	var fill := _icon("ui_bar_fill")
 	bar.texture_progress = fill if fill != null else _white(16)
 	bar.tint_progress = tint
+	# 빈 쪽은 **어두운 바닥**이 깔린다 — 홈 안쪽을 뚫어 두어서 그대로 두면 땅이 비친다
+	bar.texture_under = bar.texture_progress
+	bar.tint_under = Color(0.06, 0.04, 0.03, 0.88)
 	bar.step = 0.0
 	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	frame.add_child(bar)
@@ -426,7 +405,7 @@ func _make_bar(height: int, tint: Color, font: int) -> Dictionary:
 func _icon_button(icon_name: String, text: String, on_press: Callable) -> PanelContainer:
 	var cell := PanelContainer.new()
 	cell.custom_minimum_size = Vector2(MENU_BTN, MENU_BTN)
-	cell.add_theme_stylebox_override("panel", _frame_box("ui_button", 26, 0))
+	cell.add_theme_stylebox_override("panel", _frame_box("ui_menu_btn", 26, 0))
 
 	var inset := MarginContainer.new()
 	inset.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1000,12 +979,27 @@ func _stack_label(stack: Dictionary) -> String:
 ## **앵커로 자리를 잡는다** (UI 는 조각을 앵커로 조립한다). 자식을 다 넣은 뒤에
 ## 최소 크기로 오프셋을 맞추고, 양쪽으로 자라게 해서 해상도가 바뀌어도 가운데에 남는다
 func _build_skill_bar() -> void:
+	# 아래 가운데 한 묶음 — 위에서부터 레벨 배지 · 경험치 % · 체력 막대 · 퀵슬롯
+	# (2026-09-20 요청). 왼쪽 위에 따로 있던 상태판을 여기로 내렸다.
+	# 세로 상자에 담아야 막대가 퀵슬롯 줄과 같은 길이로 늘어난다
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 5)
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ui_root.add_child(column)
+
+	_build_level_badge(column)
+
+	var hp := _make_bar(HP_BAR_H, Color("#c33122"), 18)
+	_hp_bar = hp["bar"]
+	_hp_text = hp["text"]
+	column.add_child(hp["frame"])
+
 	var dock := HBoxContainer.new()
 	dock.add_theme_constant_override("separation", 12)
-	_ui_root.add_child(dock)
+	column.add_child(dock)
 	_bar_buttons.clear()
 	for slot in int(GameData.combat().get("skillBarSize", 4)):
-		var cell := _make_skill_cell(QUICK_CELL, "ui_skill_slot", _on_bar_pressed.bind(slot))
+		var cell := _make_skill_cell(QUICK_CELL, "ui_quick_slot", _on_bar_pressed.bind(slot))
 		cell.find_child("key", true, false).text = str(slot + 1)
 		dock.add_child(cell)
 		_bar_buttons.append(cell)
@@ -1013,7 +1007,7 @@ func _build_skill_bar() -> void:
 
 	# 자동사냥도 같은 칸이다 — 엄지가 퀵슬롯과 같은 높이에서 닿는다 (2026-09-19 요청).
 	# 켜지면 칸 위에서 화살표 고리가 돈다
-	_auto_cell = _make_skill_cell(QUICK_CELL, "ui_skill_slot", _toggle_auto)
+	_auto_cell = _make_skill_cell(QUICK_CELL, "ui_quick_slot", _toggle_auto)
 	var auto_icon: TextureRect = _auto_cell.find_child("icon", true, false)
 	auto_icon.texture = _icon("ui_icon_auto")
 	if auto_icon.texture == null:
@@ -1021,6 +1015,9 @@ func _build_skill_bar() -> void:
 	var auto_inset: MarginContainer = auto_icon.get_parent()
 	for side in ["left", "right", "top", "bottom"]:
 		auto_inset.add_theme_constant_override("margin_" + side, AUTO_INSET)
+	# "자동"·"켜짐" 을 칸 테두리 위로 올린다 — 금테 칸은 테가 두꺼워 글자가 걸렸다
+	var auto_badge: MarginContainer = _auto_cell.find_child("badge", true, false).get_parent().get_parent()
+	auto_badge.add_theme_constant_override("margin_bottom", SKILL_INSET + 4)
 	dock.add_child(_auto_cell)
 
 	_auto_spin = TextureRect.new()
@@ -1040,9 +1037,9 @@ func _build_skill_bar() -> void:
 	# 아이콘 바로 위, 글자 아래로 넣는다 — 맨 뒤에 두면 고리가 "자동"·"켜짐" 을 덮는다
 	_auto_cell.move_child(_auto_spin, 1)
 
-	dock.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM, Control.PRESET_MODE_MINSIZE, 20)
-	dock.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	dock.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	column.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM, Control.PRESET_MODE_MINSIZE, 16)
+	column.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	column.grow_vertical = Control.GROW_DIRECTION_BEGIN
 
 	var menu := HBoxContainer.new()
 	menu.add_theme_constant_override("separation", 8)
@@ -2362,16 +2359,14 @@ func _aoe_material(alpha: float) -> StandardMaterial3D:
 ## 퀵슬롯을 상태에 맞춘다. 쿨타임이 남았으면 어둠을 덮고 남은 초를 적는다
 ## 왼쪽 위 상태판을 스냅샷에 맞춘다. 레벨·체력·경험치는 **여기 한 곳에서만** 그린다
 func _refresh_status(me: Dictionary) -> void:
-	_level_label.text = "Lv.%d" % int(me.level)
+	_level_label.text = str(int(me.level))
 	var max_hp := maxf(1.0, float(me.stats.maxHp))
 	_hp_bar.max_value = max_hp
 	_hp_bar.value = float(me.hp)
 	_hp_text.text = "%d / %d" % [int(me.hp), int(max_hp)]
 	# 다음 레벨까지 필요한 양. 만렙이면 0 이 와서 0 으로 나누게 된다
 	var need := maxi(1, Combat.exp_to_next(int(me.level)))
-	_exp_bar.max_value = need
-	_exp_bar.value = mini(int(me.exp), need)
-	_exp_text.text = "%d / %d" % [int(me.exp), need]
+	_exp_text.text = "경험치 %.2f%%" % (minf(float(me.exp) / need, 1.0) * 100.0)
 
 
 func _refresh_bar(me: Dictionary) -> void:

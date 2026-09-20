@@ -60,22 +60,28 @@ func _damage() -> void:
 	_eq("피해 5vs500", Combat.compute_damage(5, 500), 1)
 
 
+## 경험치는 설계의 성장 곡선 표(`balance.json` 의 expTable)를 읽는다 —
+## 만렙까지 2,880시간(24시간 × 120일)에서 역산한 값이다
 func _exp() -> void:
-	_eq("다음레벨 1", Combat.exp_to_next(1), 55)
-	_eq("다음레벨 10", Combat.exp_to_next(10), 872)
-	_eq("다음레벨 199", Combat.exp_to_next(199), 31549)
+	var need1 := Combat.exp_to_next(1)
+	if need1 <= 0:
+		_fail_text("Lv1 필요 경험치가 0 이다 — expTable 을 못 읽었다")
+	# 레벨이 오를수록 무거워진다
+	for level in [10, 100, 199]:
+		if Combat.exp_to_next(level) <= Combat.exp_to_next(level - 1):
+			_fail_text("Lv%d 에서 요구량이 역전된다" % level)
 
-	var grown := Combat.apply_exp(1, 0, 1000)
-	_eq("1000경험치 레벨", grown.level, 5)
-	_eq("1000경험치 나머지", grown.exp, 323)
+	# 한 번에 여러 레벨이 오르고, 남는 만큼은 이월된다
+	var grown := Combat.apply_exp(1, 0, need1 * 3)
+	if grown.level < 2:
+		_fail_text("세 배를 받았는데 레벨이 안 올랐다")
+	var small := Combat.apply_exp(1, 0, need1 - 1)
+	_eq("한 칸 모자라면 안 오름", small.level, 1)
 
-	var small := Combat.apply_exp(1, 0, 54)
-	_eq("54경험치는 안오름", small.level, 1)
-
-	_eq("보상 3레벨몹/1레벨", Combat.exp_reward(3, 1, 25), 31)
-	# 8레벨 이상 낮으면 0 — 약한 몬스터만 잡는 걸 막는다
-	_eq("보상 1레벨몹/10레벨", Combat.exp_reward(1, 10, 25), 0)
-	_eq("보상 보스", Combat.exp_reward(9, 1, 67), 131)
+	# 레벨 차이 보정을 걷었다 — 몬스터 HP 에 정비례하므로 그대로 들어온다
+	_eq("보상 3레벨몹/1레벨", Combat.exp_reward(3, 1, 25), 25)
+	_eq("보상 1레벨몹/10레벨", Combat.exp_reward(1, 10, 25), 25)
+	_eq("보상 보스", Combat.exp_reward(9, 1, 67), 67)
 
 
 func _cooldown() -> void:
@@ -110,6 +116,7 @@ func _fight() -> void:
 	mobs.append(World.make_monster(
 		"dummy", GameData.monster_kind("mob003"), 1.5, 0.0, 10000.0, 0.0
 	))
+	var full := int(mobs[0].hp)
 
 	# 몬스터 쪽을 보고 친다 (dt 0 이라 제자리에서 방향만 바뀐다)
 	w.input_move("me", 1, 1.0, 0.0, 0.0)
@@ -119,11 +126,13 @@ func _fight() -> void:
 		_fail_text("사거리 안 정면인데 안 맞았다")
 		return
 
-	# 격투가 Lv1 공격 12, 들늑대 방어 3 -> 11. 치명타면 1.5배
-	var want: int = 17 if hit.crit else 11
+	# 피해는 설계 공식이다 — 공격력 × K / (K + 방어력), K 는 공격자 레벨에서 역산.
+	# 수치를 박아 두면 밸런스를 만질 때마다 여기서 걸리므로 같은 식으로 잰다
+	var plain := roundi(Stats.damage(float(me.stats.attack), int(me.level), float(mobs[0].defense)))
+	var want: int = roundi(plain * float(me.stats.critDamage)) if hit.crit else plain
 	_eq("피해량", hit.amount, want)
-	_eq("체력이 그만큼 줄었다", mobs[0].hp, 100 - want)
-	print("  들늑대 100 -> %d (%s)" % [mobs[0].hp, "치명타" if hit.crit else "보통"])
+	_eq("체력이 그만큼 줄었다", mobs[0].hp, full - want)
+	print("  들늑대 %d -> %d (%s)" % [full, mobs[0].hp, "치명타" if hit.crit else "보통"])
 
 	# 쿨타임 안에 또 치면 아무 일도 없다
 	w.attack("me")
@@ -157,12 +166,12 @@ func _fight() -> void:
 	w3.attack("k")
 	var events := w3.drain_events()
 	_eq("죽었다고 알린다", _first(events, "hit").get("killed", false), true)
-	# 3레벨 몹을 1레벨이 잡으면 25 * (1 + 2*0.12) = 31
-	_eq("경험치 보상", _first(events, "reward").get("exp", 0), 31)
+	# 레벨 차이 보정을 걷었다 — 경험치는 몬스터 HP 에 정비례하므로 그대로 들어온다
+	_eq("경험치 보상", _first(events, "reward").get("exp", 0), int(mobs3[0].exp_reward))
 	_eq("아직 레벨업은 아니다", w3.snapshot().players["k"].level, 1)
 
 	w3.step(0.016)
-	_eq("되살아난다", mobs3[0].hp, 100)
+	_eq("되살아난다", mobs3[0].hp, int(mobs3[0].max_hp))
 
 
 func _first(events: Array, type_name: String) -> Dictionary:

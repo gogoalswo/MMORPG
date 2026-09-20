@@ -87,35 +87,41 @@ func _case_options() -> void:
 		_fail("재료에 옵션이 붙었다")
 
 
+## 강화는 설계표(stat-balance.md 4장)를 그대로 쓴다 — 총 ×6, **실패하면 무조건 파괴**
 func _case_enhance() -> void:
-	_eq("강화 배율 +10", Items.enhance_multiplier(10), 1.8)
-	_eq("강화 배율 상한", Items.enhance_multiplier(99), 1.8)
+	_eq("강화 배율 +0", snappedf(Items.enhance_multiplier(0), 0.01), 1.0)
+	_eq("강화 배율 +9(=10단)", snappedf(Items.enhance_multiplier(9), 0.01), 6.0)
+	_eq("강화 배율 상한", Items.enhance_multiplier(99), Items.enhance_multiplier(9))
 	var odds := Items.enhance_odds(7)
-	_eq("+7 성공률", odds.success, 0.45)
-	_eq("+7 파괴율", odds.destroy, 0.1)
-	_eq("+7 굴림 0.2", Items.roll_enhance(7, 0.2), "success")
-	_eq("+7 굴림 0.5", Items.roll_enhance(7, 0.5), "keep")
-	_eq("+9 굴림 0.95", Items.roll_enhance(9, 0.95), "destroy")
-	# 낮은 구간은 안 부서진다 — 처음부터 부서지면 강화를 아예 안 하게 된다
-	_eq("+0 은 파괴 없음", Items.enhance_odds(0).destroy, 0.0)
-	_eq("강화 비용 +0", Items.enhance_cost(Items.get_item("w_fighter_00"), 0), 64)
-	_eq("강화 비용 +3", Items.enhance_cost(Items.get_item("w_fighter_00"), 3), 256)
-	_eq("+10 이면 못 두드린다", Items.can_enhance(10), false)
+	_eq("+7 성공률", odds.success, 0.2)
+	_eq("+7 파괴율", snappedf(odds.destroy, 0.01), 0.8)
+	_eq("+7 유지율", odds.keep, 0.0)
+	_eq("+7 굴림 0.1", Items.roll_enhance(7, 0.1), "success")
+	_eq("+7 굴림 0.5", Items.roll_enhance(7, 0.5), "destroy")
+	_eq("+8 굴림 0.95", Items.roll_enhance(8, 0.95), "destroy")
+	# 첫 칸부터 10% 로 부서진다 — 아이템 자체가 연료라 재시도는 무한하다
+	_eq("+0 성공률", Items.enhance_odds(0).success, 0.9)
+	_eq("강화는 공짜", Items.enhance_cost(Items.get_item("a_05"), 5), 0)
+	_eq("+9 면 못 두드린다", Items.can_enhance(9), false)
+	_eq("+8 이면 두드릴 수 있다", Items.can_enhance(8), true)
 
 
+## 장비 수치는 이제 절대값이 아니라 **기본 스탯의 %** 다 (설계 3장).
+## 등급1 무기는 공격 예산 35% 의 60% = 21%
 func _case_stats() -> void:
 	var item := Items.get_item("w_fighter_00")
-	_eq("기본 공격", item.bonus.attack, 3)
-	_eq("강화 +5 기본 공격", Items.base_bonus(item, 5).attack, 4)
+	_eq("기본 공격 %", item.bonus.attack, 21.0)
+	# 강화 +5 = 6단 = ×1.78
+	_eq("강화 +5 기본 공격 %", snappedf(Items.base_bonus(item, 5).attack, 0.1), 37.3)
 
 	var stack := {
 		"id": "w_fighter_00", "grade": 3, "enhance": 5,
 		"options": [{"kind": "attack", "value": 4}, {"kind": "crit", "value": 7}],
 	}
 	var stats := Items.stack_stats(stack)
-	_eq("물건 하나 공격", stats.attack, 8)
+	_eq("물건 하나 공격 %", snappedf(stats.attack, 0.1), 41.3)
 	_eq("물건 하나 치명타", stats.crit, 0.07)
-	print("  물건 하나: 공격 %d, 치명타 %.2f" % [stats.attack, stats.crit])
+	print("  물건 하나: 공격 %.1f%%, 치명타 %.2f" % [stats.attack, stats.crit])
 
 
 func _case_drop() -> void:
@@ -160,8 +166,9 @@ func _case_equip() -> void:
 	if me.equipped.get("weapon", {}).is_empty():
 		_fail("무기를 못 꼈다")
 		return
-	# 기본 3 + 옵션 5 = 8 만큼 오른다
-	_eq("끼면 공격이 오른다", int(me.stats.attack), before + 8)
+	# 장비는 **곱한다** — 맨몸 공격에 (1 + 장비 % 합계) 를 곱한 값이 된다
+	if int(me.stats.attack) <= before:
+		_fail("끼면 공격이 올라야 한다 (%d -> %d)" % [before, int(me.stats.attack)])
 	_eq("가방에서 빠진다", me.bag.size(), 0)
 
 	# 남의 직업 장비는 못 낀다

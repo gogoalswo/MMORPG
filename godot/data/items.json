@@ -7,7 +7,11 @@
       "level": 1,
       "job": "fighter",
       "bonus": {
-        "attack": 3
+        "attack": 21,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 32
     },
@@ -18,7 +22,11 @@
       "level": 1,
       "job": "mage",
       "bonus": {
-        "attack": 3
+        "attack": 21,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 32
     },
@@ -29,7 +37,11 @@
       "level": 1,
       "job": "archer",
       "bonus": {
-        "attack": 3
+        "attack": 21,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 32
     },
@@ -39,8 +51,11 @@
       "slot": "armor",
       "level": 1,
       "bonus": {
-        "maxHp": 14,
-        "defense": 1
+        "attack": 0,
+        "defense": 8.4,
+        "maxHp": 4.9,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 32
     },
@@ -50,8 +65,11 @@
       "slot": "helmet",
       "level": 1,
       "bonus": {
-        "maxHp": 7,
-        "defense": 1
+        "attack": 0,
+        "defense": 4.2,
+        "maxHp": 2.5,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 32
     },
@@ -61,8 +79,11 @@
       "slot": "boots",
       "level": 1,
       "bonus": {
-        "maxHp": 7,
-        "defense": 1
+        "attack": 0,
+        "defense": 4.2,
+        "maxHp": 2.5,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 32
     },
@@ -72,10 +93,11 @@
       "slot": "necklace",
       "level": 1,
       "bonus": {
-        "attack": 1,
-        "maxHp": 4,
-        "defense": 0,
-        "crit": 0
+        "attack": 7,
+        "defense": 2.1,
+        "maxHp": 1.2,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 32
     },
@@ -85,9 +107,10 @@
       "slot": "ring",
       "level": 1,
       "bonus": {
-        "attack": 1,
-        "maxHp": 4,
-        "defense": 0,
+        "attack": 7,
+        "defense": 2.1,
+        "maxHp": 1.2,
+        "crit": 0,
         "attackSpeed": 0
       },
       "price": 32
@@ -108,7 +131,11 @@
       "level": 10,
       "job": "fighter",
       "bonus": {
-        "attack": 8
+        "attack": 24.6,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 140
     },
@@ -119,7 +146,11 @@
       "level": 10,
       "job": "mage",
       "bonus": {
-        "attack": 8
+        "attack": 24.6,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 140
     },
@@ -130,7 +161,11 @@
       "level": 10,
       "job": "archer",
       "bonus": {
-        "attack": 8
+        "attack": 24.6,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 140
     },
@@ -140,8 +175,11 @@
       "slot": "armor",
       "level": 10,
       "bonus": {
-        "maxHp": 50,
-        "defense": 5
+        "attack": 0,
+        "defense": 9.9,
+        "maxHp": 5.7,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 140
     },
@@ -151,8 +189,11 @@
       "slot": "helmet",
       "level": 10,
       "bonus": {
-        "maxHp": 25,
-        "defense": 3
+        "attack": 0,
+        "defense": 4.9,
+        "maxHp": 2.9,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 140
     },
@@ -162,8 +203,11 @@
       "slot": "boots",
       "level": 10,
       "bonus": {
-        "maxHp": 25,
-        "defense": 3
+        "attack": 0,
+        "defense": 4.9,
+        "maxHp": 2.9,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 140
     },
@@ -173,10 +217,11 @@
       "slot": "necklace",
       "level": 10,
       "bonus": {
-        "attack": 3,
-        "maxHp": 13,
-        "defense": 1,
-        "crit": 3
+        "attack": 8.2,
+        "defense": 2.5,
+        "maxHp": 1.4,
+        "crit": 3,
+        "attackSpeed": 0
       },
       "price": 140
     },
@@ -186,9 +231,10 @@
       "slot": "ring",
       "level": 10,
       "bonus": {
-        "attack": 3,
-        "maxHp": 13,
-        "defense": 1,
+        "attack": 8.2,
+        "defense": 2.5,
+        "maxHp": 1.4,
+        "crit": 0,
         "attackSpeed": 1
       },
       "price": 140
@@ -209,7 +255,11 @@
       "level": 20,
       "job": "fighter",
       "bonus": {
-        "attack": 14
+        "attack": 29.4,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 260
     },
@@ -220,7 +270,11 @@
       "level": 20,
       "job": "mage",
       "bonus": {
-        "attack": 14
+        "attack": 29.4,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 260
     },
@@ -231,7 +285,11 @@
       "level": 20,
       "job": "archer",
       "bonus": {
-        "attack": 14
+        "attack": 29.4,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 260
     },
@@ -241,8 +299,11 @@
       "slot": "armor",
       "level": 20,
       "bonus": {
-        "maxHp": 90,
-        "defense": 9
+        "attack": 0,
+        "defense": 11.8,
+        "maxHp": 6.9,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 260
     },
@@ -252,8 +313,11 @@
       "slot": "helmet",
       "level": 20,
       "bonus": {
-        "maxHp": 45,
-        "defense": 5
+        "attack": 0,
+        "defense": 5.9,
+        "maxHp": 3.4,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 260
     },
@@ -263,8 +327,11 @@
       "slot": "boots",
       "level": 20,
       "bonus": {
-        "maxHp": 45,
-        "defense": 5
+        "attack": 0,
+        "defense": 5.9,
+        "maxHp": 3.4,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 260
     },
@@ -274,10 +341,11 @@
       "slot": "necklace",
       "level": 20,
       "bonus": {
-        "attack": 5,
-        "maxHp": 23,
-        "defense": 2,
-        "crit": 6
+        "attack": 9.8,
+        "defense": 2.9,
+        "maxHp": 1.7,
+        "crit": 5,
+        "attackSpeed": 0
       },
       "price": 260
     },
@@ -287,9 +355,10 @@
       "slot": "ring",
       "level": 20,
       "bonus": {
-        "attack": 5,
-        "maxHp": 23,
-        "defense": 2,
+        "attack": 9.8,
+        "defense": 2.9,
+        "maxHp": 1.7,
+        "crit": 0,
         "attackSpeed": 2
       },
       "price": 260
@@ -310,7 +379,11 @@
       "level": 30,
       "job": "fighter",
       "bonus": {
-        "attack": 20
+        "attack": 35.1,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 380
     },
@@ -321,7 +394,11 @@
       "level": 30,
       "job": "mage",
       "bonus": {
-        "attack": 20
+        "attack": 35.1,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 380
     },
@@ -332,7 +409,11 @@
       "level": 30,
       "job": "archer",
       "bonus": {
-        "attack": 20
+        "attack": 35.1,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 380
     },
@@ -342,8 +423,11 @@
       "slot": "armor",
       "level": 30,
       "bonus": {
-        "maxHp": 130,
-        "defense": 13
+        "attack": 0,
+        "defense": 14.1,
+        "maxHp": 8.2,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 380
     },
@@ -353,8 +437,11 @@
       "slot": "helmet",
       "level": 30,
       "bonus": {
-        "maxHp": 65,
-        "defense": 7
+        "attack": 0,
+        "defense": 7,
+        "maxHp": 4.1,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 380
     },
@@ -364,8 +451,11 @@
       "slot": "boots",
       "level": 30,
       "bonus": {
-        "maxHp": 65,
-        "defense": 7
+        "attack": 0,
+        "defense": 7,
+        "maxHp": 4.1,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 380
     },
@@ -375,10 +465,11 @@
       "slot": "necklace",
       "level": 30,
       "bonus": {
-        "attack": 7,
-        "maxHp": 33,
-        "defense": 3,
-        "crit": 8
+        "attack": 11.7,
+        "defense": 3.5,
+        "maxHp": 2.1,
+        "crit": 8,
+        "attackSpeed": 0
       },
       "price": 380
     },
@@ -388,9 +479,10 @@
       "slot": "ring",
       "level": 30,
       "bonus": {
-        "attack": 7,
-        "maxHp": 33,
-        "defense": 3,
+        "attack": 11.7,
+        "defense": 3.5,
+        "maxHp": 2.1,
+        "crit": 0,
         "attackSpeed": 3
       },
       "price": 380
@@ -411,7 +503,11 @@
       "level": 40,
       "job": "fighter",
       "bonus": {
-        "attack": 26
+        "attack": 42,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 500
     },
@@ -422,7 +518,11 @@
       "level": 40,
       "job": "mage",
       "bonus": {
-        "attack": 26
+        "attack": 42,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 500
     },
@@ -433,7 +533,11 @@
       "level": 40,
       "job": "archer",
       "bonus": {
-        "attack": 26
+        "attack": 42,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 500
     },
@@ -443,8 +547,11 @@
       "slot": "armor",
       "level": 40,
       "bonus": {
-        "maxHp": 170,
-        "defense": 17
+        "attack": 0,
+        "defense": 16.8,
+        "maxHp": 9.8,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 500
     },
@@ -454,8 +561,11 @@
       "slot": "helmet",
       "level": 40,
       "bonus": {
-        "maxHp": 85,
-        "defense": 9
+        "attack": 0,
+        "defense": 8.4,
+        "maxHp": 4.9,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 500
     },
@@ -465,8 +575,11 @@
       "slot": "boots",
       "level": 40,
       "bonus": {
-        "maxHp": 85,
-        "defense": 9
+        "attack": 0,
+        "defense": 8.4,
+        "maxHp": 4.9,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 500
     },
@@ -476,10 +589,11 @@
       "slot": "necklace",
       "level": 40,
       "bonus": {
-        "attack": 9,
-        "maxHp": 43,
-        "defense": 4,
-        "crit": 11
+        "attack": 14,
+        "defense": 4.2,
+        "maxHp": 2.4,
+        "crit": 11,
+        "attackSpeed": 0
       },
       "price": 500
     },
@@ -489,9 +603,10 @@
       "slot": "ring",
       "level": 40,
       "bonus": {
-        "attack": 9,
-        "maxHp": 43,
-        "defense": 4,
+        "attack": 14,
+        "defense": 4.2,
+        "maxHp": 2.4,
+        "crit": 0,
         "attackSpeed": 4
       },
       "price": 500
@@ -512,7 +627,11 @@
       "level": 50,
       "job": "fighter",
       "bonus": {
-        "attack": 32
+        "attack": 50.1,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 620
     },
@@ -523,7 +642,11 @@
       "level": 50,
       "job": "mage",
       "bonus": {
-        "attack": 32
+        "attack": 50.1,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 620
     },
@@ -534,7 +657,11 @@
       "level": 50,
       "job": "archer",
       "bonus": {
-        "attack": 32
+        "attack": 50.1,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 620
     },
@@ -544,8 +671,11 @@
       "slot": "armor",
       "level": 50,
       "bonus": {
-        "maxHp": 210,
-        "defense": 21
+        "attack": 0,
+        "defense": 20.1,
+        "maxHp": 11.7,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 620
     },
@@ -555,8 +685,11 @@
       "slot": "helmet",
       "level": 50,
       "bonus": {
-        "maxHp": 105,
-        "defense": 11
+        "attack": 0,
+        "defense": 10,
+        "maxHp": 5.8,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 620
     },
@@ -566,8 +699,11 @@
       "slot": "boots",
       "level": 50,
       "bonus": {
-        "maxHp": 105,
-        "defense": 11
+        "attack": 0,
+        "defense": 10,
+        "maxHp": 5.8,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 620
     },
@@ -577,10 +713,11 @@
       "slot": "necklace",
       "level": 50,
       "bonus": {
-        "attack": 11,
-        "maxHp": 53,
+        "attack": 16.7,
         "defense": 5,
-        "crit": 14
+        "maxHp": 2.9,
+        "crit": 14,
+        "attackSpeed": 0
       },
       "price": 620
     },
@@ -590,10 +727,11 @@
       "slot": "ring",
       "level": 50,
       "bonus": {
-        "attack": 11,
-        "maxHp": 53,
+        "attack": 16.7,
         "defense": 5,
-        "attackSpeed": 6
+        "maxHp": 2.9,
+        "crit": 0,
+        "attackSpeed": 5
       },
       "price": 620
     },
@@ -613,7 +751,11 @@
       "level": 60,
       "job": "fighter",
       "bonus": {
-        "attack": 38
+        "attack": 59.9,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 740
     },
@@ -624,7 +766,11 @@
       "level": 60,
       "job": "mage",
       "bonus": {
-        "attack": 38
+        "attack": 59.9,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 740
     },
@@ -635,7 +781,11 @@
       "level": 60,
       "job": "archer",
       "bonus": {
-        "attack": 38
+        "attack": 59.9,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 740
     },
@@ -645,8 +795,11 @@
       "slot": "armor",
       "level": 60,
       "bonus": {
-        "maxHp": 250,
-        "defense": 25
+        "attack": 0,
+        "defense": 24,
+        "maxHp": 14,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 740
     },
@@ -656,8 +809,11 @@
       "slot": "helmet",
       "level": 60,
       "bonus": {
-        "maxHp": 125,
-        "defense": 13
+        "attack": 0,
+        "defense": 12,
+        "maxHp": 7,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 740
     },
@@ -667,8 +823,11 @@
       "slot": "boots",
       "level": 60,
       "bonus": {
-        "maxHp": 125,
-        "defense": 13
+        "attack": 0,
+        "defense": 12,
+        "maxHp": 7,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 740
     },
@@ -678,10 +837,11 @@
       "slot": "necklace",
       "level": 60,
       "bonus": {
-        "attack": 13,
-        "maxHp": 63,
+        "attack": 20,
         "defense": 6,
-        "crit": 17
+        "maxHp": 3.5,
+        "crit": 16,
+        "attackSpeed": 0
       },
       "price": 740
     },
@@ -691,9 +851,10 @@
       "slot": "ring",
       "level": 60,
       "bonus": {
-        "attack": 13,
-        "maxHp": 63,
+        "attack": 20,
         "defense": 6,
+        "maxHp": 3.5,
+        "crit": 0,
         "attackSpeed": 7
       },
       "price": 740
@@ -714,7 +875,11 @@
       "level": 70,
       "job": "fighter",
       "bonus": {
-        "attack": 44
+        "attack": 71.5,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 860
     },
@@ -725,7 +890,11 @@
       "level": 70,
       "job": "mage",
       "bonus": {
-        "attack": 44
+        "attack": 71.5,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 860
     },
@@ -736,7 +905,11 @@
       "level": 70,
       "job": "archer",
       "bonus": {
-        "attack": 44
+        "attack": 71.5,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 860
     },
@@ -746,8 +919,11 @@
       "slot": "armor",
       "level": 70,
       "bonus": {
-        "maxHp": 290,
-        "defense": 29
+        "attack": 0,
+        "defense": 28.6,
+        "maxHp": 16.7,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 860
     },
@@ -757,8 +933,11 @@
       "slot": "helmet",
       "level": 70,
       "bonus": {
-        "maxHp": 145,
-        "defense": 15
+        "attack": 0,
+        "defense": 14.3,
+        "maxHp": 8.3,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 860
     },
@@ -768,8 +947,11 @@
       "slot": "boots",
       "level": 70,
       "bonus": {
-        "maxHp": 145,
-        "defense": 15
+        "attack": 0,
+        "defense": 14.3,
+        "maxHp": 8.3,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 860
     },
@@ -779,10 +961,11 @@
       "slot": "necklace",
       "level": 70,
       "bonus": {
-        "attack": 15,
-        "maxHp": 73,
-        "defense": 7,
-        "crit": 19
+        "attack": 23.8,
+        "defense": 7.2,
+        "maxHp": 4.2,
+        "crit": 19,
+        "attackSpeed": 0
       },
       "price": 860
     },
@@ -792,9 +975,10 @@
       "slot": "ring",
       "level": 70,
       "bonus": {
-        "attack": 15,
-        "maxHp": 73,
-        "defense": 7,
+        "attack": 23.8,
+        "defense": 7.2,
+        "maxHp": 4.2,
+        "crit": 0,
         "attackSpeed": 8
       },
       "price": 860
@@ -815,7 +999,11 @@
       "level": 80,
       "job": "fighter",
       "bonus": {
-        "attack": 50
+        "attack": 85.4,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 980
     },
@@ -826,7 +1014,11 @@
       "level": 80,
       "job": "mage",
       "bonus": {
-        "attack": 50
+        "attack": 85.4,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 980
     },
@@ -837,7 +1029,11 @@
       "level": 80,
       "job": "archer",
       "bonus": {
-        "attack": 50
+        "attack": 85.4,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 980
     },
@@ -847,8 +1043,11 @@
       "slot": "armor",
       "level": 80,
       "bonus": {
-        "maxHp": 330,
-        "defense": 33
+        "attack": 0,
+        "defense": 34.2,
+        "maxHp": 19.9,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 980
     },
@@ -858,8 +1057,11 @@
       "slot": "helmet",
       "level": 80,
       "bonus": {
-        "maxHp": 165,
-        "defense": 17
+        "attack": 0,
+        "defense": 17.1,
+        "maxHp": 10,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 980
     },
@@ -869,8 +1071,11 @@
       "slot": "boots",
       "level": 80,
       "bonus": {
-        "maxHp": 165,
-        "defense": 17
+        "attack": 0,
+        "defense": 17.1,
+        "maxHp": 10,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 980
     },
@@ -880,10 +1085,11 @@
       "slot": "necklace",
       "level": 80,
       "bonus": {
-        "attack": 17,
-        "maxHp": 83,
-        "defense": 8,
-        "crit": 22
+        "attack": 28.5,
+        "defense": 8.5,
+        "maxHp": 5,
+        "crit": 22,
+        "attackSpeed": 0
       },
       "price": 980
     },
@@ -893,9 +1099,10 @@
       "slot": "ring",
       "level": 80,
       "bonus": {
-        "attack": 17,
-        "maxHp": 83,
-        "defense": 8,
+        "attack": 28.5,
+        "defense": 8.5,
+        "maxHp": 5,
+        "crit": 0,
         "attackSpeed": 9
       },
       "price": 980
@@ -916,7 +1123,11 @@
       "level": 90,
       "job": "fighter",
       "bonus": {
-        "attack": 56
+        "attack": 102,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1100
     },
@@ -927,7 +1138,11 @@
       "level": 90,
       "job": "mage",
       "bonus": {
-        "attack": 56
+        "attack": 102,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1100
     },
@@ -938,7 +1153,11 @@
       "level": 90,
       "job": "archer",
       "bonus": {
-        "attack": 56
+        "attack": 102,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1100
     },
@@ -948,8 +1167,11 @@
       "slot": "armor",
       "level": 90,
       "bonus": {
-        "maxHp": 370,
-        "defense": 37
+        "attack": 0,
+        "defense": 40.8,
+        "maxHp": 23.8,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1100
     },
@@ -959,8 +1181,11 @@
       "slot": "helmet",
       "level": 90,
       "bonus": {
-        "maxHp": 185,
-        "defense": 19
+        "attack": 0,
+        "defense": 20.4,
+        "maxHp": 11.9,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1100
     },
@@ -970,8 +1195,11 @@
       "slot": "boots",
       "level": 90,
       "bonus": {
-        "maxHp": 185,
-        "defense": 19
+        "attack": 0,
+        "defense": 20.4,
+        "maxHp": 11.9,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1100
     },
@@ -981,10 +1209,11 @@
       "slot": "necklace",
       "level": 90,
       "bonus": {
-        "attack": 19,
-        "maxHp": 93,
-        "defense": 9,
-        "crit": 25
+        "attack": 34,
+        "defense": 10.2,
+        "maxHp": 6,
+        "crit": 25,
+        "attackSpeed": 0
       },
       "price": 1100
     },
@@ -994,9 +1223,10 @@
       "slot": "ring",
       "level": 90,
       "bonus": {
-        "attack": 19,
-        "maxHp": 93,
-        "defense": 9,
+        "attack": 34,
+        "defense": 10.2,
+        "maxHp": 6,
+        "crit": 0,
         "attackSpeed": 10
       },
       "price": 1100
@@ -1017,7 +1247,11 @@
       "level": 100,
       "job": "fighter",
       "bonus": {
-        "attack": 62
+        "attack": 121.9,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1220
     },
@@ -1028,7 +1262,11 @@
       "level": 100,
       "job": "mage",
       "bonus": {
-        "attack": 62
+        "attack": 121.9,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1220
     },
@@ -1039,7 +1277,11 @@
       "level": 100,
       "job": "archer",
       "bonus": {
-        "attack": 62
+        "attack": 121.9,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1220
     },
@@ -1049,8 +1291,11 @@
       "slot": "armor",
       "level": 100,
       "bonus": {
-        "maxHp": 410,
-        "defense": 41
+        "attack": 0,
+        "defense": 48.7,
+        "maxHp": 28.4,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1220
     },
@@ -1060,8 +1305,11 @@
       "slot": "helmet",
       "level": 100,
       "bonus": {
-        "maxHp": 205,
-        "defense": 21
+        "attack": 0,
+        "defense": 24.4,
+        "maxHp": 14.2,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1220
     },
@@ -1071,8 +1319,11 @@
       "slot": "boots",
       "level": 100,
       "bonus": {
-        "maxHp": 205,
-        "defense": 21
+        "attack": 0,
+        "defense": 24.4,
+        "maxHp": 14.2,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1220
     },
@@ -1082,10 +1333,11 @@
       "slot": "necklace",
       "level": 100,
       "bonus": {
-        "attack": 21,
-        "maxHp": 103,
-        "defense": 10,
-        "crit": 28
+        "attack": 40.6,
+        "defense": 12.2,
+        "maxHp": 7.1,
+        "crit": 27,
+        "attackSpeed": 0
       },
       "price": 1220
     },
@@ -1095,9 +1347,10 @@
       "slot": "ring",
       "level": 100,
       "bonus": {
-        "attack": 21,
-        "maxHp": 103,
-        "defense": 10,
+        "attack": 40.6,
+        "defense": 12.2,
+        "maxHp": 7.1,
+        "crit": 0,
         "attackSpeed": 11
       },
       "price": 1220
@@ -1118,7 +1371,11 @@
       "level": 110,
       "job": "fighter",
       "bonus": {
-        "attack": 68
+        "attack": 145.5,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1340
     },
@@ -1129,7 +1386,11 @@
       "level": 110,
       "job": "mage",
       "bonus": {
-        "attack": 68
+        "attack": 145.5,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1340
     },
@@ -1140,7 +1401,11 @@
       "level": 110,
       "job": "archer",
       "bonus": {
-        "attack": 68
+        "attack": 145.5,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1340
     },
@@ -1150,8 +1415,11 @@
       "slot": "armor",
       "level": 110,
       "bonus": {
-        "maxHp": 450,
-        "defense": 45
+        "attack": 0,
+        "defense": 58.2,
+        "maxHp": 34,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1340
     },
@@ -1161,8 +1429,11 @@
       "slot": "helmet",
       "level": 110,
       "bonus": {
-        "maxHp": 225,
-        "defense": 23
+        "attack": 0,
+        "defense": 29.1,
+        "maxHp": 17,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1340
     },
@@ -1172,8 +1443,11 @@
       "slot": "boots",
       "level": 110,
       "bonus": {
-        "maxHp": 225,
-        "defense": 23
+        "attack": 0,
+        "defense": 29.1,
+        "maxHp": 17,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1340
     },
@@ -1183,10 +1457,11 @@
       "slot": "necklace",
       "level": 110,
       "bonus": {
-        "attack": 23,
-        "maxHp": 113,
-        "defense": 11,
-        "crit": 30
+        "attack": 48.5,
+        "defense": 14.6,
+        "maxHp": 8.5,
+        "crit": 30,
+        "attackSpeed": 0
       },
       "price": 1340
     },
@@ -1196,9 +1471,10 @@
       "slot": "ring",
       "level": 110,
       "bonus": {
-        "attack": 23,
-        "maxHp": 113,
-        "defense": 11,
+        "attack": 48.5,
+        "defense": 14.6,
+        "maxHp": 8.5,
+        "crit": 0,
         "attackSpeed": 12
       },
       "price": 1340
@@ -1219,7 +1495,11 @@
       "level": 120,
       "job": "fighter",
       "bonus": {
-        "attack": 74
+        "attack": 173.8,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1460
     },
@@ -1230,7 +1510,11 @@
       "level": 120,
       "job": "mage",
       "bonus": {
-        "attack": 74
+        "attack": 173.8,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1460
     },
@@ -1241,7 +1525,11 @@
       "level": 120,
       "job": "archer",
       "bonus": {
-        "attack": 74
+        "attack": 173.8,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1460
     },
@@ -1251,8 +1539,11 @@
       "slot": "armor",
       "level": 120,
       "bonus": {
-        "maxHp": 490,
-        "defense": 49
+        "attack": 0,
+        "defense": 69.5,
+        "maxHp": 40.6,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1460
     },
@@ -1262,8 +1553,11 @@
       "slot": "helmet",
       "level": 120,
       "bonus": {
-        "maxHp": 245,
-        "defense": 25
+        "attack": 0,
+        "defense": 34.8,
+        "maxHp": 20.3,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1460
     },
@@ -1273,8 +1567,11 @@
       "slot": "boots",
       "level": 120,
       "bonus": {
-        "maxHp": 245,
-        "defense": 25
+        "attack": 0,
+        "defense": 34.8,
+        "maxHp": 20.3,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1460
     },
@@ -1284,10 +1581,11 @@
       "slot": "necklace",
       "level": 120,
       "bonus": {
-        "attack": 25,
-        "maxHp": 123,
-        "defense": 12,
-        "crit": 33
+        "attack": 57.9,
+        "defense": 17.4,
+        "maxHp": 10.1,
+        "crit": 33,
+        "attackSpeed": 0
       },
       "price": 1460
     },
@@ -1297,9 +1595,10 @@
       "slot": "ring",
       "level": 120,
       "bonus": {
-        "attack": 25,
-        "maxHp": 123,
-        "defense": 12,
+        "attack": 57.9,
+        "defense": 17.4,
+        "maxHp": 10.1,
+        "crit": 0,
         "attackSpeed": 13
       },
       "price": 1460
@@ -1320,7 +1619,11 @@
       "level": 130,
       "job": "fighter",
       "bonus": {
-        "attack": 80
+        "attack": 207.6,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1580
     },
@@ -1331,7 +1634,11 @@
       "level": 130,
       "job": "mage",
       "bonus": {
-        "attack": 80
+        "attack": 207.6,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1580
     },
@@ -1342,7 +1649,11 @@
       "level": 130,
       "job": "archer",
       "bonus": {
-        "attack": 80
+        "attack": 207.6,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1580
     },
@@ -1352,8 +1663,11 @@
       "slot": "armor",
       "level": 130,
       "bonus": {
-        "maxHp": 530,
-        "defense": 53
+        "attack": 0,
+        "defense": 83,
+        "maxHp": 48.4,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1580
     },
@@ -1363,8 +1677,11 @@
       "slot": "helmet",
       "level": 130,
       "bonus": {
-        "maxHp": 265,
-        "defense": 27
+        "attack": 0,
+        "defense": 41.5,
+        "maxHp": 24.2,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1580
     },
@@ -1374,8 +1691,11 @@
       "slot": "boots",
       "level": 130,
       "bonus": {
-        "maxHp": 265,
-        "defense": 27
+        "attack": 0,
+        "defense": 41.5,
+        "maxHp": 24.2,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1580
     },
@@ -1385,10 +1705,11 @@
       "slot": "necklace",
       "level": 130,
       "bonus": {
-        "attack": 27,
-        "maxHp": 133,
-        "defense": 13,
-        "crit": 36
+        "attack": 69.2,
+        "defense": 20.8,
+        "maxHp": 12.1,
+        "crit": 36,
+        "attackSpeed": 0
       },
       "price": 1580
     },
@@ -1398,9 +1719,10 @@
       "slot": "ring",
       "level": 130,
       "bonus": {
-        "attack": 27,
-        "maxHp": 133,
-        "defense": 13,
+        "attack": 69.2,
+        "defense": 20.8,
+        "maxHp": 12.1,
+        "crit": 0,
         "attackSpeed": 14
       },
       "price": 1580
@@ -1421,7 +1743,11 @@
       "level": 140,
       "job": "fighter",
       "bonus": {
-        "attack": 86
+        "attack": 248,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1700
     },
@@ -1432,7 +1758,11 @@
       "level": 140,
       "job": "mage",
       "bonus": {
-        "attack": 86
+        "attack": 248,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1700
     },
@@ -1443,7 +1773,11 @@
       "level": 140,
       "job": "archer",
       "bonus": {
-        "attack": 86
+        "attack": 248,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1700
     },
@@ -1453,8 +1787,11 @@
       "slot": "armor",
       "level": 140,
       "bonus": {
-        "maxHp": 570,
-        "defense": 57
+        "attack": 0,
+        "defense": 99.2,
+        "maxHp": 57.9,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1700
     },
@@ -1464,8 +1801,11 @@
       "slot": "helmet",
       "level": 140,
       "bonus": {
-        "maxHp": 285,
-        "defense": 29
+        "attack": 0,
+        "defense": 49.6,
+        "maxHp": 28.9,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1700
     },
@@ -1475,8 +1815,11 @@
       "slot": "boots",
       "level": 140,
       "bonus": {
-        "maxHp": 285,
-        "defense": 29
+        "attack": 0,
+        "defense": 49.6,
+        "maxHp": 28.9,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1700
     },
@@ -1486,10 +1829,11 @@
       "slot": "necklace",
       "level": 140,
       "bonus": {
-        "attack": 29,
-        "maxHp": 143,
-        "defense": 14,
-        "crit": 39
+        "attack": 82.7,
+        "defense": 24.8,
+        "maxHp": 14.5,
+        "crit": 39,
+        "attackSpeed": 0
       },
       "price": 1700
     },
@@ -1499,9 +1843,10 @@
       "slot": "ring",
       "level": 140,
       "bonus": {
-        "attack": 29,
-        "maxHp": 143,
-        "defense": 14,
+        "attack": 82.7,
+        "defense": 24.8,
+        "maxHp": 14.5,
+        "crit": 0,
         "attackSpeed": 15
       },
       "price": 1700
@@ -1522,7 +1867,11 @@
       "level": 150,
       "job": "fighter",
       "bonus": {
-        "attack": 92
+        "attack": 296.1,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1820
     },
@@ -1533,7 +1882,11 @@
       "level": 150,
       "job": "mage",
       "bonus": {
-        "attack": 92
+        "attack": 296.1,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1820
     },
@@ -1544,7 +1897,11 @@
       "level": 150,
       "job": "archer",
       "bonus": {
-        "attack": 92
+        "attack": 296.1,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1820
     },
@@ -1554,8 +1911,11 @@
       "slot": "armor",
       "level": 150,
       "bonus": {
-        "maxHp": 610,
-        "defense": 61
+        "attack": 0,
+        "defense": 118.5,
+        "maxHp": 69.1,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1820
     },
@@ -1565,8 +1925,11 @@
       "slot": "helmet",
       "level": 150,
       "bonus": {
-        "maxHp": 305,
-        "defense": 31
+        "attack": 0,
+        "defense": 59.2,
+        "maxHp": 34.6,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1820
     },
@@ -1576,8 +1939,11 @@
       "slot": "boots",
       "level": 150,
       "bonus": {
-        "maxHp": 305,
-        "defense": 31
+        "attack": 0,
+        "defense": 59.2,
+        "maxHp": 34.6,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1820
     },
@@ -1587,10 +1953,11 @@
       "slot": "necklace",
       "level": 150,
       "bonus": {
-        "attack": 31,
-        "maxHp": 153,
-        "defense": 15,
-        "crit": 41
+        "attack": 98.7,
+        "defense": 29.6,
+        "maxHp": 17.3,
+        "crit": 41,
+        "attackSpeed": 0
       },
       "price": 1820
     },
@@ -1600,9 +1967,10 @@
       "slot": "ring",
       "level": 150,
       "bonus": {
-        "attack": 31,
-        "maxHp": 153,
-        "defense": 15,
+        "attack": 98.7,
+        "defense": 29.6,
+        "maxHp": 17.3,
+        "crit": 0,
         "attackSpeed": 17
       },
       "price": 1820
@@ -1623,7 +1991,11 @@
       "level": 160,
       "job": "fighter",
       "bonus": {
-        "attack": 98
+        "attack": 353.7,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1940
     },
@@ -1634,7 +2006,11 @@
       "level": 160,
       "job": "mage",
       "bonus": {
-        "attack": 98
+        "attack": 353.7,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1940
     },
@@ -1645,7 +2021,11 @@
       "level": 160,
       "job": "archer",
       "bonus": {
-        "attack": 98
+        "attack": 353.7,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1940
     },
@@ -1655,8 +2035,11 @@
       "slot": "armor",
       "level": 160,
       "bonus": {
-        "maxHp": 650,
-        "defense": 65
+        "attack": 0,
+        "defense": 141.5,
+        "maxHp": 82.5,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1940
     },
@@ -1666,8 +2049,11 @@
       "slot": "helmet",
       "level": 160,
       "bonus": {
-        "maxHp": 325,
-        "defense": 33
+        "attack": 0,
+        "defense": 70.7,
+        "maxHp": 41.3,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1940
     },
@@ -1677,8 +2063,11 @@
       "slot": "boots",
       "level": 160,
       "bonus": {
-        "maxHp": 325,
-        "defense": 33
+        "attack": 0,
+        "defense": 70.7,
+        "maxHp": 41.3,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 1940
     },
@@ -1688,10 +2077,11 @@
       "slot": "necklace",
       "level": 160,
       "bonus": {
-        "attack": 33,
-        "maxHp": 163,
-        "defense": 16,
-        "crit": 44
+        "attack": 117.9,
+        "defense": 35.4,
+        "maxHp": 20.6,
+        "crit": 44,
+        "attackSpeed": 0
       },
       "price": 1940
     },
@@ -1701,9 +2091,10 @@
       "slot": "ring",
       "level": 160,
       "bonus": {
-        "attack": 33,
-        "maxHp": 163,
-        "defense": 16,
+        "attack": 117.9,
+        "defense": 35.4,
+        "maxHp": 20.6,
+        "crit": 0,
         "attackSpeed": 18
       },
       "price": 1940
@@ -1724,7 +2115,11 @@
       "level": 170,
       "job": "fighter",
       "bonus": {
-        "attack": 104
+        "attack": 422.5,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 2060
     },
@@ -1735,7 +2130,11 @@
       "level": 170,
       "job": "mage",
       "bonus": {
-        "attack": 104
+        "attack": 422.5,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 2060
     },
@@ -1746,7 +2145,11 @@
       "level": 170,
       "job": "archer",
       "bonus": {
-        "attack": 104
+        "attack": 422.5,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 2060
     },
@@ -1756,8 +2159,11 @@
       "slot": "armor",
       "level": 170,
       "bonus": {
-        "maxHp": 690,
-        "defense": 69
+        "attack": 0,
+        "defense": 169,
+        "maxHp": 98.6,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 2060
     },
@@ -1767,8 +2173,11 @@
       "slot": "helmet",
       "level": 170,
       "bonus": {
-        "maxHp": 345,
-        "defense": 35
+        "attack": 0,
+        "defense": 84.5,
+        "maxHp": 49.3,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 2060
     },
@@ -1778,8 +2187,11 @@
       "slot": "boots",
       "level": 170,
       "bonus": {
-        "maxHp": 345,
-        "defense": 35
+        "attack": 0,
+        "defense": 84.5,
+        "maxHp": 49.3,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 2060
     },
@@ -1789,10 +2201,11 @@
       "slot": "necklace",
       "level": 170,
       "bonus": {
-        "attack": 35,
-        "maxHp": 173,
-        "defense": 17,
-        "crit": 47
+        "attack": 140.8,
+        "defense": 42.2,
+        "maxHp": 24.6,
+        "crit": 47,
+        "attackSpeed": 0
       },
       "price": 2060
     },
@@ -1802,9 +2215,10 @@
       "slot": "ring",
       "level": 170,
       "bonus": {
-        "attack": 35,
-        "maxHp": 173,
-        "defense": 17,
+        "attack": 140.8,
+        "defense": 42.2,
+        "maxHp": 24.6,
+        "crit": 0,
         "attackSpeed": 19
       },
       "price": 2060
@@ -1825,7 +2239,11 @@
       "level": 180,
       "job": "fighter",
       "bonus": {
-        "attack": 110
+        "attack": 504.6,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 2180
     },
@@ -1836,7 +2254,11 @@
       "level": 180,
       "job": "mage",
       "bonus": {
-        "attack": 110
+        "attack": 504.6,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 2180
     },
@@ -1847,7 +2269,11 @@
       "level": 180,
       "job": "archer",
       "bonus": {
-        "attack": 110
+        "attack": 504.6,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 2180
     },
@@ -1857,8 +2283,11 @@
       "slot": "armor",
       "level": 180,
       "bonus": {
-        "maxHp": 730,
-        "defense": 73
+        "attack": 0,
+        "defense": 201.8,
+        "maxHp": 117.7,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 2180
     },
@@ -1868,8 +2297,11 @@
       "slot": "helmet",
       "level": 180,
       "bonus": {
-        "maxHp": 365,
-        "defense": 37
+        "attack": 0,
+        "defense": 100.9,
+        "maxHp": 58.9,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 2180
     },
@@ -1879,8 +2311,11 @@
       "slot": "boots",
       "level": 180,
       "bonus": {
-        "maxHp": 365,
-        "defense": 37
+        "attack": 0,
+        "defense": 100.9,
+        "maxHp": 58.9,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 2180
     },
@@ -1890,10 +2325,11 @@
       "slot": "necklace",
       "level": 180,
       "bonus": {
-        "attack": 37,
-        "maxHp": 183,
-        "defense": 18,
-        "crit": 50
+        "attack": 168.2,
+        "defense": 50.5,
+        "maxHp": 29.4,
+        "crit": 50,
+        "attackSpeed": 0
       },
       "price": 2180
     },
@@ -1903,9 +2339,10 @@
       "slot": "ring",
       "level": 180,
       "bonus": {
-        "attack": 37,
-        "maxHp": 183,
-        "defense": 18,
+        "attack": 168.2,
+        "defense": 50.5,
+        "maxHp": 29.4,
+        "crit": 0,
         "attackSpeed": 20
       },
       "price": 2180
@@ -1926,7 +2363,11 @@
       "level": 190,
       "job": "fighter",
       "bonus": {
-        "attack": 116
+        "attack": 513.6,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 2300
     },
@@ -1937,7 +2378,11 @@
       "level": 190,
       "job": "mage",
       "bonus": {
-        "attack": 116
+        "attack": 513.6,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 2300
     },
@@ -1948,7 +2393,11 @@
       "level": 190,
       "job": "archer",
       "bonus": {
-        "attack": 116
+        "attack": 513.6,
+        "defense": 0,
+        "maxHp": 0,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 2300
     },
@@ -1958,8 +2407,11 @@
       "slot": "armor",
       "level": 190,
       "bonus": {
-        "maxHp": 770,
-        "defense": 77
+        "attack": 0,
+        "defense": 205.4,
+        "maxHp": 119.8,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 2300
     },
@@ -1969,8 +2421,11 @@
       "slot": "helmet",
       "level": 190,
       "bonus": {
-        "maxHp": 385,
-        "defense": 39
+        "attack": 0,
+        "defense": 102.7,
+        "maxHp": 59.9,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 2300
     },
@@ -1980,8 +2435,11 @@
       "slot": "boots",
       "level": 190,
       "bonus": {
-        "maxHp": 385,
-        "defense": 39
+        "attack": 0,
+        "defense": 102.7,
+        "maxHp": 59.9,
+        "crit": 0,
+        "attackSpeed": 0
       },
       "price": 2300
     },
@@ -1991,10 +2449,11 @@
       "slot": "necklace",
       "level": 190,
       "bonus": {
-        "attack": 39,
-        "maxHp": 193,
-        "defense": 19,
-        "crit": 52
+        "attack": 171.2,
+        "defense": 51.4,
+        "maxHp": 30,
+        "crit": 50,
+        "attackSpeed": 0
       },
       "price": 2300
     },
@@ -2004,10 +2463,11 @@
       "slot": "ring",
       "level": 190,
       "bonus": {
-        "attack": 39,
-        "maxHp": 193,
-        "defense": 19,
-        "attackSpeed": 21
+        "attack": 171.2,
+        "defense": 51.4,
+        "maxHp": 30,
+        "crit": 0,
+        "attackSpeed": 20
       },
       "price": 2300
     },
@@ -2070,7 +2530,7 @@
     "attack": "공격력",
     "defense": "방어력"
   },
-  "maxEnhance": 10,
+  "maxEnhance": 9,
   "dropChance": 0.14,
   "bossMaterials": 3,
   "forgeMaterials": 5,

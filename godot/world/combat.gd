@@ -71,8 +71,14 @@ static func compute_damage(attack: float, defense: float) -> int:
 
 
 ## 다음 레벨까지 필요한 경험치
+## 다음 레벨까지 필요한 경험치 — **만렙까지 걸리는 시간에서 역산한 표**를 읽는다
+## (`data/balance.json` 의 expTable, 2,880시간 = 24시간 × 120일).
+## 그 전에는 `55 × 레벨^1.2` 라 사냥 속도와 무관했다
 static func exp_to_next(level: int) -> int:
-	return roundi(55.0 * pow(float(level), 1.2))
+	var table: Array = GameData.balance().get("expTable", [])
+	if table.is_empty():
+		return roundi(55.0 * pow(float(level), 1.2))
+	return maxi(1, int(table[clampi(level - 1, 0, table.size() - 1)]))
 
 
 ## 레벨과 남은 경험치를 다시 계산한다 (한 번에 여러 레벨이 오를 수 있다)
@@ -93,10 +99,9 @@ static func apply_exp(level: int, exp_now: int, gained: int) -> Dictionary:
 	return {"level": next_level, "exp": pool}
 
 
-## 레벨 차이에 따른 경험치 보정 — 약한 몬스터만 잡는 걸 막는다
-static func exp_reward(monster_level: int, player_level: int, base: float) -> int:
-	var gap := monster_level - player_level
-	if gap <= -8:
-		return 0
-	var scale := (1.0 + gap * 0.12) if gap >= 0 else (1.0 + gap * 0.11)
-	return maxi(1, roundi(base * maxf(0.1, scale)))
+## 몬스터가 주는 경험치. **레벨 차이 보정을 걷었다** (2026-09-20).
+##
+## 설계에서 경험치는 몬스터 HP 에 정비례하므로 약한 몬스터는 이미 보상이 작다 —
+## 따로 깎을 이유가 없다. 위쪽 한계도 경험치가 아니라 **사망**이 정한다
+static func exp_reward(_monster_level: int, _player_level: int, base: float) -> int:
+	return maxi(1, roundi(base))

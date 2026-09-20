@@ -79,14 +79,17 @@ func _case_cast_and_burst() -> void:
 	if me.hp != me.stats.maxHp:
 		_fail("아직 안 터져야 하는데 맞았다")
 
-	# 1600ms 가 지나면 터진다. 보스 25 x 2.2 = 55, 격투가 Lv1 방어 6 -> 49
+	# 1600ms 가 지나면 터진다. 피해는 설계 공식을 탄다 —
+	# 보스 공격력 × 범위 배수(2.2) × K / (K + 내 방어력), K 는 보스 레벨에서 역산
 	OS.delay_msec(1500)
 	w.step(0.016)
 	var hit := _first(w.drain_events(), "hit")
+	var power := float(boss.attack) * float(boss.get("aoe", {}).get("power", 2.2))
+	var want := roundi(Stats.damage(power, int(boss.level), float(me.stats.defense)))
 	if hit.is_empty():
 		_fail("시간이 지났는데 안 터졌다")
-	elif int(hit.amount) != 49:
-		_fail("범위 피해가 49 이어야 하는데 %d" % hit.amount)
+	elif int(hit.amount) != want:
+		_fail("범위 피해가 %d 이어야 하는데 %d" % [want, hit.amount])
 	else:
 		print("  터짐: 체력 %d -> %d (피해 %d)" % [me.stats.maxHp, me.hp, hit.amount])
 

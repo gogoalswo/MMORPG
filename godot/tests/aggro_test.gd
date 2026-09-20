@@ -79,16 +79,21 @@ func _case_chase() -> void:
 
 
 func _case_attack() -> void:
-	# 사거리(1.9m) 안이면 때린다. 들늑대 공격 9 vs 격투가 Lv1 방어 6 -> 8
+	# 사거리(1.9m) 안이면 때린다. **한 대가 아주 작은 것이 설계다** — 몬스터
+	# 공격력은 "여섯 마리가 동시에 때려 15초에 HP 절반" 에서 역산한 값이라,
+	# 1:1 로는 120~150대를 맞아야 죽는다. 무리가 위협이지 한 마리는 아니다
 	var s := _setup(-20.0, 0.0, -20.0, 1.5)
 	var w: World = s[0]
 	var me: Dictionary = s[1]
 	var full: int = me.hp
 	w.step(1.0 / 60.0)
-	if me.hp != full - 8:
-		_fail("맞은 피해가 8 이어야 하는데 %d" % (full - me.hp))
+	var taken := full - int(me.hp)
+	if taken <= 0:
+		_fail("사거리 안인데 안 때렸다")
+	elif taken > full / 10:
+		_fail("한 대에 최대 체력의 1/10 이 넘게 날아간다 (%d/%d)" % [taken, full])
 	else:
-		print("  들늑대에게 8 맞음 (%d -> %d)" % [full, me.hp])
+		print("  들늑대에게 %d 맞음 (%d -> %d)" % [taken, full, me.hp])
 
 	# 공격 간격 안에는 한 번만. 휘두르는 동안 묶여 있기도 하다
 	var once: int = me.hp
@@ -157,10 +162,10 @@ func _case_death_and_revive() -> void:
 	var s := _setup(-20.0, 0.0, -20.0, 1.5)
 	var w: World = s[0]
 	var me: Dictionary = s[1]
-	me.hp = 5
+	me.hp = 1
 	w.step(1.0 / 60.0)
 	if not bool(me.dead):
-		_fail("체력 5에서 8 맞았는데 안 죽었다 (hp %d)" % me.hp)
+		_fail("체력 1에서 맞았는데 안 죽었다 (hp %d)" % me.hp)
 		return
 
 	# **저절로 살아나지 않는다.** 죽은 걸 읽기도 전에 화면이 사라지면 안 된다

@@ -169,8 +169,12 @@ test('치확·공속이 설계표의 등급 곡선을 따라간다', () => {
   for (const [level, crit, speed] of want) {
     const neck = Object.values(ITEMS).find((i) => i.slot === 'necklace' && i.level === level)!;
     const ring = Object.values(ITEMS).find((i) => i.slot === 'ring' && i.level === level)!;
-    assert.equal(neck.bonus.crit, crit, `${level}레벨 목걸이 치확`);
-    assert.equal(ring.bonus.attackSpeed, speed, `${level}레벨 반지 공속`);
+    // 단계 레벨(30·60·…)은 착용 레벨(31·61·…)보다 한 칸 아래라 1 작을 수 있다
+    assert.ok(Math.abs(neck.bonus.crit! - crit) <= 1, `${level}레벨 목걸이 치확 ${neck.bonus.crit}`);
+    assert.ok(
+      Math.abs(ring.bonus.attackSpeed! - speed) <= 1,
+      `${level}레벨 반지 공속 ${ring.bonus.attackSpeed}`
+    );
   }
 });
 
@@ -376,29 +380,39 @@ test('강화 확률은 세 갈래로 나뉘고 합이 1 이다', () => {
   }
 });
 
-test('올라갈수록 어려워지고, 낮은 구간에서는 부서지지 않는다', () => {
-  // 처음부터 부서지면 강화를 아예 안 하게 된다
-  for (let level = 0; level <= 3; level++) {
-    assert.equal(enhanceOdds(level).destroy, 0, `+${level}: 초반부터 부서진다`);
+test('성공률이 설계표대로 90% 에서 10% 까지 내려간다', () => {
+  // 설계 4장의 성공률 행 그대로. **유지가 없어서 실패는 곧 파괴**다
+  const want = [0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1];
+  for (let level = 0; level < want.length; level++) {
+    const odds = enhanceOdds(level);
+    assert.equal(odds.success, want[level], `+${level} 성공률`);
+    assert.equal(odds.keep, 0, `+${level}: 유지 구간이 남아 있다`);
+    assert.equal(Math.round(odds.destroy * 100) / 100, Math.round((1 - want[level]!) * 100) / 100);
   }
-  assert.ok(enhanceOdds(0).success > enhanceOdds(9).success, '높은 수치가 더 쉬우면 안 된다');
-  assert.ok(enhanceOdds(9).destroy > 0, '끝까지 안 부서지면 골드만 있으면 되는 일이 된다');
 });
 
-test('굴림값이 확률대로 갈린다', () => {
-  const level = 8;
-  const o = enhanceOdds(level);
-  assert.equal(rollEnhance(level, 0), 'success');
-  assert.equal(rollEnhance(level, o.success - 0.001), 'success');
-  assert.equal(rollEnhance(level, o.success + 0.001), 'keep');
-  assert.equal(rollEnhance(level, o.success + o.keep + 0.001), 'destroy');
-  assert.equal(rollEnhance(level, 0.999999), 'destroy');
+test('실패하면 무조건 파괴된다 — 유지가 없다', () => {
+  // 재료도 값도 없으니 실패의 대가는 아이템 하나뿐이고, 무한히 재시도할 수 있다.
+  // 그래서 도달 단계는 "아이템이 몇 개 들어오느냐" 로만 결정된다
+  for (let level = 0; level < MAX_ENHANCE; level++) {
+    const o = enhanceOdds(level);
+    assert.equal(rollEnhance(level, 0), 'success');
+    assert.equal(rollEnhance(level, o.success - 0.001), 'success');
+    assert.equal(rollEnhance(level, o.success + 0.001), 'destroy');
+    assert.equal(rollEnhance(level, 0.999999), 'destroy');
+    for (let i = 0; i <= 100; i++) {
+      assert.notEqual(rollEnhance(level, i / 100), 'keep', `+${level}: 유지가 나온다`);
+    }
+  }
 });
 
-test('부서지지 않는 구간에서는 어떤 굴림도 파괴가 아니다', () => {
-  for (let i = 0; i <= 100; i++) {
-    assert.notEqual(rollEnhance(2, i / 100), 'destroy');
-  }
+test('강화 총 배수가 ×6 이고 고강화일수록 크게 오른다', () => {
+  // 9→10단이 +50% 여야 파괴 위험을 감수할 이유가 생긴다
+  assert.equal(Math.round(enhanceMultiplier(0) * 100) / 100, 1);
+  assert.equal(Math.round(enhanceMultiplier(MAX_ENHANCE) * 100) / 100, 6);
+  const first = enhanceMultiplier(1) / enhanceMultiplier(0) - 1;
+  const last = enhanceMultiplier(MAX_ENHANCE) / enhanceMultiplier(MAX_ENHANCE - 1) - 1;
+  assert.ok(Math.abs(last / first - 7) < 0.01, `첫 구간 : 마지막 = 1 : ${(last / first).toFixed(2)}`);
 });
 
 test('강화하면 세지고, 최고 수치에서 멈춘다', () => {
@@ -415,13 +429,11 @@ test('강화하면 세지고, 최고 수치에서 멈춘다', () => {
   assert.equal(canEnhance(MAX_ENHANCE - 1), true);
 });
 
-test('강화 값은 올라갈수록 비싸진다', () => {
+test('강화는 공짜다 — 값을 매기면 골드를 모으는 일이 된다', () => {
+  // 설계는 그 자리에 **드랍**을 놓았다. 실패하면 아이템이 사라지므로 아이템이 연료다
   const item = ITEMS['w_fighter_05']!;
-  let previous = 0;
   for (let level = 0; level < MAX_ENHANCE; level++) {
-    const cost = enhanceCost(item, level);
-    assert.ok(cost > previous, `+${level}: 더 싸다`);
-    previous = cost;
+    assert.equal(enhanceCost(item, level), 0, `+${level}: 값이 붙어 있다`);
   }
 });
 

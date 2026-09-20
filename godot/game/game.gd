@@ -70,6 +70,8 @@ const AUTO_INSET := 13
 const AUTO_GAP := 8
 ## 고리를 칸 바닥에서 얼마나 띄우나 (글자 자리)
 const SPIN_LIFT := 13
+## 화면 맨 아래 경험치 게이지 높이. 받은 그림처럼 **가는 띠**다
+const EXP_GAUGE_H := 7
 const ICON_DIR := "res://assets/icons/"
 ## 가방 탭. 0 은 전체, 나머지는 `_tab_keeps` 가 슬롯으로 가른다
 const BAG_TABS := ["전체", "무기", "방어구", "장신구", "재료"]
@@ -125,6 +127,8 @@ var _last_event := ""
 var _ui_root: Control
 ## 퀵슬롯 위 한 묶음 — 레벨 배지 안 숫자, 체력 막대와 그 위 숫자, 경험치 퍼센트
 var _level_label: Label
+## 화면 맨 아래를 가로지르는 경험치 게이지 (2026-09-20 요청)
+var _exp_bar: TextureProgressBar
 var _hp_bar: TextureProgressBar
 var _hp_text: Label
 var _exp_text: Label
@@ -394,6 +398,36 @@ func _build_level_badge(parent: Node) -> void:
 	_exp_text.add_theme_color_override("font_color", Color("#e8c14a"))
 	_exp_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(_exp_text)
+
+
+## 화면 맨 아래를 가로지르는 경험치 게이지 ★ 받은 그림(2026-09-20)대로 **가는 띠**를
+## 화면 바닥에 깐다. 홈(테두리)을 두르지 않는다 — 화면 끝까지 닿아야 해서다.
+##
+## 퍼센트 글자는 배지 아래에 그대로 둔다 (`_exp_text`) — 띠만으로는 몇 퍼센트인지
+## 읽을 수 없고, 받은 그림에도 글자와 띠가 둘 다 있다
+func _build_exp_gauge() -> void:
+	_exp_bar = TextureProgressBar.new()
+	_exp_bar.fill_mode = TextureProgressBar.FILL_LEFT_TO_RIGHT
+	_exp_bar.nine_patch_stretch = true
+	_exp_bar.set_stretch_margin(SIDE_LEFT, 24)
+	_exp_bar.set_stretch_margin(SIDE_RIGHT, 24)
+	var fill := _icon("ui_bar_fill")
+	_exp_bar.texture_progress = fill if fill != null else _white(16)
+	_exp_bar.tint_progress = Color("#e8c14a")
+	# 아직 안 채운 쪽은 어둡게 깔아 띠가 어디까지인지 보이게 한다
+	_exp_bar.texture_under = _exp_bar.texture_progress
+	_exp_bar.tint_under = Color(0.05, 0.04, 0.03, 0.8)
+	_exp_bar.step = 0.0
+	_exp_bar.custom_minimum_size = Vector2(0, EXP_GAUGE_H)
+	_exp_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ui_root.add_child(_exp_bar)
+	# 앵커만 잡고 **여백을 손으로 준다** — `PRESET_MODE_MINSIZE` 로 두면 띠가 화면
+	# 아래로 제 높이만큼 삐져나간다 (2026-09-20, 테스트가 잡았다)
+	_exp_bar.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	_exp_bar.offset_left = 0.0
+	_exp_bar.offset_right = 0.0
+	_exp_bar.offset_top = -EXP_GAUGE_H
+	_exp_bar.offset_bottom = 0.0
 
 
 ## 막대 하나 — 홈(9조각) 안에 채움을 깔고 그 위에 숫자를 얹는다.
@@ -1033,6 +1067,7 @@ func _build_skill_bar() -> void:
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_ui_root.add_child(column)
 
+	_build_exp_gauge()
 	_build_level_badge(column)
 
 	var hp := _make_bar(HP_BAR_H, Color("#c33122"), 12)
@@ -2445,6 +2480,8 @@ func _refresh_status(me: Dictionary) -> void:
 	# 다음 레벨까지 필요한 양. 만렙이면 0 이 와서 0 으로 나누게 된다
 	var need := maxi(1, Combat.exp_to_next(int(me.level)))
 	_exp_text.text = "경험치 %.2f%%" % (minf(float(me.exp) / need, 1.0) * 100.0)
+	_exp_bar.max_value = need
+	_exp_bar.value = mini(int(me.exp), need)
 
 
 func _refresh_bar(me: Dictionary) -> void:

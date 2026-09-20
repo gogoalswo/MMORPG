@@ -270,6 +270,14 @@ func _case_status(game: Node3D) -> void:
 	if not game._exp_text.text.begins_with("경험치 ") or not game._exp_text.text.ends_with("%"):
 		_fail("경험치가 퍼센트가 아니다: '%s'" % game._exp_text.text)
 
+	# 경험치 게이지는 **화면 맨 아래를 가로지른다** (2026-09-20 요청)
+	var need := maxi(1, Combat.exp_to_next(int(me.level)))
+	var gauge: Rect2 = game._exp_bar.get_global_rect()
+	if gauge.size.x < screen.x - 1.0 or absf(gauge.end.y - screen.y) > 1.0:
+		_fail("경험치 게이지가 화면 맨 아래 가로 전체가 아니다: %s" % gauge)
+	if game._exp_bar.max_value != float(need):
+		_fail("경험치 게이지 최대치가 %d 이어야 하는데 %d" % [need, game._exp_bar.max_value])
+
 	# 막대가 줄어든다 — 반쯤 깎아 보고 채움 폭이 아니라 값으로 본다
 	me.hp = int(me.stats.maxHp) / 2
 	await process_frame
@@ -317,7 +325,7 @@ func _case_status(game: Node3D) -> void:
 		_fail("오른쪽 위 가방 단추를 눌렀는데 가방이 안 열렸다")
 	game._toggle_bag()
 	await process_frame
-	print("  퀵슬롯 위: Lv.%s · %s · 체력 %s (막대 %.0fpx)" % [game._level_label.text, game._exp_text.text, game._hp_text.text, hp_rect.size.x])
+	print("  퀵슬롯 위: %s · %s · 체력 %s (막대 %.0fpx · 게이지 %.0fpx)" % [game._level_label.text, game._exp_text.text, game._hp_text.text, hp_rect.size.x, gauge.size.x])
 
 
 ## 가방·장비 창 — 열리나, 칸이 제대로 깔리나, 골라서 낄 수 있나.

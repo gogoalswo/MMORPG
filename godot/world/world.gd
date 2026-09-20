@@ -737,7 +737,9 @@ func _move_monster(monster: Dictionary, tx: float, tz: float, speed: float, delt
 ## attack 을 따로 받는 것은 범위 공격이 평타의 power 배로 때리기 때문이다
 func _hit_player(player: Dictionary, monster: Dictionary, attack: float = -1.0) -> void:
 	var power := float(monster.attack) if attack < 0.0 else attack
-	var damage := Combat.compute_damage(power, float(player.stats.defense))
+	# **공격자 레벨로 K 를 뽑는다** — 높은 사냥터 몬스터가 때리면 내 방어력 효율이
+	# 자동으로 떨어진다. 레벨차 보정 시스템이 따로 필요 없는 이유다 (설계 1장)
+	var damage := roundi(Stats.damage(power, int(monster.level), float(player.stats.defense)))
 	if bool(player.get("invincible", false)):
 		damage = 0
 	player.hp = maxi(0, int(player.hp) - damage)
@@ -1091,7 +1093,7 @@ func cast(player_id: String, skill_id: String) -> void:
 ## 몬스터 하나를 때린다. 기본 공격과 스킬이 같은 자리를 쓴다
 func _hit_monster(player: Dictionary, target: Dictionary, attack: float, skill_id: String) -> void:
 	var stats: Dictionary = player.stats
-	var damage := Combat.compute_damage(attack, target.defense)
+	var damage := roundi(Stats.damage(attack, int(player.level), float(target.defense)))
 	var crit := Combat.roll_crit(float(stats.crit), _rng.randf())
 	if crit:
 		damage = roundi(damage * float(stats.critDamage))
@@ -1112,14 +1114,23 @@ func _hit_monster(player: Dictionary, target: Dictionary, attack: float, skill_i
 		_kill(player, target, Time.get_ticks_msec())
 
 
-## 직업 스탯에 장비를 더한다. **장비가 바뀔 때마다 다시 만든다** —
-## 어딘가에 합쳐 둔 값을 들고 있으면 반드시 어긋난다
+## 맨몸 스탯에 장비를 **곱한다**. 장비가 바뀔 때마다 다시 만든다 —
+## 어딘가에 합쳐 둔 값을 들고 있으면 반드시 어긋난다.
+##
+## **더하기가 아니라 곱하기다** (2026-09-20). 설계에서 장비는 절대 수치가 아니라
+## 기본 스탯에 곱하는 **%** 다:
+##
+##     총 공격력 = 기본공격력(레벨) × (1 + 장비 % 합계)
+##
+## 축마다 계수가 다른 것(공 ×1.0 / 방 ×0.6 / HP ×0.35)은 `gear.ts` 가 이미 반영해
+## 내려보내므로 여기서는 그대로 곱하기만 한다. 생존을 레벨 쪽에 묶어 둬야
+## 저레벨 캐릭이 고등급 장비를 껴도 상위 사냥터에서 죽어 **게이팅이 자동으로 걸린다**
 func _refresh_stats(player: Dictionary) -> void:
 	var stats := Combat.stats_for(str(player.job), int(player.level))
 	var gear := Items.equipment_stats(player.equipped)
-	stats.attack += gear.attack
-	stats.defense += gear.defense
-	stats.maxHp += gear.maxHp
+	stats.attack = maxi(1, roundi(float(stats.attack) * (1.0 + float(gear.attack) / 100.0)))
+	stats.defense = maxi(0, roundi(float(stats.defense) * (1.0 + float(gear.defense) / 100.0)))
+	stats.maxHp = maxi(1, roundi(float(stats.maxHp) * (1.0 + float(gear.maxHp) / 100.0)))
 	# 상한이 있는 것들 — 옵션이 여덟 자리에 붙으므로 안 막으면 치명타 100% 가 나온다
 	var c := GameData.combat()
 	stats.crit = minf(float(stats.crit) + gear.crit, float(c.get("critCap", 0.75)))

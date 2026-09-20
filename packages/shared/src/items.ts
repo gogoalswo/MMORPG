@@ -12,45 +12,21 @@ import type { JobId } from './character.ts';
  * 조정해야 해서, 지금은 "레벨에 비례해 눈에 띄게 오르는" 정도로만 두었다.
  */
 
-export type EquipSlot =
-  | 'weapon'
-  | 'armor'
-  | 'helmet'
-  | 'boots'
-  | 'ring'
-  | 'necklace';
-
-/**
- * 창에 놓이는 순서. **여섯 자리다** — 2026-09-18 에 보조(보호대·마법서·화살통)와
- * 귀걸이를 없앴다 (요청: "슬롯은 무기, 갑옷, 투구, 신발, 목걸이, 반지 이렇게야").
- * 그 둘을 없애면서 아이템이 240종에서 180종이 됐고, 직업을 타는 자리는 무기 하나만
- * 남았다. 되살리려면 이 커밋을 뒤집는 게 빠르다.
- */
-export const EQUIP_SLOTS: EquipSlot[] = [
-  'weapon',
-  'armor',
-  'helmet',
-  'boots',
-  'necklace',
-  'ring',
-];
-
-const SLOT_LABEL: Record<EquipSlot, string> = {
-  weapon: '무기',
-  armor: '갑옷',
-  helmet: '투구',
-  boots: '신발',
-  ring: '반지',
-  necklace: '목걸이',
-};
-
-/**
- * 슬롯 이름. `job` 을 받던 자리는 보조 때문이었는데 보조를 없애 쓰이지 않는다 —
- * 부르는 쪽(창·내보내기)을 다 고치지 않아도 되도록 인자는 남겨 두고 무시한다
- */
-export function slotLabel(slot: EquipSlot, _job?: JobId): string {
-  return SLOT_LABEL[slot];
-}
+// 슬롯 정의는 `slots.ts` 로 옮겼다 — 여기서 `gear.ts` 를 임포트하게 되면서
+// 서로를 부르는 순환이 되기 때문이다. 그대로 다시 내보내니 부르는 쪽은 그대로다
+export { EQUIP_SLOTS, SLOT_CODE, slotLabel, type EquipSlot } from './slots.ts';
+import { EQUIP_SLOTS, SLOT_CODE, slotLabel, type EquipSlot } from './slots.ts';
+import {
+  GEAR_DEF_FACTOR,
+  GEAR_HP_FACTOR,
+  ENH_MAX as GEAR_ENH_MAX,
+  ENH_ODDS as GEAR_ENH_ODDS,
+  GRADE_COUNT as GEAR_GRADE_COUNT,
+  GRADE_LV_SPAN as GEAR_GRADE_LV_SPAN,
+  enhanceMultiplier as gearEnhanceMultiplier,
+  gradeSum,
+  slotStats,
+} from './gear.ts';
 
 /** 장비가 더해주는 능력치 */
 export interface ItemBonus {
@@ -153,51 +129,31 @@ export function tierName(index: number): string {
  * 이동속도(설계표에서 신발 100%)는 **아직 안 넣었다** — 지금 스탯 모델에 이동속도가
  * 없고, 넣으면 movement 와 예측 보정까지 같이 봐야 한다.
  */
-function bonusFor(slot: EquipSlot, level: number, _job?: JobId): ItemBonus {
-  const hp = (k: number) => Math.round((10 + level * 4) * k);
-  const def = (k: number) => Math.round((1 + level * 0.4) * k);
-  const atk = (k: number) => Math.round((2 + level * 0.6) * k);
-  // 무기를 1 로 두면 공격 예산 합이 1.667 이라 무기 지분이 정확히 60% 가 된다.
-  // 방어·HP 도 갑옷을 1 로 두면 합이 2.5 라 갑옷이 40% 다
-  const ATK_SIDE = 1 / 3; // 목걸이·반지가 각각 20%
-  const GEAR_MID = 0.5; // 투구·신발이 각각 20%
-  const GEAR_SIDE = 0.25; // 목걸이·반지가 각각 10%
-
-  switch (slot) {
-    case 'weapon':
-      return { attack: atk(1) };
-    case 'armor':
-      return { maxHp: hp(1), defense: def(1) };
-    case 'helmet':
-      return { maxHp: hp(GEAR_MID), defense: def(GEAR_MID) };
-    case 'boots':
-      return { maxHp: hp(GEAR_MID), defense: def(GEAR_MID) };
-    case 'necklace':
-      return {
-        attack: atk(ATK_SIDE),
-        maxHp: hp(GEAR_SIDE),
-        defense: def(GEAR_SIDE),
-        crit: Math.round(level * 0.276),
-      };
-    case 'ring':
-      return {
-        attack: atk(ATK_SIDE),
-        maxHp: hp(GEAR_SIDE),
-        defense: def(GEAR_SIDE),
-        attackSpeed: Math.round(level * 0.11),
-      };
-  }
+/**
+ * 요구 레벨을 설계의 **연속 등급**으로 옮긴다.
+ *
+ * 설계는 등급 7개(착용 Lv 1/31/61/91/121/151/181)를 쓰는데, 이 표는 단계 20개라
+ * 축이 다르다. 30레벨마다 등급 하나가 오르도록 **보간**하면 양 끝이 설계와 정확히
+ * 맞고(Lv1 = 등급1 = 35%, Lv181+ = 등급7 = 856%) 단계마다 값도 다르게 나온다.
+ * 계단으로 끊으면 한 등급 안의 단계 셋이 전부 같은 값이 되어 갈아입을 이유가 없어진다.
+ */
+function gearGrade(level: number): number {
+  return Math.max(1, Math.min(GEAR_GRADE_COUNT, 1 + (level - 1) / GEAR_GRADE_LV_SPAN));
 }
 
-/** 슬롯별 id 앞글자 */
-export const SLOT_CODE: Record<EquipSlot, string> = {
-  weapon: 'w',
-  armor: 'a',
-  helmet: 'h',
-  boots: 'b',
-  ring: 'r',
-  necklace: 'n',
-};
+function bonusFor(slot: EquipSlot, level: number, _job?: JobId): ItemBonus {
+  const s = slotStats(slot, gearGrade(level));
+  return {
+    attack: Math.round(s.atk * 10) / 10,
+    defense: Math.round(s.df * 10) / 10,
+    maxHp: Math.round(s.hp * 10) / 10,
+    // 치확·공속은 퍼센트 포인트 정수로 담는다 (`stackStats` 가 /100 한다)
+    crit: Math.round(s.crit * 100),
+    attackSpeed: Math.round(s.aspd * 100),
+  };
+}
+
+// SLOT_CODE 는 slots.ts 로 갔다 (위에서 다시 내보낸다)
 
 /** 직업을 타는 슬롯. 보조를 없애 무기 하나만 남았다 */
 export const JOB_SLOTS: EquipSlot[] = ['weapon'];
@@ -393,6 +349,22 @@ export function optionGradeScale(grade: number): number {
  * 수치 옵션은 요구 레벨을 타야 한다. 안 그러면 200레벨 장비에 붙은 공격력
  * +3 은 붙으나 마나다.
  */
+/**
+ * 그 레벨 풀세트 예산의 6~12% — 축(공격/방어/HP)마다 계수가 다르다.
+ *
+ * 한 슬롯이 가져가는 지분이 20~60% 이므로, 예산의 12% 면 **그 자리 기본의 2~3할**이
+ * 된다. 옛 표가 "1등급 최대가 기본의 3할쯤, 10등급 최대가 기본을 조금 넘는 선" 으로
+ * 잡았던 것과 같은 크기다. 더 작게 잡으면 정수로 저장하는 순간 등급 사이가
+ * 반올림으로 뭉개져 **등급을 올릴 이유가 사라진다**.
+ */
+function budgetRange(level: number, factor: number): { min: number; max: number } {
+  const budget = gradeSum(gearGrade(level)) * factor;
+  return {
+    min: Math.max(1, Math.round(budget * 0.06)),
+    max: Math.max(2, Math.round(budget * 0.12)),
+  };
+}
+
 function baseOptionRange(kind: OptionKind, level: number): { min: number; max: number } {
   switch (kind) {
     case 'crit':
@@ -401,14 +373,16 @@ function baseOptionRange(kind: OptionKind, level: number): { min: number; max: n
       return { min: 1, max: 3 };
     case 'critDamage':
       return { min: 4, max: 10 };
-    // 옵션 하나가 그 자리의 기본 수치를 넘어서면 기본이 장식이 된다.
-    // 1등급 최대가 기본의 3할쯤, 10등급 최대가 기본을 조금 넘는 선으로 잡았다.
+    // 공격·방어·HP 는 이제 **%** 다. 그 레벨의 풀세트 예산에 비례시켜야 후반에도
+    // 체감이 유지된다 — 절대 수치로 두면 Lv180 기본 514% 옆에 붙은 +22 가 장식이 된다.
+    // 옵션 하나가 그 자리의 기본을 넘어서면 기본이 장식이 되므로, 예산의 2~4%로 잡았다
+    // (등급 배수까지 곱해도 무기 기본의 3할 안쪽).
     case 'attack':
-      return { min: Math.round(1 + level * 0.06), max: Math.round(1 + level * 0.12) };
+      return budgetRange(level, 1);
     case 'defense':
-      return { min: Math.round(1 + level * 0.04), max: Math.round(1 + level * 0.08) };
+      return budgetRange(level, GEAR_DEF_FACTOR);
     case 'maxHp':
-      return { min: Math.round(3 + level * 0.6), max: Math.round(5 + level * 1.2) };
+      return budgetRange(level, GEAR_HP_FACTOR);
   }
 }
 
@@ -493,12 +467,22 @@ export function sanitizeOptions(raw: unknown, item: ItemDef, grade: number): Ite
  * **골드를 걸고 운을 본다.** 실패해도 유지되는 구간이 있고, 높은 수치에서는
  * 아예 부서진다 — 그래서 어디서 멈출지가 선택이 된다.
  */
-export const MAX_ENHANCE = 10;
+/**
+ * 강화 상한. 설계는 **10단계**이고 1단이 무강이므로, `+0 ~ +9` 로 아홉 번 두드린다
+ * (2026-09-20 에 10 → 9 로 줄였다 — 그 전에는 +10 까지 열한 칸이었다).
+ */
+export const MAX_ENHANCE = GEAR_ENH_MAX - 1;
 
-/** 강화 수치가 올리는 배율 */
+/**
+ * 강화 배율 — **설계표를 그대로 쓴다** (`gear.ts`). `+0` 이 1단, `+9` 가 10단이다.
+ *
+ * 총 배수가 ×6 이고 증가율이 고강화일수록 크다(첫 구간 : 마지막 = 1 : 7).
+ * 그 전에는 `1 + n×0.08` 이라 +10 이 ×1.8 이었다 — 9→10단이 +50% 여야 **파괴 위험을
+ * 감수할 이유**가 생긴다는 것이 설계의 결론이다.
+ */
 export function enhanceMultiplier(level: number): number {
   const n = Math.min(MAX_ENHANCE, Math.max(0, Math.round(level || 0)));
-  return 1 + n * 0.08;
+  return gearEnhanceMultiplier(n + 1);
 }
 
 export interface EnhanceOdds {
@@ -508,24 +492,28 @@ export interface EnhanceOdds {
 }
 
 /**
- * +level 에서 한 번 더 두드릴 때의 확률.
+ * +level 에서 한 번 더 두드릴 때의 확률 — **설계표 그대로**(90/80/…/10%).
  *
- * 낮은 구간은 거의 성공하고, 중반부터 유지가 늘고, 높은 구간에서만 부서진다.
- * 처음부터 부서지면 강화를 아예 안 하게 되고, 끝까지 안 부서지면 골드만 있으면
- * 되는 일이 된다.
+ * **"유지" 가 없다. 실패하면 무조건 파괴된다.** 재료도 값도 없으니(아래 `enhanceCost`)
+ * 실패의 대가는 아이템 하나뿐이고, 무한히 재시도할 수 있다. 그래서 도달 단계는
+ * **아이템이 몇 개 들어오느냐**로만 결정되고, 드랍률이 경험치와 같은 급의 손잡이가 된다.
+ *
+ * 그 전에는 유지 구간이 있어 +6 까지는 절대 안 부서졌다.
  */
 export function enhanceOdds(level: number): EnhanceOdds {
   const n = Math.max(0, Math.round(level || 0));
-  if (n <= 3) return { success: 0.95, keep: 0.05, destroy: 0 };
-  if (n <= 6) return { success: 0.7, keep: 0.3, destroy: 0 };
-  if (n <= 8) return { success: 0.45, keep: 0.45, destroy: 0.1 };
-  return { success: 0.3, keep: 0.5, destroy: 0.2 };
+  const success = GEAR_ENH_ODDS[Math.min(n, GEAR_ENH_ODDS.length - 1)]!;
+  return { success, keep: 0, destroy: 1 - success };
 }
 
-/** 한 번 두드리는 값 — 골드만 쓴다 */
-export function enhanceCost(item: ItemDef, level: number): number {
-  const n = Math.max(0, Math.round(level || 0));
-  return Math.round(item.price * 2 * (n + 1) * gradeMultiplier(1));
+/**
+ * 한 번 두드리는 값 — **공짜다.** 설계에 강화 재료도 비용도 없다.
+ *
+ * 값을 매기면 강화가 "골드를 모으는 일" 이 되는데, 설계는 그 자리에 **드랍**을
+ * 놓았다 — 실패하면 아이템이 사라지므로 아이템 자체가 연료다.
+ */
+export function enhanceCost(_item: ItemDef, _level: number): number {
+  return 0;
 }
 
 export function canEnhance(level: number): boolean {
@@ -552,10 +540,13 @@ export function rollEnhance(level: number, roll: number): EnhanceResult {
  */
 export function baseBonus(item: ItemDef, enhance = 0): Required<ItemBonus> {
   const m = enhanceMultiplier(enhance);
+  // **소수 한 자리를 남긴다.** 이 값들은 이제 절대 수치가 아니라 **%** 라서
+  // 정수로 자르면 낮은 단계에서 오차가 커진다 (등급1 갑옷 방어 8.4% → 8%)
+  const pct = (v: number) => Math.round(v * m * 10) / 10;
   return {
-    attack: Math.round((item.bonus.attack ?? 0) * m),
-    defense: Math.round((item.bonus.defense ?? 0) * m),
-    maxHp: Math.round((item.bonus.maxHp ?? 0) * m),
+    attack: pct(item.bonus.attack ?? 0),
+    defense: pct(item.bonus.defense ?? 0),
+    maxHp: pct(item.bonus.maxHp ?? 0),
     // **강화는 공격·방어·HP 에만 곱한다.** 치확·공속까지 곱하면 목걸이·반지 두 자리가
     // 강화 한 번에 다른 슬롯 넷을 합친 값을 넘어선다 (설계 문서와 시뮬레이터가 같다)
     crit: item.bonus.crit ?? 0,

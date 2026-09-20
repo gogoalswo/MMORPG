@@ -6,8 +6,8 @@ extends RefCounted
 ## 수치는 여기 적지 않는다 — `data/balance.json`(shared 에서 내보낸 것)에서 읽는다.
 ## 공식만 옮긴다. 이유와 배경은 [stat-balance.md](../../docs/features/stat-balance.md) 에 있다.
 ##
-## **아직 판정에 안 쓴다.** 지금 전투는 `Combat`(옛 공식)으로 돈다. 설계 문서 9장이
-## 정한 순서의 첫 칸이고, 이것이 서야 `gear.ts` 의 % 가 곱할 기본값이 생긴다.
+## **2026-09-20 에 판정에 붙였다.** `World` 의 피해 계산과 `Items` 의 강화가 여기를
+## 부르고, `Combat` 은 경험치 표를 `data/balance.json` 에서 읽는다.
 ##
 ## 검증: `godot/tests/stats_test.gd` 가 TS·파이썬으로 낸 값과 대조한다.
 

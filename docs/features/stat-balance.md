@@ -591,11 +591,18 @@ Lv100 기준 플레이어의 사냥터별 결과:
      (`combat.gd` 와 같은 방식: 공식만 이식하고 수치는 JSON)
    - 검증은 세 겹이다 — `balance.test.ts`·`gear.test.ts`(문서 표를 박아 두고 대조) ·
      `godot/tests/stats_test.gd`(고도에서 같은 표) · 그리고 `tools/balance_sim.py` 와 직접 대조
-2. `char_defs.gd` 에 직업 배수(`atk/hp/df/interval`)와 종족 배수를 추가. 몬스터 스탯은 스폰 시 `monster(level, role)` 로 계산(테이블 저장 안 함).
-3. `player.gd` 에 `level, hp, max_hp, atk, def` 와 전직 단계. `stage_defs.gd` 에 사냥터 20개의 `(레벨 범위, 기대 등급)`.
-4. `character.gd` 의 공격 히트 콜백에서 부채꼴 범위 안 몬스터에 `damage()` 적용. 이미 이펙트가 붙는 자리라 판정만 붙이면 된다.
-5. HUD 에 HP 바와 레벨·스탯 표시. 시뮬레이터와 같은 조건을 게임에서 재현할 디버그 수단(레벨·등급 강제 설정)을 같이 넣는다.
-6. 아이템은 마지막. 슬롯 6개와 `item_pct(grade, slot)` 만 있으면 위 등급표가 그대로 쓰인다.
+2. ~~직업 배수와 몬스터 스탯~~ — **했다.** 직업 배수는 `balance.ts` 의 `JOB_MULT`,
+   몬스터는 `monsters.ts` 의 `statsForLevel` 이 `monster(level, role)` 를 부른다.
+   **표에 저장한다** — 이 저장소는 몬스터 종류를 `shared` 에서 만들어 `data/monsters.json`
+   으로 내보내므로, 스폰 시 계산하나 표에 넣으나 출처가 한 곳으로 같다.
+3. ~~플레이어 스탯~~ — **했다.** `combat.ts` 의 `statsFor` 가 `base(L) × 직업 배수` 다.
+   전직 단계(`JOB_ADVANCES`)는 표만 있고 스탯에는 아직 미반영(스킬 계수 확정 후).
+4. ~~피해 적용~~ — **했다.** `world.gd` 의 `_hit_player` · `_hit_monster` 가
+   `Stats.damage(공격력, 공격자 레벨, 방어력)` 을 쓴다.
+5. **HUD 디버그 수단은 아직이다.** 레벨·등급을 강제로 설정해 시뮬레이터와 같은 조건을
+   게임에서 재현하는 것 — 이게 있어야 "설계대로 도는가" 를 눈으로 확인할 수 있다.
+6. **아이템은 수치만 붙였다.** `items.ts` 가 `slotStats()` 로 %를 뽑고 강화도 이 표를
+   쓴다. **카탈로그(180종 → 56종)는 10장의 미정 세 가지를 정해야 갈아끼운다.**
 
 ## 10. 아직 안 정한 것
 

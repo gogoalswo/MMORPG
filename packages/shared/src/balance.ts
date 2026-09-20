@@ -6,14 +6,12 @@
  * 숫자를 두 곳에 두지 않는 것이 이 설계의 핵심이라, 어긋나면 `balance.test.ts` 가 잡는다.
  * 장비 쪽(등급·슬롯·강화)은 [gear.ts](gear.ts) 에 있다.
  *
- * **아직 게임에 붙이지 않았다.** 지금 전투는 `combat.ts` 의 옛 공식으로 돈다.
- * 설계 문서 9장의 순서대로 이것이 먼저 서야 `gear.ts` 의 %가 곱할 기본값이 생긴다.
+ * **2026-09-20 에 판정에 붙였다.** `combat.ts` 의 `statsFor`·`expToNext` 와
+ * `monsters.ts` 의 능력치가 전부 여기서 나오고, 고도는 `world/stats.gd` 로 같은 식을
+ * 돌린다. 옛 공식(`JOB_STATS` 선형 · `55×레벨^1.2` · `20L+40`)은 전부 걷었다.
  */
 import { JOB_IDS, type JobId } from './character.ts';
-import {
-  EQUIP_SLOTS,
-  type EquipSlot,
-} from './items.ts';
+import { EQUIP_SLOTS, type EquipSlot } from './slots.ts';
 import {
   ASPD_MAX,
   CRIT_DMG_MAX,

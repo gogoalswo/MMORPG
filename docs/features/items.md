@@ -11,7 +11,7 @@
 |---|---|
 | `packages/shared/src/items.ts` | 전부. 생성·등급·옵션·강화·제작·드롭 |
 | `packages/shared/src/items.test.ts` | 규칙 전수 검사 (단계 순서, 옵션 범위, 등급 단조성 등) |
-| `packages/shared/src/gear.ts` | ★ **설계 표** — 밸런스 문서의 등급 7 × 슬롯 6 (아래 "설계 표"). 아직 안 붙였다 |
+| `packages/shared/src/gear.ts` | ★ **설계 표** — 등급 7 × 슬롯 6. **수치는 붙였고 카탈로그는 아직**(아래 "설계 표") |
 | `packages/shared/src/gear.test.ts` | 설계 문서의 표를 박아 두고 전수 대조 |
 | `packages/shared/src/balance.ts` | ★ 레벨 곡선·피해 공식·몬스터 역산 → [stat-balance.md](stat-balance.md) |
 | `godot/world/stats.gd` | ★ 위 둘의 고도 이식본. 수치는 `data/balance.json` 에서 읽는다 |
@@ -104,7 +104,11 @@ equipmentStats(equipped)        장착 8칸 합
 ## 설계 표 (`gear.ts`) — 아직 안 붙였다 ★★
 
 [stat-balance.md](stat-balance.md) 3·4장의 등급 체계를 그대로 옮긴 표다.
-**지금 도는 `items.ts` 와는 별개**이고, 게임은 아직 옛 표로 돈다.
+
+**2026-09-20 에 수치만 먼저 붙였다.** `items.ts` 의 `bonusFor` 가 `slotStats()` 를 불러
+단계마다 %를 뽑고(요구 레벨을 30레벨마다 등급 하나씩 오르는 **연속 등급**으로 보간),
+강화 배수·성공률도 이 표를 쓴다. 그래서 **게임은 이미 설계의 숫자로 돈다.**
+아직 안 바꾼 것은 **카탈로그**(180종 → 56종)뿐이다.
 
 ### 무엇이 다른가
 

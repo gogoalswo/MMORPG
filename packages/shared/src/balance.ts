@@ -84,6 +84,20 @@ export const HP_LOSS_PER_CLEAR = 0.5;
 /** 경험치 = 몬스터 HP × 이것 (정비례) */
 export const EXP_COEF = 0.2;
 
+/** 그룹 간 대기(리스폰·이동) 초. **설계 파라미터다** — 이게 없으면 한 방에 죽는 */
+/** 저레벨 그룹이 시간당 효율이 더 좋아진다 */
+export const GROUP_GAP = 3;
+/** Lv1 → 만렙 총 사냥 시간. 24시간 × 120일 = 4개월 */
+export const TARGET_HOURS = 2880;
+/** 사냥터가 하나 올라갈 때마다 "레벨당 필요 킬 수" × 이 값 */
+export const KILLS_FIELD_MULT = 1.5;
+/** 이 사냥터까지가 초반 (Lv1~30). 스킬이 모자라 사냥 속도가 후반의 1/3 이다 */
+export const EARLY_FIELDS = 3;
+/** 사냥터 1 의 레벨당 목표 시간(분) */
+export const EARLY_LEVEL_MIN = 2;
+/** 초반 사냥터마다 레벨당 시간 × 이 값 */
+export const EARLY_TIME_MULT = 1.5;
+
 /**
  * 직업 배수 — 기본 스탯에 곱한다. **DPS × 버티는 시간이 서로 ±10% 안**이라야
  * "어느 직업을 골라도 손해가 아니다" 가 된다 (`balance_sim.py --class`).
@@ -350,6 +364,87 @@ export function monster(level: number, role: MonsterRole = 'normal'): Monster {
   };
 }
 
+/** 그 레벨에서 **풀세트를 갖춘** 플레이어. 사냥 속도(킬/초)를 잴 때 쓴다 */
+export function fullPlayer(level: number): Player {
+  const grade = gradeOf(level);
+  const step = enhRefStep(level);
+  return buildPlayer(
+    level,
+    EQUIP_SLOTS.map((slot) => [slot, grade, step]),
+  );
+}
+
+/**
+ * 한 그룹을 정리하는 데 드는 시전 횟수·시간·몬스터 1마리 타수.
+ *
+ * **타수가 정수라는 것이 설계의 핵심**이다 — 타수가 작으면 장비 갱신이 그 정수를
+ * 넘기지 못해 체감이 아예 0 이 된다. 6타로 잡아 계단을 33% → 17% 로 촘촘하게 했다.
+ */
+export function groupClear(pl: Player, mo: Monster): { casts: number; seconds: number; hits: number } {
+  const per = damage(pl.atk, pl.level, mo.df) * pl.crit;
+  const hits = Math.ceil(mo.hp / per);
+  const casts = Math.ceil((spawnCount(pl.level) * hits) / aoeTargets(pl.level));
+  return { casts, seconds: casts * pl.interval, hits };
+}
+
+/** 그 레벨 기준 플레이어의 사냥 속도 (마리/초). 그룹 간 대기를 포함한다 */
+export function killRate(level: number): number {
+  const pl = fullPlayer(level);
+  const mo = monster(level);
+  return spawnCount(level) / (groupClear(pl, mo).seconds + GROUP_GAP);
+}
+
+let killsBaseCache: number | null = null;
+
+/**
+ * 사냥터 1 의 레벨당 킬 수 — **목표 총 시간에서 역산한다.**
+ *
+ * 만렙까지 걸리는 시간을 먼저 정하고(2,880시간) 필요 킬 수를 거기서 뽑는다.
+ * 어느 배수를 써도 총 시간은 맞춰지므로, 배수(`KILLS_FIELD_MULT`)는 "Lv31 시점의
+ * 속도" 를 고르는 손잡이일 뿐이다.
+ */
+function killsBase(): number {
+  if (killsBaseCache !== null) return killsBaseCache;
+  let early = 0;
+  const earlyTop = Math.min(EARLY_FIELDS * FIELD_SPAN, MAX_LEVEL - 1);
+  for (let level = 1; level <= earlyTop; level++) {
+    early += EARLY_LEVEL_MIN * 60 * EARLY_TIME_MULT ** (fieldOf(level) - 1);
+  }
+  let acc = 0;
+  for (let level = EARLY_FIELDS * FIELD_SPAN + 1; level < MAX_LEVEL; level++) {
+    acc += KILLS_FIELD_MULT ** (fieldOf(level) - EARLY_FIELDS - 1) / killRate(level);
+  }
+  killsBaseCache = (TARGET_HOURS * 3600 - early) / acc;
+  return killsBaseCache;
+}
+
+/**
+ * L → L+1 에 필요한 킬 수.
+ *
+ * **초반(Lv1~30)은 배수로 잡지 않고 레벨당 목표 시간을 직접 정한다** — 스킬이 모자라
+ * 사냥 속도가 후반의 1/3 이라 같은 배수를 쓰면 곡선이 망가진다. Lv31 에서 10.4분으로
+ * ×2.3 뛰는 단차는 **의도적으로 그 자리에 둔 것**이다: Lv30 에 3번째 스킬이 열리고
+ * Lv31 에 등급2 장비가 착용 가능해지므로, 벽이 아니라 "본 게임 시작" 으로 읽힌다.
+ */
+export function killsPerLevel(level: number): number {
+  const f = fieldOf(level);
+  if (f <= EARLY_FIELDS) {
+    const targetSec = EARLY_LEVEL_MIN * 60 * EARLY_TIME_MULT ** (f - 1);
+    return targetSec * killRate(level);
+  }
+  return killsBase() * KILLS_FIELD_MULT ** (f - EARLY_FIELDS - 1);
+}
+
+/** L → L+1 에 걸리는 시간(초) */
+export function levelSeconds(level: number): number {
+  return killsPerLevel(level) / killRate(level);
+}
+
+/** L → L+1 에 필요한 경험치 */
+export function expToNext(level: number): number {
+  return killsPerLevel(level) * monster(level).exp;
+}
+
 /** 내보내기용 — 고도가 읽는 `data/balance.json` 의 알맹이 */
 export function balanceTable() {
   return {
@@ -374,6 +469,18 @@ export function balanceTable() {
     skillStages: SKILL_STAGES,
     jobAdvances: JOB_ADVANCES,
     enhRefByField: ENH_REF_BY_FIELD,
+    /**
+     * 레벨당 필요 경험치 표 (`expTable[L-1]` = L → L+1). 만렙 자리는 0 이다.
+     *
+     * **공식이 아니라 표로 내보내는 이유**는 설계 문서 2장이 적어 둔 것과 같다 —
+     * 역산에 170레벨어치 사냥 속도를 다 돌려야 해서 런타임에 굴릴 값이 아니고,
+     * 반올림된 표라야 "이 구간만 좀 세게" 같은 손질이 가능하다.
+     */
+    expTable: Array.from({ length: MAX_LEVEL }, (_, i) =>
+      i + 1 >= MAX_LEVEL ? 0 : Math.round(expToNext(i + 1))
+    ),
+    growthTargetHours: TARGET_HOURS,
+    groupGap: GROUP_GAP,
     // 장비 쪽 상수도 같이 내보낸다 — `stats.gd` 가 여기 하나만 읽으면 되게
     gear: {
       slots: EQUIP_SLOTS,

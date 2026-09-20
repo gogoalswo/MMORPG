@@ -19,11 +19,15 @@ import {
   TARGET_REDUCE,
   TTK_HITS,
   aoeTargets,
+  balanceTable,
   base,
   damage,
   dropLevels,
   enhRefStep,
   fieldOf,
+  killsPerLevel,
+  levelSeconds,
+  expToNext,
   meleeAttackers,
   monster,
   refGrade,
@@ -206,6 +210,43 @@ test('스킬이 열리는 자리에서 몬스터 1마리 공격력은 오히려 
   for (let level = 31; level <= MAX_LEVEL; level++) {
     assert.ok(monster(level).atk >= monster(level - 1).atk, `Lv${level} 공격력이 줄었다`);
   }
+});
+
+test('성장 곡선 — 만렙까지 정확히 2,880시간(120일)이다', () => {
+  // 목표 총 시간을 먼저 정하고 레벨당 킬 수를 거기서 역산한다
+  let seconds = 0;
+  for (let level = 1; level < MAX_LEVEL; level++) seconds += levelSeconds(level);
+  assert.equal(Math.round((seconds / 3600) * 10) / 10, 2880);
+
+  // 문서 7장 표의 "레벨당 킬 수" 열
+  const want: Array<[number, number]> = [
+    [1, 138],
+    [11, 338],
+    [21, 506],
+    [31, 2011],
+    [91, 22911],
+    [141, 173980],
+    [191, 1321164],
+  ];
+  for (const [level, kills] of want) {
+    assert.equal(Math.round(killsPerLevel(level)), kills, `Lv${level} 킬 수`);
+  }
+
+  // 초반 세 구간은 레벨당 2 / 3 / 4.5분
+  for (const [level, minutes] of [[1, 2], [11, 3], [21, 4.5]] as Array<[number, number]>) {
+    assert.equal(Math.round((levelSeconds(level) / 60) * 10) / 10, minutes, `Lv${level} 분`);
+  }
+});
+
+test('경험치 표는 레벨이 오를수록 커지고 만렙에서 끝난다', () => {
+  const table = balanceTable().expTable;
+  assert.equal(table.length, MAX_LEVEL);
+  assert.equal(table[MAX_LEVEL - 1], 0, '만렙 다음은 없다');
+  for (let i = 1; i < MAX_LEVEL - 1; i++) {
+    assert.ok(table[i]! > table[i - 1]!, `Lv${i + 1} 요구량이 안 올랐다`);
+  }
+  // 표는 공식과 같아야 한다 (반올림만 다르다)
+  assert.equal(table[99], Math.round(expToNext(100)));
 });
 
 test('직업 배수가 설계 문서 2장 표와 같다', () => {

@@ -43,7 +43,9 @@ const HP_BAR_H := 22
 ## 막대 테두리 그림에서 테가 차지하는 두께 (9조각 여백). 얇은 선이라 작게 준다
 const BAR_FRAME_MARGIN := 5
 ## 막대 테두리 안쪽 여백 — 채움이 테를 덮으면 홈이 아니라 판으로 보인다
-const BAR_PAD := 3
+## 막대 테두리 안쪽 여백. **0 이다** — 조금이라도 주면 채움과 테 사이에 홈 바닥이
+## 띠로 비쳐 "빈 공간" 으로 보인다 (2026-09-20 지적)
+const BAR_PAD := 0
 ## 오른쪽 위 메뉴 단추 (스킬·가방). 엄지로 누르니 퀵슬롯과 비슷한 크기다.
 ## **테두리가 없다** — 받은 그림이 그렇다 (2026-09-20). 그래서 아이콘을 거의 꽉 채운다
 const MENU_BTN := 62
@@ -70,8 +72,8 @@ const AUTO_INSET := 13
 const AUTO_GAP := 8
 ## 고리를 칸 바닥에서 얼마나 띄우나 (글자 자리)
 const SPIN_LIFT := 13
-## 화면 맨 아래 경험치 게이지 높이. 받은 그림처럼 **가는 띠**다
-const EXP_GAUGE_H := 7
+## 화면 맨 아래 경험치 게이지 높이. 가운데에 퍼센트를 적으므로 글자가 들어갈 만큼은 된다
+const EXP_GAUGE_H := 20
 const ICON_DIR := "res://assets/icons/"
 ## 가방 탭. 0 은 전체, 나머지는 `_tab_keeps` 가 슬롯으로 가른다
 const BAG_TABS := ["전체", "무기", "방어구", "장신구", "재료"]
@@ -390,14 +392,8 @@ func _build_level_badge(parent: Node) -> void:
 	_level_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	badge.add_child(_level_label)
 
-	_exp_text = Label.new()
-	_exp_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_exp_text.add_theme_font_size_override("font_size", 11)
-	_exp_text.add_theme_constant_override("outline_size", 6)
-	_exp_text.add_theme_color_override("font_outline_color", Color.BLACK)
-	_exp_text.add_theme_color_override("font_color", Color("#e8c14a"))
-	_exp_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	parent.add_child(_exp_text)
+	# 퍼센트 글자는 **화면 맨 아래 띠 가운데**로 옮겼다 (2026-09-20 요청) —
+	# 여기(배지 아래)에는 아무것도 두지 않는다
 
 
 ## 화면 맨 아래를 가로지르는 경험치 게이지 ★ 받은 그림(2026-09-20)대로 **가는 띠**를
@@ -411,12 +407,13 @@ func _build_exp_gauge() -> void:
 	_exp_bar.nine_patch_stretch = true
 	_exp_bar.set_stretch_margin(SIDE_LEFT, 24)
 	_exp_bar.set_stretch_margin(SIDE_RIGHT, 24)
-	var fill := _icon("ui_bar_fill")
-	_exp_bar.texture_progress = fill if fill != null else _white(16)
+	# **단색 판으로 채운다.** 광택 캡슐(`ui_bar_fill`)은 위아래에 투명 여백이 있어
+	# 가는 띠에 넣으면 띠 높이를 다 못 채우고 **위쪽이 빈다** (2026-09-20 지적)
+	_exp_bar.texture_progress = _white(8)
 	_exp_bar.tint_progress = Color("#e8c14a")
-	# 아직 안 채운 쪽은 어둡게 깔아 띠가 어디까지인지 보이게 한다
+	# 아직 안 채운 쪽 — 체력 막대 홈 바닥과 같은 톤이라야 한 벌로 보인다
 	_exp_bar.texture_under = _exp_bar.texture_progress
-	_exp_bar.tint_under = Color(0.05, 0.04, 0.03, 0.8)
+	_exp_bar.tint_under = Color("#26241f")
 	_exp_bar.step = 0.0
 	_exp_bar.custom_minimum_size = Vector2(0, EXP_GAUGE_H)
 	_exp_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -428,6 +425,17 @@ func _build_exp_gauge() -> void:
 	_exp_bar.offset_right = 0.0
 	_exp_bar.offset_top = -EXP_GAUGE_H
 	_exp_bar.offset_bottom = 0.0
+
+	# 퍼센트는 **띠 가운데**에 적는다 (2026-09-20 요청)
+	_exp_text = Label.new()
+	_exp_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_exp_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_exp_text.add_theme_font_size_override("font_size", 12)
+	_exp_text.add_theme_constant_override("outline_size", 5)
+	_exp_text.add_theme_color_override("font_outline_color", Color.BLACK)
+	_exp_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_exp_text.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_exp_bar.add_child(_exp_text)
 
 
 ## 막대 하나 — 홈(9조각) 안에 채움을 깔고 그 위에 숫자를 얹는다.

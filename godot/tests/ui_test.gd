@@ -298,9 +298,12 @@ func _case_status(game: Node3D) -> void:
 		_fail("체력 막대가 퀵슬롯 줄과 길이가 다르다 (%.0f)" % hp_rect.size.x)
 	if badge.end.y > hp_rect.position.y or badge.position.y < 0.0:
 		_fail("레벨 배지가 막대 위에 안 올라갔다: %s" % badge)
+	# 퍼센트 글자는 **맨 아래 띠 가운데**에 얹힌다 (2026-09-20 요청)
 	var exp_rect: Rect2 = game._exp_text.get_global_rect()
-	if exp_rect.position.y < badge.end.y - 2.0 or exp_rect.end.y > hp_rect.position.y + 2.0:
-		_fail("경험치가 레벨과 막대 사이가 아니다: %s" % exp_rect)
+	if not gauge.grow(1.0).encloses(exp_rect):
+		_fail("경험치 글자가 띠 안에 없다: 글자 %s · 띠 %s" % [exp_rect, gauge])
+	elif absf(exp_rect.get_center().x - gauge.get_center().x) > 2.0:
+		_fail("경험치 글자가 띠 가운데가 아니다: %s" % exp_rect)
 
 	# 오른쪽 위 메뉴 — 화면 안, 묶음과 안 겹침
 	if game._menu_cells.size() != 2:

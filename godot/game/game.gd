@@ -46,6 +46,10 @@ const BAR_PAD := 5
 ## **테두리가 없다** — 받은 그림이 그렇다 (2026-09-20). 그래서 아이콘을 거의 꽉 채운다
 const MENU_BTN := 62
 const MENU_INSET := 3
+## 창 닫기 X. **모든 창이 오른쪽 위에 이것 하나를 둔다** (2026-09-20 요청)
+const CLOSE_BTN := 44
+## 창 테두리(PANEL_MARGIN 26)보다 안쪽으로 들여야 모서리 장식에 안 걸친다
+const CLOSE_PAD := 24
 ## 퀵슬롯 칸 테두리가 차지하는 두께. 받은 그림의 칸은 **머리카락처럼 얇은 선**이라
 ## 26 으로 그리면 테가 칸을 먹는다 (2026-09-20 지적). 창 칸은 26 그대로다
 const QUICK_MARGIN := 10
@@ -56,7 +60,10 @@ const PANEL_MARGIN := 26
 const SPIN_SPEED := 1.6
 ## 자동사냥 칸의 아이콘만 더 물린다. 퀵슬롯과 같은 11 로 두면 고리가 아이콘 위를
 ## 덮어 검이 안 보였다 (2026-09-19). 고리가 얇아진 뒤로는 덜 물려도 된다 (2026-09-20)
-const AUTO_INSET := 10
+## 자동사냥 칸은 **퀵슬롯보다 크다** — 고리가 작아서 안 보인다는 지적을 받았다
+## (2026-09-20). 테가 없으니 커도 스킬 칸으로 안 보인다
+const AUTO_CELL := 106
+const AUTO_INSET := 21
 ## 퀵슬롯 줄과 자동사냥 칸 사이를 얼마나 띄우나
 const AUTO_GAP := 14
 const ICON_DIR := "res://assets/icons/"
@@ -335,6 +342,12 @@ func _build_persistent() -> void:
 	_build_test_switches()
 	_build_bag_panel()
 
+	# **모든 창의 닫기는 오른쪽 위 X 하나로 통일한다** (2026-09-20 요청).
+	# 창이 다 지어진 뒤에 얹어야 자식 맨 뒤라 창 위에 그려진다
+	_close_button(_bag_panel, _toggle_bag)
+	_close_button(_skill_panel, _toggle_skills)
+	_close_button(_npc_panel, func() -> void: _npc_panel.visible = false)
+
 
 ## 레벨 배지와 경험치 — **퀵슬롯 위 묶음의 맨 윗 두 줄**이다 (2026-09-20 요청,
 ## 받은 그림대로). 배지 안에 레벨 숫자를 크게 넣고, 바로 아래에 경험치를
@@ -418,9 +431,11 @@ func _make_bar(height: int, tint: Color, font: int) -> Dictionary:
 ## 오른쪽 위 메뉴 단추 하나 — **테두리 없이 심볼만** 얹고 누르는 자리를 덮는다
 ## (2026-09-20 지적: 받은 그림의 메뉴는 테가 없는 선화 아이콘이다).
 ## 심볼이 없으면 글자가 대신 나온다
-func _icon_button(icon_name: String, text: String, on_press: Callable) -> PanelContainer:
+func _icon_button(
+	icon_name: String, text: String, on_press: Callable, size: int = MENU_BTN
+) -> PanelContainer:
 	var cell := PanelContainer.new()
-	cell.custom_minimum_size = Vector2(MENU_BTN, MENU_BTN)
+	cell.custom_minimum_size = Vector2(size, size)
 	cell.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 
 	var inset := MarginContainer.new()
@@ -461,12 +476,12 @@ class SpinRing extends Control:
 
 	func _draw() -> void:
 		var mid := size / 2.0
-		var radius := minf(size.x, size.y) / 2.0 - 2.0
-		# 받은 그림처럼 **얇은 선**이다 (2026-09-20 지적)
-		var color := Color(0.96, 0.89, 0.66, 0.95)
+		var radius := minf(size.x, size.y) / 2.0 - 3.0
+		# **눈에 띄어야 한다** — 2.0 으로 그었더니 안 보인다는 지적을 받았다 (2026-09-20)
+		var color := Color(0.96, 0.89, 0.66, 0.97)
 		for half in 2:
 			var from := half * PI + 0.1
-			draw_arc(mid, radius, from, from + ARC, 28, color, 2.0, true)
+			draw_arc(mid, radius, from, from + ARC, 28, color, 5.0, true)
 			var tip := from + ARC
 			var head := mid + Vector2(cos(tip), sin(tip)) * radius
 			var side := Vector2(-sin(tip), cos(tip))
@@ -474,9 +489,9 @@ class SpinRing extends Control:
 			draw_colored_polygon(
 				PackedVector2Array(
 					[
-						head + side * 5.0,
-						head + back * 4.0 + side * 0.5,
-						head + back * 0.5 - side * 4.0,
+						head + side * 11.0,
+						head + back * 9.0 + side * 1.0,
+						head + back * 1.0 - side * 9.0,
 					]
 				),
 				color
@@ -493,7 +508,7 @@ class SpinRing extends Control:
 ## │ [갑옷]            [목걸이]   │ [ ][ ][ ][ ][ ]                    │
 ## │ [투구]            [반지]     │ [ ][ ][ ][ ][ ]  ← 끌어 올림        │
 ## │ ┌ 공격력 방어력 체력 ──────┐ │ 고른 것 이름·옵션                  │
-## │ │ 치명타 치피  공속       │ │            [끼기/벗기] [닫기]      │
+## │ │ 치명타 치피  공속       │ │            [장착/해제]             │
 ## └─────────────────────────────┴────────────────────────────────────┘
 ## ```
 ##
@@ -664,8 +679,6 @@ func _build_bag_side(parent: Node) -> void:
 	side.add_child(buttons)
 	_bag_action = _make_button("-", _on_bag_action)
 	buttons.add_child(_bag_action)
-	var close := _make_button("닫기", func() -> void: _bag_panel.visible = false)
-	buttons.add_child(close)
 
 
 func _make_button(text: String, on_press: Callable) -> Button:
@@ -934,7 +947,7 @@ func _show_bag_detail() -> void:
 		_bag_action.disabled = true
 		return
 	_bag_detail.text = _stack_label(stack)
-	_bag_action.text = "벗기" if str(_bag_pick.get("where", "")) == "equip" else "끼기"
+	_bag_action.text = "해제" if str(_bag_pick.get("where", "")) == "equip" else "장착"
 	_bag_action.disabled = false
 
 
@@ -1042,7 +1055,7 @@ func _build_skill_bar() -> void:
 	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	dock.add_child(gap)
 
-	_auto_cell = _make_skill_cell(QUICK_CELL, "ui_quick_slot", _toggle_auto, QUICK_MARGIN)
+	_auto_cell = _make_skill_cell(AUTO_CELL, "ui_quick_slot", _toggle_auto, QUICK_MARGIN)
 	# **테두리를 없앤다** (2026-09-20 요청) — 같은 테를 두르면 퀵슬롯과 구분이 안 된다
 	_auto_cell.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	var auto_icon: TextureRect = _auto_cell.find_child("icon", true, false)
@@ -1224,6 +1237,28 @@ func _make_skill_cell(size: int, frame: String, on_press: Callable, margin: int 
 	return cell
 
 
+## 창 오른쪽 위 X. **모든 창이 이것 하나를 쓴다** (2026-09-20 요청 — "모든 ui 의
+## 닫기 버튼은 오른쪽 위로 통일할거야, x버튼으로 만들어").
+##
+## `PanelContainer` 는 자식을 창 전체에 깔기 때문에, 여백을 준 `MarginContainer`
+## 안에 `Control` 을 한 겹 두고 그 오른쪽 위 구석에 앵커로 붙인다 (레벨 배지와 같은 방법)
+func _close_button(panel: PanelContainer, on_press: Callable) -> void:
+	var pad := MarginContainer.new()
+	pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pad.add_theme_constant_override("margin_right", CLOSE_PAD)
+	pad.add_theme_constant_override("margin_top", CLOSE_PAD)
+	panel.add_child(pad)
+
+	var layer := Control.new()
+	layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pad.add_child(layer)
+
+	var button := _icon_button("ui_close", "X", on_press, CLOSE_BTN)
+	button.name = "close"
+	button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE)
+	layer.add_child(button)
+
+
 ## 고른 칸 테두리. 그림이 없으면 코드로 그린 금색 테 (안쪽은 비운다 — 아이콘이 보여야 한다)
 func _pick_box() -> StyleBox:
 	var texture := _icon("ui_slot_pick")
@@ -1361,7 +1396,6 @@ func _build_skill_panel() -> void:
 	title.add_theme_font_size_override("font_size", 30)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(title)
-	head.add_child(_make_button("닫기", _toggle_skills))
 
 	right.add_child(_caption("장착 중"))
 	var slots := HBoxContainer.new()
@@ -1724,11 +1758,6 @@ func _redraw_npc() -> void:
 			_list_bag(me, "등급", func(index: int) -> void:
 				_transport.send(&"npcCraft", {"index": index})
 			)
-
-	var close := Button.new()
-	close.text = "닫기"
-	close.pressed.connect(func() -> void: _npc_panel.visible = false)
-	_npc_rows.add_child(close)
 
 
 func _list_buy(me: Dictionary) -> void:

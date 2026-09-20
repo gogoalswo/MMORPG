@@ -209,7 +209,7 @@ fetch_icon 9768fc8560a2ece9c040596698357747 ui_button    # 단추
 fetch_icon 70f1e1a287f9e93cc1abb39f5759dccb ui_figure    # 장착 칸 사이 캐릭터
 # 스킬창·퀵슬롯 (2026-09-19). 조각 둘은 ui_slot 을 참고 그림으로 넣어 결을 맞췄다.
 # 스킬 아이콘은 **꽉 찬 그림**이라 배경을 걷지 않는다 (build-item-icons.mjs 의 FULL)
-fetch_icon dbb28d8e48eb77a991386e0b74fcfb5e ui_skill_slot  # HUD 퀵슬롯 칸
+fetch_icon 67616623f2d7038e61f1a6aa35f63113 ui_skill_slot  # 스킬창 장착 칸 (2026-09-20 에 창 결로 맞췄다)
 fetch_icon 09535596db087ab0c6d3b9de0ae6b086 ui_slot_pick   # 고른 칸 테두리 (안쪽을 뚫는다, 2026-09-20)
 fetch_icon 6688952f8b0187efe7f96935796fa7a8 skill_rising_kick
 fetch_icon 3335dffd51390210007c5b2eb5a8adb7 skill_tiger_roar
@@ -236,7 +236,8 @@ fetch_icon 66d3b2ea079339e5a22b09546c956903 ui_quick_slot  # 퀵슬롯·자동�
 fetch_icon e5157077f125b146e546c1c91b818096 ui_icon_skill  # 오른쪽 위 스킬 (펼친 책 + 룬)
 fetch_icon 7542d36d9687956d7335787965b4f16d ui_icon_bag    # 오른쪽 위 가방 (배낭)
 fetch_icon 9f519882b9a58b99a928564c0fb70efd ui_icon_auto   # 자동사냥 — 검 두 자루가 X자
-fetch_icon 5f5eec112390d85ef8910b43bb94d9ab ui_auto_spin   # 자동사냥 고리 (얇은 선 화살표)
+fetch_icon 74df64ad7717d61a8ba37c600568f827 ui_auto_spin   # 자동사냥 고리 (굵은 화살표 — 얇은 것은 안 보였다)
+fetch_icon 69c32b07ca637a710819a6ba08020abf ui_close       # 모든 창 오른쪽 위 닫기 X
 fetch_icon 029c2be72082608b40dfaf00bebe782a ui_portrait    # 옛 초상 테두리 (미사용 — 상태판을 내리면서 빠졌다)
 
 node scripts/build-item-icons.mjs

@@ -66,6 +66,7 @@ const FRAME_SIZE = {
   'ui_auto_spin.png': 192,
   'ui_level_badge.png': 192,
   'ui_quick_slot.png': 128,
+  'ui_close.png': 128,
 };
 /**
  * **배경을 걷지 않는 것.** 스킬 아이콘은 칸을 꽉 채운 그림이라 가장자리가 곧 그림이다.
@@ -97,6 +98,7 @@ const HOLLOW = new Set([
  * (2026-09-20). 이 조각들은 안쪽을 남겨야 한다 — 막대 빈 쪽 바닥이 그것이다
  */
 const SINGLE_LAYER = new Set([
+  'ui_skill_slot.png',
   'ui_bar_frame.png',
   'ui_level_badge.png',
   'ui_quick_slot.png',
@@ -116,6 +118,7 @@ const SINGLE_LAYER = new Set([
  */
 const WIDE = 96;
 const WIDE_TOLERANCE = new Set([
+  'ui_skill_slot.png',
   // ui_panel 은 넣지 않는다 — 넓은 폭으로 걷었더니 **창 바탕까지 걷혀**
   // 금테만 남고 안이 뚫렸다 (2026-09-20, 찍어서 봤다)
   'ui_subpanel.png',

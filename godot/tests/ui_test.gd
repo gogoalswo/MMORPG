@@ -418,7 +418,7 @@ func _case_bag(game: Node3D) -> void:
 	await process_frame
 	if game._bag_action.disabled:
 		_fail("칸을 골랐는데 끼기 단추가 안 켜졌다")
-	if game._bag_action.text != "끼기":
+	if game._bag_action.text != "장착":
 		_fail("가방 칸을 골랐는데 단추가 '%s'" % game._bag_action.text)
 	if not game._bag_detail.text.contains("등급"):
 		_fail("상세 칸이 '%s'" % game._bag_detail.text.left(30))
@@ -447,7 +447,7 @@ func _case_bag(game: Node3D) -> void:
 	var slot_index := slots.find("weapon")
 	game._gear_cells[slot_index].get_node("hit").pressed.emit()
 	await process_frame
-	if game._bag_action.text != "벗기":
+	if game._bag_action.text != "해제":
 		_fail("장비 칸을 골랐는데 단추가 '%s'" % game._bag_action.text)
 	game._on_bag_action()
 	for i in 3:
@@ -481,6 +481,30 @@ func _case_bag(game: Node3D) -> void:
 	await process_frame
 	if game._bag_panel.visible:
 		_fail("다시 눌렀는데 가방이 안 닫혔다")
+
+	# 닫기는 **오른쪽 위 X** 하나다 (2026-09-20 요청 — 모든 창이 같다)
+	for panel_name in ["_bag_panel", "_skill_panel"]:
+		var panel: PanelContainer = game.get(panel_name)
+		if panel_name == "_bag_panel":
+			game._toggle_bag()
+		else:
+			game._toggle_skills()
+		await process_frame
+		var mark: Control = panel.find_child("close", true, false)
+		if mark == null:
+			_fail("%s 에 닫기 X 가 없다" % panel_name)
+			continue
+		var at: Rect2 = mark.get_global_rect()
+		var box: Rect2 = panel.get_global_rect()
+		if at.get_center().x < box.get_center().x or at.get_center().y > box.get_center().y:
+			_fail("%s 의 닫기 X 가 오른쪽 위가 아니다: %s (창 %s)" % [panel_name, at, box])
+		elif not box.encloses(at):
+			_fail("%s 의 닫기 X 가 창 밖으로 나갔다: %s" % [panel_name, at])
+		mark.find_child("hit", true, false).pressed.emit()
+		await process_frame
+		if panel.visible:
+			_fail("%s 의 X 를 눌렀는데 안 닫혔다" % panel_name)
+	print("  닫기는 창 오른쪽 위 X 하나다")
 
 ## 퀵슬롯과 스킬창 — 자리, 크기, 그림, 장착·해제·바꾸기.
 ## 창은 **왼쪽이 설명, 오른쪽이 고르기** 다 (2026-09-19 요청)

@@ -11,7 +11,7 @@
 |---|---|
 | `godot/game/portal.gd` | `Portal.create(gate)` — 아치 모델을 세운다. 없으면 빛나는 원판. `Portal.hit` — 화면에서 쏜 선이 **소용돌이 판**에 닿나 |
 | `godot/game/portal_swirl.gd` | `PortalSwirl` — 아치 구멍에서 **빨려들어가는 소용돌이**. 나선 팔 5개 + 끌려드는 알갱이 + 가운데 빛 |
-| `godot/game/gate_panel.gd` | `GatePanel` — 창. 바탕·칸·글자를 앵커로 조립한다. 목록은 **끌어서** 내린다(`_on_list_input`). 고르면 `picked(zone_id)` |
+| `godot/game/gate_panel.gd` | `GatePanel` — 창(`PanelContainer`). 조각은 가방창과 같은 `ui_panel`·`ui_button`·`ui_close`. 목록은 **끌어서** 내리고 줄 전체가 누르는 자리다(`_on_list_input`·`_row_at`). 고르면 `picked(zone_id)` |
 | `godot/game/game.gd` | `_gate_tapped`(누름 판정) · `_on_gate_tapped`(문 안이면 열고 멀면 걸어감) · `_open_gate` · `_on_gate_pick`(`travel` 요청) |
 | `scripts/build-ui.mjs` | UI 조각 원본(1024²)을 쓰는 크기로 줄인다 → `public/assets/ui/` |
 | `scripts/fetch-assets.sh` | 바르코 결과물 주소. 포탈 GLB 는 여기서 1024 JPEG 로 줄여 커밋본을 만든다 |
@@ -37,10 +37,13 @@
   줄 단추는 입력을 안 받으므로(끌기 판정이 목록 쪽에 있다) 고도의 `pressed` 상태가
   오지 않는다 — `_press` 가 `normal` 스타일박스를 갈아 끼우는 이유다.
 - 누른 줄에서 손을 떼야 고른다. **다른 줄로 미끄러졌거나 끌기로 넘어가면 취소**다.
-- 틀은 그림이 아니라 `StyleBoxFlat` 이다 (검푸른 바탕 `ROW_FILL` + 푸른 테
-  `ROW_RIM`, 누르면 `ROW_PRESS_*`). 그림을 새로 받지 않는 이유는 이펙트 텍스처와
-  같다 — 에셋을 안 받아도 보이고, 색·두께가 상수라 고쳐서 바로 확인한다.
-  제목은 금색(`TITLE_COLOR`), 닫기도 줄과 같은 틀이다.
+- **틀은 가방창·스킬창과 같은 조각이다** (2026-09-20 요청: "스타일도 다른 UI와
+  아트풍 비슷하게"). 창 바탕은 `ui_panel`, 줄은 `ui_button`, 닫기는 `ui_close` X 다
+  ([hud.md](hud.md) 의 "조각 여덟 장"). 조각을 여는 것은 `game.gd` 의
+  `_frame_box`·`_icon` 이고, **`GatePanel.create` 가 그 둘을 받아 온다** — 같은
+  로더를 두 벌 두지 않으려는 것이다. 안 받으면 코드로 그린 틀로 물러선다.
+- 누른 줄은 조각을 그대로 두고 `modulate_color`(`PRESS_TINT`)로 **금테를 달군다**.
+  제목은 경험치 막대와 같은 금색(`TITLE_COLOR`)이다.
 
 ### UI 는 조각을 조립한다 ★
 

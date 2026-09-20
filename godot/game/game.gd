@@ -2038,7 +2038,8 @@ func _build_gate_panel() -> void:
 	top.layer = 10
 	add_child(top)
 
-	_gate_panel = GatePanel.create()
+	# 조각(판·단추·닫기 X)은 가방창·스킬창과 같은 것을 쓴다 — 여는 손을 넘겨준다
+	_gate_panel = GatePanel.create(_frame_box, _icon)
 	# 한글 폰트는 _ui_root 의 테마에 있다 — 다른 층이라 직접 물려준다
 	_gate_panel.theme = _ui_root.theme
 	_gate_panel.picked.connect(_on_gate_pick)

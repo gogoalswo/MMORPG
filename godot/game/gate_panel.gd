@@ -1,10 +1,15 @@
 class_name GatePanel
-extends NinePatchRect
+extends PanelContainer
 
 ## 차원문 창 — 어디로 갈지 고르는 목록. **그림 한 장이 아니라 조각을 조립한다** (CLAUDE.md):
 ##
-##   창 바탕(panel.png, 9분할) ─ 여백 ─┬─ 제목 · 닫기
-##                                     └─ 스크롤 ─ 줄마다 [칸 아이콘][존 이름]
+##   창 바탕(ui_panel, 9조각) ─ 여백 ─┬─ 제목 · 닫기(ui_close)
+##                                    └─ 스크롤 ─ 줄마다 [칸 아이콘][존 이름]
+##
+## **조각은 가방창·스킬창과 같은 것을 쓴다** (2026-09-20 요청: "스타일도 다른 UI와
+## 아트풍 비슷하게"). 그림을 여는 것은 `game.gd` 의 `_frame_box`·`_icon` 이므로
+## `create` 가 그 둘을 받아 온다 — 같은 로더를 두 벌 두지 않으려는 것이다
+## ([hud.md](../../docs/features/hud.md) 의 "조각으로 조립한다")
 ##
 ## 칸 아이콘은 둘이다 — 지금 서 있는 곳은 소용돌이(gate_here), 갈 수 있는 곳은 별(gate_go).
 ## 자리는 **앵커로만** 잡는다: 가로는 가운데 고정 폭, 세로는 화면 높이의 비율이라
@@ -29,28 +34,23 @@ const TEXT_COLOR := Color("#f2f2f2")
 ## 지금 서 있는 곳은 누를 수 없고 흐리게 (참고 그림의 맨 윗줄)
 const HERE_COLOR := Color("#8c8c8c")
 
-## 줄 한 칸의 **틀 색.** 기본 단추(회색 네모)를 그대로 쓰면 게임 화면에서 혼자
-## 사무용 UI 로 보인다 (2026-09-20 지적: "스타일도 다른 UI와 아트풍 비슷하게").
-## 차원문·아이콘 조각과 같은 **검푸른 바탕 + 푸른 테**로 맞춘다.
-## 그림을 새로 받지 않고 `StyleBoxFlat` 으로 짓는 이유는 이펙트 텍스처와 같다 —
-## 에셋을 안 받은 사람도 보이고, 색·두께가 상수라 고쳐서 바로 확인할 수 있다
-const ROW_FILL := Color("#141d2e")
-const ROW_RIM := Color("#31507e")
-## 누른 동안. 테가 밝아지고 바탕이 푸르게 달아오른다
-const ROW_PRESS_FILL := Color("#1f3f6b")
-const ROW_PRESS_RIM := Color("#79bdff")
-## 지금 서 있는 곳 — 누를 수 없으니 테도 죽인다
-const ROW_HERE_FILL := Color("#0e1420")
-const ROW_HERE_RIM := Color("#22314a")
-const ROW_RADIUS := 8
-const ROW_RIM_WIDTH := 2
-## 줄 안쪽 여백(가로, 세로)
-const ROW_PAD := Vector2(12, 6)
+## **조각은 다른 창과 같은 것을 쓴다** (2026-09-20 요청: "스타일도 다른 UI와
+## 아트풍 비슷하게"). 기본 단추(회색 네모)를 그대로 쓰면 이 창만 사무용 UI 로
+## 보인다. 이름과 9조각 여백은 `game.gd` 의 가방창·스킬창이 쓰는 값 그대로다
+## ([hud.md](../../docs/features/hud.md) 의 "조각 여덟 장")
+const PANEL_MARGIN := 26
+const BUTTON_MARGIN := 28
+## 줄 안쪽 여백
+const ROW_PAD := 6
 ## **누르면 내용이 이만큼 내려앉는다.** 색만 바뀌면 눌렸는지 눈에 안 들어온다
 const ROW_SINK := 3
-## 제목·테두리 금색. 차원문의 푸른색과 대비를 준다
-const TITLE_COLOR := Color("#ffd98a")
-const HEAD_LINE := Color("#31507e")
+## 누른 동안 틀을 이만큼 밝힌다 (금테가 달아오른다)
+const PRESS_TINT := Color(1.45, 1.3, 1.0)
+## 닫기 X 한 변 — 다른 창과 같다 (game.gd 의 CLOSE_BTN)
+const CLOSE_BTN := 44
+## 제목 금색·가르는 금 — 경험치 막대와 같은 금색이다
+const TITLE_COLOR := Color("#e8c14a")
+const HEAD_LINE := Color("#4a412b")
 ## 끌기로 치는 최소 거리(px). 이만큼 움직이면 고르기가 아니라 스크롤이다
 const DEADZONE := 14
 ## 스크롤 막대 굵기 — 손가락으로 집을 수 있어야 한다 (기본은 폰에서 너무 가늘다)
@@ -67,10 +67,17 @@ var _hold_scroll := 0
 var _dragging := false
 ## 지금 눌려 있는 줄 (뗄 때까지 밝은 틀로 둔다)
 var _held: Button = null
+## 조각을 여는 `game.gd` 의 손 — `_frame_box(이름, 9조각 여백, 안쪽 여백)` · `_icon(이름)`
+var _frame_box := Callable()
+var _icon := Callable()
 
 
-static func create() -> GatePanel:
+## `frame_box(이름, 9조각 여백, 안쪽 여백)` 과 `icon(이름)` 은 `game.gd` 것을 받는다.
+## 안 주면(테스트에서 창만 띄울 때) 코드로 그린 틀로 물러선다
+static func create(frame_box := Callable(), icon := Callable()) -> GatePanel:
 	var panel := GatePanel.new()
+	panel._frame_box = frame_box
+	panel._icon = icon
 	panel._build()
 	return panel
 
@@ -89,30 +96,14 @@ func _build() -> void:
 	offset_top = 0.0
 	offset_bottom = 0.0
 
-	texture = _tex("panel.png")
-	patch_margin_left = PATCH
-	patch_margin_right = PATCH
-	patch_margin_top = PATCH
-	patch_margin_bottom = PATCH
-	if texture == null:
-		# 조각이 없어도(sync 를 안 돌렸어도) 창은 보여야 한다
-		var fallback := ColorRect.new()
-		fallback.color = Color(0.08, 0.08, 0.09, 0.95)
-		fallback.set_anchors_preset(Control.PRESET_FULL_RECT)
-		fallback.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		add_child(fallback)
+	# 가방창·스킬창과 같은 판이다
+	add_theme_stylebox_override("panel", _box("ui_panel", PANEL_MARGIN, PAD))
 	_here_icon = _tex("gate_here.png")
 	_go_icon = _tex("gate_go.png")
 
-	var margin := MarginContainer.new()
-	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
-	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, PAD)
-	add_child(margin)
-
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 12)
-	margin.add_child(column)
+	add_child(column)
 
 	var head := HBoxContainer.new()
 	column.add_child(head)
@@ -122,15 +113,18 @@ func _build() -> void:
 	title.add_theme_font_size_override("font_size", FONT_SIZE + 4)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(title)
+	# 닫기는 다른 창과 같은 X 조각이다 (그림이 없으면 글자 X)
 	var close := Button.new()
 	close.name = "Close"
-	close.text = "닫기"
-	# 닫기도 줄과 같은 틀이다 — 창 안에 기본 회색 단추 하나만 남으면 그게 튄다
-	close.add_theme_stylebox_override("normal", _row_box(ROW_FILL, ROW_RIM, 0))
-	close.add_theme_stylebox_override("hover", _row_box(ROW_FILL, ROW_PRESS_RIM, 0))
-	close.add_theme_stylebox_override("pressed", _row_box(ROW_PRESS_FILL, ROW_PRESS_RIM, ROW_SINK))
+	close.custom_minimum_size = Vector2(CLOSE_BTN, CLOSE_BTN)
+	close.expand_icon = true
+	close.icon = _piece("ui_close")
+	if close.icon == null:
+		close.text = "X"
+	close.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
+	close.add_theme_stylebox_override("hover", StyleBoxEmpty.new())
+	close.add_theme_stylebox_override("pressed", StyleBoxEmpty.new())
 	close.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
-	close.add_theme_color_override("font_color", TEXT_COLOR)
 	close.pressed.connect(close_panel)
 	head.add_child(close)
 
@@ -210,9 +204,10 @@ func _fill(current_zone: String) -> void:
 		# 밝은 틀로 바꿔 끼운다 (`normal` 을 갈아 끼운다: 이 단추는 입력을 안 받아
 		# 고도의 pressed 상태가 오지 않는다)
 		if here:
-			button.add_theme_stylebox_override("disabled", _row_box(ROW_HERE_FILL, ROW_HERE_RIM, 0))
+			var dim := _row_box(false)
+			button.add_theme_stylebox_override("disabled", dim)
 		else:
-			button.add_theme_stylebox_override("normal", _row_box(ROW_FILL, ROW_RIM, 0))
+			button.add_theme_stylebox_override("normal", _row_box(false))
 		button.custom_minimum_size = Vector2(0, ICON + 4)
 		button.disabled = here
 		# **줄은 입력을 받지 않는다.** 누른 것이 고르기인지 끌기인지는 목록 쪽에서
@@ -285,24 +280,45 @@ func _press(row: Button) -> void:
 	if _held == row:
 		return
 	if _held != null and is_instance_valid(_held):
-		_held.add_theme_stylebox_override("normal", _row_box(ROW_FILL, ROW_RIM, 0))
+		_held.add_theme_stylebox_override("normal", _row_box(false))
 	_held = row
 	if _held != null:
-		_held.add_theme_stylebox_override("normal", _row_box(ROW_PRESS_FILL, ROW_PRESS_RIM, ROW_SINK))
+		_held.add_theme_stylebox_override("normal", _row_box(true))
 
 
-## 줄 한 칸의 틀. `sink` 만큼 내용이 내려앉는다 — 누른 줄에 준다
-func _row_box(fill: Color, rim: Color, sink: int) -> StyleBoxFlat:
-	var box := StyleBoxFlat.new()
-	box.bg_color = fill
-	box.border_color = rim
-	box.set_border_width_all(ROW_RIM_WIDTH)
-	box.set_corner_radius_all(ROW_RADIUS)
-	box.content_margin_left = ROW_PAD.x
-	box.content_margin_right = ROW_PAD.x
-	box.content_margin_top = ROW_PAD.y + sink
-	box.content_margin_bottom = maxf(ROW_PAD.y - sink, 0.0)
+## 줄 한 칸의 틀 — 단추 조각(`ui_button`) 그대로다. 누른 줄은 **밝게 달아오르고
+## 내용이 `ROW_SINK` 만큼 내려앉는다.** 조각이 없으면 코드로 그린 틀로 물러선다
+func _row_box(pressed: bool) -> StyleBox:
+	var box := _box("ui_button", BUTTON_MARGIN, ROW_PAD)
+	var sink: int = ROW_SINK if pressed else 0
+	box.content_margin_top = ROW_PAD + sink
+	box.content_margin_bottom = maxf(ROW_PAD - sink, 0.0)
+	if box is StyleBoxTexture:
+		(box as StyleBoxTexture).modulate_color = PRESS_TINT if pressed else Color.WHITE
+	elif box is StyleBoxFlat:
+		var flat := box as StyleBoxFlat
+		flat.bg_color = flat.bg_color.lightened(0.25) if pressed else flat.bg_color
+		flat.border_color = PRESS_TINT if pressed else flat.border_color
 	return box
+
+
+## 조각으로 만든 틀. `game.gd` 의 `_frame_box` 를 그대로 부르고,
+## 안 받았으면(테스트에서 창만 띄울 때) 코드로 그린 판을 준다
+func _box(name: String, margin: int, content: int) -> StyleBox:
+	if _frame_box.is_valid():
+		return _frame_box.call(name, margin, content)
+	var flat := StyleBoxFlat.new()
+	flat.bg_color = Color(0.05, 0.06, 0.08, 0.94)
+	flat.border_color = Color(0.72, 0.82, 0.95)
+	flat.set_border_width_all(2)
+	flat.set_corner_radius_all(8)
+	flat.set_content_margin_all(content)
+	return flat
+
+
+## 조각 그림 한 장 (`game.gd` 의 `_icon`). 없으면 null
+func _piece(name: String) -> Texture2D:
+	return _icon.call(name) if _icon.is_valid() else null
 
 
 func _on_pick(zone_id: String) -> void:

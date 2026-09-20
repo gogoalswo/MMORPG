@@ -46,7 +46,9 @@ const QUICK_MARGIN := 10
 const SPIN_SPEED := 1.6
 ## 자동사냥 칸의 아이콘만 더 물린다. 퀵슬롯과 같은 11 로 두면 고리가 아이콘 위를
 ## 덮어 검이 안 보였다 (2026-09-19). 고리가 얇아진 뒤로는 덜 물려도 된다 (2026-09-20)
-const AUTO_INSET := 14
+const AUTO_INSET := 10
+## 퀵슬롯 줄과 자동사냥 칸 사이를 얼마나 띄우나
+const AUTO_GAP := 14
 const ICON_DIR := "res://assets/icons/"
 ## 가방 탭. 0 은 전체, 나머지는 `_tab_keeps` 가 슬롯으로 가른다
 const BAG_TABS := ["전체", "무기", "방어구", "장신구", "재료"]
@@ -1012,7 +1014,15 @@ func _build_skill_bar() -> void:
 
 	# 자동사냥도 같은 칸이다 — 엄지가 퀵슬롯과 같은 높이에서 닿는다 (2026-09-19 요청).
 	# 켜지면 칸 위에서 화살표 고리가 돈다
+	# 퀵슬롯에서 한 뼘 띄운다 — 붙여 두면 다섯 번째 스킬 칸으로 보인다
+	var gap := Control.new()
+	gap.custom_minimum_size = Vector2(AUTO_GAP, 0)
+	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dock.add_child(gap)
+
 	_auto_cell = _make_skill_cell(QUICK_CELL, "ui_quick_slot", _toggle_auto, QUICK_MARGIN)
+	# **테두리를 없앤다** (2026-09-20 요청) — 같은 테를 두르면 퀵슬롯과 구분이 안 된다
+	_auto_cell.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	var auto_icon: TextureRect = _auto_cell.find_child("icon", true, false)
 	auto_icon.texture = _icon("ui_icon_auto")
 	if auto_icon.texture == null:

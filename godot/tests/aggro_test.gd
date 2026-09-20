@@ -15,6 +15,7 @@ func _init() -> void:
 	_case_chase()
 	_case_attack()
 	_case_leash()
+	_case_leash_goes_home()
 	_case_death_and_revive()
 
 	if _failed == 0:
@@ -109,6 +110,47 @@ func _case_leash() -> void:
 		_fail("줄이 끊겼는데 아직 쫓고 있다")
 	if mob.z >= 30.0:
 		_fail("집 쪽으로 안 돌아갔다 (z %.2f)" % mob.z)
+
+
+func _case_leash_goes_home() -> void:
+	# 줄이 끊기면 **체력을 채우고 집까지 간다.** 경계에서 한 걸음 돌아오자마자
+	# 다시 쫓으면 앞뒤로 떤다 (2026-09-20 에 지적받았다)
+	var s := _setup(-20.0, 0.0, -20.0, 8.0)
+	var w: World = s[0]
+	var me: Dictionary = s[1]
+	var mob: Dictionary = s[2]
+	mob.x = -20.0
+	mob.z = 30.0  # 집에서 30m — 리쉬(22.2) 밖
+	mob.hp = int(mob.max_hp) / 2
+	# 사람은 **집 반대쪽** 2m 에 붙어 따라간다 (어그로 안).
+	# 집 쪽에 두면 쫓아가는 것이 곧 집으로 가는 것이라 떨림이 안 난다
+	me.x = mob.x
+	me.z = mob.z + 2.0
+	w.step(1.0 / 60.0)
+	if int(mob.hp) != int(mob.max_hp):
+		_fail("줄이 끊겼는데 체력을 안 채웠다 (%d/%d)" % [int(mob.hp), int(mob.max_hp)])
+
+	# 집까지 가는 동안 사람은 계속 옆에 붙어 있는다.
+	# **한 번도 멀어지지 않고** 도착해야 한다 — 멀어지면 그게 떠는 것이다
+	var gap := 30.0
+	var backed := 0.0
+	var arrived := -1
+	for i in 600:
+		me.x = mob.x
+		me.z = mob.z + 2.0
+		w.step(1.0 / 60.0)
+		var now_gap := Vector2(mob.x - mob.home_x, mob.z - mob.home_z).length()
+		backed = maxf(backed, now_gap - gap)
+		gap = now_gap
+		if now_gap <= World.PATROL_ARRIVE:
+			arrived = i
+			break
+	if arrived < 0:
+		_fail("10초를 줬는데 집에 못 왔다 (집에서 %.2f m)" % gap)
+	elif backed > 0.001:
+		_fail("집으로 오다가 %.3f m 뒤로 갔다 — 경계에서 떨고 있다" % backed)
+	else:
+		print("  줄이 끊겨 체력을 채우고 %.1f초 만에 집으로 돌아왔다 (한 번도 안 물러섰다)" % (arrived / 60.0))
 
 
 func _case_death_and_revive() -> void:

@@ -583,7 +583,14 @@ Lv100 기준 플레이어의 사냥터별 결과:
 
 ## 9. 실제 코드에 넣을 때 순서
 
-1. `godot/scripts/` 에 `stats.gd` 를 새로 만들어 `base(L)`·`grade_sum(g)`·`damage()`·`monster(L, role)` 를 시뮬레이터와 같은 식으로 둔다. 숫자를 두 곳에 두지 않는 것이 핵심.
+1. ~~`stats.gd` 를 새로 만든다~~ — **2026-09-20 에 했다.** 자리는 `godot/scripts/` 가 아니라
+   판정이 모여 있는 **`godot/world/stats.gd`** 다. 숫자를 두 곳에 두지 않으려고 이렇게 갈랐다:
+   - `packages/shared/src/balance.ts` — `base(L)`·`damage()`·`monster(L, role)`·기준 플레이어
+   - `packages/shared/src/gear.ts` — `gradeSum(g)`·`slotStats(slot, g, 강화)`(= `item_pct`)·등급 7 × 슬롯 6 표
+   - `npm run export:godot` → `godot/data/balance.json` → `world/stats.gd` 가 **읽기만** 한다
+     (`combat.gd` 와 같은 방식: 공식만 이식하고 수치는 JSON)
+   - 검증은 세 겹이다 — `balance.test.ts`·`gear.test.ts`(문서 표를 박아 두고 대조) ·
+     `godot/tests/stats_test.gd`(고도에서 같은 표) · 그리고 `tools/balance_sim.py` 와 직접 대조
 2. `char_defs.gd` 에 직업 배수(`atk/hp/df/interval`)와 종족 배수를 추가. 몬스터 스탯은 스폰 시 `monster(level, role)` 로 계산(테이블 저장 안 함).
 3. `player.gd` 에 `level, hp, max_hp, atk, def` 와 전직 단계. `stage_defs.gd` 에 사냥터 20개의 `(레벨 범위, 기대 등급)`.
 4. `character.gd` 의 공격 히트 콜백에서 부채꼴 범위 안 몬스터에 `damage()` 적용. 이미 이펙트가 붙는 자리라 판정만 붙이면 된다.

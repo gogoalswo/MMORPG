@@ -1,0 +1,194 @@
+{
+  "maxLevel": 200,
+  "fieldSpan": 10,
+  "hpBase": 100,
+  "atkBase": 10,
+  "defBase": 10,
+  "growth": 0.02,
+  "targetReduce": 0.3,
+  "monDefRatio": 0.5,
+  "monAttackInterval": 1.5,
+  "playerAttackInterval": 1,
+  "ttkHits": 6,
+  "ttkMargin": 0.005,
+  "clearTime": 15,
+  "hpLossPerClear": 0.5,
+  "expCoef": 0.2,
+  "jobs": [
+    "fighter",
+    "mage",
+    "archer"
+  ],
+  "jobMult": {
+    "fighter": {
+      "atk": 1,
+      "hp": 1,
+      "df": 1,
+      "interval": 0.9
+    },
+    "mage": {
+      "atk": 1.35,
+      "hp": 0.8,
+      "df": 0.75,
+      "interval": 1
+    },
+    "archer": {
+      "atk": 1.35,
+      "hp": 0.9,
+      "df": 0.85,
+      "interval": 1.2
+    }
+  },
+  "roleMult": {
+    "normal": {
+      "hp": 1,
+      "atk": 1
+    },
+    "elite": {
+      "hp": 3,
+      "atk": 2
+    },
+    "boss": {
+      "hp": 7,
+      "atk": 5
+    }
+  },
+  "skillStages": [
+    {
+      "level": 1,
+      "skills": 1,
+      "spawn": 15,
+      "aoe": 8,
+      "melee": 3
+    },
+    {
+      "level": 10,
+      "skills": 2,
+      "spawn": 30,
+      "aoe": 14,
+      "melee": 4
+    },
+    {
+      "level": 30,
+      "skills": 3,
+      "spawn": 50,
+      "aoe": 20,
+      "melee": 6
+    }
+  ],
+  "jobAdvances": [
+    {
+      "level": 1,
+      "name": "1차"
+    },
+    {
+      "level": 41,
+      "name": "2차"
+    },
+    {
+      "level": 81,
+      "name": "3차"
+    },
+    {
+      "level": 121,
+      "name": "4차"
+    },
+    {
+      "level": 161,
+      "name": "5차"
+    }
+  ],
+  "enhRefByField": [
+    {
+      "field": 1,
+      "step": 4
+    },
+    {
+      "field": 7,
+      "step": 5
+    },
+    {
+      "field": 13,
+      "step": 6
+    },
+    {
+      "field": 18,
+      "step": 7
+    }
+  ],
+  "gear": {
+    "slots": [
+      "weapon",
+      "armor",
+      "helmet",
+      "boots",
+      "necklace",
+      "ring"
+    ],
+    "gradeCount": 7,
+    "gradeLvSpan": 30,
+    "sumStart": 35,
+    "sumEnd": 856,
+    "atkFactor": 1,
+    "defFactor": 0.6,
+    "hpFactor": 0.35,
+    "critRateMax": 0.5,
+    "critDmgMax": 1,
+    "aspdMax": 0.2,
+    "moveSpdMax": 0.25,
+    "slotShare": {
+      "weapon": {
+        "atk": 0.6
+      },
+      "armor": {
+        "df": 0.4,
+        "hp": 0.4
+      },
+      "helmet": {
+        "df": 0.2,
+        "hp": 0.2
+      },
+      "boots": {
+        "df": 0.2,
+        "hp": 0.2,
+        "move": 1
+      },
+      "necklace": {
+        "atk": 0.2,
+        "df": 0.1,
+        "hp": 0.1,
+        "crit": 1,
+        "critDamage": 1
+      },
+      "ring": {
+        "atk": 0.2,
+        "df": 0.1,
+        "hp": 0.1,
+        "aspd": 1
+      }
+    },
+    "enhMax": 10,
+    "enhTotal": 6,
+    "enhAccel": 7,
+    "enhOdds": [
+      0.9,
+      0.8,
+      0.7,
+      0.6,
+      0.5,
+      0.4,
+      0.3,
+      0.2,
+      0.1
+    ],
+    "dropRate": [
+      0.2963,
+      0.08,
+      0.0321,
+      0.0095,
+      0.0055,
+      0.0016,
+      0.0011
+    ]
+  }
+}

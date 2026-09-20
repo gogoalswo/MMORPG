@@ -13,6 +13,8 @@
 | `packages/shared/src/items.test.ts` | 규칙 전수 검사 (단계 순서, 옵션 범위, 등급 단조성 등) |
 | `packages/shared/src/gear.ts` | ★ **설계 표** — 밸런스 문서의 등급 7 × 슬롯 6 (아래 "설계 표"). 아직 안 붙였다 |
 | `packages/shared/src/gear.test.ts` | 설계 문서의 표를 박아 두고 전수 대조 |
+| `packages/shared/src/balance.ts` | ★ 레벨 곡선·피해 공식·몬스터 역산 → [stat-balance.md](stat-balance.md) |
+| `godot/world/stats.gd` | ★ 위 둘의 고도 이식본. 수치는 `data/balance.json` 에서 읽는다 |
 | `packages/server/src/ZoneRoom.ts` | 굴리는 자리 — `handleNpcBuy` / `handleNpcForge` / `handleCraft` / `handleNpcEnhance` / 드롭 |
 | `packages/server/src/db.ts` | `toStack` / `withOptions` — 저장값 복원과 마이그레이션 |
 | `packages/client/src/ui/itemIcons.ts` | 절차적 SVG 아이콘 (아트 에셋 없음) |
@@ -158,8 +160,9 @@ equipmentStats(equipped)        장착 8칸 합
 
 ### 붙일 때 볼 것
 
-1. **`stats.gd` 가 먼저다.** 이 표는 전부 %라 곱할 기본 스탯이 있어야 뜻이 생긴다
-   (설계 문서 9장 순서).
+1. ~~**`stats.gd` 가 먼저다.**~~ **2026-09-20 에 만들었다** — `balance.ts`(레벨 곡선·피해
+   공식·몬스터 역산)와 고도 이식본 `world/stats.gd`. 곱할 기본 스탯이 생겼으므로
+   이 표를 붙일 수 있다.
 2. `items.ts` 의 단계 20개 축이 사라지므로 **상점·제작·강화·드롭·가방**이 같이 흔들린다.
 3. 랜덤 옵션(`optionRange`)은 설계 문서에 없다 — 없앨지, 등급 안의 편차로 남길지
    정해야 한다 (설계 문서 10장 "등급 안의 세부 등급").

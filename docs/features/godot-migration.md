@@ -20,6 +20,7 @@ three.js 웹 클라이언트를 **고도 엔진으로 갈아타는 중**이다. 
 | `godot/world/world.gd` | **판정.** `ZoneRoom.ts` 의 자리다. 네트워크 얘기가 없다 |
 | `godot/world/movement.gd` | `shared/movement.ts` 이식본. TS 와 값이 같아야 한다 |
 | `godot/world/combat.gd` | `shared/combat.ts` 이식본 — 피해·치명타·경직·경험치. **수치는 `data/combat.json` 에서 읽는다** |
+| `godot/world/stats.gd` | ★ `shared/balance.ts`+`gear.ts` 이식본 — 밸런스 설계의 레벨 곡선·피해 공식·몬스터 역산·장비 등급. **아직 판정에 안 쓴다** → [stat-balance.md](stat-balance.md) |
 | `godot/world/skills.gd` | `shared/skills.ts` 의 규칙 이식본 — 배울 수 있나·쿨타임·터지는 반경 |
 | `godot/world/items.gd` | `shared/items.ts` 이식본 — 등급·랜덤옵션·강화·드롭 |
 | `godot/world/game_data.gd` | `data/*.json` 로더 |

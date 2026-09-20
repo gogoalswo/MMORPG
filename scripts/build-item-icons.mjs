@@ -258,7 +258,42 @@ if (!existsSync(SRC)) {
 
 mkdirSync(DST, { recursive: true });
 
+/**
+ * 막대 채움은 **여기서 직사각으로 그린다** ★★ 바르코에서 받을 필요가 없다.
+ *
+ * 홈(`ui_bar_frame`)은 끝이 비스듬히 잘려 있어서, 모양이 다른 채움을 겹치면
+ * 모서리마다 홈 바닥이 비친다 (2026-09-20 지적). 그렇다고 채움을 홈 모양에
+ * 맞춰 그릴 필요는 없다 — **홈 모양으로 자르는 것은 고도가 한다**
+ * (`clip_children`, 부모가 그린 알파로 자식을 자른다). 채움은 직사각이면 된다.
+ *
+ * 위가 밝고 아래로 어두워지는 세로 그라데이션. 색은 고도가 `tint_progress` 로 입힌다
+ */
+async function makeBarFill() {
+  const w = 16;
+  const h = 64;
+  const buf = Buffer.alloc(w * h * 4);
+  for (let y = 0; y < h; y += 1) {
+    const t = y / (h - 1);
+    // 맨 윗줄은 하이라이트, 아래로 갈수록 어둡다
+    const v = Math.round(255 * (y === 0 ? 1 : 1 - 0.48 * t ** 0.8));
+    for (let x = 0; x < w; x += 1) {
+      const i = (y * w + x) * 4;
+      buf[i] = v;
+      buf[i + 1] = v;
+      buf[i + 2] = v;
+      buf[i + 3] = 255;
+    }
+  }
+  const out = join(DST, 'ui_bar_fill.png');
+  await sharp(buf, { raw: { width: w, height: h, channels: 4 } })
+    .png({ compressionLevel: 9 })
+    .toFile(out);
+  console.log('  -> public/assets/icons/ui_bar_fill.png (직사각 그라데이션 — 여기서 그렸다)');
+}
+
 for (const name of readdirSync(SRC).filter((f) => f.endsWith('.png')).sort()) {
+  // 채움은 받은 그림을 쓰지 않는다 (아래에서 그려 낸다)
+  if (name === 'ui_bar_fill.png') continue;
   const src = join(SRC, name);
   const { data, info } = await sharp(src)
     .ensureAlpha()
@@ -303,3 +338,5 @@ for (const name of readdirSync(SRC).filter((f) => f.endsWith('.png')).sort()) {
   const share = ((cut / (info.width * info.height)) * 100).toFixed(0);
   console.log(`  -> public/assets/icons/${basename(name)} (배경 ${share}% 걷어냄)${note}`);
 }
+
+await makeBarFill();

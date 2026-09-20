@@ -16,8 +16,15 @@ const STOP_DISTANCE := 0.15
 const BAG_COLUMNS := 5
 ## 가방에서 한 번에 보이는 줄. 나머지는 끌어 올린다
 const BAG_ROWS := 3
-## 칸 한 변. 1280x720 안에 장착 두 줄 + 캐릭터 + 가방 5열이 들어가는 크기다
-const CELL := 88
+## 칸 한 변. 1280x720 안에 장착 두 줄 + 캐릭터 + 가방 5열이 들어가는 크기다.
+## **칸 크기를 제대로 세고 나니 창이 화면을 꽉 채워** 88 에서 줄였다 (2026-09-20)
+const CELL := 74
+## 칸 테두리 안쪽 여백. 칸의 실제 크기는 `CELL + 이것 * 2` 다
+const BAG_CELL_PAD := 6
+## 가방 격자 칸 사이
+const BAG_GRID_GAP := 4
+## 세로 스크롤바가 먹는 폭
+const SCROLLBAR_W := 14
 ## 스킬 칸. 퀵슬롯은 엄지로 누르니 조금 더 크다. 아이콘은 테두리 안쪽으로 SKILL_INSET 만큼 물린다.
 ## **HUD 는 2026-09-20 에 한 번 줄였다** — 화면을 너무 먹었다. 창 칸(SKILL_CELL)은 그대로다
 const QUICK_CELL := 84
@@ -42,6 +49,9 @@ const MENU_INSET := 3
 ## 퀵슬롯 칸 테두리가 차지하는 두께. 받은 그림의 칸은 **머리카락처럼 얇은 선**이라
 ## 26 으로 그리면 테가 칸을 먹는다 (2026-09-20 지적). 창 칸은 26 그대로다
 const QUICK_MARGIN := 10
+## 창 바탕 테두리 두께. 48 로 두면 얇은 금테 그림에서는 안쪽 여백이 그만큼 커져
+## **가방 한 줄이 창 밖으로 밀린다** (2026-09-20, 찍어서 봤다)
+const PANEL_MARGIN := 26
 ## 자동사냥 고리가 한 바퀴 도는 속도(라디안/초)
 const SPIN_SPEED := 1.6
 ## 자동사냥 칸의 아이콘만 더 물린다. 퀵슬롯과 같은 11 로 두면 고리가 아이콘 위를
@@ -508,7 +518,7 @@ func _build_bag_panel() -> void:
 
 	_bag_panel = PanelContainer.new()
 	_bag_panel.visible = false
-	_bag_panel.add_theme_stylebox_override("panel", _frame_box("ui_panel", 48, 16))
+	_bag_panel.add_theme_stylebox_override("panel", _frame_box("ui_panel", PANEL_MARGIN, 16))
 	center.add_child(_bag_panel)
 
 	var pad := MarginContainer.new()
@@ -612,12 +622,20 @@ func _build_bag_side(parent: Node) -> void:
 		tabs.add_child(tab)
 		_tab_buttons.append(tab)
 
+	# **칸은 CELL 보다 크다** — 테두리 안쪽 여백(BAG_CELL_PAD)이 양쪽에 붙기 때문이다.
+	# `CELL * 줄수` 로 잡았더니 마지막 줄이 잘려 나갔다 (2026-09-20, 찍어서 봤다)
+	var cell_box := CELL + BAG_CELL_PAD * 2
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(CELL * BAG_COLUMNS, CELL * BAG_ROWS)
+	scroll.custom_minimum_size = Vector2(
+		cell_box * BAG_COLUMNS + BAG_GRID_GAP * (BAG_COLUMNS - 1) + SCROLLBAR_W,
+		cell_box * BAG_ROWS + BAG_GRID_GAP * (BAG_ROWS - 1)
+	)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	side.add_child(scroll)
 	_bag_grid = GridContainer.new()
 	_bag_grid.columns = BAG_COLUMNS
+	_bag_grid.add_theme_constant_override("h_separation", BAG_GRID_GAP)
+	_bag_grid.add_theme_constant_override("v_separation", BAG_GRID_GAP)
 	scroll.add_child(_bag_grid)
 
 	# 머리 줄이 아니라 격자 아래에 둔다 — 그림처럼 "몇 칸 썼나" 가 단추 옆에 붙는다
@@ -730,7 +748,7 @@ func _add_icon(parent: Node, name: String, size: int) -> void:
 func _make_cell(on_press: Callable) -> PanelContainer:
 	var cell := PanelContainer.new()
 	cell.custom_minimum_size = Vector2(CELL, CELL)
-	cell.add_theme_stylebox_override("panel", _frame_box("ui_slot", 26, 6))
+	cell.add_theme_stylebox_override("panel", _frame_box("ui_slot", 26, BAG_CELL_PAD))
 
 	var icon := TextureRect.new()
 	icon.name = "icon"
@@ -861,6 +879,10 @@ func _redraw_bag() -> void:
 		var box := "ui_tab_on" if index == _bag_tab else "ui_tab_off"
 		for state in ["normal", "hover", "pressed"]:
 			tab.add_theme_stylebox_override(state, _frame_box(box, 24, 6))
+		# 고른 탭은 바탕이 상아빛이라 **글자를 어둡게** 해야 읽힌다 (2026-09-20)
+		tab.add_theme_color_override(
+			"font_color", Color("#241f16") if index == _bag_tab else Color.WHITE
+		)
 
 	# 장착 — 아이콘 이름은 슬롯 이름과 같다 (assets/icons/weapon.png …)
 	var slots: Array = Items.slots()
@@ -1286,7 +1308,7 @@ func _build_skill_panel() -> void:
 
 	_skill_panel = PanelContainer.new()
 	_skill_panel.visible = false
-	_skill_panel.add_theme_stylebox_override("panel", _frame_box("ui_panel", 48, 16))
+	_skill_panel.add_theme_stylebox_override("panel", _frame_box("ui_panel", PANEL_MARGIN, 16))
 	center.add_child(_skill_panel)
 
 	var pad := MarginContainer.new()

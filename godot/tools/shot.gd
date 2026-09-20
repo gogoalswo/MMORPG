@@ -63,6 +63,11 @@ func _run() -> void:
 		await _hud(game)
 		return
 
+	# 창은 열어 놓고 한 장만 찍는다 — 움직이는 것이 없다
+	if skill == "bag" or skill == "skills":
+		await _window(game, skill)
+		return
+
 	var player: Dictionary = game._transport._world._players[game._transport.my_id()]
 	player["level"] = LEVEL
 	player["skill_points"] = 99
@@ -119,6 +124,27 @@ func _hud(game: Node3D) -> void:
 			img.save_png("res://../logs/shot_%02d.png" % frame)
 			taken += 1
 			print("logs/shot_%02d.png  (고리 각 %.2f)" % [frame, game._auto_spin.rotation])
+	quit(0)
+
+
+## 가방창·스킬창. 조각(판·칸·탭·단추)을 갈아 끼웠을 때 테가 뭉개지지 않는지
+## 눈으로 본다 — 글자가 상자 밖으로 나오는 것은 수치로 안 잡힌다 (2026-09-19 경험)
+func _window(game: Node3D, which: String) -> void:
+	var player: Dictionary = game._transport._world._players[game._transport.my_id()]
+	player["level"] = LEVEL
+	player["skill_points"] = 99
+	if which == "skills":
+		for skill in Skills.for_job(str(player.get("job", "fighter"))).slice(0, 4):
+			game._transport.send(&"learnSkill", {"skill": skill})
+		game._toggle_skills()
+	else:
+		game._toggle_bag()
+	for i in 6:
+		await process_frame
+	await RenderingServer.frame_post_draw
+	var img := root.get_texture().get_image()
+	img.save_png("res://../logs/shot_%s.png" % which)
+	print("logs/shot_%s.png" % which)
 	quit(0)
 
 

@@ -100,6 +100,31 @@ const SINGLE_LAYER = new Set([
   'ui_bar_frame.png',
   'ui_level_badge.png',
   'ui_quick_slot.png',
+  // 인벤토리 조각도 같은 사정이다 — 안쪽이 어두운 판이라 두 겹째가 그 판을 먹는다
+  'ui_panel.png',
+  'ui_subpanel.png',
+  'ui_slot.png',
+  'ui_tab_on.png',
+  'ui_tab_off.png',
+  'ui_button.png',
+]);
+/**
+ * **배경을 넓은 폭으로 걷는 것.** ★ 칠해서 받은 조각은 테 바깥에 **흰 배경과
+ * 미묘하게 다른 밝은 회색 번짐**이 깔려 있다. 기본 폭(24)으로는 그것이 안 걷혀
+ * **칸마다 흰 테가 둘러진다** (2026-09-20, 찍어서 봤다). 안쪽은 어두운 판이라
+ * 폭을 넓혀도 안쪽까지는 넘어오지 못한다
+ */
+const WIDE = 96;
+const WIDE_TOLERANCE = new Set([
+  // ui_panel 은 넣지 않는다 — 넓은 폭으로 걷었더니 **창 바탕까지 걷혀**
+  // 금테만 남고 안이 뚫렸다 (2026-09-20, 찍어서 봤다)
+  'ui_subpanel.png',
+  'ui_slot.png',
+  'ui_slot_pick.png',
+  'ui_tab_on.png',
+  'ui_tab_off.png',
+  'ui_button.png',
+  'ui_figure.png',
 ]);
 
 /** 알파가 남아 있는 칸의 바깥 테두리 상자 */
@@ -130,7 +155,7 @@ function alphaBounds(data, width, height) {
  * 안쪽 배경색(검정)이 다르다. 모서리 평균으로 잡았더니 모서리 1~7% 만 걷히고
  * 검은 배경이 그대로 남았다.
  */
-function cutBackground(data, width, height, layers = LAYERS) {
+function cutBackground(data, width, height, layers = LAYERS, tolerance = TOLERANCE) {
   const count = width * height;
   const cut = new Uint8Array(count);
 
@@ -162,7 +187,7 @@ function cutBackground(data, width, height, layers = LAYERS) {
       const i = p * 4;
       const near = candidates.find((c) => (
         Math.abs(c.r - data[i]) + Math.abs(c.g - data[i + 1]) + Math.abs(c.b - data[i + 2])
-      ) <= TOLERANCE);
+      ) <= tolerance);
       if (near) near.count += 1;
       else candidates.push({ r: data[i], g: data[i + 1], b: data[i + 2], count: 1 });
     }
@@ -175,7 +200,7 @@ function cutBackground(data, width, height, layers = LAYERS) {
       const i = p * 4;
       const near = colors.some((c) => (
         Math.abs(data[i] - c.r) + Math.abs(data[i + 1] - c.g) + Math.abs(data[i + 2] - c.b)
-      ) <= TOLERANCE);
+      ) <= tolerance);
       if (!near) return;
       cut[p] = 1;
       queue.push(p);
@@ -238,7 +263,13 @@ for (const name of readdirSync(SRC).filter((f) => f.endsWith('.png')).sort()) {
     .toBuffer({ resolveWithObject: true });
   let cut = FULL.test(name)
     ? 0
-    : cutBackground(data, info.width, info.height, SINGLE_LAYER.has(name) ? 1 : LAYERS);
+    : cutBackground(
+      data,
+      info.width,
+      info.height,
+      SINGLE_LAYER.has(name) ? 1 : LAYERS,
+      WIDE_TOLERANCE.has(name) ? WIDE : TOLERANCE,
+    );
   if (HOLLOW.has(name)) cut += cutCenter(data, info.width, info.height);
   const out = join(DST, basename(name));
   const size = FRAME_SIZE[name] ?? SIZE;

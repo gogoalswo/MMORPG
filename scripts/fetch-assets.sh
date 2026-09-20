@@ -198,17 +198,19 @@ fetch_icon dbc3fc75337294133bfc32ab2628ba5b belt      # 벨트 (미사용)
 # 창을 짓는 그림. 전부 9조각으로 늘여 쓴다 (game.gd 의 _frame_box).
 # 처음 구운 frame_panel·frame_slot 은 2026-09-18 에 ui_* 한 벌로 갈아치웠다 —
 # 판·칸·탭·단추가 한 벌로 맞아야 창이 임시로 안 보인다.
-fetch_icon 6ecd356dcbf97b3a0c7e58010874a2b4 ui_panel     # 창 바탕 (모서리 꺾쇠)
-fetch_icon 3ac9dd6dfb3952573be25c0f99776506 ui_subpanel  # 이름표·스탯 상자
-fetch_icon 53ee3759bc42f67a8b116959a4a7fc89 ui_slot      # 칸
-fetch_icon 3323d42e0714394022e89571f96c36ca ui_tab_on    # 고른 탭
-fetch_icon a3646f67b96a22b45f2a278cd673ce01 ui_tab_off   # 안 고른 탭
-fetch_icon 300f7941dbf1b49c7a4cdbd608796663 ui_button    # 단추
-fetch_icon 43d4cd084d0fe8d2eeb46a61755b3b33 ui_figure    # 장착 칸 사이 캐릭터 그림자
+# 2026-09-20 에 **HUD 아이콘 셋을 참고 그림으로 물려** 한 벌로 다시 뽑았다 —
+# 어두운 판 + 머리카락처럼 얇은 금테 + 상아빛 포인트. 옛 청록 조각을 갈아치운 것이다
+fetch_icon 3d1e49ad807577737bed8fa2449e8a8f ui_panel     # 창 바탕 (모서리 장식)
+fetch_icon 7fe4055eec2fdebd37b6dc157d4f30ae ui_subpanel  # 이름표·스탯 상자
+fetch_icon dac29087bdffce5bdaa23666f2872afe ui_slot      # 칸
+fetch_icon 1344b8afc27c134af2b2f5942b111bbf ui_tab_on    # 고른 탭 (상아빛 — 글자는 어둡게 얹는다)
+fetch_icon 757608f70e49e1a099e5f1cb2b67710f ui_tab_off   # 안 고른 탭
+fetch_icon 9768fc8560a2ece9c040596698357747 ui_button    # 단추
+fetch_icon 70f1e1a287f9e93cc1abb39f5759dccb ui_figure    # 장착 칸 사이 캐릭터
 # 스킬창·퀵슬롯 (2026-09-19). 조각 둘은 ui_slot 을 참고 그림으로 넣어 결을 맞췄다.
 # 스킬 아이콘은 **꽉 찬 그림**이라 배경을 걷지 않는다 (build-item-icons.mjs 의 FULL)
 fetch_icon dbb28d8e48eb77a991386e0b74fcfb5e ui_skill_slot  # HUD 퀵슬롯 칸
-fetch_icon 51f78be51010dd1155b29627876adee6 ui_slot_pick   # 고른 칸 테두리 (안쪽을 뚫는다)
+fetch_icon 09535596db087ab0c6d3b9de0ae6b086 ui_slot_pick   # 고른 칸 테두리 (안쪽을 뚫는다, 2026-09-20)
 fetch_icon 6688952f8b0187efe7f96935796fa7a8 skill_rising_kick
 fetch_icon 3335dffd51390210007c5b2eb5a8adb7 skill_tiger_roar
 fetch_icon 844c2e93d9c7b8f9d6c3717b2334b9ca skill_white_tiger

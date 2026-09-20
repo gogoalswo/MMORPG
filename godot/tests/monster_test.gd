@@ -13,6 +13,7 @@ func _init() -> void:
 	_case_no_overlap()
 	_case_same_seed()
 	_case_block()
+	_case_corpse_passable()
 	_case_gate()
 
 	if _failed == 0:
@@ -96,6 +97,24 @@ func _case_block() -> void:
 		_fail("몬스터 안으로 %.3f m 들어갔다" % (minimum - gap))
 	else:
 		print("  몬스터 앞에서 %.3f m 남기고 막혔다 (최소 %.3f)" % [gap, minimum])
+
+
+func _case_corpse_passable() -> void:
+	# **죽은 놈은 지나간다.** 화면에서 사라진 시체가 벽으로 남으면
+	# "몬스터한테 막힌 것도 아닌데 안 가진다" 가 된다
+	# (docs/features/collision.md 의 "죽은 것은 지나간다")
+	var w := _world("meadow")
+	var mob: Dictionary = _mobs(w)[0]
+	mob.hp = 0
+	var me: Dictionary = w.snapshot().players["me"]
+	me.x = mob.x - 2.0
+	me.z = mob.z
+	for i in 200:
+		w.input_move("me", i + 1, 1.0, 0.0, 0.05)
+	if me.x <= mob.x + 0.5:
+		_fail("시체에 막혔다 — 시체 x=%.2f 인데 나는 x=%.2f 에 섰다" % [mob.x, me.x])
+	else:
+		print("  시체를 %.2f m 지나쳤다" % (me.x - mob.x))
 
 
 func _case_gate() -> void:

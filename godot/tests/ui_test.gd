@@ -191,12 +191,12 @@ func _run_scene() -> void:
 	# 자동 사냥 단추 — 누르면 켜지고 글자가 바뀐다. 실제로 사냥하는지는
 	# tests/auto_hunt_test.gd 가 본다 (여기는 단추와 화면만)
 	me = game._transport.snapshot().players[game._transport.my_id()]
-	game._auto_button.pressed.emit()
+	game._auto_cell.find_child("hit", true, false).pressed.emit()
 	await process_frame
 	if not bool(me.get("auto", false)):
-		_fail("자동사냥 단추를 눌렀는데 안 켜졌다")
-	elif not game._auto_button.text.contains("켜짐"):
-		_fail("켜졌는데 단추 글자가 '%s'" % game._auto_button.text)
+		_fail("자동사냥 칸을 눌렀는데 안 켜졌다")
+	elif not game._auto_spin.visible:
+		_fail("켜졌는데 화살표 고리가 안 보인다")
 	elif not game._marker.visible:
 		_fail("켜졌는데 사냥 자리 표시가 없다")
 	else:
@@ -236,12 +236,26 @@ func _run_scene() -> void:
 	else:
 		print("  켜 둔 채로 누른 자리로 걸어간다 (%.2f m)" % Vector2(me.x, me.z).distance_to(was))
 
-	game._auto_button.pressed.emit()
+	# 켜져 있는 동안 고리가 돈다 — 각이 그대로면 멈춘 그림이다
+	var spun: float = game._auto_spin.rotation
+	for i in 5:
+		await process_frame
+	if is_equal_approx(game._auto_spin.rotation, spun):
+		_fail("자동사냥을 켰는데 화살표가 안 돈다 (각 %.2f 그대로)" % spun)
+	else:
+		print("  자동사냥 고리가 돈다 (%.2f → %.2f)" % [spun, game._auto_spin.rotation])
+
+	game._auto_cell.find_child("hit", true, false).pressed.emit()
 	await process_frame
 	if bool(me.get("auto", false)):
 		_fail("다시 눌렀는데 안 꺼졌다")
-	if game._auto_button.text.contains("켜짐"):
-		_fail("껐는데 단추 글자가 '%s'" % game._auto_button.text)
+	if game._auto_spin.visible:
+		_fail("껐는데 화살표 고리가 남아 있다")
+
+	await _case_status(game)
+	await _case_bag(game)
+	await _case_skills(game)
+	await _case_design_panel(game)
 
 	if _failed == 0:
 		print("UI: 전부 통과")
@@ -249,6 +263,473 @@ func _run_scene() -> void:
 	else:
 		print("UI: %d개 실패" % _failed)
 		quit(1)
+
+
+## 퀵슬롯 위 묶음과 오른쪽 위 메뉴 — 자리, 숫자, 누르면 창이 열리나.
+## 2026-09-20 요청으로 레벨·경험치·체력이 왼쪽 위에서 **퀵슬롯 위**로 내려왔다.
+## 화면 밖으로 나가거나 서로 겹치는 것은 수치로 잡힌다 — 찍어서 볼 것은 결뿐이다
+func _case_status(game: Node3D) -> void:
+	var me: Dictionary = game._transport.snapshot().players[game._transport.my_id()]
+	var screen := Vector2(1280, 720)
+
+	# 레벨·체력·경험치가 스냅샷을 그대로 보여 준다. 레벨은 `Lv.N`(2026-09-20 요청),
+	# 경험치는 막대가 아니라 퍼센트다
+	if game._level_label.text != "Lv.%d" % int(me.level):
+		_fail("레벨 글자가 '%s' (스냅샷은 %d)" % [game._level_label.text, me.level])
+	if game._hp_text.text != "%d / %d" % [int(me.hp), int(me.stats.maxHp)]:
+		_fail("체력 글자가 '%s' (스냅샷은 %d/%d)" % [game._hp_text.text, me.hp, me.stats.maxHp])
+	if not game._exp_text.text.begins_with("경험치 ") or not game._exp_text.text.ends_with("%"):
+		_fail("경험치가 퍼센트가 아니다: '%s'" % game._exp_text.text)
+
+	# 경험치 게이지는 **화면 맨 아래를 가로지른다** (2026-09-20 요청)
+	var need := maxi(1, Combat.exp_to_next(int(me.level)))
+	var gauge: Rect2 = game._exp_bar.get_global_rect()
+	if gauge.size.x < screen.x - 1.0 or absf(gauge.end.y - screen.y) > 1.0:
+		_fail("경험치 게이지가 화면 맨 아래 가로 전체가 아니다: %s" % gauge)
+	if game._exp_bar.max_value != float(need):
+		_fail("경험치 게이지 최대치가 %d 이어야 하는데 %d" % [need, game._exp_bar.max_value])
+
+	# 막대가 줄어든다 — 반쯤 깎아 보고 채움 폭이 아니라 값으로 본다
+	me.hp = int(me.stats.maxHp) / 2
+	await process_frame
+	if game._hp_bar.value != float(me.hp):
+		_fail("체력을 깎았는데 막대가 %d" % game._hp_bar.value)
+
+	# 퀵슬롯 바로 위에, 퀵슬롯과 같은 길이로 깔린다.
+	# **테두리(부모) 기준이다** — 채움은 안쪽 여백만큼 좁다
+	var hp_frame: Control = game._hp_bar.get_parent()
+	var hp_rect: Rect2 = hp_frame.get_global_rect()
+	var quick: Rect2 = game._bar_buttons[0].get_global_rect()
+	var badge: Rect2 = game._level_label.get_global_rect()
+	if hp_rect.end.y > quick.position.y + 1.0 or quick.position.y - hp_rect.end.y > 24.0:
+		_fail("체력 막대가 퀵슬롯 바로 위가 아니다: 막대 %s · 퀵슬롯 %s" % [hp_rect, quick])
+	if absf(hp_rect.get_center().x - screen.x / 2.0) > 2.0:
+		_fail("체력 막대가 화면 가운데가 아니다: %s" % hp_rect)
+	if absf(hp_rect.size.x - float(game._auto_cell.get_global_rect().end.x - quick.position.x)) > 6.0:
+		_fail("체력 막대가 퀵슬롯 줄과 길이가 다르다 (%.0f)" % hp_rect.size.x)
+	if badge.end.y > hp_rect.position.y or badge.position.y < 0.0:
+		_fail("레벨 배지가 막대 위에 안 올라갔다: %s" % badge)
+	# 퍼센트 글자는 **맨 아래 띠 가운데**에 얹힌다 (2026-09-20 요청)
+	var exp_rect: Rect2 = game._exp_text.get_global_rect()
+	if not gauge.grow(1.0).encloses(exp_rect):
+		_fail("경험치 글자가 띠 안에 없다: 글자 %s · 띠 %s" % [exp_rect, gauge])
+	elif absf(exp_rect.get_center().x - gauge.get_center().x) > 2.0:
+		_fail("경험치 글자가 띠 가운데가 아니다: %s" % exp_rect)
+
+	# 오른쪽 위 메뉴 — 화면 안, 묶음과 안 겹침.
+	# 스킬·가방·설계(디버그) 셋이다 — 설계 재현 창은 문서 9장 5번의 디버그 수단이다
+	if game._menu_cells.size() != 3:
+		_fail("오른쪽 위 단추가 3개여야 하는데 %d개" % game._menu_cells.size())
+		return
+	var skill_rect: Rect2 = game._menu_cells[0].get_global_rect()
+	var bag_rect: Rect2 = game._menu_cells[1].get_global_rect()
+	if bag_rect.end.x > screen.x or skill_rect.position.y < 0.0 or bag_rect.position.y > 120.0:
+		_fail("메뉴 단추가 오른쪽 위에 안 붙었다: %s / %s" % [skill_rect, bag_rect])
+	if skill_rect.intersects(hp_rect) or skill_rect.intersects(badge):
+		_fail("메뉴 단추가 퀵슬롯 위 묶음과 겹친다")
+
+	# 눌러서 창이 열린다
+	game._menu_cells[0].find_child("hit", true, false).pressed.emit()
+	await process_frame
+	if not game._skill_panel.visible:
+		_fail("오른쪽 위 스킬 단추를 눌렀는데 스킬창이 안 열렸다")
+	game._toggle_skills()
+	game._menu_cells[1].find_child("hit", true, false).pressed.emit()
+	await process_frame
+	if not game._bag_panel.visible:
+		_fail("오른쪽 위 가방 단추를 눌렀는데 가방이 안 열렸다")
+	game._toggle_bag()
+	await process_frame
+	print("  퀵슬롯 위: %s · %s · 체력 %s (막대 %.0fpx · 게이지 %.0fpx)" % [game._level_label.text, game._exp_text.text, game._hp_text.text, hp_rect.size.x, gauge.size.x])
+
+
+## 가방·장비 창 — 열리나, 칸이 제대로 깔리나, 골라서 낄 수 있나.
+## 스크린샷을 찍지 않는다: 칸 수와 칸 안의 글자·그림은 노드로 읽을 수 있다
+func _case_bag(game: Node3D) -> void:
+	var me: Dictionary = game._transport.snapshot().players[game._transport.my_id()]
+
+	if game._bag_panel.visible:
+		_fail("아직 안 눌렀는데 가방이 떠 있다")
+	game._toggle_bag()
+	await process_frame
+	if not game._bag_panel.visible:
+		_fail("가방 단추를 눌렀는데 창이 안 떴다")
+		return
+
+	# 장착 6칸(3열) · 가방 5열 세 줄
+	var slots: Array = Items.slots()
+	if slots.size() != 6:
+		_fail("슬롯이 6종이어야 하는데 %d종: %s" % [slots.size(), str(slots)])
+	var gear: Array = game._gear_cells
+	if gear.size() != slots.size():
+		_fail("장착이 %d칸이어야 하는데 %d칸" % [slots.size(), gear.size()])
+	if game._bag_grid.get_child_count() < 15:
+		_fail("가방 격자가 15칸 이상이어야 하는데 %d칸" % game._bag_grid.get_child_count())
+	if game._bag_grid.columns != 5:
+		_fail("가방 격자가 5열이어야 하는데 %d열" % game._bag_grid.columns)
+
+	# **왼쪽이 장착, 오른쪽이 가방이다** (2026-09-18 요청)
+	var gear_x: float = gear[0].get_global_rect().position.x
+	var grid_x: float = game._bag_grid.get_global_rect().position.x
+	if gear_x >= grid_x:
+		_fail("장착(%.0f)이 가방(%.0f) 왼쪽에 있어야 한다" % [gear_x, grid_x])
+	else:
+		print("  좌우: 장착 x=%.0f · 가방 x=%.0f" % [gear_x, grid_x])
+
+	# 테두리가 붙었나 — 그림이 없으면 코드로 그린 것이라도 있어야 한다
+	if game._bag_panel.get_theme_stylebox("panel") == null:
+		_fail("창에 테두리가 없다")
+	if gear[0].get_theme_stylebox("panel") == null:
+		_fail("칸에 테두리가 없다")
+
+	# 그림이 붙었나. 아이콘이 없으면(sync 를 안 돌렸으면) 칸 이름이 글자로 나와야 한다
+	var drawn := 0
+	var named := 0
+	for index in gear.size():
+		var cell: PanelContainer = gear[index]
+		if cell.get_node("icon").texture != null:
+			drawn += 1
+		elif cell.get_node("text").text != "":
+			named += 1
+	if drawn + named != slots.size():
+		_fail("장착 칸 %d개가 그림도 글자도 없다" % [slots.size() - drawn - named])
+	else:
+		print("  가방 창: 장착 %d칸(그림 %d · 글자 %d), 가방 %d칸" % [
+			slots.size(), drawn, named, game._bag_grid.get_child_count()
+		])
+
+	# 칸 수·레벨·스탯 상자
+	if not game._bag_head.text.contains("/%d" % Items.bag_size()):
+		_fail("가방 칸 수가 '%s'" % game._bag_head.text)
+	if not game._bag_level.text.begins_with("LV."):
+		_fail("이름표가 'LV.' 로 시작해야 하는데 '%s'" % game._bag_level.text)
+	var stat_names: Array = game.STAT_NAMES
+	var stat_labels: Array = game._stat_labels
+	if stat_labels.size() != stat_names.size():
+		_fail("스탯이 %d개여야 하는데 %d개" % [stat_names.size(), stat_labels.size()])
+	else:
+		var wrote := ""
+		for index in stat_labels.size():
+			var want := str(stat_names[index])
+			if not str(stat_labels[index].text).begins_with(want):
+				_fail("%d번째 스탯이 '%s' 여야 하는데 '%s'" % [index, want, stat_labels[index].text])
+			wrote += stat_labels[index].text + "  "
+		print("  스탯 상자: %s" % wrote.strip_edges())
+
+	# 탭 — 다섯 개, 고른 것만 바뀐다
+	var tabs: Array = game._tab_buttons
+	if tabs.size() != 5:
+		_fail("탭이 5개여야 하는데 %d개" % tabs.size())
+	elif game._bag_tab != 0:
+		_fail("처음에는 '전체' 가 골라져 있어야 한다 (%d)" % game._bag_tab)
+
+	# 아무것도 안 골랐으면 상세 칸은 안내만, 단추는 꺼져 있어야 한다
+	if not game._bag_action.disabled:
+		_fail("아무것도 안 골랐는데 끼기 단추가 켜져 있다")
+
+	# 가방에 하나 넣고 — 골라서 낀다
+	me.bag.append({"id": "w_fighter_00", "grade": 3, "enhance": 2, "options": []})
+	game._redraw_bag()
+	await process_frame
+	var first: PanelContainer = game._bag_grid.get_child(0)
+	if first.get_node("badge").text == "":
+		_fail("가방 첫 칸에 배지가 안 붙었다")
+	elif not first.get_node("badge").text.contains("+2"):
+		_fail("강화 배지가 '+2' 여야 하는데 '%s'" % first.get_node("badge").text)
+
+	first.get_node("hit").pressed.emit()
+	await process_frame
+	if game._bag_action.disabled:
+		_fail("칸을 골랐는데 끼기 단추가 안 켜졌다")
+	if game._bag_action.text != "장착":
+		_fail("가방 칸을 골랐는데 단추가 '%s'" % game._bag_action.text)
+	if not game._bag_detail.text.contains("등급"):
+		_fail("상세 칸이 '%s'" % game._bag_detail.text.left(30))
+
+	game._on_bag_action()
+	for i in 3:
+		await process_frame
+	if me.equipped.get("weapon", {}).is_empty():
+		_fail("끼기를 눌렀는데 무기가 안 끼워졌다")
+	else:
+		var worn: Dictionary = Items.get_item(str(me.equipped.weapon.id))
+		print("  골라서 끼기: 무기 칸에 '%s'" % worn.get("name", "?"))
+
+	# 창이 화면 안에, 그리고 **가운데에** 있나. 눈으로 볼 수 없는 것은 재서 본다 —
+	# set_anchors_preset 만 부르면 왼쪽 위에 붙는다 (2026-09-18 에 그랬다)
+	var rect: Rect2 = game._bag_panel.get_global_rect()
+	if rect.size.x > 1280.0 or rect.size.y > 720.0:
+		_fail("가방 창이 화면(1280x720)보다 크다: %.0fx%.0f" % [rect.size.x, rect.size.y])
+	var off: Vector2 = (rect.position + rect.size * 0.5) - Vector2(640, 360)
+	if abs(off.x) > 8.0 or abs(off.y) > 8.0:
+		_fail("가방 창이 가운데가 아니다 — 중심이 (%.0f, %.0f) 만큼 밀렸다" % [off.x, off.y])
+	else:
+		print("  창 %.0fx%.0f, 화면 한가운데" % [rect.size.x, rect.size.y])
+
+	# 끼운 칸을 골라 벗긴다
+	var slot_index := slots.find("weapon")
+	game._gear_cells[slot_index].get_node("hit").pressed.emit()
+	await process_frame
+	if game._bag_action.text != "해제":
+		_fail("장비 칸을 골랐는데 단추가 '%s'" % game._bag_action.text)
+	game._on_bag_action()
+	for i in 3:
+		await process_frame
+	if not me.equipped.get("weapon", {}).is_empty():
+		_fail("벗기를 눌렀는데 무기가 그대로다")
+	else:
+		print("  골라서 벗기: 무기 칸이 비었다")
+
+	# 탭으로 거르면 **칸 번호와 가방 번호가 어긋난다** — 거기서 끼면 엉뚱한 게 끼워진다
+	me.bag.clear()
+	me.bag.append({"id": "m_00", "grade": 1, "enhance": 0, "options": []})
+	me.bag.append({"id": "w_fighter_00", "grade": 3, "enhance": 0, "options": []})
+	game._pick_tab(1)  # 무기
+	await process_frame
+	if game._bag_view != [1]:
+		_fail("무기 탭인데 보이는 것이 %s (가방 1번만 나와야 한다)" % str(game._bag_view))
+	game._bag_grid.get_child(0).get_node("hit").pressed.emit()
+	await process_frame
+	game._on_bag_action()
+	for i in 3:
+		await process_frame
+	if me.equipped.get("weapon", {}).is_empty():
+		_fail("무기 탭에서 골라 꼈는데 무기 칸이 비어 있다")
+	else:
+		print("  탭으로 거른 칸을 골라도 제대로 끼워진다")
+	game._pick_tab(0)
+	await process_frame
+
+	game._toggle_bag()
+	await process_frame
+	if game._bag_panel.visible:
+		_fail("다시 눌렀는데 가방이 안 닫혔다")
+
+	# 닫기는 **오른쪽 위 X** 하나다 (2026-09-20 요청 — 모든 창이 같다)
+	for panel_name in ["_bag_panel", "_skill_panel"]:
+		var panel: PanelContainer = game.get(panel_name)
+		if panel_name == "_bag_panel":
+			game._toggle_bag()
+		else:
+			game._toggle_skills()
+		await process_frame
+		var mark: Control = panel.find_child("close", true, false)
+		if mark == null:
+			_fail("%s 에 닫기 X 가 없다" % panel_name)
+			continue
+		var at: Rect2 = mark.get_global_rect()
+		var box: Rect2 = panel.get_global_rect()
+		if at.get_center().x < box.get_center().x or at.get_center().y > box.get_center().y:
+			_fail("%s 의 닫기 X 가 오른쪽 위가 아니다: %s (창 %s)" % [panel_name, at, box])
+		elif not box.encloses(at):
+			_fail("%s 의 닫기 X 가 창 밖으로 나갔다: %s" % [panel_name, at])
+		mark.find_child("hit", true, false).pressed.emit()
+		await process_frame
+		if panel.visible:
+			_fail("%s 의 X 를 눌렀는데 안 닫혔다" % panel_name)
+	print("  닫기는 창 오른쪽 위 X 하나다")
+
+## 퀵슬롯과 스킬창 — 자리, 크기, 그림, 장착·해제·바꾸기.
+## 창은 **왼쪽이 설명, 오른쪽이 고르기** 다 (2026-09-19 요청)
+## **설계 재현 창** — 문서 9장 5번의 디버그 수단. 눌러서 열고, 값을 바꾸면
+## 캐릭터가 실제로 그 조건으로 서는지 본다 (화면만 바뀌고 판정이 안 따라오면 쓸모없다)
+func _case_design_panel(game: Node3D) -> void:
+	game._toggle_debug()
+	await game.get_tree().process_frame
+	if not game._debug_panel.visible:
+		_fail("설계 창이 안 열린다")
+		return
+	if game._debug_text.text.strip_edges() == "":
+		_fail("설계 창이 비어 있다")
+
+	var me: Dictionary = game._transport.snapshot().get("players", {}).get("me", {})
+	if int(me.get("level", 0)) != game._debug_level:
+		_fail("창을 열었는데 레벨이 안 맞춰졌다 (%d ≠ %d)" % [int(me.get("level", 0)), game._debug_level])
+	if me.get("equipped", {}).size() != 6:
+		_fail("여섯 칸이 안 찼다 (%d)" % me.get("equipped", {}).size())
+
+	# 등급을 내리면 실제로 약해져야 한다
+	var before := int(me.get("stats", {}).get("attack", 0))
+	game._debug_grade = maxi(1, game._debug_grade - 2)
+	game._apply_debug()
+	await game.get_tree().process_frame
+	var after: int = int(
+		game._transport.snapshot().players["me"].get("stats", {}).get("attack", 0)
+	)
+	if after >= before:
+		_fail("등급을 내렸는데 공격력이 안 줄었다 (%d -> %d)" % [before, after])
+	else:
+		print("  설계 창: 등급 내리니 공격 %d -> %d" % [before, after])
+
+	game._toggle_debug()
+	await game.get_tree().process_frame
+	if game._debug_panel.visible:
+		_fail("설계 창이 안 닫힌다")
+
+
+func _case_skills(game: Node3D) -> void:
+	var me: Dictionary = game._transport.snapshot().players[game._transport.my_id()]
+	var screen := Vector2(1280, 720)
+
+	# 퀵슬롯 4칸이 화면 아래 가운데에, 오른쪽 단추들과 겹치지 않게
+	var quick: Array = game._bar_buttons
+	if quick.size() != 4:
+		_fail("퀵슬롯이 4칸이어야 하는데 %d칸" % quick.size())
+		return
+	var first: Rect2 = quick[0].get_global_rect()
+	var last: Rect2 = quick[3].get_global_rect()
+	# 자동사냥 칸까지 **다섯 칸 한 줄**이 아래 가운데다 (2026-09-19 요청)
+	var auto_rect: Rect2 = game._auto_cell.get_global_rect()
+	var middle := (first.position.x + auto_rect.end.x) / 2.0
+	if absf(middle - screen.x / 2.0) > 2.0 or last.end.y > screen.y or last.end.y < screen.y - 60:
+		_fail("퀵슬롯이 아래 가운데가 아니다: %s ~ %s" % [first, last])
+	if last.intersects(auto_rect):
+		_fail("퀵슬롯이 자동사냥 칸과 겹친다")
+	if auto_rect.position.x < last.end.x:
+		_fail("자동사냥 칸이 퀵슬롯 옆이 아니다: %s" % auto_rect)
+
+	# 처음에는 액션바가 비어 있을 수 있다 — 앞의 넷을 올려 두고 시작한다
+	game._send_bar(Skills.for_job(str(me.job)).slice(0, 4))
+	if me.skill_bar.size() != 4:
+		_fail("앞의 넷을 올렸는데 액션바가 %d칸" % me.skill_bar.size())
+		return
+	game._refresh_bar(me)
+	var icons := 0
+	for cell in quick:
+		if cell.find_child("icon", true, false).texture != null:
+			icons += 1
+	print("  퀵슬롯: 가운데 x=%.0f, 아이콘 %d/4" % [middle, icons])
+
+	# 쿨타임 — 쓰고 나면 어둠이 덮이고 초가 뜬다
+	var used := str(me.skill_bar[0])
+	me.skill_ready_at[used] = Time.get_ticks_msec() + 3000
+	game._refresh_bar(me)
+	if not quick[0].find_child("cool", true, false).visible or quick[0].find_child("secs", true, false).text != "3":
+		_fail("쿨타임 3초가 퀵슬롯에 안 나온다")
+	if not quick[0].find_child("edge", true, false).visible:
+		_fail("쿨타임이 도는데 경계 바늘이 없다")
+	me.skill_ready_at[used] = 0
+	game._refresh_bar(me)
+	# 끝나는 순간 번쩍인다
+	if quick[0].find_child("flash", true, false).color.a <= 0.0:
+		_fail("쿨타임이 끝났는데 칸이 안 번쩍인다")
+	# 단축키 번호가 왼쪽 위에 1~4
+	for slot in quick.size():
+		if quick[slot].find_child("key", true, false).text != str(slot + 1):
+			_fail("%d번 퀵슬롯에 단축키 번호가 없다" % (slot + 1))
+
+	# 빈 칸을 누르면 창이 열린다
+	game._toggle_skills()
+	await process_frame
+	var panel: Control = game._skill_panel
+	if not panel.visible:
+		_fail("스킬 단추를 눌렀는데 창이 안 떴다")
+		return
+	var box: Rect2 = panel.get_global_rect()
+	if not Rect2(Vector2.ZERO, screen).encloses(box):
+		_fail("스킬창 %s 이 화면 밖으로 나간다" % box)
+
+	# 왼쪽 설명, 오른쪽 목록
+	var ids: Array = Skills.for_job(str(me.job))
+	if game._skill_cells.size() != ids.size():
+		_fail("목록이 %d칸이어야 하는데 %d칸" % [ids.size(), game._skill_cells.size()])
+		return
+	var big_x: float = game._skill_big.get_global_rect().position.x
+	var list_x: float = game._skill_grid.get_global_rect().position.x
+	if big_x >= list_x:
+		_fail("설명(%.0f)이 목록(%.0f) 왼쪽에 있어야 한다" % [big_x, list_x])
+	var drawn := 0
+	for cell in game._skill_cells:
+		if cell.find_child("icon", true, false).texture != null or cell.find_child("text", true, false).text != "":
+			drawn += 1
+	if drawn != ids.size():
+		_fail("목록 칸 %d개가 그림도 글자도 없다" % (ids.size() - drawn))
+
+	# 고르면 왼쪽 설명이 따라온다
+	var last_id := str(ids[ids.size() - 1])
+	game._pick_skill(ids.size() - 1)
+	if game._skill_name.text != str(Skills.all()[last_id].name) or game._skill_desc.text == "":
+		_fail("고른 스킬(%s)이 설명에 안 나온다: '%s'" % [last_id, game._skill_name.text])
+	if not game._skill_cells[ids.size() - 1].get_node("pick").visible:
+		_fail("고른 칸에 테두리가 안 뜬다")
+	# 배운 것은 레벨 글자를 지우고, 안 배운 것은 "Lv.N 습득"
+	for index in ids.size():
+		var badge: String = game._skill_cells[index].find_child("badge", true, false).text
+		var want := "" if str(ids[index]) in me.skills else "Lv.%d 습득" % int(Skills.all()[str(ids[index])].reqLevel)
+		if badge != want:
+			_fail("%s 칸 글자가 '%s' 여야 하는데 '%s'" % [ids[index], want, badge])
+
+	# 해제 → 빈 칸에 장착 → 가득 찼으면 바꿀 칸을 골라 끼운다
+	var bar: Array = me.skill_bar
+	var before := bar.size()
+	game._skill_pick = str(bar[0])
+	game._on_skill_unequip()
+	if me.skill_bar.size() != before - 1:
+		_fail("해제했는데 액션바가 %d칸 그대로다" % me.skill_bar.size())
+	game._on_skill_equip()
+	if me.skill_bar.size() != before:
+		_fail("빈 칸이 있는데 장착이 안 됐다")
+	if me.skill_bar.size() == 4 and not (last_id in me.skill_bar):
+		game._pick_skill(ids.size() - 1)
+		game._on_skill_equip()
+		if not game._skill_swap or game._skill_state.text != "바꿀 칸을 누르세요":
+			_fail("4칸이 다 찼는데 바꿀 칸을 묻지 않는다")
+		game._pick_slot(2)
+		if str(me.skill_bar[2]) != last_id:
+			_fail("3번 칸을 골랐는데 %s 가 들어갔다" % str(me.skill_bar[2]))
+		else:
+			print("  스킬창: 목록 %d칸, 해제·장착·바꾸기(3번 칸 → %s) 확인" % [ids.size(), last_id])
+
+	game._toggle_skills()
+	await process_frame
+	if panel.visible:
+		_fail("닫기를 눌렀는데 스킬창이 안 닫혔다")
+
+	# 테스트 스위치 단추 — 누르면 뒤집히고, 다시 누르면 돌아온다
+	if game._switch_buttons.has("unlockAll"):
+		_fail("레벨 잠금 해제 단추는 걷었는데 아직 있다")
+	for name in game._switch_buttons:
+		var read := func() -> bool: return Skills.cooldown_off() if name == "cooldownOff" else Skills.unlock_all()
+		var was: bool = read.call()
+		game._switch_buttons[name].pressed.emit()
+		if read.call() == was or not game._switch_buttons[name].text.ends_with("켬" if not was else "끔"):
+			_fail("%s 단추를 눌렀는데 안 바뀐다: %s" % [name, game._switch_buttons[name].text])
+		game._switch_buttons[name].pressed.emit()
+		if read.call() != was:
+			_fail("%s 단추를 두 번 눌렀는데 원래대로 안 돌아온다" % name)
+	var corner: Rect2 = game._switch_buttons["cooldownOff"].get_global_rect()
+	if corner.position.x > 40 or corner.end.y > 720 or corner.end.y < 660:
+		_fail("스위치 단추가 왼쪽 아래가 아니다: %s" % corner)
+	if corner.intersects(game._bar_buttons[0].get_global_rect()):
+		_fail("스위치 단추가 퀵슬롯과 겹친다")
+	print("  테스트 스위치 단추 %d개: 켜고 끄기 확인 (%s)" % [game._switch_buttons.size(), corner])
+
+	# 무적 단추 — 왼쪽 아래 줄에 있고, 켜면 맞아도 HP 가 그대로다
+	var world = game._transport._world
+	var hero: Dictionary = world.snapshot().players[game._transport.my_id()]
+	var shield: Rect2 = game._invincible_button.get_global_rect()
+	if shield.position.x > 40 or shield.end.y > corner.position.y:
+		_fail("무적 단추가 쿨타임 단추 위(왼쪽 아래)가 아니다: %s" % shield)
+	game._invincible_button.pressed.emit()
+	if not bool(hero.get("invincible", false)):
+		_fail("무적 단추를 눌렀는데 안 켜졌다")
+	var hp_before := int(hero.hp)
+	world._hit_player(hero, {"id": "test", "attack": 999.0})
+	if int(hero.hp) != hp_before:
+		_fail("무적인데 HP 가 줄었다: %d → %d" % [hp_before, int(hero.hp)])
+	game._invincible_button.pressed.emit()
+	if bool(hero.get("invincible", false)):
+		_fail("무적 단추를 다시 눌렀는데 안 꺼졌다")
+	print("  무적 단추: 켜면 피해 0, 다시 누르면 꺼짐 (%s)" % shield)
+
+	# 새 문구 글자가 폰트에 있나 (부분집합이라 빠질 수 있다)
+	var font: Font = load(FONT)
+	var missing := ""
+	for ch in "장착 해제 취소 스킬 목록 바꿀 칸을 누르세요 요구 레벨 재사용 사거리 주위 대상 배움 습득 테스트 쿨타임 잠금 해제 켬 끔 무적":
+		if ch != " " and not font.has_char(ch.unicode_at(0)):
+			missing += ch
+	if missing != "":
+		_fail("스킬창 글자가 폰트에 없다: %s" % missing)
 
 
 ## 목록을 눌렀다/뗐다. 자리는 **목록 기준**이다 (Control 의 gui_input 이 그렇다)

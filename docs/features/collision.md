@@ -18,6 +18,9 @@
 | `packages/client/src/game/remotePlayers.ts` | `solids()` — 예측이 쓸 **다른 캐릭터** 목록 |
 | `packages/client/src/game/player.ts` | `solids` 필드, 예측과 되돌려 재생에 넘긴다 |
 | `packages/client/src/main.ts` | 매 프레임 두 목록을 `solidBuffer` 에 합쳐 `player.solids` 로 |
+| `godot/world/movement.gd` | `pushOutOfSolids`·`applyMove`·`scatterSpawn` 이식본 |
+| `godot/world/world.gd` | `_solids_near` (ZoneRoom 의 `solidsNear`), `input_move`·`_walk_auto`·`_move_monster` 에서 적용 |
+| `godot/tests/monster_test.gd` | 살아 있는 놈에 막히는지 · **시체를 지나가는지** |
 
 ## 규칙
 
@@ -54,6 +57,21 @@
 지킨다. 가장 큰 몸과 가장 짧은 사거리를 맞대는 식으로 재면 실제로 만나지 않는 짝을
 검사하게 돼서, 통과해도 통과한 게 아니고 실패해도 고칠 곳이 없다.
 스탯 표나 몬스터 크기를 건드리면 이 줄이 먼저 깨진다 — 그때는 계수를 줄인다.
+
+### 시체를 빼는 것은 **넘기는 쪽**의 일이다 ★
+
+`pushOutOfSolids` 는 받은 목록을 그대로 믿는다 — 죽었는지 안 본다. 그래서 목록을
+만드는 쪽(`solidsNear` · `_solids_near`)이 `hp <= 0` 을 빼야 한다.
+
+고도로 옮길 때 **몬스터끼리는 빼고 캐릭터 이동만 `_monsters` 를 통째로 넘기고
+있었다** (2026-09-20 에 "몬스터한테 막힌 게 아니라 맵에 이동이 안 된다" 는 지적을
+받았다). 화면은 죽은 놈을 지우므로 **아무것도 없는 자리에 보이지 않는 벽**이 서고,
+리스폰(10초) 전까지 그대로 남는다. 잡은 자리에 서서 다음 무리로 걸어가려 할 때
+정확히 이 증상이 난다.
+
+- 같은 이유로 **훑는 반경도 여기서 건다** — `SOLID_SCAN_RANGE`(4m). 존에 200마리가
+  있는데 매 프레임 전부 재면 폰에서 버겁다.
+- `godot/tests/monster_test.gd` 의 `_case_corpse_passable` 이 이것을 지킨다.
 
 ### 여유(0.2)는 몬스터끼리에만 넣는다 ★
 

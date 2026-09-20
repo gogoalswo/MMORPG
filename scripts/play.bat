@@ -74,15 +74,25 @@ if errorlevel 1 (
   if errorlevel 1 echo       pull failed - running with the code you have
 )
 
-rem ---- 3. assets, copied straight from public/assets ---------
-rem  Unlike "npm run sync:godot" this does not shrink textures to
-rem  512px - that is for the phone build. So no Node, no npm.
+rem ---- 3. assets: mirror the whole public\assets tree ---------
+rem  One line on purpose. Listing folders by hand is how icons\
+rem  and ui\ got missed - they were simply absent on a PC run and
+rem  the window came up as red errors and plain text (2026-09-19).
+rem  A new asset folder now needs no edit here.
+rem
+rem  Folder names match on both sides, so this is a plain mirror.
+rem  "npm run sync:godot" copies less and shrinks model textures to
+rem  512px - that is to keep the phone pck small. A PC does not
+rem  care, and copying everything needs no Node and no sharp.
+rem  /D skips files that are already up to date.
+rem
+rem  Side effect: model textures stay at 1024px here, so running
+rem  "npm run test:godot" right after this makes model_test say
+rem  "texture is 1024px". That guard is there to keep the phone
+rem  pck small - run "npm run sync:godot" before testing.
 echo [3/5] Copying assets to godot\assets
-for %%d in (models fonts ground) do if not exist "%ROOT%\godot\assets\%%d" mkdir "%ROOT%\godot\assets\%%d"
-xcopy /D /Y /Q "%ROOT%\public\assets\models\varco_fighter.glb"    "%ROOT%\godot\assets\models\" >nul
-xcopy /D /Y /Q "%ROOT%\public\assets\models\varco_ogre1.glb"      "%ROOT%\godot\assets\models\" >nul
-xcopy /D /Y /Q "%ROOT%\public\assets\fonts\NotoSansKR-subset.ttf" "%ROOT%\godot\assets\fonts\"  >nul
-xcopy /D /Y /Q "%ROOT%\public\assets\textures\ground_*.ktx2"      "%ROOT%\godot\assets\ground\" >nul
+if not exist "%ROOT%\godot\assets" mkdir "%ROOT%\godot\assets"
+xcopy /E /I /D /Y /Q "%ROOT%\public\assets" "%ROOT%\godot\assets" >nul
 
 rem ---- 4. import: without the cache class_name lookups fail ---
 echo [4/5] Importing assets - the first run takes a few minutes

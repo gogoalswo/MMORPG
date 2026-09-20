@@ -583,12 +583,33 @@ Lv100 기준 플레이어의 사냥터별 결과:
 
 ## 9. 실제 코드에 넣을 때 순서
 
-1. `godot/scripts/` 에 `stats.gd` 를 새로 만들어 `base(L)`·`grade_sum(g)`·`damage()`·`monster(L, role)` 를 시뮬레이터와 같은 식으로 둔다. 숫자를 두 곳에 두지 않는 것이 핵심.
-2. `char_defs.gd` 에 직업 배수(`atk/hp/df/interval`)와 종족 배수를 추가. 몬스터 스탯은 스폰 시 `monster(level, role)` 로 계산(테이블 저장 안 함).
-3. `player.gd` 에 `level, hp, max_hp, atk, def` 와 전직 단계. `stage_defs.gd` 에 사냥터 20개의 `(레벨 범위, 기대 등급)`.
-4. `character.gd` 의 공격 히트 콜백에서 부채꼴 범위 안 몬스터에 `damage()` 적용. 이미 이펙트가 붙는 자리라 판정만 붙이면 된다.
-5. HUD 에 HP 바와 레벨·스탯 표시. 시뮬레이터와 같은 조건을 게임에서 재현할 디버그 수단(레벨·등급 강제 설정)을 같이 넣는다.
-6. 아이템은 마지막. 슬롯 6개와 `item_pct(grade, slot)` 만 있으면 위 등급표가 그대로 쓰인다.
+1. ~~`stats.gd` 를 새로 만든다~~ — **2026-09-20 에 했다.** 자리는 `godot/scripts/` 가 아니라
+   판정이 모여 있는 **`godot/world/stats.gd`** 다. 숫자를 두 곳에 두지 않으려고 이렇게 갈랐다:
+   - `packages/shared/src/balance.ts` — `base(L)`·`damage()`·`monster(L, role)`·기준 플레이어
+   - `packages/shared/src/gear.ts` — `gradeSum(g)`·`slotStats(slot, g, 강화)`(= `item_pct`)·등급 7 × 슬롯 6 표
+   - `npm run export:godot` → `godot/data/balance.json` → `world/stats.gd` 가 **읽기만** 한다
+     (`combat.gd` 와 같은 방식: 공식만 이식하고 수치는 JSON)
+   - 검증은 세 겹이다 — `balance.test.ts`·`gear.test.ts`(문서 표를 박아 두고 대조) ·
+     `godot/tests/stats_test.gd`(고도에서 같은 표) · 그리고 `tools/balance_sim.py` 와 직접 대조
+2. ~~직업 배수와 몬스터 스탯~~ — **했다.** 직업 배수는 `balance.ts` 의 `JOB_MULT`,
+   몬스터는 `monsters.ts` 의 `statsForLevel` 이 `monster(level, role)` 를 부른다.
+   **표에 저장한다** — 이 저장소는 몬스터 종류를 `shared` 에서 만들어 `data/monsters.json`
+   으로 내보내므로, 스폰 시 계산하나 표에 넣으나 출처가 한 곳으로 같다.
+3. ~~플레이어 스탯~~ — **했다.** `combat.ts` 의 `statsFor` 가 `base(L) × 직업 배수` 다.
+   전직 단계(`JOB_ADVANCES`)는 표만 있고 스탯에는 아직 미반영(스킬 계수 확정 후).
+4. ~~피해 적용~~ — **했다.** `world.gd` 의 `_hit_player` · `_hit_monster` 가
+   `Stats.damage(공격력, 공격자 레벨, 방어력)` 을 쓴다.
+5. ~~HUD 디버그 수단~~ — **했다.** 오른쪽 위 메뉴의 **"설계"** 단추다
+   (`game.gd` 의 `_build_debug_panel`). 레벨·등급·강화를 눌러 맞추면 캐릭터가 그
+   조건으로 서고, **설계가 말하는 값을 나란히 찍는다** — 내 스탯 / 기준 플레이어 /
+   몬스터 수치 / 1마리 타수 / 한 그룹 정리 시간·HP 손실.
+   - **붙이자마자 버그를 잡았다**: 고도의 맨몸 스탯(`combat.gd` 의 `stats_for`)만
+     옛 선형 공식으로 남아 있어서 Lv100 공격이 250(옛) vs 71(설계)이었다. 몬스터는
+     새 설계로 도는데 플레이어만 옛 곡선이라 후반이 통째로 어긋날 뻔했다.
+   - 판정 쪽 진입점은 `World.debug_gear(player, 레벨, 등급, 강화)` 이고,
+     `godot/tests/ui_test.gd` 가 눌러서 값이 실제로 따라오는지 확인한다.
+6. **아이템은 수치만 붙였다.** `items.ts` 가 `slotStats()` 로 %를 뽑고 강화도 이 표를
+   쓴다. **카탈로그(180종 → 56종)는 10장의 미정 세 가지를 정해야 갈아끼운다.**
 
 ## 10. 아직 안 정한 것
 

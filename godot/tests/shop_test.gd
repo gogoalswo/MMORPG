@@ -164,24 +164,25 @@ func _case_enhance() -> void:
 	me.gold = 10000
 	me.bag.append({"id": "w_fighter_00", "grade": 1, "enhance": 0, "options": []})
 
-	# +0 비용 64G, 낮은 구간은 안 부서진다
+	# **강화는 공짜이고 실패하면 무조건 파괴된다** (설계 4장). 재료도 값도 없으니
+	# 실패의 대가는 아이템 하나뿐이고, 도달 단계는 "아이템이 몇 개 들어오느냐" 로만
+	# 결정된다 — 그래서 드랍률이 경험치와 같은 급의 손잡이가 된다
 	var results := {"success": 0, "keep": 0, "destroy": 0}
+	var gold_before := int(me.gold)
 	for i in 20:
 		if me.bag.is_empty():
 			break
-		var before := int(me.gold)
 		w.npc_enhance("me", 0)
-		if int(me.gold) >= before:
-			_fail("골드를 안 썼다")
-			return
 		for e in w.drain_events():
 			if e.get("type", "") == "enhanceResult":
 				results[str(e.result)] += 1
-	if results.destroy > 0 and results.success + results.keep < 4:
-		_fail("낮은 구간에서 너무 빨리 부서졌다")
-	print("  강화 20회: 성공 %d · 유지 %d · 파괴 %d" % [
-		results.success, results.keep, results.destroy
-	])
+	if int(me.gold) != gold_before:
+		_fail("강화가 공짜인데 골드를 썼다 (%d -> %d)" % [gold_before, int(me.gold)])
+	if results.keep > 0:
+		_fail("유지가 나왔다 — 설계에는 유지 구간이 없다")
+	if results.success + results.destroy == 0:
+		_fail("강화가 한 번도 안 돌았다")
+	print("  강화 시도: 성공 %d · 파괴 %d" % [results.success, results.destroy])
 
 
 func _case_craft() -> void:

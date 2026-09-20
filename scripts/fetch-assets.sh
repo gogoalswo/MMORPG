@@ -166,4 +166,84 @@ for n in 1 2 3 4 5; do
   fi
 done
 
+# ------------------------------------------------------------ 가방·장비 아이콘
+
+# 바르코 커스텀 워크플로우 "인벤토리 UI" 의 출력물 11장. 연한 청백색 선화 한 벌이라
+# 창 안에서 서로 겉돌지 않는다. 배경이 검은 것과 흰 것이 섞여 있어(프롬프트마다 다르다)
+# build-item-icons.mjs 가 걷어내고 128px 로 굽는다 → public/assets/icons (커밋한다).
+#
+# glove·belt 는 **아직 어느 칸에 쓸지 안 정했다** — 받아만 두고 고도로는 안 넘긴다
+# (sync-godot-assets.mjs 의 ICONS). offhand(방패)는 2026-09-18 에 슬롯 자체를 없애
+# 받기는 하되 고도로 안 넘긴다. 테두리 둘(frame_*)은 같은 워크플로우에서 나중에 만들었다.
+mkdir -p assets-src/icons
+
+fetch_icon() { # $1=객체 해시  $2=출력 이름
+  if [ ! -f "assets-src/icons/$2.png" ]; then
+    echo "받는 중: icons/$2.png"
+    curl -sL --max-time 120 -o "assets-src/icons/$2.png" "${VARCO}/$1.png"
+  fi
+}
+
+fetch_icon 5e1236b3e6ad6dc7fec570a9bd187a9f weapon    # 검
+fetch_icon 5c25daa856bca458f26f703fe63424f4 offhand   # 방패
+fetch_icon 756fe1b855b1e5cff5038c21253b244a helmet    # 투구
+fetch_icon 0779fa082cdcbc922c8bf8104e9212ea armor     # 갑옷
+fetch_icon 9fc33631108021fa8ec41db82b8ed378 boots     # 장화
+fetch_icon 7798ba00c5755e15d7a9fa28c38083ef ring      # 반지
+fetch_icon 624e1a1a10e8576c2ce473e0155dd4f0 necklace  # 목걸이
+fetch_icon 5fd4ab55b5c3e682f35f8cf81b2a266d bag       # 가방
+fetch_icon 0f5c8a9b06c498361643b69fc4b3d97c gold      # 동전
+fetch_icon 36ce4590784bd702b644bcd409e50f0b glove     # 장갑 (미사용)
+fetch_icon dbc3fc75337294133bfc32ab2628ba5b belt      # 벨트 (미사용)
+# 창을 짓는 그림. 전부 9조각으로 늘여 쓴다 (game.gd 의 _frame_box).
+# 처음 구운 frame_panel·frame_slot 은 2026-09-18 에 ui_* 한 벌로 갈아치웠다 —
+# 판·칸·탭·단추가 한 벌로 맞아야 창이 임시로 안 보인다.
+# 2026-09-20 에 **HUD 아이콘 셋을 참고 그림으로 물려** 한 벌로 다시 뽑았다 —
+# 어두운 판 + 머리카락처럼 얇은 금테 + 상아빛 포인트. 옛 청록 조각을 갈아치운 것이다
+fetch_icon 3d1e49ad807577737bed8fa2449e8a8f ui_panel     # 창 바탕 (모서리 장식)
+fetch_icon 7fe4055eec2fdebd37b6dc157d4f30ae ui_subpanel  # 이름표·스탯 상자
+fetch_icon dac29087bdffce5bdaa23666f2872afe ui_slot      # 칸
+fetch_icon 1344b8afc27c134af2b2f5942b111bbf ui_tab_on    # 고른 탭 (상아빛 — 글자는 어둡게 얹는다)
+fetch_icon 757608f70e49e1a099e5f1cb2b67710f ui_tab_off   # 안 고른 탭
+fetch_icon 9768fc8560a2ece9c040596698357747 ui_button    # 단추
+fetch_icon 70f1e1a287f9e93cc1abb39f5759dccb ui_figure    # 장착 칸 사이 캐릭터
+# 스킬창·퀵슬롯 (2026-09-19). 조각 둘은 ui_slot 을 참고 그림으로 넣어 결을 맞췄다.
+# 스킬 아이콘은 **꽉 찬 그림**이라 배경을 걷지 않는다 (build-item-icons.mjs 의 FULL)
+fetch_icon 67616623f2d7038e61f1a6aa35f63113 ui_skill_slot  # 스킬창 장착 칸 (2026-09-20 에 창 결로 맞췄다)
+fetch_icon 09535596db087ab0c6d3b9de0ae6b086 ui_slot_pick   # 고른 칸 테두리 (안쪽을 뚫는다, 2026-09-20)
+fetch_icon 6688952f8b0187efe7f96935796fa7a8 skill_rising_kick
+fetch_icon 3335dffd51390210007c5b2eb5a8adb7 skill_tiger_roar
+fetch_icon 844c2e93d9c7b8f9d6c3717b2334b9ca skill_white_tiger
+fetch_icon 3d66ba0be1ec8bec0bc0b2a11fcce4f9 skill_sky_breaker
+fetch_icon 627417215a6f50209f7d0a20cbd1c607 skill_thunder_fall
+# 메인 HUD. 아트를 **두 번** 갈았다 — 처음 뽑은 두꺼운 금테가 "너무 두껍다" 는
+# 지적을 받고(2026-09-20), 받은 그림대로 **머리카락처럼 얇은 금선**과 **테 없는
+# 선화 아이콘**으로 다시 뽑았다. 아래 주소가 그 두 번째 것이다.
+#
+# 막대 채움은 **흰 것 한 장**이고 붉은 체력은 색만 입혀 쓴다.
+# 퀵슬롯 칸은 `ui_quick_slot` 으로 따로 둔다 — `ui_skill_slot` 을 덮으면
+# 스킬창 장착 칸까지 바뀌어 창 안에서 목록 칸(ui_slot)과 결이 어긋난다.
+# 막대 홈·배지·칸은 **안쪽이 어두운 채로** 받는다 (뚫으면 땅이 비친다)
+fetch_icon 9824f75b67284f12e744b40c4b54921f ui_bar_frame   # 체력 막대 홈 (얇은 금선)
+# 막대 채움(ui_bar_fill)은 **받지 않는다** — `build-item-icons.mjs` 가 직사각
+# 그라데이션으로 그려 낸다. 비스듬한 홈 모양으로 자르는 것은 고도가 마스크로 한다
+# 배지는 **푸른기가 돌아** 한 번 다시 뽑았다 (2026-09-20 지적: "레벨 UI 도 다른
+# UI 들이랑 비슷한 색상으로"). 안쪽이 #2d363d(슬레이트) 였던 것을 #202321 로 —
+# 프롬프트에 칸과 같은 값(#191a19)과 "NO blue, NO slate" 를 박아야 나온다
+fetch_icon b2d622d7beb6fab02b26d0725c6231a1 ui_level_badge # 레벨 배지 (얇은 금색 원 두 겹)
+fetch_icon 66d3b2ea079339e5a22b09546c956903 ui_quick_slot  # 퀵슬롯·자동사냥 칸 (얇은 선)
+# 아이콘 셋은 **밝게 칠한 것**이다 — 선화로 뽑았더니 어두운 실루엣이 되어
+# 밤 사냥터에서 묻혔다 (2026-09-20 지적). 프롬프트에 "FULLY COLORED and BRIGHT,
+# NOT a dark silhouette, NOT black" 을 넣어야 칠해서 준다
+# 아이콘 셋은 **받은 스크린샷을 참고 그림으로 물려** 뽑았다 (2026-09-20).
+# 상아빛 흰색 + 금색에 얇은 어두운 윤곽 — 받은 화면의 메뉴 아이콘과 같은 결이다
+fetch_icon e5157077f125b146e546c1c91b818096 ui_icon_skill  # 오른쪽 위 스킬 (펼친 책 + 룬)
+fetch_icon 7542d36d9687956d7335787965b4f16d ui_icon_bag    # 오른쪽 위 가방 (배낭)
+fetch_icon 9f519882b9a58b99a928564c0fb70efd ui_icon_auto   # 자동사냥 — 검 두 자루가 X자
+fetch_icon 74df64ad7717d61a8ba37c600568f827 ui_auto_spin   # 자동사냥 고리 (굵은 화살표 — 얇은 것은 안 보였다)
+fetch_icon 69c32b07ca637a710819a6ba08020abf ui_close       # 모든 창 오른쪽 위 닫기 X
+fetch_icon 029c2be72082608b40dfaf00bebe782a ui_portrait    # 옛 초상 테두리 (미사용 — 상태판을 내리면서 빠졌다)
+
+node scripts/build-item-icons.mjs
+
 echo "완료. 총 $(du -sh public/assets | cut -f1)"

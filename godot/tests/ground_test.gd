@@ -42,13 +42,13 @@ func _case_textures() -> void:
 	var missing: Array = []
 	for kind in kinds:
 		for suffix in ["color", "normal"]:
-			var path := "res://assets/ground/ground_%s_%s.ktx2" % [kind, suffix]
+			var path := "res://assets/textures/ground_%s_%s.ktx2" % [kind, suffix]
 			if not ResourceLoader.exists(path):
 				missing.append(path.get_file())
 	if not missing.is_empty():
 		_fail("없는 텍스처: %s — npm run sync:godot 을 돌렸나" % str(missing))
 	else:
-		var sample: Texture2D = load("res://assets/ground/ground_grass_color.ktx2")
+		var sample: Texture2D = load("res://assets/textures/ground_grass_color.ktx2")
 		print("  텍스처 %d종 x 2장, 풀 %dx%d" % [kinds.size(), sample.get_width(), sample.get_height()])
 
 

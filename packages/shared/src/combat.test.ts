@@ -27,7 +27,11 @@ test('직업마다 성격이 수치로 갈린다', () => {
 
   assert.ok(fighter.maxHp > mage.maxHp, '격투가가 마법사보다 단단하다');
   assert.ok(fighter.defense > archer.defense, '격투가가 궁수보다 방어가 높다');
-  assert.ok(mage.attack > archer.attack, '마법사 한 방이 더 아프다');
+  // 설계에서 마법사와 궁수는 공격 배수가 같다(1.35). 대신 궁수가 더 단단하고,
+  // 사거리(카이팅) 이점이 있어 공격 간격이 느리다 — 전투력은 ±10% 안에 든다
+  assert.equal(mage.attack, archer.attack, '마법사와 궁수는 공격 배수가 같다');
+  assert.ok(archer.maxHp > mage.maxHp, '궁수가 마법사보다 단단하다');
+  assert.ok(archer.defense > mage.defense, '궁수가 마법사보다 방어가 높다');
   assert.ok(archer.attackRange > fighter.attackRange, '궁수가 더 멀리 닿는다');
   assert.ok(fighter.attackCooldown < mage.attackCooldown, '격투가가 더 자주 때린다');
 
@@ -92,16 +96,15 @@ test('경험치는 음수로 줄지 않는다', () => {
   assert.equal(result.exp, 10);
 });
 
-test('레벨 차이가 크게 나면 보상이 줄고, 결국 0 이 된다', () => {
-  const even = expReward(10, 10, 100);
-  const weaker = expReward(6, 10, 100);
-  const trivial = expReward(1, 10, 100);
-  const harder = expReward(14, 10, 100);
-
-  assert.equal(even, 100, '동레벨이면 기본값 그대로');
-  assert.ok(weaker < even, '약한 몬스터는 덜 준다');
-  assert.equal(trivial, 0, '9레벨 이상 차이나면 아무것도 주지 않는다');
-  assert.ok(harder > even, '강한 몬스터는 더 준다');
+test('경험치에는 레벨 차이 보정이 없다', () => {
+  // 설계에서 경험치는 몬스터 HP 에 정비례한다 — 약한 몬스터는 HP 가 작아 이미
+  // 보상이 작으므로 따로 깎을 이유가 없다. 위쪽 한계는 경험치가 아니라 **사망**이
+  // 정한다(+20레벨이면 그룹을 정리하기 전에 죽는다).
+  for (const monsterLevel of [1, 6, 10, 14, 200]) {
+    assert.equal(expReward(monsterLevel, 10, 100), 100, `Lv${monsterLevel} 에서 깎였다`);
+  }
+  // 몬스터 HP 가 곧 보상이라, 아래 사냥터는 저절로 손해가 된다
+  assert.ok(MONSTER_KINDS['mob003']!.expReward < MONSTER_KINDS['mob098']!.expReward);
 });
 
 test('레벨업 직전 경험치는 다음 레벨로 이월된다', () => {
@@ -144,32 +147,10 @@ test('몬스터 경직은 공격 간격보다 짧다 — 때리는 사이에 쫓
 
 import { MONSTER_KINDS } from './monsters.ts';
 import { RUN_SPEED } from './constants.ts';
+import { killsPerLevel, monster as designMonster } from './balance.ts';
 
-/** 자기보다 이만큼까지 높은 몬스터는 상대할 만하다고 본다 */
-const REACH = 4;
-
-/** 그 레벨에서 고를 만한 몬스터 중 가장 경험치가 좋은 것 */
-function bestRewardAt(playerLevel: number): number {
-  let best = 0;
-  for (const kind of Object.values(MONSTER_KINDS)) {
-    // 보스는 3분에 한 마리라 꾸준한 사냥 계산에 넣으면 곡선이 왜곡된다
-    if (kind.boss) continue;
-    if (kind.level > playerLevel + REACH) continue;
-    best = Math.max(best, expReward(kind.level, playerLevel, kind.expReward));
-  }
-  return best;
-}
-
-/** 레벨별 필요 마릿수 */
-function killsPerLevel(): number[] {
-  const out: number[] = [];
-  for (let level = 1; level < MAX_LEVEL; level++) {
-    const reward = bestRewardAt(level);
-    assert.ok(reward > 0, `Lv${level} 에서 잡을 만한 몬스터가 없다`);
-    out.push(expToNext(level) / reward);
-  }
-  return out;
-}
+// 레벨당 필요 마릿수는 더 이상 여기서 재구성하지 않는다 — 설계(balance.ts)가
+// 목표 시간(2,880시간)에서 역산한 값을 갖고 있으므로, 그것과 맞물리는지만 본다
 
 test('필요 경험치는 레벨이 오를수록 늘어난다', () => {
   for (let level = 1; level < MAX_LEVEL; level++) {
@@ -190,26 +171,35 @@ test('몬스터 레벨이 5 간격으로 놓여 있다', () => {
   assert.ok(levels[levels.length - 1]! >= MAX_LEVEL - 4, '만렙 직전에 잡을 몬스터가 없다');
 });
 
-test('레벨당 필요 마릿수가 감당할 범위에 있다', () => {
-  const kills = killsPerLevel();
-  // 만렙 근처는 위에 잡을 몬스터가 없어 필연적으로 늘어난다. 최대값만 막고,
-  // 전체가 고르게 퍼졌는지는 중앙값으로 본다.
-  const worst = Math.max(...kills);
-  assert.ok(worst <= 26, `한 레벨에 ${worst.toFixed(1)}마리는 너무 많다`);
-
-  const sorted = [...kills].sort((a, b) => a - b);
-  const median = sorted[Math.floor(sorted.length / 2)]!;
-  assert.ok(median <= 16, `레벨당 중앙값이 ${median.toFixed(1)}마리다`);
-
-  // 첫 레벨은 몇 마리 안에 올라야 시작하자마자 손맛이 난다
-  assert.ok(kills[0]! <= 3, `첫 레벨업에 ${kills[0]!.toFixed(1)}마리가 필요하다`);
+test('필요 경험치와 몬스터 보상이 설계 곡선과 맞물린다', () => {
+  // `expToNext` 는 balance.ts 의 성장 곡선에서, 몬스터 보상은 같은 곳의 HP×0.2 에서
+  // 나온다. 둘을 나누면 설계가 정한 "레벨당 필요 킬 수" 가 그대로 나와야 한다 —
+  // 어느 한쪽만 손대면 여기서 걸린다
+  for (const level of [1, 11, 31, 91, 141, 191]) {
+    const perKill = designMonster(level).exp;
+    const got = expToNext(level) / perKill;
+    const want = killsPerLevel(level);
+    assert.ok(
+      Math.abs(got / want - 1) < 0.01,
+      `Lv${level}: ${Math.round(got)}마리인데 설계는 ${Math.round(want)}마리`
+    );
+  }
 });
 
-test('1 → 만렙 총량이 설계 범위 안이다', () => {
-  const total = killsPerLevel().reduce((a, b) => a + b, 0);
-  // 사냥터 20곳 × 10레벨 = Lv200 기준 약 3000마리로 잡았다.
-  // 곡선이나 몬스터 배치를 건드리면 여기서 걸린다.
-  assert.ok(total > 2500 && total < 3500, `총 ${Math.round(total)}마리 — 설계에서 벗어났다`);
+test('레벨당 마릿수는 초반이 가볍고 뒤로 갈수록 가파르다', () => {
+  // 첫 레벨은 138마리(2분), 마지막은 132만 마리(101시간). 초반 세 구간이 2 → 3 →
+  // 4.5분으로 완만히 오르고 Lv31 에서 ×2.3 뛰는데, 그 자리는 **의도적**이다 —
+  // Lv30 에 3번째 스킬이 열리고 Lv31 에 등급2 장비가 열려 두 단계 강해진다
+  assert.ok(killsPerLevel(1) < 200, `첫 레벨에 ${Math.round(killsPerLevel(1))}마리는 많다`);
+  // 한 사냥터 안에서는 요구량이 같으므로 **구간 경계**에서만 오른다
+  for (const field of [2, 4, 10, 16, 20]) {
+    const start = (field - 1) * 10 + 1;
+    assert.ok(
+      killsPerLevel(start) > killsPerLevel(start - 1),
+      `사냥터 ${field} 초입(Lv${start})에서 역전된다`
+    );
+  }
+  assert.ok(killsPerLevel(199) > killsPerLevel(1) * 1000, '마지막이 첫 레벨보다 훨씬 무겁다');
 });
 
 
@@ -244,12 +234,13 @@ test('공격 속도는 간격을 줄이되 0 으로 만들지 않는다', () => 
   assert.ok(effectiveCooldown(base, 99) > 0);
 });
 
-test('치명타 바탕값은 직업을 가리지 않는다', () => {
-  // 여기서 직업을 가르면 장비 때문인지 직업 때문인지 알 수 없게 된다
+test('치명타·공속은 맨몸에서 0 이다 — 전부 장비에서 온다', () => {
+  // 설계에서 치확은 목걸이, 공속은 반지 전담이다. 맨몸에 바탕값을 주면
+  // 등급 1~2 에서도 치명타가 터져 몬스터 HP 가 작은 초반에 타수 편차가 커진다
   for (const job of JOB_IDS) {
     const stats = statsFor(job, 50);
-    assert.equal(stats.crit, BASE_CRIT, `${job} 의 바탕 치명타가 다르다`);
-    assert.equal(stats.critDamage, BASE_CRIT_DAMAGE);
+    assert.equal(stats.crit, 0, `${job} 의 바탕 치명타가 0 이 아니다`);
+    assert.equal(stats.critDamage, 1, '맨몸 치명타 피해는 배수 1');
     assert.equal(stats.attackSpeed, 0, '공격 속도는 장비로만 얻는다');
   }
 });

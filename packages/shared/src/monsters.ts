@@ -11,6 +11,8 @@
  * 어긋난 건 한참 뒤에 "이 구간만 유독 어렵다"로만 나타난다.
  */
 
+import { ROLE_MULT, monster } from './balance.ts';
+
 export interface MonsterKind {
   id: string;
   name: string;
@@ -170,20 +172,30 @@ export function monsterIdFor(level: number): string {
 }
 
 /**
- * 레벨 하나에서 능력치를 뽑는다.
+ * 레벨 하나에서 능력치를 뽑는다 — **밸런스 설계의 역산값**이다
+ * ([balance.ts](balance.ts) 의 `monster(level, role)`).
  *
- * 방어가 √L 인 게 핵심이다. 선형으로 키우면 `computeDamage` 의 감쇠식
- * `def/(def+45)` 가 100% 로 포화해서 고레벨 전투가 한없이 길어진다 —
- * 선형이었을 때 200레벨에서 근접 직업이 43대를 때려야 했다. √L 이면 200까지 10~15대다.
+ * 2026-09-20 에 갈아끼웠다. 그 전에는 `HP = 20L + 40`, `공격 = 1.8L + 4`,
+ * `방어 = 2√L` 이라는 손으로 고른 식이었다. 설계는 **(레벨, 그 레벨의 기준 장비)**
+ * 에서 역산한다 — 레벨만으로 뽑으면 같은 레벨이라도 등급 4 유저와 등급 6 유저가
+ * 3배 차이라 후반에 의미가 없다.
+ *
+ * **공격력이 아주 작아 보이는 것이 정상이다.** 6마리가 동시에 때린다고 가정하고
+ * "한 그룹을 정리하는 동안 HP 50% 를 잃는다" 에서 역산하므로, 1:1 로는 120~150대를
+ * 맞아야 죽는다. 잡몹 한 마리는 위협이 아니고 **무리가 위협**인 구조다.
+ *
+ * 공격 간격은 설계가 1.5초 하나로 고정한다 — 몬스터 공격력이 그 간격에서 역산되므로
+ * 종마다 다르면 총량이 어긋난다. `strong` 은 사거리·이동 속도·크기에만 쓴다.
  */
 function statsForLevel(level: number, strong: boolean) {
+  const design = monster(level);
   return {
-    maxHp: Math.round(20 * level + 40),
-    attack: Math.round(1.8 * level + 4),
-    defense: Math.round(2 * Math.sqrt(level)),
-    expReward: Math.round(4 + 7 * level),
+    maxHp: Math.round(design.hp),
+    attack: Math.round(design.atk),
+    defense: Math.round(design.df),
+    expReward: Math.round(design.exp),
     attackRange: strong ? 2.2 : 1.9,
-    attackCooldown: strong ? 1000 : 1200,
+    attackCooldown: Math.round(design.interval * 1000),
     aggroRange: Math.round(Math.min(16, 9 + level * 0.04) * 10) / 10,
     leashRange: Math.round(Math.min(34, 22 + level * 0.06) * 10) / 10,
     moveSpeed: strong ? 4.4 : 3.6,
@@ -222,8 +234,12 @@ function buildKinds(): Record<string, MonsterKind> {
       accentColor: tier.bodyColor,
       boss: true,
       ...base,
-      maxHp: base.maxHp * 8,
-      attack: Math.round(base.attack * 1.25),
+      // 역할 배수는 설계표를 쓴다 (`ROLE_MULT.boss` — HP ×7 / 공격 ×5).
+      // **보스는 아직 설계 보류**라 이 배수는 자리만 잡아 둔 임시값이다. 일반 몬스터가
+      // 무리 기준으로 역산되어 1마리 공격력이 작으므로, 1:1 로 싸우는 보스는
+      // 공격력을 크게 올려야 위협이 된다
+      maxHp: Math.round(base.maxHp * ROLE_MULT.boss.hp),
+      attack: Math.round(base.attack * ROLE_MULT.boss.atk),
       // 도망칠 틈은 준다 — 사거리 밖으로 나가면 따라오지 않는다
       aggroRange: Math.min(18, base.aggroRange + 2),
       leashRange: Math.min(38, base.leashRange + 4),

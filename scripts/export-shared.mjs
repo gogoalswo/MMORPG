@@ -17,6 +17,7 @@ import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { balanceTable } from '../packages/shared/src/balance.ts';
 import {
   ZONES,
   MONSTER_KINDS,
@@ -58,6 +59,7 @@ import {
   ITEMS,
   EQUIP_SLOTS,
   SLOT_CODE,
+  slotLabel,
   JOB_SLOTS,
   INVENTORY_SIZE,
   GRADE_MIN,
@@ -104,6 +106,9 @@ export function buildData() {
       unlockAll: SKILL_UNLOCK_ALL,
       autoTestGapMs: AUTO_SKILL_TEST_GAP,
     },
+    // 밸런스 설계(stat-balance.md)의 수치. **아직 게임이 안 읽는다** — 판정은
+    // 여전히 combat.json 으로 돈다. 설계 문서 9장 순서대로 stats.gd 가 먼저 서야 한다
+    'balance.json': balanceTable(),
     'combat.json': {
       jobs: JOB_IDS,
       // [체력, 공격, 방어, 사거리, 공격간격, 레벨당 체력, 레벨당 공격, 레벨당 방어]
@@ -125,6 +130,8 @@ export function buildData() {
     'items.json': {
       items: ITEMS,
       slots: EQUIP_SLOTS,
+      // 창에 적는 칸 이름
+      slotLabels: Object.fromEntries(EQUIP_SLOTS.map((slot) => [slot, slotLabel(slot)])),
       // 드롭이 후보 id 를 만들 때 쓴다 (슬롯 코드 + 직업 + 단계)
       slotCode: SLOT_CODE,
       jobSlots: JOB_SLOTS,

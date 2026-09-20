@@ -44,21 +44,30 @@ static func roll_crit(chance: float, roll: float) -> bool:
 
 
 ## 직업·레벨로 스탯을 만든다. 바탕값 + 레벨당 x (레벨 - 1)
+## 맨몸 능력치 — **밸런스 설계의 복리 곡선**이다 (`Stats.base(L)` × 직업 배수).
+##
+## 2026-09-20 에 갈아끼웠다. 그 전에는 `jobStats` 의 선형 증가(레벨당 +2.4 공격 같은
+## 고정값)였는데, 레벨당 상대 성장이 초반 +18% / 후반 +0.5% 로 40배 차이가 나
+## "장비 비중" 의 기준이 사라진다. `jobStats` 는 이제 **사거리**만 쓴다.
+##
+## **치명타는 기본이 0 이다** — 설계에서 치확·치피는 목걸이 전담이라 장비에서만 온다
 static func stats_for(job: String, level: int) -> Dictionary:
 	var table: Dictionary = _c().get("jobStats", {})
 	if not table.has(job):
 		push_error("없는 직업: %s" % job)
 		return {}
 	var row: Array = table[job]
-	var steps := maxi(0, level - 1)
+	var b := Stats.base(level)
+	var m: Dictionary = GameData.balance().get("jobMult", {}).get(job, {})
 	return {
-		"maxHp": roundi(float(row[0]) + float(row[5]) * steps),
-		"attack": roundi(float(row[1]) + float(row[6]) * steps),
-		"defense": roundi(float(row[2]) + float(row[7]) * steps),
+		"maxHp": roundi(b["hp"] * float(m.get("hp", 1.0))),
+		"attack": roundi(b["atk"] * float(m.get("atk", 1.0))),
+		"defense": roundi(b["df"] * float(m.get("df", 1.0))),
 		"attackRange": float(row[3]),
-		"attackCooldown": float(row[4]),
-		"crit": float(_c().get("baseCrit", 0.05)),
-		"critDamage": float(_c().get("baseCritDamage", 1.5)),
+		# 설계의 직업별 공격 간격(초) → ms
+		"attackCooldown": roundi(float(m.get("interval", 1.0)) * 1000.0),
+		"crit": 0.0,
+		"critDamage": 1.0,
 		"attackSpeed": 0.0,
 	}
 
@@ -71,8 +80,14 @@ static func compute_damage(attack: float, defense: float) -> int:
 
 
 ## 다음 레벨까지 필요한 경험치
+## 다음 레벨까지 필요한 경험치 — **만렙까지 걸리는 시간에서 역산한 표**를 읽는다
+## (`data/balance.json` 의 expTable, 2,880시간 = 24시간 × 120일).
+## 그 전에는 `55 × 레벨^1.2` 라 사냥 속도와 무관했다
 static func exp_to_next(level: int) -> int:
-	return roundi(55.0 * pow(float(level), 1.2))
+	var table: Array = GameData.balance().get("expTable", [])
+	if table.is_empty():
+		return roundi(55.0 * pow(float(level), 1.2))
+	return maxi(1, int(table[clampi(level - 1, 0, table.size() - 1)]))
 
 
 ## 레벨과 남은 경험치를 다시 계산한다 (한 번에 여러 레벨이 오를 수 있다)
@@ -93,10 +108,9 @@ static func apply_exp(level: int, exp_now: int, gained: int) -> Dictionary:
 	return {"level": next_level, "exp": pool}
 
 
-## 레벨 차이에 따른 경험치 보정 — 약한 몬스터만 잡는 걸 막는다
-static func exp_reward(monster_level: int, player_level: int, base: float) -> int:
-	var gap := monster_level - player_level
-	if gap <= -8:
-		return 0
-	var scale := (1.0 + gap * 0.12) if gap >= 0 else (1.0 + gap * 0.11)
-	return maxi(1, roundi(base * maxf(0.1, scale)))
+## 몬스터가 주는 경험치. **레벨 차이 보정을 걷었다** (2026-09-20).
+##
+## 설계에서 경험치는 몬스터 HP 에 정비례하므로 약한 몬스터는 이미 보상이 작다 —
+## 따로 깎을 이유가 없다. 위쪽 한계도 경험치가 아니라 **사망**이 정한다
+static func exp_reward(_monster_level: int, _player_level: int, base: float) -> int:
+	return maxi(1, roundi(base))

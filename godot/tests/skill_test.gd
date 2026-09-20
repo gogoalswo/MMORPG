@@ -126,9 +126,11 @@ func _case_cast() -> void:
 		_fail("사거리 안인데 안 맞았다")
 		return
 
-	# 할퀴기 power 2.8, 격투가 Lv1 공격 12 -> 33.6, 들늑대 방어 3 -> 31 (치명타면 1.5배)
-	# 31.4999… 라 31 로 내려간다 — 33.6 이 이진수로 딱 떨어지지 않는다
-	var want: int = 47 if hit.crit else 31
+	# 스킬 피해도 설계 공식을 탄다 — 공격력 × 계수 × K / (K + 방어력).
+	# 맨몸에는 치명타가 없으므로(설계: 치확·치피는 목걸이 전담) 치명타면 배수만 곱한다
+	var power := float(Skills.get_skill("fighter", "rising_kick").get("power", 1.0))
+	var plain := roundi(Stats.damage(float(me.stats.attack) * power, int(me.level), float(mob.defense)))
+	var want: int = roundi(plain * float(me.stats.critDamage)) if hit.crit else plain
 	if int(hit.amount) != want:
 		_fail("피해가 %d 여야 하는데 %d" % [want, hit.amount])
 	elif str(hit.get("skill", "")) != "rising_kick":

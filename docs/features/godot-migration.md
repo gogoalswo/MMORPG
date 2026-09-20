@@ -20,6 +20,7 @@ three.js 웹 클라이언트를 **고도 엔진으로 갈아타는 중**이다. 
 | `godot/world/world.gd` | **판정.** `ZoneRoom.ts` 의 자리다. 네트워크 얘기가 없다 |
 | `godot/world/movement.gd` | `shared/movement.ts` 이식본. TS 와 값이 같아야 한다 |
 | `godot/world/combat.gd` | `shared/combat.ts` 이식본 — 피해·치명타·경직·경험치. **수치는 `data/combat.json` 에서 읽는다** |
+| `godot/world/stats.gd` | ★ `shared/balance.ts`+`gear.ts` 이식본 — 밸런스 설계의 레벨 곡선·피해 공식·몬스터 역산·장비 등급. **아직 판정에 안 쓴다** → [stat-balance.md](stat-balance.md) |
 | `godot/world/skills.gd` | `shared/skills.ts` 의 규칙 이식본 — 배울 수 있나·쿨타임·터지는 반경 |
 | `godot/world/items.gd` | `shared/items.ts` 이식본 — 등급·랜덤옵션·강화·드롭 |
 | `godot/world/game_data.gd` | `data/*.json` 로더 |
@@ -39,6 +40,7 @@ three.js 웹 클라이언트를 **고도 엔진으로 갈아타는 중**이다. 
 | `godot/world/build.gd` | 빌드 표시와 "새 빌드 있음" 확인 |
 | `scripts/sync-godot-assets.mjs` | `public/assets` → `godot/assets` 복사. 모델은 텍스처를 줄여 넣는다 (`npm run sync:godot`) |
 | `scripts/shrink-glb-textures.mjs` | `.glb` 안 텍스처를 512px 로 줄인다 |
+| `scripts/build-item-icons.mjs` | 바르코 아이콘 원본의 배경을 걷고 128px 로 굽는다 → `public/assets/icons` |
 | `scripts/build-korean-font.py` | 한글 폰트를 완성형 2350자로 줄인다. 결과물은 커밋한다 |
 | `godot/tests/*.gd` | 헤드리스 검사 — 이동 공식·World·터치 이동·몬스터 |
 | `godot/export_presets.cfg` | 안드로이드·웹 익스포트 설정. **비밀은 없다** — 아래 "서명" 참고 |
@@ -122,6 +124,10 @@ TS 에 남으니 표가 어긋나면 `npm test` 가 잡는다. 전부 GDScript �
 
 **쓰는 것만 복사한다.** 웹 빌드는 `godot/assets/` 를 통째로 담는다. 직업이 늘면
 `sync-godot-assets.mjs` 의 `MODELS` 에 줄을 더한다.
+
+가방 창 아이콘과 창을 짓는 그림(`ui_*`)은 같은 파일의 `ICONS` 다. **이쪽은 커밋한다**
+— 128~384px PNG 열다섯 장이 합쳐 376KB 라 이력에 남겨도 부담이 없고, 원본(1024²)만
+커밋하지 않는다 → [inventory-equipment.md](inventory-equipment.md) 의 "아이콘".
 
 ### 텍스처를 512px 로 줄여서 넣는다 ★
 
@@ -478,8 +484,16 @@ set GODOT_DIR=D:\godot  둘 곳을 바꾼다 (기본 C:\godot)
    (86MB). 푼 뒤 `godot.exe` 로 이름을 바꾸고 **콘솔용 exe(`..._console.exe`)와 zip 은 지운다.**
    두 번째 실행부터는 통째로 건너뛴다.
 2. `git pull --ff-only` — **지금 체크아웃된 브랜치**를 받는다. git 이 없으면 있는 코드로 돈다.
-3. 에셋을 `godot/assets` 로 복사한다. `npm run sync:godot` 과 달리 **텍스처를 512 로 줄이지
-   않는다** — 줄이는 건 폰 pck 용량 때문이고 PC 는 원본이 낫다. 덕분에 Node 도 `sharp` 도 필요 없다.
+3. **`public/assets` 를 통째로 미러링한다** (`xcopy /E`). 폴더를 손으로 나열하다가
+   `icons/`·`ui/` 를 빠뜨려 PC 실행이 빨간 오류와 맨 글자로 떴다 (2026-09-19). 이제
+   **새 에셋 폴더가 생겨도 이 배치는 안 고쳐도 된다.**
+   - 그래서 양쪽 폴더 이름을 같게 맞췄다 — 고도가 찾던 `assets/ground` 를
+     **`assets/textures`** 로 바꿔 원본(`public/assets/textures`)과 같게 했다.
+     이름이 어긋나면 미러링에 예외가 생기고, 예외가 바로 빠뜨리는 자리가 된다.
+   - `npm run sync:godot` 과 달리 **텍스처를 512 로 줄이지 않고 빼는 것도 없다** —
+     줄이고 거르는 건 폰 pck 용량 때문이고 PC 는 원본이 낫다. Node 도 `sharp` 도 필요 없다.
+   - 그래서 `play.bat` 뒤에 바로 `npm run test:godot` 을 돌리면 `model_test` 가
+     "텍스처가 1024px 다" 로 걸린다. 검사가 맞는 것이니 **테스트 전에 `npm run sync:godot`** 을 돌린다.
 4. `--headless --import` **를 반드시 먼저 돌린다.** 임포트 캐시(`godot/.godot/`)가 없으면
    `class_name` 을 못 찾아 `game.gd` 가 파싱 오류로 죽는다 (2026-09-17 에 확인).
 5. `godot --path godot` 으로 띄운다.

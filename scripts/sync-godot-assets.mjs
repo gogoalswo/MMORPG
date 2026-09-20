@@ -31,6 +31,36 @@ const UI = ['panel.png', 'gate_here.png', 'gate_go.png'];
 const FONTS = ['NotoSansKR-subset.ttf'];
 
 /**
+ * 가방·장착 창 아이콘과 테두리. 바르코로 만들고 `scripts/build-item-icons.mjs` 가
+ * 배경을 걷어 구운 것이다 (public/assets/icons).
+ *
+ * **쓰는 것만 복사한다.** 슬롯 6칸이 전부 그림을 갖췄다. 받아 둔 장갑(glove)·
+ * 벨트(belt)는 어느 칸에 쓸지 안 정해서 뺐고, 보조(offhand)는 슬롯 자체를 없앴다.
+ */
+const ICONS = [
+  'weapon.png', 'armor.png', 'helmet.png',
+  'boots.png', 'necklace.png', 'ring.png',
+  'bag.png', 'gold.png',
+  // 창을 짓는 그림들. 9조각으로 늘여 쓴다 (game.gd 의 _frame_box)
+  'ui_panel.png', 'ui_subpanel.png', 'ui_slot.png',
+  'ui_tab_on.png', 'ui_tab_off.png', 'ui_button.png',
+  // 장착 칸 사이에 서는 캐릭터 그림자
+  'ui_figure.png',
+  // 스킬창·퀵슬롯 — 칸 테두리, 고른 칸 표시, 격투가 스킬 아이콘 (이름 = skill_<id>)
+  'ui_skill_slot.png', 'ui_slot_pick.png',
+  'skill_rising_kick.png', 'skill_tiger_roar.png', 'skill_white_tiger.png',
+  'skill_sky_breaker.png', 'skill_thunder_fall.png',
+  // 메인 HUD — 왼쪽 위 상태판(초상 테두리·막대 홈·막대 채움),
+  // 오른쪽 위 메뉴 단추 둘, 자동사냥 칸과 켜졌을 때 도는 고리
+  // 2026-09-20 에 받은 그림대로 어두운 쇠 + 금테로 갈아 끼웠다 (막대·칸·단추),
+  // 레벨 배지가 새로 들어왔고 초상(ui_portrait)은 빠졌다
+  'ui_bar_frame.png', 'ui_bar_fill.png', 'ui_level_badge.png', 'ui_quick_slot.png',
+  'ui_icon_skill.png', 'ui_icon_bag.png', 'ui_icon_auto.png', 'ui_auto_spin.png',
+  // 모든 창의 오른쪽 위 닫기 X (2026-09-20)
+  'ui_close.png',
+];
+
+/**
  * 바닥 텍스처 7종(색 + 노멀). **고도가 .ktx2 를 그대로 읽는다** — 시험해 보고
  * 확인했다 (2026-09-17). 일곱 장을 전부 넣는다: 존마다 받으면 존 구성이
  * 비동기가 되는데 그만한 크기가 아니다 (14장 2.5MB).
@@ -55,7 +85,10 @@ const jobs = [
   },
   { names: UI, from: join(ROOT, 'public', 'assets', 'ui'), to: join(ROOT, 'godot', 'assets', 'ui') },
   { names: FONTS, from: join(ROOT, 'public', 'assets', 'fonts'), to: join(ROOT, 'godot', 'assets', 'fonts') },
-  { names: GROUND, from: join(ROOT, 'public', 'assets', 'textures'), to: join(ROOT, 'godot', 'assets', 'ground') },
+  { names: ICONS, from: join(ROOT, 'public', 'assets', 'icons'), to: join(ROOT, 'godot', 'assets', 'icons') },
+  // 보내는 쪽과 받는 쪽 폴더 이름을 같게 둔다 — play.bat 이 public/assets 를 통째로
+  // 미러링하므로, 이름이 어긋나면 PC 에서만 바닥이 빠진다 (2026-09-19 에 맞췄다)
+  { names: GROUND, from: join(ROOT, 'public', 'assets', 'textures'), to: join(ROOT, 'godot', 'assets', 'textures') },
 ];
 
 let copied = 0;

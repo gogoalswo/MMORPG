@@ -32,6 +32,8 @@ const PORTAL_LOOK := 2.4
 const PORTAL_DISTANCE := 9.0
 ## 몇 프레임째를 찍나. 소용돌이는 계속 돌므로 한 바퀴를 고르게 나눈다
 const PORTAL_SHOTS := [4, 12, 20, 28]
+## `hud` 로 찍을 때. 고리가 도는지 보려면 몇 프레임 떨어뜨려 찍어야 한다
+const HUD_SHOTS := [6, 20, 40]
 
 
 func _init() -> void:
@@ -58,6 +60,17 @@ func _run() -> void:
 	# 차원문 창 — 이펙트가 아니라 UI 다. HUD 에 안 가리는지, 누른 줄이 눌려 보이는지
 	if skill == "gate":
 		await _gate(game)
+		return
+
+	# HUD 는 시전할 것이 없다 — 액션바를 채우고 자동사냥을 켠 채로 찍는다
+	# (켜져 있어야 자동사냥 칸에서 고리가 돈다)
+	if skill == "hud":
+		await _hud(game)
+		return
+
+	# 창은 열어 놓고 한 장만 찍는다 — 움직이는 것이 없다
+	if skill == "bag" or skill == "skills":
+		await _window(game, skill)
 		return
 
 	var player: Dictionary = game._transport._world._players[game._transport.my_id()]
@@ -124,6 +137,56 @@ func _press_event(at: Vector2) -> InputEventMouseButton:
 	event.position = at
 	event.pressed = true
 	return event
+
+
+## 메인 HUD — 왼쪽 위 상태판, 오른쪽 위 메뉴, 아래 가운데 퀵슬롯과 자동사냥 칸.
+## **고리가 도는 것을 보려면 여러 장이 필요하다** — 한 장만으로는 멈춘 그림과 같다
+func _hud(game: Node3D) -> void:
+	var player: Dictionary = game._transport._world._players[game._transport.my_id()]
+	player["level"] = LEVEL
+	player["skill_points"] = 99
+	player["exp"] = int(Combat.exp_to_next(LEVEL) * 0.4)
+	for skill in Skills.for_job(str(player.get("job", "fighter"))).slice(0, 4):
+		game._transport.send(&"learnSkill", {"skill": skill})
+	game._transport.send(&"setSkillBar", {"bar": Skills.for_job(str(player.get("job", "fighter"))).slice(0, 4)})
+	game._transport.send(&"autoHunt", {"on": true})
+	# 체력이 가득이면 막대가 줄어드는 모습을 못 본다 — 3/5 로 깎아 둔다
+	await process_frame
+	player["hp"] = int(float(player["hp"]) * 0.6)
+
+	var frame := 0
+	var taken := 0
+	while taken < HUD_SHOTS.size():
+		await process_frame
+		frame += 1
+		if frame in HUD_SHOTS:
+			await RenderingServer.frame_post_draw
+			var img := root.get_texture().get_image()
+			img.save_png("res://../logs/shot_%02d.png" % frame)
+			taken += 1
+			print("logs/shot_%02d.png  (고리 각 %.2f)" % [frame, game._auto_spin.rotation])
+	quit(0)
+
+
+## 가방창·스킬창. 조각(판·칸·탭·단추)을 갈아 끼웠을 때 테가 뭉개지지 않는지
+## 눈으로 본다 — 글자가 상자 밖으로 나오는 것은 수치로 안 잡힌다 (2026-09-19 경험)
+func _window(game: Node3D, which: String) -> void:
+	var player: Dictionary = game._transport._world._players[game._transport.my_id()]
+	player["level"] = LEVEL
+	player["skill_points"] = 99
+	if which == "skills":
+		for skill in Skills.for_job(str(player.get("job", "fighter"))).slice(0, 4):
+			game._transport.send(&"learnSkill", {"skill": skill})
+		game._toggle_skills()
+	else:
+		game._toggle_bag()
+	for i in 6:
+		await process_frame
+	await RenderingServer.frame_post_draw
+	var img := root.get_texture().get_image()
+	img.save_png("res://../logs/shot_%s.png" % which)
+	print("logs/shot_%s.png" % which)
+	quit(0)
 
 
 ## 차원문 소용돌이. 문 **밖**에 서야 한다 — 안에 서면 `gate` 이벤트가 창을 열어

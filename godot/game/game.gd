@@ -11,6 +11,76 @@ extends Node3D
 
 const STOP_DISTANCE := 0.15
 
+## 가방·장비 창. 가방 격자는 5열 — 웹 클라의 COLUMNS 와 같다
+## (docs/features/inventory-equipment.md). 장비는 8칸이라 4열 두 줄로 떨어진다
+const BAG_COLUMNS := 5
+## 가방에서 한 번에 보이는 줄. 나머지는 끌어 올린다
+const BAG_ROWS := 3
+## 칸 한 변. 1280x720 안에 장착 두 줄 + 캐릭터 + 가방 5열이 들어가는 크기다.
+## **칸 크기를 제대로 세고 나니 창이 화면을 꽉 채워** 88 에서 줄였다 (2026-09-20)
+const CELL := 74
+## 칸 테두리 안쪽 여백. 칸의 실제 크기는 `CELL + 이것 * 2` 다
+const BAG_CELL_PAD := 6
+## 가방 격자 칸 사이
+const BAG_GRID_GAP := 4
+## 세로 스크롤바가 먹는 폭
+const SCROLLBAR_W := 14
+## 스킬 칸. 퀵슬롯은 엄지로 누르니 조금 더 크다. 아이콘은 테두리 안쪽으로 SKILL_INSET 만큼 물린다.
+## **HUD 는 2026-09-20 에 한 번 줄였다** — 화면을 너무 먹었다. 창 칸(SKILL_CELL)은 그대로다
+const QUICK_CELL := 52
+const SKILL_CELL := 100
+const SKILL_COLUMNS := 4
+const SKILL_GAP := 10
+const SKILL_INSET := 5
+## 퀵슬롯 위 한 묶음 (2026-09-20 요청). 레벨 배지 한 변과 체력 막대 높이다.
+## **막대 길이는 안 정한다** — 세로 상자가 가장 넓은 자식(퀵슬롯 줄)에 맞춰 준다.
+## 막대는 **테두리 두께의 두 배보다 높아야 한다** — 34 에 여백 18 을 주었더니
+## 위아래 조각이 겹쳐 홈이 안 보였다 (2026-09-20, 찍어서 봤다)
+const LEVEL_BADGE := 50
+## 막대 높이. **글자가 들어갈 만큼은 남겨야 한다** — 반으로 줄이면서 안쪽 여백
+## (`BAR_PAD`)도 같이 줄였다 (2026-09-20)
+const HP_BAR_H := 22
+## 막대 테두리 그림에서 테가 차지하는 두께 (9조각 여백). 얇은 선이라 작게 준다
+const BAR_FRAME_MARGIN := 5
+## (채움은 직사각이라 여백이 필요 없다 — 홈이 `clip_children` 으로 잘라 준다)
+## 막대 테두리 안쪽 여백 — 채움이 테를 덮으면 홈이 아니라 판으로 보인다
+## 막대 테두리 안쪽 여백. **0 이다** — 조금이라도 주면 채움과 테 사이에 홈 바닥이
+## 띠로 비쳐 "빈 공간" 으로 보인다 (2026-09-20 지적)
+const BAR_PAD := 0
+## 오른쪽 위 메뉴 단추 (스킬·가방). 엄지로 누르니 퀵슬롯과 비슷한 크기다.
+## **테두리가 없다** — 받은 그림이 그렇다 (2026-09-20). 그래서 아이콘을 거의 꽉 채운다
+const MENU_BTN := 62
+const MENU_INSET := 3
+## 창 닫기 X. **모든 창이 오른쪽 위에 이것 하나를 둔다** (2026-09-20 요청)
+const CLOSE_BTN := 44
+## 창 테두리(PANEL_MARGIN 26)보다 안쪽으로 들여야 모서리 장식에 안 걸친다
+const CLOSE_PAD := 24
+## 퀵슬롯 칸 테두리가 차지하는 두께. 받은 그림의 칸은 **머리카락처럼 얇은 선**이라
+## 26 으로 그리면 테가 칸을 먹는다 (2026-09-20 지적). 창 칸은 26 그대로다
+const QUICK_MARGIN := 6
+## 창 바탕 테두리 두께. 48 로 두면 얇은 금테 그림에서는 안쪽 여백이 그만큼 커져
+## **가방 한 줄이 창 밖으로 밀린다** (2026-09-20, 찍어서 봤다)
+const PANEL_MARGIN := 26
+## 자동사냥 고리가 한 바퀴 도는 속도(라디안/초)
+const SPIN_SPEED := 1.6
+## 자동사냥 칸의 아이콘만 더 물린다. 퀵슬롯과 같은 11 로 두면 고리가 아이콘 위를
+## 덮어 검이 안 보였다 (2026-09-19). 고리가 얇아진 뒤로는 덜 물려도 된다 (2026-09-20)
+## 자동사냥 칸은 **퀵슬롯보다 크다** — 고리가 작아서 안 보인다는 지적을 받았다
+## (2026-09-20). 테가 없으니 커도 스킬 칸으로 안 보인다
+const AUTO_CELL := 64
+const AUTO_INSET := 13
+## 퀵슬롯 줄과 자동사냥 칸 사이를 얼마나 띄우나
+const AUTO_GAP := 8
+## 고리를 칸 바닥에서 얼마나 띄우나 (글자 자리)
+const SPIN_LIFT := 13
+## 화면 맨 아래 경험치 게이지 높이. 가운데에 퍼센트를 적으므로 글자가 들어갈 만큼은 된다
+const EXP_GAUGE_H := 20
+const ICON_DIR := "res://assets/icons/"
+## 가방 탭. 0 은 전체, 나머지는 `_tab_keeps` 가 슬롯으로 가른다
+const BAG_TABS := ["전체", "무기", "방어구", "장신구", "재료"]
+## 스탯 상자에 놓는 여섯 개. 순서가 `_redraw_bag` 의 목록과 같아야 한다
+const STAT_NAMES := ["공격력", "방어력", "체력", "치명타", "치명타 피해", "공격 속도"]
+
 var _transport: Transport
 var _player: Node3D
 ## 기둥은 가운데가 원점이라 반만큼 띄워야 하고, 모델은 발이 원점이다
@@ -26,6 +96,7 @@ var _last_delta := 0.0
 ## 공격 동작을 언제까지 트나 (서버가 준 경직 시간)
 var _swing_until := 0
 var _camera: CameraRig
+## 존 이름·골드·fps·빌드가 적히는 줄. 상태판 아래에 깔린다
 var _label: Label
 var _marker: MeshInstance3D
 
@@ -57,7 +128,13 @@ const MOB_BAR_MS := 5000
 ## 마지막으로 일어난 일 한 줄 (맞았다·레벨 올랐다)
 var _last_event := ""
 var _ui_root: Control
-var _hp_bar: ProgressBar
+## 퀵슬롯 위 한 묶음 — 레벨 배지 안 숫자, 체력 막대와 그 위 숫자, 경험치 퍼센트
+var _level_label: Label
+## 화면 맨 아래를 가로지르는 경험치 게이지 (2026-09-20 요청)
+var _exp_bar: TextureProgressBar
+var _hp_bar: TextureProgressBar
+var _hp_text: Label
+var _exp_text: Label
 ## 맞았을 때 화면 가장자리가 붉어지는 비네트 (game/hurt_flash.gd)
 var _hurt: HurtFlash
 var _gate_panel: GatePanel
@@ -71,12 +148,68 @@ var _npc_tab := ""
 var _npc_items: Array = []
 ## 액션바 4칸. 눌리면 그 스킬을 쓴다
 var _bar_buttons: Array = []
-## 자동 사냥 토글. 글자와 색은 **서버가 준 me.auto** 로만 정한다 —
-## 눌린 것으로 지레 바꾸면 판정이 거절했을 때 화면만 켜진 채로 남는다
-var _auto_button: Button
+## 칸마다 지난 프레임에 쿨타임이 돌고 있었나 — 끝나는 순간을 잡아 번쩍인다
+var _bar_cooling: Array = []
+## 테스트 스위치 단추 — 이름 → Button
+var _switch_buttons: Dictionary = {}
+## 테스트 무적 단추. 글자는 **스냅샷(me.invincible)** 만 보고 그린다 (자동사냥과 같다)
+var _invincible_button: Button
+## 자동 사냥 칸. 퀵슬롯 옆에 같은 모양으로 붙는다. 켜짐 표시는 **서버가 준
+## me.auto** 로만 정한다 — 눌린 것으로 지레 바꾸면 판정이 거절했을 때 화면만
+## 켜진 채로 남는다
+var _auto_cell: PanelContainer
+## 켜져 있는 동안 칸 위에서 도는 화살표 고리
+var _auto_spin: TextureRect
+## 오른쪽 위 메뉴 단추 둘 (스킬·가방)
+var _menu_cells: Array = []
 var _skill_panel: PanelContainer
+## 스킬창. 틀은 한 번 짓고 `_redraw_skills` 가 채운다
+var _skill_big: PanelContainer
+var _skill_name: Label
+var _skill_info: Label
+var _skill_state: Label
+var _skill_desc: Label
+var _skill_equip: Button
+var _skill_unequip: Button
+var _skill_grid: GridContainer
+## 목록 칸과 그 칸의 스킬 id (같은 순서). 직업이 바뀌면 다시 짓는다
+var _skill_cells: Array = []
+var _skill_ids: Array = []
+## 창 안의 장착 칸 (퀵슬롯과 같은 순서)
+var _slot_cells: Array = []
+## 고른 스킬 id. 왼쪽 설명이 이것을 보여 준다
+var _skill_pick := ""
+## 4칸이 다 찬 채로 장착을 눌렀다 — 다음에 누르는 장착 칸과 바꾼다
+var _skill_swap := false
+## 가방·장비 창. 틀은 한 번만 짓고 `_redraw_bag` 이 내용만 채운다
 var _bag_panel: PanelContainer
-var _bag_rows: VBoxContainer
+
+## **설계 재현 창** — 레벨·등급·강화를 강제로 맞추고, 그 조건에서 설계가 말하는
+## 값(그룹 정리 시간·HP 손실·몬스터 수치)을 같이 보여 준다. 설계 문서 9장 5번
+var _debug_panel: PanelContainer
+var _debug_text: Label
+var _debug_level := 100
+var _debug_grade := 4
+var _debug_enhance := 3
+var _bag_head: Label
+var _bag_gold: Label
+var _bag_sum: Label
+var _bag_grid: GridContainer
+var _bag_detail: Label
+var _bag_action: Button
+## 고른 칸 — {"where": "equip"|"bag", "index": int}. 비면 아무것도 안 골랐다
+var _bag_pick: Dictionary = {}
+## 아이콘을 한 번만 찾아 기억해 둔다 (없는 것도 기억한다)
+var _icon_cache: Dictionary = {}
+## 장착 칸. 캐릭터를 사이에 두고 두 줄로 갈라 세우므로 격자가 아니라 목록으로 든다
+var _gear_cells: Array = []
+var _bag_level: Label
+var _stat_labels: Array = []
+var _tab_buttons: Array = []
+## 지금 고른 탭 (BAG_TABS 의 번호)
+var _bag_tab := 0
+## 보이는 칸이 가방 몇 번째인지. 탭으로 거르면 둘이 어긋난다
+var _bag_view: Array = []
 
 
 func _ready() -> void:
@@ -126,6 +259,8 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			_show_skill(payload)
 		&"skills":
 			_last_event = "스킬을 배웠습니다"
+			if _skill_panel.visible:
+				_redraw_skills()
 		&"loot":
 			var got := str(payload.get("item", {}).get("id", ""))
 			if got == "":
@@ -140,7 +275,8 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			if _npc_panel.visible:
 				_redraw_npc()
 		&"skillBar":
-			pass
+			if _skill_panel.visible:
+				_redraw_skills()
 		&"notice":
 			_last_event = str(payload.get("text", ""))
 		&"gate":
@@ -211,33 +347,709 @@ func _build_persistent() -> void:
 	_hurt = HurtFlash.new()
 	_ui_root.add_child(_hurt)
 
+	# 존 이름·골드·몬스터 수·fps·빌드. **체력·레벨·경험치는 여기서 지웠다** —
+	# 퀵슬롯 위 묶음이 보여 준다. 빌드 표시는 남긴다 (지금 보는 것이 어느 빌드인지)
 	_label = Label.new()
 	_label.position = Vector2(24, 24)
+	_label.add_theme_font_size_override("font_size", 16)
 	_ui_root.add_child(_label)
-
-	_hp_bar = ProgressBar.new()
-	_hp_bar.position = Vector2(24, 150)
-	_hp_bar.size = Vector2(360, 34)
-	_hp_bar.show_percentage = false
-	_ui_root.add_child(_hp_bar)
 
 	_build_gate_panel()
 	_build_npc_panel()
 	_build_skill_bar()
 	_build_skill_panel()
+	_build_test_switches()
 	_build_bag_panel()
+	_build_debug_panel()
+
+	# **모든 창의 닫기는 오른쪽 위 X 하나로 통일한다** (2026-09-20 요청).
+	# 창이 다 지어진 뒤에 얹어야 자식 맨 뒤라 창 위에 그려진다
+	_close_button(_bag_panel, _toggle_bag)
+	_close_button(_skill_panel, _toggle_skills)
+	_close_button(_npc_panel, func() -> void: _npc_panel.visible = false)
 
 
-## 가방과 장비. 웹 클라의 ui/inventory.ts 자리다.
-## 목록은 **열 때마다 다시 그린다** — 줍고 끼는 동안 계속 바뀌기 때문이다
+## 레벨 배지와 경험치 — **퀵슬롯 위 묶음의 맨 윗 두 줄**이다 (2026-09-20 요청,
+## 받은 그림대로). 배지 안에 레벨 숫자를 크게 넣고, 바로 아래에 경험치를
+## 퍼센트로 적는다. 막대로 두지 않은 것도 요청이다 — 받은 그림이 그렇다
+func _build_level_badge(parent: Node) -> void:
+	# **배지는 9조각으로 늘이지 않는다** ★ 9조각은 가운데를 늘여 채우므로 둥근 테가
+	# 사라지고 좌우 날개만 남았다 (2026-09-20, 찍어서 봤다). 그림 한 장을 비율 그대로
+	# 깔고 그 위에 숫자를 얹는다 — 창 테두리(늘여 쓰는 것)와 다른 쓰임이다
+	var badge := Control.new()
+	badge.custom_minimum_size = Vector2(LEVEL_BADGE, LEVEL_BADGE)
+	badge.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(badge)
+
+	var ring := _icon("ui_level_badge")
+	if ring != null:
+		var rect := TextureRect.new()
+		rect.texture = ring
+		rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+		badge.add_child(rect)
+
+	_level_label = Label.new()
+	_level_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_level_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_level_label.add_theme_font_size_override("font_size", 13)
+	_level_label.add_theme_constant_override("outline_size", 7)
+	_level_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	_level_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	badge.add_child(_level_label)
+
+	# 퍼센트 글자는 **화면 맨 아래 띠 가운데**로 옮겼다 (2026-09-20 요청) —
+	# 여기(배지 아래)에는 아무것도 두지 않는다
+
+
+## 화면 맨 아래를 가로지르는 경험치 게이지 ★ 받은 그림(2026-09-20)대로 **가는 띠**를
+## 화면 바닥에 깐다. 홈(테두리)을 두르지 않는다 — 화면 끝까지 닿아야 해서다.
+##
+## 퍼센트 글자는 배지 아래에 그대로 둔다 (`_exp_text`) — 띠만으로는 몇 퍼센트인지
+## 읽을 수 없고, 받은 그림에도 글자와 띠가 둘 다 있다
+func _build_exp_gauge() -> void:
+	_exp_bar = TextureProgressBar.new()
+	_exp_bar.fill_mode = TextureProgressBar.FILL_LEFT_TO_RIGHT
+	_exp_bar.nine_patch_stretch = true
+	var gauge_fill := _icon("ui_bar_fill")
+	_exp_bar.texture_progress = gauge_fill if gauge_fill != null else _white(16)
+	_exp_bar.tint_progress = Color("#e8c14a")
+	# 아직 안 채운 쪽 — 체력 막대 홈 바닥과 같은 톤이라야 한 벌로 보인다
+	_exp_bar.texture_under = _exp_bar.texture_progress
+	_exp_bar.tint_under = Color("#26241f")
+	_exp_bar.step = 0.0
+	_exp_bar.custom_minimum_size = Vector2(0, EXP_GAUGE_H)
+	_exp_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ui_root.add_child(_exp_bar)
+	# 앵커만 잡고 **여백을 손으로 준다** — `PRESET_MODE_MINSIZE` 로 두면 띠가 화면
+	# 아래로 제 높이만큼 삐져나간다 (2026-09-20, 테스트가 잡았다)
+	_exp_bar.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	_exp_bar.offset_left = 0.0
+	_exp_bar.offset_right = 0.0
+	_exp_bar.offset_top = -EXP_GAUGE_H
+	_exp_bar.offset_bottom = 0.0
+
+	# 퍼센트는 **띠 가운데**에 적는다 (2026-09-20 요청)
+	_exp_text = Label.new()
+	_exp_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_exp_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_exp_text.add_theme_font_size_override("font_size", 12)
+	_exp_text.add_theme_constant_override("outline_size", 5)
+	_exp_text.add_theme_color_override("font_outline_color", Color.BLACK)
+	_exp_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_exp_text.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_exp_bar.add_child(_exp_text)
+
+
+## 막대 하나 — 홈(9조각) 안에 채움을 깔고, **그 위에 금테를 다시 얹고**, 숫자를 얹는다.
+## `{"frame": PanelContainer, "bar": TextureProgressBar, "text": Label}`
+func _make_bar(height: int, tint: Color, font: int) -> Dictionary:
+	var frame := PanelContainer.new()
+	# 가로 길이는 안 정한다 — 세로 상자가 퀵슬롯 줄 너비에 맞춰 늘여 준다
+	frame.custom_minimum_size = Vector2(0, height)
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame.add_theme_stylebox_override("panel", _frame_box("ui_bar_frame", BAR_FRAME_MARGIN, BAR_PAD))
+	# **홈이 마스크다** ★★ 부모가 그린 알파 안에서만 자식이 보인다. 채움은 직사각
+	# 한 장이면 되고, 끝이 비스듬히 잘린 모양은 홈이 잘라 준다 (2026-09-20 지적)
+	frame.clip_children = CanvasItem.CLIP_CHILDREN_AND_DRAW
+
+	var bar := TextureProgressBar.new()
+	bar.fill_mode = TextureProgressBar.FILL_LEFT_TO_RIGHT
+	# 채움은 **직사각 한 장**이다 — 통째로 늘여도 될 모양이라 여백을 안 준다
+	bar.nine_patch_stretch = true
+	var fill := _icon("ui_bar_fill")
+	bar.texture_progress = fill if fill != null else _white(16)
+	bar.tint_progress = tint
+	# 빈 쪽 바닥은 **홈 그림 안에 있다** — 조각을 뚫지 않고 어두운 안쪽째로 받는다
+	bar.step = 0.0
+	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame.add_child(bar)
+
+	# **금테는 채움 위에 한 번 더 얹는다** ★★ 홈이 부모라 채움이 그 위에 그려져
+	# 찬 쪽의 금테를 덮었다 — 테가 빈 쪽에만 남아 막대가 반으로 갈린 것처럼 보였다
+	# (2026-09-20 지적: "HP 가 차 있어도 황금 테두리는 동일하게 있어야 한다").
+	# 같은 홈 그림을 `draw_center = false` 로 다시 깔면 **가운데(채움)는 그대로 두고
+	# 테만** 올라온다. 조각을 새로 만들지 않아도 되고, 비스듬히 잘린 끝은 모서리
+	# 조각에 들어 있어 그대로 따라온다
+	var edge := _frame_box("ui_bar_frame", BAR_FRAME_MARGIN, 0)
+	if edge is StyleBoxTexture:
+		(edge as StyleBoxTexture).draw_center = false
+	elif edge is StyleBoxFlat:
+		(edge as StyleBoxFlat).draw_center = false
+	var border := Panel.new()
+	border.add_theme_stylebox_override("panel", edge)
+	border.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame.add_child(border)
+
+	var text := Label.new()
+	text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	text.add_theme_font_size_override("font_size", font)
+	text.add_theme_constant_override("outline_size", 5)
+	text.add_theme_color_override("font_outline_color", Color.BLACK)
+	text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	text.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bar.add_child(text)
+
+	return {"frame": frame, "bar": bar, "text": text}
+
+
+## 오른쪽 위 메뉴 단추 하나 — **테두리 없이 심볼만** 얹고 누르는 자리를 덮는다
+## (2026-09-20 지적: 받은 그림의 메뉴는 테가 없는 선화 아이콘이다).
+## 심볼이 없으면 글자가 대신 나온다
+func _icon_button(
+	icon_name: String, text: String, on_press: Callable, size: int = MENU_BTN
+) -> PanelContainer:
+	var cell := PanelContainer.new()
+	cell.custom_minimum_size = Vector2(size, size)
+	cell.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+
+	var inset := MarginContainer.new()
+	inset.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for side in ["left", "right", "top", "bottom"]:
+		inset.add_theme_constant_override("margin_" + side, MENU_INSET)
+	cell.add_child(inset)
+
+	var texture := _icon(icon_name)
+	if texture != null:
+		var rect := TextureRect.new()
+		rect.texture = texture
+		rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		inset.add_child(rect)
+	else:
+		var label := Label.new()
+		label.text = text
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		inset.add_child(label)
+
+	var hit := Button.new()
+	hit.name = "hit"
+	hit.flat = true
+	hit.tooltip_text = text
+	hit.pressed.connect(on_press)
+	cell.add_child(hit)
+	return cell
+
+
+## 고리 그림이 없을 때 대신 도는 화살표 둘. 칸 둘레를 따라 반원씩 긋고
+## 끝에 삼각 머리를 단다 — 돌리는 것은 부모(`_auto_spin`)가 한다
+class SpinRing extends Control:
+	const ARC := PI * 0.82
+
+	func _draw() -> void:
+		var mid := size / 2.0
+		var radius := minf(size.x, size.y) / 2.0 - 3.0
+		# **눈에 띄어야 한다** — 2.0 으로 그었더니 안 보인다는 지적을 받았다 (2026-09-20)
+		var color := Color(0.96, 0.89, 0.66, 0.97)
+		for half in 2:
+			var from := half * PI + 0.1
+			draw_arc(mid, radius, from, from + ARC, 28, color, 5.0, true)
+			var tip := from + ARC
+			var head := mid + Vector2(cos(tip), sin(tip)) * radius
+			var side := Vector2(-sin(tip), cos(tip))
+			var back := -Vector2(cos(tip), sin(tip))
+			draw_colored_polygon(
+				PackedVector2Array(
+					[
+						head + side * 11.0,
+						head + back * 9.0 + side * 1.0,
+						head + back * 1.0 - side * 9.0,
+					]
+				),
+				color
+			)
+
+
+## 가방과 장착 창. 웹 클라의 ui/inventory.ts 자리다.
+##
+## 배치는 2026-09-18 에 받은 그림대로다:
+##
+## ```
+## ┌ LV. 1 · 경험치 ─────────────┬ [전체][무기][방어구][장신구][재료] ┐
+## │ [무기]  (캐릭터)  [신발]     │ [ ][ ][ ][ ][ ]                    │
+## │ [갑옷]            [목걸이]   │ [ ][ ][ ][ ][ ]                    │
+## │ [투구]            [반지]     │ [ ][ ][ ][ ][ ]  ← 끌어 올림        │
+## │ ┌ 공격력 방어력 체력 ──────┐ │ 고른 것 이름·옵션                  │
+## │ │ 치명타 치피  공속       │ │            [장착/해제]             │
+## └─────────────────────────────┴────────────────────────────────────┘
+## ```
+##
+## **왼쪽이 장착, 오른쪽이 가방이다.** 장착 6칸은 캐릭터를 사이에 두고 세 칸씩
+## 세로로 세운다. 스탯은 캐릭터 아래 상자에 여섯 개를 두 줄로 놓는다.
+##
+## **창은 `CenterContainer` 에 얹어 늘 화면 한가운데에 둔다.** `set_anchors_preset`
+## 만 부르면 오프셋이 0 이라 왼쪽 위 구석에 박힌다 (2026-09-18 에 그랬다). 지을 때
+## 한 번만 맞추는 것도 안 된다 — 든 것에 따라 창 크기가 변해 그만큼 밀린다.
+##
+## **틀은 한 번만 짓고 내용만 다시 채운다.** 매번 지웠다 만들면 눌러 둔 칸이
+## 풀리고 스크롤이 맨 위로 튄다.
+##
+## 판·칸·탭·단추 그림은 전부 바르코로 만든 것이다 (assets/icons/ui_*).
+## **없으면 코드로 그린 판과 테두리로 나온다** — npm run sync:godot 을 안 돌린
+## 사람도 창은 돌아가야 한다 (모델이 없으면 기둥으로 그리는 것과 같은 규칙)
+## **설계 재현 창** — 설계 문서 9장 5번이 요구한 디버그 수단이다.
+##
+## 레벨·등급·강화를 강제로 맞춰 시뮬레이터와 같은 조건을 세우고, 그 조건에서
+## 설계가 말하는 값을 나란히 찍는다. 수치로만 맞다고 믿었다가 화면이 다른 적이
+## 여러 번이라, **게임 안에서 대조할 수단**이 있어야 한다.
+func _build_debug_panel() -> void:
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ui_root.add_child(center)
+
+	_debug_panel = PanelContainer.new()
+	_debug_panel.visible = false
+	_debug_panel.add_theme_stylebox_override("panel", _frame_box("ui_panel", PANEL_MARGIN, 16))
+	center.add_child(_debug_panel)
+
+	var pad := MarginContainer.new()
+	for side in ["left", "right", "top", "bottom"]:
+		pad.add_theme_constant_override("margin_" + side, 28)
+	_debug_panel.add_child(pad)
+
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 10)
+	pad.add_child(column)
+
+	var title := Label.new()
+	title.text = "설계 재현"
+	title.add_theme_font_size_override("font_size", 26)
+	column.add_child(title)
+
+	column.add_child(_debug_row("레벨", func(step: int) -> void:
+		_debug_level = clampi(_debug_level + step, 1, Stats.max_level())
+		_apply_debug()
+	, [-10, -1, 1, 10]))
+	column.add_child(_debug_row("등급", func(step: int) -> void:
+		_debug_grade = clampi(_debug_grade + step, 1, Stats.grade_count())
+		_apply_debug()
+	, [-1, 1]))
+	column.add_child(_debug_row("강화", func(step: int) -> void:
+		_debug_enhance = clampi(_debug_enhance + step, 0, Items.max_enhance())
+		_apply_debug()
+	, [-1, 1]))
+
+	_debug_text = Label.new()
+	_debug_text.add_theme_font_size_override("font_size", 18)
+	_debug_text.custom_minimum_size = Vector2(560, 0)
+	column.add_child(_debug_text)
+
+	_close_button(_debug_panel, _toggle_debug)
+
+
+## 값 한 줄 — 이름 + 증감 단추들
+func _debug_row(label: String, on_step: Callable, steps: Array) -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	var name_label := Label.new()
+	name_label.text = label
+	name_label.custom_minimum_size = Vector2(90, 0)
+	name_label.add_theme_font_size_override("font_size", 20)
+	row.add_child(name_label)
+	for step in steps:
+		var button := _make_button("%+d" % int(step), on_step.bind(int(step)))
+		button.custom_minimum_size = Vector2(84, 52)
+		row.add_child(button)
+	return row
+
+
+func _toggle_debug() -> void:
+	_debug_panel.visible = not _debug_panel.visible
+	if _debug_panel.visible:
+		_apply_debug()
+
+
+## 지금 값으로 캐릭터를 세우고, 설계가 말하는 값을 함께 찍는다
+func _apply_debug() -> void:
+	_transport.send(&"debugGear", {
+		"level": _debug_level, "grade": _debug_grade, "enhance": _debug_enhance
+	})
+	var level := _debug_level
+	var mon := Stats.monster(level)
+	var ref := Stats.ref_player(level)
+	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
+	var stats: Dictionary = me.get("stats", {})
+
+	# 설계가 말하는 것 — 한 그룹을 몇 초에 정리하고 HP 를 얼마나 잃는가
+	var per_hit: float = Stats.damage(float(stats.get("attack", 1)), level, float(mon["df"]))
+	var hits := int(ceil(float(mon["hp"]) / maxf(1.0, per_hit)))
+	var casts := int(ceil(float(Stats.spawn_count(level)) * hits / float(Stats.aoe_targets(level))))
+	var clear := casts * float(stats.get("attackCooldown", 1000)) / 1000.0
+	var taken: float = (
+		Stats.damage(float(mon["atk"]), level, float(stats.get("defense", 1)))
+		* float(Stats.melee_attackers(level)) * clear / float(mon["interval"])
+	)
+	var loss := taken / maxf(1.0, float(stats.get("maxHp", 1)))
+
+	_debug_text.text = "\n".join([
+		"Lv%d · 등급%d · 강화 +%d   (사냥터 %d, 기준 등급 %.2f, 기준 강화 %d단)" % [
+			level, _debug_grade, _debug_enhance,
+			Stats.field_of(level), Stats.ref_grade(level), Stats.enh_ref_step(level)
+		],
+		"",
+		"내  HP %d  공격 %d  방어 %d" % [
+			int(stats.get("maxHp", 0)), int(stats.get("attack", 0)), int(stats.get("defense", 0))
+		],
+		"기준 HP %d  공격 %d  방어 %d" % [roundi(ref["hp"]), roundi(ref["atk"]), roundi(ref["df"])],
+		"몬스터 HP %d  공격 %d  방어 %d" % [roundi(mon["hp"]), roundi(mon["atk"]), roundi(mon["df"])],
+		"",
+		"1마리 %d타 (설계 6타)" % hits,
+		"한 그룹(%d마리) 정리 %.1f초 / HP 손실 %.0f%%  — 설계 목표 15초 / 50%%" % [
+			Stats.spawn_count(level), clear, loss * 100.0
+		],
+	])
+
+
 func _build_bag_panel() -> void:
-	_bag_panel = PanelContainer.new()
-	_bag_panel.set_anchors_preset(Control.PRESET_CENTER)
-	_bag_panel.visible = false
-	_ui_root.add_child(_bag_panel)
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ui_root.add_child(center)
 
-	_bag_rows = VBoxContainer.new()
-	_bag_panel.add_child(_bag_rows)
+	_bag_panel = PanelContainer.new()
+	_bag_panel.visible = false
+	_bag_panel.add_theme_stylebox_override("panel", _frame_box("ui_panel", PANEL_MARGIN, 16))
+	center.add_child(_bag_panel)
+
+	var pad := MarginContainer.new()
+	for side in ["left", "right", "top", "bottom"]:
+		pad.add_theme_constant_override("margin_" + side, 28)
+	_bag_panel.add_child(pad)
+
+	var columns := HBoxContainer.new()
+	columns.add_theme_constant_override("separation", 26)
+	pad.add_child(columns)
+
+	_build_gear_side(columns)
+	_build_bag_side(columns)
+
+
+## 왼쪽 — 이름표 · 장착 6칸 · 캐릭터 · 스탯 상자
+func _build_gear_side(parent: Node) -> void:
+	var side := VBoxContainer.new()
+	side.add_theme_constant_override("separation", 12)
+	parent.add_child(side)
+
+	# 이름표
+	var plate := PanelContainer.new()
+	plate.add_theme_stylebox_override("panel", _frame_box("ui_subpanel", 24, 8))
+	side.add_child(plate)
+	var plate_pad := MarginContainer.new()
+	for s in ["left", "right", "top", "bottom"]:
+		plate_pad.add_theme_constant_override("margin_" + s, 10)
+	plate.add_child(plate_pad)
+	_bag_level = Label.new()
+	_bag_level.add_theme_font_size_override("font_size", 26)
+	plate_pad.add_child(_bag_level)
+
+	# 장착 — 캐릭터를 사이에 두고 세 칸씩. 칸 순서는 데이터가 정한다 (items.json 의 slots)
+	var body := HBoxContainer.new()
+	body.add_theme_constant_override("separation", 14)
+	body.alignment = BoxContainer.ALIGNMENT_CENTER
+	side.add_child(body)
+
+	var left_col := VBoxContainer.new()
+	left_col.add_theme_constant_override("separation", 10)
+	body.add_child(left_col)
+
+	# 가운데 캐릭터. 그림이 없으면 빈 자리로 남는다 (창이 무너지지 않게 크기만 잡아 둔다)
+	var figure := TextureRect.new()
+	figure.custom_minimum_size = Vector2(196, CELL * 3 + 20)
+	figure.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	figure.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	figure.texture = _icon("ui_figure")
+	body.add_child(figure)
+
+	var right_col := VBoxContainer.new()
+	right_col.add_theme_constant_override("separation", 10)
+	body.add_child(right_col)
+
+	_gear_cells.clear()
+	var count := Items.slots().size()
+	for index in count:
+		var cell := _make_cell(_pick_bag.bind("equip", index))
+		(left_col if index < ceili(count / 2.0) else right_col).add_child(cell)
+		_gear_cells.append(cell)
+
+	# 스탯 상자 — 여섯 개를 두 줄로
+	var box := PanelContainer.new()
+	box.add_theme_stylebox_override("panel", _frame_box("ui_subpanel", 24, 8))
+	side.add_child(box)
+	var box_pad := MarginContainer.new()
+	for s in ["left", "right", "top", "bottom"]:
+		box_pad.add_theme_constant_override("margin_" + s, 12)
+	box.add_child(box_pad)
+	var grid := GridContainer.new()
+	grid.columns = 3
+	grid.add_theme_constant_override("h_separation", 22)
+	grid.add_theme_constant_override("v_separation", 6)
+	box_pad.add_child(grid)
+	_stat_labels.clear()
+	for name in STAT_NAMES:
+		var label := Label.new()
+		label.add_theme_font_size_override("font_size", 21)
+		label.custom_minimum_size = Vector2(150, 0)
+		grid.add_child(label)
+		_stat_labels.append(label)
+
+
+## 오른쪽 — 탭 · 가방 격자 · 상세 · 단추
+func _build_bag_side(parent: Node) -> void:
+	var side := VBoxContainer.new()
+	side.add_theme_constant_override("separation", 12)
+	parent.add_child(side)
+
+	var tabs := HBoxContainer.new()
+	tabs.add_theme_constant_override("separation", 4)
+	side.add_child(tabs)
+	_tab_buttons.clear()
+	for index in BAG_TABS.size():
+		var tab := Button.new()
+		tab.text = BAG_TABS[index]
+		tab.custom_minimum_size = Vector2(0, 56)
+		tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		tab.pressed.connect(_pick_tab.bind(index))
+		tabs.add_child(tab)
+		_tab_buttons.append(tab)
+
+	# **칸은 CELL 보다 크다** — 테두리 안쪽 여백(BAG_CELL_PAD)이 양쪽에 붙기 때문이다.
+	# `CELL * 줄수` 로 잡았더니 마지막 줄이 잘려 나갔다 (2026-09-20, 찍어서 봤다)
+	var cell_box := CELL + BAG_CELL_PAD * 2
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(
+		cell_box * BAG_COLUMNS + BAG_GRID_GAP * (BAG_COLUMNS - 1) + SCROLLBAR_W,
+		cell_box * BAG_ROWS + BAG_GRID_GAP * (BAG_ROWS - 1)
+	)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	side.add_child(scroll)
+	_bag_grid = GridContainer.new()
+	_bag_grid.columns = BAG_COLUMNS
+	_bag_grid.add_theme_constant_override("h_separation", BAG_GRID_GAP)
+	_bag_grid.add_theme_constant_override("v_separation", BAG_GRID_GAP)
+	scroll.add_child(_bag_grid)
+
+	# 머리 줄이 아니라 격자 아래에 둔다 — 그림처럼 "몇 칸 썼나" 가 단추 옆에 붙는다
+	var foot := HBoxContainer.new()
+	foot.add_theme_constant_override("separation", 10)
+	side.add_child(foot)
+	_add_icon(foot, "bag", 34)
+	_bag_head = Label.new()
+	_bag_head.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	foot.add_child(_bag_head)
+	_add_icon(foot, "gold", 34)
+	_bag_gold = Label.new()
+	_bag_gold.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_bag_gold.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	foot.add_child(_bag_gold)
+
+	_bag_detail = Label.new()
+	_bag_detail.custom_minimum_size = Vector2(CELL * BAG_COLUMNS, 64)
+	_bag_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_bag_detail.add_theme_font_size_override("font_size", 21)
+	side.add_child(_bag_detail)
+
+	var buttons := HBoxContainer.new()
+	buttons.alignment = BoxContainer.ALIGNMENT_END
+	buttons.add_theme_constant_override("separation", 12)
+	side.add_child(buttons)
+	_bag_action = _make_button("-", _on_bag_action)
+	buttons.add_child(_bag_action)
+
+
+func _make_button(text: String, on_press: Callable) -> Button:
+	var button := Button.new()
+	button.text = text
+	button.custom_minimum_size = Vector2(160, 60)
+	for state in ["normal", "hover", "pressed", "disabled"]:
+		button.add_theme_stylebox_override(state, _frame_box("ui_button", 28, 6))
+	button.pressed.connect(on_press)
+	return button
+
+
+## 테두리·판. 바르코로 만든 그림을 9조각으로 늘여 쓴다.
+## **그림이 없으면 코드로 그린 판**을 준다 — 아무것도 없이 뜨는 일은 없어야 한다
+## `margin` 은 9조각으로 자를 자리(텍스처 픽셀), `content` 는 안쪽 내용이 물러앉는
+## 여백이다. **둘을 따로 준다** — 안 주면 고도가 9조각 여백을 안쪽 여백으로도 써서,
+## 칸마다 26px 씩 물러앉아 창이 1320x758 로 부풀었다 (2026-09-18)
+func _frame_box(name: String, margin: int, content: int) -> StyleBox:
+	var texture := _icon(name)
+	if texture != null:
+		var box := StyleBoxTexture.new()
+		box.texture = texture
+		for side in [SIDE_LEFT, SIDE_RIGHT, SIDE_TOP, SIDE_BOTTOM]:
+			box.set_texture_margin(side, margin)
+		box.set_content_margin_all(content)
+		return box
+	var flat := StyleBoxFlat.new()
+	flat.bg_color = Color(0.05, 0.06, 0.08, 0.94)
+	flat.border_color = Color(0.72, 0.82, 0.95)
+	flat.set_border_width_all(3)
+	flat.set_corner_radius_all(8)
+	flat.set_content_margin_all(content)
+	return flat
+
+
+## 아이콘 한 장. **없으면 null** — 부르는 쪽이 글자나 코드로 그린 판으로 대신한다.
+##
+## **있는지는 `.import` 가 있는지로 본다.** ★ 두 번 틀린 자리다 (2026-09-18):
+##
+## | 방법 | PC(에셋 있음) | PC(sync 안 함) | 웹 익스포트 |
+## |---|---|---|---|
+## | `ResourceLoader.exists` | 있다 | 없다 | **없다고 한다** — 폰에서 전부 글자로 나왔다 |
+## | 안 거르고 `load` | 있다 | **오류 쏟아짐** | 있다 |
+## | `.png` 또는 `.png.import` | 있다 | 없다 | 있다 |
+##
+## 익스포트에서 PNG 는 `.ctex` 로 구워져 들어가고 원본 `.png` 는 빠지는데
+## **`.png.import` 는 팩에 그대로 들어간다.** `load` 는 리맵을 따라가므로,
+## 임포트 파일이 있으면 불러도 된다. 바닥(`.ktx2`)은 임포트를 안 거쳐 원본이
+## 그대로 있어서 예전 방식이 거기서는 통했다.
+##
+## 한 번 해 본 결과는 이름마다 기억한다 — 칸마다 다시 찾지 않도록
+func _icon(name: String) -> Texture2D:
+	if name == "":
+		return null
+	if _icon_cache.has(name):
+		return _icon_cache[name]
+	var path := ICON_DIR + name + ".png"
+	var texture: Texture2D = null
+	if FileAccess.file_exists(path) or FileAccess.file_exists(path + ".import"):
+		texture = load(path) as Texture2D
+	_icon_cache[name] = texture
+	return texture
+
+
+## 줄에 아이콘을 끼운다. 그림이 없으면 아무것도 넣지 않는다 (글자만 남는다)
+func _add_icon(parent: Node, name: String, size: int) -> void:
+	var texture := _icon(name)
+	if texture == null:
+		return
+	var rect := TextureRect.new()
+	rect.texture = texture
+	rect.custom_minimum_size = Vector2(size, size)
+	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	parent.add_child(rect)
+
+
+## 창의 한 칸 — 판 위에 그림 · 글자 · 배지 · 누르는 자리를 겹쳐 둔다.
+## PanelContainer 는 자식을 모두 칸 전체에 깔기 때문에 정렬만으로 자리를 나눈다
+func _make_cell(on_press: Callable) -> PanelContainer:
+	var cell := PanelContainer.new()
+	cell.custom_minimum_size = Vector2(CELL, CELL)
+	cell.add_theme_stylebox_override("panel", _frame_box("ui_slot", 26, BAG_CELL_PAD))
+
+	var icon := TextureRect.new()
+	icon.name = "icon"
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cell.add_child(icon)
+
+	# 그림이 없는 것(재료)은 이름을 줄여 적는다
+	var text := Label.new()
+	text.name = "text"
+	text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	text.add_theme_font_size_override("font_size", 18)
+	text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cell.add_child(text)
+
+	var badge := Label.new()
+	badge.name = "badge"
+	badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	badge.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	badge.add_theme_font_size_override("font_size", 18)
+	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cell.add_child(badge)
+
+	var hit := Button.new()
+	hit.name = "hit"
+	hit.flat = true
+	hit.pressed.connect(on_press)
+	cell.add_child(hit)
+	return cell
+
+
+## 칸 하나를 채운다. `icon_name` 이 없거나 그림이 없으면 글자로 나온다
+func _fill_cell(cell: PanelContainer, stack: Dictionary, empty_text: String, icon_name: String) -> void:
+	var icon: TextureRect = cell.get_node("icon")
+	var text: Label = cell.get_node("text")
+	var badge: Label = cell.get_node("badge")
+	var texture := _icon(icon_name)
+	icon.texture = texture
+
+	if stack.is_empty():
+		# 빈 칸 — 그림을 죽여 둔다. 그림이 없으면 칸 이름을 적는다
+		icon.modulate = Color(1, 1, 1, 0.22)
+		text.text = "" if texture != null else empty_text
+		badge.text = ""
+		return
+
+	icon.modulate = Color(1, 1, 1, 1)
+	var item := Items.get_item(str(stack.get("id", "")))
+	text.text = "" if texture != null else str(item.get("name", stack.get("id", "?")))
+	badge.text = _stack_badge(stack)
+
+
+## 칸 오른쪽 아래 배지 — 강화 +N · 개수 · 등급. 이름은 상세 칸이 맡는다
+func _stack_badge(stack: Dictionary) -> String:
+	var parts: Array = []
+	var enhance := int(stack.get("enhance", 0))
+	if enhance > 0:
+		parts.append("+%d" % enhance)
+	var count := int(stack.get("count", 1))
+	if count > 1:
+		parts.append("x%d" % count)
+	parts.append("%d" % int(stack.get("grade", 1)))
+	return " ".join(parts)
+
+
+## 격자의 칸 수를 맞춘다. **칸 수가 바뀔 때만 손댄다** — 매번 다시 지으면
+## 눌러 둔 칸이 풀린다. 칸은 뒤에만 붙으므로 bind 해 둔 index 는 그대로 맞다
+func _fit_cells(grid: GridContainer, want: int, where: String) -> void:
+	while grid.get_child_count() > want:
+		var last := grid.get_child(grid.get_child_count() - 1)
+		grid.remove_child(last)
+		last.queue_free()
+	while grid.get_child_count() < want:
+		grid.add_child(_make_cell(_pick_bag.bind(where, grid.get_child_count())))
+
+
+## 탭 — 무엇을 보여줄지 거른다. **거르면 칸 번호와 가방 번호가 어긋나므로**
+## 보이는 칸이 가방 몇 번째인지를 `_bag_view` 에 적어 둔다
+func _pick_tab(index: int) -> void:
+	_bag_tab = index
+	_bag_pick = {}
+	_redraw_bag()
+
+
+func _tab_keeps(stack: Dictionary) -> bool:
+	if _bag_tab == 0:
+		return true
+	var item := Items.get_item(str(stack.get("id", "")))
+	if bool(item.get("material", false)):
+		return _bag_tab == 4
+	var slot := str(item.get("slot", ""))
+	match _bag_tab:
+		1: return slot == "weapon"
+		2: return slot in ["armor", "helmet", "boots"]
+		3: return slot in ["necklace", "ring"]
+	return false
+
+
+func _pick_bag(where: String, index: int) -> void:
+	_bag_pick = {"where": where, "index": index}
+	_show_bag_detail()
 
 
 func _toggle_bag() -> void:
@@ -247,47 +1059,126 @@ func _toggle_bag() -> void:
 
 
 func _redraw_bag() -> void:
-	for child in _bag_rows.get_children():
-		child.queue_free()
-
 	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
 	if me.is_empty():
 		return
+	var job := str(me.get("job", ""))
+	var bag: Array = me.get("bag", [])
+	var equipped: Dictionary = me.get("equipped", {})
 
-	var title := Label.new()
-	title.text = "가방 %d/%d   골드 %d" % [me.bag.size(), Items.bag_size(), me.get("gold", 0)]
-	_bag_rows.add_child(title)
+	_bag_level.text = "LV. %d" % int(me.get("level", 1))
+	_bag_head.text = "%d/%d" % [bag.size(), Items.bag_size()]
+	_bag_gold.text = "%d" % int(me.get("gold", 0))
 
-	# 끼고 있는 것 — 누르면 벗는다
-	for slot in Items.slots():
-		var stack: Dictionary = me.equipped.get(slot, {})
-		var button := Button.new()
-		if stack.is_empty():
-			button.text = "[%s] 비었음" % slot
-			button.disabled = true
-		else:
-			button.text = "[%s] %s" % [slot, _stack_label(stack)]
-			button.pressed.connect(func() -> void:
-				_transport.send(&"unequip", {"slot": str(slot)})
-				_redraw_bag()
-			)
-		_bag_rows.add_child(button)
-
-	# 가방 — 누르면 낀다. **낄 수 있는지는 World 가 다시 본다**
-	for index in mini(me.bag.size(), 12):
-		var stack: Dictionary = me.bag[index]
-		var button := Button.new()
-		button.text = _stack_label(stack)
-		button.pressed.connect(func() -> void:
-			_transport.send(&"equip", {"index": index})
-			_redraw_bag()
+	# 탭 — 고른 것만 밝게
+	for index in _tab_buttons.size():
+		var tab: Button = _tab_buttons[index]
+		var box := "ui_tab_on" if index == _bag_tab else "ui_tab_off"
+		for state in ["normal", "hover", "pressed"]:
+			tab.add_theme_stylebox_override(state, _frame_box(box, 24, 6))
+		# 고른 탭은 바탕이 상아빛이라 **글자를 어둡게** 해야 읽힌다 (2026-09-20)
+		tab.add_theme_color_override(
+			"font_color", Color("#241f16") if index == _bag_tab else Color.WHITE
 		)
-		_bag_rows.add_child(button)
 
-	var close := Button.new()
-	close.text = "닫기"
-	close.pressed.connect(func() -> void: _bag_panel.visible = false)
-	_bag_rows.add_child(close)
+	# 장착 — 아이콘 이름은 슬롯 이름과 같다 (assets/icons/weapon.png …)
+	var slots: Array = Items.slots()
+	for index in _gear_cells.size():
+		var slot := str(slots[index])
+		_fill_cell(_gear_cells[index], equipped.get(slot, {}), Items.slot_label(slot, job), slot)
+
+	# 스탯 여섯 — 상태바에 안 나오는 것까지 한자리에 모은다
+	var stats: Dictionary = me.get("stats", {})
+	var shown := [
+		"공격력 %d" % int(stats.get("attack", 0)),
+		"방어력 %d" % int(stats.get("defense", 0)),
+		"체력 %d" % int(stats.get("maxHp", 0)),
+		"치명타 %.0f%%" % (float(stats.get("crit", 0.0)) * 100.0),
+		"치명타 피해 %.0f%%" % (float(stats.get("critDamage", 0.0)) * 100.0),
+		"공격 속도 +%.0f%%" % (float(stats.get("attackSpeed", 0.0)) * 100.0),
+	]
+	for index in _stat_labels.size():
+		_stat_labels[index].text = str(shown[index])
+
+	# 가방 — 탭으로 거른 것만. 보이는 칸이 가방 몇 번째인지 적어 둔다
+	_bag_view.clear()
+	for index in bag.size():
+		if _tab_keeps(bag[index]):
+			_bag_view.append(index)
+	_fit_cells(_bag_grid, maxi(BAG_COLUMNS * BAG_ROWS, _bag_view.size()), "bag")
+	for index in _bag_grid.get_child_count():
+		var stack: Dictionary = bag[_bag_view[index]] if index < _bag_view.size() else {}
+		var icon_name := ""
+		if not stack.is_empty():
+			# 재료는 슬롯이 없어 그림도 없다 — 이름으로 나온다
+			icon_name = str(Items.get_item(str(stack.get("id", ""))).get("slot", ""))
+		_fill_cell(_bag_grid.get_child(index), stack, "", icon_name)
+
+	_show_bag_detail()
+
+
+## 상세 칸 — 고른 것의 이름·강화·등급·옵션을 푼다. 고른 칸은 밝게 둔다
+func _show_bag_detail() -> void:
+	for index in _gear_cells.size():
+		_gear_cells[index].modulate = _cell_tint("equip", index)
+	for index in _bag_grid.get_child_count():
+		_bag_grid.get_child(index).modulate = _cell_tint("bag", index)
+
+	var stack := _picked_stack()
+	if stack.is_empty():
+		_bag_detail.text = "칸을 고르면 여기에 나옵니다"
+		_bag_action.text = "-"
+		_bag_action.disabled = true
+		return
+	_bag_detail.text = _stack_label(stack)
+	_bag_action.text = "해제" if str(_bag_pick.get("where", "")) == "equip" else "장착"
+	_bag_action.disabled = false
+
+
+func _cell_tint(where: String, index: int) -> Color:
+	if str(_bag_pick.get("where", "")) == where and int(_bag_pick.get("index", -1)) == index:
+		return Color(1.35, 1.35, 1.1)
+	return Color(1, 1, 1)
+
+
+## 고른 칸이 가방 몇 번째인가. **탭으로 걸러 놔서 칸 번호와 다르다**
+func _picked_bag_index() -> int:
+	var index := int(_bag_pick.get("index", -1))
+	if index < 0 or index >= _bag_view.size():
+		return -1
+	return int(_bag_view[index])
+
+
+func _picked_stack() -> Dictionary:
+	if _bag_pick.is_empty():
+		return {}
+	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
+	if me.is_empty():
+		return {}
+	if str(_bag_pick.get("where", "")) == "equip":
+		var slots: Array = Items.slots()
+		var index := int(_bag_pick.get("index", -1))
+		if index < 0 or index >= slots.size():
+			return {}
+		return me.get("equipped", {}).get(str(slots[index]), {})
+	var at := _picked_bag_index()
+	var bag: Array = me.get("bag", [])
+	if at < 0 or at >= bag.size():
+		return {}
+	return bag[at]
+
+
+func _on_bag_action() -> void:
+	var stack := _picked_stack()
+	if stack.is_empty():
+		return
+	if str(_bag_pick.get("where", "")) == "equip":
+		_transport.send(&"unequip", {"slot": str(Items.slots()[int(_bag_pick.index)])})
+	else:
+		# 탭으로 걸러 놔서 칸 번호가 아니라 가방 번호를 보낸다
+		_transport.send(&"equip", {"index": _picked_bag_index()})
+	_bag_pick = {}
+	_redraw_bag()
 
 
 ## "낡은 장검 +3 (5등급) 공격 +7, 치명타 +2%"
@@ -306,86 +1197,655 @@ func _stack_label(stack: Dictionary) -> String:
 	return text
 
 
-## 액션바. 칸 수는 데이터가 정한다 (combat.json 의 skillBarSize)
+## HUD 하단. **가운데에 퀵슬롯 4칸**, 오른쪽 아래에 자동사냥·스킬·가방 단추.
+##
+## 퀵슬롯은 스킬 아이콘을 칸 테두리(ui_skill_slot)에 넣고, 쿨타임이 남았으면
+## 시계 방향으로 걷히는 어둠과 남은 초를 얹는다. 빈 칸은 "+" — 누르면 스킬창이 열린다.
+##
+## **앵커로 자리를 잡는다** (UI 는 조각을 앵커로 조립한다). 자식을 다 넣은 뒤에
+## 최소 크기로 오프셋을 맞추고, 양쪽으로 자라게 해서 해상도가 바뀌어도 가운데에 남는다
 func _build_skill_bar() -> void:
-	var row := HBoxContainer.new()
-	row.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	row.position = Vector2(-260, -110)
-	_ui_root.add_child(row)
+	# 아래 가운데 한 묶음 — 위에서부터 레벨 배지 · 경험치 % · 체력 막대 · 퀵슬롯
+	# (2026-09-20 요청). 왼쪽 위에 따로 있던 상태판을 여기로 내렸다.
+	# 세로 상자에 담아야 막대가 퀵슬롯 줄과 같은 길이로 늘어난다
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 4)
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ui_root.add_child(column)
 
+	_build_exp_gauge()
+	_build_level_badge(column)
+
+	var hp := _make_bar(HP_BAR_H, Color("#c33122"), 12)
+	_hp_bar = hp["bar"]
+	_hp_text = hp["text"]
+	column.add_child(hp["frame"])
+
+	var dock := HBoxContainer.new()
+	dock.add_theme_constant_override("separation", 5)
+	column.add_child(dock)
+	_bar_buttons.clear()
 	for slot in int(GameData.combat().get("skillBarSize", 4)):
-		var button := Button.new()
-		button.custom_minimum_size = Vector2(125, 70)
-		button.text = "-"
-		button.pressed.connect(_on_bar_pressed.bind(slot))
-		row.add_child(button)
-		_bar_buttons.append(button)
+		var cell := _make_skill_cell(QUICK_CELL, "ui_quick_slot", _on_bar_pressed.bind(slot), QUICK_MARGIN)
+		cell.find_child("key", true, false).text = str(slot + 1)
+		dock.add_child(cell)
+		_bar_buttons.append(cell)
+		_bar_cooling.append(false)
 
-	_auto_button = Button.new()
-	_auto_button.custom_minimum_size = Vector2(130, 70)
-	_auto_button.text = "자동사냥"
-	_auto_button.pressed.connect(_toggle_auto)
-	row.add_child(_auto_button)
+	# 자동사냥도 같은 칸이다 — 엄지가 퀵슬롯과 같은 높이에서 닿는다 (2026-09-19 요청).
+	# 켜지면 칸 위에서 화살표 고리가 돈다
+	# 퀵슬롯에서 한 뼘 띄운다 — 붙여 두면 다섯 번째 스킬 칸으로 보인다
+	var gap := Control.new()
+	gap.custom_minimum_size = Vector2(AUTO_GAP, 0)
+	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dock.add_child(gap)
 
-	var open := Button.new()
-	open.text = "스킬"
-	open.custom_minimum_size = Vector2(110, 70)
-	open.pressed.connect(func() -> void: _skill_panel.visible = not _skill_panel.visible)
-	row.add_child(open)
+	_auto_cell = _make_skill_cell(AUTO_CELL, "ui_quick_slot", _toggle_auto, QUICK_MARGIN)
+	# **테두리를 없앤다** (2026-09-20 요청) — 같은 테를 두르면 퀵슬롯과 구분이 안 된다
+	_auto_cell.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	var auto_icon: TextureRect = _auto_cell.find_child("icon", true, false)
+	auto_icon.texture = _icon("ui_icon_auto")
+	if auto_icon.texture == null:
+		_auto_cell.find_child("text", true, false).text = "자동사냥"
+	var auto_inset: MarginContainer = auto_icon.get_parent()
+	for side in ["left", "right", "top", "bottom"]:
+		auto_inset.add_theme_constant_override("margin_" + side, AUTO_INSET)
+	# "자동"·"켜짐" 을 칸 테두리 위로 올린다 — 금테 칸은 테가 두꺼워 글자가 걸렸다
+	var auto_badge: MarginContainer = _auto_cell.find_child("badge", true, false).get_parent().get_parent()
+	# 칸이 작아진 뒤로는 바닥에 바짝 붙인다 — 가운데로 올라오면 검 손잡이와 겹친다
+	auto_badge.add_theme_constant_override("margin_bottom", 4)
+	dock.add_child(_auto_cell)
 
-	var bag := Button.new()
-	bag.text = "가방"
-	bag.custom_minimum_size = Vector2(110, 70)
-	bag.pressed.connect(_toggle_bag)
-	row.add_child(bag)
+	_auto_spin = TextureRect.new()
+	_auto_spin.texture = _icon("ui_auto_spin")
+	_auto_spin.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_auto_spin.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_auto_spin.visible = false
+	_auto_spin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# 고리 그림이 없으면 코드로 그린 화살표 둘이 돈다 — 에셋을 안 받은 사람도 보여야 한다
+	if _auto_spin.texture == null:
+		var drawn := SpinRing.new()
+		drawn.name = "drawn"
+		drawn.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		drawn.set_anchors_preset(Control.PRESET_FULL_RECT)
+		_auto_spin.add_child(drawn)
+	# 고리를 바닥에서 띄운다 — 칸을 꽉 채우면 아래쪽 화살표가 "자동사냥" 글자와 겹친다
+	var spin_pad := MarginContainer.new()
+	spin_pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	spin_pad.add_theme_constant_override("margin_bottom", SPIN_LIFT)
+	spin_pad.add_child(_auto_spin)
+	_auto_cell.add_child(spin_pad)
+	# 아이콘 바로 위, 글자 아래로 넣는다 — 맨 뒤에 두면 고리가 글자를 덮는다
+	_auto_cell.move_child(spin_pad, 1)
+
+	column.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM, Control.PRESET_MODE_MINSIZE, 16)
+	column.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	column.grow_vertical = Control.GROW_DIRECTION_BEGIN
+
+	var menu := HBoxContainer.new()
+	menu.add_theme_constant_override("separation", 6)
+	_ui_root.add_child(menu)
+
+	# 오른쪽 위 — 스킬·가방. 아이콘만 남기고 글자를 뺐다 (2026-09-19 요청).
+	# 무엇인지는 그림으로 알린다 — 그림이 없으면 글자가 대신 나온다
+	_menu_cells = [
+		_icon_button("ui_icon_skill", "스킬", _toggle_skills),
+		_icon_button("ui_icon_bag", "가방", _toggle_bag),
+		_icon_button("", "설계", _toggle_debug),
+	]
+	for cell in _menu_cells:
+		menu.add_child(cell)
+	menu.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE, 20)
+	menu.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 
 
-## 스킬창 — 내 직업 스킬을 늘어놓고, 누르면 배워서 액션바에 올린다.
-## **스킬 내용은 다시 만들기로 했다.** 여기는 표를 읽어 줄을 세울 뿐이라
-## 표가 바뀌면 그대로 따라온다
+## 스킬 칸 하나 — 퀵슬롯·창 안 장착 칸·목록 칸·설명 쪽 큰 아이콘이 전부 이것이다.
+##
+## ```
+## PanelContainer (frame, 안쪽 여백 0)
+##  ├ MarginContainer (SKILL_INSET) ─ icon / text / cool / secs
+##  ├ badge  (오른쪽 아래 — Lv.N 또는 N번)
+##  ├ pick   (고른 칸 테두리 ui_slot_pick, 칸 전체를 덮는다)
+##  └ hit    (flat Button — 누름만 받는다)
+## ```
+##
+## 테두리 안쪽 여백을 0 으로 두고 아이콘만 `MarginContainer` 로 물린다 — 고른 칸
+## 테두리가 칸 테두리 위에 정확히 겹쳐야 해서다
+func _make_skill_cell(size: int, frame: String, on_press: Callable, margin: int = 26) -> PanelContainer:
+	var cell := PanelContainer.new()
+	cell.custom_minimum_size = Vector2(size, size)
+	cell.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	cell.add_theme_stylebox_override("panel", _frame_box(frame, margin, 0))
+
+	var inset := MarginContainer.new()
+	inset.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for side in ["left", "right", "top", "bottom"]:
+		inset.add_theme_constant_override("margin_" + side, SKILL_INSET)
+	cell.add_child(inset)
+
+	var icon := TextureRect.new()
+	icon.name = "icon"
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	inset.add_child(icon)
+
+	# 아이콘이 없는 스킬(마법사·궁수)은 이름을 적는다
+	var text := Label.new()
+	text.name = "text"
+	text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	text.add_theme_font_size_override("font_size", 18 if size < 140 else 26)
+	text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	inset.add_child(text)
+
+	# 쿨타임 — 남은 만큼 어둡다. 12시에서 **시계 방향으로 밝은 쪽이 넓어진다**
+	# (어둠을 반시계로 채워야 경계가 시계 방향으로 돈다)
+	var cool := TextureProgressBar.new()
+	cool.name = "cool"
+	cool.fill_mode = TextureProgressBar.FILL_COUNTER_CLOCKWISE
+	cool.texture_progress = _white(size - SKILL_INSET * 2)
+	cool.tint_progress = Color(0, 0, 0, 0.68)
+	cool.max_value = 1.0
+	cool.step = 0.0
+	cool.visible = false
+	cool.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	inset.add_child(cool)
+
+	# 어둠과 밝은 쪽의 경계에서 도는 빛 바늘
+	var edge := CoolEdge.new()
+	edge.name = "edge"
+	edge.visible = false
+	edge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	inset.add_child(edge)
+
+	var secs := Label.new()
+	secs.name = "secs"
+	secs.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	secs.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	# **칸 크기를 넘기면 안 된다** — 28 로 뒀더니 이 글자의 최소 높이가 칸보다 커서
+	# 퀵슬롯이 세로로 늘어났다 (2026-09-20, 찍어서 봤다)
+	secs.add_theme_font_size_override("font_size", 16)
+	secs.add_theme_constant_override("outline_size", 6)
+	secs.add_theme_color_override("font_outline_color", Color.BLACK)
+	secs.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	inset.add_child(secs)
+
+	# 다 쓰고 돌아왔을 때 번쩍 — 쿨타임이 끝난 것을 눈으로 알린다 (_flash_ready)
+	var flash := ColorRect.new()
+	flash.name = "flash"
+	flash.color = Color(1.0, 0.95, 0.8, 0.0)
+	flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	inset.add_child(flash)
+
+	# 가운데 아래 — 목록 칸의 "Lv.N 습득"
+	var badge := Label.new()
+	badge.name = "badge"
+	badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	badge.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	badge.add_theme_font_size_override("font_size", 9)
+	badge.add_theme_constant_override("outline_size", 5)
+	badge.add_theme_color_override("font_outline_color", Color.BLACK)
+	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# 왼쪽 위 — 퀵슬롯 단축키 번호
+	var key := Label.new()
+	key.name = "key"
+	key.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	key.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	key.add_theme_font_size_override("font_size", 12)
+	key.add_theme_constant_override("outline_size", 6)
+	key.add_theme_color_override("font_outline_color", Color.BLACK)
+	key.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var badge_pad := MarginContainer.new()
+	badge_pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	badge_pad.add_theme_constant_override("margin_left", SKILL_INSET + 2)
+	badge_pad.add_theme_constant_override("margin_right", 4)
+	badge_pad.add_theme_constant_override("margin_top", SKILL_INSET)
+	badge_pad.add_theme_constant_override("margin_bottom", SKILL_INSET - 3)
+	var badge_layer := Control.new()
+	badge_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	badge_pad.add_child(badge_layer)
+	badge.set_anchors_preset(Control.PRESET_FULL_RECT)
+	key.set_anchors_preset(Control.PRESET_FULL_RECT)
+	badge_layer.add_child(badge)
+	badge_layer.add_child(key)
+	cell.add_child(badge_pad)
+
+	var pick := Panel.new()
+	pick.name = "pick"
+	pick.visible = false
+	pick.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pick.add_theme_stylebox_override("panel", _pick_box())
+	cell.add_child(pick)
+
+	var hit := Button.new()
+	hit.name = "hit"
+	hit.flat = true
+	if on_press.is_valid():
+		hit.pressed.connect(on_press)
+	else:
+		hit.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cell.add_child(hit)
+	return cell
+
+
+## 창 오른쪽 위 X. **모든 창이 이것 하나를 쓴다** (2026-09-20 요청 — "모든 ui 의
+## 닫기 버튼은 오른쪽 위로 통일할거야, x버튼으로 만들어").
+##
+## `PanelContainer` 는 자식을 창 전체에 깔기 때문에, 여백을 준 `MarginContainer`
+## 안에 `Control` 을 한 겹 두고 그 오른쪽 위 구석에 앵커로 붙인다 (레벨 배지와 같은 방법)
+func _close_button(panel: PanelContainer, on_press: Callable) -> void:
+	var pad := MarginContainer.new()
+	pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pad.add_theme_constant_override("margin_right", CLOSE_PAD)
+	pad.add_theme_constant_override("margin_top", CLOSE_PAD)
+	panel.add_child(pad)
+
+	var layer := Control.new()
+	layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pad.add_child(layer)
+
+	var button := _icon_button("ui_close", "X", on_press, CLOSE_BTN)
+	button.name = "close"
+	button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE)
+	layer.add_child(button)
+
+
+## 고른 칸 테두리. 그림이 없으면 코드로 그린 금색 테 (안쪽은 비운다 — 아이콘이 보여야 한다)
+func _pick_box() -> StyleBox:
+	var texture := _icon("ui_slot_pick")
+	if texture != null:
+		var box := StyleBoxTexture.new()
+		box.texture = texture
+		for side in [SIDE_LEFT, SIDE_RIGHT, SIDE_TOP, SIDE_BOTTOM]:
+			box.set_texture_margin(side, 26)
+		return box
+	var flat := StyleBoxFlat.new()
+	flat.draw_center = false
+	flat.border_color = Color(1.0, 0.72, 0.25)
+	flat.set_border_width_all(4)
+	flat.set_corner_radius_all(6)
+	return flat
+
+
+## 쿨타임 경계의 빛 바늘. 가운데에서 칸 끝까지 긋고, 끝에 작은 불씨를 단다.
+## `ratio` 는 남은 몫(1 → 0) — 어둠이 12시에서 반시계로 그만큼 덮고 있으므로
+## 바늘은 12시에서 반시계로 ratio 바퀴 돈 자리다. 줄어들수록 시계 방향으로 12시에 다가간다
+class CoolEdge extends Control:
+	var ratio := 0.0
+
+	func _draw() -> void:
+		var half := size / 2.0
+		var angle := -PI / 2.0 - ratio * TAU
+		var dir := Vector2(cos(angle), sin(angle))
+		# 네모 칸 끝까지 닿는 길이
+		var reach := minf(half.x / maxf(absf(dir.x), 0.001), half.y / maxf(absf(dir.y), 0.001))
+		var tip := half + dir * reach
+		draw_line(half, tip, Color(0.55, 0.85, 1.0, 0.28), 7.0, true)
+		draw_line(half, tip, Color(0.9, 0.97, 1.0, 0.95), 2.0, true)
+		draw_circle(tip, 4.0, Color(1.0, 1.0, 1.0, 0.9))
+
+
+## 쿨타임 어둠에 쓰는 흰 판. 둥근 채우기는 늘이면 안 그려지므로 칸 크기 그대로 만든다
+func _white(size: int) -> Texture2D:
+	var image := Image.create(size, size, false, Image.FORMAT_RGBA8)
+	image.fill(Color.WHITE)
+	return ImageTexture.create_from_image(image)
+
+
+## 칸에 스킬 하나를 채운다. `id` 가 비면 `empty_text` 를 적는다
+func _fill_skill_cell(cell: PanelContainer, id: String, empty_text: String) -> void:
+	var icon: TextureRect = cell.find_child("icon", true, false)
+	var text: Label = cell.find_child("text", true, false)
+	var texture := _icon("skill_" + id) if id != "" else null
+	icon.texture = texture
+	if id == "":
+		text.text = empty_text
+	elif texture == null:
+		text.text = str(Skills.all().get(id, {}).get("name", id))
+	else:
+		text.text = ""
+
+
+## 스킬창. 2026-09-19 에 받은 그림(가방 상세 화면)의 배치를 **좌우로 뒤집은** 것이다:
+##
+## ```
+## ┌──────────────────────┬ 스킬 ─────────────────── [닫기] ┐
+## │      [큰 아이콘]      │ 장착 중  [1][2][3][4]              │
+## │        낙뢰           │ 스킬 목록                          │
+## │ ┌ 요구 레벨·재사용 ┐ │ [ ][ ][ ][ ]                        │
+## │ └ 배움·장착 상태  ┘ │ [ ]            ← 끌어 올림           │
+## │ ┌ 설명 ────────────┐ │                                     │
+## │ └──────────────────┘ │                     [해제] [장착]   │
+## └──────────────────────┴─────────────────────────────────────┘
+## ```
+##
+## **왼쪽이 설명, 오른쪽이 고르기·장착/해제다** (요청). 장착은 빈 칸이 있으면
+## 맨 뒤에 붙고, 4칸이 다 찼으면 **바꿀 칸을 누르게 한다** — 옛 창은 말없이 맨 앞
+## 칸을 밀어냈는데, 무엇이 빠지는지 모르는 채로 빠졌다.
+##
+## 배우기는 따로 없다. 장착할 때 아직 안 배웠으면 배우기 요청을 먼저 보낸다
+## (둘 다 World 가 다시 본다 — 레벨이 모자라면 배우기가 거절되고 장착도 걸러진다).
+## 틀은 한 번 짓고 `_redraw_skills` 가 내용만 채운다
 func _build_skill_panel() -> void:
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ui_root.add_child(center)
+
 	_skill_panel = PanelContainer.new()
-	_skill_panel.set_anchors_preset(Control.PRESET_CENTER)
 	_skill_panel.visible = false
-	_ui_root.add_child(_skill_panel)
+	_skill_panel.add_theme_stylebox_override("panel", _frame_box("ui_panel", PANEL_MARGIN, 16))
+	center.add_child(_skill_panel)
 
-	var rows := VBoxContainer.new()
-	_skill_panel.add_child(rows)
+	var pad := MarginContainer.new()
+	for side in ["left", "right", "top", "bottom"]:
+		pad.add_theme_constant_override("margin_" + side, 28)
+	_skill_panel.add_child(pad)
 
+	var columns := HBoxContainer.new()
+	columns.add_theme_constant_override("separation", 26)
+	pad.add_child(columns)
+
+	# 왼쪽 — 설명
+	var left := VBoxContainer.new()
+	left.custom_minimum_size = Vector2(380, 0)
+	left.add_theme_constant_override("separation", 12)
+	columns.add_child(left)
+
+	_skill_big = _make_skill_cell(150, "ui_slot", Callable())
+	left.add_child(_skill_big)
+
+	_skill_name = Label.new()
+	_skill_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_skill_name.add_theme_font_size_override("font_size", 30)
+	left.add_child(_skill_name)
+
+	_skill_info = Label.new()
+	_skill_info.add_theme_font_size_override("font_size", 20)
+	_skill_state = Label.new()
+	_skill_state.add_theme_font_size_override("font_size", 20)
+	_skill_state.add_theme_color_override("font_color", Color(1.0, 0.78, 0.35))
+	var info := _sub_box(left, false)
+	info.add_child(_skill_info)
+	info.add_child(_skill_state)
+
+	_skill_desc = Label.new()
+	_skill_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_skill_desc.add_theme_font_size_override("font_size", 20)
+	_skill_desc.custom_minimum_size = Vector2(340, 0)
+	_sub_box(left, true).add_child(_skill_desc)
+
+	# 오른쪽 — 고르기와 장착/해제
+	var right := VBoxContainer.new()
+	right.add_theme_constant_override("separation", 12)
+	columns.add_child(right)
+
+	var head := HBoxContainer.new()
+	right.add_child(head)
 	var title := Label.new()
 	title.text = "스킬"
-	rows.add_child(title)
+	title.add_theme_font_size_override("font_size", 30)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(title)
 
-	var grid := GridContainer.new()
-	grid.columns = 3
-	rows.add_child(grid)
+	right.add_child(_caption("장착 중"))
+	var slots := HBoxContainer.new()
+	slots.add_theme_constant_override("separation", SKILL_GAP)
+	right.add_child(slots)
+	_slot_cells.clear()
+	for slot in int(GameData.combat().get("skillBarSize", 4)):
+		var cell := _make_skill_cell(SKILL_CELL, "ui_skill_slot", _pick_slot.bind(slot))
+		slots.add_child(cell)
+		_slot_cells.append(cell)
 
-	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
-	for id in Skills.for_job(str(me.get("job", "fighter"))):
-		var skill: Dictionary = Skills.all().get(str(id), {})
+	right.add_child(_caption("스킬 목록"))
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(
+		SKILL_CELL * SKILL_COLUMNS + SKILL_GAP * (SKILL_COLUMNS - 1), SKILL_CELL * 2 + SKILL_GAP
+	)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	right.add_child(scroll)
+	_skill_grid = GridContainer.new()
+	_skill_grid.columns = SKILL_COLUMNS
+	_skill_grid.add_theme_constant_override("h_separation", SKILL_GAP)
+	_skill_grid.add_theme_constant_override("v_separation", SKILL_GAP)
+	scroll.add_child(_skill_grid)
+
+	var buttons := HBoxContainer.new()
+	buttons.alignment = BoxContainer.ALIGNMENT_END
+	buttons.add_theme_constant_override("separation", 12)
+	right.add_child(buttons)
+	_skill_unequip = _make_button("해제", _on_skill_unequip)
+	buttons.add_child(_skill_unequip)
+	_skill_equip = _make_button("장착", _on_skill_equip)
+	buttons.add_child(_skill_equip)
+
+
+## 테스트 스위치 단추 — 왼쪽 아래 (2026-09-19 에 오른쪽 위에서 옮겼다, 요청). 누르면 World 에 요청하고, 글자는 표의 지금 값을 따른다
+## (`_refresh_switches`). 스위치를 없애면 이 단추들도 걷는다 → skills.md "테스트 스위치"
+##
+## **쿨타임 0 하나만 단다.** 레벨 잠금 해제 단추는 2026-09-19 에 걷었다 (요청).
+## 스위치 자체와 World 쪽 처리는 그대로다 — 켜고 끄려면 `skills.json` 을 고친다
+const SWITCH_BUTTONS := ["cooldownOff"]
+func _build_test_switches() -> void:
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 6)
+	_ui_root.add_child(column)
+	_switch_buttons.clear()
+	for name in SWITCH_BUTTONS:
 		var button := Button.new()
-		button.text = "%s\n%d레벨" % [skill.get("name", id), skill.get("reqLevel", 1)]
-		button.pressed.connect(_on_skill_pressed.bind(str(id)))
-		grid.add_child(button)
+		button.custom_minimum_size = Vector2(230, 52)
+		button.add_theme_font_size_override("font_size", 18)
+		button.pressed.connect(_on_switch_pressed.bind(name))
+		column.add_child(button)
+		_switch_buttons[name] = button
+	# 무적은 플레이어 값이라 표 스위치와 따로 논다 — 요청은 `invincible`
+	_invincible_button = Button.new()
+	_invincible_button.custom_minimum_size = Vector2(230, 52)
+	_invincible_button.add_theme_font_size_override("font_size", 18)
+	_invincible_button.text = "테스트: 무적  끔"
+	_invincible_button.pressed.connect(_toggle_invincible)
+	column.add_child(_invincible_button)
+	column.move_child(_invincible_button, 0)
+	_refresh_switches()
+	column.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 20)
+	column.grow_vertical = Control.GROW_DIRECTION_BEGIN
 
-	var close := Button.new()
-	close.text = "닫기"
-	close.pressed.connect(func() -> void: _skill_panel.visible = false)
-	rows.add_child(close)
+
+func _on_switch_pressed(name: String) -> void:
+	var on := Skills.cooldown_off() if name == "cooldownOff" else Skills.unlock_all()
+	_transport.send(&"testSwitch", {"name": name, "on": not on})
+	_refresh_switches()
+	if _skill_panel.visible:
+		_redraw_skills()
 
 
-## 스킬창에서 고르면 배우고 빈 칸에 올린다. **배울 수 있는지는 World 가 다시 본다**
-func _on_skill_pressed(skill_id: String) -> void:
+func _toggle_invincible() -> void:
 	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
-	_transport.send(&"learnSkill", {"skill": skill_id})
+	_transport.send(&"invincible", {"on": not bool(me.get("invincible", false))})
 
-	var bar: Array = me.get("skill_bar", []).duplicate()
-	if skill_id in bar:
+
+func _refresh_invincible(me: Dictionary) -> void:
+	var on := bool(me.get("invincible", false))
+	_invincible_button.text = "테스트: 무적  %s" % ("켬" if on else "끔")
+	_invincible_button.modulate = Color("#7ce08a") if on else Color.WHITE
+
+
+func _refresh_switches() -> void:
+	for name in _switch_buttons:
+		var on := Skills.cooldown_off() if name == "cooldownOff" else Skills.unlock_all()
+		var label := "테스트: 쿨타임 0" if name == "cooldownOff" else "테스트: 레벨 잠금 해제"
+		_switch_buttons[name].text = "%s  %s" % [label, "켬" if on else "끔"]
+
+
+## 테두리 상자 안에 세로 줄을 하나 만들어 돌려준다.
+##
+## **`ui_subpanel` 을 쓰지 않는다.** ★ 그 그림은 가운데에 얇은 판이 있고 둘레가 넓은
+## 빛번짐이라, 9조각으로 늘이면 판은 글자보다 작게, 빛번짐만 상자 크기로 그려진다 —
+## 능력·설명 글자가 상자 밖으로 삐져나와 보였다 (2026-09-19). 테가 그림 가장자리에
+## 붙어 있는 `ui_slot` 은 어떤 크기로 늘여도 테가 상자 끝에 온다
+func _sub_box(parent: Node, fill: bool) -> VBoxContainer:
+	var box := PanelContainer.new()
+	box.add_theme_stylebox_override("panel", _frame_box("ui_slot", 26, 10))
+	if fill:
+		box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	parent.add_child(box)
+	var box_pad := MarginContainer.new()
+	for s in ["left", "right", "top", "bottom"]:
+		box_pad.add_theme_constant_override("margin_" + s, 12)
+	box.add_child(box_pad)
+	var rows := VBoxContainer.new()
+	rows.add_theme_constant_override("separation", 4)
+	box_pad.add_child(rows)
+	return rows
+
+
+func _caption(text: String) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.add_theme_font_size_override("font_size", 20)
+	label.add_theme_color_override("font_color", Color(0.72, 0.8, 0.92))
+	return label
+
+
+func _toggle_skills() -> void:
+	_skill_panel.visible = not _skill_panel.visible
+	_skill_swap = false
+	if _skill_panel.visible:
+		_redraw_skills()
+
+
+func _me() -> Dictionary:
+	return _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
+
+
+## 스킬창 내용을 지금 상태로 채운다. 목록은 직업이 바뀌었을 때만 다시 짓는다
+func _redraw_skills() -> void:
+	var me := _me()
+	var job := str(me.get("job", "fighter"))
+	var ids: Array = []
+	for id in Skills.for_job(job):
+		ids.append(str(id))
+	if ids != _skill_ids:
+		_skill_ids = ids
+		for child in _skill_grid.get_children():
+			child.queue_free()
+		_skill_cells.clear()
+		for index in ids.size():
+			var cell := _make_skill_cell(SKILL_CELL, "ui_slot", _pick_skill.bind(index))
+			_skill_grid.add_child(cell)
+			_skill_cells.append(cell)
+	if not (_skill_pick in _skill_ids):
+		_skill_pick = str(_skill_ids[0]) if not _skill_ids.is_empty() else ""
+
+	var bar: Array = me.get("skill_bar", [])
+	var learned: Array = me.get("skills", [])
+	var level := int(me.get("level", 1))
+
+	for index in _skill_cells.size():
+		var id := str(_skill_ids[index])
+		var cell: PanelContainer = _skill_cells[index]
+		var skill: Dictionary = Skills.all().get(id, {})
+		_fill_skill_cell(cell, id, "")
+		# 안 배운 것만 "Lv.N 습득". 배웠으면 지운다. 장착 번호는 적지 않는다 — 번호는 퀵슬롯에 있다
+		var badge: Label = cell.find_child("badge", true, false)
+		badge.text = "" if id in learned else "Lv.%d 습득" % int(skill.get("reqLevel", 1))
+		# 아직 배울 수 없는 것은 흐리게
+		var open: bool = id in learned or Skills.can_learn(skill, job, level)
+		cell.modulate = Color.WHITE if open else Color(0.5, 0.5, 0.5)
+		cell.get_node("pick").visible = id == _skill_pick
+
+	for slot in _slot_cells.size():
+		var cell: PanelContainer = _slot_cells[slot]
+		var id := str(bar[slot]) if slot < bar.size() else ""
+		_fill_skill_cell(cell, id, "+")
+		cell.get_node("pick").visible = _skill_swap or (id != "" and id == _skill_pick)
+
+	var skill: Dictionary = Skills.all().get(_skill_pick, {})
+	_fill_skill_cell(_skill_big, _skill_pick, "")
+	_skill_name.text = str(skill.get("name", ""))
+	var targets := int(skill.get("maxTargets", 1))
+	_skill_info.text = "요구 레벨 %d\n재사용 %s초\n사거리 %s, %s" % [
+		int(skill.get("reqLevel", 1)),
+		str(snappedf(float(skill.get("cooldown", 0)) / 1000.0, 0.1)),
+		str(skill.get("range", 0)),
+		"주위 %d명" % targets if float(skill.get("arc", 0)) >= TAU - 0.01 else "대상 %d명" % targets,
+	]
+	_skill_desc.text = str(skill.get("description", ""))
+
+	var equipped := _skill_pick in bar
+	if _skill_swap:
+		_skill_state.text = "바꿀 칸을 누르세요"
+	elif equipped:
+		_skill_state.text = "장착 중 (%d번 칸)" % (bar.find(_skill_pick) + 1)
+	elif _skill_pick in learned:
+		_skill_state.text = "배움"
+	elif Skills.can_learn(skill, job, level):
+		_skill_state.text = "장착하면 배웁니다"
+	else:
+		_skill_state.text = "%d레벨에 배웁니다" % int(skill.get("reqLevel", 1))
+
+	_skill_equip.text = "취소" if _skill_swap else "장착"
+	_skill_equip.disabled = _skill_pick == "" or (equipped and not _skill_swap)
+	_skill_unequip.disabled = not equipped or _skill_swap
+
+
+func _pick_skill(index: int) -> void:
+	_skill_pick = str(_skill_ids[index])
+	_skill_swap = false
+	_redraw_skills()
+
+
+## 창 안의 장착 칸을 눌렀다. 바꿀 칸을 고르는 중이면 거기에 끼우고,
+## 아니면 그 칸의 스킬을 고른다
+func _pick_slot(slot: int) -> void:
+	var bar: Array = _me().get("skill_bar", []).duplicate()
+	if _skill_swap:
+		_skill_swap = false
+		if slot < bar.size():
+			bar[slot] = _skill_pick
+		else:
+			bar.append(_skill_pick)
+		_send_bar(bar)
+	elif slot < bar.size():
+		_skill_pick = str(bar[slot])
+	_redraw_skills()
+
+
+## 장착. 빈 칸이 있으면 맨 뒤에 붙고, 다 찼으면 바꿀 칸을 고르게 한다
+func _on_skill_equip() -> void:
+	if _skill_swap:
+		_skill_swap = false
+		_redraw_skills()
 		return
-	var size := int(GameData.combat().get("skillBarSize", 4))
-	if bar.size() >= size:
-		bar.remove_at(0)
-	bar.append(skill_id)
+	var bar: Array = _me().get("skill_bar", []).duplicate()
+	if _skill_pick == "" or _skill_pick in bar:
+		return
+	if bar.size() < int(GameData.combat().get("skillBarSize", 4)):
+		bar.append(_skill_pick)
+		_send_bar(bar)
+	else:
+		_skill_swap = true
+	_redraw_skills()
+
+
+func _on_skill_unequip() -> void:
+	var bar: Array = _me().get("skill_bar", []).duplicate()
+	bar.erase(_skill_pick)
+	_send_bar(bar)
+	_redraw_skills()
+
+
+## 액션바를 보낸다. **안 배운 것이 들어 있으면 배우기부터 요청한다** —
+## World 는 배운 것만 올려 주므로 순서가 바뀌면 그 칸이 걸러진다
+func _send_bar(bar: Array) -> void:
+	var learned: Array = _me().get("skills", [])
+	for id in bar:
+		if not (id in learned):
+			_transport.send(&"learnSkill", {"skill": str(id)})
 	_transport.send(&"setSkillBar", {"bar": bar})
 
 
@@ -408,7 +1868,8 @@ func _on_bar_pressed(slot: int) -> void:
 	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
 	var bar: Array = me.get("skill_bar", [])
 	if slot >= bar.size():
-		_skill_panel.visible = true
+		if not _skill_panel.visible:
+			_toggle_skills()
 		return
 	_transport.send(&"skill", {"skill": str(bar[slot])})
 
@@ -490,11 +1951,6 @@ func _redraw_npc() -> void:
 			_list_bag(me, "등급", func(index: int) -> void:
 				_transport.send(&"npcCraft", {"index": index})
 			)
-
-	var close := Button.new()
-	close.text = "닫기"
-	close.pressed.connect(func() -> void: _npc_panel.visible = false)
-	_npc_rows.add_child(close)
 
 
 func _list_buy(me: Dictionary) -> void:
@@ -731,6 +2187,13 @@ func _build_zone(zone_id: String) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	# 퀵슬롯 단축키 1~4. 칸 왼쪽 위에 적힌 번호와 같다
+	if event is InputEventKey and event.pressed and not event.echo:
+		var slot: int = event.keycode - KEY_1
+		if slot >= 0 and slot < _bar_buttons.size():
+			_on_bar_pressed(slot)
+			get_viewport().set_input_as_handled()
+			return
 	# 터치는 기본 설정이 마우스로 바꿔 주므로 이 한 줄이 폰도 덮는다
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		# 죽어 있으면 어딜 눌러도 부활 요청이다
@@ -879,6 +2342,10 @@ func _process(delta: float) -> void:
 	_send_input(delta)
 	_draw_state()
 	_tick_aoe()
+	if _auto_spin != null and _auto_spin.visible:
+		# PanelContainer 가 자식 크기를 칸에 맞춰 다시 잡는다 — 축은 그때마다 가운데로
+		_auto_spin.pivot_offset = _auto_spin.size / 2.0
+		_auto_spin.rotation += delta * SPIN_SPEED
 
 
 ## 눌러 둔 자리로 향하는 방향을 만들어 보낸다. **요청일 뿐이고 판정은 World 가 한다.**
@@ -1036,18 +2503,13 @@ func _draw_state() -> void:
 			Vector3(me.x, 0.0, me.z), float(me.hp) / maxf(1.0, float(me.stats.maxHp))
 		)
 
-	_hp_bar.max_value = me.stats.maxHp
-	_hp_bar.value = me.hp
+	_refresh_status(me)
 	_refresh_bar(me)
 	_refresh_auto(me)
+	_refresh_invincible(me)
 
-	_label.text = "%s   %d레벨   체력 %d/%d   경험치 %d/%d\n골드 %d   몬스터 %d/%d   %d fps   빌드 %s\n%s" % [
+	_label.text = "%s   골드 %d   몬스터 %d/%d   %d fps   빌드 %s\n%s" % [
 		GameData.zone(zone_now).get("name", zone_now),
-		me.level,
-		me.hp,
-		me.stats.maxHp,
-		me.exp,
-		Combat.exp_to_next(int(me.level)),
 		me.get("gold", 0),
 		alive,
 		snap.get("monsters", []).size(),
@@ -1166,26 +2628,59 @@ func _aoe_material(alpha: float) -> StandardMaterial3D:
 	return mat
 
 
-## 액션바 글자를 상태에 맞춘다. 쿨타임이 남았으면 남은 초를 적는다
+## 퀵슬롯을 상태에 맞춘다. 쿨타임이 남았으면 어둠을 덮고 남은 초를 적는다
+## 왼쪽 위 상태판을 스냅샷에 맞춘다. 레벨·체력·경험치는 **여기 한 곳에서만** 그린다
+func _refresh_status(me: Dictionary) -> void:
+	_level_label.text = "Lv.%d" % int(me.level)
+	var max_hp := maxf(1.0, float(me.stats.maxHp))
+	_hp_bar.max_value = max_hp
+	_hp_bar.value = float(me.hp)
+	_hp_text.text = "%d / %d" % [int(me.hp), int(max_hp)]
+	# 다음 레벨까지 필요한 양. 만렙이면 0 이 와서 0 으로 나누게 된다
+	var need := maxi(1, Combat.exp_to_next(int(me.level)))
+	_exp_text.text = "경험치 %.2f%%" % (minf(float(me.exp) / need, 1.0) * 100.0)
+	_exp_bar.max_value = need
+	_exp_bar.value = mini(int(me.exp), need)
+
+
 func _refresh_bar(me: Dictionary) -> void:
 	var bar: Array = me.get("skill_bar", [])
 	var ready_at: Dictionary = me.get("skill_ready_at", {})
 	var now := Time.get_ticks_msec()
 	for slot in _bar_buttons.size():
-		var button: Button = _bar_buttons[slot]
-		if slot >= bar.size():
-			button.text = "+"
-			button.disabled = false
-			continue
-		var id := str(bar[slot])
-		var skill: Dictionary = Skills.all().get(id, {})
-		var left := int(ready_at.get(id, 0)) - now
-		if left > 0:
-			button.text = "%s\n%.1f초" % [skill.get("name", id), left / 1000.0]
-			button.disabled = true
+		var cell: PanelContainer = _bar_buttons[slot]
+		var id := str(bar[slot]) if slot < bar.size() else ""
+		_fill_skill_cell(cell, id, "+")
+		var cool: TextureProgressBar = cell.find_child("cool", true, false)
+		var secs: Label = cell.find_child("secs", true, false)
+		var left := int(ready_at.get(id, 0)) - now if id != "" else 0
+		var cooling := left > 0
+		cool.visible = cooling
+		var edge: CoolEdge = cell.find_child("edge", true, false)
+		edge.visible = cooling
+		if cooling:
+			var total := maxf(float(Skills.all().get(id, {}).get("cooldown", 0)), float(left))
+			cool.value = left / total
+			edge.ratio = cool.value
+			edge.queue_redraw()
+			# 1초 아래로는 소수 한 자리 — 막 돌아오는 순간이 보인다
+			secs.text = "%.1f" % (left / 1000.0) if left < 1000 else str(ceili(left / 1000.0))
 		else:
-			button.text = str(skill.get("name", id))
-			button.disabled = false
+			secs.text = ""
+		if _bar_cooling[slot] and not cooling:
+			_flash_ready(cell)
+		_bar_cooling[slot] = cooling
+
+
+## 쿨타임이 끝났다 — 칸이 번쩍이며 살짝 튀었다 가라앉는다
+func _flash_ready(cell: PanelContainer) -> void:
+	var flash: ColorRect = cell.find_child("flash", true, false)
+	cell.pivot_offset = cell.size / 2.0
+	var tween := cell.create_tween().set_parallel()
+	flash.color.a = 0.75
+	tween.tween_property(flash, "color:a", 0.0, 0.35).set_ease(Tween.EASE_OUT)
+	cell.scale = Vector2.ONE * 1.12
+	tween.tween_property(cell, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
 ## 자동 사냥 버튼 글자와 사냥 자리 표시. **상태는 스냅샷(me.auto)만 보고 그린다** —
@@ -1197,8 +2692,14 @@ func _refresh_bar(me: Dictionary) -> void:
 ## 가리키면 걸어가는 도중에 표시가 발밑으로 튄다 (앵커가 따라오기 때문이다)
 func _refresh_auto(me: Dictionary) -> void:
 	var on := bool(me.get("auto", false))
-	_auto_button.text = "자동사냥\n켜짐" if on else "자동사냥"
-	_auto_button.modulate = Color("#7ce08a") if on else Color.WHITE
+	# 켜져 있는 동안만 고리가 보이고 돈다 (_process). 끄면 각도를 되돌려
+	# 다음에 켤 때 늘 같은 자리에서 시작한다
+	_auto_spin.visible = on
+	if not on:
+		_auto_spin.rotation = 0.0
+	# 켜진 것은 **고리가 알린다** — 칸까지 초록으로 물들이면 고리와 아이콘이
+	# 한 덩어리로 보여 무엇이 도는지 알 수 없었다 (2026-09-19, 찍어서 봤다)
+	_auto_cell.find_child("badge", true, false).text = "자동사냥"
 	if _target != Vector3.INF or _target_mob != "":
 		return
 	if on:

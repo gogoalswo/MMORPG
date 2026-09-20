@@ -74,8 +74,29 @@ const HUNT_PATROL_REST_MS := 1200
 ## 화면이 멈춰서 입력이 끊긴 것과 손을 뗀 것을 구별할 방법이 없고, 구별할 필요도
 ## 없다. 둘 다 "사람이 안 몰고 있다"이다
 const MANUAL_HOLD_MS := 400
+## 캐릭터를 막는 몸을 훑는 반경. ZoneRoom.ts 의 SOLID_SCAN_RANGE 와 같은 값이다
+const SOLID_SCAN_RANGE := 4.0
 
 var _next_save_at := 0
+
+
+## 그 자리에서 캐릭터를 막는 몸들. **죽은 것은 빼고 4m 안만** 본다.
+##
+## 시체를 안 빼면 화면에서 사라진 놈이 보이지 않는 벽으로 남아 "왜 안 가지" 가
+## 된다 (docs/features/collision.md 의 "죽은 것은 지나간다"). 몬스터끼리는
+## `_move_monster` 가 이미 빼고 있었는데 **캐릭터 이동만 통째로 넘기고 있었다.**
+## ZoneRoom.ts 의 solidsNear 와 같은 순서·같은 조건이다
+func _solids_near(x: float, z: float) -> Array:
+	var near: Array = []
+	for monster in _monsters:
+		if int(monster.hp) <= 0:
+			continue
+		var dx: float = float(monster.x) - x
+		var dz: float = float(monster.z) - z
+		if dx * dx + dz * dz > SOLID_SCAN_RANGE * SOLID_SCAN_RANGE:
+			continue
+		near.append(monster)
+	return near
 
 
 func open(id: String) -> void:
@@ -146,6 +167,9 @@ func join(player_id: String) -> void:
 		"auto_x": float(spawn[0]),
 		"auto_z": float(spawn[1]),
 		"auto_target": "",
+		# --- 테스트: 무적 --- 켜면 몬스터에게 맞아도 HP 가 안 준다.
+		# 존을 옮겨도 유지한다 (테스트 중에 존마다 다시 켜면 번거롭다)
+		"invincible": bool(kept.get("invincible", false)),
 		# 잡을 것이 없을 때 서성이는 자리와 쉬는 시각
 		"auto_patrol_x": float(spawn[0]),
 		"auto_patrol_z": float(spawn[1]),
@@ -197,8 +221,11 @@ func input_move(player_id: String, seq: int, dx: float, dz: float, dt: float) ->
 		player.last_seq = seq
 		return
 
-	# 몬스터를 뚫고 못 지나간다. 미는 쪽은 언제나 움직이는 쪽이다
-	Movement.apply_move(player, dx, dz, dt, half_size, _run_speed, _monsters)
+	# 몬스터를 뚫고 못 지나간다. 미는 쪽은 언제나 움직이는 쪽이다.
+	# **시체는 빼고 넘긴다** — 넣으면 보이지 않는 벽이 된다 (_solids_near)
+	Movement.apply_move(
+		player, dx, dz, dt, half_size, _run_speed, _solids_near(player.x, player.z)
+	)
 	player.last_seq = seq
 
 	if sqrt(dx * dx + dz * dz) > 1e-4:
@@ -488,7 +515,9 @@ func _walk_auto(
 	if to.length() <= stop_at:
 		return
 	var dir := to.normalized()
-	Movement.apply_move(player, dir.x, dir.y, delta, half_size, _run_speed, _monsters)
+	Movement.apply_move(
+		player, dir.x, dir.y, delta, half_size, _run_speed, _solids_near(player.x, player.z)
+	)
 	player.rot = atan2(dir.x, dir.y)
 
 
@@ -531,6 +560,8 @@ func _respawn(now: int) -> void:
 			continue
 		monster.hp = monster.max_hp
 		monster.respawn_at = 0
+		# 죽은 자리에서 다시 선다. 집에서 멀면 다음 틱의 리쉬 검사가 도로 켠다
+		monster.leashing = false
 
 
 ## Transport 가 비워 간다. 여기서 비우지 않으면 계속 쌓인다
@@ -569,9 +600,25 @@ func _step_monsters(delta: float, now: int) -> void:
 
 		var home_gap := Vector2(monster.x - monster.home_x, monster.z - monster.home_z).length()
 
-		# 집에서 너무 멀어졌으면 쫓기를 포기하고 돌아간다
+		# --- 집으로 돌아가는 중 ---
+		# **도착할 때까지 아무도 안 쫓는다.** 한 걸음 걷고 리쉬 안으로 들어오자마자
+		# 대상을 다시 찾으면 경계에서 앞뒤로 떤다 (2026-09-20 에 지적받았다)
+		if bool(monster.get("leashing", false)):
+			if home_gap <= PATROL_ARRIVE:
+				monster.leashing = false
+				monster.state = "idle"
+				continue
+			monster.state = "chase"
+			_move_monster(monster, monster.home_x, monster.home_z, float(monster.speed), delta)
+			continue
+
+		# 집에서 너무 멀어졌으면 쫓기를 포기하고 **체력을 채워** 돌아간다.
+		# 깎아 놓고 도망친 놈을 다음에 만났을 때 반피로 서 있으면, 리쉬 밖에서
+		# 때렸다 빠지기를 되풀이해 위험 없이 잡을 수 있다
 		if home_gap > float(monster.leash):
+			monster.leashing = true
 			monster.target = ""
+			monster.hp = monster.max_hp
 			monster.state = "chase"
 			_move_monster(monster, monster.home_x, monster.home_z, float(monster.speed), delta)
 			continue
@@ -708,7 +755,11 @@ func _move_monster(monster: Dictionary, tx: float, tz: float, speed: float, delt
 ## attack 을 따로 받는 것은 범위 공격이 평타의 power 배로 때리기 때문이다
 func _hit_player(player: Dictionary, monster: Dictionary, attack: float = -1.0) -> void:
 	var power := float(monster.attack) if attack < 0.0 else attack
-	var damage := Combat.compute_damage(power, float(player.stats.defense))
+	# **공격자 레벨로 K 를 뽑는다** — 높은 사냥터 몬스터가 때리면 내 방어력 효율이
+	# 자동으로 떨어진다. 레벨차 보정 시스템이 따로 필요 없는 이유다 (설계 1장)
+	var damage := roundi(Stats.damage(power, int(monster.get("level", 1)), float(player.stats.defense)))
+	if bool(player.get("invincible", false)):
+		damage = 0
 	player.hp = maxi(0, int(player.hp) - damage)
 	_events.append({
 		"type": "hit",
@@ -801,6 +852,8 @@ static func make_monster(
 		# 집. 너무 멀어지면 여기로 돌아온다
 		"home_x": x,
 		"home_z": z,
+		# 집으로 돌아가는 중인가. 돌아가는 동안은 아무도 안 쫓는다 (_step_monsters)
+		"leashing": false,
 		"target": "",
 		"state": "idle",
 		# --- 순찰 --- 쫓을 사람이 없을 때 걸어갈 자리와, 다음 다리를 시작할 시각.
@@ -948,6 +1001,67 @@ func learn_skill(player_id: String, skill_id: String) -> void:
 	_events.append({"type": "skills", "learned": player.skills.duplicate()})
 
 
+## 테스트 스위치(쿨타임 0 · 레벨 잠금 해제)를 켜고 끈다. 이름은 Skills.SWITCHES 만 받는다
+func set_test_switch(name: String, on: bool) -> void:
+	if not Skills.set_switch(name, on):
+		return
+	var label := "쿨타임 0" if name == "cooldownOff" else "레벨 잠금 해제"
+	_events.append({"type": "notice", "text": "%s %s" % [label, "켬" if on else "끔"]})
+
+
+## 테스트용 무적. 맞는 판정·이벤트는 그대로 두고 피해만 0 으로 만든다 (`_hit_player`)
+func set_invincible(player_id: String, on: bool) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	player.invincible = on
+	_events.append({"type": "notice", "text": "무적 %s" % ("켬" if on else "끔")})
+
+
+## **디버그 — 시뮬레이터와 같은 조건을 게임에서 세운다.** ★
+##
+## 설계 문서 9장 5번이 요구한 것이다. 레벨과 "등급 g 풀세트 + 강화 n" 을 강제로
+## 맞춰 놓으면, 화면에 찍히는 그룹 정리 시간·HP 손실을 설계표와 바로 대조할 수 있다.
+## 수치로만 맞다고 믿었다가 화면이 다른 적이 여러 번이라, 재현 수단이 있어야 한다.
+##
+## 등급은 착용 레벨(1/31/61/…)에 가장 가까운 **단계**로 옮긴다 — 지금 카탈로그가
+## 단계 20개 축이기 때문이다(설계의 56종 표로 갈아끼우면 이 변환이 사라진다).
+func debug_gear(player_id: String, level: int, grade: int, enhance: int) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	player.level = clampi(level, 1, Stats.max_level())
+	player.exp = 0
+
+	var want_level := Stats.equip_level(clampi(grade, 1, Stats.grade_count()))
+	var step := clampi(enhance, 0, Items.max_enhance())
+	# 그 착용 레벨에 가장 가까운 단계의 물건으로 여섯 칸을 채운다
+	var equipped := {}
+	for slot in Items.slots():
+		var best := {}
+		var best_gap := 1 << 30
+		for id in Items.all():
+			var item: Dictionary = Items.all()[id]
+			if str(item.get("slot", "")) != slot:
+				continue
+			if item.has("job") and str(item.job) != str(player.job):
+				continue
+			var gap: int = absi(int(item.get("level", 1)) - want_level)
+			if gap < best_gap:
+				best_gap = gap
+				best = item
+		if best.is_empty():
+			continue
+		equipped[slot] = {"id": str(best.id), "grade": 1, "enhance": step, "options": []}
+	player.equipped = equipped
+	_refresh_stats(player)
+	player.hp = int(player.stats.maxHp)
+	_events.append({
+		"type": "notice",
+		"text": "디버그: Lv%d · 등급%d 풀세트 · 강화 +%d" % [player.level, grade, step],
+	})
+
+
 ## 액션바를 정한다. 배운 것만, 칸 수만큼만 올라간다
 func set_skill_bar(player_id: String, ids: Array) -> void:
 	var player: Dictionary = _players.get(player_id, {})
@@ -1043,7 +1157,7 @@ func cast(player_id: String, skill_id: String) -> void:
 ## 몬스터 하나를 때린다. 기본 공격과 스킬이 같은 자리를 쓴다
 func _hit_monster(player: Dictionary, target: Dictionary, attack: float, skill_id: String) -> void:
 	var stats: Dictionary = player.stats
-	var damage := Combat.compute_damage(attack, target.defense)
+	var damage := roundi(Stats.damage(attack, int(player.level), float(target.defense)))
 	var crit := Combat.roll_crit(float(stats.crit), _rng.randf())
 	if crit:
 		damage = roundi(damage * float(stats.critDamage))
@@ -1064,14 +1178,23 @@ func _hit_monster(player: Dictionary, target: Dictionary, attack: float, skill_i
 		_kill(player, target, Time.get_ticks_msec())
 
 
-## 직업 스탯에 장비를 더한다. **장비가 바뀔 때마다 다시 만든다** —
-## 어딘가에 합쳐 둔 값을 들고 있으면 반드시 어긋난다
+## 맨몸 스탯에 장비를 **곱한다**. 장비가 바뀔 때마다 다시 만든다 —
+## 어딘가에 합쳐 둔 값을 들고 있으면 반드시 어긋난다.
+##
+## **더하기가 아니라 곱하기다** (2026-09-20). 설계에서 장비는 절대 수치가 아니라
+## 기본 스탯에 곱하는 **%** 다:
+##
+##     총 공격력 = 기본공격력(레벨) × (1 + 장비 % 합계)
+##
+## 축마다 계수가 다른 것(공 ×1.0 / 방 ×0.6 / HP ×0.35)은 `gear.ts` 가 이미 반영해
+## 내려보내므로 여기서는 그대로 곱하기만 한다. 생존을 레벨 쪽에 묶어 둬야
+## 저레벨 캐릭이 고등급 장비를 껴도 상위 사냥터에서 죽어 **게이팅이 자동으로 걸린다**
 func _refresh_stats(player: Dictionary) -> void:
 	var stats := Combat.stats_for(str(player.job), int(player.level))
 	var gear := Items.equipment_stats(player.equipped)
-	stats.attack += gear.attack
-	stats.defense += gear.defense
-	stats.maxHp += gear.maxHp
+	stats.attack = maxi(1, roundi(float(stats.attack) * (1.0 + float(gear.attack) / 100.0)))
+	stats.defense = maxi(0, roundi(float(stats.defense) * (1.0 + float(gear.defense) / 100.0)))
+	stats.maxHp = maxi(1, roundi(float(stats.maxHp) * (1.0 + float(gear.maxHp) / 100.0)))
 	# 상한이 있는 것들 — 옵션이 여덟 자리에 붙으므로 안 막으면 치명타 100% 가 나온다
 	var c := GameData.combat()
 	stats.crit = minf(float(stats.crit) + gear.crit, float(c.get("critCap", 0.75)))

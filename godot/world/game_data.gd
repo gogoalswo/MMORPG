@@ -43,6 +43,10 @@ static func constants() -> Dictionary:
 static func combat() -> Dictionary:
 	return load_table("combat")
 
+## 밸런스 설계(stat-balance.md)의 수치. 판정은 아직 combat 으로 돈다 — Stats 가 읽는다
+static func balance() -> Dictionary:
+	return load_table("balance")
+
 static func monster_kind(id: String) -> Dictionary:
 	var kinds: Dictionary = load_table("monsters").get("kinds", {})
 	if not kinds.has(id):

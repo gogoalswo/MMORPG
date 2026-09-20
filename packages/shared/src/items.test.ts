@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import type { ItemBonus } from './items.ts';
 import {
   BOSS_MATERIALS,
   slotLabel,
@@ -82,9 +83,9 @@ test('모든 아이템이 슬롯과 요구 레벨을 갖는다', () => {
   }
 });
 
-test('무기와 보조만 직업을 탄다', () => {
-  // 보조는 격투가 보호대 / 궁수 화살통 / 마법사 마법서로 갈린다
-  const jobSlots = ['weapon', 'offhand'];
+test('무기만 직업을 탄다', () => {
+  // 보조(보호대·마법서·화살통)를 없애면서 직업을 타는 자리는 무기만 남았다
+  const jobSlots = ['weapon'];
   for (const item of Object.values(ITEMS)) {
     if (item.material) continue;
     if (jobSlots.includes(item.slot!)) assert.ok(item.job, `${item.id}: ${item.slot} 인데 직업이 없다`);
@@ -92,7 +93,7 @@ test('무기와 보조만 직업을 탄다', () => {
   }
 });
 
-test('슬롯 8종이 단계마다 다 갖춰져 있다', () => {
+test('슬롯 6종이 단계마다 다 갖춰져 있다', () => {
   // 하나라도 비면 그 자리는 영영 빈 채로 남는다
   for (const slot of EQUIP_SLOTS) {
     const levels = new Set(
@@ -104,18 +105,85 @@ test('슬롯 8종이 단계마다 다 갖춰져 있다', () => {
   }
 });
 
-test('보조 슬롯 이름이 직업마다 다르다', () => {
-  assert.equal(slotLabel('offhand', 'fighter'), '보호대');
-  assert.equal(slotLabel('offhand', 'archer'), '화살통');
-  assert.equal(slotLabel('offhand', 'mage'), '마법서');
-  assert.equal(slotLabel('helmet'), '투구', '직업과 무관한 슬롯은 이름이 하나다');
+test('슬롯 이름은 여섯 개뿐이다', () => {
+  // 보조·귀걸이를 없앴다. 남은 것에 이름이 다 붙어 있어야 창이 빈칸으로 안 나온다
+  assert.deepEqual(
+    EQUIP_SLOTS.map((slot) => slotLabel(slot)),
+    ['무기', '갑옷', '투구', '신발', '목걸이', '반지']
+  );
+  assert.equal(EQUIP_SLOTS.length, 6);
 });
 
-test('직업별 보조 장비는 성격이 다르다', () => {
-  const at = (job: string) => ITEMS[`o_${job}_05`]!.bonus;
-  assert.ok((at('fighter').maxHp ?? 0) > 0, '격투가 보호대는 체력을 준다');
-  assert.ok((at('mage').attack ?? 0) > 0, '마법사 마법서는 공격을 준다');
-  assert.ok((at('archer').attack ?? 0) > 0, '궁수 화살통은 공격을 준다');
+test('슬롯 배분이 설계표와 같다 (stat-balance.md)', () => {
+  // 스탯마다 예산을 100% 로 보고 슬롯이 나눠 갖는다. 어긋나면 "갈아입을 자리가
+  // 목적에 따라 갈린다" 는 설계가 무너진다
+  // 단계 레벨은 10 단위(1·10·…·190)라 설계표의 착용 레벨(1·31·61·…)과 자리가 다르다.
+  // 배분은 레벨과 무관하므로 아무 단계에서나 재도 같다
+  const at = (slot: string) => {
+    const item = Object.values(ITEMS).find(
+      (i) => i.slot === slot && i.level === 180 && (i.job ?? 'fighter') === 'fighter'
+    )!;
+    return item.bonus;
+  };
+  const share = (pick: (b: ItemBonus) => number | undefined) => {
+    const total = EQUIP_SLOTS.reduce((sum, s) => sum + (pick(at(s)) ?? 0), 0);
+    return (slot: string) => Math.round(((pick(at(slot)) ?? 0) / total) * 100);
+  };
+
+  const atk = share((b) => b.attack);
+  assert.equal(atk('weapon'), 60, '무기가 공격력 예산의 60%');
+  assert.equal(atk('necklace'), 20);
+  assert.equal(atk('ring'), 20);
+
+  const def = share((b) => b.defense);
+  assert.equal(def('armor'), 40, '갑옷이 방어력 예산의 40%');
+  assert.equal(def('helmet'), 20);
+  assert.equal(def('boots'), 20);
+  assert.equal(def('necklace'), 10);
+  assert.equal(def('ring'), 10);
+
+  // HP 는 방어력과 같은 배분을 쓴다 (둘 다 생존 스탯)
+  const hp = share((b) => b.maxHp);
+  for (const slot of EQUIP_SLOTS) assert.equal(hp(slot), def(slot), `${slot}: HP 배분이 방어력과 다르다`);
+
+  // 치명타는 목걸이, 공격 속도는 반지 전담
+  for (const slot of EQUIP_SLOTS) {
+    assert.equal(at(slot).crit ?? 0, slot === 'necklace' ? 50 : 0, `${slot}: 치명타`);
+    assert.equal(at(slot).attackSpeed ?? 0, slot === 'ring' ? 20 : 0, `${slot}: 공격 속도`);
+  }
+});
+
+test('치확·공속이 설계표의 등급 곡선을 따라간다', () => {
+  // 설계표(stat-balance.md)는 착용 레벨 1·31·61·91·121·151·181 에서
+  // 치확 0·8·17·25·33·42·50%p, 공속 0·3·7·10·13·17·20% 를 적는다.
+  // 단계 레벨은 10 단위라 30·60·… 에서 재는데, 한 칸(1레벨) 차이라 값이 같거나 1 작다
+  const want: Array<[number, number, number]> = [
+    // 레벨, 치확, 공속
+    [30, 8, 3],
+    [60, 17, 7],
+    [90, 25, 10],
+    [120, 33, 13],
+    [150, 41, 17],
+    [180, 50, 20],
+  ];
+  for (const [level, crit, speed] of want) {
+    const neck = Object.values(ITEMS).find((i) => i.slot === 'necklace' && i.level === level)!;
+    const ring = Object.values(ITEMS).find((i) => i.slot === 'ring' && i.level === level)!;
+    // 단계 레벨(30·60·…)은 착용 레벨(31·61·…)보다 한 칸 아래라 1 작을 수 있다
+    assert.ok(Math.abs(neck.bonus.crit! - crit) <= 1, `${level}레벨 목걸이 치확 ${neck.bonus.crit}`);
+    assert.ok(
+      Math.abs(ring.bonus.attackSpeed! - speed) <= 1,
+      `${level}레벨 반지 공속 ${ring.bonus.attackSpeed}`
+    );
+  }
+});
+
+test('보조와 귀걸이는 아이템이 안 나온다', () => {
+  // 없앤 자리의 아이템이 남아 있으면 못 끼는 물건이 가방에 쌓인다
+  for (const item of Object.values(ITEMS)) {
+    assert.ok(item.slot !== 'offhand', `${item.id}: 보조가 남아 있다`);
+    assert.ok(item.slot !== 'earring', `${item.id}: 귀걸이가 남아 있다`);
+  }
 });
 
 test('요구 레벨과 직업을 서버가 막는다', () => {
@@ -312,29 +380,39 @@ test('강화 확률은 세 갈래로 나뉘고 합이 1 이다', () => {
   }
 });
 
-test('올라갈수록 어려워지고, 낮은 구간에서는 부서지지 않는다', () => {
-  // 처음부터 부서지면 강화를 아예 안 하게 된다
-  for (let level = 0; level <= 3; level++) {
-    assert.equal(enhanceOdds(level).destroy, 0, `+${level}: 초반부터 부서진다`);
+test('성공률이 설계표대로 90% 에서 10% 까지 내려간다', () => {
+  // 설계 4장의 성공률 행 그대로. **유지가 없어서 실패는 곧 파괴**다
+  const want = [0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1];
+  for (let level = 0; level < want.length; level++) {
+    const odds = enhanceOdds(level);
+    assert.equal(odds.success, want[level], `+${level} 성공률`);
+    assert.equal(odds.keep, 0, `+${level}: 유지 구간이 남아 있다`);
+    assert.equal(Math.round(odds.destroy * 100) / 100, Math.round((1 - want[level]!) * 100) / 100);
   }
-  assert.ok(enhanceOdds(0).success > enhanceOdds(9).success, '높은 수치가 더 쉬우면 안 된다');
-  assert.ok(enhanceOdds(9).destroy > 0, '끝까지 안 부서지면 골드만 있으면 되는 일이 된다');
 });
 
-test('굴림값이 확률대로 갈린다', () => {
-  const level = 8;
-  const o = enhanceOdds(level);
-  assert.equal(rollEnhance(level, 0), 'success');
-  assert.equal(rollEnhance(level, o.success - 0.001), 'success');
-  assert.equal(rollEnhance(level, o.success + 0.001), 'keep');
-  assert.equal(rollEnhance(level, o.success + o.keep + 0.001), 'destroy');
-  assert.equal(rollEnhance(level, 0.999999), 'destroy');
+test('실패하면 무조건 파괴된다 — 유지가 없다', () => {
+  // 재료도 값도 없으니 실패의 대가는 아이템 하나뿐이고, 무한히 재시도할 수 있다.
+  // 그래서 도달 단계는 "아이템이 몇 개 들어오느냐" 로만 결정된다
+  for (let level = 0; level < MAX_ENHANCE; level++) {
+    const o = enhanceOdds(level);
+    assert.equal(rollEnhance(level, 0), 'success');
+    assert.equal(rollEnhance(level, o.success - 0.001), 'success');
+    assert.equal(rollEnhance(level, o.success + 0.001), 'destroy');
+    assert.equal(rollEnhance(level, 0.999999), 'destroy');
+    for (let i = 0; i <= 100; i++) {
+      assert.notEqual(rollEnhance(level, i / 100), 'keep', `+${level}: 유지가 나온다`);
+    }
+  }
 });
 
-test('부서지지 않는 구간에서는 어떤 굴림도 파괴가 아니다', () => {
-  for (let i = 0; i <= 100; i++) {
-    assert.notEqual(rollEnhance(2, i / 100), 'destroy');
-  }
+test('강화 총 배수가 ×6 이고 고강화일수록 크게 오른다', () => {
+  // 9→10단이 +50% 여야 파괴 위험을 감수할 이유가 생긴다
+  assert.equal(Math.round(enhanceMultiplier(0) * 100) / 100, 1);
+  assert.equal(Math.round(enhanceMultiplier(MAX_ENHANCE) * 100) / 100, 6);
+  const first = enhanceMultiplier(1) / enhanceMultiplier(0) - 1;
+  const last = enhanceMultiplier(MAX_ENHANCE) / enhanceMultiplier(MAX_ENHANCE - 1) - 1;
+  assert.ok(Math.abs(last / first - 7) < 0.01, `첫 구간 : 마지막 = 1 : ${(last / first).toFixed(2)}`);
 });
 
 test('강화하면 세지고, 최고 수치에서 멈춘다', () => {
@@ -351,13 +429,11 @@ test('강화하면 세지고, 최고 수치에서 멈춘다', () => {
   assert.equal(canEnhance(MAX_ENHANCE - 1), true);
 });
 
-test('강화 값은 올라갈수록 비싸진다', () => {
+test('강화는 공짜다 — 값을 매기면 골드를 모으는 일이 된다', () => {
+  // 설계는 그 자리에 **드랍**을 놓았다. 실패하면 아이템이 사라지므로 아이템이 연료다
   const item = ITEMS['w_fighter_05']!;
-  let previous = 0;
   for (let level = 0; level < MAX_ENHANCE; level++) {
-    const cost = enhanceCost(item, level);
-    assert.ok(cost > previous, `+${level}: 더 싸다`);
-    previous = cost;
+    assert.equal(enhanceCost(item, level), 0, `+${level}: 값이 붙어 있다`);
   }
 });
 

@@ -166,13 +166,31 @@ func _case_direction(game: Node3D) -> void:
 	if fell.length() > LightningFx.AHEAD + 0.01:
 		_fail("번개가 %.1fm 떨어져서 친다 — 내가 선 자리여야 한다" % fell.length())
 
-	# 시작점은 **캐릭터보다 뒤 · 하늘**이다
+	# **어느 쪽을 보든 시작점이 화면 밖이어야 한다** (2026-09-18 지적:
+	# "방향에 따라 엄청 짧게 나오기도 하고 번개 시작지점이 보이기도 해").
+	# 캐릭터가 보는 쪽 반대에 두면 카메라가 고정각이라 시작점이 화면 아래로 내려온다
+	var cam: Camera3D = game._camera
+	var worst := -99999.0
+	var worst_at := 0.0
+	for step in 16:
+		var turn := TAU * float(step) / 16.0
+		var sky: Vector3 = here + LightningFx.from_dir(turn) * LightningFx.BEHIND \
+			+ Vector3.UP * LightningFx.SKY
+		var on_screen := cam.unproject_position(sky).y
+		if on_screen > worst:
+			worst = on_screen
+			worst_at = turn
+	if worst > -40.0:
+		_fail("%.0f° 를 볼 때 시작점이 화면 y=%.0f 다 — 화면 밖(음수)이어야 한다" % [
+			rad_to_deg(worst_at), worst
+		])
+	else:
+		print("  시작점: 열여섯 방향 전부 화면 밖 (가장 낮은 것이 y=%.0f)" % worst)
+
 	var start: Vector3 = first.to_global(first._from) - here
 	var high: float = start.y
 	start.y = 0.0
-	var behind: float = -start.dot(facing)
-	if behind <= 0.0:
-		_fail("줄기가 캐릭터 앞(%.1fm)에서 시작한다 — 뒤에서 와야 한다" % -behind)
+	var behind: float = start.length()
 	if high < 3.0:
 		_fail("줄기가 %.1fm 에서 시작한다 — 하늘에서 와야 한다" % high)
 
@@ -181,8 +199,8 @@ func _case_direction(game: Node3D) -> void:
 	if box.size.y < LightningFx.SKY * 0.8:
 		_fail("줄기 메시가 %.1fm 밖에 안 덮는다 (하늘은 %.1fm)" % [box.size.y, LightningFx.SKY])
 	else:
-		print("  줄기: 캐릭터 뒤 %.1fm · 높이 %.1fm 에서 내 자리(앞 %.1fm)로 (%.1fm 를 덮는다)" % [
-			behind, high, fell.length(), box.size.y
+		print("  줄기: %.1fm 떨어진 높이 %.1fm 에서 내 자리로 (%.1fm 를 덮는다)" % [
+			behind, high, box.size.y
 		])
 
 
@@ -226,14 +244,28 @@ func _case_ground(game: Node3D) -> void:
 	if first._crack_paths.size() < LightningFx.CRACKS * 2:
 		_fail("금이 %d갈래다 — 가지를 안 친다" % first._crack_paths.size())
 
-	# 파편은 **솟았다 떨어진다.** 안 떨어지면 불똥이지 파편이 아니다
-	var debris: CPUParticles3D = first._debris
-	if debris.direction.y <= 0.0:
-		_fail("파편이 위로 안 튄다 (y=%.2f)" % debris.direction.y)
-	if debris.gravity.y >= 0.0:
-		_fail("파편이 안 떨어진다 (중력 %.1f)" % debris.gravity.y)
-	if debris.material_override.blend_mode != BaseMaterial3D.BLEND_MODE_MIX:
-		_fail("파편이 가산 혼합이다 — 흙은 빛나지 않는다")
+	# 터지는 것은 **흙이 아니라 전기다** (2026-09-19 지시: "바닥에 먼지가 아니라
+	# 번개가 터지는 이펙트로"). 빛이므로 가산 혼합이고, 중력을 세게 주면 도로
+	# 흙처럼 떨어진다
+	var sparks: CPUParticles3D = first._sparks
+	if sparks.direction.y <= 0.0:
+		_fail("불똥이 위로 안 튄다 (y=%.2f)" % sparks.direction.y)
+	if sparks.material_override.blend_mode != BaseMaterial3D.BLEND_MODE_ADD:
+		_fail("불똥이 가산 혼합이 아니다 — 전기는 빛난다")
+	if sparks.gravity.y < -6.0:
+		_fail("불똥이 중력 %.1f 로 떨어진다 — 흙으로 보인다" % sparks.gravity.y)
+
+	# 지면 전기 가닥은 **리본 메시**다 (알갱이가 아니다). 금과 달리 밝고 빨리 꺼진다
+	for pair in [["가닥 halo", first._arc_halo], ["가닥 심", first._arc_core]]:
+		var arc: MeshInstance3D = pair[1]
+		if arc.mesh == null or arc.mesh.get_surface_count() == 0:
+			_fail("%s 에 면이 하나도 없다" % pair[0])
+		elif arc.material_override.blend_mode != BaseMaterial3D.BLEND_MODE_ADD:
+			_fail("%s 가 가산 혼합이 아니다" % pair[0])
+	if first._arc_halo.get_aabb().size.y > 0.4:
+		_fail("전기 가닥이 %.2fm 솟았다 — 지면을 타야 한다" % first._arc_halo.get_aabb().size.y)
+	if LightningFx.ARC_LIFE >= LightningFx.CRACK_LIFE:
+		_fail("전기 가닥이 금보다 오래 남는다 — 전기는 빨리 꺼진다")
 
 	# 번쩍임 — 줄기 모양만으로는 번개로 안 읽힌다
 	if first._light == null:
@@ -249,9 +281,9 @@ func _case_ground(game: Node3D) -> void:
 	if LightningFx.FLARE_SWELL > 1.5:
 		_fail("섬광이 %.2f배까지 퍼진다 — 충격 파동 고리가 된다" % LightningFx.FLARE_SWELL)
 
-	print("  땅: 금 %d갈래(가지 포함)가 %.0fms 에 걸쳐 자라고, 파편 %d개가 중력 %.0f 로 떨어진다" % [
+	print("  땅: 금 %d갈래가 %.0fms 에 걸쳐 자라고, 전기 가닥 %d개와 불똥 %d개가 터진다" % [
 		first._crack_paths.size(), LightningFx.CRACK_GROW * 1000.0,
-		debris.amount, debris.gravity.y
+		LightningFx.ARCS, sparks.amount
 	])
 
 
@@ -265,7 +297,7 @@ func _case_visible(game: Node3D) -> void:
 	var core := LightningFx.CORE_WIDTH * per_m
 	var sky := LightningFx.SKY * per_m
 	var crack := LightningFx.CRACK_LENGTH * per_m
-	var chunk := LightningFx.DEBRIS_SIZE * per_m
+	var chunk := LightningFx.SPARK_SIZE * per_m
 	print("  1m=%.0fpx — 줄기 halo %.0fpx(코어 %.0fpx) · 높이 %.0fpx · 금 %.0fpx · 파편 %.0fpx" % [
 		per_m, halo, core, sky, crack, chunk
 	])
@@ -282,11 +314,11 @@ func _case_visible(game: Node3D) -> void:
 	# 두껍고 사각사각하다" 는 말을 들었다 (2026-09-18) — 크기를 반으로 줄인 만큼
 	# 개수를 늘렸으니, 하한도 개수와 함께 본다
 	if chunk < 3.0:
-		_fail("파편이 %.1fpx 다 — 한 픽셀 밑이면 안 보인다" % chunk)
+		_fail("불똥이 %.1fpx 다 — 한 픽셀 밑이면 안 보인다" % chunk)
 	if chunk > 7.0:
-		_fail("파편이 %.0fpx 다 — 크면 덩어리로 보인다" % chunk)
-	if LightningFx.DEBRIS_COUNT < 20:
-		_fail("알갱이가 %d개뿐이다 — 작게 줄인 만큼 많아야 한다" % LightningFx.DEBRIS_COUNT)
+		_fail("불똥이 %.0fpx 다 — 크면 덩어리로 보인다" % chunk)
+	if LightningFx.SPARK_COUNT < 20:
+		_fail("불똥이 %d개뿐이다 — 작게 줄인 만큼 많아야 한다" % LightningFx.SPARK_COUNT)
 	if sky < 150.0:
 		_fail("시작 높이가 %.0fpx 다 — 하늘에서 오는 것으로 안 보인다" % sky)
 

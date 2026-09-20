@@ -46,7 +46,6 @@ export const Player = schema({
    * 값은 아이템 id 이고, 빈 문자열이면 그 자리가 비어 있다는 뜻이다.
    */
   weapon: t.string(),
-  offhand: t.string(),
   helmet: t.string(),
   armor: t.string(),
   boots: t.string(),

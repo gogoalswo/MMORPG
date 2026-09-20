@@ -37,6 +37,19 @@ static func unlock_all() -> bool:
 	return bool(_table().get("unlockAll", false))
 
 
+## 테스트 스위치를 켜고 끈다. **World 만 부른다** (화면 단추는 요청을 보낼 뿐이다).
+## 표는 메모리에 한 벌이라 판정과 화면이 같이 따라온다. 파일은 안 바꾸므로
+## 다시 켜면 `skills.json` 의 값으로 돌아간다
+const SWITCHES := ["cooldownOff", "unlockAll"]
+
+
+static func set_switch(name: String, on: bool) -> bool:
+	if not (name in SWITCHES):
+		return false
+	_table()[name] = on
+	return true
+
+
 ## 실제로 적용할 쿨타임(ms) — 테스트 스위치가 켜져 있으면 0
 static func cooldown_of(skill: Dictionary) -> int:
 	return 0 if cooldown_off() else int(skill.get("cooldown", 0))

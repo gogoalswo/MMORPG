@@ -1,4 +1,5 @@
 import type { JobId } from './character.ts';
+import { JOB_MULT, base as balanceBase, expToNext as balanceExpToNext } from './balance.ts';
 
 /**
  * 스탯과 전투 계산.
@@ -152,17 +153,30 @@ export const JOB_STATS: Record<JobId, StatRow> = {
   archer:  [  100,    15,     5,    12,        800,          9,          2.8,          0.9 ],
 };
 
+/**
+ * 맨몸 능력치 — **밸런스 설계의 복리 곡선**이다 ([balance.ts](balance.ts)).
+ *
+ * 2026-09-20 에 갈아끼웠다. 그 전에는 `JOB_STATS` 의 선형 증가(레벨당 +11 HP 같은
+ * 고정값)였는데, 그러면 레벨당 상대 성장이 초반 +18% / 후반 +0.5% 로 40배 차이가 나
+ * "장비 비중" 이라는 개념 자체가 레벨대마다 다른 뜻이 된다. 복리면 레벨 1개가
+ * 언제나 총 피해 +2% 다. `JOB_STATS` 는 **사거리와 공격 간격**만 남아서 쓰인다.
+ *
+ * **치명타는 기본이 0 이다** — 설계에서 치확·치피는 목걸이 전담이라 장비에서만 온다.
+ * 등급 1~2 에서 치명타가 거의 없어야 몬스터 HP 가 작은 초반에 타수 편차가 안 커진다.
+ */
 export function statsFor(job: JobId, level: number): Stats {
-  const [maxHp, attack, defense, attackRange, attackCooldown, hpUp, attackUp, defenseUp] = JOB_STATS[job];
-  const steps = Math.max(0, level - 1);
+  const [, , , attackRange] = JOB_STATS[job];
+  const b = balanceBase(level);
+  const m = JOB_MULT[job];
   return {
-    maxHp: Math.round(maxHp + hpUp * steps),
-    attack: Math.round(attack + attackUp * steps),
-    defense: Math.round(defense + defenseUp * steps),
+    maxHp: Math.round(b.hp * m.hp),
+    attack: Math.round(b.atk * m.atk),
+    defense: Math.round(b.df * m.df),
     attackRange,
-    attackCooldown,
-    crit: BASE_CRIT,
-    critDamage: BASE_CRIT_DAMAGE,
+    // 설계의 직업별 공격 간격(초) → ms
+    attackCooldown: Math.round(m.interval * 1000),
+    crit: 0,
+    critDamage: 1,
     attackSpeed: 0,
   };
 }
@@ -181,18 +195,15 @@ export function computeDamage(attack: number, defense: number): number {
   return Math.max(1, Math.round(attack * (1 - reduction)));
 }
 
-/** 다음 레벨까지 필요한 누적 경험치 */
 /**
- * 다음 레벨까지 필요한 경험치.
+ * 다음 레벨까지 필요한 경험치 — **만렙까지 걸리는 시간에서 역산한 값**이다
+ * ([balance.ts](balance.ts) 의 성장 곡선, 2,880시간 = 24시간 × 120일).
  *
- * 지수를 1.45 에서 1.2 로 낮췄다. 1.45 는 필요량이 몬스터 보상보다 훨씬 빨리
- * 늘어서, 구간 후반이면 한 레벨에 40~50마리씩 잡아야 했다.
- *
- * 몬스터를 5레벨 간격으로 배치한 것과 맞물려(`monsters.ts`) 레벨당 대체로
- * 4~15마리, 1 → 40 이 약 390마리가 된다. `combat.test.ts` 가 이 범위를 지킨다.
+ * 그 전에는 `55 × 레벨^1.2` 였다 (Lv100 에 13,815). 사냥 속도와 무관한 식이라
+ * "만렙까지 얼마나 걸리는가" 를 정할 수 없었다.
  */
 export function expToNext(level: number): number {
-  return Math.round(55 * Math.pow(level, 1.2));
+  return Math.round(balanceExpToNext(level));
 }
 
 /**
@@ -219,10 +230,16 @@ export function applyExp(level: number, exp: number, gained: number): { level: n
   return { level: nextLevel, exp: pool };
 }
 
-/** 레벨 차이에 따른 경험치 보정 — 약한 몬스터만 잡는 걸 막는다 */
-export function expReward(monsterLevel: number, playerLevel: number, base: number): number {
-  const gap = monsterLevel - playerLevel;
-  if (gap <= -8) return 0;
-  const scale = gap >= 0 ? 1 + gap * 0.12 : 1 + gap * 0.11;
-  return Math.max(1, Math.round(base * Math.max(0.1, scale)));
+/**
+ * 몬스터가 주는 경험치. **레벨 차이 보정을 걷었다** (2026-09-20).
+ *
+ * 설계에서 경험치는 **몬스터 HP 에 정비례**하므로, 약한 몬스터는 HP 가 작아 이미
+ * 보상이 작다 — 따로 깎을 이유가 없다. 위쪽 한계도 경험치가 아니라 **사망**이 정한다
+ * (+20레벨이면 그룹을 정리하기 전에 죽는다). 경험치의 역할은 "위로 밀어주는 것" 이
+ * 아니라 **"위로 갈 때 방해하지 않는 것"** 이다 — 상향 압력은 드랍이 담당한다.
+ *
+ * 그 전에는 레벨 차이로 ±12%/칸 씩 깎고, 8레벨 아래면 0 이었다.
+ */
+export function expReward(_monsterLevel: number, _playerLevel: number, base: number): number {
+  return Math.max(1, Math.round(base));
 }

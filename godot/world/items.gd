@@ -25,6 +25,13 @@ static func slots() -> Array:
 	return _t().get("slots", [])
 
 
+## 창에 적는 칸 이름. 표는 shared 의 slotLabel 이 낸다.
+## `job` 은 보조 슬롯 때문에 받던 것인데 보조를 없애 쓰이지 않는다 — 부르는 쪽을
+## 다 고치지 않아도 되도록 남겨 둔다
+static func slot_label(slot: String, _job: String = "") -> String:
+	return str(_t().get("slotLabels", {}).get(slot, slot))
+
+
 static func bag_size() -> int:
 	return int(_t().get("bagSize", 200))
 
@@ -114,26 +121,29 @@ static func describe_option(option: Dictionary) -> String:
 
 
 ## 강화 수치가 올리는 배율
+## 강화 배율 — **설계표를 그대로 쓴다**(`Stats`). `+0` 이 1단, `+9` 가 10단이다.
+## 총 배수 ×6 이고 증가율이 고강화일수록 크다 (첫 구간 : 마지막 = 1 : 7)
 static func enhance_multiplier(level: int) -> float:
-	return 1.0 + clampi(level, 0, max_enhance()) * 0.08
+	return Stats.enhance_multiplier(clampi(level, 0, max_enhance()) + 1)
 
 
-## +level 에서 한 번 더 두드릴 때의 확률.
-## 낮은 구간은 거의 성공하고, 중반부터 유지가 늘고, 높은 구간에서만 부서진다 —
-## 처음부터 부서지면 강화를 아예 안 하게 되고, 끝까지 안 부서지면 골드만 있으면 된다
+## +level 에서 한 번 더 두드릴 때의 확률 — **설계표 그대로**(90/80/…/10%).
+##
+## **"유지" 가 없다. 실패하면 무조건 파괴된다.** 재료도 값도 없으니 실패의 대가는
+## 아이템 하나뿐이고 무한히 재시도할 수 있다 — 도달 단계는 "아이템이 몇 개
+## 들어오느냐" 로만 결정되고, 그래서 드랍률이 경험치와 같은 급의 손잡이가 된다
 static func enhance_odds(level: int) -> Dictionary:
-	var n := maxi(0, level)
-	if n <= 3:
-		return {"success": 0.95, "keep": 0.05, "destroy": 0.0}
-	if n <= 6:
-		return {"success": 0.7, "keep": 0.3, "destroy": 0.0}
-	if n <= 8:
-		return {"success": 0.45, "keep": 0.45, "destroy": 0.1}
-	return {"success": 0.3, "keep": 0.5, "destroy": 0.2}
+	var odds: Array = GameData.balance().get("gear", {}).get("enhOdds", [])
+	if odds.is_empty():
+		return {"success": 0.9, "keep": 0.0, "destroy": 0.1}
+	var success := float(odds[clampi(level, 0, odds.size() - 1)])
+	return {"success": success, "keep": 0.0, "destroy": 1.0 - success}
 
 
-static func enhance_cost(item: Dictionary, level: int) -> int:
-	return roundi(float(item.get("price", 0)) * 2.0 * (maxi(0, level) + 1) * grade_multiplier(1))
+## 한 번 두드리는 값 — **공짜다.** 설계에 강화 재료도 비용도 없다.
+## 값을 매기면 강화가 "골드를 모으는 일" 이 되는데, 설계는 그 자리에 드랍을 놓았다
+static func enhance_cost(_item: Dictionary, _level: int) -> int:
+	return 0
 
 
 static func can_enhance(level: int) -> bool:
@@ -156,10 +166,16 @@ static func roll_enhance(level: int, roll: float) -> String:
 static func base_bonus(item: Dictionary, enhance: int = 0) -> Dictionary:
 	var m := enhance_multiplier(enhance)
 	var bonus: Dictionary = item.get("bonus", {})
+	# **소수 한 자리를 남긴다** — 이 값들은 절대 수치가 아니라 **%** 라서 정수로
+	# 자르면 낮은 단계에서 오차가 커진다 (등급1 갑옷 방어 8.4% → 8%)
 	return {
-		"attack": roundi(float(bonus.get("attack", 0)) * m),
-		"defense": roundi(float(bonus.get("defense", 0)) * m),
-		"maxHp": roundi(float(bonus.get("maxHp", 0)) * m),
+		"attack": snappedf(float(bonus.get("attack", 0)) * m, 0.1),
+		"defense": snappedf(float(bonus.get("defense", 0)) * m, 0.1),
+		"maxHp": snappedf(float(bonus.get("maxHp", 0)) * m, 0.1),
+		# **강화는 공격·방어·HP 에만 곱한다** — 치확·공속까지 곱하면 목걸이·반지
+		# 두 자리가 강화 한 번에 다른 슬롯 넷을 합친 값을 넘어선다
+		"crit": int(bonus.get("crit", 0)),
+		"attackSpeed": int(bonus.get("attackSpeed", 0)),
 	}
 
 
@@ -178,6 +194,9 @@ static func stack_stats(stack: Dictionary) -> Dictionary:
 	total.attack = base.attack
 	total.defense = base.defense
 	total.maxHp = base.maxHp
+	# 치확·공속은 퍼센트 정수로 들어 있다 (목걸이 50 = +50%p)
+	total.crit = base.crit / 100.0
+	total.attackSpeed = base.attackSpeed / 100.0
 
 	for option in stack.get("options", []):
 		var value := int(option.value)

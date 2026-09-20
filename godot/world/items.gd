@@ -36,6 +36,11 @@ static func bag_size() -> int:
 	return int(_t().get("bagSize", 200))
 
 
+## 설계표(`balance.json`)의 장비 쪽 — 옵션 수치도 여기 들어 있다
+static func _g() -> Dictionary:
+	return GameData.balance().get("gear", {})
+
+
 static func max_enhance() -> int:
 	return int(_t().get("maxEnhance", 10))
 
@@ -55,17 +60,20 @@ static func grade_multiplier(grade: int) -> float:
 	return 1.0 + (g - 1) * 0.3
 
 
+## 품질 등급이 옵션 수치에 주는 배율 — 1등급이 최대의 25%, 10등급이 100%.
+## 0 에서 시작하지 않는다: **옵션은 1등급 물건에도 붙어야 "물건마다 다르다" 가 성립**한다
 static func option_grade_scale(grade: int) -> float:
-	var g := clampi(grade, int(_t().get("gradeMin", 1)), int(_t().get("gradeMax", 10)))
-	return 1.0 + (g - 1) * 0.35
+	var top := int(_g().get("optionGradeMax", 10))
+	var g := clampi(grade, 1, top)
+	return 0.25 + 0.75 * float(g - 1) / float(top - 1)
 
 
-static func is_percent_option(kind: String) -> bool:
-	return kind in ["crit", "attackSpeed", "critDamage"]
+## **여섯 종이 전부 퍼센트다** — 공격력·방어력을 빼면서 수치로 주는 옵션이 없어졌다
+static func is_percent_option(_kind: String) -> bool:
+	return true
 
 
-## 1등급 기준 범위. **퍼센트 옵션은 레벨을 타지 않는다** — 10% 는 어디서나 10% 다.
-## 수치 옵션은 요구 레벨을 타야 한다, 안 그러면 200레벨 장비의 공격 +3 은 장식이다
+## 안 쓰는 자리 — 옛 표가 수치 옵션에 쓰던 것이다
 static func _base_option_range(kind: String, level: int) -> Dictionary:
 	match kind:
 		"crit":
@@ -85,11 +93,11 @@ static func _base_option_range(kind: String, level: int) -> Dictionary:
 
 ## 이 등급에서 이 옵션이 나올 수 있는 범위. 창에 그대로 보여준다 —
 ## "몇 등급이면 얼마까지 뜨나" 를 알 수 없으면 등급을 올릴 이유를 설명할 수 없다
-static func option_range(kind: String, grade: int, level: int) -> Dictionary:
-	var base := _base_option_range(kind, level)
-	var scale := option_grade_scale(grade)
-	var low := maxi(1, roundi(base.min * scale))
-	return {"min": low, "max": maxi(low, roundi(base.max * scale))}
+## 그 품질 등급에서 이 옵션이 나올 수 있는 범위 — 설계표(`balance.json`)다.
+## **레벨은 안 본다.** 여섯 종이 전부 퍼센트라 어디서나 같은 뜻이라야 한다
+static func option_range(kind: String, grade: int, _level: int = 1) -> Dictionary:
+	var top := float(_g().get("optionMaxValue", {}).get(kind, 0.0)) * option_grade_scale(grade)
+	return {"min": snappedf(top * 0.5, 0.1), "max": snappedf(top, 0.1)}
 
 
 ## 옵션을 굴린다. **종류는 겹치지 않게 고른다** — 치명타가 셋 붙으면 옵션이
@@ -98,18 +106,23 @@ static func roll_options(item: Dictionary, grade: int, rng: RandomNumberGenerato
 	if bool(item.get("material", false)):
 		return []  # 재료는 끼는 물건이 아니다
 
-	var low := int(_t().get("optionMin", 1))
-	var high := int(_t().get("optionMax", 3))
+	# **개수는 품질 등급이 정한다** — 등급이 오르면 개수와 수치가 같이 커진다
+	var counts: Array = _g().get("optionCount", [])
+	var top := int(_g().get("optionGradeMax", 10))
+	var row: Array = counts[clampi(grade, 1, top) - 1] if not counts.is_empty() else [1, 1]
+	var low := int(row[0])
+	var high := int(row[1])
 	var count := low + int(rng.randf() * (high - low + 1))
 	var pool: Array = _t().get("optionKinds", []).duplicate()
 
 	var out: Array = []
 	for i in mini(count, pool.size()):
 		var kind := str(pool.pop_at(int(rng.randf() * pool.size())))
-		var span := option_range(kind, grade, int(item.get("level", 1)))
+		var span := option_range(kind, grade)
+		# 소수 한 자리로 저장한다 — 정수로 자르면 낮은 등급에서 0 이 되어 버린다
 		out.append({
 			"kind": kind,
-			"value": span.min + roundi(rng.randf() * (span.max - span.min)),
+			"value": snappedf(span.min + rng.randf() * (span.max - span.min), 0.1),
 		})
 	return out
 
@@ -180,7 +193,12 @@ static func base_bonus(item: Dictionary, enhance: int = 0) -> Dictionary:
 
 
 static func empty_stats() -> Dictionary:
-	return {"attack": 0, "defense": 0, "maxHp": 0, "crit": 0.0, "critDamage": 0.0, "attackSpeed": 0.0}
+	return {
+		"attack": 0.0, "defense": 0.0, "maxHp": 0.0,
+		"crit": 0.0, "critDamage": 0.0, "attackSpeed": 0.0,
+		# 옵션으로만 붙는 두 축 — 쿨타임 감소와 방어력 관통
+		"cooldown": 0.0, "penetration": 0.0,
+	}
 
 
 ## 물건 하나가 주는 것 전부
@@ -198,15 +216,17 @@ static func stack_stats(stack: Dictionary) -> Dictionary:
 	total.crit = base.crit / 100.0
 	total.attackSpeed = base.attackSpeed / 100.0
 
+	# 옵션 여섯 종은 전부 퍼센트다. HP 만 **기본 스탯에 곱할 %** 라 같은 자리에 더하고,
+	# 나머지 다섯은 비율(0.07 = 7%)로 바꿔 담는다
 	for option in stack.get("options", []):
-		var value := int(option.value)
+		var value := float(option.value)
 		match str(option.kind):
-			"attack": total.attack += value
-			"defense": total.defense += value
 			"maxHp": total.maxHp += value
 			"crit": total.crit += value / 100.0
 			"critDamage": total.critDamage += value / 100.0
 			"attackSpeed": total.attackSpeed += value / 100.0
+			"cooldown": total.cooldown += value / 100.0
+			"penetration": total.penetration += value / 100.0
 	return total
 
 

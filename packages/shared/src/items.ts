@@ -17,14 +17,16 @@ import type { JobId } from './character.ts';
 export { EQUIP_SLOTS, SLOT_CODE, slotLabel, type EquipSlot } from './slots.ts';
 import { EQUIP_SLOTS, SLOT_CODE, slotLabel, type EquipSlot } from './slots.ts';
 import {
-  GEAR_DEF_FACTOR,
-  GEAR_HP_FACTOR,
   ENH_MAX as GEAR_ENH_MAX,
   ENH_ODDS as GEAR_ENH_ODDS,
+  OPTION_KINDS,
+  optionCount as gearOptionCount,
+  optionRange as gearOptionRange,
+  optionScale as gearOptionScale,
+  type OptionKind,
   GRADE_COUNT as GEAR_GRADE_COUNT,
   GRADE_LV_SPAN as GEAR_GRADE_LV_SPAN,
   enhanceMultiplier as gearEnhanceMultiplier,
-  gradeSum,
   slotStats,
 } from './gear.ts';
 
@@ -288,22 +290,9 @@ export interface ItemStack {
  * 굴릴 수 있는 범위(min~max)를 넓힌다. 그래서 높은 등급은 "무조건 세다"가
  * 아니라 "잘 뽑으면 훨씬 세다"가 된다.
  */
-export type OptionKind =
-  | 'crit'
-  | 'attackSpeed'
-  | 'critDamage'
-  | 'maxHp'
-  | 'attack'
-  | 'defense';
-
-export const OPTION_KINDS: OptionKind[] = [
-  'crit',
-  'attackSpeed',
-  'critDamage',
-  'maxHp',
-  'attack',
-  'defense',
-];
+// 옵션 종류와 수치는 `gear.ts` 가 정한다 — 값어치를 하나로 묶고(옵션 하나 = DPS +1%)
+// 종류별 최대치를 거기서 역산한 표다. 여기서는 굴리고 저장하는 것만 한다
+export { OPTION_KINDS, type OptionKind } from './gear.ts';
 
 export interface ItemOption {
   kind: OptionKind;
@@ -311,12 +300,18 @@ export interface ItemOption {
   value: number;
 }
 
-/** 한 물건에 붙을 수 있는 옵션 수 */
+/**
+ * 한 물건에 붙을 수 있는 옵션 수 — **품질 등급이 정한다**(`gear.ts` 의 `OPTION_COUNT`).
+ * 아래 둘은 전 등급을 통틀어 본 최소·최대라 창의 안내 문구에만 쓴다
+ */
 export const OPTION_MIN = 1;
-export const OPTION_MAX = 3;
+export const OPTION_MAX = 4;
 
-/** 퍼센트로 읽는 옵션 — 표시에도 판정에도 100 으로 나눠 쓴다 */
-const PERCENT_OPTIONS = new Set<OptionKind>(['crit', 'attackSpeed', 'critDamage']);
+/**
+ * **여섯 종이 전부 퍼센트다.** 공격력·방어력을 빼면서 수치로 주는 옵션이 없어졌다 —
+ * 표시에도 판정에도 100 으로 나눠 쓴다
+ */
+const PERCENT_OPTIONS = new Set<OptionKind>(OPTION_KINDS);
 
 export function isPercentOption(kind: OptionKind): boolean {
   return PERCENT_OPTIONS.has(kind);
@@ -324,84 +319,36 @@ export function isPercentOption(kind: OptionKind): boolean {
 
 export const OPTION_LABEL: Record<OptionKind, string> = {
   crit: '치명타',
-  attackSpeed: '공격 속도',
   critDamage: '치명타 데미지',
+  attackSpeed: '공격 속도',
   maxHp: '체력',
-  attack: '공격력',
-  defense: '방어력',
+  cooldown: '쿨타임 감소',
+  penetration: '방어력 관통',
 };
 
 /**
- * 등급이 옵션 범위를 넓히는 배율.
- *
- * 1등급 1.0 → 10등급 4.15. 최상위 등급이 하위 등급 셋을 합친 것보다 나아야
- * 재료를 쌓아 올릴 이유가 생긴다.
+ * 등급이 옵션 수치에 주는 배율 — `gear.ts` 의 `optionScale` 이다.
+ * 1등급이 최대의 25%, 10등급이 100%.
  */
 export function optionGradeScale(grade: number): number {
-  const g = Math.min(GRADE_MAX, Math.max(GRADE_MIN, Math.round(grade)));
-  return 1 + (g - 1) * 0.35;
+  return gearOptionScale(Math.min(GRADE_MAX, Math.max(GRADE_MIN, Math.round(grade))));
 }
 
 /**
- * 1등급 기준 범위.
- *
- * 퍼센트 옵션은 레벨을 타지 않는다 — 10% 는 어디서나 10% 다.
- * 수치 옵션은 요구 레벨을 타야 한다. 안 그러면 200레벨 장비에 붙은 공격력
- * +3 은 붙으나 마나다.
- */
-/**
- * 그 레벨 풀세트 예산의 6~12% — 축(공격/방어/HP)마다 계수가 다르다.
- *
- * 한 슬롯이 가져가는 지분이 20~60% 이므로, 예산의 12% 면 **그 자리 기본의 2~3할**이
- * 된다. 옛 표가 "1등급 최대가 기본의 3할쯤, 10등급 최대가 기본을 조금 넘는 선" 으로
- * 잡았던 것과 같은 크기다. 더 작게 잡으면 정수로 저장하는 순간 등급 사이가
- * 반올림으로 뭉개져 **등급을 올릴 이유가 사라진다**.
- */
-function budgetRange(level: number, factor: number): { min: number; max: number } {
-  const budget = gradeSum(gearGrade(level)) * factor;
-  return {
-    min: Math.max(1, Math.round(budget * 0.06)),
-    max: Math.max(2, Math.round(budget * 0.12)),
-  };
-}
-
-function baseOptionRange(kind: OptionKind, level: number): { min: number; max: number } {
-  switch (kind) {
-    case 'crit':
-      return { min: 1, max: 3 };
-    case 'attackSpeed':
-      return { min: 1, max: 3 };
-    case 'critDamage':
-      return { min: 4, max: 10 };
-    // 공격·방어·HP 는 이제 **%** 다. 그 레벨의 풀세트 예산에 비례시켜야 후반에도
-    // 체감이 유지된다 — 절대 수치로 두면 Lv180 기본 514% 옆에 붙은 +22 가 장식이 된다.
-    // 옵션 하나가 그 자리의 기본을 넘어서면 기본이 장식이 되므로, 예산의 2~4%로 잡았다
-    // (등급 배수까지 곱해도 무기 기본의 3할 안쪽).
-    case 'attack':
-      return budgetRange(level, 1);
-    case 'defense':
-      return budgetRange(level, GEAR_DEF_FACTOR);
-    case 'maxHp':
-      return budgetRange(level, GEAR_HP_FACTOR);
-  }
-}
-
-/**
- * 이 등급에서 이 옵션이 나올 수 있는 범위.
+ * 이 등급에서 이 옵션이 나올 수 있는 범위 — `gear.ts` 의 표다.
  *
  * 창에 그대로 보여준다 — "몇 등급이면 얼마까지 뜨나"를 알 수 없으면
  * 등급을 올릴 이유를 설명할 수 없다.
+ *
+ * **레벨은 안 본다.** 여섯 종이 전부 퍼센트라 어디서나 같은 뜻이라야 한다.
+ * 인자는 부르는 쪽을 다 고치지 않으려고 남겨 두고 무시한다
  */
 export function optionRange(
   kind: OptionKind,
   grade: number,
-  level: number
+  _level?: number
 ): { min: number; max: number } {
-  const base = baseOptionRange(kind, level);
-  const scale = optionGradeScale(grade);
-  const min = Math.max(1, Math.round(base.min * scale));
-  const max = Math.max(min, Math.round(base.max * scale));
-  return { min, max };
+  return gearOptionRange(kind, Math.min(GRADE_MAX, Math.max(GRADE_MIN, Math.round(grade))));
 }
 
 /** 옵션 한 줄을 사람이 읽는 글로 */
@@ -425,14 +372,17 @@ export function rollOptions(
 ): ItemOption[] {
   if (item.material) return []; // 재료는 끼는 물건이 아니다
 
-  const count = OPTION_MIN + Math.floor(rng() * (OPTION_MAX - OPTION_MIN + 1));
+  // **개수는 품질 등급이 정한다** — 등급이 오르면 개수와 수치가 같이 커진다
+  const [lo, hi] = gearOptionCount(Math.min(GRADE_MAX, Math.max(GRADE_MIN, Math.round(grade))));
+  const count = lo + Math.floor(rng() * (hi - lo + 1));
   const pool = [...OPTION_KINDS];
 
   const out: ItemOption[] = [];
   for (let i = 0; i < Math.min(count, pool.length); i++) {
     const kind = pool.splice(Math.floor(rng() * pool.length), 1)[0]!;
-    const { min, max } = optionRange(kind, grade, item.level);
-    out.push({ kind, value: min + Math.round(rng() * (max - min)) });
+    const { min, max } = optionRange(kind, grade);
+    // 소수 한 자리로 저장한다 — 정수로 자르면 낮은 등급에서 0 이 되어 버린다
+    out.push({ kind, value: Math.round((min + rng() * (max - min)) * 10) / 10 });
   }
   return out;
 }
@@ -450,9 +400,10 @@ export function sanitizeOptions(raw: unknown, item: ItemDef, grade: number): Ite
     if (!OPTION_KINDS.includes(kind) || seen.has(kind)) continue;
     if (typeof value !== 'number' || !Number.isFinite(value)) continue;
 
-    const { min, max } = optionRange(kind, grade, item.level);
+    const { min, max } = optionRange(kind, grade);
     seen.add(kind);
-    out.push({ kind, value: Math.min(max, Math.max(min, Math.round(value))) });
+    const clamped = Math.min(max, Math.max(min, value));
+    out.push({ kind, value: Math.round(clamped * 10) / 10 });
     if (out.length >= OPTION_MAX) break;
   }
   return out;
@@ -570,10 +521,23 @@ export interface ItemStats {
   critDamage: number;
   /** 공격 속도 가산 (0.2 = +20%) */
   attackSpeed: number;
+  /** 스킬 쿨타임 감소 (0.05 = 5% 짧아짐). **옵션으로만 붙는다** */
+  cooldown: number;
+  /** 방어력 관통 (0.1 = 상대 방어력 10% 무시). **옵션으로만 붙는다** */
+  penetration: number;
 }
 
 export function emptyStats(): ItemStats {
-  return { attack: 0, defense: 0, maxHp: 0, crit: 0, critDamage: 0, attackSpeed: 0 };
+  return {
+    attack: 0,
+    defense: 0,
+    maxHp: 0,
+    crit: 0,
+    critDamage: 0,
+    attackSpeed: 0,
+    cooldown: 0,
+    penetration: 0,
+  };
 }
 
 /** 물건 하나가 주는 것 전부 */
@@ -589,14 +553,16 @@ export function stackStats(stack: ItemStack): ItemStats {
   total.crit = base.crit / 100;
   total.attackSpeed = base.attackSpeed / 100;
 
+  // 옵션 여섯 종은 전부 퍼센트다. HP 만 **기본 스탯에 곱할 %** 라 같은 자리에 더하고,
+  // 나머지 넷은 비율(0.07 = 7%)로 바꿔 담는다
   for (const option of stack.options ?? []) {
     switch (option.kind) {
-      case 'attack': total.attack += option.value; break;
-      case 'defense': total.defense += option.value; break;
       case 'maxHp': total.maxHp += option.value; break;
       case 'crit': total.crit += option.value / 100; break;
       case 'critDamage': total.critDamage += option.value / 100; break;
       case 'attackSpeed': total.attackSpeed += option.value / 100; break;
+      case 'cooldown': total.cooldown += option.value / 100; break;
+      case 'penetration': total.penetration += option.value / 100; break;
     }
   }
   return total;

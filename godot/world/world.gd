@@ -1099,9 +1099,12 @@ func cast(player_id: String, skill_id: String) -> void:
 	var ready_at: Dictionary = player.skill_ready_at
 	if now < int(ready_at.get(skill_id, 0)):
 		return
-	ready_at[skill_id] = now + Skills.cooldown_of(skill)
-
 	var stats: Dictionary = player.stats
+	# **스킬 쿨타임 감소** — 옵션으로만 붙는다. 이 설계는 범위 스킬로 무리를
+	# 정리하는 사냥이라 쿨감은 사실상 DPS 다 (그래서 옵션 하나의 값어치를
+	# 공속과 같은 "DPS +1%" 로 맞춰 뒀다)
+	var cut := clampf(float(stats.get("cooldown", 0.0)), 0.0, 0.9)
+	ready_at[skill_id] = now + roundi(Skills.cooldown_of(skill) * (1.0 - cut))
 
 	# 겨눈 놈 쪽으로 몸을 돌리는 것은 **쿨타임을 돌리기 전이 아니라** 여기서 한다.
 	# 회복기도 대상을 향해 서야 이펙트가 엉뚱한 쪽을 보지 않는다
@@ -1157,7 +1160,9 @@ func cast(player_id: String, skill_id: String) -> void:
 ## 몬스터 하나를 때린다. 기본 공격과 스킬이 같은 자리를 쓴다
 func _hit_monster(player: Dictionary, target: Dictionary, attack: float, skill_id: String) -> void:
 	var stats: Dictionary = player.stats
-	var damage := roundi(Stats.damage(attack, int(player.level), float(target.defense)))
+	# **방어력 관통** — 상대 방어력을 그만큼 없는 셈 치고 때린다 (옵션으로만 붙는다)
+	var pierced: float = float(target.defense) * (1.0 - float(stats.get("penetration", 0.0)))
+	var damage := roundi(Stats.damage(attack, int(player.level), pierced))
 	var crit := Combat.roll_crit(float(stats.crit), _rng.randf())
 	if crit:
 		damage = roundi(damage * float(stats.critDamage))
@@ -1202,6 +1207,10 @@ func _refresh_stats(player: Dictionary) -> void:
 	stats.attackSpeed = minf(
 		float(stats.attackSpeed) + gear.attackSpeed, float(c.get("attackSpeedCap", 1.0))
 	)
+	# **옵션으로만 붙는 두 축.** 상한을 두는 이유는 위와 같다 — 여섯 칸에 옵션이
+	# 넷씩 붙으므로 안 막으면 쿨타임 0 · 방어 무시 100% 가 나온다
+	stats["cooldown"] = minf(float(gear.get("cooldown", 0.0)), 0.5)
+	stats["penetration"] = minf(float(gear.get("penetration", 0.0)), 0.8)
 	player.stats = stats
 	player.hp = mini(int(player.hp), int(stats.maxHp))
 

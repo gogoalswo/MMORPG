@@ -436,7 +436,7 @@ func _build_exp_gauge() -> void:
 	_exp_bar.add_child(_exp_text)
 
 
-## 막대 하나 — 홈(9조각) 안에 채움을 깔고 그 위에 숫자를 얹는다.
+## 막대 하나 — 홈(9조각) 안에 채움을 깔고, **그 위에 금테를 다시 얹고**, 숫자를 얹는다.
 ## `{"frame": PanelContainer, "bar": TextureProgressBar, "text": Label}`
 func _make_bar(height: int, tint: Color, font: int) -> Dictionary:
 	var frame := PanelContainer.new()
@@ -459,6 +459,22 @@ func _make_bar(height: int, tint: Color, font: int) -> Dictionary:
 	bar.step = 0.0
 	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	frame.add_child(bar)
+
+	# **금테는 채움 위에 한 번 더 얹는다** ★★ 홈이 부모라 채움이 그 위에 그려져
+	# 찬 쪽의 금테를 덮었다 — 테가 빈 쪽에만 남아 막대가 반으로 갈린 것처럼 보였다
+	# (2026-09-20 지적: "HP 가 차 있어도 황금 테두리는 동일하게 있어야 한다").
+	# 같은 홈 그림을 `draw_center = false` 로 다시 깔면 **가운데(채움)는 그대로 두고
+	# 테만** 올라온다. 조각을 새로 만들지 않아도 되고, 비스듬히 잘린 끝은 모서리
+	# 조각에 들어 있어 그대로 따라온다
+	var edge := _frame_box("ui_bar_frame", BAR_FRAME_MARGIN, 0)
+	if edge is StyleBoxTexture:
+		(edge as StyleBoxTexture).draw_center = false
+	elif edge is StyleBoxFlat:
+		(edge as StyleBoxFlat).draw_center = false
+	var border := Panel.new()
+	border.add_theme_stylebox_override("panel", edge)
+	border.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame.add_child(border)
 
 	var text := Label.new()
 	text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

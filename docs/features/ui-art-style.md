@@ -138,6 +138,10 @@ Everything around the emblem is flat pure black. No text, no letters.
   `TextureRect` 한 장으로 비율 그대로 깐다.
 - **칸의 실제 크기는 `CELL + 안쪽 여백 * 2`** 다. 격자 높이를 `CELL * 줄수` 로 잡으면
   마지막 줄이 잘린다 → [inventory-equipment.md](inventory-equipment.md).
+- **테두리 안을 채우는 것은 그림으로 받지 않는다.** ★ 테두리와 채움은 모양이 어긋나기
+  마련이고(둥근 캡슐 ↔ 비스듬히 잘린 홈), 겹치면 모서리마다 바닥이 비쳐 "빈 공간"
+  으로 보인다. 채움은 **코드로 그려** 어떤 크기에도 테 안을 꽉 채우게 한다
+  (`_bar_fill` → [hud.md](hud.md)).
 
 ## 확인
 

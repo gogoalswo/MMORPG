@@ -405,11 +405,7 @@ func _build_exp_gauge() -> void:
 	_exp_bar = TextureProgressBar.new()
 	_exp_bar.fill_mode = TextureProgressBar.FILL_LEFT_TO_RIGHT
 	_exp_bar.nine_patch_stretch = true
-	_exp_bar.set_stretch_margin(SIDE_LEFT, 24)
-	_exp_bar.set_stretch_margin(SIDE_RIGHT, 24)
-	# **단색 판으로 채운다.** 광택 캡슐(`ui_bar_fill`)은 위아래에 투명 여백이 있어
-	# 가는 띠에 넣으면 띠 높이를 다 못 채우고 **위쪽이 빈다** (2026-09-20 지적)
-	_exp_bar.texture_progress = _white(8)
+	_exp_bar.texture_progress = _bar_fill(EXP_GAUGE_H)
 	_exp_bar.tint_progress = Color("#e8c14a")
 	# 아직 안 채운 쪽 — 체력 막대 홈 바닥과 같은 톤이라야 한 벌로 보인다
 	_exp_bar.texture_under = _exp_bar.texture_progress
@@ -449,12 +445,8 @@ func _make_bar(height: int, tint: Color, font: int) -> Dictionary:
 
 	var bar := TextureProgressBar.new()
 	bar.fill_mode = TextureProgressBar.FILL_LEFT_TO_RIGHT
-	# 채움은 끝이 둥근 캡슐이라 통째로 늘이면 끝이 뭉개진다 — 9조각으로 가운데만 늘인다
 	bar.nine_patch_stretch = true
-	bar.set_stretch_margin(SIDE_LEFT, 24)
-	bar.set_stretch_margin(SIDE_RIGHT, 24)
-	var fill := _icon("ui_bar_fill")
-	bar.texture_progress = fill if fill != null else _white(16)
+	bar.texture_progress = _bar_fill(height)
 	bar.tint_progress = tint
 	# 빈 쪽 바닥은 **홈 그림 안에 있다** — 조각을 뚫지 않고 어두운 안쪽째로 받는다
 	bar.step = 0.0
@@ -1346,6 +1338,28 @@ class CoolEdge extends Control:
 		draw_line(half, tip, Color(0.55, 0.85, 1.0, 0.28), 7.0, true)
 		draw_line(half, tip, Color(0.9, 0.97, 1.0, 0.95), 2.0, true)
 		draw_circle(tip, 4.0, Color(1.0, 1.0, 1.0, 0.9))
+
+
+## 막대 채움 ★★ **코드로 그린다.** 바르코로 받은 광택 캡슐(`ui_bar_fill`)은 끝이
+## 둥근데 홈(`ui_bar_frame`)은 **끝이 비스듬히 잘려** 있다. 모양이 다른 둘을 겹치니
+## 모서리마다 홈 바닥이 비쳐 **"빈 공간"** 으로 보였다 (2026-09-20 지적 — "테두리랑
+## 그걸 채우는 슬라이드 이미지가 달라서 생기는 문제").
+##
+## 채움은 **어떤 높이·길이에도 홈을 꽉 채워야** 하므로 그림으로 맞출 수가 없다.
+## 위가 밝고 아래로 어두워지는 세로 그라데이션 한 줄을 만들어 늘여 쓴다 — 광택은
+## 그대로 살고 모양은 언제나 홈과 같다. 색은 `tint_progress` 가 입힌다
+func _bar_fill(height: int) -> Texture2D:
+	var tall := maxi(height, 4)
+	var image := Image.create(8, tall, false, Image.FORMAT_RGBA8)
+	for y in tall:
+		# 위 1/3 이 밝고 아래로 갈수록 어둡다. 맨 위 한 줄은 하이라이트
+		var t := float(y) / maxf(1.0, float(tall - 1))
+		var v := lerpf(1.0, 0.52, pow(t, 0.8))
+		if y == 0:
+			v = 1.0
+		for x in 8:
+			image.set_pixel(x, y, Color(v, v, v))
+	return ImageTexture.create_from_image(image)
 
 
 ## 쿨타임 어둠에 쓰는 흰 판. 둥근 채우기는 늘이면 안 그려지므로 칸 크기 그대로 만든다

@@ -229,9 +229,11 @@ fetch_icon 66d3b2ea079339e5a22b09546c956903 ui_quick_slot  # 퀵슬롯·자동�
 # 아이콘 셋은 **밝게 칠한 것**이다 — 선화로 뽑았더니 어두운 실루엣이 되어
 # 밤 사냥터에서 묻혔다 (2026-09-20 지적). 프롬프트에 "FULLY COLORED and BRIGHT,
 # NOT a dark silhouette, NOT black" 을 넣어야 칠해서 준다
-fetch_icon a565d9d8185a27a28a7b938c094ba367 ui_icon_skill  # 오른쪽 위 스킬 (금테 책 + 룬)
-fetch_icon 4f6cbe226e41777bf6aa0393bf6ccb6c ui_icon_bag    # 오른쪽 위 가방 (황갈색 배낭)
-fetch_icon bfe674eb94721287927d24bbc88053e1 ui_icon_auto   # 자동사냥 — 검 두 자루가 X자
+# 아이콘 셋은 **받은 스크린샷을 참고 그림으로 물려** 뽑았다 (2026-09-20).
+# 상아빛 흰색 + 금색에 얇은 어두운 윤곽 — 받은 화면의 메뉴 아이콘과 같은 결이다
+fetch_icon e5157077f125b146e546c1c91b818096 ui_icon_skill  # 오른쪽 위 스킬 (펼친 책 + 룬)
+fetch_icon 7542d36d9687956d7335787965b4f16d ui_icon_bag    # 오른쪽 위 가방 (배낭)
+fetch_icon 9f519882b9a58b99a928564c0fb70efd ui_icon_auto   # 자동사냥 — 검 두 자루가 X자
 fetch_icon 5f5eec112390d85ef8910b43bb94d9ab ui_auto_spin   # 자동사냥 고리 (얇은 선 화살표)
 fetch_icon 029c2be72082608b40dfaf00bebe782a ui_portrait    # 옛 초상 테두리 (미사용 — 상태판을 내리면서 빠졌다)
 

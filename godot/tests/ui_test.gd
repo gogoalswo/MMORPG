@@ -261,9 +261,9 @@ func _case_status(game: Node3D) -> void:
 	var me: Dictionary = game._transport.snapshot().players[game._transport.my_id()]
 	var screen := Vector2(1280, 720)
 
-	# 레벨·체력·경험치가 스냅샷을 그대로 보여 준다. 레벨은 배지 안이라 **숫자만**이고,
+	# 레벨·체력·경험치가 스냅샷을 그대로 보여 준다. 레벨은 `Lv.N`(2026-09-20 요청),
 	# 경험치는 막대가 아니라 퍼센트다
-	if game._level_label.text != str(int(me.level)):
+	if game._level_label.text != "Lv.%d" % int(me.level):
 		_fail("레벨 글자가 '%s' (스냅샷은 %d)" % [game._level_label.text, me.level])
 	if game._hp_text.text != "%d / %d" % [int(me.hp), int(me.stats.maxHp)]:
 		_fail("체력 글자가 '%s' (스냅샷은 %d/%d)" % [game._hp_text.text, me.hp, me.stats.maxHp])

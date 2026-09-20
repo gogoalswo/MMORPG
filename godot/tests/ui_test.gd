@@ -245,6 +245,7 @@ func _run_scene() -> void:
 	await _case_status(game)
 	await _case_bag(game)
 	await _case_skills(game)
+	await _case_design_panel(game)
 
 	if _failed == 0:
 		print("UI: 전부 통과")
@@ -305,9 +306,10 @@ func _case_status(game: Node3D) -> void:
 	elif absf(exp_rect.get_center().x - gauge.get_center().x) > 2.0:
 		_fail("경험치 글자가 띠 가운데가 아니다: %s" % exp_rect)
 
-	# 오른쪽 위 메뉴 — 화면 안, 묶음과 안 겹침
-	if game._menu_cells.size() != 2:
-		_fail("오른쪽 위 단추가 2개여야 하는데 %d개" % game._menu_cells.size())
+	# 오른쪽 위 메뉴 — 화면 안, 묶음과 안 겹침.
+	# 스킬·가방·설계(디버그) 셋이다 — 설계 재현 창은 문서 9장 5번의 디버그 수단이다
+	if game._menu_cells.size() != 3:
+		_fail("오른쪽 위 단추가 3개여야 하는데 %d개" % game._menu_cells.size())
 		return
 	var skill_rect: Rect2 = game._menu_cells[0].get_global_rect()
 	var bag_rect: Rect2 = game._menu_cells[1].get_global_rect()
@@ -519,6 +521,42 @@ func _case_bag(game: Node3D) -> void:
 
 ## 퀵슬롯과 스킬창 — 자리, 크기, 그림, 장착·해제·바꾸기.
 ## 창은 **왼쪽이 설명, 오른쪽이 고르기** 다 (2026-09-19 요청)
+## **설계 재현 창** — 문서 9장 5번의 디버그 수단. 눌러서 열고, 값을 바꾸면
+## 캐릭터가 실제로 그 조건으로 서는지 본다 (화면만 바뀌고 판정이 안 따라오면 쓸모없다)
+func _case_design_panel(game: Node3D) -> void:
+	game._toggle_debug()
+	await game.get_tree().process_frame
+	if not game._debug_panel.visible:
+		_fail("설계 창이 안 열린다")
+		return
+	if game._debug_text.text.strip_edges() == "":
+		_fail("설계 창이 비어 있다")
+
+	var me: Dictionary = game._transport.snapshot().get("players", {}).get("me", {})
+	if int(me.get("level", 0)) != game._debug_level:
+		_fail("창을 열었는데 레벨이 안 맞춰졌다 (%d ≠ %d)" % [int(me.get("level", 0)), game._debug_level])
+	if me.get("equipped", {}).size() != 6:
+		_fail("여섯 칸이 안 찼다 (%d)" % me.get("equipped", {}).size())
+
+	# 등급을 내리면 실제로 약해져야 한다
+	var before := int(me.get("stats", {}).get("attack", 0))
+	game._debug_grade = maxi(1, game._debug_grade - 2)
+	game._apply_debug()
+	await game.get_tree().process_frame
+	var after: int = int(
+		game._transport.snapshot().players["me"].get("stats", {}).get("attack", 0)
+	)
+	if after >= before:
+		_fail("등급을 내렸는데 공격력이 안 줄었다 (%d -> %d)" % [before, after])
+	else:
+		print("  설계 창: 등급 내리니 공격 %d -> %d" % [before, after])
+
+	game._toggle_debug()
+	await game.get_tree().process_frame
+	if game._debug_panel.visible:
+		_fail("설계 창이 안 닫힌다")
+
+
 func _case_skills(game: Node3D) -> void:
 	var me: Dictionary = game._transport.snapshot().players[game._transport.my_id()]
 	var screen := Vector2(1280, 720)

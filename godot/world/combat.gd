@@ -44,21 +44,30 @@ static func roll_crit(chance: float, roll: float) -> bool:
 
 
 ## 직업·레벨로 스탯을 만든다. 바탕값 + 레벨당 x (레벨 - 1)
+## 맨몸 능력치 — **밸런스 설계의 복리 곡선**이다 (`Stats.base(L)` × 직업 배수).
+##
+## 2026-09-20 에 갈아끼웠다. 그 전에는 `jobStats` 의 선형 증가(레벨당 +2.4 공격 같은
+## 고정값)였는데, 레벨당 상대 성장이 초반 +18% / 후반 +0.5% 로 40배 차이가 나
+## "장비 비중" 의 기준이 사라진다. `jobStats` 는 이제 **사거리**만 쓴다.
+##
+## **치명타는 기본이 0 이다** — 설계에서 치확·치피는 목걸이 전담이라 장비에서만 온다
 static func stats_for(job: String, level: int) -> Dictionary:
 	var table: Dictionary = _c().get("jobStats", {})
 	if not table.has(job):
 		push_error("없는 직업: %s" % job)
 		return {}
 	var row: Array = table[job]
-	var steps := maxi(0, level - 1)
+	var b := Stats.base(level)
+	var m: Dictionary = GameData.balance().get("jobMult", {}).get(job, {})
 	return {
-		"maxHp": roundi(float(row[0]) + float(row[5]) * steps),
-		"attack": roundi(float(row[1]) + float(row[6]) * steps),
-		"defense": roundi(float(row[2]) + float(row[7]) * steps),
+		"maxHp": roundi(b["hp"] * float(m.get("hp", 1.0))),
+		"attack": roundi(b["atk"] * float(m.get("atk", 1.0))),
+		"defense": roundi(b["df"] * float(m.get("df", 1.0))),
 		"attackRange": float(row[3]),
-		"attackCooldown": float(row[4]),
-		"crit": float(_c().get("baseCrit", 0.05)),
-		"critDamage": float(_c().get("baseCritDamage", 1.5)),
+		# 설계의 직업별 공격 간격(초) → ms
+		"attackCooldown": roundi(float(m.get("interval", 1.0)) * 1000.0),
+		"crit": 0.0,
+		"critDamage": 1.0,
 		"attackSpeed": 0.0,
 	}
 

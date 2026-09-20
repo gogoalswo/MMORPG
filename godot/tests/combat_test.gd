@@ -34,23 +34,30 @@ func _eq(label: String, got, want) -> void:
 	_failed += 1
 
 
+## 맨몸 능력치는 설계의 복리 곡선이다 — `base(L) × 직업 배수`.
+## 격투가 배수가 전부 1.0 이라 Lv1 이 곧 설계의 바탕값(100/10/10)이다
 func _stats() -> void:
 	var k1 := Combat.stats_for("fighter", 1)
-	_eq("격투가1 체력", k1.maxHp, 120)
-	_eq("격투가1 공격", k1.attack, 12)
-	_eq("격투가1 방어", k1.defense, 6)
+	_eq("격투가1 체력", k1.maxHp, 100)
+	_eq("격투가1 공격", k1.attack, 10)
+	_eq("격투가1 방어", k1.defense, 10)
 	_eq("격투가1 사거리", k1.attackRange, 2.2)
-	_eq("격투가1 간격", k1.attackCooldown, 700.0)
+	# 공격 간격은 설계의 직업 배수에서 온다 (격투가 0.9초)
+	_eq("격투가1 간격", k1.attackCooldown, 900.0)
 
+	# 레벨 1개는 언제나 +2% — 구간마다 다르면 "장비 비중" 의 기준이 사라진다
 	var k10 := Combat.stats_for("fighter", 10)
-	_eq("격투가10 체력", k10.maxHp, 219)
-	_eq("격투가10 공격", k10.attack, 34)
-	_eq("격투가10 방어", k10.defense, 16)
+	_eq("격투가10 체력", k10.maxHp, roundi(100.0 * pow(1.02, 9)))
+	_eq("격투가10 공격", k10.attack, roundi(10.0 * pow(1.02, 9)))
 
+	# 직업은 같은 바탕에 배수만 다르다 — 마법사는 공격 1.35 / HP 0.8 / 방어 0.75
 	var m50 := Combat.stats_for("mage", 50)
-	_eq("마법사50 체력", m50.maxHp, 374)
-	_eq("마법사50 공격", m50.attack, 196)
-	_eq("마법사50 방어", m50.defense, 28)
+	var b50 := Stats.base(50)
+	_eq("마법사50 체력", m50.maxHp, roundi(b50["hp"] * 0.8))
+	_eq("마법사50 공격", m50.attack, roundi(b50["atk"] * 1.35))
+	_eq("마법사50 방어", m50.defense, roundi(b50["df"] * 0.75))
+	# 치명타는 맨몸에 없다 — 치확은 목걸이, 공속은 반지 전담
+	_eq("맨몸 치확", int(m50.crit * 100.0), 0)
 
 
 func _damage() -> void:

@@ -739,7 +739,7 @@ func _hit_player(player: Dictionary, monster: Dictionary, attack: float = -1.0) 
 	var power := float(monster.attack) if attack < 0.0 else attack
 	# **공격자 레벨로 K 를 뽑는다** — 높은 사냥터 몬스터가 때리면 내 방어력 효율이
 	# 자동으로 떨어진다. 레벨차 보정 시스템이 따로 필요 없는 이유다 (설계 1장)
-	var damage := roundi(Stats.damage(power, int(monster.level), float(player.stats.defense)))
+	var damage := roundi(Stats.damage(power, int(monster.get("level", 1)), float(player.stats.defense)))
 	if bool(player.get("invincible", false)):
 		damage = 0
 	player.hp = maxi(0, int(player.hp) - damage)
@@ -996,6 +996,50 @@ func set_invincible(player_id: String, on: bool) -> void:
 		return
 	player.invincible = on
 	_events.append({"type": "notice", "text": "무적 %s" % ("켬" if on else "끔")})
+
+
+## **디버그 — 시뮬레이터와 같은 조건을 게임에서 세운다.** ★
+##
+## 설계 문서 9장 5번이 요구한 것이다. 레벨과 "등급 g 풀세트 + 강화 n" 을 강제로
+## 맞춰 놓으면, 화면에 찍히는 그룹 정리 시간·HP 손실을 설계표와 바로 대조할 수 있다.
+## 수치로만 맞다고 믿었다가 화면이 다른 적이 여러 번이라, 재현 수단이 있어야 한다.
+##
+## 등급은 착용 레벨(1/31/61/…)에 가장 가까운 **단계**로 옮긴다 — 지금 카탈로그가
+## 단계 20개 축이기 때문이다(설계의 56종 표로 갈아끼우면 이 변환이 사라진다).
+func debug_gear(player_id: String, level: int, grade: int, enhance: int) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	player.level = clampi(level, 1, Stats.max_level())
+	player.exp = 0
+
+	var want_level := Stats.equip_level(clampi(grade, 1, Stats.grade_count()))
+	var step := clampi(enhance, 0, Items.max_enhance())
+	# 그 착용 레벨에 가장 가까운 단계의 물건으로 여섯 칸을 채운다
+	var equipped := {}
+	for slot in Items.slots():
+		var best := {}
+		var best_gap := 1 << 30
+		for id in Items.all():
+			var item: Dictionary = Items.all()[id]
+			if str(item.get("slot", "")) != slot:
+				continue
+			if item.has("job") and str(item.job) != str(player.job):
+				continue
+			var gap: int = absi(int(item.get("level", 1)) - want_level)
+			if gap < best_gap:
+				best_gap = gap
+				best = item
+		if best.is_empty():
+			continue
+		equipped[slot] = {"id": str(best.id), "grade": 1, "enhance": step, "options": []}
+	player.equipped = equipped
+	_refresh_stats(player)
+	player.hp = int(player.stats.maxHp)
+	_events.append({
+		"type": "notice",
+		"text": "디버그: Lv%d · 등급%d 풀세트 · 강화 +%d" % [player.level, grade, step],
+	})
 
 
 ## 액션바를 정한다. 배운 것만, 칸 수만큼만 올라간다

@@ -21,6 +21,7 @@ func _init() -> void:
 	_gear()
 	_enhance()
 	_start_gear()
+	_debug_gear()
 
 	if _failed == 0:
 		print("스탯: 전부 통과")
@@ -166,6 +167,36 @@ func _enhance() -> void:
 	var maxed := Stats.slot_stats("necklace", 7.0, 10)
 	_near("치확은 강화를 안 먹는다", maxed["crit"], bare["crit"])
 	_near("공속은 강화를 안 먹는다", Stats.slot_stats("ring", 7.0, 10)["aspd"], Stats.slot_stats("ring", 7.0, 1)["aspd"])
+
+
+## **디버그 수단이 시뮬레이터와 같은 조건을 세우는가** (설계 문서 9장 5번).
+##
+## 레벨·등급·강화를 강제로 맞췄을 때, 게임 안 플레이어가 설계의 기준 플레이어와
+## 같은 세기가 되어야 "설계대로 도는가" 를 화면에서 확인할 수 있다
+func _debug_gear() -> void:
+	var w := World.new()
+	w.open("meadow")
+	w.join("me")
+	w.debug_gear("me", 100, 4, 3)
+
+	var me: Dictionary = w.snapshot().players["me"]
+	if int(me.level) != 100:
+		_fail("레벨이 100 이 아니다 (%d)" % int(me.level))
+	if me.equipped.size() != 6:
+		_fail("여섯 칸이 안 찼다 (%d)" % me.equipped.size())
+	if int(me.hp) != int(me.stats.maxHp):
+		_fail("체력이 가득 안 찼다")
+
+	# 설계의 기준 플레이어(Lv100, 등급 보간 3.30, 강화 5단)와 자릿수가 같아야 한다.
+	# 등급을 4 로 강제했으니 기준보다 조금 세다 — 두 배를 넘지는 않는다
+	var ref := Stats.ref_player(100)
+	var ratio := float(me.stats.attack) / float(ref["atk"])
+	if ratio < 0.5 or ratio > 2.5:
+		_fail("공격력이 기준의 %.2f 배다 (%d vs %d)" % [ratio, int(me.stats.attack), roundi(ref["atk"])])
+	else:
+		print("  디버그 Lv100 등급4 +3: 공격 %d (기준 %d), HP %d" % [
+			int(me.stats.attack), roundi(ref["atk"]), int(me.stats.maxHp)
+		])
 
 
 ## 시작 장비는 무기 한 자루. 등급1 은 사냥터 2 에서야 나온다

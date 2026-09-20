@@ -183,6 +183,14 @@ var _skill_pick := ""
 var _skill_swap := false
 ## 가방·장비 창. 틀은 한 번만 짓고 `_redraw_bag` 이 내용만 채운다
 var _bag_panel: PanelContainer
+
+## **설계 재현 창** — 레벨·등급·강화를 강제로 맞추고, 그 조건에서 설계가 말하는
+## 값(그룹 정리 시간·HP 손실·몬스터 수치)을 같이 보여 준다. 설계 문서 9장 5번
+var _debug_panel: PanelContainer
+var _debug_text: Label
+var _debug_level := 100
+var _debug_grade := 4
+var _debug_enhance := 3
 var _bag_head: Label
 var _bag_gold: Label
 var _bag_sum: Label
@@ -352,6 +360,7 @@ func _build_persistent() -> void:
 	_build_skill_panel()
 	_build_test_switches()
 	_build_bag_panel()
+	_build_debug_panel()
 
 	# **모든 창의 닫기는 오른쪽 위 X 하나로 통일한다** (2026-09-20 요청).
 	# 창이 다 지어진 뒤에 얹어야 자식 맨 뒤라 창 위에 그려진다
@@ -586,6 +595,120 @@ class SpinRing extends Control:
 ## 판·칸·탭·단추 그림은 전부 바르코로 만든 것이다 (assets/icons/ui_*).
 ## **없으면 코드로 그린 판과 테두리로 나온다** — npm run sync:godot 을 안 돌린
 ## 사람도 창은 돌아가야 한다 (모델이 없으면 기둥으로 그리는 것과 같은 규칙)
+## **설계 재현 창** — 설계 문서 9장 5번이 요구한 디버그 수단이다.
+##
+## 레벨·등급·강화를 강제로 맞춰 시뮬레이터와 같은 조건을 세우고, 그 조건에서
+## 설계가 말하는 값을 나란히 찍는다. 수치로만 맞다고 믿었다가 화면이 다른 적이
+## 여러 번이라, **게임 안에서 대조할 수단**이 있어야 한다.
+func _build_debug_panel() -> void:
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ui_root.add_child(center)
+
+	_debug_panel = PanelContainer.new()
+	_debug_panel.visible = false
+	_debug_panel.add_theme_stylebox_override("panel", _frame_box("ui_panel", PANEL_MARGIN, 16))
+	center.add_child(_debug_panel)
+
+	var pad := MarginContainer.new()
+	for side in ["left", "right", "top", "bottom"]:
+		pad.add_theme_constant_override("margin_" + side, 28)
+	_debug_panel.add_child(pad)
+
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 10)
+	pad.add_child(column)
+
+	var title := Label.new()
+	title.text = "설계 재현"
+	title.add_theme_font_size_override("font_size", 26)
+	column.add_child(title)
+
+	column.add_child(_debug_row("레벨", func(step: int) -> void:
+		_debug_level = clampi(_debug_level + step, 1, Stats.max_level())
+		_apply_debug()
+	, [-10, -1, 1, 10]))
+	column.add_child(_debug_row("등급", func(step: int) -> void:
+		_debug_grade = clampi(_debug_grade + step, 1, Stats.grade_count())
+		_apply_debug()
+	, [-1, 1]))
+	column.add_child(_debug_row("강화", func(step: int) -> void:
+		_debug_enhance = clampi(_debug_enhance + step, 0, Items.max_enhance())
+		_apply_debug()
+	, [-1, 1]))
+
+	_debug_text = Label.new()
+	_debug_text.add_theme_font_size_override("font_size", 18)
+	_debug_text.custom_minimum_size = Vector2(560, 0)
+	column.add_child(_debug_text)
+
+	_close_button(_debug_panel, _toggle_debug)
+
+
+## 값 한 줄 — 이름 + 증감 단추들
+func _debug_row(label: String, on_step: Callable, steps: Array) -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	var name_label := Label.new()
+	name_label.text = label
+	name_label.custom_minimum_size = Vector2(90, 0)
+	name_label.add_theme_font_size_override("font_size", 20)
+	row.add_child(name_label)
+	for step in steps:
+		var button := _make_button("%+d" % int(step), on_step.bind(int(step)))
+		button.custom_minimum_size = Vector2(84, 52)
+		row.add_child(button)
+	return row
+
+
+func _toggle_debug() -> void:
+	_debug_panel.visible = not _debug_panel.visible
+	if _debug_panel.visible:
+		_apply_debug()
+
+
+## 지금 값으로 캐릭터를 세우고, 설계가 말하는 값을 함께 찍는다
+func _apply_debug() -> void:
+	_transport.send(&"debugGear", {
+		"level": _debug_level, "grade": _debug_grade, "enhance": _debug_enhance
+	})
+	var level := _debug_level
+	var mon := Stats.monster(level)
+	var ref := Stats.ref_player(level)
+	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
+	var stats: Dictionary = me.get("stats", {})
+
+	# 설계가 말하는 것 — 한 그룹을 몇 초에 정리하고 HP 를 얼마나 잃는가
+	var per_hit: float = Stats.damage(float(stats.get("attack", 1)), level, float(mon["df"]))
+	var hits := int(ceil(float(mon["hp"]) / maxf(1.0, per_hit)))
+	var casts := int(ceil(float(Stats.spawn_count(level)) * hits / float(Stats.aoe_targets(level))))
+	var clear := casts * float(stats.get("attackCooldown", 1000)) / 1000.0
+	var taken: float = (
+		Stats.damage(float(mon["atk"]), level, float(stats.get("defense", 1)))
+		* float(Stats.melee_attackers(level)) * clear / float(mon["interval"])
+	)
+	var loss := taken / maxf(1.0, float(stats.get("maxHp", 1)))
+
+	_debug_text.text = "\n".join([
+		"Lv%d · 등급%d · 강화 +%d   (사냥터 %d, 기준 등급 %.2f, 기준 강화 %d단)" % [
+			level, _debug_grade, _debug_enhance,
+			Stats.field_of(level), Stats.ref_grade(level), Stats.enh_ref_step(level)
+		],
+		"",
+		"내  HP %d  공격 %d  방어 %d" % [
+			int(stats.get("maxHp", 0)), int(stats.get("attack", 0)), int(stats.get("defense", 0))
+		],
+		"기준 HP %d  공격 %d  방어 %d" % [roundi(ref["hp"]), roundi(ref["atk"]), roundi(ref["df"])],
+		"몬스터 HP %d  공격 %d  방어 %d" % [roundi(mon["hp"]), roundi(mon["atk"]), roundi(mon["df"])],
+		"",
+		"1마리 %d타 (설계 6타)" % hits,
+		"한 그룹(%d마리) 정리 %.1f초 / HP 손실 %.0f%%  — 설계 목표 15초 / 50%%" % [
+			Stats.spawn_count(level), clear, loss * 100.0
+		],
+	])
+
+
 func _build_bag_panel() -> void:
 	var center := CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -1168,6 +1291,7 @@ func _build_skill_bar() -> void:
 	_menu_cells = [
 		_icon_button("ui_icon_skill", "스킬", _toggle_skills),
 		_icon_button("ui_icon_bag", "가방", _toggle_bag),
+		_icon_button("", "설계", _toggle_debug),
 	]
 	for cell in _menu_cells:
 		menu.add_child(cell)

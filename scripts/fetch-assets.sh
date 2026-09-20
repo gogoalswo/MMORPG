@@ -214,21 +214,23 @@ fetch_icon 3335dffd51390210007c5b2eb5a8adb7 skill_tiger_roar
 fetch_icon 844c2e93d9c7b8f9d6c3717b2334b9ca skill_white_tiger
 fetch_icon 3d66ba0be1ec8bec0bc0b2a11fcce4f9 skill_sky_breaker
 fetch_icon 627417215a6f50209f7d0a20cbd1c607 skill_thunder_fall
-# 메인 HUD (2026-09-19). 오른쪽 위 메뉴와 자동사냥 칸 조각이다.
-fetch_icon 43a642bb211e382584e79a65547d86d4 ui_icon_skill  # 오른쪽 위 스킬 단추
-fetch_icon c0462e650711225a3abde372e637406a ui_icon_bag    # 오른쪽 위 가방 단추
-fetch_icon a32516d65c3087185bef1c63a9c80425 ui_icon_auto   # 자동사냥 칸
-fetch_icon 0062d6e64d3dcf66ad041979c5001b38 ui_auto_spin   # 자동사냥 고리 (도는 화살표 둘)
-fetch_icon 029c2be72082608b40dfaf00bebe782a ui_portrait    # 옛 초상 테두리 (미사용 — 상태판을 내리면서 빠졌다)
-# HUD 아트를 **어두운 쇠 + 금테**로 갈아 끼웠다 (2026-09-20, 받은 그림대로).
+# 메인 HUD. 아트를 **두 번** 갈았다 — 처음 뽑은 두꺼운 금테가 "너무 두껍다" 는
+# 지적을 받고(2026-09-20), 받은 그림대로 **머리카락처럼 얇은 금선**과 **테 없는
+# 선화 아이콘**으로 다시 뽑았다. 아래 주소가 그 두 번째 것이다.
+#
 # 막대 채움은 **흰 것 한 장**이고 붉은 체력은 색만 입혀 쓴다.
 # 퀵슬롯 칸은 `ui_quick_slot` 으로 따로 둔다 — `ui_skill_slot` 을 덮으면
-# 스킬창 장착 칸까지 바뀌어 창 안에서 목록 칸(ui_slot)과 결이 어긋난다
-fetch_icon 92541f792a7dbb24b8af339da1e55b8d ui_bar_frame   # 체력 막대 홈 (안쪽을 뚫는다)
+# 스킬창 장착 칸까지 바뀌어 창 안에서 목록 칸(ui_slot)과 결이 어긋난다.
+# 막대 홈·배지·칸은 **안쪽이 어두운 채로** 받는다 (뚫으면 땅이 비친다)
+fetch_icon 9824f75b67284f12e744b40c4b54921f ui_bar_frame   # 체력 막대 홈 (얇은 금선)
 fetch_icon b58dcdbd6894b815fcfa09d0cb7e7340 ui_bar_fill    # 막대 채움 (색은 코드가 입힌다)
-fetch_icon a45ebf6b9fc7007391b58cb5ec89a4c9 ui_level_badge # 레벨 배지 (안쪽을 뚫는다)
-fetch_icon e5e6a4e3f110ddaabb525e5686f74624 ui_quick_slot  # 퀵슬롯·자동사냥 칸
-fetch_icon 1a2329841752e028ace7a530970d958b ui_menu_btn    # 오른쪽 위 단추 테두리
+fetch_icon c41890b49bcfb31cf91861287fe65fd5 ui_level_badge # 레벨 배지 (얇은 금색 원)
+fetch_icon 66d3b2ea079339e5a22b09546c956903 ui_quick_slot  # 퀵슬롯·자동사냥 칸 (얇은 선)
+fetch_icon 20be4c3fa633c7862e5d970a69c02f8b ui_icon_skill  # 오른쪽 위 스킬 (선화, 테 없음)
+fetch_icon 74b3a3ec0e05345aed7d1a981b6af984 ui_icon_bag    # 오른쪽 위 가방 (선화, 테 없음)
+fetch_icon e259161864911eba8ccd8ff6c784c22d ui_icon_auto   # 자동사냥 — 검 두 자루가 X자
+fetch_icon 5f5eec112390d85ef8910b43bb94d9ab ui_auto_spin   # 자동사냥 고리 (얇은 선 화살표)
+fetch_icon 029c2be72082608b40dfaf00bebe782a ui_portrait    # 옛 초상 테두리 (미사용 — 상태판을 내리면서 빠졌다)
 
 node scripts/build-item-icons.mjs
 

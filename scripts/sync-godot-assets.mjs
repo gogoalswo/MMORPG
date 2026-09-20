@@ -54,8 +54,7 @@ const ICONS = [
   // 오른쪽 위 메뉴 단추 둘, 자동사냥 칸과 켜졌을 때 도는 고리
   // 2026-09-20 에 받은 그림대로 어두운 쇠 + 금테로 갈아 끼웠다 (막대·칸·단추),
   // 레벨 배지가 새로 들어왔고 초상(ui_portrait)은 빠졌다
-  'ui_bar_frame.png', 'ui_bar_fill.png', 'ui_level_badge.png', 'ui_menu_btn.png',
-  'ui_quick_slot.png',
+  'ui_bar_frame.png', 'ui_bar_fill.png', 'ui_level_badge.png', 'ui_quick_slot.png',
   'ui_icon_skill.png', 'ui_icon_bag.png', 'ui_icon_auto.png', 'ui_auto_spin.png',
 ];
 

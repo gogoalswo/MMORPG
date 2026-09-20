@@ -30,18 +30,22 @@ const SKILL_INSET := 11
 ## 위아래 조각이 겹쳐 홈이 안 보였다 (2026-09-20, 찍어서 봤다)
 const LEVEL_BADGE := 86
 const HP_BAR_H := 40
-## 막대 테두리 그림에서 테가 차지하는 두께 (9조각 여백)
-const BAR_FRAME_MARGIN := 12
+## 막대 테두리 그림에서 테가 차지하는 두께 (9조각 여백). 얇은 선이라 작게 준다
+const BAR_FRAME_MARGIN := 7
 ## 막대 테두리 안쪽 여백 — 채움이 테를 덮으면 홈이 아니라 판으로 보인다
 const BAR_PAD := 5
-## 오른쪽 위 메뉴 단추 (스킬·가방). 엄지로 누르니 퀵슬롯과 비슷한 크기다
+## 오른쪽 위 메뉴 단추 (스킬·가방). 엄지로 누르니 퀵슬롯과 비슷한 크기다.
+## **테두리가 없다** — 받은 그림이 그렇다 (2026-09-20). 그래서 아이콘을 거의 꽉 채운다
 const MENU_BTN := 84
-const MENU_INSET := 13
+const MENU_INSET := 4
+## 퀵슬롯 칸 테두리가 차지하는 두께. 받은 그림의 칸은 **머리카락처럼 얇은 선**이라
+## 26 으로 그리면 테가 칸을 먹는다 (2026-09-20 지적). 창 칸은 26 그대로다
+const QUICK_MARGIN := 10
 ## 자동사냥 고리가 한 바퀴 도는 속도(라디안/초)
 const SPIN_SPEED := 1.6
-## 자동사냥 칸의 아이콘만 더 물린다. 퀵슬롯과 같은 11 로 두면 **고리가 아이콘 위를
-## 덮어** 검도 과녁도 안 보였다 (2026-09-19, 찍어서 봤다)
-const AUTO_INSET := 27
+## 자동사냥 칸의 아이콘만 더 물린다. 퀵슬롯과 같은 11 로 두면 고리가 아이콘 위를
+## 덮어 검이 안 보였다 (2026-09-19). 고리가 얇아진 뒤로는 덜 물려도 된다 (2026-09-20)
+const AUTO_INSET := 18
 const ICON_DIR := "res://assets/icons/"
 ## 가방 탭. 0 은 전체, 나머지는 `_tab_keeps` 가 슬롯으로 가른다
 const BAG_TABS := ["전체", "무기", "방어구", "장신구", "재료"]
@@ -380,9 +384,7 @@ func _make_bar(height: int, tint: Color, font: int) -> Dictionary:
 	var fill := _icon("ui_bar_fill")
 	bar.texture_progress = fill if fill != null else _white(16)
 	bar.tint_progress = tint
-	# 빈 쪽은 **어두운 바닥**이 깔린다 — 홈 안쪽을 뚫어 두어서 그대로 두면 땅이 비친다
-	bar.texture_under = bar.texture_progress
-	bar.tint_under = Color(0.06, 0.04, 0.03, 0.88)
+	# 빈 쪽 바닥은 **홈 그림 안에 있다** — 조각을 뚫지 않고 어두운 안쪽째로 받는다
 	bar.step = 0.0
 	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	frame.add_child(bar)
@@ -400,12 +402,13 @@ func _make_bar(height: int, tint: Color, font: int) -> Dictionary:
 	return {"frame": frame, "bar": bar, "text": text}
 
 
-## 오른쪽 위 메뉴 단추 하나 — `ui_button` 테두리에 심볼을 얹고 누르는 자리를 덮는다.
+## 오른쪽 위 메뉴 단추 하나 — **테두리 없이 심볼만** 얹고 누르는 자리를 덮는다
+## (2026-09-20 지적: 받은 그림의 메뉴는 테가 없는 선화 아이콘이다).
 ## 심볼이 없으면 글자가 대신 나온다
 func _icon_button(icon_name: String, text: String, on_press: Callable) -> PanelContainer:
 	var cell := PanelContainer.new()
 	cell.custom_minimum_size = Vector2(MENU_BTN, MENU_BTN)
-	cell.add_theme_stylebox_override("panel", _frame_box("ui_menu_btn", 26, 0))
+	cell.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 
 	var inset := MarginContainer.new()
 	inset.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -441,15 +444,16 @@ func _icon_button(icon_name: String, text: String, on_press: Callable) -> PanelC
 ## 고리 그림이 없을 때 대신 도는 화살표 둘. 칸 둘레를 따라 반원씩 긋고
 ## 끝에 삼각 머리를 단다 — 돌리는 것은 부모(`_auto_spin`)가 한다
 class SpinRing extends Control:
-	const ARC := PI * 0.72
+	const ARC := PI * 0.82
 
 	func _draw() -> void:
 		var mid := size / 2.0
-		var radius := minf(size.x, size.y) / 2.0 - 3.0
-		var color := Color(0.45, 0.92, 1.0, 0.95)
+		var radius := minf(size.x, size.y) / 2.0 - 2.0
+		# 받은 그림처럼 **얇은 선**이다 (2026-09-20 지적)
+		var color := Color(0.96, 0.89, 0.66, 0.95)
 		for half in 2:
 			var from := half * PI + 0.1
-			draw_arc(mid, radius, from, from + ARC, 24, color, 4.0, true)
+			draw_arc(mid, radius, from, from + ARC, 28, color, 2.0, true)
 			var tip := from + ARC
 			var head := mid + Vector2(cos(tip), sin(tip)) * radius
 			var side := Vector2(-sin(tip), cos(tip))
@@ -457,9 +461,9 @@ class SpinRing extends Control:
 			draw_colored_polygon(
 				PackedVector2Array(
 					[
-						head + side * 9.0,
-						head + back * 7.0 + side * 1.0,
-						head + back * 1.0 - side * 7.0,
+						head + side * 5.0,
+						head + back * 4.0 + side * 0.5,
+						head + back * 0.5 - side * 4.0,
 					]
 				),
 				color
@@ -999,7 +1003,7 @@ func _build_skill_bar() -> void:
 	column.add_child(dock)
 	_bar_buttons.clear()
 	for slot in int(GameData.combat().get("skillBarSize", 4)):
-		var cell := _make_skill_cell(QUICK_CELL, "ui_quick_slot", _on_bar_pressed.bind(slot))
+		var cell := _make_skill_cell(QUICK_CELL, "ui_quick_slot", _on_bar_pressed.bind(slot), QUICK_MARGIN)
 		cell.find_child("key", true, false).text = str(slot + 1)
 		dock.add_child(cell)
 		_bar_buttons.append(cell)
@@ -1007,7 +1011,7 @@ func _build_skill_bar() -> void:
 
 	# 자동사냥도 같은 칸이다 — 엄지가 퀵슬롯과 같은 높이에서 닿는다 (2026-09-19 요청).
 	# 켜지면 칸 위에서 화살표 고리가 돈다
-	_auto_cell = _make_skill_cell(QUICK_CELL, "ui_quick_slot", _toggle_auto)
+	_auto_cell = _make_skill_cell(QUICK_CELL, "ui_quick_slot", _toggle_auto, QUICK_MARGIN)
 	var auto_icon: TextureRect = _auto_cell.find_child("icon", true, false)
 	auto_icon.texture = _icon("ui_icon_auto")
 	if auto_icon.texture == null:
@@ -1069,11 +1073,11 @@ func _build_skill_bar() -> void:
 ##
 ## 테두리 안쪽 여백을 0 으로 두고 아이콘만 `MarginContainer` 로 물린다 — 고른 칸
 ## 테두리가 칸 테두리 위에 정확히 겹쳐야 해서다
-func _make_skill_cell(size: int, frame: String, on_press: Callable) -> PanelContainer:
+func _make_skill_cell(size: int, frame: String, on_press: Callable, margin: int = 26) -> PanelContainer:
 	var cell := PanelContainer.new()
 	cell.custom_minimum_size = Vector2(size, size)
 	cell.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	cell.add_theme_stylebox_override("panel", _frame_box(frame, 26, 0))
+	cell.add_theme_stylebox_override("panel", _frame_box(frame, margin, 0))
 
 	var inset := MarginContainer.new()
 	inset.mouse_filter = Control.MOUSE_FILTER_IGNORE

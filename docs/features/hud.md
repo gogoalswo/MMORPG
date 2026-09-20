@@ -34,7 +34,7 @@
 | `godot/tools/shot.gd` | `_hud` — 자동사냥을 켠 채로 화면을 뽑는다 (`npm run shot:godot -- hud`) |
 | `scripts/sync-godot-assets.mjs` | `ICONS` — 조각 이름을 여기 적어야 `godot/assets` 로 간다 |
 | `scripts/build-item-icons.mjs` | `FRAME_SIZE` · `HOLLOW` — 조각을 굽는 설정 |
-| `scripts/fetch-assets.sh` | 조각 일곱 장의 결과물 주소 |
+| `scripts/fetch-assets.sh` | 조각들의 결과물 주소 |
 
 ## 규칙
 
@@ -99,21 +99,35 @@
 **존 이름·골드·몬스터 수·fps·빌드 표시**다. 빌드 표시는 지우면 안 된다
 ([godot-migration.md](godot-migration.md) 의 "지금 보는 것이 어느 빌드인지").
 
+### 테두리 두께는 조각마다 다르다 ★
+
+`_frame_box(name, margin, content)` 의 `margin` 은 **그림에서 테가 차지하는
+픽셀**이다. 실제보다 크게 주면 9조각의 모서리가 서로 겹쳐 칸을 먹는다.
+
+| 쓰는 곳 | 값 |
+|---|---|
+| 창·스킬창 칸 (`ui_slot` 등, 두꺼운 테) | 26 (`_make_skill_cell` 의 기본값) |
+| 퀵슬롯·자동사냥 칸 (`ui_quick_slot`, 얇은 선) | `QUICK_MARGIN` 10 |
+| 체력 막대 홈 | `BAR_FRAME_MARGIN` 7 |
+| 오른쪽 위 메뉴 단추 | **없다** — `StyleBoxEmpty` |
+
 ### 자동사냥은 퀵슬롯과 같은 칸이다 ★
 
 오른쪽 아래 글자 단추였던 것을 **퀵슬롯 옆 다섯 번째 칸**으로 옮겼다 (요청이
 그랬다). 엄지가 퀵슬롯과 같은 높이에서 닿는다. 칸은 스킬 칸과 같은
 `_make_skill_cell` 로 짓는다 — 테두리·배지·누르는 자리가 그대로 맞는다.
 
-- **아이콘만 더 물린다** (`AUTO_INSET` 27, 퀵슬롯은 `SKILL_INSET` 11). 11 로 두면
-  고리가 아이콘 위를 덮어 **검도 과녁도 안 보였다** (2026-09-19, 찍어서 봤다).
+- **아이콘만 더 물린다** (`AUTO_INSET` 18, 퀵슬롯은 `SKILL_INSET` 11). 11 로 두면
+  고리가 아이콘 위를 덮어 **검이 안 보였다** (2026-09-19, 찍어서 봤다). 고리가
+  얇은 선이 된 뒤로는 27 까지 물릴 필요가 없다 (2026-09-20).
+- 아이콘은 **검 두 자루가 X자로 엇갈린 문장**이다 (2026-09-20 요청).
 - **칸 가운데 아래 배지**가 `자동` ↔ `켜짐` 으로 바뀐다.
 - 켜짐을 **칸 전체 초록 `modulate`** 로 알리던 것은 뺐다 — 고리와 아이콘이 한
   덩어리로 보여 무엇이 도는지 알 수 없었다.
 
 ### 켜지면 고리가 돈다 ★
 
-`ui_auto_spin`(서로 쫓는 화살표 둘)을 칸 위에 얹고 `_process` 에서
+`ui_auto_spin`(**얇은 선 하나로 그린 고리와 작은 화살촉 둘**)을 칸 위에 얹고 `_process` 에서
 `rotation += delta * SPIN_SPEED`(1.6 rad/s) 한다.
 
 - **칸 안에서 돈다.** `PanelContainer` 는 자식을 칸 전체 크기로 다시 잡으므로
@@ -126,15 +140,22 @@
 - **판정은 여기서 하지 않는다.** 켜짐은 서버가 준 `me.auto` 로만 정한다
   ([auto-hunt-and-targeting.md](auto-hunt-and-targeting.md)).
 
-## 조각 일곱 장
+## 조각 여덟 장
 
 바르코로 만들었다 (`nano-banana-pro`). 결과물 주소는 `scripts/fetch-assets.sh` 에
 박혀 있다 — 다시 찾을 필요가 없다.
 
-**아트는 2026-09-20 에 갈아 끼웠다** — 청록 발광에서 받은 그림대로 **낡은 쇠 +
-얇은 금테 + 각진 모서리**로. 프롬프트에 쓴 말은
-`aged dark iron and black leather with a thin polished gold trim, angular beveled
-corners, small gold rivets, worn metal texture, muted warm palette` 다.
+**아트는 2026-09-20 에 두 번 갈았다.** 처음 뽑은 "낡은 쇠 + 금테" 는 **테가 너무
+두껍다**는 지적을 받았다. 받은 그림을 다시 뜯어보니 규칙이 둘이었다:
+
+- **칸·막대·배지는 머리카락처럼 얇은 금색 선** 하나다. 두꺼운 금속도 리벳도 없고,
+  안쪽은 그냥 어두운 판이다. 프롬프트에 쓴 말:
+  `extremely thin pale gold hairline outline, no thick metal, no rivets, no ornament,
+  the inside filled with flat dark charcoal grey`
+- **메뉴 아이콘은 테두리가 아예 없다.** 크림색 선화 문장(紋章)만 떠 있다:
+  `flat line-art emblem in creamy ivory and pale gold, thin clean outlines,
+  it must NOT sit on any disc, circle, plate, badge, frame or panel`
+  — 이 마지막 문장을 안 넣으면 **아이콘이 크림색 원판 위에 앉아 나온다.**
 
 **퀵슬롯 칸은 `ui_quick_slot` 으로 따로 둔다** ★ `ui_skill_slot` 을 덮으면
 스킬창의 장착 칸까지 같이 바뀌어, 그 옆 목록 칸(`ui_slot`, 옛 청록)과 창 안에서
@@ -142,16 +163,20 @@ corners, small gold rivets, worn metal texture, muted warm palette` 다.
 
 | 이름 | 무엇 | 굽는 설정 |
 |---|---|---|
-| `ui_bar_frame` | 체력 막대 홈 | 256 · 안쪽을 뚫는다(HOLLOW) |
+| `ui_bar_frame` | 체력 막대 홈 (얇은 금선 + 어두운 안쪽) | 256 · 한 겹만 걷는다 |
 | `ui_bar_fill` | 광택 캡슐 (흰색) | 256 |
-| `ui_level_badge` | 레벨 배지 (원형 + 날개) | 192 · 안쪽을 뚫는다 |
-| `ui_quick_slot` | 퀵슬롯·자동사냥 칸 테두리 | 128 · 안쪽을 뚫는다 |
-| `ui_menu_btn` | 오른쪽 위 단추 테두리 | 160 · 안쪽을 뚫는다 |
-| `ui_icon_skill` | 룬이 떠 있는 책 | 128 |
-| `ui_icon_bag` | 배낭 | 128 |
-| `ui_icon_auto` | 검과 과녁 | 128 |
-| `ui_auto_spin` | 도는 화살표 둘 | 192 · 가운데를 뚫는다 |
+| `ui_level_badge` | 레벨 배지 (얇은 금색 원 + 어두운 판) | 192 · 한 겹만 걷는다 |
+| `ui_quick_slot` | 퀵슬롯·자동사냥 칸 (얇은 선, 위 모서리 잘림) | 128 · 한 겹만 걷는다 |
+| `ui_icon_skill` | 룬이 떠 있는 책 (선화) | 128 |
+| `ui_icon_bag` | 배낭 (선화) | 128 |
+| `ui_icon_auto` | **검 두 자루가 X자** (선화) | 128 |
+| `ui_auto_spin` | 얇은 선 화살표 고리 | 192 · 가운데를 뚫는다 |
 | `ui_portrait` | 옛 초상 테두리 (**미사용**) | 192 |
+
+**안쪽을 뚫지 않고 어두운 채로 받는다** ★ 막대 홈·배지·칸은 안쪽이 어두운 판이고,
+그 위에 채움·숫자·아이콘이 올라간다. 뚫으면 땅이 비친다. 대신 배경을 걷을 때
+**한 겹만** 걷어야 한다(`SINGLE_LAYER`) — 그림이 화면을 꽉 채워 첫 겹이 조금밖에
+못 걷으면, 얇은 여백을 벗기는 규칙이 한 겹 더 들어가 **안쪽 어두운 판까지 먹는다.**
 
 **참고 그림을 물리려면 업로드가 온전해야 한다** ★ — `ui_slot` 을 참고로 넣어
 돌렸더니 다섯 장이 통째로 실패했다 (2026-09-19). 잘린 PNG 를 올린 탓이었고,

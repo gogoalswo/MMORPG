@@ -65,7 +65,6 @@ const FRAME_SIZE = {
   'ui_bar_fill.png': 256,
   'ui_auto_spin.png': 192,
   'ui_level_badge.png': 192,
-  'ui_menu_btn.png': 160,
   'ui_quick_slot.png': 128,
 };
 /**
@@ -88,13 +87,19 @@ const TRIM = /^ui_/;
 const HOLLOW = new Set([
   'frame_slot.png',
   'ui_slot_pick.png',
-  // HUD 조각 — 막대 홈 안쪽·배지 한가운데·단추 안쪽·고리 한가운데는 **비어야 한다**.
-  // 채움과 숫자와 아이콘이 그 자리에 들어가고, 고리는 칸 아이콘 위에서 돈다
+  // 고리 한가운데는 비어야 한다 — 칸 아이콘 위에서 도는 것이라
+  'ui_auto_spin.png',
+]);
+/**
+ * **배경을 한 겹만 걷는 것.** ★ 얇은 선으로 그린 HUD 조각(막대 홈·배지·칸)은
+ * 안쪽이 어두운 판인데, 그림이 화면을 꽉 채워 첫 겹이 조금밖에 못 걷는다.
+ * 그러면 `THIN_MARGIN` 규칙이 한 겹 더 들어가 **안쪽 어두운 판까지 먹는다**
+ * (2026-09-20). 이 조각들은 안쪽을 남겨야 한다 — 막대 빈 쪽 바닥이 그것이다
+ */
+const SINGLE_LAYER = new Set([
   'ui_bar_frame.png',
   'ui_level_badge.png',
-  'ui_menu_btn.png',
   'ui_quick_slot.png',
-  'ui_auto_spin.png',
 ]);
 
 /** 알파가 남아 있는 칸의 바깥 테두리 상자 */
@@ -125,7 +130,7 @@ function alphaBounds(data, width, height) {
  * 안쪽 배경색(검정)이 다르다. 모서리 평균으로 잡았더니 모서리 1~7% 만 걷히고
  * 검은 배경이 그대로 남았다.
  */
-function cutBackground(data, width, height) {
+function cutBackground(data, width, height, layers = LAYERS) {
   const count = width * height;
   const cut = new Uint8Array(count);
 
@@ -145,7 +150,7 @@ function cutBackground(data, width, height) {
     return out;
   };
 
-  for (let layer = 0; layer < LAYERS; layer += 1) {
+  for (let layer = 0; layer < layers; layer += 1) {
     if (layer > 0 && cut.reduce((sum, v) => sum + v, 0) >= count * THIN_MARGIN) break;
     const seeds = rim();
     if (seeds.length === 0) break;
@@ -231,7 +236,9 @@ for (const name of readdirSync(SRC).filter((f) => f.endsWith('.png')).sort()) {
     .ensureAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });
-  let cut = FULL.test(name) ? 0 : cutBackground(data, info.width, info.height);
+  let cut = FULL.test(name)
+    ? 0
+    : cutBackground(data, info.width, info.height, SINGLE_LAYER.has(name) ? 1 : LAYERS);
   if (HOLLOW.has(name)) cut += cutCenter(data, info.width, info.height);
   const out = join(DST, basename(name));
   const size = FRAME_SIZE[name] ?? SIZE;

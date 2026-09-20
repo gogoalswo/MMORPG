@@ -29,6 +29,10 @@ import {
   GRADE_SUM_END,
   GRADE_SUM_START,
   MOVE_SPD_MAX,
+  OPTION_COUNT,
+  OPTION_GRADE_MAX,
+  OPTION_KINDS,
+  OPTION_MAX_VALUE,
   SLOT_SHARE,
   dropField,
   equipLevel,
@@ -499,6 +503,12 @@ export function balanceTable() {
       enhAccel: ENH_ACCEL,
       enhOdds: ENH_ODDS,
       dropRate: GEAR_DROP_RATE,
+      // 랜덤 옵션 — 값어치를 하나로 묶고(옵션 하나 = DPS +1%) 종류별 최대치를
+      // 역산한 표다. 품질 등급(1~10)이 개수와 수치를 함께 키운다
+      optionKinds: OPTION_KINDS,
+      optionMaxValue: OPTION_MAX_VALUE,
+      optionCount: OPTION_COUNT,
+      optionGradeMax: OPTION_GRADE_MAX,
     },
   };
 }

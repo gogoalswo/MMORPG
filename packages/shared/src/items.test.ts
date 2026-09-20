@@ -42,6 +42,7 @@ import {
   tierForLevel,
   tierLevel,
 } from './items.ts';
+import { optionCount } from './gear.ts';
 import { MONSTER_KINDS } from './monsters.ts';
 import { FIELD_ORDER } from './zones.ts';
 
@@ -488,22 +489,44 @@ test('굴린 값은 그 등급의 범위 안에 있다', () => {
   }
 });
 
-test('등급이 오르면 옵션 범위가 넓어진다', () => {
-  // 등급을 올릴 이유가 여기밖에 없다 — 여기서 안 오르면 제작이 무의미해진다
-  const item = ITEMS['a_05']!;
+test('옵션은 여섯 종이고 전부 퍼센트다', () => {
+  // 2026-09-20 요청: 공속·치명타 확률·치명타 데미지·HP·쿨타임 감소·방어력 관통.
+  // **공격력·방어력은 뺐다** — 슬롯 기본 수치가 이미 담당하므로 옵션으로 또 주면
+  // "같은 것을 두 번" 이다
+  assert.deepEqual([...OPTION_KINDS].sort(), [
+    'attackSpeed',
+    'cooldown',
+    'crit',
+    'critDamage',
+    'maxHp',
+    'penetration',
+  ]);
   for (const kind of OPTION_KINDS) {
-    let previousMax = 0;
-    let previousMin = 0;
+    assert.ok(describeOption({ kind, value: 3 }).endsWith('%'), `${kind} 가 퍼센트가 아니다`);
+  }
+});
+
+test('품질 등급이 오르면 옵션 개수와 수치가 같이 커진다', () => {
+  // 등급을 올릴 이유가 여기밖에 없다 — 둘 중 하나만 키우면 "등급은 높은데 옵션이
+  // 하나뿐" 이나 "옵션은 넷인데 값이 시시한" 물건이 생긴다
+  for (const kind of OPTION_KINDS) {
+    const lowest = optionRange(kind, GRADE_MIN);
+    const highest = optionRange(kind, GRADE_MAX);
+    assert.ok(lowest.min <= lowest.max, `${kind}: min 이 max 보다 크다`);
+    assert.ok(highest.max > lowest.max * 3, `${kind}: 10등급이 1등급의 세 배도 안 된다`);
+    let previous = 0;
     for (let grade = GRADE_MIN; grade <= GRADE_MAX; grade++) {
-      const { min, max } = optionRange(kind, grade, item.level);
-      assert.ok(min <= max, `${kind} ${grade}등급: min 이 max 보다 크다`);
-      assert.ok(max > previousMax, `${kind} ${grade}등급: 최대가 안 올랐다`);
-      assert.ok(min >= previousMin, `${kind} ${grade}등급: 최소가 내려갔다`);
-      previousMax = max;
-      previousMin = min;
+      const { max } = optionRange(kind, grade);
+      assert.ok(max >= previous, `${kind} ${grade}등급: 최대가 내려갔다`);
+      previous = max;
     }
   }
-  assert.equal(optionGradeScale(GRADE_MIN), 1, '1등급이 기준이어야 한다');
+  // 개수도 같이 오른다 (1개 → 4개)
+  assert.deepEqual(optionCount(GRADE_MIN), [1, 1]);
+  assert.deepEqual(optionCount(GRADE_MAX), [4, 4]);
+  for (let grade = GRADE_MIN + 1; grade <= GRADE_MAX; grade++) {
+    assert.ok(optionCount(grade)[1] >= optionCount(grade - 1)[1], `${grade}등급 개수가 줄었다`);
+  }
   assert.equal(optionGradeScale(0), optionGradeScale(GRADE_MIN), '범위를 벗어나도 안전해야 한다');
   assert.equal(optionGradeScale(999), optionGradeScale(GRADE_MAX));
 });
@@ -530,16 +553,21 @@ test('옵션이 능력치에 실제로 더해진다', () => {
     id: item.id,
     grade: 1,
     options: [
-      { kind: 'attack', value: 10 },
+      { kind: 'maxHp', value: 10 },
       { kind: 'crit', value: 7 },
       { kind: 'attackSpeed', value: 4 },
+      { kind: 'cooldown', value: 3 },
+      { kind: 'penetration', value: 6 },
     ],
   });
 
-  assert.equal(rolled.attack, plain.attack + 10);
-  // 퍼센트는 비율로 담긴다 — 화면과 판정이 다른 단위를 쓰면 언젠가 어긋난다
+  // HP 는 기본 스탯에 곱할 % 라 슬롯 기본 수치와 같은 자리에 더한다
+  assert.equal(rolled.maxHp, plain.maxHp + 10);
+  // 나머지는 비율로 담긴다 — 화면과 판정이 다른 단위를 쓰면 언젠가 어긋난다
   assert.ok(Math.abs(rolled.crit - 0.07) < 1e-9, `치명타가 ${rolled.crit}`);
   assert.ok(Math.abs(rolled.attackSpeed - 0.04) < 1e-9);
+  assert.ok(Math.abs(rolled.cooldown - 0.03) < 1e-9, `쿨감이 ${rolled.cooldown}`);
+  assert.ok(Math.abs(rolled.penetration - 0.06) < 1e-9, `관통이 ${rolled.penetration}`);
 });
 
 test('장착한 것들의 옵션이 합산된다', () => {
@@ -556,17 +584,19 @@ test('재료에는 옵션이 붙지 않는다', () => {
 });
 
 test('저장된 옵션은 지금 규칙으로 다시 잘린다', () => {
-  // 예전 규칙으로 저장된 값이나 손댄 값이 그대로 들어오면 안 된다
+  // 예전 규칙으로 저장된 값이나 손댄 값이 그대로 들어오면 안 된다.
+  // 없어진 종류(공격력·방어력)도 여기서 걸러진다
   const item = ITEMS['a_05']!;
-  const { min, max } = optionRange('attack', 2, item.level);
+  const { min, max } = optionRange('penetration', 2);
 
   const cleaned = sanitizeOptions(
     [
-      { kind: 'attack', value: 999999 },
-      { kind: 'attack', value: 5 },
+      { kind: 'penetration', value: 999999 },
+      { kind: 'penetration', value: 5 },
       { kind: '없는옵션', value: 3 },
+      { kind: 'attack', value: 7 },
+      { kind: 'defense', value: 7 },
       { kind: 'crit', value: -50 },
-      { kind: 'defense', value: max },
       { kind: 'maxHp', value: 1 },
       { kind: 'critDamage', value: 1 },
     ],
@@ -577,7 +607,11 @@ test('저장된 옵션은 지금 규칙으로 다시 잘린다', () => {
   assert.ok(cleaned.length <= OPTION_MAX, `${cleaned.length}개가 남았다`);
   assert.equal(cleaned[0]!.value, max, '최대를 넘으면 잘려야 한다');
   assert.equal(new Set(cleaned.map((o) => o.kind)).size, cleaned.length, '종류가 겹쳤다');
-  assert.ok(min >= 1);
+  // 값은 소수 한 자리다 — 정수로 자르면 낮은 등급에서 0 이 되어 버린다
+  assert.ok(min > 0, `최소가 ${min}`);
+  for (const option of cleaned) {
+    assert.equal(option.value, Math.round(option.value * 10) / 10, `${option.kind} 자릿수`);
+  }
   assert.deepEqual(sanitizeOptions('망가진 값', item, 1), []);
 });
 
@@ -593,7 +627,8 @@ test('드롭에는 옵션이 함께 굴려진다', () => {
   assert.ok(checked > 0, '장비가 한 번도 안 떨어져 검사를 못 했다');
 });
 
-test('옵션 글은 퍼센트와 수치를 구분해 쓴다', () => {
+test('옵션 글은 새 이름으로 나온다', () => {
   assert.equal(describeOption({ kind: 'crit', value: 7 }), '치명타 +7%');
-  assert.equal(describeOption({ kind: 'attack', value: 7 }), '공격력 +7');
+  assert.equal(describeOption({ kind: 'cooldown', value: 1.2 }), '쿨타임 감소 +1.2%');
+  assert.equal(describeOption({ kind: 'penetration', value: 3.3 }), '방어력 관통 +3.3%');
 });

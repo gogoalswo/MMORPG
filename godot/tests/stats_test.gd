@@ -22,6 +22,7 @@ func _init() -> void:
 	_enhance()
 	_start_gear()
 	_debug_gear()
+	_new_axes()
 
 	if _failed == 0:
 		print("스탯: 전부 통과")
@@ -197,6 +198,41 @@ func _debug_gear() -> void:
 		print("  디버그 Lv100 등급4 +3: 공격 %d (기준 %d), HP %d" % [
 			int(me.stats.attack), roundi(ref["atk"]), int(me.stats.maxHp)
 		])
+
+
+## **쿨감·관통이 판정에 실제로 닿는가** (2026-09-20 에 넣은 옵션 두 축).
+## 스탯에만 있고 계산에 안 쓰이면 장식이다
+func _new_axes() -> void:
+	var w := World.new()
+	w.open("meadow")
+	w.join("me")
+	var me: Dictionary = w.snapshot().players["me"]
+
+	# 관통 — 상대 방어력을 그만큼 없는 셈 치고 때린다
+	var mob := World.make_monster(
+		"dummy", GameData.monster_kind("mob003"), 1.5, 0.0, 10000.0, 0.0
+	)
+	var plain := Stats.damage(float(me.stats.attack), int(me.level), float(mob.defense))
+	var pierced := Stats.damage(
+		float(me.stats.attack), int(me.level), float(mob.defense) * 0.5
+	)
+	if pierced <= plain:
+		_fail("관통이 피해를 못 올린다 (%.1f -> %.1f)" % [plain, pierced])
+	else:
+		print("  관통 50%%: 피해 %.1f -> %.1f" % [plain, pierced])
+
+	# 쿨감 — 옵션이 붙으면 스탯에 실려야 한다
+	me.equipped = {
+		"ring": {
+			"id": "r_00", "grade": 10, "enhance": 0,
+			"options": [{"kind": "cooldown", "value": 1.0}, {"kind": "penetration", "value": 3.3}],
+		}
+	}
+	w._refresh_stats(me)
+	if float(me.stats.get("cooldown", 0.0)) <= 0.0:
+		_fail("쿨감이 스탯에 안 실렸다")
+	if float(me.stats.get("penetration", 0.0)) <= 0.0:
+		_fail("관통이 스탯에 안 실렸다")
 
 
 ## 시작 장비는 무기 한 자루. 등급1 은 사냥터 2 에서야 나온다

@@ -2514,21 +2514,21 @@
   "maxDropGrade": 7,
   "optionKinds": [
     "crit",
-    "attackSpeed",
     "critDamage",
+    "attackSpeed",
     "maxHp",
-    "attack",
-    "defense"
+    "cooldown",
+    "penetration"
   ],
   "optionMin": 1,
-  "optionMax": 3,
+  "optionMax": 4,
   "optionLabel": {
     "crit": "치명타",
-    "attackSpeed": "공격 속도",
     "critDamage": "치명타 데미지",
+    "attackSpeed": "공격 속도",
     "maxHp": "체력",
-    "attack": "공격력",
-    "defense": "방어력"
+    "cooldown": "쿨타임 감소",
+    "penetration": "방어력 관통"
   },
   "maxEnhance": 9,
   "dropChance": 0.14,

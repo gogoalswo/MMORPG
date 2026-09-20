@@ -41,9 +41,13 @@
 - `gradeMultiplier(g) = 1 + (g-1)*0.3` 은 이제 **값(판매가·제작 수수료)에만** 쓴다.
 
 ### 랜덤 옵션 ★
-- 종류 6개: `crit` 치명타 / `attackSpeed` 공격 속도 / `critDamage` 치명타 데미지 /
-  `maxHp` 체력 / `attack` 공격력 / `defense` 방어력.
-- 개수 `OPTION_MIN=1` ~ `OPTION_MAX=3`, **종류는 겹치지 않는다.**
+- 종류 6개: `crit` 치명타 확률 / `critDamage` 치명타 데미지 / `attackSpeed` 공격 속도 /
+  `maxHp` 체력 / `cooldown` 스킬 쿨타임 감소 / `penetration` 방어력 관통.
+  **2026-09-20 에 공격력·방어력을 빼고 쿨감·관통을 넣었다** — 공격력·방어력은 슬롯
+  기본 수치가 이미 담당하므로 옵션으로 또 주면 "같은 것을 두 번" 이다.
+  수치와 개수는 [stat-balance.md](stat-balance.md) 3-2장이 정한다
+  (옵션 하나 = DPS +1% 로 값어치를 묶고 종류별 최대치를 역산).
+- **개수는 품질 등급이 정한다** — 1등급 1개 → 10등급 4개. **종류는 겹치지 않는다.**
 - 범위: `optionRange(kind, grade, level)` = `baseOptionRange(kind, level) × optionGradeScale(grade)`
   - `optionGradeScale(g) = 1 + (g-1)*0.35` → 1등급 1.0, 10등급 4.15
   - 퍼센트 옵션(치명타/공속/치명타데미지)은 **레벨을 안 탄다** — 10%는 어디서나 10%

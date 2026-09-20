@@ -45,30 +45,31 @@ func _fail(text: String) -> void:
 
 func _case_grade() -> void:
 	_eq("등급 배율 5", Items.grade_multiplier(5), 2.2)
-	_eq("옵션 등급 배율 5", Items.option_grade_scale(5), 2.4)
+	# 품질 등급 배율 — 1등급이 최대의 25%, 10등급이 100%
+	_eq("옵션 등급 배율 1", snappedf(Items.option_grade_scale(1), 0.01), 0.25)
+	_eq("옵션 등급 배율 10", snappedf(Items.option_grade_scale(10), 0.01), 1.0)
 	# 범위 밖은 잘린다
 	_eq("등급 배율 상한", Items.grade_multiplier(99), Items.grade_multiplier(10))
 
 
+## 옵션 여섯 종 — 공속·치확·치피·HP·쿨감·관통. **전부 퍼센트고 레벨을 안 탄다**
 func _case_options() -> void:
-	# 수치 옵션은 요구 레벨을 탄다
-	var attack := Items.option_range("attack", 5, 100)
-	_eq("공격 옵션 5등급 100레벨 최소", attack.min, 17)
-	_eq("공격 옵션 5등급 100레벨 최대", attack.max, 31)
-	# 퍼센트 옵션은 레벨을 타지 않는다 — 10% 는 어디서나 10% 다
-	var crit := Items.option_range("crit", 10, 1)
-	_eq("치명타 옵션 10등급 최소", crit.min, 4)
-	_eq("치명타 옵션 10등급 최대", crit.max, 12)
+	# 설계표에서 나온 최대치 (옵션 하나 = DPS +1% 에서 역산)
+	var crit := Items.option_range("crit", 10)
+	_eq("치명타 옵션 10등급 최소", snappedf(crit.min, 0.1), 0.8)
+	_eq("치명타 옵션 10등급 최대", snappedf(crit.max, 0.1), 1.5)
 	_eq("치명타는 레벨 무관", Items.option_range("crit", 10, 200).max, crit.max)
+	_eq("관통 옵션 10등급 최대", snappedf(Items.option_range("penetration", 10).max, 0.1), 3.3)
+	_eq("쿨감 옵션 10등급 최대", snappedf(Items.option_range("cooldown", 10).max, 0.1), 1.0)
 
-	# 굴린 옵션은 1~3개, 종류가 겹치지 않고, 범위 안이다
+	# 굴린 옵션은 품질 등급이 정한 개수만큼, 종류가 겹치지 않고, 범위 안이다
 	var rng := RandomNumberGenerator.new()
 	var item := Items.get_item("w_fighter_05")
 	for seed_value in 50:
 		rng.seed = seed_value
 		var rolled := Items.roll_options(item, 4, rng)
-		if rolled.size() < 1 or rolled.size() > 3:
-			_fail("옵션이 %d개다" % rolled.size())
+		if rolled.size() != 2:
+			_fail("4등급은 옵션이 2개여야 하는데 %d개다" % rolled.size())
 			return
 		var seen: Array = []
 		for option in rolled:
@@ -76,10 +77,14 @@ func _case_options() -> void:
 				_fail("옵션 종류가 겹쳤다: %s" % option.kind)
 				return
 			seen.append(option.kind)
-			var span := Items.option_range(str(option.kind), 4, int(item.level))
+			var span := Items.option_range(str(option.kind), 4)
 			if option.value < span.min or option.value > span.max:
-				_fail("%s 값 %d 가 범위(%d~%d) 밖" % [option.kind, option.value, span.min, span.max])
+				_fail("%s 값 %s 가 범위(%s~%s) 밖" % [option.kind, option.value, span.min, span.max])
 				return
+	# 10등급은 넷이 붙는다 — 개수도 등급을 탄다
+	rng.seed = 7
+	if Items.roll_options(item, 10, rng).size() != 4:
+		_fail("10등급은 옵션이 4개여야 한다")
 	print("  옵션 50번 굴림: 개수·종류·범위 모두 규칙대로")
 
 	# 재료는 끼는 물건이 아니라 옵션이 안 붙는다
@@ -114,14 +119,24 @@ func _case_stats() -> void:
 	# 강화 +5 = 6단 = ×1.78
 	_eq("강화 +5 기본 공격 %", snappedf(Items.base_bonus(item, 5).attack, 0.1), 37.3)
 
+	# 옵션은 공격력을 안 준다 — 슬롯 기본 수치가 이미 담당하기 때문이다.
+	# 대신 기본이 안 건드리는 축(쿨감·관통)과 치확·치피·공속·HP 가 붙는다
 	var stack := {
 		"id": "w_fighter_00", "grade": 3, "enhance": 5,
-		"options": [{"kind": "attack", "value": 4}, {"kind": "crit", "value": 7}],
+		"options": [
+			{"kind": "crit", "value": 0.7},
+			{"kind": "penetration", "value": 1.4},
+			{"kind": "cooldown", "value": 0.4},
+		],
 	}
 	var stats := Items.stack_stats(stack)
-	_eq("물건 하나 공격 %", snappedf(stats.attack, 0.1), 41.3)
-	_eq("물건 하나 치명타", stats.crit, 0.07)
-	print("  물건 하나: 공격 %.1f%%, 치명타 %.2f" % [stats.attack, stats.crit])
+	_eq("물건 하나 공격 %", snappedf(stats.attack, 0.1), 37.3)
+	_eq("물건 하나 치명타", snappedf(stats.crit, 0.001), 0.007)
+	_eq("물건 하나 관통", snappedf(stats.penetration, 0.001), 0.014)
+	_eq("물건 하나 쿨감", snappedf(stats.cooldown, 0.001), 0.004)
+	print("  물건 하나: 공격 %.1f%%, 치확 %.3f, 관통 %.3f, 쿨감 %.3f" % [
+		stats.attack, stats.crit, stats.penetration, stats.cooldown
+	])
 
 
 func _case_drop() -> void:

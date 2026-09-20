@@ -24,7 +24,7 @@ HUD 와 인벤토리가 이것으로 되어 있고, **앞으로 만드는 UI 는
 
 | 쓰임 | 값 |
 |---|---|
-| 판 안쪽 (칸·창·배지) | `#191a19` ~ `#1f1919` (거의 검정에 가까운 어두운 회갈색) |
+| 판 안쪽 (칸·창·배지) | `#191a19` ~ `#202321` (거의 검정에 가까운 **중성** 어두운 회갈색) |
 | 테두리 금색 | `#b9a46c` ~ `#dfc97a` |
 | 고른 탭·밝은 강조 | `#e3d092` (**글자는 어둡게 얹는다** — `#241f16`) |
 | 아이콘 밝은 면 | `#eeead7` (상아) |
@@ -68,7 +68,7 @@ frame. It stands alone — no disc, no circle, no plate, no frame, no panel behi
 Everything around the emblem is flat pure black. No text, no letters.
 ```
 
-빼면 안 되는 문구 셋:
+빼면 안 되는 문구 넷:
 
 - `it must NOT sit on any disc, circle, plate, badge, frame or panel`
   — 빼면 아이콘이 **크림색 원판 위에 앉아** 나온다.
@@ -77,6 +77,10 @@ Everything around the emblem is flat pure black. No text, no letters.
 - `everything outside is pure white, the four corners must be pure white`
   (배경을 걷어야 하는 조각)
   — 빼면 모서리가 검게 남아 화면에 **검은 사각 판**으로 뜬다.
+- **어두운 판에는 값과 함께 `NO blue, NO slate, NO grey-blue tint` 를 박는다.** ★
+  "dark charcoal" 만 쓰면 모델이 **푸른 슬레이트**(`#2d363d`)로 그린다. 레벨 배지가
+  그래서 혼자 푸른기가 돌았고, "다른 UI 들이랑 비슷한 색상으로" 라는 지적을 받았다
+  (2026-09-20). 값을 적고(`#191a19`) "칸과 같은 톤" 이라고 쓰면 맞게 나온다.
 
 ## 참고 그림 ★★
 

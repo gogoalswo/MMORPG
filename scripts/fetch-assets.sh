@@ -226,7 +226,10 @@ fetch_icon 627417215a6f50209f7d0a20cbd1c607 skill_thunder_fall
 # 막대 홈·배지·칸은 **안쪽이 어두운 채로** 받는다 (뚫으면 땅이 비친다)
 fetch_icon 9824f75b67284f12e744b40c4b54921f ui_bar_frame   # 체력 막대 홈 (얇은 금선)
 fetch_icon b58dcdbd6894b815fcfa09d0cb7e7340 ui_bar_fill    # 막대 채움 (색은 코드가 입힌다)
-fetch_icon c41890b49bcfb31cf91861287fe65fd5 ui_level_badge # 레벨 배지 (얇은 금색 원)
+# 배지는 **푸른기가 돌아** 한 번 다시 뽑았다 (2026-09-20 지적: "레벨 UI 도 다른
+# UI 들이랑 비슷한 색상으로"). 안쪽이 #2d363d(슬레이트) 였던 것을 #202321 로 —
+# 프롬프트에 칸과 같은 값(#191a19)과 "NO blue, NO slate" 를 박아야 나온다
+fetch_icon b2d622d7beb6fab02b26d0725c6231a1 ui_level_badge # 레벨 배지 (얇은 금색 원 두 겹)
 fetch_icon 66d3b2ea079339e5a22b09546c956903 ui_quick_slot  # 퀵슬롯·자동사냥 칸 (얇은 선)
 # 아이콘 셋은 **밝게 칠한 것**이다 — 선화로 뽑았더니 어두운 실루엣이 되어
 # 밤 사냥터에서 묻혔다 (2026-09-20 지적). 프롬프트에 "FULLY COLORED and BRIGHT,

@@ -237,6 +237,11 @@ fetch_icon 66d3b2ea079339e5a22b09546c956903 ui_quick_slot  # 퀵슬롯·자동�
 # NOT a dark silhouette, NOT black" 을 넣어야 칠해서 준다
 # 아이콘 셋은 **받은 스크린샷을 참고 그림으로 물려** 뽑았다 (2026-09-20).
 # 상아빛 흰색 + 금색에 얇은 어두운 윤곽 — 받은 화면의 메뉴 아이콘과 같은 결이다
+# 차원문 창 줄 아이콘 (2026-09-21). 파란 타일을 쓰다가 금빛 창과 결이 달라 다시 뽑았다 —
+# 타일(판) 없이 문장만 있는 그림이다 (docs/features/ui-art-style.md 의 "아이콘류" 틀)
+fetch_icon 09d32f50e266215c7ff66542d6d7c016 ui_gate_here   # 지금 서 있는 곳 — 소용돌이
+fetch_icon 2209356ad70f42d8872938bc39ffedd4 ui_gate_go     # 갈 수 있는 곳 — 별
+
 fetch_icon e5157077f125b146e546c1c91b818096 ui_icon_skill  # 오른쪽 위 스킬 (펼친 책 + 룬)
 fetch_icon 7542d36d9687956d7335787965b4f16d ui_icon_bag    # 오른쪽 위 가방 (배낭)
 fetch_icon 9f519882b9a58b99a928564c0fb70efd ui_icon_auto   # 자동사냥 — 검 두 자루가 X자

@@ -13,7 +13,7 @@
 | `godot/game/portal_swirl.gd` | `PortalSwirl` — 아치 구멍에서 **빨려들어가는 소용돌이**. 나선 팔 5개 + 끌려드는 알갱이 + 가운데 빛 |
 | `godot/game/gate_panel.gd` | `GatePanel` — 창(`PanelContainer`). 조각은 가방창과 같은 `ui_panel`·`ui_button`·`ui_close`. 목록은 **끌어서** 내리고 줄 전체가 누르는 자리다(`_on_list_input`·`_row_at`). 고르면 `picked(zone_id)` |
 | `godot/game/game.gd` | `_gate_tapped`(누름 판정) · `_on_gate_tapped`(문 안이면 열고 멀면 걸어감) · `_open_gate` · `_on_gate_pick`(`travel` 요청) |
-| `scripts/build-ui.mjs` | UI 조각 원본(1024²)을 쓰는 크기로 줄인다 → `public/assets/ui/` |
+| `scripts/build-item-icons.mjs` | 줄 아이콘(`ui_gate_here`·`ui_gate_go`)을 128px 로 굽는다 → `public/assets/icons/` |
 | `scripts/fetch-assets.sh` | 바르코 결과물 주소. 포탈 GLB 는 여기서 1024 JPEG 로 줄여 커밋본을 만든다 |
 | `scripts/sync-godot-assets.mjs` | `MODELS` 에 `varco_portal.glb`, `UI` 에 조각 셋 |
 | `godot/tests/ui_test.gd` | 줄 수·막힌 줄·칸 아이콘·가운데 앵커·아치 윗부분 누르기 |
@@ -67,6 +67,19 @@ NinePatchRect (panel.png, 여백 PATCH=12) ─ 앵커: 가로 가운데 WIDTH=52
 참고 그림(디아블로 웨이포인트)처럼 **지금 서 있는 곳만 소용돌이**에 흐린 글씨로
 막고, 나머지는 **별**이다. 잠긴 곳은 없다 — 아무 사냥터나 갈 수 있다는 규칙은
 그대로다 ([world-zones.md](world-zones.md) 의 "잠그지 않는다").
+
+**2026-09-21 에 그림을 갈았다.** 처음 것은 파란 **타일(판)** 위에 문장이 앉은
+그림(`assets/ui/gate_*.png`)이라 두 가지가 어긋났다:
+
+- 금빛 창과 **결이 달랐다** — 다른 UI 아이콘은 판 없이 상아빛 문장만 있다
+  ([ui-art-style.md](ui-art-style.md) 의 3번 규칙).
+- 타일이 줄 높이보다 커서 **금테 밖으로 삐져나왔다** (아이콘 60px, 줄 안쪽 48px).
+
+지금은 `ui_gate_here`(소용돌이) · `ui_gate_go`(별)이고, 다른 아이콘과 같은 길로
+만든다 — 아트풍 문서의 "아이콘류" 프롬프트 + 이미 올라가 있는 참고 그림,
+`fetch-assets.sh` 의 `fetch_icon`, `build-item-icons.mjs` 가 128px 로 굽는다.
+**크기는 `ICON`(40) 이고 `ROW_PAD`(10)·`ROW_PAD_X`(20) 안에 들어간다** — 줄 높이는
+`ICON + ROW_PAD * 2` 로 따라오므로 셋 중 하나만 바꿔도 테 밖으로 나가지 않는다.
 
 ### 문을 누르면 ★
 
@@ -134,7 +147,8 @@ NinePatchRect (panel.png, 여백 PATCH=12) ─ 앵커: 가로 가운데 WIDTH=52
 
 - 창 크기·글자 크기·아이콘 크기는 `GatePanel` 맨 위 상수다. 바탕 그림을 바꾸면 테두리를 재서 `PATCH` 를 맞춘다.
 - 소용돌이 모양·빠르기는 `PortalSwirl` 맨 위 상수다. **고쳤으면 찍어서 보고 나서** "됐다" 고 한다.
-- 조각을 새로 받으면 `fetch-assets.sh` 에 `fetch_ui` 줄, `build-ui.mjs` 의 `PIECES`, `sync-godot-assets.mjs` 의 `UI` 셋을 같이 고친다.
+- 조각을 새로 받으면 `fetch-assets.sh` 에 `fetch_icon` 줄, `sync-godot-assets.mjs` 의 `ICONS` 를 같이 고친다.
+  옛 `assets/ui/` 조각(창 바탕·파란 타일 둘)은 **아무도 안 쓴다** — 파일은 남겨 뒀지만 고도로는 안 옮긴다.
 - 문 자리·반지름·색은 `packages/shared` 의 `GATE_*` 다 ([world-zones.md](world-zones.md)).
 
 ## 관련

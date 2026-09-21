@@ -25,7 +25,12 @@ const MODELS = [
 ];
 
 /** UI 조각. 이미 build-ui.mjs 가 줄여 둔 것이라 그대로 복사한다 */
-const UI = ['panel.png', 'gate_here.png', 'gate_go.png'];
+/**
+ * **차원문 창이 쓰던 옛 조각.** 2026-09-21 에 창을 다른 UI 와 같은 결로 바꾸면서
+ * (창 바탕 `ui_panel`, 줄 아이콘 `ui_gate_*`) 아무도 안 쓰게 됐다. 파일은
+ * public/assets/ui 에 남겨 두지만 **고도로는 안 옮긴다** — pck 만 늘어난다
+ */
+const UI = [];
 
 /** 한글 폰트. 고도 기본 폰트에는 한글 글리프가 없어 넣지 않으면 네모로 나온다 */
 const FONTS = ['NotoSansKR-subset.ttf'];
@@ -58,6 +63,8 @@ const ICONS = [
   'ui_icon_skill.png', 'ui_icon_bag.png', 'ui_icon_auto.png', 'ui_auto_spin.png',
   // 모든 창의 오른쪽 위 닫기 X (2026-09-20)
   'ui_close.png',
+  // 차원문 창 줄 아이콘 — 지금 서 있는 곳은 소용돌이, 갈 곳은 별 (2026-09-21)
+  'ui_gate_here.png', 'ui_gate_go.png',
 ];
 
 /**

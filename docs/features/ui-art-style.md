@@ -94,6 +94,9 @@ Everything around the emblem is flat pure black. No text, no letters.
   https://3d.varco.ai/api/objects/26d7516cbd9971ad06060eb9da7254da.jpg
   ```
 
+- 이 주소를 그대로 물려 만든 것: 차원문 창의 줄 아이콘 둘
+  (`ui_gate_here` 소용돌이 · `ui_gate_go` 별, 2026-09-21). **한 번에 맞았다** —
+  프롬프트는 아래 "아이콘류" 틀에서 `<무엇>` 만 갈았다 ([portal-ui.md](portal-ui.md)).
 - 새로 만들어야 하면 **지금 쓰는 아이콘으로 다시 만든다.**
 
   ```bash

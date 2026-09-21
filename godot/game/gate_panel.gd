@@ -17,8 +17,6 @@ extends PanelContainer
 
 signal picked(zone_id: String)
 
-const UI_DIR := "res://assets/ui/"
-
 ## 창 폭(기준 해상도 1280×720 의 px). 높이는 화면 위아래 ANCHOR_Y 만큼 비운 나머지
 const WIDTH := 520.0
 const ANCHOR_Y := 0.06
@@ -27,7 +25,10 @@ const PATCH := 12
 ## 테두리 안쪽 여백
 const PAD := 26
 ## 칸 아이콘 한 변과 줄 사이
-const ICON := 60
+## 칸 아이콘 한 변. **틀 안에 들어가는 크기여야 한다** — 60 으로 두었더니 줄
+## 높이(64)에서 위아래 여백을 빼고 남는 48 을 넘어 **금테 밖으로 삐져나왔다**
+## (2026-09-21 지적)
+const ICON := 40
 const ROW_GAP := 6
 const FONT_SIZE := 30
 const TEXT_COLOR := Color("#f2f2f2")
@@ -41,7 +42,9 @@ const HERE_COLOR := Color("#8c8c8c")
 const PANEL_MARGIN := 26
 const BUTTON_MARGIN := 28
 ## 줄 안쪽 여백
-const ROW_PAD := 6
+## 줄 안쪽 여백. 가로는 **금테 굵기보다 넉넉히** 준다 — 좁으면 아이콘이 테 위에 올라탄다
+const ROW_PAD := 10
+const ROW_PAD_X := 20
 ## **누르면 내용이 이만큼 내려앉는다.** 색만 바뀌면 눌렸는지 눈에 안 들어온다
 const ROW_SINK := 3
 ## 누른 동안 틀을 이만큼 밝힌다 (금테가 달아오른다)
@@ -98,8 +101,11 @@ func _build() -> void:
 
 	# 가방창·스킬창과 같은 판이다
 	add_theme_stylebox_override("panel", _box("ui_panel", PANEL_MARGIN, PAD))
-	_here_icon = _tex("gate_here.png")
-	_go_icon = _tex("gate_go.png")
+	# 줄 아이콘 — 다른 UI 와 같은 결의 조각이다 (상아빛 문장, 판 없음).
+	# 파란 타일(`assets/ui/gate_*.png`)을 쓰다가 **금빛 창과 결이 달라** 다시 뽑았다
+	# (2026-09-21) → docs/features/ui-art-style.md
+	_here_icon = _piece("ui_gate_here")
+	_go_icon = _piece("ui_gate_go")
 
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 12)
@@ -208,7 +214,7 @@ func _fill(current_zone: String) -> void:
 			button.add_theme_stylebox_override("disabled", dim)
 		else:
 			button.add_theme_stylebox_override("normal", _row_box(false))
-		button.custom_minimum_size = Vector2(0, ICON + 4)
+		button.custom_minimum_size = Vector2(0, ICON + ROW_PAD * 2)
 		button.disabled = here
 		# **줄은 입력을 받지 않는다.** 누른 것이 고르기인지 끌기인지는 목록 쪽에서
 		# 판정한다 — 줄이 먼저 받으면 끌다가 손을 뗀 자리의 줄로 떠나 버린다
@@ -290,6 +296,8 @@ func _press(row: Button) -> void:
 ## 내용이 `ROW_SINK` 만큼 내려앉는다.** 조각이 없으면 코드로 그린 틀로 물러선다
 func _row_box(pressed: bool) -> StyleBox:
 	var box := _box("ui_button", BUTTON_MARGIN, ROW_PAD)
+	box.content_margin_left = ROW_PAD_X
+	box.content_margin_right = ROW_PAD_X
 	var sink: int = ROW_SINK if pressed else 0
 	box.content_margin_top = ROW_PAD + sink
 	box.content_margin_bottom = maxf(ROW_PAD - sink, 0.0)
@@ -325,7 +333,3 @@ func _on_pick(zone_id: String) -> void:
 	visible = false
 	picked.emit(zone_id)
 
-
-static func _tex(file: String) -> Texture2D:
-	var path := UI_DIR + file
-	return load(path) if ResourceLoader.exists(path) else null

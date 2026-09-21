@@ -1,6 +1,6 @@
 extends SceneTree
 
-## 상점과 대장간 — 사고팔기·새로 만들기·강화·등급 올리기.
+## 상점과 대장간 — 사고팔기·강화. (제작은 2026-09-20 에 걷었다)
 ##
 ## **닿는 거리는 살 때마다 다시 잰다.** 창을 열어 두고 걸어 나가면 안 돼야 한다.
 ## 기준값은 packages/shared/src/items.ts 를 node 로 돌려 뽑았다 (2026-09-17).
@@ -16,9 +16,7 @@ func _init() -> void:
 	_case_buy()
 	_case_too_far()
 	_case_sell()
-	_case_forge()
 	_case_enhance()
-	_case_craft()
 	Save.clear()
 
 	if _failed == 0:
@@ -131,32 +129,6 @@ func _case_sell() -> void:
 	print("  판매: 1등급 13G, 5등급 28G")
 
 
-func _case_forge() -> void:
-	var s := _at("smith")
-	var w: World = s[0]
-	var me: Dictionary = s[1]
-
-	# 재료가 없으면 못 만든다
-	me.gold = 1000
-	w.npc_forge("me", "a_00")
-	if not me.bag.is_empty():
-		_fail("재료 없이 만들어졌다")
-
-	# 낡은 정수 5개 + 48골드
-	for i in 5:
-		me.bag.append({"id": "m_00", "grade": 1, "enhance": 0, "options": []})
-	w.drain_events()
-	w.npc_forge("me", "a_00")
-	var made := 0
-	for stack in me.bag:
-		if str(stack.id) == "a_00":
-			made += 1
-	_eq("만들어진다", made, 1)
-	_eq("재료 5개를 쓴다", me.bag.size(), 1)
-	_eq("수수료 48G", int(me.gold), 952)
-	print("  제작: 낡은 정수 5개 + 48G -> 낡은 갑옷")
-
-
 func _case_enhance() -> void:
 	var s := _at("smith")
 	var w: World = s[0]
@@ -183,28 +155,3 @@ func _case_enhance() -> void:
 	if results.success + results.destroy == 0:
 		_fail("강화가 한 번도 안 돌았다")
 	print("  강화 시도: 성공 %d · 파괴 %d" % [results.success, results.destroy])
-
-
-func _case_craft() -> void:
-	var s := _at("smith")
-	var w: World = s[0]
-	var me: Dictionary = s[1]
-	me.gold = 1000
-	me.bag.append({"id": "w_fighter_00", "grade": 1, "enhance": 0, "options": []})
-	me.bag.append({"id": "m_00", "grade": 1, "enhance": 0, "options": []})
-
-	w.npc_craft("me", 0)
-	_eq("2등급이 된다", int(me.bag[0].grade), 2)
-	_eq("수수료 16G", int(me.gold), 984)
-	_eq("재료 1개를 쓴다", me.bag.size(), 1)
-	if me.bag[0].options.is_empty():
-		_fail("옵션이 다시 안 굴려졌다")
-	else:
-		print("  등급 올리기: 1 -> 2등급 (재료 1개 + 16G, 옵션 재굴림)")
-
-	# 재료가 없으면 못 올린다
-	w.drain_events()
-	w.npc_craft("me", 0)
-	_eq("재료 없으면 그대로", int(me.bag[0].grade), 2)
-	if not _notice_of(w).contains("필요"):
-		_fail("재료가 필요하다고 알려 주지 않았다")

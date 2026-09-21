@@ -418,10 +418,10 @@ func _case_bag(game: Node3D) -> void:
 			wrote += stat_labels[index].text + "  "
 		print("  스탯 상자: %s" % wrote.strip_edges())
 
-	# 탭 — 다섯 개, 고른 것만 바뀐다
+	# 탭 — 네 개, 고른 것만 바뀐다 (재료 탭은 제작과 함께 없앴다)
 	var tabs: Array = game._tab_buttons
-	if tabs.size() != 5:
-		_fail("탭이 5개여야 하는데 %d개" % tabs.size())
+	if tabs.size() != 4:
+		_fail("탭이 4개여야 하는데 %d개" % tabs.size())
 	elif game._bag_tab != 0:
 		_fail("처음에는 '전체' 가 골라져 있어야 한다 (%d)" % game._bag_tab)
 
@@ -484,7 +484,7 @@ func _case_bag(game: Node3D) -> void:
 
 	# 탭으로 거르면 **칸 번호와 가방 번호가 어긋난다** — 거기서 끼면 엉뚱한 게 끼워진다
 	me.bag.clear()
-	me.bag.append({"id": "m_00", "grade": 1, "enhance": 0, "options": []})
+	me.bag.append({"id": "a_00", "grade": 1, "enhance": 0, "options": []})
 	me.bag.append({"id": "w_fighter_00", "grade": 3, "enhance": 0, "options": []})
 	game._pick_tab(1)  # 무기
 	await process_frame

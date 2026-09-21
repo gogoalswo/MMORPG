@@ -87,10 +87,6 @@ func _case_options() -> void:
 		_fail("10등급은 옵션이 4개여야 한다")
 	print("  옵션 50번 굴림: 개수·종류·범위 모두 규칙대로")
 
-	# 재료는 끼는 물건이 아니라 옵션이 안 붙는다
-	if not Items.roll_options(Items.get_item("m_00"), 7, rng).is_empty():
-		_fail("재료에 옵션이 붙었다")
-
 
 ## 강화는 설계표(stat-balance.md 4장)를 그대로 쓴다 — 총 ×6, **실패하면 무조건 파괴**
 func _case_enhance() -> void:

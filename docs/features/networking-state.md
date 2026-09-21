@@ -83,8 +83,8 @@ Colyseus 0.18. 존 하나 = 룸 하나. 서버 권위 + 클라이언트 예측/�
 
 ### 메시지 목록 (클라 → 서버)
 `input` `moveTo` `chat` `attack` `godmode` `target` `autohunt` `autoSkills` `autoRange` `skill`
-`learnSkill` `setSkillBar` `equip` `unequip` `craft`
-`npcOpen` `npcBuy` `npcSell` `npcForge` `npcEnhance` `npcJob`
+`learnSkill` `setSkillBar` `equip` `unequip`
+`npcOpen` `npcBuy` `npcSell` `npcEnhance` `npcJob`
 `createCharacter` `selectCharacter` `deleteCharacter` `setJob` `linkGoogle`
 
 ### 메시지 목록 (서버 → 클라)

@@ -44,7 +44,7 @@ export interface ItemBonus {
 export interface ItemDef {
   id: string;
   name: string;
-  /** 재료는 착용할 수 없으므로 슬롯이 없다 */
+  /** 지금은 전부 장비다. `null` 자리는 착용 못 하는 물건을 위해 남겨 뒀다 */
   slot: EquipSlot | null;
   /** 착용 가능한 최소 레벨 */
   level: number;
@@ -53,8 +53,6 @@ export interface ItemDef {
   bonus: ItemBonus;
   /** 상점에 팔 때 받는 금액 */
   price: number;
-  /** 제작 재료인지 — 보스만 떨군다 */
-  material?: boolean;
 }
 
 /** 가방 칸 수 */
@@ -200,17 +198,7 @@ function buildItems(): Record<string, ItemDef> {
       };
     }
 
-    // 그 사냥터 보스가 떨구는 제작 재료
-    const materialId = materialIdFor(index);
-    out[materialId] = {
-      id: materialId,
-      name: `${prefix} 정수`,
-      slot: null,
-      level,
-      bonus: {},
-      price: Math.round(price * 0.4),
-      material: true,
-    };
+    // 제작 재료(`m_XX`)는 2026-09-20 에 없앴다 — 제작 자체를 걷었기 때문이다
   });
 
   return out;
@@ -222,14 +210,11 @@ export function getItem(id: string): ItemDef | null {
   return ITEMS[id] ?? null;
 }
 
-/** 단계 번호에서 재료 id */
-export function materialIdFor(tier: number): string {
-  return 'm_' + String(tier).padStart(2, '0');
-}
+// materialIdFor 는 제작과 함께 없앴다
 
 /** 이 캐릭터가 낄 수 있는 장비인지 — 서버가 반드시 다시 확인해야 한다 */
 export function canEquip(item: ItemDef, job: JobId, level: number): boolean {
-  if (!item.slot) return false; // 재료는 못 낀다
+  if (!item.slot) return false; // 슬롯이 없는 것은 못 낀다
   if (item.job && item.job !== job) return false;
   return level >= item.level;
 }
@@ -248,7 +233,14 @@ export function canEquip(item: ItemDef, job: JobId, level: number): boolean {
  */
 export const GRADE_MIN = 1;
 export const GRADE_MAX = 10;
-export const MAX_DROP_GRADE = 7;
+/**
+ * 드롭으로 나올 수 있는 최고 등급 — **10등급, 즉 전부다.**
+ *
+ * 2026-09-20 에 7 → 10 이 됐다. 그전에는 8~10 을 제작으로만 만들 수 있었는데
+ * (요청: "제작은 일단 제거해") 제작을 걷으면서 **드롭이 유일한 길**이 됐다.
+ * 대신 가중치가 `2^(10-g)` 라 10등급은 512번에 한 번꼴이다.
+ */
+export const MAX_DROP_GRADE = GRADE_MAX;
 
 /**
  * 등급이 올릴 **값** 배율 — 1등급이 기준이다.
@@ -370,8 +362,6 @@ export function rollOptions(
   grade: number,
   rng: () => number = Math.random
 ): ItemOption[] {
-  if (item.material) return []; // 재료는 끼는 물건이 아니다
-
   // **개수는 품질 등급이 정한다** — 등급이 오르면 개수와 수치가 같이 커진다
   const [lo, hi] = gearOptionCount(Math.min(GRADE_MAX, Math.max(GRADE_MIN, Math.round(grade))));
   const count = lo + Math.floor(rng() * (hi - lo + 1));
@@ -590,114 +580,16 @@ export function equipmentStats(
 // ---------------------------------------------------------------- 제작
 
 /**
- * 제작.
+ * **제작은 없앴다** (2026-09-20 요청: "제작은 일단 제거해").
  *
- * 예전에는 같은 물건 3개를 합쳤는데, 이제 **보스가 떨구는 재료**로 올린다.
- * 쓰던 장비를 그대로 올리므로 똑같은 걸 여러 개 모을 필요가 없고,
- * 대신 상위 등급은 보스를 몇 번 잡았느냐에 걸린다.
+ * 등급 올리기·새로 만들기·재료(`m_XX`)가 전부 여기 있었다. 설계
+ * ([stat-balance.md](../../../docs/features/stat-balance.md))에는 강화만 있고
+ * 제작이 없으므로, 두 체계를 나란히 두면 "상위 등급으로 가는 길" 이 둘이 된다.
+ *
+ * 걷어내면서 따라온 것: **드롭이 유일한 길**이 되어 `MAX_DROP_GRADE` 가 7 → 10 이
+ * 됐고, 보스가 떨구던 재료가 사라졌다(보스 전용 아이템은 나중에 정한다).
+ * 되살리려면 이 커밋을 뒤집는 게 빠르다.
  */
-
-/** 목표 등급 하나를 만드는 데 드는 재료 수 */
-export function materialsNeeded(targetGrade: number): number {
-  return Math.max(1, targetGrade - 1);
-}
-
-/** 제작 수수료 */
-export function craftCost(item: ItemDef, currentGrade: number): number {
-  return Math.round(item.price * 0.5 * gradeMultiplier(currentGrade));
-}
-
-/** 이 등급에서 위로 올릴 수 있는지 */
-export function canCraftUp(grade: number): boolean {
-  return grade >= GRADE_MIN && grade < GRADE_MAX;
-}
-
-export interface CraftRequirement {
-  targetGrade: number;
-  materialId: string;
-  materialName: string;
-  materialCount: number;
-  gold: number;
-}
-
-/**
- * 이 장비를 한 등급 올리는 데 필요한 것.
- *
- * 재료는 **그 장비와 같은 단계**의 것을 쓴다. 낮은 단계 재료로 최상위 장비를
- * 올릴 수 있으면 초반 보스만 반복해서 끝나버린다.
- */
-export function craftRequirement(item: ItemDef, currentGrade: number): CraftRequirement | null {
-  if (!canCraftUp(currentGrade) || item.material) return null;
-
-  const tier = tierIndexOf(item);
-  const materialId = materialIdFor(tier);
-  const target = currentGrade + 1;
-
-  return {
-    targetGrade: target,
-    materialId,
-    materialName: ITEMS[materialId]?.name ?? materialId,
-    materialCount: materialsNeeded(target),
-    gold: craftCost(item, currentGrade),
-  };
-}
-
-/** 아이템 id 끝에 붙은 단계 번호 */
-export function tierIndexOf(item: ItemDef): number {
-  const tag = item.id.slice(-2);
-  const parsed = Number.parseInt(tag, 10);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-/**
- * 새로 만들기.
- *
- * 등급 올리기가 "가진 걸 더 좋게"라면 이건 "없는 걸 마련한다"이다.
- * 드롭은 슬롯 8종에 고루 퍼지지만 운이라, 투구만 끝내 안 나오는 일이 생긴다.
- * 그때 보스 재료로 원하는 자리를 직접 채운다.
- *
- * 등급 올리기보다 재료를 더 쓴다 — 없던 걸 만드는 쪽이 싸면 아무도 줍지 않는다.
- */
-export const FORGE_MATERIALS = 5;
-
-export interface ForgeRecipe {
-  itemId: string;
-  materialId: string;
-  materialName: string;
-  materialCount: number;
-  gold: number;
-}
-
-/** 이 장비를 1등급으로 만들 때 드는 것 */
-export function forgeRecipe(item: ItemDef): ForgeRecipe | null {
-  if (item.material) return null;
-
-  const materialId = materialIdFor(tierIndexOf(item));
-  return {
-    itemId: item.id,
-    materialId,
-    materialName: ITEMS[materialId]?.name ?? materialId,
-    materialCount: FORGE_MATERIALS,
-    gold: Math.round(item.price * 1.5),
-  };
-}
-
-/**
- * 그 캐릭터가 만들 수 있는 것 — 자기 레벨까지의 장비 전부.
- *
- * 상점이 무기만 파는 것과 짝이 된다. 방어구·장신구는 사냥으로 줍거나
- * 여기서 만든다.
- */
-export function forgeableFor(job: JobId, level: number): string[] {
-  return Object.values(ITEMS)
-    .filter((item) => {
-      if (item.material) return false;
-      if (item.job && item.job !== job) return false;
-      return item.level <= level;
-    })
-    .sort((a, b) => a.level - b.level || a.slot!.localeCompare(b.slot!))
-    .map((item) => item.id);
-}
 
 // ---------------------------------------------------------------- 드롭
 
@@ -769,26 +661,18 @@ export function rollDrop(monsterLevel: number, job: JobId, rng: () => number = M
   return { gold, item: { id, grade, options: def ? rollOptions(def, grade, rng) : [] } };
 }
 
-/** 보스가 한 번에 떨구는 재료 수 */
-export const BOSS_MATERIALS = 3;
-
 export interface BossDrop {
   gold: number;
-  materialId: string;
-  count: number;
 }
 
 /**
- * 보스 보상.
+ * 보스 보상 — **지금은 금화뿐이다.**
  *
- * 재료는 **반드시** 나온다. 최상위 등급으로 가는 유일한 길이라 운에 맡기면
- * 보스를 잡고도 아무것도 못 얻는 일이 생기고, 그건 3분을 기다린 값이 아니다.
+ * 2026-09-20 에 제작을 걷으면서 보스 재료도 같이 없앴다. 보스는 **보스 전용
+ * 아이템**을 떨굴 예정이고 그건 나중에 설계한다. 그때까지 잡은 값은 금화로만
+ * 돌려준다 — 일반 처치의 12배다.
  */
 export function rollBossDrop(monsterLevel: number, rng: () => number = Math.random): BossDrop {
   const base = (2 + monsterLevel * 1.5) * 12;
-  return {
-    gold: Math.max(1, Math.round(base * (0.8 + rng() * 0.4))),
-    materialId: materialIdFor(tierForLevel(monsterLevel)),
-    count: BOSS_MATERIALS,
-  };
+  return { gold: Math.max(1, Math.round(base * (0.8 + rng() * 0.4))) };
 }

@@ -252,7 +252,7 @@ function toStack(raw: unknown): ItemStack | null {
 /** 저장된 옵션을 지금 규칙으로 다듬고, 없으면 한 번 굴려 붙인다 */
 function withOptions(stack: ItemStack, raw: unknown): ItemStack {
   const item = getItem(stack.id);
-  if (!item || item.material) return { ...stack, options: [] };
+  if (!item) return { ...stack, options: [] };
   if (raw === undefined || raw === null) {
     return { ...stack, options: rollOptions(item, stack.grade) };
   }

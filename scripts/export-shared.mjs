@@ -71,8 +71,6 @@ import {
   OPTION_LABEL,
   MAX_ENHANCE,
   DROP_CHANCE,
-  BOSS_MATERIALS,
-  FORGE_MATERIALS,
   TIER_COUNT,
 } from '../packages/shared/src/index.ts';
 
@@ -145,8 +143,6 @@ export function buildData() {
       optionLabel: OPTION_LABEL,
       maxEnhance: MAX_ENHANCE,
       dropChance: DROP_CHANCE,
-      bossMaterials: BOSS_MATERIALS,
-      forgeMaterials: FORGE_MATERIALS,
       tierCount: TIER_COUNT,
     },
     'constants.json': {

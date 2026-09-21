@@ -77,7 +77,7 @@ const SPIN_LIFT := 13
 const EXP_GAUGE_H := 20
 const ICON_DIR := "res://assets/icons/"
 ## 가방 탭. 0 은 전체, 나머지는 `_tab_keeps` 가 슬롯으로 가른다
-const BAG_TABS := ["전체", "무기", "방어구", "장신구", "재료"]
+const BAG_TABS := ["전체", "무기", "방어구", "장신구"]
 ## 스탯 상자에 놓는 여섯 개. 순서가 `_redraw_bag` 의 목록과 같아야 한다
 const STAT_NAMES := ["공격력", "방어력", "체력", "치명타", "치명타 피해", "공격 속도"]
 
@@ -573,7 +573,7 @@ class SpinRing extends Control:
 ## 배치는 2026-09-18 에 받은 그림대로다:
 ##
 ## ```
-## ┌ LV. 1 · 경험치 ─────────────┬ [전체][무기][방어구][장신구][재료] ┐
+## ┌ LV. 1 · 경험치 ─────────────┬ [전체][무기][방어구][장신구] ┐
 ## │ [무기]  (캐릭터)  [신발]     │ [ ][ ][ ][ ][ ]                    │
 ## │ [갑옷]            [목걸이]   │ [ ][ ][ ][ ][ ]                    │
 ## │ [투구]            [반지]     │ [ ][ ][ ][ ][ ]  ← 끌어 올림        │
@@ -954,7 +954,7 @@ func _make_cell(on_press: Callable) -> PanelContainer:
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cell.add_child(icon)
 
-	# 그림이 없는 것(재료)은 이름을 줄여 적는다
+	# 그림이 없는 것은 이름을 줄여 적는다
 	var text := Label.new()
 	text.name = "text"
 	text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -1037,8 +1037,6 @@ func _tab_keeps(stack: Dictionary) -> bool:
 	if _bag_tab == 0:
 		return true
 	var item := Items.get_item(str(stack.get("id", "")))
-	if bool(item.get("material", false)):
-		return _bag_tab == 4
 	var slot := str(item.get("slot", ""))
 	match _bag_tab:
 		1: return slot == "weapon"
@@ -1110,7 +1108,6 @@ func _redraw_bag() -> void:
 		var stack: Dictionary = bag[_bag_view[index]] if index < _bag_view.size() else {}
 		var icon_name := ""
 		if not stack.is_empty():
-			# 재료는 슬롯이 없어 그림도 없다 — 이름으로 나온다
 			icon_name = str(Items.get_item(str(stack.get("id", ""))).get("slot", ""))
 		_fill_cell(_bag_grid.get_child(index), stack, "", icon_name)
 
@@ -1900,13 +1897,13 @@ func _show_npc(payload: Dictionary) -> void:
 	]
 	_npc_role = role
 	_npc_items = payload.get("items", [])
-	_npc_tab = "buy" if role == "shop" else "forge"
+	_npc_tab = "buy" if role == "shop" else "enhance"
 	_redraw_npc()
 	_npc_panel.visible = true
 
 
 ## 목록은 **열 때마다 다시 그린다** — 사고팔고 두드리는 동안 계속 바뀐다.
-## 웹 클라의 npcDialog(상점) · craftWindow(대장간 탭 3개) 자리다
+## 웹 클라의 npcDialog(상점) · craftWindow 자리다. 대장간은 제작을 걷은 뒤 강화만 남았다
 func _redraw_npc() -> void:
 	for child in _npc_rows.get_children():
 		child.queue_free()
@@ -1921,9 +1918,7 @@ func _redraw_npc() -> void:
 
 	var tabs := HBoxContainer.new()
 	_npc_rows.add_child(tabs)
-	var names := {"buy": "사기", "sell": "팔기"} if _npc_role == "shop" else {
-		"forge": "새로 만들기", "enhance": "강화", "craft": "등급 올리기"
-	}
+	var names := {"buy": "사기", "sell": "팔기"} if _npc_role == "shop" else {"enhance": "강화"}
 	for key in names:
 		var tab := Button.new()
 		tab.text = names[key]
@@ -1941,15 +1936,9 @@ func _redraw_npc() -> void:
 			_list_bag(me, "팔기", func(index: int) -> void:
 				_transport.send(&"npcSell", {"index": index})
 			)
-		"forge":
-			_list_forge(me)
 		"enhance":
 			_list_bag(me, "강화", func(index: int) -> void:
 				_transport.send(&"npcEnhance", {"index": index})
-			)
-		"craft":
-			_list_bag(me, "등급", func(index: int) -> void:
-				_transport.send(&"npcCraft", {"index": index})
 			)
 
 
@@ -1965,38 +1954,6 @@ func _list_buy(me: Dictionary) -> void:
 		)
 		_npc_rows.add_child(button)
 
-
-## 만들 수 있는 것이 레벨을 따라 길어진다. **가진 재료로 만들 수 있는 것만** 올린다 —
-## 안 거르면 200레벨에 160줄이 깔려 정작 무엇을 만들 수 있는지가 안 보인다
-func _list_forge(me: Dictionary) -> void:
-	var shown := 0
-	for id in _npc_items:
-		if shown >= 12:
-			break
-		var item := Items.get_item(str(id))
-		var recipe := Items.forge_recipe(item)
-		if recipe.is_empty():
-			continue
-		var have := 0
-		for stack in me.bag:
-			if str(stack.get("id", "")) == str(recipe.materialId):
-				have += 1
-		if have < int(recipe.materialCount):
-			continue
-		shown += 1
-		var button := Button.new()
-		button.text = "%s   %s %d개 + %d G" % [
-			item.get("name", id), recipe.materialName, recipe.materialCount, recipe.gold
-		]
-		button.pressed.connect(func() -> void:
-			_transport.send(&"npcForge", {"item": str(id)})
-			_redraw_npc()
-		)
-		_npc_rows.add_child(button)
-	if shown == 0:
-		var empty := Label.new()
-		empty.text = "만들 수 있는 것이 없습니다 (보스가 재료를 떨굽니다)"
-		_npc_rows.add_child(empty)
 
 
 func _list_bag(me: Dictionary, verb: String, action: Callable) -> void:

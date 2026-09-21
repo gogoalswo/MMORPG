@@ -38,7 +38,7 @@ created_at, updated_at, gold, inventory, equipment, skills, skill_bar, skill_poi
 - `grade` / `enhance` 는 범위로 자른다.
 - `options` 가 **없으면(undefined) 한 번 굴려 붙인다.** 옵션이 생기기 전에 주운
   장비를 옵션 0개로 두면 영영 못 고치는 쓰레기가 된다. 한 번 굴리면 저장되므로
-  다음 접속부터 그대로다. 빈 배열 `[]` 은 "재료라서 없다"는 뜻이라 다시 안 굴린다.
+  다음 접속부터 그대로다. 빈 배열 `[]` 은 "굴려 봤는데 없다"는 뜻이라 다시 안 굴린다.
 - 있으면 `sanitizeOptions` 로 지금 규칙에 맞게 자른다.
 
 **깨진 값 하나 때문에 접속이 막히면 안 된다.** 못 읽으면 조용히 빈 값으로 떨어뜨린다.

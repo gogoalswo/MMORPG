@@ -40,14 +40,9 @@ import {
   GODMODE_ALLOWED,
   resolveZoneId,
   INVENTORY_SIZE,
-  GRADE_MAX,
-  canCraftUp,
   canEquip,
   canEnhance,
-  craftRequirement,
   enhanceCost,
-  forgeRecipe,
-  forgeableFor,
   rollBossDrop,
   rollEnhance,
   ITEMS,
@@ -258,14 +253,12 @@ export class ZoneRoom extends Room {
     this.onMessage('npcBuy', (client, itemId: string) => this.handleNpcBuy(client, itemId));
     this.onMessage('npcSell', (client, index: number) => this.handleNpcSell(client, index));
     this.onMessage('npcJob', (client, job: string) => this.handleNpcJob(client, job));
-    this.onMessage('npcForge', (client, itemId: string) => this.handleNpcForge(client, itemId));
     this.onMessage('npcEnhance', (client, index: number) => this.handleNpcEnhance(client, index));
     this.onMessage('autoRange', (client, radius: number) => {
       // 값은 서버가 다시 자른다. 클라이언트 슬라이더는 표시일 뿐이다.
       this.autoRadius.set(client.sessionId, clampHuntRadius(radius));
     });
     this.onMessage('equip', (client, index: number) => this.handleEquip(client, index));
-    this.onMessage('craft', (client, index: number) => this.handleCraft(client, index));
     this.onMessage('unequip', (client, slot: string) => this.handleUnequip(client, slot));
     this.onMessage('skill', (client, skillId: string) => this.handleSkill(client, skillId));
     this.onMessage('linkGoogle', (client, idToken: string) => {
@@ -1177,69 +1170,6 @@ export class ZoneRoom extends Room {
     this.persist(client.sessionId);
   }
 
-  /**
-   * 제작 — 보스 재료로 쓰던 장비를 한 등급 올린다.
-   *
-   * 8~10 등급은 드롭에 없으므로 이 길로만 나온다. 재료는 **그 장비와 같은 단계**의
-   * 것을 쓴다 — 낮은 단계 재료로 최상위 장비를 올릴 수 있으면 초반 보스만
-   * 반복하는 게 최적이 되어 사냥터가 하나로 줄어든다.
-   */
-  private handleCraft(client: Client, index: number): void {
-    const viewer = this.viewers.get(client.sessionId);
-    const player = this.state.players.get(client.sessionId);
-    if (!viewer || !player || typeof index !== 'number') return;
-
-    const target = viewer.character.inventory[index];
-    if (!target) return;
-
-    const item = getItem(target.id);
-    if (!item) return;
-
-    if (!canCraftUp(target.grade)) {
-      client.send('notice', { text: `${GRADE_MAX}등급이 최고입니다.` });
-      return;
-    }
-
-    const need = craftRequirement(item, target.grade);
-    if (!need) return;
-
-    const materialIndexes: number[] = [];
-    viewer.character.inventory.forEach((stack, i) => {
-      if (stack.id === need.materialId) materialIndexes.push(i);
-    });
-
-    if (materialIndexes.length < need.materialCount) {
-      client.send('notice', {
-        text: `${need.materialName} ${need.materialCount}개가 필요합니다 (${materialIndexes.length}개 보유).`,
-      });
-      return;
-    }
-
-    if (viewer.character.gold < need.gold) {
-      client.send('notice', { text: `골드가 ${need.gold - viewer.character.gold} 모자랍니다.` });
-      return;
-    }
-
-    // 재료를 뒤에서부터 지운다. 앞에서 지우면 남은 인덱스가 밀린다.
-    const consumed = materialIndexes.slice(0, need.materialCount).sort((a, b) => b - a);
-    for (const i of consumed) viewer.character.inventory.splice(i, 1);
-    viewer.character.gold -= need.gold;
-
-    // 재료를 지우면서 대상 장비의 자리도 밀렸을 수 있다 — 다시 찾는다
-    const moved = consumed.filter((i) => i < index).length;
-    const slot = viewer.character.inventory[index - moved];
-    if (slot && slot.id === target.id && slot.grade === target.grade) {
-      slot.grade = need.targetGrade;
-      // 등급이 올라가면 옵션 범위가 넓어지므로 **다시 굴린다.**
-      // 그대로 두면 10등급인데 1등급 범위의 옵션이 박힌 물건이 남는다.
-      slot.options = rollOptions(item, need.targetGrade);
-    }
-
-    client.send('notice', { text: `${item.name} ${need.targetGrade}등급 제작 완료` });
-    this.sendInventory(viewer);
-    this.persist(client.sessionId);
-  }
-
   private handleUnequip(client: Client, slot: string): void {
     const viewer = this.viewers.get(client.sessionId);
     const player = this.state.players.get(client.sessionId);
@@ -1423,7 +1353,8 @@ export class ZoneRoom extends Room {
     client.send('npc', {
       role,
       stock: role === 'shop' ? this.shopStock(player) : [],
-      forge: role === 'smith' ? forgeableFor(player.job as JobId, player.level) : [],
+      // 대장간 제작(`forge`)은 2026-09-20 에 걷었다 — 클라이언트 호환을 위해 빈 칸만 남긴다
+      forge: [],
       jobs: role === 'jobs' ? [...JOB_IDS] : [],
     });
   }
@@ -1481,68 +1412,6 @@ export class ZoneRoom extends Room {
   }
 
   /**
-   * 전직.
-   *
-   * 직업이 바뀌면 무기와 보조는 못 쓰게 되므로 가방으로 돌려보낸다.
-   * 낀 채로 두면 능력치는 붙는데 창에는 못 끼는 물건이 박혀 있는 꼴이 된다.
-   */
-  /**
-   * 새로 만들기 — 보스 재료로 원하는 자리를 채운다.
-   *
-   * **만들 수 있는 목록을 서버가 다시 만들어 대조한다.** 클라이언트가 보낸
-   * id 를 믿으면 1레벨이 200레벨 장비를 찍어낸다.
-   */
-  private handleNpcForge(client: Client, itemId: string): void {
-    const viewer = this.viewers.get(client.sessionId);
-    const player = this.state.players.get(client.sessionId);
-    if (!viewer || !player || typeof itemId !== 'string') return;
-    if (!this.npcNear(player, 'smith')) {
-      client.send('notice', { text: '대장간에서만 만들 수 있습니다.' });
-      return;
-    }
-
-    if (!forgeableFor(player.job as JobId, player.level).includes(itemId)) return;
-
-    const item = getItem(itemId);
-    if (!item) return;
-
-    const recipe = forgeRecipe(item);
-    if (!recipe) return;
-
-    if (viewer.character.inventory.length >= INVENTORY_SIZE) {
-      client.send('notice', { text: '가방이 가득 찼습니다.' });
-      return;
-    }
-
-    const materials: number[] = [];
-    viewer.character.inventory.forEach((stack, i) => {
-      if (stack.id === recipe.materialId) materials.push(i);
-    });
-
-    if (materials.length < recipe.materialCount) {
-      client.send('notice', {
-        text: `${recipe.materialName} ${recipe.materialCount}개가 필요합니다 (${materials.length}개 보유).`,
-      });
-      return;
-    }
-    if (viewer.character.gold < recipe.gold) {
-      client.send('notice', { text: `골드가 ${recipe.gold - viewer.character.gold} 모자랍니다.` });
-      return;
-    }
-
-    // 뒤에서부터 지워야 앞 인덱스가 밀리지 않는다
-    for (const i of materials.slice(0, recipe.materialCount).sort((a, b) => b - a)) {
-      viewer.character.inventory.splice(i, 1);
-    }
-    viewer.character.gold -= recipe.gold;
-    viewer.character.inventory.push({ id: itemId, grade: 1, options: rollOptions(item, 1) });
-
-    client.send('notice', { text: `${item.name} 제작 완료` });
-    this.sendInventory(viewer);
-    this.persist(client.sessionId);
-  }
-
-  /**
    * 강화 — 골드를 걸고 운을 본다.
    *
    * 굴림을 **서버가 한다.** 클라이언트가 결과를 보내게 두면 전부 성공이 된다.
@@ -1561,7 +1430,7 @@ export class ZoneRoom extends Room {
     if (!stack) return;
 
     const item = getItem(stack.id);
-    if (!item || item.material) return;
+    if (!item) return;
 
     const level = stack.enhance ?? 0;
     if (!canEnhance(level)) {
@@ -1593,6 +1462,12 @@ export class ZoneRoom extends Room {
     this.persist(client.sessionId);
   }
 
+  /**
+   * 전직.
+   *
+   * 직업이 바뀌면 무기와 보조는 못 쓰게 되므로 가방으로 돌려보낸다.
+   * 낀 채로 두면 능력치는 붙는데 창에는 못 끼는 물건이 박혀 있는 꼴이 된다.
+   */
   private handleNpcJob(client: Client, job: string): void {
     const viewer = this.viewers.get(client.sessionId);
     const player = this.state.players.get(client.sessionId);
@@ -1808,17 +1683,8 @@ export class ZoneRoom extends Room {
       // 보상은 바로 가방으로 넣는다. 바닥에 떨어뜨리면 아이템도 하나의 엔티티가
       // 되어 AoI·동기화·줍기 판정이 전부 따라붙는다 — 지금 필요한 무게가 아니다.
       if (kind.boss) {
-        // 보스는 재료를 반드시 준다 — 최상위 등급으로 가는 유일한 길이다
-        const bossDrop = rollBossDrop(kind.level);
-        gold += bossDrop.gold;
-        const def = getItem(bossDrop.materialId);
-        let given = 0;
-        for (let i = 0; i < bossDrop.count; i++) {
-          if (viewer.character.inventory.length >= INVENTORY_SIZE) break;
-          viewer.character.inventory.push({ id: bossDrop.materialId, grade: 1 });
-          given++;
-        }
-        if (given > 0) lootedNames.push(`${def?.name ?? bossDrop.materialId} ×${given}`);
+        // 보스 전용 아이템은 나중에 만든다 — 그때까지 보상은 금화뿐이다
+        gold += rollBossDrop(kind.level).gold;
         this.announce(`${player.name} 님이 ${kind.name} 을(를) 쓰러뜨렸습니다!`);
         continue;
       }

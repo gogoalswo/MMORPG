@@ -115,15 +115,6 @@
       },
       "price": 32
     },
-    "m_00": {
-      "id": "m_00",
-      "name": "낡은 정수",
-      "slot": null,
-      "level": 1,
-      "bonus": {},
-      "price": 13,
-      "material": true
-    },
     "w_fighter_01": {
       "id": "w_fighter_01",
       "name": "단단한 너클",
@@ -238,15 +229,6 @@
         "attackSpeed": 1
       },
       "price": 140
-    },
-    "m_01": {
-      "id": "m_01",
-      "name": "단단한 정수",
-      "slot": null,
-      "level": 10,
-      "bonus": {},
-      "price": 56,
-      "material": true
     },
     "w_fighter_02": {
       "id": "w_fighter_02",
@@ -363,15 +345,6 @@
       },
       "price": 260
     },
-    "m_02": {
-      "id": "m_02",
-      "name": "강철 정수",
-      "slot": null,
-      "level": 20,
-      "bonus": {},
-      "price": 104,
-      "material": true
-    },
     "w_fighter_03": {
       "id": "w_fighter_03",
       "name": "은빛 너클",
@@ -486,15 +459,6 @@
         "attackSpeed": 3
       },
       "price": 380
-    },
-    "m_03": {
-      "id": "m_03",
-      "name": "은빛 정수",
-      "slot": null,
-      "level": 30,
-      "bonus": {},
-      "price": 152,
-      "material": true
     },
     "w_fighter_04": {
       "id": "w_fighter_04",
@@ -611,15 +575,6 @@
       },
       "price": 500
     },
-    "m_04": {
-      "id": "m_04",
-      "name": "늪지 정수",
-      "slot": null,
-      "level": 40,
-      "bonus": {},
-      "price": 200,
-      "material": true
-    },
     "w_fighter_05": {
       "id": "w_fighter_05",
       "name": "서리 너클",
@@ -734,15 +689,6 @@
         "attackSpeed": 5
       },
       "price": 620
-    },
-    "m_05": {
-      "id": "m_05",
-      "name": "서리 정수",
-      "slot": null,
-      "level": 50,
-      "bonus": {},
-      "price": 248,
-      "material": true
     },
     "w_fighter_06": {
       "id": "w_fighter_06",
@@ -859,15 +805,6 @@
       },
       "price": 740
     },
-    "m_06": {
-      "id": "m_06",
-      "name": "흑단 정수",
-      "slot": null,
-      "level": 60,
-      "bonus": {},
-      "price": 296,
-      "material": true
-    },
     "w_fighter_07": {
       "id": "w_fighter_07",
       "name": "고대 너클",
@@ -982,15 +919,6 @@
         "attackSpeed": 8
       },
       "price": 860
-    },
-    "m_07": {
-      "id": "m_07",
-      "name": "고대 정수",
-      "slot": null,
-      "level": 70,
-      "bonus": {},
-      "price": 344,
-      "material": true
     },
     "w_fighter_08": {
       "id": "w_fighter_08",
@@ -1107,15 +1035,6 @@
       },
       "price": 980
     },
-    "m_08": {
-      "id": "m_08",
-      "name": "사막 정수",
-      "slot": null,
-      "level": 80,
-      "bonus": {},
-      "price": 392,
-      "material": true
-    },
     "w_fighter_09": {
       "id": "w_fighter_09",
       "name": "백금 너클",
@@ -1230,15 +1149,6 @@
         "attackSpeed": 10
       },
       "price": 1100
-    },
-    "m_09": {
-      "id": "m_09",
-      "name": "백금 정수",
-      "slot": null,
-      "level": 90,
-      "bonus": {},
-      "price": 440,
-      "material": true
     },
     "w_fighter_10": {
       "id": "w_fighter_10",
@@ -1355,15 +1265,6 @@
       },
       "price": 1220
     },
-    "m_10": {
-      "id": "m_10",
-      "name": "유황 정수",
-      "slot": null,
-      "level": 100,
-      "bonus": {},
-      "price": 488,
-      "material": true
-    },
     "w_fighter_11": {
       "id": "w_fighter_11",
       "name": "용암 너클",
@@ -1478,15 +1379,6 @@
         "attackSpeed": 12
       },
       "price": 1340
-    },
-    "m_11": {
-      "id": "m_11",
-      "name": "용암 정수",
-      "slot": null,
-      "level": 110,
-      "bonus": {},
-      "price": 536,
-      "material": true
     },
     "w_fighter_12": {
       "id": "w_fighter_12",
@@ -1603,15 +1495,6 @@
       },
       "price": 1460
     },
-    "m_12": {
-      "id": "m_12",
-      "name": "빙하 정수",
-      "slot": null,
-      "level": 120,
-      "bonus": {},
-      "price": 584,
-      "material": true
-    },
     "w_fighter_13": {
       "id": "w_fighter_13",
       "name": "뒤틀린 너클",
@@ -1726,15 +1609,6 @@
         "attackSpeed": 14
       },
       "price": 1580
-    },
-    "m_13": {
-      "id": "m_13",
-      "name": "뒤틀린 정수",
-      "slot": null,
-      "level": 130,
-      "bonus": {},
-      "price": 632,
-      "material": true
     },
     "w_fighter_14": {
       "id": "w_fighter_14",
@@ -1851,15 +1725,6 @@
       },
       "price": 1700
     },
-    "m_14": {
-      "id": "m_14",
-      "name": "그림자 정수",
-      "slot": null,
-      "level": 140,
-      "bonus": {},
-      "price": 680,
-      "material": true
-    },
     "w_fighter_15": {
       "id": "w_fighter_15",
       "name": "폐허 너클",
@@ -1974,15 +1839,6 @@
         "attackSpeed": 17
       },
       "price": 1820
-    },
-    "m_15": {
-      "id": "m_15",
-      "name": "폐허 정수",
-      "slot": null,
-      "level": 150,
-      "bonus": {},
-      "price": 728,
-      "material": true
     },
     "w_fighter_16": {
       "id": "w_fighter_16",
@@ -2099,15 +1955,6 @@
       },
       "price": 1940
     },
-    "m_16": {
-      "id": "m_16",
-      "name": "창백한 정수",
-      "slot": null,
-      "level": 160,
-      "bonus": {},
-      "price": 776,
-      "material": true
-    },
     "w_fighter_17": {
       "id": "w_fighter_17",
       "name": "균열 너클",
@@ -2222,15 +2069,6 @@
         "attackSpeed": 19
       },
       "price": 2060
-    },
-    "m_17": {
-      "id": "m_17",
-      "name": "균열 정수",
-      "slot": null,
-      "level": 170,
-      "bonus": {},
-      "price": 824,
-      "material": true
     },
     "w_fighter_18": {
       "id": "w_fighter_18",
@@ -2347,15 +2185,6 @@
       },
       "price": 2180
     },
-    "m_18": {
-      "id": "m_18",
-      "name": "심연 정수",
-      "slot": null,
-      "level": 180,
-      "bonus": {},
-      "price": 872,
-      "material": true
-    },
     "w_fighter_19": {
       "id": "w_fighter_19",
       "name": "종말 너클",
@@ -2470,15 +2299,6 @@
         "attackSpeed": 20
       },
       "price": 2300
-    },
-    "m_19": {
-      "id": "m_19",
-      "name": "종말 정수",
-      "slot": null,
-      "level": 190,
-      "bonus": {},
-      "price": 920,
-      "material": true
     }
   },
   "slots": [
@@ -2511,7 +2331,7 @@
   "bagSize": 200,
   "gradeMin": 1,
   "gradeMax": 10,
-  "maxDropGrade": 7,
+  "maxDropGrade": 10,
   "optionKinds": [
     "crit",
     "critDamage",
@@ -2532,7 +2352,5 @@
   },
   "maxEnhance": 9,
   "dropChance": 0.14,
-  "bossMaterials": 3,
-  "forgeMaterials": 5,
   "tierCount": 20
 }

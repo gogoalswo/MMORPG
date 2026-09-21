@@ -2,7 +2,6 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { ItemBonus } from './items.ts';
 import {
-  BOSS_MATERIALS,
   slotLabel,
   DROP_CHANCE,
   EQUIP_SLOTS,
@@ -23,19 +22,15 @@ import {
   OPTION_MAX,
   isPercentOption,
   describeOption,
-  canCraftUp,
   canEnhance,
   enhanceCost,
   enhanceMultiplier,
   enhanceOdds,
   rollEnhance,
   canEquip,
-  craftRequirement,
   equipmentStats,
   getItem,
   gradeMultiplier,
-  materialIdFor,
-  materialsNeeded,
   rollBossDrop,
   rollDrop,
   rollGrade,
@@ -73,11 +68,6 @@ test('모든 아이템이 슬롯과 요구 레벨을 갖는다', () => {
     assert.ok(item.level >= 1, `${item.id}: 요구 레벨이 ${item.level}`);
     assert.ok(item.price > 0, `${item.id}: 가격이 없다`);
 
-    if (item.material) {
-      assert.equal(item.slot, null, `${item.id}: 재료인데 슬롯이 있다`);
-      continue;
-    }
-
     assert.ok(EQUIP_SLOTS.includes(item.slot!), `${item.id}: 슬롯이 이상하다`);
     const sum = Object.values(item.bonus).reduce((a, b) => a + b, 0);
     assert.ok(sum > 0, `${item.id}: 아무 능력치도 안 올려준다`);
@@ -88,7 +78,6 @@ test('무기만 직업을 탄다', () => {
   // 보조(보호대·마법서·화살통)를 없애면서 직업을 타는 자리는 무기만 남았다
   const jobSlots = ['weapon'];
   for (const item of Object.values(ITEMS)) {
-    if (item.material) continue;
     if (jobSlots.includes(item.slot!)) assert.ok(item.job, `${item.id}: ${item.slot} 인데 직업이 없다`);
     else assert.equal(item.job, undefined, `${item.id}: ${item.slot} 인데 직업을 탄다`);
   }
@@ -218,7 +207,7 @@ test('없는 아이템 id 는 조용히 무시된다', () => {
 test('단계가 높을수록 더 좋다', () => {
   for (const slot of EQUIP_SLOTS) {
     const sorted = Object.values(ITEMS)
-      .filter((i) => !i.material && i.slot === slot && (!i.job || i.job === 'fighter'))
+      .filter((i) => i.slot === slot && (!i.job || i.job === 'fighter'))
       .sort((a, b) => a.level - b.level);
     const value = (i: (typeof sorted)[number]) => Object.values(i.bonus).reduce((a, b) => a + b, 0);
     for (let i = 1; i < sorted.length; i++) {
@@ -289,79 +278,13 @@ test('등급은 범위를 벗어나도 안전하다', () => {
   assert.equal(gradeMultiplier(999), gradeMultiplier(GRADE_MAX));
 });
 
-test('재료는 착용할 수 없다', () => {
-  const material = ITEMS[materialIdFor(0)]!;
-  assert.equal(material.material, true);
-  assert.equal(canEquip(material, 'fighter', 200), false);
-});
-
-test('보스는 재료를 반드시 준다', () => {
-  // 최상위로 가는 유일한 길이라 운에 맡기면 3분 기다린 값이 없다
+test('보스는 금화를 더 준다', () => {
+  // 보스 전용 아이템은 아직 없다 — 그때까지 3분을 기다린 값은 금화로만 돌아온다
   for (const level of [9, 99, 199]) {
-    const drop = rollBossDrop(level, () => 0.5);
-    assert.ok(drop.gold > 0);
-    assert.equal(drop.count, BOSS_MATERIALS);
-    assert.ok(ITEMS[drop.materialId]?.material, `${drop.materialId} 가 재료가 아니다`);
+    const boss = rollBossDrop(level, () => 0.5);
+    const normal = rollDrop(level, 'fighter', () => 0.5).gold;
+    assert.ok(boss.gold > normal * 5, `보스 ${boss.gold} vs 일반 ${normal}`);
   }
-});
-
-test('일반 몬스터는 재료를 주지 않는다', () => {
-  for (let i = 0; i < 50; i++) {
-    const drop = rollDrop(50, 'fighter', fixed(0.5, 0, i / 50, i / 50));
-    if (drop.item) assert.ok(!ITEMS[drop.item.id]?.material, '일반 드롭에 재료가 섞였다');
-  }
-});
-
-test('제작에는 같은 단계의 재료가 든다', () => {
-  const item = ITEMS['w_fighter_05']!;
-  const need = craftRequirement(item, 3)!;
-  assert.equal(need.targetGrade, 4);
-  assert.equal(need.materialId, materialIdFor(5), '장비와 같은 단계 재료여야 한다');
-  assert.equal(need.materialCount, materialsNeeded(4));
-  assert.ok(need.gold > 0);
-});
-
-test('등급이 높아질수록 재료가 더 든다', () => {
-  const item = ITEMS['a_05']!;
-  let previous = 0;
-  for (let g = GRADE_MIN; g < GRADE_MAX; g++) {
-    const need = craftRequirement(item, g)!;
-    assert.ok(need.materialCount >= previous, `${g}→${g + 1} 이 더 싸다`);
-    previous = need.materialCount;
-  }
-  assert.equal(craftRequirement(item, GRADE_MAX), null, '최고 등급은 더 못 올린다');
-});
-
-test('재료 자체는 제작할 수 없다', () => {
-  const material = ITEMS[materialIdFor(3)]!;
-  assert.equal(craftRequirement(material, 1), null);
-});
-
-test('최고 등급에서는 더 제작할 수 없다', () => {
-  assert.equal(canCraftUp(GRADE_MAX), false);
-  assert.equal(canCraftUp(GRADE_MAX - 1), true);
-  assert.equal(canCraftUp(MAX_DROP_GRADE), true, '드롭 최고 등급에서 위로 올릴 수 있어야 한다');
-});
-
-test('제작 비용은 등급이 오를수록 비싸진다', () => {
-  const item = ITEMS['w_fighter_05']!;
-  let previous = 0;
-  for (let g = GRADE_MIN; g < GRADE_MAX; g++) {
-    const cost = craftRequirement(item, g)!.gold;
-    assert.ok(cost > previous, `${g}등급 제작비가 더 싸다`);
-    previous = cost;
-  }
-});
-
-test('드롭 최고 등급에서 제작으로 만렙 등급까지 이어진다', () => {
-  // 7등급까지만 떨어지므로 여기서 길이 끊기면 8~10 은 도달 불가가 된다
-  let materials = 0;
-  for (let g = MAX_DROP_GRADE; g < GRADE_MAX; g++) {
-    const need = craftRequirement(ITEMS['a_05']!, g);
-    assert.ok(need, `${g}등급에서 제작이 막힌다`);
-    materials += need!.materialCount;
-  }
-  assert.ok(materials > 0, `7 → ${GRADE_MAX} 에 재료 ${materials}개`);
 });
 
 test('골드는 몬스터 레벨을 따라 오른다', () => {
@@ -576,11 +499,6 @@ test('장착한 것들의 옵션이 합산된다', () => {
     armor: { id: 'a_05', grade: 1, options: [{ kind: 'crit', value: 3 }] },
   });
   assert.ok(Math.abs(total.crit - 0.08) < 1e-9, `합이 ${total.crit}`);
-});
-
-test('재료에는 옵션이 붙지 않는다', () => {
-  const material = ITEMS[materialIdFor(3)]!;
-  assert.deepEqual(rollOptions(material, 7, cycleRng()), []);
 });
 
 test('저장된 옵션은 지금 규칙으로 다시 잘린다', () => {

@@ -135,42 +135,45 @@ test('슬롯 배분이 설계표와 같다 (stat-balance.md)', () => {
     return (slot: string) => Math.round(((pick(at(slot)) ?? 0) / total) * 100);
   };
 
+  // 2026-09-21: 장신구를 무기·갑옷의 절반으로 올리고 치확·공속을 걷었다
   const atk = share((b) => b.attack);
-  assert.equal(atk('weapon'), 60, '무기가 공격력 예산의 60%');
-  assert.equal(atk('necklace'), 20);
-  assert.equal(atk('ring'), 20);
+  assert.equal(atk('weapon'), 50, '무기가 공격력 예산의 절반');
+  assert.equal(atk('necklace'), 25, '목걸이는 무기의 절반');
+  assert.equal(atk('ring'), 25);
 
   const def = share((b) => b.defense);
-  assert.equal(def('armor'), 40, '갑옷이 방어력 예산의 40%');
-  assert.equal(def('helmet'), 20);
-  assert.equal(def('boots'), 20);
-  assert.equal(def('necklace'), 10);
-  assert.equal(def('ring'), 10);
+  assert.equal(def('armor'), 33, '갑옷이 방어력 예산의 1/3');
+  for (const slot of ['helmet', 'boots', 'necklace', 'ring']) {
+    assert.equal(def(slot), 17, `${slot}: 갑옷의 절반(1/6)`);
+  }
 
   // HP 는 방어력과 같은 배분을 쓴다 (둘 다 생존 스탯)
   const hp = share((b) => b.maxHp);
   for (const slot of EQUIP_SLOTS) assert.equal(hp(slot), def(slot), `${slot}: HP 배분이 방어력과 다르다`);
 
-  // 치명타는 목걸이, 공격 속도는 반지 전담
+  // 2026-09-21 지시로 치확·공속 기본 수치를 걷었다 — 랜덤 옵션으로만 붙는다
   for (const slot of EQUIP_SLOTS) {
-    assert.equal(at(slot).crit ?? 0, slot === 'necklace' ? 50 : 0, `${slot}: 치명타`);
-    assert.equal(at(slot).attackSpeed ?? 0, slot === 'ring' ? 20 : 0, `${slot}: 공격 속도`);
+    assert.equal(at(slot).crit ?? 0, 0, `${slot}: 치명타가 남아 있다`);
+    assert.equal(at(slot).attackSpeed ?? 0, 0, `${slot}: 공격 속도가 남아 있다`);
   }
 });
 
-test('치확·공속이 설계표의 등급 곡선을 따라간다', () => {
-  // 설계표(stat-balance.md)는 등급 1~7 에서 치확 0·8·17·25·33·42·50%p,
-  // 공속 0·3·7·10·13·17·20% 를 적는다. 축이 등급 하나가 된 뒤로는 **딱 맞는다** —
-  // 단계 레벨(30·60·…)에서 재느라 1 어긋나던 것이 없어졌다
-  const crit = [0, 8, 17, 25, 33, 42, 50];
-  const speed = [0, 3, 7, 10, 13, 17, 20];
+test('장비 기본 수치는 공격·방어·HP 셋뿐이다', () => {
+  // 지시: "치명타랑 공속 옵션은 제거". 장신구도 이제 작은 무기·작은 갑옷이다
+  for (const item of Object.values(ITEMS)) {
+    assert.equal(item.bonus.crit ?? 0, 0, `${item.id}: 치명타`);
+    assert.equal(item.bonus.attackSpeed ?? 0, 0, `${item.id}: 공격 속도`);
+  }
+  // 목걸이·반지는 무기·갑옷의 절반을 받는다
   for (let grade = 1; grade <= MAX_DROP_GRADE; grade++) {
-    assert.equal(getItem(itemId(grade, 'necklace'))!.bonus.crit, crit[grade - 1], `${grade}등급 치확`);
-    assert.equal(
-      getItem(itemId(grade, 'ring'))!.bonus.attackSpeed,
-      speed[grade - 1],
-      `${grade}등급 공속`
-    );
+    const w = getItem(itemId(grade, 'weapon'))!.bonus;
+    const a = getItem(itemId(grade, 'armor'))!.bonus;
+    for (const slot of ['necklace', 'ring'] as const) {
+      const s = getItem(itemId(grade, slot))!.bonus;
+      assert.ok(Math.abs(s.attack! - w.attack! / 2) <= 0.1, `${slot} ${grade}등급 공격력`);
+      assert.ok(Math.abs(s.defense! - a.defense! / 2) <= 0.1, `${slot} ${grade}등급 방어력`);
+      assert.ok(Math.abs(s.maxHp! - a.maxHp! / 2) <= 0.1, `${slot} ${grade}등급 HP`);
+    }
   }
 });
 

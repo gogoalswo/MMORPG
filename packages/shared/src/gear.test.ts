@@ -93,44 +93,67 @@ test('치명타·공속은 등급에 선형이다 — 등급1 은 0 이다', () 
 });
 
 test('슬롯 지분은 스탯마다 합이 100% 다', () => {
-  const stats: GearStat[] = ['atk', 'df', 'hp', 'crit', 'critDamage', 'aspd', 'move'];
+  // 2026-09-21 에 치확·치피·공속 버킷을 걷었다 — 장비 기본은 공/방/HP 셋뿐이고
+  // 이동속도만 신발 전담으로 남았다. 걷은 스탯은 지분이 0 이라 합을 안 본다
+  const stats: GearStat[] = ['atk', 'df', 'hp', 'move'];
   for (const stat of stats) {
     const total = EQUIP_SLOTS.reduce((sum, slot) => sum + (SLOT_SHARE[slot][stat] ?? 0), 0);
     assert.ok(Math.abs(total - 1) < 1e-9, `${stat} 지분 합이 ${total}`);
   }
+  for (const stat of ['crit', 'critDamage', 'aspd'] as GearStat[]) {
+    const total = EQUIP_SLOTS.reduce((sum, slot) => sum + (SLOT_SHARE[slot][stat] ?? 0), 0);
+    assert.equal(total, 0, `${stat} 는 장비 기본에서 걷었다`);
+  }
 });
 
-test('등급7 슬롯 수치가 문서의 "등급7 실제 수치" 표와 같다 (무강 → 강화 4단)', () => {
+test('목걸이·반지가 무기·갑옷의 정확히 절반이다', () => {
+  // 2026-09-21 지시: "공격력 방어력 hp를 무기랑 방어구의 수치 반만 넣어"
+  for (const grade of [1, 4, 7]) {
+    const w = slotStats('weapon', grade);
+    const a = slotStats('armor', grade);
+    for (const slot of ['necklace', 'ring'] as const) {
+      const s = slotStats(slot, grade);
+      assert.ok(Math.abs(s.atk - w.atk / 2) < 1e-9, `${slot} 공격력이 무기의 절반이 아니다`);
+      assert.ok(Math.abs(s.df - a.df / 2) < 1e-9, `${slot} 방어력이 갑옷의 절반이 아니다`);
+      assert.ok(Math.abs(s.hp - a.hp / 2) < 1e-9, `${slot} HP 가 갑옷의 절반이 아니다`);
+    }
+  }
+});
+
+test('등급7 슬롯 수치 (무강 → 강화 4단)', () => {
+  // 2026-09-21 에 배분을 바꿨다 — 무기 0.6→0.5, 갑옷 0.4→1/3,
+  // 장신구가 그 절반(0.25 / 1/6). **풀세트 합은 그대로**다
   const at = (slot: Parameters<typeof slotStats>[0], step: number) => slotStats(slot, 7, step);
   const r = (v: number) => Math.round(v);
 
-  assert.equal(r(at('weapon', 1).atk), 514);
-  assert.equal(r(at('weapon', 4).atk), 670);
+  assert.equal(r(at('weapon', 1).atk), 428);
+  assert.equal(r(at('weapon', 4).atk), 558);
 
-  assert.equal(r(at('armor', 1).df), 205);
-  assert.equal(r(at('armor', 4).df), 268);
-  assert.equal(r(at('armor', 1).hp), 120);
-  assert.equal(r(at('armor', 4).hp), 156);
+  assert.equal(r(at('armor', 1).df), 171);
+  assert.equal(r(at('armor', 4).df), 223);
+  assert.equal(r(at('armor', 1).hp), 100);
+  assert.equal(r(at('armor', 4).hp), 130);
 
-  assert.equal(r(at('helmet', 1).df), 103);
-  assert.equal(r(at('helmet', 4).df), 134);
-  assert.equal(r(at('helmet', 1).hp), 60);
-  assert.equal(r(at('helmet', 4).hp), 78);
+  assert.equal(r(at('helmet', 1).df), 86);
+  assert.equal(r(at('helmet', 4).df), 112);
+  assert.equal(r(at('helmet', 1).hp), 50);
+  assert.equal(r(at('helmet', 4).hp), 65);
 
   // 신발은 투구와 같은 수치에 이동속도만 더 붙는다
-  assert.equal(r(at('boots', 4).df), 134);
+  assert.equal(r(at('boots', 4).df), 112);
   assert.equal(r(at('boots', 1).move * 100), 25);
 
   for (const slot of ['necklace', 'ring'] as const) {
-    assert.equal(r(at(slot, 1).atk), 171, `${slot} 공격력`);
-    assert.equal(r(at(slot, 4).atk), 223, `${slot} 공격력(4단)`);
-    assert.equal(r(at(slot, 1).df), 51, `${slot} 방어력`);
-    assert.equal(r(at(slot, 4).df), 67, `${slot} 방어력(4단)`);
-    assert.equal(r(at(slot, 1).hp), 30, `${slot} HP`);
-    assert.equal(r(at(slot, 4).hp), 39, `${slot} HP(4단)`);
+    assert.equal(r(at(slot, 1).atk), 214, `${slot} 공격력`);
+    assert.equal(r(at(slot, 4).atk), 279, `${slot} 공격력(4단)`);
+    assert.equal(r(at(slot, 1).df), 86, `${slot} 방어력`);
+    assert.equal(r(at(slot, 4).df), 112, `${slot} 방어력(4단)`);
+    assert.equal(r(at(slot, 1).hp), 50, `${slot} HP`);
+    assert.equal(r(at(slot, 4).hp), 65, `${slot} HP(4단)`);
   }
-  assert.equal(r(at('necklace', 1).crit * 100), 50);
-  assert.equal(r(at('ring', 1).aspd * 100), 20);
+  // 치확·공속은 장비 기본에서 걷었다 — 랜덤 옵션으로만 붙는다
+  assert.equal(at('necklace', 1).crit, 0);
+  assert.equal(at('ring', 1).aspd, 0);
 });
 
 test('강화는 %스탯에만 곱한다 — 치명타·공속은 그대로다', () => {

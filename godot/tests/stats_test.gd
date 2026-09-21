@@ -75,11 +75,13 @@ func _reduce() -> void:
 ## 문서 6장 표 — 사냥터 끝 레벨에서 잰 값
 func _monster_table() -> void:
 	var rows := [
-		{"level": 10, "grade": 1.0, "hp": 71, "atk": 2},
-		{"level": 50, "grade": 1.63, "hp": 214, "atk": 4},
-		{"level": 100, "grade": 3.3, "hp": 1043, "atk": 14},
-		{"level": 150, "grade": 4.97, "hp": 7044, "atk": 64},
-		{"level": 200, "grade": 6.63, "hp": 60224, "atk": 394},
+		# 2026-09-21 에 다시 뽑았다 — 장비에서 치확·치피·공속을 걷으면서
+		# 기준 플레이어의 평균 피해 배수가 사라져 몬스터 HP 가 같이 내려갔다
+		{"level": 10, "grade": 1.0, "hp": 69, "atk": 2},
+		{"level": 50, "grade": 1.63, "hp": 213, "atk": 4},
+		{"level": 100, "grade": 3.3, "hp": 972, "atk": 14},
+		{"level": 150, "grade": 4.97, "hp": 5781, "atk": 64},
+		{"level": 200, "grade": 6.63, "hp": 41801, "atk": 394},
 	]
 	for row in rows:
 		var level := int(row["level"])
@@ -145,13 +147,17 @@ func _gear() -> void:
 		_eq("등급 %d 풀셋 합" % g, roundi(Stats.grade_sum(float(g))), int(row["sum"]))
 	_near("등급 간격", snappedf(Stats.grade_ratio(), 0.0001), 1.7037, 1e-9)
 
-	# 등급7 실제 수치 (무강 → 강화 4단)
-	_eq("등급7 무기 무강", roundi(Stats.slot_stats("weapon", 7.0, 1)["atk"]), 514)
-	_eq("등급7 무기 4단", roundi(Stats.slot_stats("weapon", 7.0, 4)["atk"]), 670)
-	_eq("등급7 갑옷 방어", roundi(Stats.slot_stats("armor", 7.0, 1)["df"]), 205)
-	_eq("등급7 갑옷 HP", roundi(Stats.slot_stats("armor", 7.0, 1)["hp"]), 120)
-	_eq("등급7 목걸이 치확", roundi(Stats.slot_stats("necklace", 7.0, 1)["crit"] * 100.0), 50)
-	_eq("등급7 반지 공속", roundi(Stats.slot_stats("ring", 7.0, 1)["aspd"] * 100.0), 20)
+	# 등급7 실제 수치 (무강 → 강화 4단).
+	# **2026-09-21 에 배분을 바꿨다** — 무기 0.6→0.5, 갑옷 0.4→1/3, 장신구가 그 절반.
+	# 치확·공속은 장비 기본에서 걷었고(랜덤 옵션 전담) 풀세트 합은 그대로다
+	_eq("등급7 무기 무강", roundi(Stats.slot_stats("weapon", 7.0, 1)["atk"]), 428)
+	_eq("등급7 무기 4단", roundi(Stats.slot_stats("weapon", 7.0, 4)["atk"]), 558)
+	_eq("등급7 갑옷 방어", roundi(Stats.slot_stats("armor", 7.0, 1)["df"]), 171)
+	_eq("등급7 갑옷 HP", roundi(Stats.slot_stats("armor", 7.0, 1)["hp"]), 100)
+	_eq("등급7 목걸이 공격", roundi(Stats.slot_stats("necklace", 7.0, 1)["atk"]), 214)
+	_eq("등급7 목걸이 방어", roundi(Stats.slot_stats("necklace", 7.0, 1)["df"]), 86)
+	_eq("등급7 목걸이 치확", roundi(Stats.slot_stats("necklace", 7.0, 1)["crit"] * 100.0), 0)
+	_eq("등급7 반지 공속", roundi(Stats.slot_stats("ring", 7.0, 1)["aspd"] * 100.0), 0)
 	_eq("등급7 신발 이동", roundi(Stats.slot_stats("boots", 7.0, 1)["move"] * 100.0), 25)
 
 

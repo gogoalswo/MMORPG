@@ -7,7 +7,7 @@
       "grade": 1,
       "level": 1,
       "bonus": {
-        "attack": 21,
+        "attack": 17.5,
         "defense": 0,
         "maxHp": 0,
         "crit": 0,
@@ -23,8 +23,8 @@
       "level": 1,
       "bonus": {
         "attack": 0,
-        "defense": 8.4,
-        "maxHp": 4.9,
+        "defense": 7,
+        "maxHp": 4.1,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -38,8 +38,8 @@
       "level": 1,
       "bonus": {
         "attack": 0,
-        "defense": 4.2,
-        "maxHp": 2.5,
+        "defense": 3.5,
+        "maxHp": 2,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -53,8 +53,8 @@
       "level": 1,
       "bonus": {
         "attack": 0,
-        "defense": 4.2,
-        "maxHp": 2.5,
+        "defense": 3.5,
+        "maxHp": 2,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -67,9 +67,9 @@
       "grade": 1,
       "level": 1,
       "bonus": {
-        "attack": 7,
-        "defense": 2.1,
-        "maxHp": 1.2,
+        "attack": 8.8,
+        "defense": 3.5,
+        "maxHp": 2,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -82,9 +82,9 @@
       "grade": 1,
       "level": 1,
       "bonus": {
-        "attack": 7,
-        "defense": 2.1,
-        "maxHp": 1.2,
+        "attack": 8.8,
+        "defense": 3.5,
+        "maxHp": 2,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -97,7 +97,7 @@
       "grade": 2,
       "level": 31,
       "bonus": {
-        "attack": 35.8,
+        "attack": 29.8,
         "defense": 0,
         "maxHp": 0,
         "crit": 0,
@@ -113,8 +113,8 @@
       "level": 31,
       "bonus": {
         "attack": 0,
-        "defense": 14.3,
-        "maxHp": 8.3,
+        "defense": 11.9,
+        "maxHp": 7,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -128,8 +128,8 @@
       "level": 31,
       "bonus": {
         "attack": 0,
-        "defense": 7.2,
-        "maxHp": 4.2,
+        "defense": 6,
+        "maxHp": 3.5,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -143,8 +143,8 @@
       "level": 31,
       "bonus": {
         "attack": 0,
-        "defense": 7.2,
-        "maxHp": 4.2,
+        "defense": 6,
+        "maxHp": 3.5,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -157,10 +157,10 @@
       "grade": 2,
       "level": 31,
       "bonus": {
-        "attack": 11.9,
-        "defense": 3.6,
-        "maxHp": 2.1,
-        "crit": 8,
+        "attack": 14.9,
+        "defense": 6,
+        "maxHp": 3.5,
+        "crit": 0,
         "attackSpeed": 0
       },
       "price": 392
@@ -172,11 +172,11 @@
       "grade": 2,
       "level": 31,
       "bonus": {
-        "attack": 11.9,
-        "defense": 3.6,
-        "maxHp": 2.1,
+        "attack": 14.9,
+        "defense": 6,
+        "maxHp": 3.5,
         "crit": 0,
-        "attackSpeed": 3
+        "attackSpeed": 0
       },
       "price": 392
     },
@@ -187,7 +187,7 @@
       "grade": 3,
       "level": 61,
       "bonus": {
-        "attack": 61,
+        "attack": 50.8,
         "defense": 0,
         "maxHp": 0,
         "crit": 0,
@@ -203,8 +203,8 @@
       "level": 61,
       "bonus": {
         "attack": 0,
-        "defense": 24.4,
-        "maxHp": 14.2,
+        "defense": 20.3,
+        "maxHp": 11.9,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -218,8 +218,8 @@
       "level": 61,
       "bonus": {
         "attack": 0,
-        "defense": 12.2,
-        "maxHp": 7.1,
+        "defense": 10.2,
+        "maxHp": 5.9,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -233,8 +233,8 @@
       "level": 61,
       "bonus": {
         "attack": 0,
-        "defense": 12.2,
-        "maxHp": 7.1,
+        "defense": 10.2,
+        "maxHp": 5.9,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -247,10 +247,10 @@
       "grade": 3,
       "level": 61,
       "bonus": {
-        "attack": 20.3,
-        "defense": 6.1,
-        "maxHp": 3.6,
-        "crit": 17,
+        "attack": 25.4,
+        "defense": 10.2,
+        "maxHp": 5.9,
+        "crit": 0,
         "attackSpeed": 0
       },
       "price": 752
@@ -262,11 +262,11 @@
       "grade": 3,
       "level": 61,
       "bonus": {
-        "attack": 20.3,
-        "defense": 6.1,
-        "maxHp": 3.6,
+        "attack": 25.4,
+        "defense": 10.2,
+        "maxHp": 5.9,
         "crit": 0,
-        "attackSpeed": 7
+        "attackSpeed": 0
       },
       "price": 752
     },
@@ -277,7 +277,7 @@
       "grade": 4,
       "level": 91,
       "bonus": {
-        "attack": 103.9,
+        "attack": 86.5,
         "defense": 0,
         "maxHp": 0,
         "crit": 0,
@@ -293,8 +293,8 @@
       "level": 91,
       "bonus": {
         "attack": 0,
-        "defense": 41.5,
-        "maxHp": 24.2,
+        "defense": 34.6,
+        "maxHp": 20.2,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -308,8 +308,8 @@
       "level": 91,
       "bonus": {
         "attack": 0,
-        "defense": 20.8,
-        "maxHp": 12.1,
+        "defense": 17.3,
+        "maxHp": 10.1,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -323,8 +323,8 @@
       "level": 91,
       "bonus": {
         "attack": 0,
-        "defense": 20.8,
-        "maxHp": 12.1,
+        "defense": 17.3,
+        "maxHp": 10.1,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -337,10 +337,10 @@
       "grade": 4,
       "level": 91,
       "bonus": {
-        "attack": 34.6,
-        "defense": 10.4,
-        "maxHp": 6.1,
-        "crit": 25,
+        "attack": 43.3,
+        "defense": 17.3,
+        "maxHp": 10.1,
+        "crit": 0,
         "attackSpeed": 0
       },
       "price": 1112
@@ -352,11 +352,11 @@
       "grade": 4,
       "level": 91,
       "bonus": {
-        "attack": 34.6,
-        "defense": 10.4,
-        "maxHp": 6.1,
+        "attack": 43.3,
+        "defense": 17.3,
+        "maxHp": 10.1,
         "crit": 0,
-        "attackSpeed": 10
+        "attackSpeed": 0
       },
       "price": 1112
     },
@@ -367,7 +367,7 @@
       "grade": 5,
       "level": 121,
       "bonus": {
-        "attack": 176.9,
+        "attack": 147.4,
         "defense": 0,
         "maxHp": 0,
         "crit": 0,
@@ -383,8 +383,8 @@
       "level": 121,
       "bonus": {
         "attack": 0,
-        "defense": 70.8,
-        "maxHp": 41.3,
+        "defense": 59,
+        "maxHp": 34.4,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -398,8 +398,8 @@
       "level": 121,
       "bonus": {
         "attack": 0,
-        "defense": 35.4,
-        "maxHp": 20.6,
+        "defense": 29.5,
+        "maxHp": 17.2,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -413,8 +413,8 @@
       "level": 121,
       "bonus": {
         "attack": 0,
-        "defense": 35.4,
-        "maxHp": 20.6,
+        "defense": 29.5,
+        "maxHp": 17.2,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -427,10 +427,10 @@
       "grade": 5,
       "level": 121,
       "bonus": {
-        "attack": 59,
-        "defense": 17.7,
-        "maxHp": 10.3,
-        "crit": 33,
+        "attack": 73.7,
+        "defense": 29.5,
+        "maxHp": 17.2,
+        "crit": 0,
         "attackSpeed": 0
       },
       "price": 1472
@@ -442,11 +442,11 @@
       "grade": 5,
       "level": 121,
       "bonus": {
-        "attack": 59,
-        "defense": 17.7,
-        "maxHp": 10.3,
+        "attack": 73.7,
+        "defense": 29.5,
+        "maxHp": 17.2,
         "crit": 0,
-        "attackSpeed": 13
+        "attackSpeed": 0
       },
       "price": 1472
     },
@@ -457,7 +457,7 @@
       "grade": 6,
       "level": 151,
       "bonus": {
-        "attack": 301.5,
+        "attack": 251.2,
         "defense": 0,
         "maxHp": 0,
         "crit": 0,
@@ -473,8 +473,8 @@
       "level": 151,
       "bonus": {
         "attack": 0,
-        "defense": 120.6,
-        "maxHp": 70.3,
+        "defense": 100.5,
+        "maxHp": 58.6,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -488,8 +488,8 @@
       "level": 151,
       "bonus": {
         "attack": 0,
-        "defense": 60.3,
-        "maxHp": 35.2,
+        "defense": 50.2,
+        "maxHp": 29.3,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -503,8 +503,8 @@
       "level": 151,
       "bonus": {
         "attack": 0,
-        "defense": 60.3,
-        "maxHp": 35.2,
+        "defense": 50.2,
+        "maxHp": 29.3,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -517,10 +517,10 @@
       "grade": 6,
       "level": 151,
       "bonus": {
-        "attack": 100.5,
-        "defense": 30.1,
-        "maxHp": 17.6,
-        "crit": 42,
+        "attack": 125.6,
+        "defense": 50.2,
+        "maxHp": 29.3,
+        "crit": 0,
         "attackSpeed": 0
       },
       "price": 1832
@@ -532,11 +532,11 @@
       "grade": 6,
       "level": 151,
       "bonus": {
-        "attack": 100.5,
-        "defense": 30.1,
-        "maxHp": 17.6,
+        "attack": 125.6,
+        "defense": 50.2,
+        "maxHp": 29.3,
         "crit": 0,
-        "attackSpeed": 17
+        "attackSpeed": 0
       },
       "price": 1832
     },
@@ -547,7 +547,7 @@
       "grade": 7,
       "level": 181,
       "bonus": {
-        "attack": 513.6,
+        "attack": 428,
         "defense": 0,
         "maxHp": 0,
         "crit": 0,
@@ -563,8 +563,8 @@
       "level": 181,
       "bonus": {
         "attack": 0,
-        "defense": 205.4,
-        "maxHp": 119.8,
+        "defense": 171.2,
+        "maxHp": 99.9,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -578,8 +578,8 @@
       "level": 181,
       "bonus": {
         "attack": 0,
-        "defense": 102.7,
-        "maxHp": 59.9,
+        "defense": 85.6,
+        "maxHp": 49.9,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -593,8 +593,8 @@
       "level": 181,
       "bonus": {
         "attack": 0,
-        "defense": 102.7,
-        "maxHp": 59.9,
+        "defense": 85.6,
+        "maxHp": 49.9,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -607,10 +607,10 @@
       "grade": 7,
       "level": 181,
       "bonus": {
-        "attack": 171.2,
-        "defense": 51.4,
-        "maxHp": 30,
-        "crit": 50,
+        "attack": 214,
+        "defense": 85.6,
+        "maxHp": 49.9,
+        "crit": 0,
         "attackSpeed": 0
       },
       "price": 2192
@@ -622,11 +622,11 @@
       "grade": 7,
       "level": 181,
       "bonus": {
-        "attack": 171.2,
-        "defense": 51.4,
-        "maxHp": 30,
+        "attack": 214,
+        "defense": 85.6,
+        "maxHp": 49.9,
         "crit": 0,
-        "attackSpeed": 20
+        "attackSpeed": 0
       },
       "price": 2192
     }

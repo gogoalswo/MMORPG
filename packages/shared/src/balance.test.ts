@@ -75,12 +75,15 @@ test('피해는 뺄셈이 아니라 나눗셈이다 — 방어력이 커져도 0
 
 test('몬스터 표가 설계 문서 6장과 같다 (사냥터 끝 레벨)', () => {
   // | 사냥터 | 잰 레벨 | 기준 등급 | 몬스터 HP | 몬스터 ATK |
+  // **2026-09-21 에 다시 뽑았다.** 장비에서 치확·치피·공속 버킷을 걷으면서
+  // 기준 플레이어의 평균 피해 배수(1 + 치확×치피)가 사라져 몬스터 HP 가 같이
+  // 내려갔다 — 후반이 -30% 다. 체감(동레벨 6타·만렙 2,880시간)은 그대로다
   const rows = [
-    { level: 10, grade: 1.0, hp: 71, atk: 2 },
-    { level: 50, grade: 1.63, hp: 214, atk: 4 },
-    { level: 100, grade: 3.3, hp: 1043, atk: 14 },
-    { level: 150, grade: 4.97, hp: 7044, atk: 64 },
-    { level: 200, grade: 6.63, hp: 60224, atk: 394 },
+    { level: 10, grade: 1.0, hp: 69, atk: 2 },
+    { level: 50, grade: 1.63, hp: 213, atk: 4 },
+    { level: 100, grade: 3.3, hp: 972, atk: 14 },
+    { level: 150, grade: 4.97, hp: 5781, atk: 64 },
+    { level: 200, grade: 6.63, hp: 41801, atk: 394 },
   ];
   for (const row of rows) {
     assert.equal(Math.round(refGrade(row.level) * 100) / 100, row.grade, `Lv${row.level} 기준 등급`);
@@ -218,15 +221,16 @@ test('성장 곡선 — 만렙까지 정확히 2,880시간(120일)이다', () =>
   for (let level = 1; level < MAX_LEVEL; level++) seconds += levelSeconds(level);
   assert.equal(Math.round((seconds / 3600) * 10) / 10, 2880);
 
-  // 문서 7장 표의 "레벨당 킬 수" 열
+  // 문서 7장 표의 "레벨당 킬 수" 열 (2026-09-21 에 다시 뽑았다 — 위 몬스터 표와
+  // 같은 이유다. **총 시간 2,880시간은 그대로**고 한 마리가 작아진 만큼 수가 준다)
   const want: Array<[number, number]> = [
     [1, 138],
     [11, 338],
     [21, 506],
-    [31, 2011],
-    [91, 22911],
-    [141, 173980],
-    [191, 1321164],
+    [31, 1707],
+    [91, 19443],
+    [141, 147642],
+    [191, 1121157],
   ];
   for (const [level, kills] of want) {
     assert.equal(Math.round(killsPerLevel(level)), kills, `Lv${level} 킬 수`);

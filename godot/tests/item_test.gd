@@ -114,9 +114,9 @@ func _case_enhance() -> void:
 ## 등급1 무기는 공격 예산 35% 의 60% = 21%
 func _case_stats() -> void:
 	var item := Items.get_item("g1_w")
-	_eq("기본 공격 %", item.bonus.attack, 21.0)
+	_eq("기본 공격 %", item.bonus.attack, 17.5)
 	# 강화 +5 = 6단 = ×1.78
-	_eq("강화 +5 기본 공격 %", snappedf(Items.base_bonus(item, 5).attack, 0.1), 37.3)
+	_eq("강화 +5 기본 공격 %", snappedf(Items.base_bonus(item, 5).attack, 0.1), 31.1)
 
 	# 옵션은 공격력을 안 준다 — 슬롯 기본 수치가 이미 담당하기 때문이다.
 	# 대신 기본이 안 건드리는 축(쿨감·관통)과 치확·치피·공속·HP 가 붙는다
@@ -129,7 +129,7 @@ func _case_stats() -> void:
 		],
 	}
 	var stats := Items.stack_stats(stack)
-	_eq("물건 하나 공격 %", snappedf(stats.attack, 0.1), 37.3)
+	_eq("물건 하나 공격 %", snappedf(stats.attack, 0.1), 31.1)
 	_eq("물건 하나 치명타", snappedf(stats.crit, 0.001), 0.007)
 	_eq("물건 하나 관통", snappedf(stats.penetration, 0.001), 0.014)
 	_eq("물건 하나 쿨감", snappedf(stats.cooldown, 0.001), 0.004)

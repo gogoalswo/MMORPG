@@ -31,6 +31,7 @@ import {
   MOVE_SPD_MAX,
   OPTION_COUNT,
   OPTION_GRADE_MAX,
+  OPTION_POWER,
   OPTION_KINDS,
   OPTION_MAX_VALUE,
   SLOT_SHARE,
@@ -509,6 +510,8 @@ export function balanceTable() {
       optionMaxValue: OPTION_MAX_VALUE,
       optionCount: OPTION_COUNT,
       optionGradeMax: OPTION_GRADE_MAX,
+      // 옵션 수치 배수 (2026-09-21 에 50배). 고도도 **반올림 다음에** 곱한다
+      optionPower: OPTION_POWER,
     },
   };
 }

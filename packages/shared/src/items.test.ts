@@ -508,14 +508,12 @@ test('옵션은 여섯 종이고 전부 퍼센트다', () => {
   }
 });
 
-test('품질 등급이 오르면 옵션 개수와 수치가 같이 커진다', () => {
-  // 등급을 올릴 이유가 여기밖에 없다 — 둘 중 하나만 키우면 "등급은 높은데 옵션이
-  // 하나뿐" 이나 "옵션은 넷인데 값이 시시한" 물건이 생긴다
+test('등급이 오르면 옵션 수치가 커진다 — 개수는 2개 고정이다', () => {
   for (const kind of OPTION_KINDS) {
     const lowest = optionRange(kind, GRADE_MIN);
     const highest = optionRange(kind, GRADE_MAX);
     assert.ok(lowest.min <= lowest.max, `${kind}: min 이 max 보다 크다`);
-    assert.ok(highest.max > lowest.max * 3, `${kind}: 10등급이 1등급의 세 배도 안 된다`);
+    assert.ok(highest.max > lowest.max * 3, `${kind}: 7등급이 1등급의 세 배도 안 된다`);
     let previous = 0;
     for (let grade = GRADE_MIN; grade <= GRADE_MAX; grade++) {
       const { max } = optionRange(kind, grade);
@@ -523,14 +521,20 @@ test('품질 등급이 오르면 옵션 개수와 수치가 같이 커진다', (
       previous = max;
     }
   }
-  // 개수도 같이 오른다 (1개 → 4개)
-  assert.deepEqual(optionCount(GRADE_MIN), [1, 1]);
-  assert.deepEqual(optionCount(GRADE_MAX), [4, 4]);
-  for (let grade = GRADE_MIN + 1; grade <= GRADE_MAX; grade++) {
-    assert.ok(optionCount(grade)[1] >= optionCount(grade - 1)[1], `${grade}등급 개수가 줄었다`);
+  // 2026-09-21 지시: "갯수를 항상 2개로 고정". 등급은 수치만 키운다
+  for (let grade = GRADE_MIN; grade <= GRADE_MAX; grade++) {
+    assert.deepEqual(optionCount(grade), [2, 2], `${grade}등급 개수`);
   }
   assert.equal(optionGradeScale(0), optionGradeScale(GRADE_MIN), '범위를 벗어나도 안전해야 한다');
   assert.equal(optionGradeScale(999), optionGradeScale(GRADE_MAX));
+});
+
+test('옵션 수치가 50배다 — 태초 치명타가 40~75%p', () => {
+  // 2026-09-21 지시: "지금보다 50배 올려. 예를 들어 치명타 확률이 40%~75%".
+  // **반올림하고 나서** 곱해야 37.5 가 아니라 40 이 나온다
+  assert.deepEqual(optionRange('crit', 7), { min: 40, max: 75 });
+  assert.deepEqual(optionRange('crit', 1), { min: 10, max: 20 });
+  assert.deepEqual(optionRange('maxHp', 7), { min: 100, max: 200 });
 });
 
 test('수치 옵션은 요구 레벨을 탄다', () => {

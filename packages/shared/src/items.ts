@@ -311,11 +311,12 @@ export interface ItemOption {
 }
 
 /**
- * 한 물건에 붙을 수 있는 옵션 수 — **품질 등급이 정한다**(`gear.ts` 의 `OPTION_COUNT`).
- * 아래 둘은 전 등급을 통틀어 본 최소·최대라 창의 안내 문구에만 쓴다
+ * 한 물건에 붙는 옵션 수 — **전 등급 2개 고정** (2026-09-21 지시).
+ * 표는 `gear.ts` 의 `OPTION_COUNT` 이고, 여기 둘은 그 표를 통틀어 본 최소·최대라
+ * 창의 안내 문구와 저장값 자르기(`sanitizeOptions`)에 쓴다
  */
-export const OPTION_MIN = 1;
-export const OPTION_MAX = 4;
+export const OPTION_MIN = 2;
+export const OPTION_MAX = 2;
 
 /**
  * **여섯 종이 전부 퍼센트다.** 공격력·방어력을 빼면서 수치로 주는 옵션이 없어졌다 —

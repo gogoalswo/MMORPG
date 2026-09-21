@@ -747,8 +747,8 @@
     "cooldown",
     "penetration"
   ],
-  "optionMin": 1,
-  "optionMax": 4,
+  "optionMin": 2,
+  "optionMax": 2,
   "optionLabel": {
     "crit": "치명타",
     "critDamage": "치명타 데미지",

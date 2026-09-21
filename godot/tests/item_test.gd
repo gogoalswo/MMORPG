@@ -56,12 +56,14 @@ func _case_grade() -> void:
 ## 옵션 여섯 종 — 공속·치확·치피·HP·쿨감·관통. **전부 퍼센트고 레벨을 안 탄다**
 func _case_options() -> void:
 	# 설계표에서 나온 최대치 (옵션 하나 = DPS +1% 에서 역산)
+	# 2026-09-21 에 옵션 수치를 **50배**로 올렸다 (`OPTION_POWER`) —
+	# 반올림 다음에 곱하므로 태초 치확이 37.5 가 아니라 **40~75** 다
 	var crit := Items.option_range("crit", 7)
-	_eq("치명타 옵션 7등급 최소", snappedf(crit.min, 0.1), 0.8)
-	_eq("치명타 옵션 7등급 최대", snappedf(crit.max, 0.1), 1.5)
+	_eq("치명타 옵션 7등급 최소", snappedf(crit.min, 0.1), 40.0)
+	_eq("치명타 옵션 7등급 최대", snappedf(crit.max, 0.1), 75.0)
 	_eq("치명타는 레벨 무관", Items.option_range("crit", 7, 200).max, crit.max)
-	_eq("관통 옵션 7등급 최대", snappedf(Items.option_range("penetration", 7).max, 0.1), 3.3)
-	_eq("쿨감 옵션 7등급 최대", snappedf(Items.option_range("cooldown", 7).max, 0.1), 1.0)
+	_eq("관통 옵션 7등급 최대", snappedf(Items.option_range("penetration", 7).max, 0.1), 165.0)
+	_eq("쿨감 옵션 7등급 최대", snappedf(Items.option_range("cooldown", 7).max, 0.1), 50.0)
 
 	# 굴린 옵션은 등급이 정한 개수만큼, 종류가 겹치지 않고, 범위 안이다
 	var rng := RandomNumberGenerator.new()
@@ -69,8 +71,8 @@ func _case_options() -> void:
 	for seed_value in 50:
 		rng.seed = seed_value
 		var rolled := Items.roll_options(item, 4, rng)
-		if rolled.size() < 2 or rolled.size() > 3:
-			_fail("4등급은 옵션이 2~3개여야 하는데 %d개다" % rolled.size())
+		if rolled.size() != 2:
+			_fail("옵션은 2개 고정인데 %d개다" % rolled.size())
 			return
 		var seen: Array = []
 		for option in rolled:
@@ -82,10 +84,10 @@ func _case_options() -> void:
 			if option.value < span.min or option.value > span.max:
 				_fail("%s 값 %s 가 범위(%s~%s) 밖" % [option.kind, option.value, span.min, span.max])
 				return
-	# 7등급은 넷이 붙는다 — 개수도 등급을 탄다
+	# 개수는 등급을 안 탄다 — 2026-09-21 지시로 전 등급 2개 고정이다
 	rng.seed = 7
-	if Items.roll_options(item, 7, rng).size() != 4:
-		_fail("7등급은 옵션이 4개여야 한다")
+	if Items.roll_options(item, 7, rng).size() != 2:
+		_fail("7등급도 옵션은 2개여야 한다")
 	print("  옵션 50번 굴림: 개수·종류·범위 모두 규칙대로")
 
 

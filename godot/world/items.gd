@@ -93,11 +93,14 @@ static func _base_option_range(kind: String, level: int) -> Dictionary:
 
 ## 이 등급에서 이 옵션이 나올 수 있는 범위. 창에 그대로 보여준다 —
 ## "몇 등급이면 얼마까지 뜨나" 를 알 수 없으면 등급을 올릴 이유를 설명할 수 없다
-## 그 품질 등급에서 이 옵션이 나올 수 있는 범위 — 설계표(`balance.json`)다.
+## 그 등급에서 이 옵션이 나올 수 있는 범위 — 설계표(`balance.json`)다.
 ## **레벨은 안 본다.** 여섯 종이 전부 퍼센트라 어디서나 같은 뜻이라야 한다
+## **반올림하고 나서 배수를 곱한다** — `gear.ts` 의 `OPTION_POWER`(50배) 와 같은 자리다.
+## 순서가 다르면 태초 치확이 37.5~75 가 되어 TS 쪽과 어긋난다
 static func option_range(kind: String, grade: int, _level: int = 1) -> Dictionary:
+	var power := float(_g().get("optionPower", 1.0))
 	var top := float(_g().get("optionMaxValue", {}).get(kind, 0.0)) * option_grade_scale(grade)
-	return {"min": snappedf(top * 0.5, 0.1), "max": snappedf(top, 0.1)}
+	return {"min": snappedf(top * 0.5, 0.1) * power, "max": snappedf(top, 0.1) * power}
 
 
 ## 옵션을 굴린다. **종류는 겹치지 않게 고른다** — 치명타가 셋 붙으면 옵션이

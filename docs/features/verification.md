@@ -169,6 +169,7 @@ npm run shot:godot                   # 낙뢰(thunder_fall)
 npm run shot:godot -- rising_kick    # 스킬 id 를 주면 그것
 npm run shot:godot -- portal         # 차원문 소용돌이 (스킬이 아니라 늘 켜진 이펙트)
 npm run shot:godot -- gate           # 차원문 창 (logs/gate_off.png · gate_on.png=줄 누른 채)
+npm run shot:godot -- range:tiger_roar   # 스킬 범위 표시 (logs/range_NN.png)
 ```
 
 - **`--headless` 로는 아무것도 안 그려진다.** 헤드리스는 더미 렌더러라 화면이
@@ -179,6 +180,11 @@ npm run shot:godot -- gate           # 차원문 창 (logs/gate_off.png · gate_
   이미 꺼진 뒤만 남는다. **처음에 번개를 못 본 것도 이 때문이었다.**
 - 한 번 돌리면 **여섯 장**이 나온다 (0.02·0.06·0.11·0.17·0.24·0.36초쯤).
   전부 볼 필요는 없다 — 이펙트가 가장 벌어지는 한 장을 고른다.
+- **`range:<스킬id>` 는 사냥터로 간다.** ★ 스킬 범위 표시(`SkillRange`)를 보는
+  모드다. 마을에서 찍으면 모양은 나오지만 **덮는 넓이**를 못 본다 — 범위기를
+  보는 이유가 그건데. 그래서 초원의 무리 한가운데(-28, -28)에 세우고 찍는다
+  (`shot.gd` 의 `RANGE_*`). 반경·각이 판정과 같은지는 `skill_test.gd` 가 숫자로
+  보고, 여기서는 **50마리 사이에서 얼마나 덮나**만 본다 → [skills.md](skills.md)
 - **`portal` 은 다른 길로 간다.** 시전할 스킬이 없고 늘 돌아가는 이펙트라,
   시간을 늦추지 않고 문 앞(6m)에 세운 뒤 네 장을 찍는다. 이때 **게임의
   `_process` 를 끈다** — 안 끄면 카메라가 매 프레임 캐릭터를 다시 쫓아가 문이

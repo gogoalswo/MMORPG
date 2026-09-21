@@ -140,6 +140,14 @@ var _hurt: HurtFlash
 var _gate_panel: GatePanel
 ## 보스 범위 공격 예고. [{node, fill, start, end, radius}, ...]
 var _aoe_marks: Array = []
+## 스킬 범위 표시(테스트 단추). 살아 있는 SkillRange 들
+var _range_marks: Array = []
+## 스킬 범위를 그릴까 — **화면에만 있는 값이다.** 판정은 늘 모양을 보내고,
+## 그릴지 말지만 여기서 정한다 (`_toggle_range`)
+var _show_range := false
+## 스킬 범위 표시 단추와, 그 위에 마지막 시전의 반경·각·맞은 수를 적는 줄
+var _range_button: Button
+var _range_label: Label
 var _npc_panel: PanelContainer
 var _npc_title: Label
 var _npc_rows: VBoxContainer
@@ -251,6 +259,10 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			_last_event = "마을에서 되살아났습니다"
 		&"aoe":
 			_show_aoe(payload)
+		&"skillRange":
+			# 판정은 늘 보낸다. 켜 뒀을 때만 그린다
+			if _show_range:
+				_show_skill_range(payload)
 		&"npc":
 			_show_npc(payload)
 		&"skill":
@@ -1647,6 +1659,21 @@ func _build_test_switches() -> void:
 	_invincible_button.pressed.connect(_toggle_invincible)
 	column.add_child(_invincible_button)
 	column.move_child(_invincible_button, 0)
+	# 스킬 범위도 표 스위치가 아니다 — **화면에만 있는 값**이라 판정에 보낼 것이 없다
+	_range_button = Button.new()
+	_range_button.custom_minimum_size = Vector2(230, 52)
+	_range_button.add_theme_font_size_override("font_size", 18)
+	_range_button.pressed.connect(_toggle_range)
+	column.add_child(_range_button)
+	column.move_child(_range_button, 0)
+	# 숫자는 **단추 위 전용 줄**에 적는다. HUD 한 줄(`_last_event`)에 적었더니
+	# 바로 다음 틱의 몬스터 피격 알림이 덮어써서 읽을 틈이 없었다 (2026-09-21)
+	_range_label = Label.new()
+	_range_label.add_theme_font_size_override("font_size", 17)
+	_range_label.add_theme_color_override("font_color", Color("#46e0d8"))
+	column.add_child(_range_label)
+	column.move_child(_range_label, 0)
+	_refresh_range_button()
 	_refresh_switches()
 	column.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 20)
 	column.grow_vertical = Control.GROW_DIRECTION_BEGIN
@@ -1663,6 +1690,24 @@ func _on_switch_pressed(name: String) -> void:
 func _toggle_invincible() -> void:
 	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
 	_transport.send(&"invincible", {"on": not bool(me.get("invincible", false))})
+
+
+## 스킬 범위 표시를 켜고 끈다. 끄면 이미 떠 있는 것도 바로 치운다 —
+## 끄고 나서 1초쯤 남아 있으면 꺼졌는지 아닌지가 헷갈린다
+func _toggle_range() -> void:
+	_show_range = not _show_range
+	if not _show_range:
+		for mark in _range_marks:
+			if is_instance_valid(mark):
+				mark.queue_free()
+		_range_marks.clear()
+		_range_label.text = ""
+	_refresh_range_button()
+
+
+func _refresh_range_button() -> void:
+	_range_button.text = "테스트: 스킬 범위  %s" % ("켬" if _show_range else "끔")
+	_range_button.modulate = Color("#7ce08a") if _show_range else Color.WHITE
 
 
 func _refresh_invincible(me: Dictionary) -> void:
@@ -2051,6 +2096,7 @@ func _build_zone(zone_id: String) -> void:
 	if _zone_node != null:
 		_zone_node.queue_free()
 	_aoe_marks.clear()
+	_range_marks.clear()
 	_zone_node = Node3D.new()
 	add_child(_zone_node)
 	_shown_zone = zone_id
@@ -2300,6 +2346,7 @@ func _process(delta: float) -> void:
 	_send_input(delta)
 	_draw_state()
 	_tick_aoe()
+	_tick_range(delta)
 	if _auto_spin != null and _auto_spin.visible:
 		# PanelContainer 가 자식 크기를 칸에 맞춰 다시 잡는다 — 축은 그때마다 가운데로
 		_auto_spin.pivot_offset = _auto_spin.size / 2.0
@@ -2681,3 +2728,31 @@ func _tick_aoe() -> void:
 			continue
 		alive.append(mark)
 	_aoe_marks = alive
+
+
+## 스킬 범위 표시를 늙힌다. 수명이 다한 것은 스스로 알려 준다
+func _tick_range(delta: float) -> void:
+	var alive: Array = []
+	for mark in _range_marks:
+		if not is_instance_valid(mark):
+			continue
+		if mark.tick(delta):
+			mark.queue_free()
+			continue
+		alive.append(mark)
+	_range_marks = alive
+
+
+## 판정이 보낸 모양 그대로 땅에 그리고, 몇 마리가 걸렸는지는 글로 적는다 —
+## 반경만 보면 "왜 저기 있는 놈이 안 맞지" 가 `maxTargets` 때문인지 모른다
+func _show_skill_range(payload: Dictionary) -> void:
+	if _zone_node == null:
+		return
+	_range_marks.append(SkillRange.show_cast(_zone_node, payload))
+	_range_label.text = "%s  %.1fm · %d° · %d/%d 마리" % [
+		Skills.all().get(str(payload.get("skill", "")), {}).get("name", "스킬"),
+		float(payload.get("reach", 0.0)),
+		roundi(rad_to_deg(float(payload.get("arc", 0.0)))),
+		int(payload.get("hits", 0)),
+		int(payload.get("max_targets", 0)),
+	]

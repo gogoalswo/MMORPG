@@ -1148,9 +1148,28 @@ func cast(player_id: String, skill_id: String) -> void:
 		reach = Skills.blast_radius(skill)
 
 	var attack := float(stats.attack) * float(skill.get("power", 1.0))
-	for target in _pick_targets(
-		player, reach, float(skill.arc), int(skill.get("maxTargets", 1)), origin
-	):
+	var arc := float(skill.arc)
+	var cap := int(skill.get("maxTargets", 1))
+	var picked := _pick_targets(player, reach, arc, cap, origin)
+
+	# **판정이 쓴 모양을 그대로 알린다** — 화면이 다시 계산하면 두 값이 갈라져서
+	# "표시는 맞는데 안 맞는" 일이 생긴다. `_pick_targets` 가 부채꼴을 쓰는 조건
+	# (착탄점이 없고 각이 한 바퀴 미만)까지 여기서 풀어 보내므로, 화면은 받은
+	# 각으로 한 가지 모양만 그리면 된다 → docs/features/skills.md "범위 표시"
+	_events.append({
+		"type": "skillRange",
+		"id": player_id,
+		"skill": skill_id,
+		"x": float(origin.get("x", player.x)),
+		"z": float(origin.get("z", player.z)),
+		"reach": reach,
+		"arc": arc if (origin.is_empty() and arc < TAU) else TAU,
+		"facing": float(player.rot),
+		"max_targets": cap,
+		"hits": picked.size(),
+	})
+
+	for target in picked:
 		_hit_monster(player, target, attack, skill_id)
 
 

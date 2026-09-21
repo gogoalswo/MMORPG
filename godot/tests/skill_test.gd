@@ -17,6 +17,7 @@ func _init() -> void:
 	_case_bar()
 	_case_cast()
 	_case_multi()
+	_case_range()
 	_case_dead()
 	Save.clear()
 
@@ -31,6 +32,13 @@ func _init() -> void:
 func _fail(text: String) -> void:
 	print("  실패 " + text)
 	_failed += 1
+
+
+func _mob(mobs: Array, id: String) -> Dictionary:
+	for m in mobs:
+		if str(m.get("id", "")) == id:
+			return m
+	return {}
 
 
 func _first(events: Array, type_name: String) -> Dictionary:
@@ -161,6 +169,126 @@ func _case_multi() -> void:
 		_fail("호포각이 3마리를 쳐야 하는데 %d마리" % hits)
 	else:
 		print("  호포각: %d마리 동시" % hits)
+
+
+## 범위 표시(`skillRange`)가 **판정이 실제로 쓴 모양**을 싣고 오는지.
+##
+## 이 이벤트의 값어치는 전부 "판정과 같다"는 데 있다. 화면이 `skills.json` 을
+## 다시 읽어 그리면 판정이 바뀔 때 조용히 갈라지므로, 여기서 세 가지 모양을
+## 다 본다 → docs/features/skills.md "범위 표시"
+func _case_range() -> void:
+	var s := _setup(3)
+	var w: World = s[0]
+	var me: Dictionary = s[1]
+
+	# 1) 근접 부채꼴 — 중심은 내 몸, 각은 스킬의 각 그대로
+	w.learn_skill("me", "rising_kick")
+	w.set_skill_bar("me", ["rising_kick"])
+	w.drain_events()
+	w.cast("me", "rising_kick")
+	var shape := _first(w.drain_events(), "skillRange")
+	var kick := Skills.get_skill("fighter", "rising_kick")
+	if shape.is_empty():
+		_fail("범위가 안 실려 왔다")
+		return
+	if not (is_equal_approx(shape.x, float(me.x)) and is_equal_approx(shape.z, float(me.z))):
+		_fail("근접기 중심이 내 몸이 아니다 (%.1f, %.1f)" % [shape.x, shape.z])
+	if not is_equal_approx(float(shape.reach), float(kick.range)):
+		_fail("반경이 %.1f 여야 하는데 %.1f" % [float(kick.range), shape.reach])
+	if not is_equal_approx(float(shape.arc), float(kick.arc)):
+		_fail("각이 %.2f 여야 하는데 %.2f" % [float(kick.arc), shape.arc])
+	else:
+		print("  근접 부채꼴: 반경 %.1fm · %d°" % [shape.reach, roundi(rad_to_deg(shape.arc))])
+
+	# 2) 전방위 근접 — 각이 한 바퀴면 부채꼴이 아니라 원이다
+	w.learn_skill("me", "tiger_roar")
+	w.set_skill_bar("me", ["tiger_roar"])
+	w.drain_events()
+	w.cast("me", "tiger_roar")
+	var events := w.drain_events()
+	var round_shape := _first(events, "skillRange")
+	var hits := 0
+	for e in events:
+		if e.get("type", "") == "hit":
+			hits += 1
+	if not is_equal_approx(float(round_shape.arc), TAU):
+		_fail("전방위기 각이 한 바퀴가 아니다 (%.2f)" % round_shape.arc)
+	elif int(round_shape.hits) != hits:
+		_fail("맞은 수가 %d 인데 %d 로 실려 왔다" % [hits, round_shape.hits])
+	else:
+		print("  전방위 원: 반경 %.1fm · %d/%d 마리" % [
+			round_shape.reach, round_shape.hits, round_shape.max_targets
+		])
+
+	# **그려질 모양과 맞은 놈이 같은가** — 이 도구의 값어치가 전부 여기 있다.
+	# 각을 반대로 재거나 좌우가 뒤집히면 "표시는 맞는데 안 맞는" 게 되고,
+	# 그건 디버그 도구로서 없느니만 못하다. 좁은 부채꼴(백호격 72°)로 보되
+	# **반경 안이지만 옆에 선 놈**을 하나 두어 양쪽을 다 건다
+	# 정면(+x)에서 90도 꺾인 자리 — 반경 4m 안이지만 72도 부채꼴 밖이다
+	var aside := World.make_monster(
+		"aside", GameData.monster_kind("mob003"), 0.0, 2.0, 10000.0, 0.0
+	)
+	s[2].append(aside)
+	w.learn_skill("me", "white_tiger")
+	w.set_skill_bar("me", ["white_tiger"])
+	w.drain_events()
+	w.cast("me", "white_tiger")
+	var fan_events := w.drain_events()
+	var fan := _first(fan_events, "skillRange")
+	var struck: Array = []
+	for e in fan_events:
+		if e.get("type", "") == "hit":
+			struck.append(str(e.target))
+	if float(fan.arc) >= TAU:
+		_fail("백호격은 좁은 부채꼴이어야 한다 (%.2f)" % fan.arc)
+	for mob in s[2]:
+		var dx: float = float(mob.x) - float(fan.x)
+		var dz: float = float(mob.z) - float(fan.z)
+		var gap := sqrt(dx * dx + dz * dz)
+		var inside := gap <= float(fan.reach) + 1e-3
+		if inside and gap > 1e-3:
+			var dot := (dx / gap) * sin(float(fan.facing)) + (dz / gap) * cos(float(fan.facing))
+			inside = acos(clampf(dot, -1.0, 1.0)) <= float(fan.arc) / 2.0 + 1e-3
+		var was_hit := str(mob.id) in struck
+		# 안에 있어도 `maxTargets` 에 걸려 안 맞을 수 있다 — 그 반대는 없어야 한다
+		if was_hit and not inside:
+			_fail("%s 는 그려질 모양 밖인데 맞았다 (%.2f m)" % [mob.id, gap])
+	if not ("aside" in struck):
+		print("  모양 밖(옆 2m)은 안 맞고, 맞은 놈은 전부 모양 안이다")
+	else:
+		_fail("부채꼴 옆에 선 놈이 맞았다 — 각을 재는 방향이 어긋났다")
+
+	# 3) 원거리 — **착탄점이 중심**이고 반경은 사거리가 아니라 터지는 반경이다.
+	#    사거리(12m)를 그대로 그리면 화면 전체가 범위가 된다
+	me["job"] = "archer"
+	w.learn_skill("me", "explosive_arrow")
+	w.set_skill_bar("me", ["explosive_arrow"])
+	w.drain_events()
+	w.cast("me", "explosive_arrow")
+	var far := _first(w.drain_events(), "skillRange")
+	var arrow := Skills.get_skill("archer", "explosive_arrow")
+	if far.is_empty():
+		_fail("원거리 범위가 안 실려 왔다")
+		return
+	# 앞선 시전에 쓰러진 놈이 있을 수 있다 — **살아 있는 것 중 가장 가까운 놈**이
+	# 겨눠진다 (`World.cast` 가 `_pick_targets` 로 하나만 고른다)
+	var mob: Dictionary = {}
+	var best := INF
+	for m in s[2]:
+		if int(m.hp) <= 0:
+			continue
+		var gap := Vector2(float(m.x), float(m.z)).length()
+		if gap < best:
+			best = gap
+			mob = m
+	if not (is_equal_approx(far.x, float(mob.x)) and is_equal_approx(far.z, float(mob.z))):
+		_fail("착탄점이 겨눈 놈(%s) 자리가 아니다 (%.1f, %.1f)" % [mob.id, far.x, far.z])
+	if not is_equal_approx(float(far.reach), Skills.blast_radius(arrow)):
+		_fail("터지는 반경이 %.1f 여야 하는데 %.1f" % [Skills.blast_radius(arrow), far.reach])
+	elif not is_equal_approx(float(far.arc), TAU):
+		_fail("날아가 터진 것에 부채꼴은 없다 (%.2f)" % far.arc)
+	else:
+		print("  원거리 착탄: 사거리 %.0fm → 터지는 반경 %.1fm" % [float(arrow.range), far.reach])
 
 
 ## 자가 회복 스킬을 확인하던 `_case_heal` 은 **2026-09-17 에 뺐다** — 회복기를

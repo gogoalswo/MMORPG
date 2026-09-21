@@ -724,10 +724,33 @@ func _case_skills(game: Node3D) -> void:
 		_fail("무적 단추를 다시 눌렀는데 안 꺼졌다")
 	print("  무적 단추: 켜면 피해 0, 다시 누르면 꺼짐 (%s)" % shield)
 
+	# 스킬 범위 단추 — **꺼 두면 판정이 보내도 안 그린다**, 켜면 그리고 숫자를 적는다.
+	# 끄면 떠 있던 것까지 치운다 (남아 있으면 꺼졌는지가 안 읽힌다)
+	var band: Rect2 = game._range_button.get_global_rect()
+	if band.position.x > 40 or band.end.y > shield.position.y:
+		_fail("스킬 범위 단추가 무적 단추 위(왼쪽 아래)가 아니다: %s" % band)
+	var shape := {"x": 1.0, "z": 2.0, "reach": 4.0, "arc": TAU, "facing": 0.0, "hits": 3, "max_targets": 5, "skill": "white_tiger"}
+	game._on_event(&"skillRange", shape)
+	if not game._range_marks.is_empty():
+		_fail("꺼 뒀는데 범위를 그렸다")
+	game._range_button.pressed.emit()
+	game._on_event(&"skillRange", shape)
+	if game._range_marks.size() != 1:
+		_fail("켰는데 범위를 안 그렸다 (%d개)" % game._range_marks.size())
+	elif not game._range_label.text.contains("3/5"):
+		_fail("맞은 수가 안 적혔다: '%s'" % game._range_label.text)
+	game._range_button.pressed.emit()
+	await process_frame
+	if not game._range_marks.is_empty() or game._range_label.text != "":
+		_fail("껐는데 떠 있던 범위가 안 치워졌다")
+	print("  스킬 범위 단추: 꺼 두면 안 그리고, 켜면 그리며 '%s' (%s)" % [
+		"3/5 마리", band
+	])
+
 	# 새 문구 글자가 폰트에 있나 (부분집합이라 빠질 수 있다)
 	var font: Font = load(FONT)
 	var missing := ""
-	for ch in "장착 해제 취소 스킬 목록 바꿀 칸을 누르세요 요구 레벨 재사용 사거리 주위 대상 배움 습득 테스트 쿨타임 잠금 해제 켬 끔 무적":
+	for ch in "장착 해제 취소 스킬 목록 바꿀 칸을 누르세요 요구 레벨 재사용 사거리 주위 대상 배움 습득 테스트 쿨타임 잠금 해제 켬 끔 무적 범위 마리":
 		if ch != " " and not font.has_char(ch.unicode_at(0)):
 			missing += ch
 	if missing != "":

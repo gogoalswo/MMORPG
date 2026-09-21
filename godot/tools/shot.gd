@@ -35,6 +35,13 @@ const PORTAL_SHOTS := [4, 12, 20, 28]
 ## `hud` 로 찍을 때. 고리가 도는지 보려면 몇 프레임 떨어뜨려 찍어야 한다
 const HUD_SHOTS := [6, 20, 40]
 
+## `range:` 로 찍을 때 — 몬스터 무리 한가운데에 선다. 마을에서 찍으면 모양은
+## 보이지만 **덮는 넓이**를 못 본다 (범위기를 보는 이유가 그건데)
+const RANGE_ZONE := "meadow"
+const RANGE_PACK := Vector3(-28.0, 0.0, -28.0)
+## 표시가 1.1초 살아 있고 마지막 0.45초는 흐려진다 — 한창 진할 때를 고른다
+const RANGE_SHOTS := [3, 10]
+
 
 func _init() -> void:
 	Save.clear()
@@ -66,6 +73,11 @@ func _run() -> void:
 	# (켜져 있어야 자동사냥 칸에서 고리가 돈다)
 	if skill == "hud":
 		await _hud(game)
+		return
+
+	# 스킬 범위 표시 — `npm run shot:godot -- range:tiger_roar`
+	if skill.begins_with("range:"):
+		await _range(game, skill.trim_prefix("range:"))
 		return
 
 	# 창은 열어 놓고 한 장만 찍는다 — 움직이는 것이 없다
@@ -165,6 +177,39 @@ func _hud(game: Node3D) -> void:
 			img.save_png("res://../logs/shot_%02d.png" % frame)
 			taken += 1
 			print("logs/shot_%02d.png  (고리 각 %.2f)" % [frame, game._auto_spin.rotation])
+	quit(0)
+
+
+## 스킬 범위 표시(`SkillFx` 가 아니라 `SkillRange`). **무리 한가운데에서 찍는다** —
+## 반경·각이 맞는지는 `skill_test.gd` 가 숫자로 보지만, 그게 화면에서 얼마나
+## 덮는지는 찍어야만 안다 (설계에서 범위가 곧 사냥 속도라서 보는 값이다)
+func _range(game: Node3D, skill: String) -> void:
+	var world = game._transport._world
+	game._transport.send(&"travel", {"zone": RANGE_ZONE})
+	await process_frame
+	var player: Dictionary = world._players[game._transport.my_id()]
+	player["level"] = LEVEL
+	player["skill_points"] = 99
+	player["x"] = RANGE_PACK.x
+	player["z"] = RANGE_PACK.z
+	game._transport.send(&"learnSkill", {"skill": skill})
+	game._transport.send(&"setSkillBar", {"bar": [skill]})
+	game._toggle_range()
+	for i in 4:
+		await process_frame
+
+	Engine.time_scale = SLOW
+	game._transport.send(&"skill", {"skill": skill})
+	var frame := 0
+	var taken := 0
+	while taken < RANGE_SHOTS.size():
+		await process_frame
+		frame += 1
+		if frame in RANGE_SHOTS:
+			await RenderingServer.frame_post_draw
+			root.get_texture().get_image().save_png("res://../logs/range_%02d.png" % frame)
+			taken += 1
+			print("logs/range_%02d.png  %s" % [frame, game._range_label.text])
 	quit(0)
 
 

@@ -910,18 +910,20 @@ func restore(player_id: String) -> bool:
 			bar.append(str(id))
 	player.skill_bar = bar
 
-	# 가방·장비도 되살린다. 표에 없는 id 는 버린다 — 아이템을 다시 만드는 중이라
-	# 없어진 것이 저장에 남아 있을 수 있다
+	# 가방·장비도 되살린다. **옛 id 는 지금 id 로 옮긴다** (2026-09-21 에 단계 축을
+	# 없앴다) — 갈 자리가 없는 것만 버린다. 등급은 아이템이 들고 있으므로
+	# 저장값이 아니라 표에서 가져온다
 	var bag: Array = []
 	for stack in saved.get("bag", []):
-		if not Items.get_item(str(stack.get("id", ""))).is_empty():
-			bag.append(stack)
+		var moved := _restore_stack(stack)
+		if not moved.is_empty():
+			bag.append(moved)
 	player.bag = bag
 	var worn: Dictionary = {}
 	for slot in saved.get("equipped", {}):
-		var stack: Dictionary = saved.equipped[slot]
-		if not Items.get_item(str(stack.get("id", ""))).is_empty():
-			worn[str(slot)] = stack
+		var moved := _restore_stack(saved.equipped[slot])
+		if not moved.is_empty():
+			worn[str(slot)] = moved
 	player.equipped = worn
 	# 장비까지 넣고 나서 스탯을 만든다. 체력 상한이 장비에 걸려 있다
 	_refresh_stats(player)
@@ -932,6 +934,19 @@ func restore(player_id: String) -> bool:
 		player.x = clampf(float(saved.get("x", player.x)), -half_size, half_size)
 		player.z = clampf(float(saved.get("z", player.z)), -half_size, half_size)
 	return true
+
+
+## 저장된 물건 하나를 지금 표에 맞춘다. 갈 자리가 없으면 빈 사전을 준다
+func _restore_stack(raw: Variant) -> Dictionary:
+	if typeof(raw) != TYPE_DICTIONARY:
+		return {}
+	var stack: Dictionary = (raw as Dictionary).duplicate(true)
+	var id := Items.migrate_id(str(stack.get("id", "")))
+	if id.is_empty():
+		return {}
+	stack.id = id
+	stack.grade = int(Items.get_item(id).get("grade", 1))
+	return stack
 
 
 func save(player_id: String) -> void:

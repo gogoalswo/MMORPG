@@ -45,31 +45,32 @@ func _fail(text: String) -> void:
 
 func _case_grade() -> void:
 	_eq("등급 배율 5", Items.grade_multiplier(5), 2.2)
-	# 품질 등급 배율 — 1등급이 최대의 25%, 10등급이 100%
+	# 옵션 등급 배율 — 1등급이 최대의 25%, 7등급이 100%
+	# (2026-09-21 에 품질 1~10 축을 없애고 장비 등급 1~7 로 합쳤다)
 	_eq("옵션 등급 배율 1", snappedf(Items.option_grade_scale(1), 0.01), 0.25)
-	_eq("옵션 등급 배율 10", snappedf(Items.option_grade_scale(10), 0.01), 1.0)
+	_eq("옵션 등급 배율 7", snappedf(Items.option_grade_scale(7), 0.01), 1.0)
 	# 범위 밖은 잘린다
-	_eq("등급 배율 상한", Items.grade_multiplier(99), Items.grade_multiplier(10))
+	_eq("등급 배율 상한", Items.grade_multiplier(99), Items.grade_multiplier(7))
 
 
 ## 옵션 여섯 종 — 공속·치확·치피·HP·쿨감·관통. **전부 퍼센트고 레벨을 안 탄다**
 func _case_options() -> void:
 	# 설계표에서 나온 최대치 (옵션 하나 = DPS +1% 에서 역산)
-	var crit := Items.option_range("crit", 10)
-	_eq("치명타 옵션 10등급 최소", snappedf(crit.min, 0.1), 0.8)
-	_eq("치명타 옵션 10등급 최대", snappedf(crit.max, 0.1), 1.5)
-	_eq("치명타는 레벨 무관", Items.option_range("crit", 10, 200).max, crit.max)
-	_eq("관통 옵션 10등급 최대", snappedf(Items.option_range("penetration", 10).max, 0.1), 3.3)
-	_eq("쿨감 옵션 10등급 최대", snappedf(Items.option_range("cooldown", 10).max, 0.1), 1.0)
+	var crit := Items.option_range("crit", 7)
+	_eq("치명타 옵션 7등급 최소", snappedf(crit.min, 0.1), 0.8)
+	_eq("치명타 옵션 7등급 최대", snappedf(crit.max, 0.1), 1.5)
+	_eq("치명타는 레벨 무관", Items.option_range("crit", 7, 200).max, crit.max)
+	_eq("관통 옵션 7등급 최대", snappedf(Items.option_range("penetration", 7).max, 0.1), 3.3)
+	_eq("쿨감 옵션 7등급 최대", snappedf(Items.option_range("cooldown", 7).max, 0.1), 1.0)
 
-	# 굴린 옵션은 품질 등급이 정한 개수만큼, 종류가 겹치지 않고, 범위 안이다
+	# 굴린 옵션은 등급이 정한 개수만큼, 종류가 겹치지 않고, 범위 안이다
 	var rng := RandomNumberGenerator.new()
-	var item := Items.get_item("w_fighter_05")
+	var item := Items.get_item("g3_w")
 	for seed_value in 50:
 		rng.seed = seed_value
 		var rolled := Items.roll_options(item, 4, rng)
-		if rolled.size() != 2:
-			_fail("4등급은 옵션이 2개여야 하는데 %d개다" % rolled.size())
+		if rolled.size() < 2 or rolled.size() > 3:
+			_fail("4등급은 옵션이 2~3개여야 하는데 %d개다" % rolled.size())
 			return
 		var seen: Array = []
 		for option in rolled:
@@ -81,10 +82,10 @@ func _case_options() -> void:
 			if option.value < span.min or option.value > span.max:
 				_fail("%s 값 %s 가 범위(%s~%s) 밖" % [option.kind, option.value, span.min, span.max])
 				return
-	# 10등급은 넷이 붙는다 — 개수도 등급을 탄다
+	# 7등급은 넷이 붙는다 — 개수도 등급을 탄다
 	rng.seed = 7
-	if Items.roll_options(item, 10, rng).size() != 4:
-		_fail("10등급은 옵션이 4개여야 한다")
+	if Items.roll_options(item, 7, rng).size() != 4:
+		_fail("7등급은 옵션이 4개여야 한다")
 	print("  옵션 50번 굴림: 개수·종류·범위 모두 규칙대로")
 
 
@@ -102,7 +103,7 @@ func _case_enhance() -> void:
 	_eq("+8 굴림 0.95", Items.roll_enhance(8, 0.95), "destroy")
 	# 첫 칸부터 10% 로 부서진다 — 아이템 자체가 연료라 재시도는 무한하다
 	_eq("+0 성공률", Items.enhance_odds(0).success, 0.9)
-	_eq("강화는 공짜", Items.enhance_cost(Items.get_item("a_05"), 5), 0)
+	_eq("강화는 공짜", Items.enhance_cost(Items.get_item("g3_a"), 5), 0)
 	_eq("+9 면 못 두드린다", Items.can_enhance(9), false)
 	_eq("+8 이면 두드릴 수 있다", Items.can_enhance(8), true)
 
@@ -110,7 +111,7 @@ func _case_enhance() -> void:
 ## 장비 수치는 이제 절대값이 아니라 **기본 스탯의 %** 다 (설계 3장).
 ## 등급1 무기는 공격 예산 35% 의 60% = 21%
 func _case_stats() -> void:
-	var item := Items.get_item("w_fighter_00")
+	var item := Items.get_item("g1_w")
 	_eq("기본 공격 %", item.bonus.attack, 21.0)
 	# 강화 +5 = 6단 = ×1.78
 	_eq("강화 +5 기본 공격 %", snappedf(Items.base_bonus(item, 5).attack, 0.1), 37.3)
@@ -118,7 +119,7 @@ func _case_stats() -> void:
 	# 옵션은 공격력을 안 준다 — 슬롯 기본 수치가 이미 담당하기 때문이다.
 	# 대신 기본이 안 건드리는 축(쿨감·관통)과 치확·치피·공속·HP 가 붙는다
 	var stack := {
-		"id": "w_fighter_00", "grade": 3, "enhance": 5,
+		"id": "g1_w", "grade": 1, "enhance": 5,
 		"options": [
 			{"kind": "crit", "value": 0.7},
 			{"kind": "penetration", "value": 1.4},
@@ -154,12 +155,13 @@ func _case_drop() -> void:
 		if def.is_empty():
 			_fail("없는 아이템이 떨어졌다: %s" % loot.item.id)
 			return
-		if def.has("job") and str(def.job) != "fighter":
-			_fail("다른 직업 장비가 떨어졌다: %s" % loot.item.id)
+		# 장비는 직업을 안 탄다 (2026-09-21)
+		if def.has("job"):
+			_fail("직업을 타는 장비가 떨어졌다: %s" % loot.item.id)
 			return
-		# 35레벨 몬스터는 3단계(요구 레벨 30) 물건을 떨군다
-		if int(def.level) != 30:
-			_fail("단계가 안 맞다: %s (레벨 %d)" % [loot.item.id, def.level])
+		# 등급이 곧 요구 레벨이다. Lv35 는 사냥터 4 라 1등급(요구 Lv1)만 나온다
+		if int(def.level) != 1:
+			_fail("등급이 안 맞다: %s (요구 레벨 %d)" % [loot.item.id, def.level])
 			return
 		# **사냥터가 등급을 정한다** — Lv35 는 사냥터 4 라 1등급만 나와야 한다
 		if not (int(loot.item.grade) in Items.drop_grades(35)):
@@ -196,7 +198,7 @@ func _case_equip() -> void:
 	var me: Dictionary = w.snapshot().players["me"]
 	var before := int(me.stats.attack)
 
-	me.bag.append({"id": "w_fighter_00", "grade": 1, "enhance": 0, "options": [{"kind": "attack", "value": 5}]})
+	me.bag.append({"id": "g1_w", "grade": 1, "enhance": 0, "options": [{"kind": "attack", "value": 5}]})
 	w.equip("me", 0)
 	if me.equipped.get("weapon", {}).is_empty():
 		_fail("무기를 못 꼈다")
@@ -206,17 +208,11 @@ func _case_equip() -> void:
 		_fail("끼면 공격이 올라야 한다 (%d -> %d)" % [before, int(me.stats.attack)])
 	_eq("가방에서 빠진다", me.bag.size(), 0)
 
-	# 남의 직업 장비는 못 낀다
-	me.bag.append({"id": "w_mage_00", "grade": 1, "enhance": 0, "options": []})
-	w.equip("me", 0)
-	if not me.equipped.get("weapon", {}).id == "w_fighter_00":
-		_fail("마법사 무기가 끼워졌다")
-
-	# 요구 레벨이 높은 것도 못 낀다
-	me.bag.append({"id": "w_fighter_10", "grade": 1, "enhance": 0, "options": []})
+	# 요구 레벨이 높은 것은 못 낀다 (직업 제한은 2026-09-21 에 없어졌다)
+	me.bag.append({"id": "g4_w", "grade": 4, "enhance": 0, "options": []})
 	w.equip("me", me.bag.size() - 1)
-	if str(me.equipped.weapon.id) != "w_fighter_00":
-		_fail("100레벨 장비를 1레벨이 꼈다")
+	if str(me.equipped.weapon.id) != "g1_w":
+		_fail("91레벨 장비를 1레벨이 꼈다")
 
 	# 벗으면 되돌아온다
 	w.unequip("me", "weapon")

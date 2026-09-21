@@ -34,10 +34,12 @@ test('내보낸 개수가 문서와 맞는다', () => {
 test('아이템도 내보낸다 — 등급·랜덤옵션·강화를 그대로 가기로 했다 (2026-09-17)', () => {
   const items = data['items.json'].items;
   const ids = Object.keys(items);
-  // 단계 20 x (무기 3직업 + 나머지 5칸) = 160. 보조·귀걸이를 없애면서 240 에서 줄었다.
-  // 제작 재료(`m_XX`) 20종은 2026-09-20 에 제작과 함께 없앴다
-  assert.equal(ids.length, 160, '장비 160종 (단계 20 x 슬롯 8 — 무기만 직업 셋)');
+  // 등급 7 x 슬롯 6 = 42. 2026-09-21 에 단계 20개 축을 없애고(160 → 42)
+  // 장비가 직업을 타지 않게 했다
+  assert.equal(ids.length, 42, '장비 42종 (등급 7 x 슬롯 6)');
   // 드롭이 후보 id 를 만들 때 쓰는 표가 같이 있어야 한다
   assert.equal(data['items.json'].slots.length, 6, '장비 슬롯 6종');
   assert.ok(data['items.json'].slotCode.weapon === 'w', '슬롯 코드');
+  // 고도가 "이 레벨에서 낄 수 있는 최고 등급" 을 찾는 표
+  assert.deepEqual(data['items.json'].gradeLevels, [1, 31, 61, 91, 121, 151, 181]);
 });

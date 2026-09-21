@@ -7,7 +7,6 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { JOB_IDS } from './character.ts';
 import { EQUIP_SLOTS } from './items.ts';
 import {
   ENH_MAX,
@@ -173,17 +172,17 @@ test('드랍 사냥터는 착용 레벨보다 한 구간 위다', () => {
   }
 });
 
-test('아이템은 56종 — 등급 7 x (무기 3직업 + 나머지 5칸)', () => {
+test('아이템은 42종 — 등급 7 x 슬롯 6', () => {
   const items = Object.values(GEAR_ITEMS);
-  assert.equal(items.length, GRADE_COUNT * (JOB_IDS.length + EQUIP_SLOTS.length - 1));
-  assert.equal(items.length, 56);
+  assert.equal(items.length, GRADE_COUNT * EQUIP_SLOTS.length);
+  assert.equal(items.length, 42);
 
   for (const item of items) {
     assert.equal(item.id, item.id.toLowerCase(), `${item.id} 는 소문자여야 한다`);
     assert.equal(item.level, equipLevel(item.grade), `${item.id} 착용 레벨`);
     assert.ok(item.name.length > 0, `${item.id} 이름`);
-    // 무기만 직업을 탄다
-    assert.equal(item.slot === 'weapon', item.job !== undefined, `${item.id} 직업 유무`);
+    // 2026-09-21: 장비가 직업을 안 탄다 — 무기도 한 벌이다
+    assert.equal(item.job, undefined, `${item.id} 가 직업을 탄다`);
   }
 
   // 같은 이름이 둘 있으면 가방에서 구분이 안 된다
@@ -193,7 +192,7 @@ test('아이템은 56종 — 등급 7 x (무기 3직업 + 나머지 5칸)', () =
 
 test('풀세트 6칸이 등급 예산을 정확히 나눠 갖는다', () => {
   for (let g = 1; g <= GRADE_COUNT; g++) {
-    const set = fullSet(g, 'fighter');
+    const set = fullSet(g);
     assert.equal(set.length, EQUIP_SLOTS.length);
     const sum = set.reduce((t, item) => t + item.stats.atk, 0);
     assert.ok(Math.abs(sum - gradeSum(g)) < 1e-9, `등급 ${g} 공격력 합이 ${sum}`);

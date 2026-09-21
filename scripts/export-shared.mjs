@@ -71,7 +71,7 @@ import {
   OPTION_MAX,
   OPTION_LABEL,
   MAX_ENHANCE,
-  TIER_COUNT,
+  gradeLevel,
 } from '../packages/shared/src/index.ts';
 // `index.ts` 가 gear.ts 를 다시 내보내지 않는다 — 설계 표는 직접 가져온다
 import { GEAR_DROP_RATE } from '../packages/shared/src/gear.ts';
@@ -132,7 +132,7 @@ export function buildData() {
       slots: EQUIP_SLOTS,
       // 창에 적는 칸 이름
       slotLabels: Object.fromEntries(EQUIP_SLOTS.map((slot) => [slot, slotLabel(slot)])),
-      // 드롭이 후보 id 를 만들 때 쓴다 (슬롯 코드 + 직업 + 단계)
+      // 드롭이 후보 id 를 만들 때 쓴다 (`g{등급}_{슬롯코드}`)
       slotCode: SLOT_CODE,
       jobSlots: JOB_SLOTS,
       bagSize: INVENTORY_SIZE,
@@ -151,7 +151,9 @@ export function buildData() {
       // 설계(stat-balance.md 7장)가 "그 사냥터 체류 중에 목표 개수를 채운다"
       // 에서 역산한 값이라, 합계 하나로는 못 줄이고 등급마다 따로 둔다
       gradeDropRate: GEAR_DROP_RATE,
-      tierCount: TIER_COUNT,
+      // 등급별 착용 레벨 (1·31·61·91·121·151·181). 고도는 이걸로 "이 레벨에서
+      // 낄 수 있는 최고 등급" 을 찾는다 — 30레벨 간격을 두 곳에 적지 않으려고 표로 준다
+      gradeLevels: Array.from({ length: MAX_DROP_GRADE }, (_, i) => gradeLevel(i + 1)),
     },
     'constants.json': {
       tickRate: TICK_RATE,

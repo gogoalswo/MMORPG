@@ -62,14 +62,18 @@ func _notice_of(w: World) -> String:
 
 
 func _case_stock() -> void:
-	# 자기 직업 무기만, 레벨 부근 것만
+	# 무기만, 낄 수 있는 등급과 그 아래 하나까지.
+	# 장비가 직업을 안 타므로(2026-09-21) 직업이 달라도 재고가 같다
 	var stock := Items.shop_stock("fighter", 1)
-	_eq("격투가 Lv1 재고", stock, ["w_fighter_00"])
+	_eq("Lv1 재고", stock, ["g1_w"])
+	_eq("직업이 재고를 안 가른다", Items.shop_stock("mage", 1), stock)
+	# Lv40 은 2등급(착용 Lv31)을 낄 수 있고, 그 아래 1등급도 같이 선다 — 강화 여벌
+	_eq("Lv40 재고", Items.shop_stock("fighter", 40), ["g1_w", "g2_w"])
 	for id in Items.shop_stock("mage", 40):
-		if not str(id).begins_with("w_mage_"):
-			_fail("마법사 상점에 %s 가 있다" % id)
+		if not str(id).begins_with("g"):
+			_fail("무기가 아닌 것이 상점에 있다: %s" % id)
 			return
-	print("  재고: 격투가 Lv1 %s / 마법사 Lv40 %d종" % [str(stock), Items.shop_stock("mage", 40).size()])
+	print("  재고: Lv1 %s / Lv40 %s (직업 무관)" % [str(stock), str(Items.shop_stock("mage", 40))])
 
 
 func _case_buy() -> void:
@@ -78,14 +82,14 @@ func _case_buy() -> void:
 	var me: Dictionary = s[1]
 
 	# 골드가 없으면 못 산다
-	w.npc_buy("me", "w_fighter_00")
+	w.npc_buy("me", "g1_w")
 	if not me.bag.is_empty():
 		_fail("골드 0 인데 샀다")
 	if not _notice_of(w).contains("모자"):
 		_fail("모자란다고 알려 주지 않았다")
 
 	me.gold = 100
-	w.npc_buy("me", "w_fighter_00")
+	w.npc_buy("me", "g1_w")
 	_eq("사면 가방에 들어온다", me.bag.size(), 1)
 	_eq("골드가 값만큼 준다", int(me.gold), 68)  # 100 - 32
 	if me.bag[0].options.is_empty():
@@ -95,7 +99,7 @@ func _case_buy() -> void:
 
 	# 파는 목록에 없는 것은 못 산다 — 화면이 보낸 id 를 믿지 않는다
 	w.drain_events()
-	w.npc_buy("me", "w_fighter_10")
+	w.npc_buy("me", "g4_w")
 	_eq("목록에 없는 것은 안 팔린다", me.bag.size(), 1)
 
 
@@ -105,7 +109,7 @@ func _case_too_far() -> void:
 	var me: Dictionary = s[1]
 	me.gold = 100
 	me.z = 20.0  # 상인에게서 멀리
-	w.npc_buy("me", "w_fighter_00")
+	w.npc_buy("me", "g1_w")
 	if not me.bag.is_empty():
 		_fail("멀리 있는데 샀다")
 	else:
@@ -116,13 +120,13 @@ func _case_sell() -> void:
 	var s := _at("shop")
 	var w: World = s[0]
 	var me: Dictionary = s[1]
-	me.bag.append({"id": "w_fighter_00", "grade": 1, "enhance": 0, "options": []})
+	me.bag.append({"id": "g1_w", "grade": 1, "enhance": 0, "options": []})
 	w.npc_sell("me", 0)
 	_eq("1등급 판매가", int(me.gold), 13)
 
 	# 등급이 높으면 더 쳐준다 — 애써 올린 걸 헐값에 넘기면 팔 이유가 없다
 	me.gold = 0
-	me.bag.append({"id": "w_fighter_00", "grade": 5, "enhance": 0, "options": []})
+	me.bag.append({"id": "g1_w", "grade": 5, "enhance": 0, "options": []})
 	w.npc_sell("me", 0)
 	_eq("5등급 판매가", int(me.gold), 28)
 	_eq("팔면 가방에서 빠진다", me.bag.size(), 0)
@@ -134,7 +138,7 @@ func _case_enhance() -> void:
 	var w: World = s[0]
 	var me: Dictionary = s[1]
 	me.gold = 10000
-	me.bag.append({"id": "w_fighter_00", "grade": 1, "enhance": 0, "options": []})
+	me.bag.append({"id": "g1_w", "grade": 1, "enhance": 0, "options": []})
 
 	# **강화는 공짜이고 실패하면 무조건 파괴된다** (설계 4장). 재료도 값도 없으니
 	# 실패의 대가는 아이템 하나뿐이고, 도달 단계는 "아이템이 몇 개 들어오느냐" 로만

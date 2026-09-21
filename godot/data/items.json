@@ -1,11 +1,11 @@
 {
   "items": {
-    "w_fighter_00": {
-      "id": "w_fighter_00",
-      "name": "낡은 너클",
+    "g1_w": {
+      "id": "g1_w",
+      "name": "일반 무기",
       "slot": "weapon",
+      "grade": 1,
       "level": 1,
-      "job": "fighter",
       "bonus": {
         "attack": 21,
         "defense": 0,
@@ -15,40 +15,11 @@
       },
       "price": 32
     },
-    "w_mage_00": {
-      "id": "w_mage_00",
-      "name": "낡은 지팡이",
-      "slot": "weapon",
-      "level": 1,
-      "job": "mage",
-      "bonus": {
-        "attack": 21,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 32
-    },
-    "w_archer_00": {
-      "id": "w_archer_00",
-      "name": "낡은 활",
-      "slot": "weapon",
-      "level": 1,
-      "job": "archer",
-      "bonus": {
-        "attack": 21,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 32
-    },
-    "a_00": {
-      "id": "a_00",
-      "name": "낡은 갑옷",
+    "g1_a": {
+      "id": "g1_a",
+      "name": "일반 갑옷",
       "slot": "armor",
+      "grade": 1,
       "level": 1,
       "bonus": {
         "attack": 0,
@@ -59,10 +30,11 @@
       },
       "price": 32
     },
-    "h_00": {
-      "id": "h_00",
-      "name": "낡은 투구",
+    "g1_h": {
+      "id": "g1_h",
+      "name": "일반 투구",
       "slot": "helmet",
+      "grade": 1,
       "level": 1,
       "bonus": {
         "attack": 0,
@@ -73,10 +45,11 @@
       },
       "price": 32
     },
-    "b_00": {
-      "id": "b_00",
-      "name": "낡은 신발",
+    "g1_b": {
+      "id": "g1_b",
+      "name": "일반 신발",
       "slot": "boots",
+      "grade": 1,
       "level": 1,
       "bonus": {
         "attack": 0,
@@ -87,10 +60,11 @@
       },
       "price": 32
     },
-    "n_00": {
-      "id": "n_00",
-      "name": "낡은 목걸이",
+    "g1_n": {
+      "id": "g1_n",
+      "name": "일반 목걸이",
       "slot": "necklace",
+      "grade": 1,
       "level": 1,
       "bonus": {
         "attack": 7,
@@ -101,10 +75,11 @@
       },
       "price": 32
     },
-    "r_00": {
-      "id": "r_00",
-      "name": "낡은 반지",
+    "g1_r": {
+      "id": "g1_r",
+      "name": "일반 반지",
       "slot": "ring",
+      "grade": 1,
       "level": 1,
       "bonus": {
         "attack": 7,
@@ -115,2082 +90,462 @@
       },
       "price": 32
     },
-    "w_fighter_01": {
-      "id": "w_fighter_01",
-      "name": "단단한 너클",
+    "g2_w": {
+      "id": "g2_w",
+      "name": "고급 무기",
       "slot": "weapon",
-      "level": 10,
-      "job": "fighter",
+      "grade": 2,
+      "level": 31,
       "bonus": {
-        "attack": 24.6,
+        "attack": 35.8,
         "defense": 0,
         "maxHp": 0,
         "crit": 0,
         "attackSpeed": 0
       },
-      "price": 140
+      "price": 392
     },
-    "w_mage_01": {
-      "id": "w_mage_01",
-      "name": "단단한 지팡이",
-      "slot": "weapon",
-      "level": 10,
-      "job": "mage",
-      "bonus": {
-        "attack": 24.6,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 140
-    },
-    "w_archer_01": {
-      "id": "w_archer_01",
-      "name": "단단한 활",
-      "slot": "weapon",
-      "level": 10,
-      "job": "archer",
-      "bonus": {
-        "attack": 24.6,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 140
-    },
-    "a_01": {
-      "id": "a_01",
-      "name": "단단한 갑옷",
+    "g2_a": {
+      "id": "g2_a",
+      "name": "고급 갑옷",
       "slot": "armor",
-      "level": 10,
+      "grade": 2,
+      "level": 31,
       "bonus": {
         "attack": 0,
-        "defense": 9.9,
-        "maxHp": 5.7,
+        "defense": 14.3,
+        "maxHp": 8.3,
         "crit": 0,
         "attackSpeed": 0
       },
-      "price": 140
+      "price": 392
     },
-    "h_01": {
-      "id": "h_01",
-      "name": "단단한 투구",
+    "g2_h": {
+      "id": "g2_h",
+      "name": "고급 투구",
       "slot": "helmet",
-      "level": 10,
+      "grade": 2,
+      "level": 31,
       "bonus": {
         "attack": 0,
-        "defense": 4.9,
-        "maxHp": 2.9,
+        "defense": 7.2,
+        "maxHp": 4.2,
         "crit": 0,
         "attackSpeed": 0
       },
-      "price": 140
+      "price": 392
     },
-    "b_01": {
-      "id": "b_01",
-      "name": "단단한 신발",
+    "g2_b": {
+      "id": "g2_b",
+      "name": "고급 신발",
       "slot": "boots",
-      "level": 10,
+      "grade": 2,
+      "level": 31,
       "bonus": {
         "attack": 0,
-        "defense": 4.9,
-        "maxHp": 2.9,
+        "defense": 7.2,
+        "maxHp": 4.2,
         "crit": 0,
         "attackSpeed": 0
       },
-      "price": 140
+      "price": 392
     },
-    "n_01": {
-      "id": "n_01",
-      "name": "단단한 목걸이",
+    "g2_n": {
+      "id": "g2_n",
+      "name": "고급 목걸이",
       "slot": "necklace",
-      "level": 10,
+      "grade": 2,
+      "level": 31,
       "bonus": {
-        "attack": 8.2,
-        "defense": 2.5,
-        "maxHp": 1.4,
-        "crit": 3,
-        "attackSpeed": 0
-      },
-      "price": 140
-    },
-    "r_01": {
-      "id": "r_01",
-      "name": "단단한 반지",
-      "slot": "ring",
-      "level": 10,
-      "bonus": {
-        "attack": 8.2,
-        "defense": 2.5,
-        "maxHp": 1.4,
-        "crit": 0,
-        "attackSpeed": 1
-      },
-      "price": 140
-    },
-    "w_fighter_02": {
-      "id": "w_fighter_02",
-      "name": "강철 너클",
-      "slot": "weapon",
-      "level": 20,
-      "job": "fighter",
-      "bonus": {
-        "attack": 29.4,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 260
-    },
-    "w_mage_02": {
-      "id": "w_mage_02",
-      "name": "강철 지팡이",
-      "slot": "weapon",
-      "level": 20,
-      "job": "mage",
-      "bonus": {
-        "attack": 29.4,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 260
-    },
-    "w_archer_02": {
-      "id": "w_archer_02",
-      "name": "강철 활",
-      "slot": "weapon",
-      "level": 20,
-      "job": "archer",
-      "bonus": {
-        "attack": 29.4,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 260
-    },
-    "a_02": {
-      "id": "a_02",
-      "name": "강철 갑옷",
-      "slot": "armor",
-      "level": 20,
-      "bonus": {
-        "attack": 0,
-        "defense": 11.8,
-        "maxHp": 6.9,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 260
-    },
-    "h_02": {
-      "id": "h_02",
-      "name": "강철 투구",
-      "slot": "helmet",
-      "level": 20,
-      "bonus": {
-        "attack": 0,
-        "defense": 5.9,
-        "maxHp": 3.4,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 260
-    },
-    "b_02": {
-      "id": "b_02",
-      "name": "강철 신발",
-      "slot": "boots",
-      "level": 20,
-      "bonus": {
-        "attack": 0,
-        "defense": 5.9,
-        "maxHp": 3.4,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 260
-    },
-    "n_02": {
-      "id": "n_02",
-      "name": "강철 목걸이",
-      "slot": "necklace",
-      "level": 20,
-      "bonus": {
-        "attack": 9.8,
-        "defense": 2.9,
-        "maxHp": 1.7,
-        "crit": 5,
-        "attackSpeed": 0
-      },
-      "price": 260
-    },
-    "r_02": {
-      "id": "r_02",
-      "name": "강철 반지",
-      "slot": "ring",
-      "level": 20,
-      "bonus": {
-        "attack": 9.8,
-        "defense": 2.9,
-        "maxHp": 1.7,
-        "crit": 0,
-        "attackSpeed": 2
-      },
-      "price": 260
-    },
-    "w_fighter_03": {
-      "id": "w_fighter_03",
-      "name": "은빛 너클",
-      "slot": "weapon",
-      "level": 30,
-      "job": "fighter",
-      "bonus": {
-        "attack": 35.1,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 380
-    },
-    "w_mage_03": {
-      "id": "w_mage_03",
-      "name": "은빛 지팡이",
-      "slot": "weapon",
-      "level": 30,
-      "job": "mage",
-      "bonus": {
-        "attack": 35.1,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 380
-    },
-    "w_archer_03": {
-      "id": "w_archer_03",
-      "name": "은빛 활",
-      "slot": "weapon",
-      "level": 30,
-      "job": "archer",
-      "bonus": {
-        "attack": 35.1,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 380
-    },
-    "a_03": {
-      "id": "a_03",
-      "name": "은빛 갑옷",
-      "slot": "armor",
-      "level": 30,
-      "bonus": {
-        "attack": 0,
-        "defense": 14.1,
-        "maxHp": 8.2,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 380
-    },
-    "h_03": {
-      "id": "h_03",
-      "name": "은빛 투구",
-      "slot": "helmet",
-      "level": 30,
-      "bonus": {
-        "attack": 0,
-        "defense": 7,
-        "maxHp": 4.1,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 380
-    },
-    "b_03": {
-      "id": "b_03",
-      "name": "은빛 신발",
-      "slot": "boots",
-      "level": 30,
-      "bonus": {
-        "attack": 0,
-        "defense": 7,
-        "maxHp": 4.1,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 380
-    },
-    "n_03": {
-      "id": "n_03",
-      "name": "은빛 목걸이",
-      "slot": "necklace",
-      "level": 30,
-      "bonus": {
-        "attack": 11.7,
-        "defense": 3.5,
+        "attack": 11.9,
+        "defense": 3.6,
         "maxHp": 2.1,
         "crit": 8,
         "attackSpeed": 0
       },
-      "price": 380
+      "price": 392
     },
-    "r_03": {
-      "id": "r_03",
-      "name": "은빛 반지",
+    "g2_r": {
+      "id": "g2_r",
+      "name": "고급 반지",
       "slot": "ring",
-      "level": 30,
+      "grade": 2,
+      "level": 31,
       "bonus": {
-        "attack": 11.7,
-        "defense": 3.5,
+        "attack": 11.9,
+        "defense": 3.6,
         "maxHp": 2.1,
         "crit": 0,
         "attackSpeed": 3
       },
-      "price": 380
+      "price": 392
     },
-    "w_fighter_04": {
-      "id": "w_fighter_04",
-      "name": "늪지 너클",
+    "g3_w": {
+      "id": "g3_w",
+      "name": "희귀 무기",
       "slot": "weapon",
-      "level": 40,
-      "job": "fighter",
+      "grade": 3,
+      "level": 61,
       "bonus": {
-        "attack": 42,
+        "attack": 61,
         "defense": 0,
         "maxHp": 0,
         "crit": 0,
         "attackSpeed": 0
       },
-      "price": 500
+      "price": 752
     },
-    "w_mage_04": {
-      "id": "w_mage_04",
-      "name": "늪지 지팡이",
-      "slot": "weapon",
-      "level": 40,
-      "job": "mage",
-      "bonus": {
-        "attack": 42,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 500
-    },
-    "w_archer_04": {
-      "id": "w_archer_04",
-      "name": "늪지 활",
-      "slot": "weapon",
-      "level": 40,
-      "job": "archer",
-      "bonus": {
-        "attack": 42,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 500
-    },
-    "a_04": {
-      "id": "a_04",
-      "name": "늪지 갑옷",
+    "g3_a": {
+      "id": "g3_a",
+      "name": "희귀 갑옷",
       "slot": "armor",
-      "level": 40,
+      "grade": 3,
+      "level": 61,
       "bonus": {
         "attack": 0,
-        "defense": 16.8,
-        "maxHp": 9.8,
+        "defense": 24.4,
+        "maxHp": 14.2,
         "crit": 0,
         "attackSpeed": 0
       },
-      "price": 500
+      "price": 752
     },
-    "h_04": {
-      "id": "h_04",
-      "name": "늪지 투구",
+    "g3_h": {
+      "id": "g3_h",
+      "name": "희귀 투구",
       "slot": "helmet",
-      "level": 40,
+      "grade": 3,
+      "level": 61,
       "bonus": {
         "attack": 0,
-        "defense": 8.4,
-        "maxHp": 4.9,
+        "defense": 12.2,
+        "maxHp": 7.1,
         "crit": 0,
         "attackSpeed": 0
       },
-      "price": 500
+      "price": 752
     },
-    "b_04": {
-      "id": "b_04",
-      "name": "늪지 신발",
+    "g3_b": {
+      "id": "g3_b",
+      "name": "희귀 신발",
       "slot": "boots",
-      "level": 40,
+      "grade": 3,
+      "level": 61,
       "bonus": {
         "attack": 0,
-        "defense": 8.4,
-        "maxHp": 4.9,
+        "defense": 12.2,
+        "maxHp": 7.1,
         "crit": 0,
         "attackSpeed": 0
       },
-      "price": 500
+      "price": 752
     },
-    "n_04": {
-      "id": "n_04",
-      "name": "늪지 목걸이",
+    "g3_n": {
+      "id": "g3_n",
+      "name": "희귀 목걸이",
       "slot": "necklace",
-      "level": 40,
+      "grade": 3,
+      "level": 61,
       "bonus": {
-        "attack": 14,
-        "defense": 4.2,
-        "maxHp": 2.4,
-        "crit": 11,
+        "attack": 20.3,
+        "defense": 6.1,
+        "maxHp": 3.6,
+        "crit": 17,
         "attackSpeed": 0
       },
-      "price": 500
+      "price": 752
     },
-    "r_04": {
-      "id": "r_04",
-      "name": "늪지 반지",
+    "g3_r": {
+      "id": "g3_r",
+      "name": "희귀 반지",
       "slot": "ring",
-      "level": 40,
+      "grade": 3,
+      "level": 61,
       "bonus": {
-        "attack": 14,
-        "defense": 4.2,
-        "maxHp": 2.4,
-        "crit": 0,
-        "attackSpeed": 4
-      },
-      "price": 500
-    },
-    "w_fighter_05": {
-      "id": "w_fighter_05",
-      "name": "서리 너클",
-      "slot": "weapon",
-      "level": 50,
-      "job": "fighter",
-      "bonus": {
-        "attack": 50.1,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 620
-    },
-    "w_mage_05": {
-      "id": "w_mage_05",
-      "name": "서리 지팡이",
-      "slot": "weapon",
-      "level": 50,
-      "job": "mage",
-      "bonus": {
-        "attack": 50.1,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 620
-    },
-    "w_archer_05": {
-      "id": "w_archer_05",
-      "name": "서리 활",
-      "slot": "weapon",
-      "level": 50,
-      "job": "archer",
-      "bonus": {
-        "attack": 50.1,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 620
-    },
-    "a_05": {
-      "id": "a_05",
-      "name": "서리 갑옷",
-      "slot": "armor",
-      "level": 50,
-      "bonus": {
-        "attack": 0,
-        "defense": 20.1,
-        "maxHp": 11.7,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 620
-    },
-    "h_05": {
-      "id": "h_05",
-      "name": "서리 투구",
-      "slot": "helmet",
-      "level": 50,
-      "bonus": {
-        "attack": 0,
-        "defense": 10,
-        "maxHp": 5.8,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 620
-    },
-    "b_05": {
-      "id": "b_05",
-      "name": "서리 신발",
-      "slot": "boots",
-      "level": 50,
-      "bonus": {
-        "attack": 0,
-        "defense": 10,
-        "maxHp": 5.8,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 620
-    },
-    "n_05": {
-      "id": "n_05",
-      "name": "서리 목걸이",
-      "slot": "necklace",
-      "level": 50,
-      "bonus": {
-        "attack": 16.7,
-        "defense": 5,
-        "maxHp": 2.9,
-        "crit": 14,
-        "attackSpeed": 0
-      },
-      "price": 620
-    },
-    "r_05": {
-      "id": "r_05",
-      "name": "서리 반지",
-      "slot": "ring",
-      "level": 50,
-      "bonus": {
-        "attack": 16.7,
-        "defense": 5,
-        "maxHp": 2.9,
-        "crit": 0,
-        "attackSpeed": 5
-      },
-      "price": 620
-    },
-    "w_fighter_06": {
-      "id": "w_fighter_06",
-      "name": "흑단 너클",
-      "slot": "weapon",
-      "level": 60,
-      "job": "fighter",
-      "bonus": {
-        "attack": 59.9,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 740
-    },
-    "w_mage_06": {
-      "id": "w_mage_06",
-      "name": "흑단 지팡이",
-      "slot": "weapon",
-      "level": 60,
-      "job": "mage",
-      "bonus": {
-        "attack": 59.9,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 740
-    },
-    "w_archer_06": {
-      "id": "w_archer_06",
-      "name": "흑단 활",
-      "slot": "weapon",
-      "level": 60,
-      "job": "archer",
-      "bonus": {
-        "attack": 59.9,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 740
-    },
-    "a_06": {
-      "id": "a_06",
-      "name": "흑단 갑옷",
-      "slot": "armor",
-      "level": 60,
-      "bonus": {
-        "attack": 0,
-        "defense": 24,
-        "maxHp": 14,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 740
-    },
-    "h_06": {
-      "id": "h_06",
-      "name": "흑단 투구",
-      "slot": "helmet",
-      "level": 60,
-      "bonus": {
-        "attack": 0,
-        "defense": 12,
-        "maxHp": 7,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 740
-    },
-    "b_06": {
-      "id": "b_06",
-      "name": "흑단 신발",
-      "slot": "boots",
-      "level": 60,
-      "bonus": {
-        "attack": 0,
-        "defense": 12,
-        "maxHp": 7,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 740
-    },
-    "n_06": {
-      "id": "n_06",
-      "name": "흑단 목걸이",
-      "slot": "necklace",
-      "level": 60,
-      "bonus": {
-        "attack": 20,
-        "defense": 6,
-        "maxHp": 3.5,
-        "crit": 16,
-        "attackSpeed": 0
-      },
-      "price": 740
-    },
-    "r_06": {
-      "id": "r_06",
-      "name": "흑단 반지",
-      "slot": "ring",
-      "level": 60,
-      "bonus": {
-        "attack": 20,
-        "defense": 6,
-        "maxHp": 3.5,
+        "attack": 20.3,
+        "defense": 6.1,
+        "maxHp": 3.6,
         "crit": 0,
         "attackSpeed": 7
       },
-      "price": 740
+      "price": 752
     },
-    "w_fighter_07": {
-      "id": "w_fighter_07",
-      "name": "고대 너클",
+    "g4_w": {
+      "id": "g4_w",
+      "name": "영웅 무기",
       "slot": "weapon",
-      "level": 70,
-      "job": "fighter",
+      "grade": 4,
+      "level": 91,
       "bonus": {
-        "attack": 71.5,
+        "attack": 103.9,
         "defense": 0,
         "maxHp": 0,
         "crit": 0,
         "attackSpeed": 0
       },
-      "price": 860
+      "price": 1112
     },
-    "w_mage_07": {
-      "id": "w_mage_07",
-      "name": "고대 지팡이",
-      "slot": "weapon",
-      "level": 70,
-      "job": "mage",
-      "bonus": {
-        "attack": 71.5,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 860
-    },
-    "w_archer_07": {
-      "id": "w_archer_07",
-      "name": "고대 활",
-      "slot": "weapon",
-      "level": 70,
-      "job": "archer",
-      "bonus": {
-        "attack": 71.5,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 860
-    },
-    "a_07": {
-      "id": "a_07",
-      "name": "고대 갑옷",
+    "g4_a": {
+      "id": "g4_a",
+      "name": "영웅 갑옷",
       "slot": "armor",
-      "level": 70,
+      "grade": 4,
+      "level": 91,
       "bonus": {
         "attack": 0,
-        "defense": 28.6,
-        "maxHp": 16.7,
+        "defense": 41.5,
+        "maxHp": 24.2,
         "crit": 0,
         "attackSpeed": 0
       },
-      "price": 860
+      "price": 1112
     },
-    "h_07": {
-      "id": "h_07",
-      "name": "고대 투구",
+    "g4_h": {
+      "id": "g4_h",
+      "name": "영웅 투구",
       "slot": "helmet",
-      "level": 70,
+      "grade": 4,
+      "level": 91,
       "bonus": {
         "attack": 0,
-        "defense": 14.3,
-        "maxHp": 8.3,
+        "defense": 20.8,
+        "maxHp": 12.1,
         "crit": 0,
         "attackSpeed": 0
       },
-      "price": 860
+      "price": 1112
     },
-    "b_07": {
-      "id": "b_07",
-      "name": "고대 신발",
+    "g4_b": {
+      "id": "g4_b",
+      "name": "영웅 신발",
       "slot": "boots",
-      "level": 70,
+      "grade": 4,
+      "level": 91,
       "bonus": {
         "attack": 0,
-        "defense": 14.3,
-        "maxHp": 8.3,
+        "defense": 20.8,
+        "maxHp": 12.1,
         "crit": 0,
         "attackSpeed": 0
       },
-      "price": 860
+      "price": 1112
     },
-    "n_07": {
-      "id": "n_07",
-      "name": "고대 목걸이",
+    "g4_n": {
+      "id": "g4_n",
+      "name": "영웅 목걸이",
       "slot": "necklace",
-      "level": 70,
+      "grade": 4,
+      "level": 91,
       "bonus": {
-        "attack": 23.8,
-        "defense": 7.2,
-        "maxHp": 4.2,
-        "crit": 19,
-        "attackSpeed": 0
-      },
-      "price": 860
-    },
-    "r_07": {
-      "id": "r_07",
-      "name": "고대 반지",
-      "slot": "ring",
-      "level": 70,
-      "bonus": {
-        "attack": 23.8,
-        "defense": 7.2,
-        "maxHp": 4.2,
-        "crit": 0,
-        "attackSpeed": 8
-      },
-      "price": 860
-    },
-    "w_fighter_08": {
-      "id": "w_fighter_08",
-      "name": "사막 너클",
-      "slot": "weapon",
-      "level": 80,
-      "job": "fighter",
-      "bonus": {
-        "attack": 85.4,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 980
-    },
-    "w_mage_08": {
-      "id": "w_mage_08",
-      "name": "사막 지팡이",
-      "slot": "weapon",
-      "level": 80,
-      "job": "mage",
-      "bonus": {
-        "attack": 85.4,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 980
-    },
-    "w_archer_08": {
-      "id": "w_archer_08",
-      "name": "사막 활",
-      "slot": "weapon",
-      "level": 80,
-      "job": "archer",
-      "bonus": {
-        "attack": 85.4,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 980
-    },
-    "a_08": {
-      "id": "a_08",
-      "name": "사막 갑옷",
-      "slot": "armor",
-      "level": 80,
-      "bonus": {
-        "attack": 0,
-        "defense": 34.2,
-        "maxHp": 19.9,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 980
-    },
-    "h_08": {
-      "id": "h_08",
-      "name": "사막 투구",
-      "slot": "helmet",
-      "level": 80,
-      "bonus": {
-        "attack": 0,
-        "defense": 17.1,
-        "maxHp": 10,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 980
-    },
-    "b_08": {
-      "id": "b_08",
-      "name": "사막 신발",
-      "slot": "boots",
-      "level": 80,
-      "bonus": {
-        "attack": 0,
-        "defense": 17.1,
-        "maxHp": 10,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 980
-    },
-    "n_08": {
-      "id": "n_08",
-      "name": "사막 목걸이",
-      "slot": "necklace",
-      "level": 80,
-      "bonus": {
-        "attack": 28.5,
-        "defense": 8.5,
-        "maxHp": 5,
-        "crit": 22,
-        "attackSpeed": 0
-      },
-      "price": 980
-    },
-    "r_08": {
-      "id": "r_08",
-      "name": "사막 반지",
-      "slot": "ring",
-      "level": 80,
-      "bonus": {
-        "attack": 28.5,
-        "defense": 8.5,
-        "maxHp": 5,
-        "crit": 0,
-        "attackSpeed": 9
-      },
-      "price": 980
-    },
-    "w_fighter_09": {
-      "id": "w_fighter_09",
-      "name": "백금 너클",
-      "slot": "weapon",
-      "level": 90,
-      "job": "fighter",
-      "bonus": {
-        "attack": 102,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1100
-    },
-    "w_mage_09": {
-      "id": "w_mage_09",
-      "name": "백금 지팡이",
-      "slot": "weapon",
-      "level": 90,
-      "job": "mage",
-      "bonus": {
-        "attack": 102,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1100
-    },
-    "w_archer_09": {
-      "id": "w_archer_09",
-      "name": "백금 활",
-      "slot": "weapon",
-      "level": 90,
-      "job": "archer",
-      "bonus": {
-        "attack": 102,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1100
-    },
-    "a_09": {
-      "id": "a_09",
-      "name": "백금 갑옷",
-      "slot": "armor",
-      "level": 90,
-      "bonus": {
-        "attack": 0,
-        "defense": 40.8,
-        "maxHp": 23.8,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1100
-    },
-    "h_09": {
-      "id": "h_09",
-      "name": "백금 투구",
-      "slot": "helmet",
-      "level": 90,
-      "bonus": {
-        "attack": 0,
-        "defense": 20.4,
-        "maxHp": 11.9,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1100
-    },
-    "b_09": {
-      "id": "b_09",
-      "name": "백금 신발",
-      "slot": "boots",
-      "level": 90,
-      "bonus": {
-        "attack": 0,
-        "defense": 20.4,
-        "maxHp": 11.9,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1100
-    },
-    "n_09": {
-      "id": "n_09",
-      "name": "백금 목걸이",
-      "slot": "necklace",
-      "level": 90,
-      "bonus": {
-        "attack": 34,
-        "defense": 10.2,
-        "maxHp": 6,
+        "attack": 34.6,
+        "defense": 10.4,
+        "maxHp": 6.1,
         "crit": 25,
         "attackSpeed": 0
       },
-      "price": 1100
+      "price": 1112
     },
-    "r_09": {
-      "id": "r_09",
-      "name": "백금 반지",
+    "g4_r": {
+      "id": "g4_r",
+      "name": "영웅 반지",
       "slot": "ring",
-      "level": 90,
+      "grade": 4,
+      "level": 91,
       "bonus": {
-        "attack": 34,
-        "defense": 10.2,
-        "maxHp": 6,
+        "attack": 34.6,
+        "defense": 10.4,
+        "maxHp": 6.1,
         "crit": 0,
         "attackSpeed": 10
       },
-      "price": 1100
+      "price": 1112
     },
-    "w_fighter_10": {
-      "id": "w_fighter_10",
-      "name": "유황 너클",
+    "g5_w": {
+      "id": "g5_w",
+      "name": "전설 무기",
       "slot": "weapon",
-      "level": 100,
-      "job": "fighter",
+      "grade": 5,
+      "level": 121,
       "bonus": {
-        "attack": 121.9,
+        "attack": 176.9,
         "defense": 0,
         "maxHp": 0,
         "crit": 0,
         "attackSpeed": 0
       },
-      "price": 1220
+      "price": 1472
     },
-    "w_mage_10": {
-      "id": "w_mage_10",
-      "name": "유황 지팡이",
-      "slot": "weapon",
-      "level": 100,
-      "job": "mage",
-      "bonus": {
-        "attack": 121.9,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1220
-    },
-    "w_archer_10": {
-      "id": "w_archer_10",
-      "name": "유황 활",
-      "slot": "weapon",
-      "level": 100,
-      "job": "archer",
-      "bonus": {
-        "attack": 121.9,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1220
-    },
-    "a_10": {
-      "id": "a_10",
-      "name": "유황 갑옷",
+    "g5_a": {
+      "id": "g5_a",
+      "name": "전설 갑옷",
       "slot": "armor",
-      "level": 100,
+      "grade": 5,
+      "level": 121,
       "bonus": {
         "attack": 0,
-        "defense": 48.7,
-        "maxHp": 28.4,
+        "defense": 70.8,
+        "maxHp": 41.3,
         "crit": 0,
         "attackSpeed": 0
       },
-      "price": 1220
+      "price": 1472
     },
-    "h_10": {
-      "id": "h_10",
-      "name": "유황 투구",
+    "g5_h": {
+      "id": "g5_h",
+      "name": "전설 투구",
       "slot": "helmet",
-      "level": 100,
+      "grade": 5,
+      "level": 121,
       "bonus": {
         "attack": 0,
-        "defense": 24.4,
-        "maxHp": 14.2,
+        "defense": 35.4,
+        "maxHp": 20.6,
         "crit": 0,
         "attackSpeed": 0
       },
-      "price": 1220
+      "price": 1472
     },
-    "b_10": {
-      "id": "b_10",
-      "name": "유황 신발",
+    "g5_b": {
+      "id": "g5_b",
+      "name": "전설 신발",
       "slot": "boots",
-      "level": 100,
+      "grade": 5,
+      "level": 121,
       "bonus": {
         "attack": 0,
-        "defense": 24.4,
-        "maxHp": 14.2,
+        "defense": 35.4,
+        "maxHp": 20.6,
         "crit": 0,
         "attackSpeed": 0
       },
-      "price": 1220
+      "price": 1472
     },
-    "n_10": {
-      "id": "n_10",
-      "name": "유황 목걸이",
+    "g5_n": {
+      "id": "g5_n",
+      "name": "전설 목걸이",
       "slot": "necklace",
-      "level": 100,
+      "grade": 5,
+      "level": 121,
       "bonus": {
-        "attack": 40.6,
-        "defense": 12.2,
-        "maxHp": 7.1,
-        "crit": 27,
-        "attackSpeed": 0
-      },
-      "price": 1220
-    },
-    "r_10": {
-      "id": "r_10",
-      "name": "유황 반지",
-      "slot": "ring",
-      "level": 100,
-      "bonus": {
-        "attack": 40.6,
-        "defense": 12.2,
-        "maxHp": 7.1,
-        "crit": 0,
-        "attackSpeed": 11
-      },
-      "price": 1220
-    },
-    "w_fighter_11": {
-      "id": "w_fighter_11",
-      "name": "용암 너클",
-      "slot": "weapon",
-      "level": 110,
-      "job": "fighter",
-      "bonus": {
-        "attack": 145.5,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1340
-    },
-    "w_mage_11": {
-      "id": "w_mage_11",
-      "name": "용암 지팡이",
-      "slot": "weapon",
-      "level": 110,
-      "job": "mage",
-      "bonus": {
-        "attack": 145.5,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1340
-    },
-    "w_archer_11": {
-      "id": "w_archer_11",
-      "name": "용암 활",
-      "slot": "weapon",
-      "level": 110,
-      "job": "archer",
-      "bonus": {
-        "attack": 145.5,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1340
-    },
-    "a_11": {
-      "id": "a_11",
-      "name": "용암 갑옷",
-      "slot": "armor",
-      "level": 110,
-      "bonus": {
-        "attack": 0,
-        "defense": 58.2,
-        "maxHp": 34,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1340
-    },
-    "h_11": {
-      "id": "h_11",
-      "name": "용암 투구",
-      "slot": "helmet",
-      "level": 110,
-      "bonus": {
-        "attack": 0,
-        "defense": 29.1,
-        "maxHp": 17,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1340
-    },
-    "b_11": {
-      "id": "b_11",
-      "name": "용암 신발",
-      "slot": "boots",
-      "level": 110,
-      "bonus": {
-        "attack": 0,
-        "defense": 29.1,
-        "maxHp": 17,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1340
-    },
-    "n_11": {
-      "id": "n_11",
-      "name": "용암 목걸이",
-      "slot": "necklace",
-      "level": 110,
-      "bonus": {
-        "attack": 48.5,
-        "defense": 14.6,
-        "maxHp": 8.5,
-        "crit": 30,
-        "attackSpeed": 0
-      },
-      "price": 1340
-    },
-    "r_11": {
-      "id": "r_11",
-      "name": "용암 반지",
-      "slot": "ring",
-      "level": 110,
-      "bonus": {
-        "attack": 48.5,
-        "defense": 14.6,
-        "maxHp": 8.5,
-        "crit": 0,
-        "attackSpeed": 12
-      },
-      "price": 1340
-    },
-    "w_fighter_12": {
-      "id": "w_fighter_12",
-      "name": "빙하 너클",
-      "slot": "weapon",
-      "level": 120,
-      "job": "fighter",
-      "bonus": {
-        "attack": 173.8,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1460
-    },
-    "w_mage_12": {
-      "id": "w_mage_12",
-      "name": "빙하 지팡이",
-      "slot": "weapon",
-      "level": 120,
-      "job": "mage",
-      "bonus": {
-        "attack": 173.8,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1460
-    },
-    "w_archer_12": {
-      "id": "w_archer_12",
-      "name": "빙하 활",
-      "slot": "weapon",
-      "level": 120,
-      "job": "archer",
-      "bonus": {
-        "attack": 173.8,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1460
-    },
-    "a_12": {
-      "id": "a_12",
-      "name": "빙하 갑옷",
-      "slot": "armor",
-      "level": 120,
-      "bonus": {
-        "attack": 0,
-        "defense": 69.5,
-        "maxHp": 40.6,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1460
-    },
-    "h_12": {
-      "id": "h_12",
-      "name": "빙하 투구",
-      "slot": "helmet",
-      "level": 120,
-      "bonus": {
-        "attack": 0,
-        "defense": 34.8,
-        "maxHp": 20.3,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1460
-    },
-    "b_12": {
-      "id": "b_12",
-      "name": "빙하 신발",
-      "slot": "boots",
-      "level": 120,
-      "bonus": {
-        "attack": 0,
-        "defense": 34.8,
-        "maxHp": 20.3,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1460
-    },
-    "n_12": {
-      "id": "n_12",
-      "name": "빙하 목걸이",
-      "slot": "necklace",
-      "level": 120,
-      "bonus": {
-        "attack": 57.9,
-        "defense": 17.4,
-        "maxHp": 10.1,
+        "attack": 59,
+        "defense": 17.7,
+        "maxHp": 10.3,
         "crit": 33,
         "attackSpeed": 0
       },
-      "price": 1460
+      "price": 1472
     },
-    "r_12": {
-      "id": "r_12",
-      "name": "빙하 반지",
+    "g5_r": {
+      "id": "g5_r",
+      "name": "전설 반지",
       "slot": "ring",
-      "level": 120,
+      "grade": 5,
+      "level": 121,
       "bonus": {
-        "attack": 57.9,
-        "defense": 17.4,
-        "maxHp": 10.1,
+        "attack": 59,
+        "defense": 17.7,
+        "maxHp": 10.3,
         "crit": 0,
         "attackSpeed": 13
       },
-      "price": 1460
+      "price": 1472
     },
-    "w_fighter_13": {
-      "id": "w_fighter_13",
-      "name": "뒤틀린 너클",
+    "g6_w": {
+      "id": "g6_w",
+      "name": "초월 무기",
       "slot": "weapon",
-      "level": 130,
-      "job": "fighter",
+      "grade": 6,
+      "level": 151,
       "bonus": {
-        "attack": 207.6,
+        "attack": 301.5,
         "defense": 0,
         "maxHp": 0,
         "crit": 0,
         "attackSpeed": 0
       },
-      "price": 1580
+      "price": 1832
     },
-    "w_mage_13": {
-      "id": "w_mage_13",
-      "name": "뒤틀린 지팡이",
-      "slot": "weapon",
-      "level": 130,
-      "job": "mage",
-      "bonus": {
-        "attack": 207.6,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1580
-    },
-    "w_archer_13": {
-      "id": "w_archer_13",
-      "name": "뒤틀린 활",
-      "slot": "weapon",
-      "level": 130,
-      "job": "archer",
-      "bonus": {
-        "attack": 207.6,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1580
-    },
-    "a_13": {
-      "id": "a_13",
-      "name": "뒤틀린 갑옷",
+    "g6_a": {
+      "id": "g6_a",
+      "name": "초월 갑옷",
       "slot": "armor",
-      "level": 130,
+      "grade": 6,
+      "level": 151,
       "bonus": {
         "attack": 0,
-        "defense": 83,
-        "maxHp": 48.4,
+        "defense": 120.6,
+        "maxHp": 70.3,
         "crit": 0,
         "attackSpeed": 0
       },
-      "price": 1580
+      "price": 1832
     },
-    "h_13": {
-      "id": "h_13",
-      "name": "뒤틀린 투구",
+    "g6_h": {
+      "id": "g6_h",
+      "name": "초월 투구",
       "slot": "helmet",
-      "level": 130,
+      "grade": 6,
+      "level": 151,
       "bonus": {
         "attack": 0,
-        "defense": 41.5,
-        "maxHp": 24.2,
+        "defense": 60.3,
+        "maxHp": 35.2,
         "crit": 0,
         "attackSpeed": 0
       },
-      "price": 1580
+      "price": 1832
     },
-    "b_13": {
-      "id": "b_13",
-      "name": "뒤틀린 신발",
+    "g6_b": {
+      "id": "g6_b",
+      "name": "초월 신발",
       "slot": "boots",
-      "level": 130,
+      "grade": 6,
+      "level": 151,
       "bonus": {
         "attack": 0,
-        "defense": 41.5,
-        "maxHp": 24.2,
+        "defense": 60.3,
+        "maxHp": 35.2,
         "crit": 0,
         "attackSpeed": 0
       },
-      "price": 1580
+      "price": 1832
     },
-    "n_13": {
-      "id": "n_13",
-      "name": "뒤틀린 목걸이",
+    "g6_n": {
+      "id": "g6_n",
+      "name": "초월 목걸이",
       "slot": "necklace",
-      "level": 130,
+      "grade": 6,
+      "level": 151,
       "bonus": {
-        "attack": 69.2,
-        "defense": 20.8,
-        "maxHp": 12.1,
-        "crit": 36,
+        "attack": 100.5,
+        "defense": 30.1,
+        "maxHp": 17.6,
+        "crit": 42,
         "attackSpeed": 0
       },
-      "price": 1580
+      "price": 1832
     },
-    "r_13": {
-      "id": "r_13",
-      "name": "뒤틀린 반지",
+    "g6_r": {
+      "id": "g6_r",
+      "name": "초월 반지",
       "slot": "ring",
-      "level": 130,
+      "grade": 6,
+      "level": 151,
       "bonus": {
-        "attack": 69.2,
-        "defense": 20.8,
-        "maxHp": 12.1,
-        "crit": 0,
-        "attackSpeed": 14
-      },
-      "price": 1580
-    },
-    "w_fighter_14": {
-      "id": "w_fighter_14",
-      "name": "그림자 너클",
-      "slot": "weapon",
-      "level": 140,
-      "job": "fighter",
-      "bonus": {
-        "attack": 248,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1700
-    },
-    "w_mage_14": {
-      "id": "w_mage_14",
-      "name": "그림자 지팡이",
-      "slot": "weapon",
-      "level": 140,
-      "job": "mage",
-      "bonus": {
-        "attack": 248,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1700
-    },
-    "w_archer_14": {
-      "id": "w_archer_14",
-      "name": "그림자 활",
-      "slot": "weapon",
-      "level": 140,
-      "job": "archer",
-      "bonus": {
-        "attack": 248,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1700
-    },
-    "a_14": {
-      "id": "a_14",
-      "name": "그림자 갑옷",
-      "slot": "armor",
-      "level": 140,
-      "bonus": {
-        "attack": 0,
-        "defense": 99.2,
-        "maxHp": 57.9,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1700
-    },
-    "h_14": {
-      "id": "h_14",
-      "name": "그림자 투구",
-      "slot": "helmet",
-      "level": 140,
-      "bonus": {
-        "attack": 0,
-        "defense": 49.6,
-        "maxHp": 28.9,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1700
-    },
-    "b_14": {
-      "id": "b_14",
-      "name": "그림자 신발",
-      "slot": "boots",
-      "level": 140,
-      "bonus": {
-        "attack": 0,
-        "defense": 49.6,
-        "maxHp": 28.9,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1700
-    },
-    "n_14": {
-      "id": "n_14",
-      "name": "그림자 목걸이",
-      "slot": "necklace",
-      "level": 140,
-      "bonus": {
-        "attack": 82.7,
-        "defense": 24.8,
-        "maxHp": 14.5,
-        "crit": 39,
-        "attackSpeed": 0
-      },
-      "price": 1700
-    },
-    "r_14": {
-      "id": "r_14",
-      "name": "그림자 반지",
-      "slot": "ring",
-      "level": 140,
-      "bonus": {
-        "attack": 82.7,
-        "defense": 24.8,
-        "maxHp": 14.5,
-        "crit": 0,
-        "attackSpeed": 15
-      },
-      "price": 1700
-    },
-    "w_fighter_15": {
-      "id": "w_fighter_15",
-      "name": "폐허 너클",
-      "slot": "weapon",
-      "level": 150,
-      "job": "fighter",
-      "bonus": {
-        "attack": 296.1,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1820
-    },
-    "w_mage_15": {
-      "id": "w_mage_15",
-      "name": "폐허 지팡이",
-      "slot": "weapon",
-      "level": 150,
-      "job": "mage",
-      "bonus": {
-        "attack": 296.1,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1820
-    },
-    "w_archer_15": {
-      "id": "w_archer_15",
-      "name": "폐허 활",
-      "slot": "weapon",
-      "level": 150,
-      "job": "archer",
-      "bonus": {
-        "attack": 296.1,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1820
-    },
-    "a_15": {
-      "id": "a_15",
-      "name": "폐허 갑옷",
-      "slot": "armor",
-      "level": 150,
-      "bonus": {
-        "attack": 0,
-        "defense": 118.5,
-        "maxHp": 69.1,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1820
-    },
-    "h_15": {
-      "id": "h_15",
-      "name": "폐허 투구",
-      "slot": "helmet",
-      "level": 150,
-      "bonus": {
-        "attack": 0,
-        "defense": 59.2,
-        "maxHp": 34.6,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1820
-    },
-    "b_15": {
-      "id": "b_15",
-      "name": "폐허 신발",
-      "slot": "boots",
-      "level": 150,
-      "bonus": {
-        "attack": 0,
-        "defense": 59.2,
-        "maxHp": 34.6,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1820
-    },
-    "n_15": {
-      "id": "n_15",
-      "name": "폐허 목걸이",
-      "slot": "necklace",
-      "level": 150,
-      "bonus": {
-        "attack": 98.7,
-        "defense": 29.6,
-        "maxHp": 17.3,
-        "crit": 41,
-        "attackSpeed": 0
-      },
-      "price": 1820
-    },
-    "r_15": {
-      "id": "r_15",
-      "name": "폐허 반지",
-      "slot": "ring",
-      "level": 150,
-      "bonus": {
-        "attack": 98.7,
-        "defense": 29.6,
-        "maxHp": 17.3,
+        "attack": 100.5,
+        "defense": 30.1,
+        "maxHp": 17.6,
         "crit": 0,
         "attackSpeed": 17
       },
-      "price": 1820
+      "price": 1832
     },
-    "w_fighter_16": {
-      "id": "w_fighter_16",
-      "name": "창백한 너클",
+    "g7_w": {
+      "id": "g7_w",
+      "name": "태초 무기",
       "slot": "weapon",
-      "level": 160,
-      "job": "fighter",
-      "bonus": {
-        "attack": 353.7,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1940
-    },
-    "w_mage_16": {
-      "id": "w_mage_16",
-      "name": "창백한 지팡이",
-      "slot": "weapon",
-      "level": 160,
-      "job": "mage",
-      "bonus": {
-        "attack": 353.7,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1940
-    },
-    "w_archer_16": {
-      "id": "w_archer_16",
-      "name": "창백한 활",
-      "slot": "weapon",
-      "level": 160,
-      "job": "archer",
-      "bonus": {
-        "attack": 353.7,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1940
-    },
-    "a_16": {
-      "id": "a_16",
-      "name": "창백한 갑옷",
-      "slot": "armor",
-      "level": 160,
-      "bonus": {
-        "attack": 0,
-        "defense": 141.5,
-        "maxHp": 82.5,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1940
-    },
-    "h_16": {
-      "id": "h_16",
-      "name": "창백한 투구",
-      "slot": "helmet",
-      "level": 160,
-      "bonus": {
-        "attack": 0,
-        "defense": 70.7,
-        "maxHp": 41.3,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1940
-    },
-    "b_16": {
-      "id": "b_16",
-      "name": "창백한 신발",
-      "slot": "boots",
-      "level": 160,
-      "bonus": {
-        "attack": 0,
-        "defense": 70.7,
-        "maxHp": 41.3,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 1940
-    },
-    "n_16": {
-      "id": "n_16",
-      "name": "창백한 목걸이",
-      "slot": "necklace",
-      "level": 160,
-      "bonus": {
-        "attack": 117.9,
-        "defense": 35.4,
-        "maxHp": 20.6,
-        "crit": 44,
-        "attackSpeed": 0
-      },
-      "price": 1940
-    },
-    "r_16": {
-      "id": "r_16",
-      "name": "창백한 반지",
-      "slot": "ring",
-      "level": 160,
-      "bonus": {
-        "attack": 117.9,
-        "defense": 35.4,
-        "maxHp": 20.6,
-        "crit": 0,
-        "attackSpeed": 18
-      },
-      "price": 1940
-    },
-    "w_fighter_17": {
-      "id": "w_fighter_17",
-      "name": "균열 너클",
-      "slot": "weapon",
-      "level": 170,
-      "job": "fighter",
-      "bonus": {
-        "attack": 422.5,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 2060
-    },
-    "w_mage_17": {
-      "id": "w_mage_17",
-      "name": "균열 지팡이",
-      "slot": "weapon",
-      "level": 170,
-      "job": "mage",
-      "bonus": {
-        "attack": 422.5,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 2060
-    },
-    "w_archer_17": {
-      "id": "w_archer_17",
-      "name": "균열 활",
-      "slot": "weapon",
-      "level": 170,
-      "job": "archer",
-      "bonus": {
-        "attack": 422.5,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 2060
-    },
-    "a_17": {
-      "id": "a_17",
-      "name": "균열 갑옷",
-      "slot": "armor",
-      "level": 170,
-      "bonus": {
-        "attack": 0,
-        "defense": 169,
-        "maxHp": 98.6,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 2060
-    },
-    "h_17": {
-      "id": "h_17",
-      "name": "균열 투구",
-      "slot": "helmet",
-      "level": 170,
-      "bonus": {
-        "attack": 0,
-        "defense": 84.5,
-        "maxHp": 49.3,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 2060
-    },
-    "b_17": {
-      "id": "b_17",
-      "name": "균열 신발",
-      "slot": "boots",
-      "level": 170,
-      "bonus": {
-        "attack": 0,
-        "defense": 84.5,
-        "maxHp": 49.3,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 2060
-    },
-    "n_17": {
-      "id": "n_17",
-      "name": "균열 목걸이",
-      "slot": "necklace",
-      "level": 170,
-      "bonus": {
-        "attack": 140.8,
-        "defense": 42.2,
-        "maxHp": 24.6,
-        "crit": 47,
-        "attackSpeed": 0
-      },
-      "price": 2060
-    },
-    "r_17": {
-      "id": "r_17",
-      "name": "균열 반지",
-      "slot": "ring",
-      "level": 170,
-      "bonus": {
-        "attack": 140.8,
-        "defense": 42.2,
-        "maxHp": 24.6,
-        "crit": 0,
-        "attackSpeed": 19
-      },
-      "price": 2060
-    },
-    "w_fighter_18": {
-      "id": "w_fighter_18",
-      "name": "심연 너클",
-      "slot": "weapon",
-      "level": 180,
-      "job": "fighter",
-      "bonus": {
-        "attack": 504.6,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 2180
-    },
-    "w_mage_18": {
-      "id": "w_mage_18",
-      "name": "심연 지팡이",
-      "slot": "weapon",
-      "level": 180,
-      "job": "mage",
-      "bonus": {
-        "attack": 504.6,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 2180
-    },
-    "w_archer_18": {
-      "id": "w_archer_18",
-      "name": "심연 활",
-      "slot": "weapon",
-      "level": 180,
-      "job": "archer",
-      "bonus": {
-        "attack": 504.6,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 2180
-    },
-    "a_18": {
-      "id": "a_18",
-      "name": "심연 갑옷",
-      "slot": "armor",
-      "level": 180,
-      "bonus": {
-        "attack": 0,
-        "defense": 201.8,
-        "maxHp": 117.7,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 2180
-    },
-    "h_18": {
-      "id": "h_18",
-      "name": "심연 투구",
-      "slot": "helmet",
-      "level": 180,
-      "bonus": {
-        "attack": 0,
-        "defense": 100.9,
-        "maxHp": 58.9,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 2180
-    },
-    "b_18": {
-      "id": "b_18",
-      "name": "심연 신발",
-      "slot": "boots",
-      "level": 180,
-      "bonus": {
-        "attack": 0,
-        "defense": 100.9,
-        "maxHp": 58.9,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 2180
-    },
-    "n_18": {
-      "id": "n_18",
-      "name": "심연 목걸이",
-      "slot": "necklace",
-      "level": 180,
-      "bonus": {
-        "attack": 168.2,
-        "defense": 50.5,
-        "maxHp": 29.4,
-        "crit": 50,
-        "attackSpeed": 0
-      },
-      "price": 2180
-    },
-    "r_18": {
-      "id": "r_18",
-      "name": "심연 반지",
-      "slot": "ring",
-      "level": 180,
-      "bonus": {
-        "attack": 168.2,
-        "defense": 50.5,
-        "maxHp": 29.4,
-        "crit": 0,
-        "attackSpeed": 20
-      },
-      "price": 2180
-    },
-    "w_fighter_19": {
-      "id": "w_fighter_19",
-      "name": "종말 너클",
-      "slot": "weapon",
-      "level": 190,
-      "job": "fighter",
+      "grade": 7,
+      "level": 181,
       "bonus": {
         "attack": 513.6,
         "defense": 0,
@@ -2198,43 +553,14 @@
         "crit": 0,
         "attackSpeed": 0
       },
-      "price": 2300
+      "price": 2192
     },
-    "w_mage_19": {
-      "id": "w_mage_19",
-      "name": "종말 지팡이",
-      "slot": "weapon",
-      "level": 190,
-      "job": "mage",
-      "bonus": {
-        "attack": 513.6,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 2300
-    },
-    "w_archer_19": {
-      "id": "w_archer_19",
-      "name": "종말 활",
-      "slot": "weapon",
-      "level": 190,
-      "job": "archer",
-      "bonus": {
-        "attack": 513.6,
-        "defense": 0,
-        "maxHp": 0,
-        "crit": 0,
-        "attackSpeed": 0
-      },
-      "price": 2300
-    },
-    "a_19": {
-      "id": "a_19",
-      "name": "종말 갑옷",
+    "g7_a": {
+      "id": "g7_a",
+      "name": "태초 갑옷",
       "slot": "armor",
-      "level": 190,
+      "grade": 7,
+      "level": 181,
       "bonus": {
         "attack": 0,
         "defense": 205.4,
@@ -2242,13 +568,14 @@
         "crit": 0,
         "attackSpeed": 0
       },
-      "price": 2300
+      "price": 2192
     },
-    "h_19": {
-      "id": "h_19",
-      "name": "종말 투구",
+    "g7_h": {
+      "id": "g7_h",
+      "name": "태초 투구",
       "slot": "helmet",
-      "level": 190,
+      "grade": 7,
+      "level": 181,
       "bonus": {
         "attack": 0,
         "defense": 102.7,
@@ -2256,13 +583,14 @@
         "crit": 0,
         "attackSpeed": 0
       },
-      "price": 2300
+      "price": 2192
     },
-    "b_19": {
-      "id": "b_19",
-      "name": "종말 신발",
+    "g7_b": {
+      "id": "g7_b",
+      "name": "태초 신발",
       "slot": "boots",
-      "level": 190,
+      "grade": 7,
+      "level": 181,
       "bonus": {
         "attack": 0,
         "defense": 102.7,
@@ -2270,13 +598,14 @@
         "crit": 0,
         "attackSpeed": 0
       },
-      "price": 2300
+      "price": 2192
     },
-    "n_19": {
-      "id": "n_19",
-      "name": "종말 목걸이",
+    "g7_n": {
+      "id": "g7_n",
+      "name": "태초 목걸이",
       "slot": "necklace",
-      "level": 190,
+      "grade": 7,
+      "level": 181,
       "bonus": {
         "attack": 171.2,
         "defense": 51.4,
@@ -2284,13 +613,14 @@
         "crit": 50,
         "attackSpeed": 0
       },
-      "price": 2300
+      "price": 2192
     },
-    "r_19": {
-      "id": "r_19",
-      "name": "종말 반지",
+    "g7_r": {
+      "id": "g7_r",
+      "name": "태초 반지",
       "slot": "ring",
-      "level": 190,
+      "grade": 7,
+      "level": 181,
       "bonus": {
         "attack": 171.2,
         "defense": 51.4,
@@ -2298,7 +628,7 @@
         "crit": 0,
         "attackSpeed": 20
       },
-      "price": 2300
+      "price": 2192
     }
   },
   "slots": [
@@ -2325,12 +655,10 @@
     "ring": "r",
     "necklace": "n"
   },
-  "jobSlots": [
-    "weapon"
-  ],
+  "jobSlots": [],
   "bagSize": 200,
   "gradeMin": 1,
-  "gradeMax": 10,
+  "gradeMax": 7,
   "maxDropGrade": 7,
   "dropGrades": [
     [],
@@ -2439,5 +767,13 @@
     0.0016,
     0.0011
   ],
-  "tierCount": 20
+  "gradeLevels": [
+    1,
+    31,
+    61,
+    91,
+    121,
+    151,
+    181
+  ]
 }

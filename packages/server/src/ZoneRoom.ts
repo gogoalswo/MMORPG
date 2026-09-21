@@ -49,7 +49,7 @@ import {
   JOB_IDS,
   NPC_REACH,
   gradeMultiplier,
-  tierForLevel,
+  gradeForLevel,
   type NpcRole,
   equipmentStats,
   getItem,
@@ -1328,14 +1328,14 @@ export class ZoneRoom extends Room {
    * 무기만 파는 건 "일단 때릴 건 있어야 시작한다"는 최소한이다.
    */
   private shopStock(player: PlayerState): string[] {
-    const job = player.job as JobId;
-    const maxTier = tierForLevel(player.level);
+    // 장비는 직업을 안 탄다 (2026-09-21) — 진열은 등급으로만 거른다.
+    // 낄 수 있는 등급과 그 아래 하나까지 — 아래를 같이 두는 건 강화 여벌 때문이다
+    const top = gradeForLevel(player.level);
     return Object.values(ITEMS)
-      .filter((item) => {
-        if (item.slot !== 'weapon') return false;
-        if (item.job !== job) return false;
-        return item.level <= player.level && tierForLevel(item.level) >= maxTier - 1;
-      })
+      .filter(
+        (item) =>
+          item.slot === 'weapon' && item.level <= player.level && item.grade >= top - 1
+      )
       .map((item) => item.id);
   }
 

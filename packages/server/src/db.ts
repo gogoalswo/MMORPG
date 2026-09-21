@@ -1,6 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import {
   GRADE_MAX,
+  migrateItemId,
   GRADE_MIN,
   MAX_ENHANCE,
   getItem,
@@ -249,14 +250,22 @@ function toStack(raw: unknown): ItemStack | null {
   return null;
 }
 
-/** 저장된 옵션을 지금 규칙으로 다듬고, 없으면 한 번 굴려 붙인다 */
+/**
+ * 저장된 옵션을 지금 규칙으로 다듬고, 없으면 한 번 굴려 붙인다.
+ *
+ * **id 와 등급도 여기서 맞춘다** (2026-09-21). 단계 축을 없애면서 옛 id 는
+ * `migrateItemId` 로 옮기고, 등급은 이제 아이템이 들고 있으므로 저장값이 아니라
+ * 표에서 가져온다 — 둘이 어긋나면 수치와 표시가 따로 논다
+ */
 function withOptions(stack: ItemStack, raw: unknown): ItemStack {
-  const item = getItem(stack.id);
+  const id = migrateItemId(stack.id);
+  const item = id ? getItem(id) : null;
   if (!item) return { ...stack, options: [] };
+  const moved: ItemStack = { ...stack, id: item.id, grade: item.grade };
   if (raw === undefined || raw === null) {
-    return { ...stack, options: rollOptions(item, stack.grade) };
+    return { ...moved, options: rollOptions(item, moved.grade) };
   }
-  return { ...stack, options: sanitizeOptions(raw, item, stack.grade) };
+  return { ...moved, options: sanitizeOptions(raw, item, moved.grade) };
 }
 
 function toStrings(raw: unknown[]): string[] {

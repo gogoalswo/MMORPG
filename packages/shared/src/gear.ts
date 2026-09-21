@@ -8,20 +8,18 @@
  *
  * ## 기존 `items.ts` 와 무엇이 다른가
  *
- * | | `items.ts` (지금 도는 것) | 여기 (설계) |
- * |---|---|---|
- * | 축 | 단계 20개(요구 레벨) × 등급 1~10 | **등급 7개**뿐 |
- * | 카탈로그 | 180종 (재료 20 포함) | **56종** |
+ * ## 2026-09-21 — 카탈로그까지 이 표로 옮겼다 ★
  *
- * **수치는 2026-09-20 에 붙였다.** `items.ts` 가 `slotStats()` 를 불러 단계마다 %를
- * 뽑고(요구 레벨을 연속 등급으로 보간), 강화 배수·성공률도 여기 표를 쓴다.
- * 그래서 게임은 이미 설계의 숫자로 돈다.
+ * 수치는 2026-09-20 에 붙였고, **카탈로그는 2026-09-21 에 붙였다.** `items.ts` 의
+ * 단계 20개 축이 사라지고 **등급 7개가 유일한 축**이 됐다. 그때 정한 세 가지:
  *
- * **아직 안 바꾼 것은 카탈로그다.** 56종으로 갈아끼우려면 설계 문서 10장이 남겨 둔
- * 세 가지를 먼저 정해야 한다 — 랜덤 옵션을 남길지 · 제작과 재료를 어떻게 할지 ·
- * 보스가 무엇을 떨굴지.
+ * - **랜덤 옵션은 남긴다** (지시: "1번은 남겨"). 다만 품질 등급 1~10 이라는 두 번째
+ *   축은 없애고 장비 등급 1~7 로 합쳤다 — 아래 `OPTION_GRADE_MAX` 참고.
+ * - **직업별로 나누지 않는다** (지시: "직업별 장비는 동일해"). 무기도 한 벌이라 42종.
+ * - 등급 이름은 **일반 · 고급 · 희귀 · 영웅 · 전설 · 초월 · 태초**.
+ *
+ * 남은 것은 보스 드롭뿐이다 — 보스는 아직 금화만 준다.
  */
-import { JOB_IDS, type JobId } from './character.ts';
 import { EQUIP_SLOTS, SLOT_CODE, type EquipSlot } from './slots.ts';
 
 /** 등급 수. 사냥터 20개와 1:1 이 아니다 — 등급 하나가 사냥터 3개(30레벨)를 덮는다 */
@@ -240,15 +238,14 @@ export function dropGrades(field: number): number[] {
   return top <= 1 ? [1] : [top - 1, top];
 }
 
-/** 등급 접두어. `items.ts` 의 단계 접두어에서 일곱 개를 골라 톤을 맞췄다 */
-const GRADE_PREFIX = ['낡은', '단단한', '강철', '은빛', '고대', '심연', '종말'];
-
-/** 직업을 타는 슬롯은 무기 하나다 */
-const WEAPON_NAME: Record<JobId, string> = {
-  fighter: '너클',
-  mage: '지팡이',
-  archer: '활',
-};
+/**
+ * 등급 이름 — **일반 → 태초.** 2026-09-21 지시.
+ *
+ * 그 전에는 사냥터 접두어("낡은 · 단단한 · 강철 …")에서 일곱 개를 고른 것이었는데,
+ * 그건 단계 20개 축의 잔재였다. 등급이 유일한 축이 된 지금은 **등급 이름이 곧
+ * 희소도**라야 읽힌다.
+ */
+export const GRADE_NAME = ['일반', '고급', '희귀', '영웅', '전설', '초월', '태초'];
 
 const SLOT_LABEL: Record<EquipSlot, string> = {
   weapon: '무기',
@@ -266,43 +263,35 @@ export interface GearDef {
   grade: number;
   /** 착용 레벨 */
   level: number;
-  /** 무기만 직업을 탄다 */
-  job?: JobId;
   /** 무강(1단) 기준 수치. 강화는 `slotStats(slot, grade, step)` 로 다시 구한다 */
   stats: Record<GearStat, number>;
 }
 
 /**
- * 등급 7 × 슬롯 6 = **56종**. 무기만 직업 3벌이라 7 × (3 + 5) 다.
+ * 등급 7 × 슬롯 6 = **42종.**
  *
- * 단계 20개짜리 옛 표(180종)보다 훨씬 적다. **아이템 레벨 축을 없앴기 때문**이고,
+ * **직업별로 나누지 않는다** — 전 직업이 같은 장비를 쓴다 (2026-09-21 지시).
+ * 그 전에는 무기만 직업 3벌이라 56종이었다.
+ *
+ * 단계 20개짜리 옛 표(160종)보다 훨씬 적다. **아이템 레벨 축을 없앴기 때문**이고,
  * 그게 설계의 핵심이다 — 등급 하나가 30레벨을 덮으므로 그 안에서는 갈아입을 것이
  * 없고, 대신 **강화**와 **다음 등급 착용 레벨**이 성장을 맡는다.
  */
 function buildGear(): Record<string, GearDef> {
   const out: Record<string, GearDef> = {};
   for (let grade = 1; grade <= GRADE_COUNT; grade++) {
-    const prefix = GRADE_PREFIX[grade - 1]!;
+    const prefix = GRADE_NAME[grade - 1]!;
     const level = equipLevel(grade);
     for (const slot of EQUIP_SLOTS) {
-      const stats = slotStats(slot, grade);
-      if (slot === 'weapon') {
-        for (const job of JOB_IDS) {
-          const id = `g${grade}_${SLOT_CODE[slot]}_${job}`;
-          out[id] = {
-            id,
-            name: `${prefix} ${WEAPON_NAME[job]}`,
-            slot,
-            grade,
-            level,
-            job,
-            stats,
-          };
-        }
-        continue;
-      }
       const id = `g${grade}_${SLOT_CODE[slot]}`;
-      out[id] = { id, name: `${prefix} ${SLOT_LABEL[slot]}`, slot, grade, level, stats };
+      out[id] = {
+        id,
+        name: `${prefix} ${SLOT_LABEL[slot]}`,
+        slot,
+        grade,
+        level,
+        stats: slotStats(slot, grade),
+      };
     }
   }
   return out;
@@ -310,13 +299,9 @@ function buildGear(): Record<string, GearDef> {
 
 export const GEAR_ITEMS: Record<string, GearDef> = buildGear();
 
-/** 그 등급·직업으로 맞출 수 있는 풀세트 6칸 */
-export function fullSet(grade: number, job: JobId): GearDef[] {
-  return EQUIP_SLOTS.map((slot) =>
-    slot === 'weapon'
-      ? GEAR_ITEMS[`g${grade}_${SLOT_CODE[slot]}_${job}`]!
-      : GEAR_ITEMS[`g${grade}_${SLOT_CODE[slot]}`]!
-  );
+/** 그 등급으로 맞출 수 있는 풀세트 6칸 */
+export function fullSet(grade: number): GearDef[] {
+  return EQUIP_SLOTS.map((slot) => GEAR_ITEMS[`g${grade}_${SLOT_CODE[slot]}`]!);
 }
 
 // ---------------------------------------------------------------- 랜덤 옵션
@@ -386,36 +371,37 @@ export const OPTION_MAX_VALUE: Record<OptionKind, number> = {
 };
 
 /**
- * **옵션이 타는 축은 장비 등급(1~7)이 아니라 품질 등급(1~10)이다.**
+ * **옵션도 장비 등급(1~7)을 탄다.** ★
  *
- * 설계 문서 10장이 "등급 안의 세부 등급(같은 등급에서 일반/희귀/영웅 같은 편차)" 로
- * 남겨 뒀던 자리다. 장비 등급은 **성능 그 자체**(등비 ×1.7037)를 정하고, 품질 등급은
- * 같은 물건 사이의 편차만 정한다 — 두 축이 섞이면 "등급 낮은데 품질 높은 물건" 의
- * 위치를 설명할 수 없다.
+ * 2026-09-21 까지는 품질 등급(1~10)이라는 **두 번째 축**이었다 — 설계 문서 10장의
+ * "등급 안의 세부 등급" 자리다. 카탈로그를 42종으로 갈아끼우면서 **축을 하나로
+ * 합쳤다**: 등급 7개가 유일한 축이라야 "7등급짜리 게임" 이 성립하고, 숨은 1~10
+ * 축이 하나 더 있으면 가방에 뜬 숫자가 무엇을 뜻하는지 설명할 수 없다.
+ *
+ * 같은 등급 안의 편차는 **굴림 자체**가 맡는다 — 종류·개수·값(최대의 50~100%)이
+ * 물건마다 다르므로 "같은 등급인데 이건 좋다" 는 그대로 남는다.
  */
-export const OPTION_GRADE_MAX = 10;
+export const OPTION_GRADE_MAX = 7;
 
 /**
- * 품질 등급별 옵션 **개수** (최소, 최대).
+ * 등급별 옵션 **개수** (최소, 최대).
  *
  * 등급이 오르면 개수와 수치가 같이 커진다 — 둘 중 하나만 키우면 "등급은 높은데
  * 옵션이 하나뿐" 이나 "옵션은 넷인데 값이 시시한" 물건이 생긴다.
+ * 10행짜리 옛 표를 7행으로 줄이면서 **양 끝(1개 → 4개)은 그대로 뒀다.**
  */
 export const OPTION_COUNT: Array<[number, number]> = [
-  [1, 1], // 1등급
-  [1, 2],
+  [1, 1], // 1등급 (일반)
   [1, 2],
   [2, 2],
   [2, 3],
-  [2, 3],
   [3, 3],
   [3, 4],
-  [3, 4],
-  [4, 4], // 10등급
+  [4, 4], // 7등급 (태초)
 ];
 
 /**
- * 품질 등급이 옵션 수치에 주는 배수 — 1등급이 최대의 **25%**, 10등급이 100%.
+ * 등급이 옵션 수치에 주는 배수 — 1등급이 최대의 **25%**, 7등급이 100%.
  *
  * 0 에서 시작하지 않는다. 슬롯 기본 수치의 치확·공속은 장비 등급1 에서 0 이지만
  * (초반에 타수 편차를 막으려고), **옵션은 1등급 물건에도 붙어야 "물건마다 다르다"**
@@ -427,7 +413,7 @@ export function optionScale(grade: number): number {
 }
 
 /**
- * 그 품질 등급에서 이 옵션이 나올 수 있는 범위. 굴림은 최대의 50~100% 사이다.
+ * 그 등급에서 이 옵션이 나올 수 있는 범위. 굴림은 최대의 50~100% 사이다.
  *
  * **레벨을 안 탄다** — 설계가 정한 그대로다. 퍼센트 옵션은 어디서나 같은 뜻이라야
  * 하고(10% 는 어디서나 10%), 수치로 주면 200레벨 장비의 공격력 +3 처럼 장식이 된다.
@@ -438,7 +424,7 @@ export function optionRange(kind: OptionKind, grade: number): { min: number; max
   return { min: round(top * 0.5), max: round(top) };
 }
 
-/** 그 품질 등급 물건에 붙는 옵션 개수의 (최소, 최대) */
+/** 그 등급 물건에 붙는 옵션 개수의 (최소, 최대) */
 export function optionCount(grade: number): [number, number] {
   const row = OPTION_COUNT[Math.max(0, Math.min(OPTION_GRADE_MAX, Math.trunc(grade)) - 1)]!;
   return [row[0], row[1]];

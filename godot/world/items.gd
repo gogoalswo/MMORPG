@@ -240,8 +240,40 @@ static func equipment_stats(equipped: Dictionary) -> Dictionary:
 	return total
 
 
-static func tier_for_level(monster_level: int) -> int:
-	return clampi(monster_level / 10, 0, int(_t().get("tierCount", 20)) - 1)
+## 그 레벨에서 낄 수 있는 가장 높은 등급 (1~7). 표(`gradeLevels`)를 거꾸로 훑는다 —
+## 30레벨 간격을 고도에도 적어 두면 두 곳이 어긋난다
+static func grade_for_level(level: int) -> int:
+	var levels: Array = _t().get("gradeLevels", [])
+	var top := int(_t().get("gradeMin", 1))
+	for i in levels.size():
+		if level >= int(levels[i]):
+			top = i + 1
+	return top
+
+
+## 아이템 id — `g{등급}_{슬롯코드}`. 만드는 규칙은 `packages/shared/src/items.ts` 와 같다
+static func item_id(grade: int, slot: String) -> String:
+	return "g%d_%s" % [grade, str(_t().get("slotCode", {}).get(slot, "?"))]
+
+
+## 옛 id 를 지금 id 로 — **한 번 쓰고 버릴 다리다.** ★
+##
+## 2026-09-21 에 단계 20개 축을 없애면서 `w_fighter_07`·`a_07` 이 전부 사라졌다.
+## 그냥 두면 저장에 남은 가방이 통째로 빈다. 단계는 요구 레벨을 거쳐 등급으로
+## 옮길 수 있다 (단계 7 = Lv70 = 3등급). 빈 문자열이면 갈 자리가 없다는 뜻이다
+static func migrate_id(id: String) -> String:
+	if not get_item(id).is_empty():
+		return id
+	var parts := id.split("_")
+	if parts.size() < 2:
+		return ""
+	var tier := int(str(parts[parts.size() - 1]))
+	var code := str(parts[0])
+	var codes: Dictionary = _t().get("slotCode", {})
+	for slot in codes:
+		if str(codes[slot]) == code:
+			return item_id(grade_for_level(1 if tier == 0 else tier * 10), str(slot))
+	return ""
 
 
 ## 그 몬스터가 선 사냥터(1~20). `items.json` 의 `dropGrades` 를 찾는 열쇠다
@@ -317,20 +349,13 @@ static func roll_drop(monster_level: int, job: String, rng: RandomNumberGenerato
 	if rng.randf() >= drop_chance(monster_level):
 		return {"gold": gold}
 
-	var tag := "%02d" % tier_for_level(monster_level)
-	var job_slots: Array = _t().get("jobSlots", [])
-	var codes: Dictionary = _t().get("slotCode", {})
-
-	# 슬롯 8종이 고루 나와야 한다. 한쪽만 나오면 나머지 자리는 영영 빈다
-	var candidates: Array = []
-	for slot in slots():
-		var code := str(codes.get(slot, "?"))
-		candidates.append(
-			"%s_%s_%s" % [code, job, tag] if slot in job_slots else "%s_%s" % [code, tag]
-		)
-	var id := str(candidates[mini(candidates.size() - 1, int(rng.randf() * candidates.size()))])
-
+	# 슬롯은 고루 나와야 한다 — 한쪽만 나오면 나머지 자리는 영영 빈다.
+	# 직업은 더 이상 후보를 가르지 않는다. **굴리는 순서는 슬롯 → 등급** —
+	# `items.ts` 와 같은 순서라야 같은 씨앗에서 같은 것이 나온다
+	var all_slots := slots()
+	var pick := mini(all_slots.size() - 1, int(rng.randf() * all_slots.size()))
 	var grade := roll_grade(rng.randf(), monster_level)
+	var id := item_id(grade, str(all_slots[pick]))
 	var def := get_item(id)
 	return {
 		"gold": gold,
@@ -343,18 +368,17 @@ static func roll_drop(monster_level: int, job: String, rng: RandomNumberGenerato
 	}
 
 
-## 상점에 뜨는 것 — **자기 직업의 무기만.** 방어구·장신구는 사냥으로만 줍는다.
-## 레벨 부근 것만 올린다
-static func shop_stock(job: String, level: int) -> Array:
-	var max_tier := tier_for_level(level)
+## 상점에 뜨는 것 — **무기만.** 방어구·장신구는 사냥으로만 줍는다.
+## 장비가 직업을 안 타므로(2026-09-21) 진열은 등급으로만 거른다 —
+## 낄 수 있는 등급과 그 아래 하나까지 (아래를 같이 두는 건 강화 여벌 때문이다)
+static func shop_stock(_job: String, level: int) -> Array:
+	var top := grade_for_level(level)
 	var out: Array = []
 	for id in all():
 		var item: Dictionary = all()[id]
 		if str(item.get("slot", "")) != "weapon":
 			continue
-		if str(item.get("job", "")) != job:
-			continue
-		if int(item.level) <= level and tier_for_level(int(item.level)) >= max_tier - 1:
+		if int(item.level) <= level and int(item.get("grade", 1)) >= top - 1:
 			out.append(id)
 	out.sort()
 	return out

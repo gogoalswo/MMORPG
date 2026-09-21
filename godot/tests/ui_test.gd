@@ -430,7 +430,7 @@ func _case_bag(game: Node3D) -> void:
 		_fail("아무것도 안 골랐는데 끼기 단추가 켜져 있다")
 
 	# 가방에 하나 넣고 — 골라서 낀다
-	me.bag.append({"id": "w_fighter_00", "grade": 3, "enhance": 2, "options": []})
+	me.bag.append({"id": "g1_w", "grade": 1, "enhance": 2, "options": []})
 	game._redraw_bag()
 	await process_frame
 	var first: PanelContainer = game._bag_grid.get_child(0)
@@ -484,8 +484,8 @@ func _case_bag(game: Node3D) -> void:
 
 	# 탭으로 거르면 **칸 번호와 가방 번호가 어긋난다** — 거기서 끼면 엉뚱한 게 끼워진다
 	me.bag.clear()
-	me.bag.append({"id": "a_00", "grade": 1, "enhance": 0, "options": []})
-	me.bag.append({"id": "w_fighter_00", "grade": 3, "enhance": 0, "options": []})
+	me.bag.append({"id": "g1_a", "grade": 1, "enhance": 0, "options": []})
+	me.bag.append({"id": "g1_w", "grade": 1, "enhance": 0, "options": []})
 	game._pick_tab(1)  # 무기
 	await process_frame
 	if game._bag_view != [1]:

@@ -3,13 +3,23 @@ import type { JobId } from './character.ts';
 /**
  * 아이템과 드롭.
  *
- * 몬스터와 같은 방식으로 **표에서 만든다.** 사냥터 20곳에 맞춰 20단계가 있고,
- * 단계마다 슬롯 8종을 채운다. 직업을 타는 무기·보조는 3벌씩이라 단계당 13개,
- * 전부 260개다. 손으로 적으면 반드시 어긋나므로 이름은 접두어 표에서,
- * 수치는 요구 레벨에서 뽑는다.
+ * 몬스터와 같은 방식으로 **표에서 만든다.** 축은 **등급 7개 하나뿐**이고
+ * (일반 → 태초), 등급마다 슬롯 6칸을 채워 **42종**이다. 수치는 설계 표
+ * (`gear.ts`)가 내는 것을 그대로 담는다 — 여기서 새로 짓지 않는다.
  *
- * 수치는 아직 정밀하게 맞추지 않았다 — 곡선을 먼저 잡고 장비를 얹으면 두 번
- * 조정해야 해서, 지금은 "레벨에 비례해 눈에 띄게 오르는" 정도로만 두었다.
+ * ## 2026-09-21 — 단계 20개 축을 없앴다 ★★
+ *
+ * 그 전에는 사냥터 20곳에 맞춘 **단계 20개 × 등급 1~10** 이라 160종이었다.
+ * 설계([stat-balance.md](../../../docs/features/stat-balance.md))는 처음부터
+ * 등급 7개짜리였는데 카탈로그만 옛 축에 남아 있었고, 두 축이 겹쳐 "단계는
+ * 높은데 등급이 낮은 물건" 의 자리를 설명할 수 없었다. 지시대로 **7등급으로
+ * 합쳤다.**
+ *
+ * 같이 정한 것:
+ * - **직업별로 나누지 않는다** — 전 직업이 같은 장비를 쓴다. 무기도 한 벌이다.
+ * - **랜덤 옵션은 남긴다** — 같은 등급 안의 편차를 옵션이 맡는다.
+ * - 등급 하나가 30레벨을 덮으므로(착용 Lv 1·31·61·91·121·151·181) 그 안에서
+ *   갈아입을 것이 없다. 대신 **강화**가 그 구간의 성장을 맡는다.
  */
 
 // 슬롯 정의는 `slots.ts` 로 옮겼다 — 여기서 `gear.ts` 를 임포트하게 되면서
@@ -26,7 +36,9 @@ import {
   optionScale as gearOptionScale,
   type OptionKind,
   GRADE_COUNT as GEAR_GRADE_COUNT,
-  GRADE_LV_SPAN as GEAR_GRADE_LV_SPAN,
+  GRADE_NAME,
+  equipLevel as gearEquipLevel,
+  gradeOf as gearGradeOf,
   enhanceMultiplier as gearEnhanceMultiplier,
   slotStats,
   dropGrades as gearDropGrades,
@@ -49,9 +61,14 @@ export interface ItemDef {
   name: string;
   /** 지금은 전부 장비다. `null` 자리는 착용 못 하는 물건을 위해 남겨 뒀다 */
   slot: EquipSlot | null;
-  /** 착용 가능한 최소 레벨 */
+  /** 등급 1~7. **이게 유일한 성능 축이다** */
+  grade: number;
+  /** 착용 가능한 최소 레벨 — 등급이 정한다 (1·31·61·91·121·151·181) */
   level: number;
-  /** 무기와 보조는 직업을 탄다. 없으면 아무나 낀다 */
+  /**
+   * 직업 전용 장비 — **지금은 아무도 안 쓴다.** 2026-09-21 에 장비를 전 직업
+   * 공용으로 바꾸면서 비었다. 막는 자리(`canEquip`)는 남겨 둔다
+   */
   job?: JobId;
   bonus: ItemBonus;
   /** 상점에 팔 때 받는 금액 */
@@ -61,49 +78,25 @@ export interface ItemDef {
 /** 가방 칸 수 */
 export const INVENTORY_SIZE = 200;
 
-/** 단계별 접두어 — 사냥터 순서와 같다 */
-const TIER_PREFIX = [
-  '낡은', '단단한', '강철', '은빛', '늪지',
-  '서리', '흑단', '고대', '사막', '백금',
-  '유황', '용암', '빙하', '뒤틀린', '그림자',
-  '폐허', '창백한', '균열', '심연', '종말',
-];
-
 /**
- * 단계별 색.
+ * 등급별 색.
  *
  * 갑옷·신발은 모델에 갈아입힐 메시가 없다. 그래서 **몸통과 다리 색을 바꾼다** —
- * 20단계를 지나며 색이 변하면 "다른 걸 입었다"로는 읽힌다. 사냥터 분위기와
- * 같은 순서라 어디서 얻은 장비인지도 짐작이 간다.
+ * 등급이 오르며 색이 변하면 "다른 걸 입었다"로는 읽힌다. 흙빛에서 시작해
+ * 태초에서 가장 밝다. 단계 20색짜리 옛 표에서 일곱 칸을 고른 것이다.
  */
-export const TIER_COLOR = [
-  '#8a7a5e', '#7f8a92', '#9aa3ad', '#c3cbd6', '#6f8a5a',
-  '#9fc4de', '#4a4a52', '#c9a94a', '#d0a86a', '#dfe3e8',
-  '#c2a63a', '#c46a3a', '#7fb8d8', '#6b5a86', '#5a4f7a',
-  '#8a8479', '#cfc9bb', '#b054b0', '#3f6e8c', '#a83a44',
+export const GRADE_COLOR = [
+  '#8a7a5e', '#7f8a92', '#6f8a5a', '#c9a94a', '#b054b0', '#3f6e8c', '#a83a44',
 ];
 
-/** 직업별 무기 이름 */
-const WEAPON_NAME: Record<JobId, string> = {
-  fighter: '너클',
-  mage: '지팡이',
-  archer: '활',
-};
-
-/** 단계 번호(0부터)에서 요구 레벨 — 사냥터 레벨대의 시작점과 같다 */
-export function tierLevel(index: number): number {
-  return index === 0 ? 1 : index * 10;
+/** 등급 번호(1~7)에서 착용 레벨 — 1·31·61·91·121·151·181 */
+export function gradeLevel(grade: number): number {
+  return gearEquipLevel(grade);
 }
 
-/** 단계 개수 */
-export const TIER_COUNT = TIER_PREFIX.length;
-
-/**
- * 단계 이름(접두어). 제작창에서 단계를 골라 거르려면 이름이 있어야 한다 —
- * "8단계" 로만 적으면 어느 사냥터 물건인지 알 수 없다.
- */
-export function tierName(index: number): string {
-  return TIER_PREFIX[Math.max(0, Math.min(TIER_PREFIX.length - 1, index))]!;
+/** 등급 이름 (일반 → 태초) */
+export function gradeName(grade: number): string {
+  return GRADE_NAME[Math.max(0, Math.min(GRADE_NAME.length - 1, Math.trunc(grade) - 1))]!;
 }
 
 /**
@@ -133,19 +126,14 @@ export function tierName(index: number): string {
  * 없고, 넣으면 movement 와 예측 보정까지 같이 봐야 한다.
  */
 /**
- * 요구 레벨을 설계의 **연속 등급**으로 옮긴다.
+ * 그 등급 그 슬롯의 기본 수치. **설계 표가 내는 값을 그대로 담는다.**
  *
- * 설계는 등급 7개(착용 Lv 1/31/61/91/121/151/181)를 쓰는데, 이 표는 단계 20개라
- * 축이 다르다. 30레벨마다 등급 하나가 오르도록 **보간**하면 양 끝이 설계와 정확히
- * 맞고(Lv1 = 등급1 = 35%, Lv181+ = 등급7 = 856%) 단계마다 값도 다르게 나온다.
- * 계단으로 끊으면 한 등급 안의 단계 셋이 전부 같은 값이 되어 갈아입을 이유가 없어진다.
+ * 2026-09-21 까지는 요구 레벨을 연속 등급으로 **보간**해서 단계 20개를 채웠다.
+ * 등급이 곧 축이 된 지금은 보간할 것이 없다 — `slotStats(slot, grade)` 가
+ * 설계표의 그 칸이다 (등급1 무기 공 21%, 등급7 무기 공 514% …).
  */
-function gearGrade(level: number): number {
-  return Math.max(1, Math.min(GEAR_GRADE_COUNT, 1 + (level - 1) / GEAR_GRADE_LV_SPAN));
-}
-
-function bonusFor(slot: EquipSlot, level: number, _job?: JobId): ItemBonus {
-  const s = slotStats(slot, gearGrade(level));
+function bonusFor(slot: EquipSlot, grade: number): ItemBonus {
+  const s = slotStats(slot, grade);
   return {
     attack: Math.round(s.atk * 10) / 10,
     defense: Math.round(s.df * 10) / 10,
@@ -158,51 +146,58 @@ function bonusFor(slot: EquipSlot, level: number, _job?: JobId): ItemBonus {
 
 // SLOT_CODE 는 slots.ts 로 갔다 (위에서 다시 내보낸다)
 
-/** 직업을 타는 슬롯. 보조를 없애 무기 하나만 남았다 */
-export const JOB_SLOTS: EquipSlot[] = ['weapon'];
+/**
+ * 직업을 타는 슬롯 — **이제 없다.**
+ *
+ * 2026-09-21 지시: "직업별 장비는 동일해". 무기까지 전 직업 공용이라 빈 표다.
+ * 이름을 남겨 두는 이유는 `items.json` 으로 나가고 있어서다 — 고도가 읽기를
+ * 그만둔 뒤에도 키가 사라지면 옛 빌드가 깨진다.
+ */
+export const JOB_SLOTS: EquipSlot[] = [];
 
+/** 아이템 id — `g{등급}_{슬롯코드}`. 설계 표(`gear.ts`)와 같은 규칙이다 */
+export function itemId(grade: number, slot: EquipSlot): string {
+  return `g${grade}_${SLOT_CODE[slot]}`;
+}
+
+/**
+ * 그 레벨에서 낄 수 있는 가장 높은 등급 (1~7).
+ *
+ * 단계 축이 있던 때의 `tierForLevel` 자리다 — 상점 진열과 저장 복원이 쓴다.
+ */
+export function gradeForLevel(level: number): number {
+  return Math.max(GRADE_MIN, Math.min(GRADE_MAX, Math.floor(gearGradeOf(level))));
+}
+
+/**
+ * 등급 7 × 슬롯 6 = **42종.**
+ *
+ * 이름은 `등급 이름 + 슬롯 이름` 이다 ("일반 무기" … "태초 반지"). 무기를
+ * 너클·지팡이·활로 나누지 않는 것은 장비가 직업을 안 타기 때문이고, 손에
+ * 들리는 **모델은 직업이 정한다** — 같은 "전설 무기" 가 법사에게는 지팡이다.
+ */
 function buildItems(): Record<string, ItemDef> {
   const out: Record<string, ItemDef> = {};
-  const jobs = Object.keys(WEAPON_NAME) as JobId[];
 
-  TIER_PREFIX.forEach((prefix, index) => {
-    const level = tierLevel(index);
+  for (let grade = 1; grade <= GEAR_GRADE_COUNT; grade++) {
+    const level = gradeLevel(grade);
+    // 값은 착용 레벨을 따라간다 — 등급이 오르면 성능은 등비(×1.7)로 뛰지만
+    // 골드 수입은 레벨에 비례해서 는다. 값까지 등비로 두면 상점이 닫힌다
     const price = Math.round(20 + level * 12);
-    const tag = String(index).padStart(2, '0');
 
     for (const slot of EQUIP_SLOTS) {
-      const code = SLOT_CODE[slot];
-
-      if (JOB_SLOTS.includes(slot)) {
-        for (const job of jobs) {
-          const id = `${code}_${job}_${tag}`;
-          const base = WEAPON_NAME[job];
-          out[id] = {
-            id,
-            name: `${prefix} ${base}`,
-            slot,
-            level,
-            job,
-            bonus: bonusFor(slot, level, job),
-            price,
-          };
-        }
-        continue;
-      }
-
-      const id = `${code}_${tag}`;
+      const id = itemId(grade, slot);
       out[id] = {
         id,
-        name: `${prefix} ${slotLabel(slot)}`,
+        name: `${gradeName(grade)} ${slotLabel(slot)}`,
         slot,
+        grade,
         level,
-        bonus: bonusFor(slot, level),
+        bonus: bonusFor(slot, grade),
         price,
       };
     }
-
-    // 제작 재료(`m_XX`)는 2026-09-20 에 없앴다 — 제작 자체를 걷었기 때문이다
-  });
+  }
 
   return out;
 }
@@ -211,6 +206,26 @@ export const ITEMS: Record<string, ItemDef> = buildItems();
 
 export function getItem(id: string): ItemDef | null {
   return ITEMS[id] ?? null;
+}
+
+/**
+ * 옛 id 를 지금 id 로 — **한 번 쓰고 버릴 다리다.** ★
+ *
+ * 2026-09-21 에 단계 20개 축을 없애면서 `w_fighter_07`·`a_07` 같은 id 가 전부
+ * 사라졌다. 그냥 두면 **가방이 통째로 빈다** — 저장에 남은 것이 표에 없으면
+ * 버리는 게 원래 규칙이라서다. 단계는 요구 레벨을 거쳐 등급으로 옮길 수 있으므로
+ * (단계 7 = Lv70 = 3등급) 자리만 맞춰 준다. 수치는 그 등급의 것으로 다시 계산된다.
+ *
+ * 옛 저장이 다 지나가면 지워도 된다.
+ */
+export function migrateItemId(id: string): string | null {
+  if (ITEMS[id]) return id;
+  const match = /^([a-z])(?:_(?:fighter|mage|archer))?_(\d{2})$/.exec(id);
+  if (!match) return null;
+  const slot = EQUIP_SLOTS.find((s) => SLOT_CODE[s] === match[1]);
+  if (!slot) return null; // 제작 재료(`m_XX`)는 갈 자리가 없다 — 버린다
+  const tier = Number(match[2]);
+  return itemId(gradeForLevel(tier === 0 ? 1 : tier * 10), slot);
 }
 
 // materialIdFor 는 제작과 함께 없앴다
@@ -225,28 +240,25 @@ export function canEquip(item: ItemDef, job: JobId, level: number): boolean {
 // ---------------------------------------------------------------- 등급
 
 /**
- * 등급.
+ * 등급 — **축이 이것 하나다.** ★★
  *
- * 단계(요구 레벨)와는 다른 축이다. 같은 "낡은 활"이라도 등급이 다르면 성능이
- * 다르다. 단계는 어느 사냥터에서 나오는지를, 등급은 그 중 얼마나 좋은 물건인지를
- * 정한다.
+ * 2026-09-21 까지는 단계(요구 레벨)와 등급(1~10) 두 축이 겹쳐 있었다. 지금은
+ * 등급이 곧 아이템이다: "전설 무기" 는 5등급 무기 하나뿐이고, 등급이 성능
+ * (등비 ×1.7037)·착용 레벨·나오는 사냥터를 전부 정한다.
  *
- * **7등급까지만 떨어지고 8~10 은 제작으로만 나온다.** 그래야 최상위 장비가
- * 운이 아니라 쌓아온 결과가 된다.
+ * 가방에 든 물건의 `grade` 는 이제 **카탈로그에서 따라온 값**이라 id 와 어긋날
+ * 수 없다 — 불러올 때 `getItem(id).grade` 로 다시 맞춘다.
  */
 export const GRADE_MIN = 1;
-export const GRADE_MAX = 10;
+export const GRADE_MAX = GEAR_GRADE_COUNT;
 /**
- * 드롭으로 나올 수 있는 최고 등급 — **7등급.**
+ * 드롭으로 나올 수 있는 최고 등급 — **7등급, 즉 전부.**
  *
- * 2026-09-20 에 제작을 걷으면서 "드롭이 유일한 길" 이라는 이유로 7 → 10 으로
- * 올렸다가, **2026-09-21 에 다시 7로 내렸다.** 사냥터별 상한(`dropGrades`)을
- * 걸면서 그 이유가 사라졌기 때문이다 — 어차피 사냥터 20 이 끝이고, 8~10 은
- * 설계([stat-balance.md](../../../docs/features/stat-balance.md) 3장)에 **근거가
- * 없는 숫자**였다. 설계 등급은 7개이고, 카탈로그를 56종으로 갈 때 두 축이
- * 7에서 하나로 합쳐진다.
+ * 등급이 유일한 축이 되면서 "드롭 상한" 이라는 개념 자체가 없어졌다. 어느
+ * 등급을 언제 얻는지는 사냥터가 정한다(`dropGrades`) — 7등급은 마지막
+ * 사냥터에서만 뚫린다. 부르는 쪽이 많아 이름은 남겨 둔다.
  */
-export const MAX_DROP_GRADE = GEAR_GRADE_COUNT;
+export const MAX_DROP_GRADE = GRADE_MAX;
 
 /**
  * 등급이 올릴 **값** 배율 — 1등급이 기준이다.
@@ -599,12 +611,6 @@ export function equipmentStats(
 
 // ---------------------------------------------------------------- 드롭
 
-/** 몬스터 레벨에 맞는 단계 번호 */
-export function tierForLevel(monsterLevel: number): number {
-  const index = Math.floor(monsterLevel / 10);
-  return Math.min(TIER_PREFIX.length - 1, Math.max(0, index));
-}
-
 /**
  * 그 몬스터가 장비를 떨굴 확률 — **설계값이다.** ★★
  *
@@ -683,16 +689,13 @@ export function rollDrop(monsterLevel: number, job: JobId, rng: () => number = M
 
   if (rng() >= dropChanceFor(monsterLevel)) return { gold };
 
-  const tier = tierForLevel(monsterLevel);
-  const tag = String(tier).padStart(2, '0');
-
-  // 슬롯 8종이 고루 나와야 한다. 한쪽만 나오면 나머지 자리는 영영 빈다.
-  const candidates = EQUIP_SLOTS.map((slot) =>
-    JOB_SLOTS.includes(slot) ? `${SLOT_CODE[slot]}_${job}_${tag}` : `${SLOT_CODE[slot]}_${tag}`
-  );
-  const id = candidates[Math.min(candidates.length - 1, Math.floor(rng() * candidates.length))]!;
-
+  // 슬롯은 고루 나와야 한다 — 한쪽만 나오면 나머지 자리는 영영 빈다.
+  // 직업은 더 이상 후보를 가르지 않는다. 등급은 사냥터가 정한다
+  // (굴리는 순서는 슬롯 → 등급. 고도 `items.gd` 도 같은 순서라야 같은 씨앗에서 같은 것이 나온다)
+  const pick = Math.min(EQUIP_SLOTS.length - 1, Math.floor(rng() * EQUIP_SLOTS.length));
   const grade = rollGrade(rng(), monsterLevel);
+  const id = itemId(grade, EQUIP_SLOTS[pick]!);
+
   const def = getItem(id);
   return { gold, item: { id, grade, options: def ? rollOptions(def, grade, rng) : [] } };
 }

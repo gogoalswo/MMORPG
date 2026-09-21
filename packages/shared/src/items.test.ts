@@ -35,8 +35,10 @@ import {
   rollDrop,
   rollGrade,
   dropGradesFor,
-  tierForLevel,
-  tierLevel,
+  gradeForLevel,
+  gradeLevel,
+  itemId,
+  migrateItemId,
 } from './items.ts';
 import { optionCount } from './gear.ts';
 import { MONSTER_KINDS } from './monsters.ts';
@@ -48,13 +50,33 @@ const fixed = (...values: number[]) => {
   return () => values[Math.min(i++, values.length - 1)]!;
 };
 
-test('단계 수가 사냥터 수와 같다', () => {
-  // 어긋나면 마지막 사냥터에서 그 단계 장비가 안 떨어진다
-  const tiers = new Set(Object.values(ITEMS).map((i) => i.level));
-  assert.equal(tiers.size, FIELD_ORDER.length);
+test('아이템은 42종 — 등급 7 × 슬롯 6', () => {
+  // 2026-09-21 에 단계 20개 축을 없앴다. 축이 등급 하나뿐이라야
+  // 가방에 뜬 숫자가 무엇을 뜻하는지 설명할 수 있다
+  assert.equal(Object.keys(ITEMS).length, 42);
+  const grades = new Set(Object.values(ITEMS).map((i) => i.grade));
+  assert.deepEqual([...grades].sort((a, b) => a - b), [1, 2, 3, 4, 5, 6, 7]);
 });
 
-test('떨어지는 장비가 슬롯 8종에 고루 퍼진다', () => {
+test('등급 이름은 일반 → 태초 일곱 개다', () => {
+  // 2026-09-21 지시. 어느 사냥터 물건인지가 아니라 **희소도**가 이름이다
+  assert.deepEqual(
+    Object.values(ITEMS)
+      .filter((i) => i.slot === 'weapon')
+      .sort((a, b) => a.grade - b.grade)
+      .map((i) => i.name),
+    ['일반 무기', '고급 무기', '희귀 무기', '영웅 무기', '전설 무기', '초월 무기', '태초 무기']
+  );
+});
+
+test('착용 레벨이 30레벨 간격이다 — 1·31·61·91·121·151·181', () => {
+  // 등급 하나가 사냥터 셋(30레벨)을 덮는다. 그 안의 성장은 강화가 맡는다
+  const levels = [...new Set(Object.values(ITEMS).map((i) => i.level))].sort((a, b) => a - b);
+  assert.deepEqual(levels, [1, 31, 61, 91, 121, 151, 181]);
+  for (let g = 1; g <= MAX_DROP_GRADE; g++) assert.equal(gradeLevel(g), levels[g - 1]);
+});
+
+test('떨어지는 장비가 슬롯 6종에 고루 퍼진다', () => {
   // 한쪽만 나오면 나머지 자리는 영영 빈다
   const seen = new Set<string>();
   for (let i = 0; i < 3000; i++) {
@@ -75,24 +97,22 @@ test('모든 아이템이 슬롯과 요구 레벨을 갖는다', () => {
   }
 });
 
-test('무기만 직업을 탄다', () => {
-  // 보조(보호대·마법서·화살통)를 없애면서 직업을 타는 자리는 무기만 남았다
-  const jobSlots = ['weapon'];
+test('직업을 타는 장비가 하나도 없다', () => {
+  // 2026-09-21 지시: "직업별 장비는 동일해". 무기까지 전 직업 공용이다
   for (const item of Object.values(ITEMS)) {
-    if (jobSlots.includes(item.slot!)) assert.ok(item.job, `${item.id}: ${item.slot} 인데 직업이 없다`);
-    else assert.equal(item.job, undefined, `${item.id}: ${item.slot} 인데 직업을 탄다`);
+    assert.equal(item.job, undefined, `${item.id}: ${item.slot} 인데 직업을 탄다`);
   }
 });
 
-test('슬롯 6종이 단계마다 다 갖춰져 있다', () => {
+test('슬롯 6종이 등급마다 다 갖춰져 있다', () => {
   // 하나라도 비면 그 자리는 영영 빈 채로 남는다
   for (const slot of EQUIP_SLOTS) {
-    const levels = new Set(
-      Object.values(ITEMS)
-        .filter((i) => i.slot === slot)
-        .map((i) => i.level)
-    );
-    assert.equal(levels.size, FIELD_ORDER.length, `${slot}: 단계가 ${levels.size}개뿐이다`);
+    for (let grade = 1; grade <= MAX_DROP_GRADE; grade++) {
+      const item = getItem(itemId(grade, slot));
+      assert.ok(item, `${slot} ${grade}등급이 없다`);
+      assert.equal(item!.slot, slot);
+      assert.equal(item!.grade, grade);
+    }
   }
 });
 
@@ -108,14 +128,8 @@ test('슬롯 이름은 여섯 개뿐이다', () => {
 test('슬롯 배분이 설계표와 같다 (stat-balance.md)', () => {
   // 스탯마다 예산을 100% 로 보고 슬롯이 나눠 갖는다. 어긋나면 "갈아입을 자리가
   // 목적에 따라 갈린다" 는 설계가 무너진다
-  // 단계 레벨은 10 단위(1·10·…·190)라 설계표의 착용 레벨(1·31·61·…)과 자리가 다르다.
-  // 배분은 레벨과 무관하므로 아무 단계에서나 재도 같다
-  const at = (slot: string) => {
-    const item = Object.values(ITEMS).find(
-      (i) => i.slot === slot && i.level === 180 && (i.job ?? 'fighter') === 'fighter'
-    )!;
-    return item.bonus;
-  };
+  // 배분은 등급과 무관하므로 어느 등급에서 재도 같다 — 7등급(태초)에서 잰다
+  const at = (slot: string) => getItem(itemId(7, slot as never))!.bonus;
   const share = (pick: (b: ItemBonus) => number | undefined) => {
     const total = EQUIP_SLOTS.reduce((sum, s) => sum + (pick(at(s)) ?? 0), 0);
     return (slot: string) => Math.round(((pick(at(slot)) ?? 0) / total) * 100);
@@ -145,26 +159,17 @@ test('슬롯 배분이 설계표와 같다 (stat-balance.md)', () => {
 });
 
 test('치확·공속이 설계표의 등급 곡선을 따라간다', () => {
-  // 설계표(stat-balance.md)는 착용 레벨 1·31·61·91·121·151·181 에서
-  // 치확 0·8·17·25·33·42·50%p, 공속 0·3·7·10·13·17·20% 를 적는다.
-  // 단계 레벨은 10 단위라 30·60·… 에서 재는데, 한 칸(1레벨) 차이라 값이 같거나 1 작다
-  const want: Array<[number, number, number]> = [
-    // 레벨, 치확, 공속
-    [30, 8, 3],
-    [60, 17, 7],
-    [90, 25, 10],
-    [120, 33, 13],
-    [150, 41, 17],
-    [180, 50, 20],
-  ];
-  for (const [level, crit, speed] of want) {
-    const neck = Object.values(ITEMS).find((i) => i.slot === 'necklace' && i.level === level)!;
-    const ring = Object.values(ITEMS).find((i) => i.slot === 'ring' && i.level === level)!;
-    // 단계 레벨(30·60·…)은 착용 레벨(31·61·…)보다 한 칸 아래라 1 작을 수 있다
-    assert.ok(Math.abs(neck.bonus.crit! - crit) <= 1, `${level}레벨 목걸이 치확 ${neck.bonus.crit}`);
-    assert.ok(
-      Math.abs(ring.bonus.attackSpeed! - speed) <= 1,
-      `${level}레벨 반지 공속 ${ring.bonus.attackSpeed}`
+  // 설계표(stat-balance.md)는 등급 1~7 에서 치확 0·8·17·25·33·42·50%p,
+  // 공속 0·3·7·10·13·17·20% 를 적는다. 축이 등급 하나가 된 뒤로는 **딱 맞는다** —
+  // 단계 레벨(30·60·…)에서 재느라 1 어긋나던 것이 없어졌다
+  const crit = [0, 8, 17, 25, 33, 42, 50];
+  const speed = [0, 3, 7, 10, 13, 17, 20];
+  for (let grade = 1; grade <= MAX_DROP_GRADE; grade++) {
+    assert.equal(getItem(itemId(grade, 'necklace'))!.bonus.crit, crit[grade - 1], `${grade}등급 치확`);
+    assert.equal(
+      getItem(itemId(grade, 'ring'))!.bonus.attackSpeed,
+      speed[grade - 1],
+      `${grade}등급 공속`
     );
   }
 });
@@ -177,16 +182,19 @@ test('보조와 귀걸이는 아이템이 안 나온다', () => {
   }
 });
 
-test('요구 레벨과 직업을 서버가 막는다', () => {
-  const highKnuckle = Object.values(ITEMS).find((i) => i.slot === 'weapon' && i.job === 'fighter' && i.level >= 100)!;
-  assert.equal(canEquip(highKnuckle, 'fighter', 10), false, '레벨이 모자라면 못 낀다');
-  assert.equal(canEquip(highKnuckle, 'mage', 200), false, '다른 직업 무기는 못 낀다');
-  assert.equal(canEquip(highKnuckle, 'fighter', 200), true);
+test('요구 레벨을 서버가 막는다 — 직업은 더 이상 안 가른다', () => {
+  const high = getItem(itemId(6, 'weapon'))!;
+  assert.equal(canEquip(high, 'fighter', 10), false, '레벨이 모자라면 못 낀다');
+  assert.equal(canEquip(high, 'fighter', 200), true);
+  // 2026-09-21: 같은 물건을 어느 직업이든 낀다
+  for (const job of ['fighter', 'mage', 'archer'] as const) {
+    assert.equal(canEquip(high, job, 200), true, `${job} 가 못 낀다`);
+  }
 });
 
 test('장비 능력치가 합산된다', () => {
-  const weapon = ITEMS['w_fighter_05']!;
-  const armor = ITEMS['a_05']!;
+  const weapon = getItem(itemId(3, 'weapon'))!;
+  const armor = getItem(itemId(3, 'armor'))!;
   const total = equipmentStats({
     weapon: { id: weapon.id, grade: 1 },
     armor: { id: armor.id, grade: 1 },
@@ -205,25 +213,34 @@ test('없는 아이템 id 는 조용히 무시된다', () => {
   assert.deepEqual(total, emptyStats());
 });
 
-test('단계가 높을수록 더 좋다', () => {
+test('등급이 높을수록 더 좋다', () => {
   for (const slot of EQUIP_SLOTS) {
     const sorted = Object.values(ITEMS)
-      .filter((i) => i.slot === slot && (!i.job || i.job === 'fighter'))
-      .sort((a, b) => a.level - b.level);
+      .filter((i) => i.slot === slot)
+      .sort((a, b) => a.grade - b.grade);
     const value = (i: (typeof sorted)[number]) => Object.values(i.bonus).reduce((a, b) => a + b, 0);
     for (let i = 1; i < sorted.length; i++) {
-      assert.ok(value(sorted[i]!) > value(sorted[i - 1]!), `${slot}: ${sorted[i]!.id} 가 앞 단계보다 못하다`);
+      assert.ok(value(sorted[i]!) > value(sorted[i - 1]!), `${slot}: ${sorted[i]!.id} 가 앞 등급보다 못하다`);
     }
   }
 });
 
-test('몬스터 레벨이 해당 단계 아이템으로 이어진다', () => {
+test('그 레벨에서 낄 수 있는 등급이 나온다', () => {
   for (const kind of Object.values(MONSTER_KINDS)) {
-    const tier = tierForLevel(kind.level);
-    const required = tierLevel(tier);
+    const required = gradeLevel(gradeForLevel(kind.level));
     // 잡은 몬스터보다 한참 높은 레벨을 요구하는 장비가 떨어지면 못 낀다
     assert.ok(required <= kind.level, `${kind.name}(Lv${kind.level}) → 요구 Lv${required} 장비`);
   }
+});
+
+test('옛 id 는 같은 자리의 등급으로 옮겨진다', () => {
+  // 2026-09-21 에 단계 축을 없앴다. 옮기지 않으면 저장된 가방이 통째로 빈다
+  assert.equal(migrateItemId('w_fighter_07'), 'g3_w', '단계 7 = Lv70 = 3등급');
+  assert.equal(migrateItemId('a_00'), 'g1_a');
+  assert.equal(migrateItemId('n_19'), 'g7_n', '마지막 단계는 7등급으로');
+  assert.equal(migrateItemId('g5_b'), 'g5_b', '지금 id 는 그대로 둔다');
+  assert.equal(migrateItemId('m_05'), null, '제작 재료는 갈 자리가 없다');
+  for (const id of Object.keys(ITEMS)) assert.equal(migrateItemId(id), id);
 });
 
 test('드롭은 항상 골드를 주고, 아이템은 가끔 준다', () => {
@@ -266,14 +283,13 @@ test('등급 비율이 설계의 드랍률 비 그대로다', () => {
   assert.ok(Math.abs(share - want) < 0.01, `1등급 비중 ${share.toFixed(3)} (${want.toFixed(3)} 여야 한다)`);
 });
 
-test('떨어지는 무기는 잡은 사람 직업 것이다', () => {
-  // 못 쓰는 무기가 가방을 채우면 정리가 일이 된다
-  for (const job of ['fighter', 'mage', 'archer'] as const) {
-    const drop = rollDrop(50, job, fixed(0.5, 0, 0, 0));
-    const item = getItem(drop.item!.id)!;
-    assert.equal(item.slot, 'weapon');
-    assert.equal(item.job, job);
-  }
+test('어느 직업이 잡아도 같은 무기가 떨어진다', () => {
+  // 2026-09-21 지시: "직업별 장비는 동일해"
+  const ids = (['fighter', 'mage', 'archer'] as const).map(
+    (job) => rollDrop(50, job, fixed(0.5, 0, 0, 0)).item!.id
+  );
+  assert.equal(getItem(ids[0]!)!.slot, 'weapon');
+  assert.equal(new Set(ids).size, 1, `직업마다 다른 것이 떨어진다: ${ids.join(', ')}`);
 });
 
 // ---------------------------------------------------------------- 등급
@@ -325,12 +341,13 @@ test('창 안에서는 아래 등급이 더 흔하다 — 비는 설계가 정�
   assert.ok(Math.abs(ratio - want) < 0.05, `비가 ${want.toFixed(2)}:1 이어야 하는데 ${ratio.toFixed(2)}:1`);
 });
 
-test('기본 능력치는 등급을 타지 않는다', () => {
-  // 기본은 고정이고, 등급이 흔드는 건 옵션 범위뿐이다
-  const item = ITEMS['a_05']!;
-  const first = baseBonus(item);
-  for (let g = GRADE_MIN; g <= GRADE_MAX; g++) {
-    assert.deepEqual(baseBonus(item), first, `${g}등급에서 기본 수치가 달라졌다`);
+test('등급이 곧 성능이다 — 등비 ×1.7037 로 오른다', () => {
+  // 2026-09-21 이전에는 등급이 옵션 범위만 넓혔다. 지금은 등급이 수치 그 자체다
+  const ratio = 1.7037;
+  for (let g = 2; g <= GRADE_MAX; g++) {
+    const now = baseBonus(getItem(itemId(g, 'weapon'))!).attack;
+    const before = baseBonus(getItem(itemId(g - 1, 'weapon'))!).attack;
+    assert.ok(Math.abs(now / before - ratio) < 0.01, `${g}등급 무기가 ${now / before}배다`);
   }
   assert.equal(gradeMultiplier(GRADE_MIN), 1, '1등급이 값의 기준이어야 한다');
 });
@@ -402,7 +419,7 @@ test('강화 총 배수가 ×6 이고 고강화일수록 크게 오른다', () =
 });
 
 test('강화하면 세지고, 최고 수치에서 멈춘다', () => {
-  const item = ITEMS['a_05']!;
+  const item = getItem(itemId(3, 'armor'))!;
   let previous = 0;
   for (let level = 0; level <= MAX_ENHANCE; level++) {
     const value = Object.values(baseBonus(item, level)).reduce((a, b) => a + b, 0);
@@ -417,14 +434,14 @@ test('강화하면 세지고, 최고 수치에서 멈춘다', () => {
 
 test('강화는 공짜다 — 값을 매기면 골드를 모으는 일이 된다', () => {
   // 설계는 그 자리에 **드랍**을 놓았다. 실패하면 아이템이 사라지므로 아이템이 연료다
-  const item = ITEMS['w_fighter_05']!;
+  const item = getItem(itemId(3, 'weapon'))!;
   for (let level = 0; level < MAX_ENHANCE; level++) {
     assert.equal(enhanceCost(item, level), 0, `+${level}: 값이 붙어 있다`);
   }
 });
 
 test('강화는 기본 수치를 키운다', () => {
-  const item = ITEMS['a_05']!;
+  const item = getItem(itemId(3, 'armor'))!;
   assert.ok(baseBonus(item, 5).maxHp > baseBonus(item, 0).maxHp, '강화가 기본 수치에 붙어야 한다');
 });
 
@@ -445,7 +462,7 @@ function cycleRng(seed = 0): () => number {
 }
 
 test('옵션은 1~3개가 종류 겹치지 않게 붙는다', () => {
-  const item = ITEMS['a_05']!;
+  const item = getItem(itemId(3, 'armor'))!;
   for (let seed = 0; seed < 40; seed++) {
     const options = rollOptions(item, 5, cycleRng(seed));
     assert.ok(
@@ -458,7 +475,7 @@ test('옵션은 1~3개가 종류 겹치지 않게 붙는다', () => {
 });
 
 test('굴린 값은 그 등급의 범위 안에 있다', () => {
-  for (const id of ['a_05', 'w_fighter_19', 'r_00']) {
+  for (const id of ['g3_a', 'g7_w', 'g1_r']) {
     const item = ITEMS[id]!;
     for (let grade = GRADE_MIN; grade <= GRADE_MAX; grade++) {
       for (let seed = 0; seed < 20; seed++) {
@@ -518,8 +535,8 @@ test('품질 등급이 오르면 옵션 개수와 수치가 같이 커진다', (
 
 test('수치 옵션은 요구 레벨을 탄다', () => {
   // 200레벨 장비에 공격력 +3 이 붙으면 붙으나 마나다
-  const low = ITEMS['a_00']!;
-  const high = ITEMS['a_19']!;
+  const low = getItem(itemId(1, 'armor'))!;
+  const high = getItem(itemId(7, 'armor'))!;
   for (const kind of OPTION_KINDS) {
     const a = optionRange(kind, 1, low.level);
     const b = optionRange(kind, 1, high.level);
@@ -532,7 +549,7 @@ test('수치 옵션은 요구 레벨을 탄다', () => {
 });
 
 test('옵션이 능력치에 실제로 더해진다', () => {
-  const item = ITEMS['a_05']!;
+  const item = getItem(itemId(3, 'armor'))!;
   const plain = stackStats({ id: item.id, grade: 1 });
   const rolled = stackStats({
     id: item.id,
@@ -557,8 +574,8 @@ test('옵션이 능력치에 실제로 더해진다', () => {
 
 test('장착한 것들의 옵션이 합산된다', () => {
   const total = equipmentStats({
-    weapon: { id: 'w_fighter_05', grade: 1, options: [{ kind: 'crit', value: 5 }] },
-    armor: { id: 'a_05', grade: 1, options: [{ kind: 'crit', value: 3 }] },
+    weapon: { id: 'g3_w', grade: 1, options: [{ kind: 'crit', value: 5 }] },
+    armor: { id: 'g3_a', grade: 1, options: [{ kind: 'crit', value: 3 }] },
   });
   assert.ok(Math.abs(total.crit - 0.08) < 1e-9, `합이 ${total.crit}`);
 });
@@ -566,7 +583,7 @@ test('장착한 것들의 옵션이 합산된다', () => {
 test('저장된 옵션은 지금 규칙으로 다시 잘린다', () => {
   // 예전 규칙으로 저장된 값이나 손댄 값이 그대로 들어오면 안 된다.
   // 없어진 종류(공격력·방어력)도 여기서 걸러진다
-  const item = ITEMS['a_05']!;
+  const item = getItem(itemId(3, 'armor'))!;
   const { min, max } = optionRange('penetration', 2);
 
   const cleaned = sanitizeOptions(

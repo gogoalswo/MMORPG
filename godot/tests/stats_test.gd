@@ -224,7 +224,7 @@ func _new_axes() -> void:
 	# 쿨감 — 옵션이 붙으면 스탯에 실려야 한다
 	me.equipped = {
 		"ring": {
-			"id": "r_00", "grade": 10, "enhance": 0,
+			"id": "g1_r", "grade": 1, "enhance": 0,
 			"options": [{"kind": "cooldown", "value": 1.0}, {"kind": "penetration", "value": 3.3}],
 		}
 	}

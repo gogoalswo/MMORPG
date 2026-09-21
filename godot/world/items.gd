@@ -63,9 +63,9 @@ static func grade_multiplier(grade: int) -> float:
 ## 품질 등급이 옵션 수치에 주는 배율 — 1등급이 최대의 25%, 10등급이 100%.
 ## 0 에서 시작하지 않는다: **옵션은 1등급 물건에도 붙어야 "물건마다 다르다" 가 성립**한다
 static func option_grade_scale(grade: int) -> float:
-	var top := int(_g().get("optionGradeMax", 10))
+	var top := int(_g().get("optionGradeMax", 7))
 	var g := clampi(grade, 1, top)
-	return 0.25 + 0.75 * float(g - 1) / float(top - 1)
+	return pow(float(_g().get("optionStep", 0.65)), float(top - g))
 
 
 ## **여섯 종이 전부 퍼센트다** — 공격력·방어력을 빼면서 수치로 주는 옵션이 없어졌다
@@ -95,12 +95,12 @@ static func _base_option_range(kind: String, level: int) -> Dictionary:
 ## "몇 등급이면 얼마까지 뜨나" 를 알 수 없으면 등급을 올릴 이유를 설명할 수 없다
 ## 그 등급에서 이 옵션이 나올 수 있는 범위 — 설계표(`balance.json`)다.
 ## **레벨은 안 본다.** 여섯 종이 전부 퍼센트라 어디서나 같은 뜻이라야 한다
-## **반올림하고 나서 배수를 곱한다** — `gear.ts` 의 `OPTION_POWER`(50배) 와 같은 자리다.
-## 순서가 다르면 태초 치확이 37.5~75 가 되어 TS 쪽과 어긋난다
+## **최소는 최대의 절반이다** (2026-09-21: "최소 최대 수치가 50% 상한을 둬").
+## 배수(`optionPower`)를 곱하고 정수로 끊는다 — `gear.ts` 의 `optionRange` 와 같은 순서다
 static func option_range(kind: String, grade: int, _level: int = 1) -> Dictionary:
 	var power := float(_g().get("optionPower", 1.0))
-	var top := float(_g().get("optionMaxValue", {}).get(kind, 0.0)) * option_grade_scale(grade)
-	return {"min": snappedf(top * 0.5, 0.1) * power, "max": snappedf(top, 0.1) * power}
+	var top := float(_g().get("optionMaxValue", {}).get(kind, 0.0)) * power * option_grade_scale(grade)
+	return {"min": float(roundi(top * 0.5)), "max": float(roundi(top))}
 
 
 ## 옵션을 굴린다. **종류는 겹치지 않게 고른다** — 치명타가 셋 붙으면 옵션이

@@ -438,6 +438,7 @@
       ]
     ],
     "optionGradeMax": 7,
-    "optionPower": 50
+    "optionPower": 50,
+    "optionStep": 0.65
   }
 }

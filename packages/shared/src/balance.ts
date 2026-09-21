@@ -32,6 +32,7 @@ import {
   OPTION_COUNT,
   OPTION_GRADE_MAX,
   OPTION_POWER,
+  OPTION_STEP,
   OPTION_KINDS,
   OPTION_MAX_VALUE,
   SLOT_SHARE,
@@ -510,8 +511,11 @@ export function balanceTable() {
       optionMaxValue: OPTION_MAX_VALUE,
       optionCount: OPTION_COUNT,
       optionGradeMax: OPTION_GRADE_MAX,
-      // 옵션 수치 배수 (2026-09-21 에 50배). 고도도 **반올림 다음에** 곱한다
+      // 옵션 수치 배수 (2026-09-21 에 50배)
       optionPower: OPTION_POWER,
+      // 등급 하나당 옵션 수치 비 — 한 칸 내려갈 때마다 ×0.65.
+      // "이전 등급 최대 = 다음 등급 하위 30%" 에서 나온 값이다
+      optionStep: OPTION_STEP,
     },
   };
 }

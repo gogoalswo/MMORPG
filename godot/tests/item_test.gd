@@ -45,9 +45,11 @@ func _fail(text: String) -> void:
 
 func _case_grade() -> void:
 	_eq("등급 배율 5", Items.grade_multiplier(5), 2.2)
-	# 옵션 등급 배율 — 1등급이 최대의 25%, 7등급이 100%
-	# (2026-09-21 에 품질 1~10 축을 없애고 장비 등급 1~7 로 합쳤다)
-	_eq("옵션 등급 배율 1", snappedf(Items.option_grade_scale(1), 0.01), 0.25)
+	# 옵션 등급 배율 — 7등급이 100%, 한 칸 내려갈 때마다 ×0.65 (등비).
+	# 2026-09-21 에 선형(25%→100%)에서 등비로 바꿨다 — 선형이면 후반 한 칸(+14%)이
+	# 굴림 폭(±33%)보다 작아 "이전 등급이 더 좋은" 물건이 나왔다
+	_eq("옵션 등급 배율 1", snappedf(Items.option_grade_scale(1), 0.01), 0.08)
+	_eq("옵션 등급 배율 6", snappedf(Items.option_grade_scale(6), 0.01), 0.65)
 	_eq("옵션 등급 배율 7", snappedf(Items.option_grade_scale(7), 0.01), 1.0)
 	# 범위 밖은 잘린다
 	_eq("등급 배율 상한", Items.grade_multiplier(99), Items.grade_multiplier(7))
@@ -59,7 +61,7 @@ func _case_options() -> void:
 	# 2026-09-21 에 옵션 수치를 **50배**로 올렸다 (`OPTION_POWER`) —
 	# 반올림 다음에 곱하므로 태초 치확이 37.5 가 아니라 **40~75** 다
 	var crit := Items.option_range("crit", 7)
-	_eq("치명타 옵션 7등급 최소", snappedf(crit.min, 0.1), 40.0)
+	_eq("치명타 옵션 7등급 최소", snappedf(crit.min, 0.1), 38.0)
 	_eq("치명타 옵션 7등급 최대", snappedf(crit.max, 0.1), 75.0)
 	_eq("치명타는 레벨 무관", Items.option_range("crit", 7, 200).max, crit.max)
 	_eq("관통 옵션 7등급 최대", snappedf(Items.option_range("penetration", 7).max, 0.1), 165.0)

@@ -532,12 +532,39 @@ test('등급이 오르면 옵션 수치가 커진다 — 개수는 2개 고정�
   assert.equal(optionGradeScale(999), optionGradeScale(GRADE_MAX));
 });
 
-test('옵션 수치가 50배다 — 태초 치명타가 40~75%p', () => {
+test('옵션 수치가 50배다 — 태초 치명타가 38~75%p', () => {
   // 2026-09-21 지시: "지금보다 50배 올려. 예를 들어 치명타 확률이 40%~75%".
-  // **반올림하고 나서** 곱해야 37.5 가 아니라 40 이 나온다
-  assert.deepEqual(optionRange('crit', 7), { min: 40, max: 75 });
-  assert.deepEqual(optionRange('crit', 1), { min: 10, max: 20 });
+  // 최소가 40 이 아니라 38 인 것은 **최대의 정확히 절반**이라서다 (아래 테스트)
+  assert.deepEqual(optionRange('crit', 7), { min: 38, max: 75 });
   assert.deepEqual(optionRange('maxHp', 7), { min: 100, max: 200 });
+});
+
+test('최소는 최대의 절반이다 — 굴림 폭 50% 상한', () => {
+  // 2026-09-21 지시: "랜덤 범위가 너무 커. 최소 최대 수치가 50% 상한을 둬"
+  for (const kind of OPTION_KINDS) {
+    for (let grade = GRADE_MIN; grade <= GRADE_MAX; grade++) {
+      const { min, max } = optionRange(kind, grade);
+      assert.ok(min >= max * 0.5 - 1, `${kind} ${grade}등급: ${min}~${max} 는 폭이 절반을 넘는다`);
+      assert.ok(min <= max, `${kind} ${grade}등급: min 이 max 보다 크다`);
+    }
+  }
+});
+
+test('이전 등급 최대가 다음 등급의 하위 30%쯤에 선다', () => {
+  // 2026-09-21 지적: "지금은 이전 등급이 오히려 더 좋은 경우가 많은데".
+  // 배율이 선형이던 때는 6→7 에서 71% 였다 — 한 칸 차이(+14%)가 굴림 폭(±33%)보다
+  // 작았기 때문이다. 등비(×1/0.65)로 바꿔 전 구간을 30% 에 맞췄다.
+  // 정수로 끊는 탓에 **저등급일수록 흔들린다** — 공속 1등급이 2~5 라 한 칸이 크다.
+  // 그래서 전 구간은 20~50%, 값이 커지는 5등급부터는 25~35% 로 본다
+  for (const kind of OPTION_KINDS) {
+    for (let grade = GRADE_MIN + 1; grade <= GRADE_MAX; grade++) {
+      const low = optionRange(kind, grade - 1);
+      const high = optionRange(kind, grade);
+      const at = ((low.max - high.min) / (high.max - high.min)) * 100;
+      const [lo, hi] = grade >= 5 ? [25, 35] : [20, 50];
+      assert.ok(at >= lo && at <= hi, `${kind} ${grade - 1}→${grade}등급: ${at.toFixed(0)}% 자리`);
+    }
+  }
 });
 
 test('수치 옵션은 요구 레벨을 탄다', () => {

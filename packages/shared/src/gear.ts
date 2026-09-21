@@ -437,15 +437,34 @@ export const OPTION_COUNT: Array<[number, number]> = [
 ];
 
 /**
- * 등급이 옵션 수치에 주는 배수 — 1등급이 최대의 **25%**, 7등급이 100%.
+ * 등급 하나당 옵션 수치가 몇 배가 되는가 — **1 / 0.65 = 약 1.54배.** ★★
  *
- * 0 에서 시작하지 않는다. 슬롯 기본 수치의 치확·공속은 장비 등급1 에서 0 이지만
- * (초반에 타수 편차를 막으려고), **옵션은 1등급 물건에도 붙어야 "물건마다 다르다"**
- * 가 성립한다.
+ * 2026-09-21 지적: "랜덤 범위가 너무 커 … 지금은 이전 등급이 오히려 더 좋은 경우가
+ * 많은데 이전 등급 최대가 다음 등급 하위 30% 정도 되게 만들어."
+ *
+ * **선형 배율이 원인이었다.** 25% → 100% 를 일곱 칸에 선형으로 나누면 후반 한 칸이
+ * +14% 인데 굴림 폭은 ±33% 라, 6등급 최고 굴림이 7등급 굴림의 71% 지점까지 올라갔다.
+ * 등비로 바꾸면 전 구간에서 간격이 같다.
+ *
+ * 비는 요청 두 줄에서 바로 나온다:
+ *
+ * ```
+ * 최소 = 최대 × 0.5                       ← "최소 최대 수치가 50% 상한"
+ * 이전 최대 = 다음 최소 + 0.3 × (다음 폭)  ← "이전 등급 최대가 다음 등급 하위 30%"
+ *           = 0.5×다음최대 + 0.3×0.5×다음최대 = 0.65 × 다음 최대
+ * ```
+ *
+ * 그래서 한 칸 내려갈 때마다 **×0.65** 다. 7등급이 100%, 1등급은 7.5% 가 된다
+ * (옛 25% 보다 낮다 — 초반 옵션이 작아진 만큼 등급 간 차이가 또렷해진다).
+ */
+export const OPTION_STEP = 0.65;
+
+/**
+ * 등급이 옵션 수치에 주는 배수 — 7등급이 100%, 한 칸 내려갈 때마다 ×0.65.
  */
 export function optionScale(grade: number): number {
   const g = Math.max(1, Math.min(OPTION_GRADE_MAX, grade));
-  return 0.25 + (0.75 * (g - 1)) / (OPTION_GRADE_MAX - 1);
+  return OPTION_STEP ** (OPTION_GRADE_MAX - g);
 }
 
 /**
@@ -455,10 +474,11 @@ export function optionScale(grade: number): number {
  * 하고(10% 는 어디서나 10%), 수치로 주면 200레벨 장비의 공격력 +3 처럼 장식이 된다.
  */
 export function optionRange(kind: OptionKind, grade: number): { min: number; max: number } {
-  const top = OPTION_MAX_VALUE[kind] * optionScale(grade);
-  // 반올림하고 **나서** 50배 한다 (`OPTION_POWER` 참고) — 태초 치확이 40~75 가 된다
-  const round = (v: number) => (Math.round(v * 10) / 10) * OPTION_POWER;
-  return { min: round(top * 0.5), max: round(top) };
+  // **최소는 최대의 절반이다** (2026-09-21: "최소 최대 수치가 50% 상한을 둬").
+  // 등비 배율(`OPTION_STEP`)과 짝이 되는 규칙이라 둘을 같이 본다.
+  // 자릿수가 커진 뒤로는 소수점이 읽는 데 방해만 되므로 정수로 끊는다
+  const top = OPTION_MAX_VALUE[kind] * OPTION_POWER * optionScale(grade);
+  return { min: Math.round(top * 0.5), max: Math.round(top) };
 }
 
 /** 그 등급 물건에 붙는 옵션 개수의 (최소, 최대) */

@@ -57,6 +57,11 @@ func _run() -> void:
 		await _portal(game)
 		return
 
+	# 차원문 창 — 이펙트가 아니라 UI 다. HUD 에 안 가리는지, 누른 줄이 눌려 보이는지
+	if skill == "gate":
+		await _gate(game)
+		return
+
 	# HUD 는 시전할 것이 없다 — 액션바를 채우고 자동사냥을 켠 채로 찍는다
 	# (켜져 있어야 자동사냥 칸에서 고리가 돈다)
 	if skill == "hud":
@@ -96,6 +101,42 @@ func _run() -> void:
 			taken += 1
 			print("logs/shot_%02d.png  (%.2f초쯤)" % [frame, float(frame) * 0.15 * SLOW])
 	quit(0)
+
+
+## 차원문 창을 열어 찍는다. 한 장은 그냥, 한 장은 **줄을 누른 채**로 —
+## 눌린 틀이 눈에 들어오는지는 글로 확인할 수 없다
+func _gate(game: Node3D) -> void:
+	game._open_gate()
+	await process_frame
+	await process_frame
+	var panel: GatePanel = game._gate_panel
+	var list: ScrollContainer = panel._scroll
+	var frame := 0
+	while frame < 6:
+		await process_frame
+		frame += 1
+	await RenderingServer.frame_post_draw
+	root.get_texture().get_image().save_png("res://../logs/gate_off.png")
+	print("logs/gate_off.png")
+
+	# 세 번째 줄을 누른 채로 둔다
+	var box := panel.row(2).get_global_rect()
+	var at := Vector2(list.size.x * 0.5, box.get_center().y - list.global_position.y)
+	panel._on_list_input(_press_event(at))
+	for i in 4:
+		await process_frame
+	await RenderingServer.frame_post_draw
+	root.get_texture().get_image().save_png("res://../logs/gate_on.png")
+	print("logs/gate_on.png  (셋째 줄을 누른 채)")
+	quit(0)
+
+
+func _press_event(at: Vector2) -> InputEventMouseButton:
+	var event := InputEventMouseButton.new()
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.position = at
+	event.pressed = true
+	return event
 
 
 ## 메인 HUD — 왼쪽 위 상태판, 오른쪽 위 메뉴, 아래 가운데 퀵슬롯과 자동사냥 칸.

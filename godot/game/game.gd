@@ -1983,11 +1983,24 @@ func _make_theme() -> Theme:
 	return theme
 
 
-## 차원문 창. 조각을 조립하는 건 GatePanel 이 하고, 여기서는 달고 고른 곳을 보내기만 한다
+## 차원문 창. 조각을 조립하는 건 GatePanel 이 하고, 여기서는 달고 고른 곳을 보내기만 한다.
+##
+## **HUD 보다 위에 있는 제 층(CanvasLayer)에 단다** (2026-09-20 지적: "포탈이 HUD에
+## 이미지가 가려지는데"). `_ui_root` 안에 두면 나중에 붙는 액션바·가방창이 위에
+## 그려져 목록을 덮고, 그쪽이 누름까지 먹어 줄이 안 눌렸다. 층 번호를 올리면
+## 붙이는 순서와 상관없이 늘 맨 위다
 func _build_gate_panel() -> void:
-	_gate_panel = GatePanel.create()
+	var top := CanvasLayer.new()
+	top.name = "GateLayer"
+	top.layer = 10
+	add_child(top)
+
+	# 조각(판·단추·닫기 X)은 가방창·스킬창과 같은 것을 쓴다 — 여는 손을 넘겨준다
+	_gate_panel = GatePanel.create(_frame_box, _icon)
+	# 한글 폰트는 _ui_root 의 테마에 있다 — 다른 층이라 직접 물려준다
+	_gate_panel.theme = _ui_root.theme
 	_gate_panel.picked.connect(_on_gate_pick)
-	_ui_root.add_child(_gate_panel)
+	top.add_child(_gate_panel)
 
 
 func _open_gate() -> void:

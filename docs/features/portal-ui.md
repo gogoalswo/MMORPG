@@ -11,7 +11,7 @@
 |---|---|
 | `godot/game/portal.gd` | `Portal.create(gate)` — 아치 모델을 세운다. 없으면 빛나는 원판. `Portal.hit` — 화면에서 쏜 선이 **소용돌이 판**에 닿나 |
 | `godot/game/portal_swirl.gd` | `PortalSwirl` — 아치 구멍에서 **빨려들어가는 소용돌이**. 나선 팔 5개 + 끌려드는 알갱이 + 가운데 빛 |
-| `godot/game/gate_panel.gd` | `GatePanel` — 창. 바탕·칸·글자를 앵커로 조립한다. 목록은 **끌어서** 내린다(`_on_list_input`). 고르면 `picked(zone_id)` |
+| `godot/game/gate_panel.gd` | `GatePanel` — 창(`PanelContainer`). 조각은 가방창과 같은 `ui_panel`·`ui_button`·`ui_close`. 목록은 **끌어서** 내리고 줄 전체가 누르는 자리다(`_on_list_input`·`_row_at`). 고르면 `picked(zone_id)` |
 | `godot/game/game.gd` | `_gate_tapped`(누름 판정) · `_on_gate_tapped`(문 안이면 열고 멀면 걸어감) · `_open_gate` · `_on_gate_pick`(`travel` 요청) |
 | `scripts/build-ui.mjs` | UI 조각 원본(1024²)을 쓰는 크기로 줄인다 → `public/assets/ui/` |
 | `scripts/fetch-assets.sh` | 바르코 결과물 주소. 포탈 GLB 는 여기서 1024 JPEG 로 줄여 커밋본을 만든다 |
@@ -19,6 +19,31 @@
 | `godot/tests/ui_test.gd` | 줄 수·막힌 줄·칸 아이콘·가운데 앵커·아치 윗부분 누르기 |
 
 ## 규칙
+
+### 창은 HUD 보다 위 층에 있다 ★
+
+`GatePanel` 은 `_ui_root` 가 아니라 **제 `CanvasLayer`(layer 10)** 에 단다
+(2026-09-20 지적: "포탈이 HUD에 이미지가 가려지는데"). `_ui_root` 안에 두면
+나중에 붙는 액션바·가방창이 위에 그려져 목록을 덮고, **그쪽이 누름까지 먹어**
+가려진 줄은 눌리지도 않았다. 층 번호를 올리면 붙이는 순서와 상관없이 맨 위다.
+한글 폰트는 `_ui_root.theme` 에 있으므로 창에 직접 물려준다.
+
+### 줄은 칸이고, 누르면 눌린다 ★
+
+- **줄 전체가 누르는 자리다** (2026-09-20 요청). `_row_at` 은 가로를 따지지 않고
+  세로만 본다 — 목록 안이면 어디를 눌러도 그 줄이고, 줄 사이 틈(`ROW_GAP`)도
+  가까운 줄에 붙인다.
+- **누르면 밝은 틀로 바뀌고 내용이 `ROW_SINK`(3px) 내려앉는다.** 뗄 때 되돌린다.
+  줄 단추는 입력을 안 받으므로(끌기 판정이 목록 쪽에 있다) 고도의 `pressed` 상태가
+  오지 않는다 — `_press` 가 `normal` 스타일박스를 갈아 끼우는 이유다.
+- 누른 줄에서 손을 떼야 고른다. **다른 줄로 미끄러졌거나 끌기로 넘어가면 취소**다.
+- **틀은 가방창·스킬창과 같은 조각이다** (2026-09-20 요청: "스타일도 다른 UI와
+  아트풍 비슷하게"). 창 바탕은 `ui_panel`, 줄은 `ui_button`, 닫기는 `ui_close` X 다
+  ([hud.md](hud.md) 의 "조각 여덟 장"). 조각을 여는 것은 `game.gd` 의
+  `_frame_box`·`_icon` 이고, **`GatePanel.create` 가 그 둘을 받아 온다** — 같은
+  로더를 두 벌 두지 않으려는 것이다. 안 받으면 코드로 그린 틀로 물러선다.
+- 누른 줄은 조각을 그대로 두고 `modulate_color`(`PRESS_TINT`)로 **금테를 달군다**.
+  제목은 경험치 막대와 같은 금색(`TITLE_COLOR`)이다.
 
 ### UI 는 조각을 조립한다 ★
 

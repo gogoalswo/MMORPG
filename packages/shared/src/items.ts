@@ -30,6 +30,7 @@ import {
   enhanceMultiplier as gearEnhanceMultiplier,
   slotStats,
   dropGrades as gearDropGrades,
+  GEAR_DROP_RATE,
 } from './gear.ts';
 
 /** 장비가 더해주는 능력치 */
@@ -604,8 +605,28 @@ export function tierForLevel(monsterLevel: number): number {
   return Math.min(TIER_PREFIX.length - 1, Math.max(0, index));
 }
 
-/** 아이템이 떨어질 확률 */
-export const DROP_CHANCE = 0.14;
+/**
+ * 그 몬스터가 장비를 떨굴 확률 — **설계값이다.** ★★
+ *
+ * 2026-09-21 까지는 `DROP_CHANCE = 0.14` 평면값이었다. 그 숫자는 설계 문서보다
+ * **먼저** 있던 것(고도 이관 2단계)이고, 설계의 `GEAR_DROP_RATE` 는 `balance.json`
+ * 으로 내보내지기만 할 뿐 **판정에서 아무도 안 읽고 있었다** — 설계 9장의 "코드에
+ * 넣을 때 순서" 여섯 단계에 드랍률이 없어서 그 사이로 빠졌다.
+ *
+ * 창에 든 등급들의 확률을 **더한 값**이다. 각 등급은 자기 `GEAR_DROP_RATE` 로
+ * 떨어진다 — 아래 등급이 자기 기준 사냥터를 지나서도 계속 나오는 것은 의도다.
+ * 강화 여벌이 필요하기 때문이다(실패하면 파괴).
+ *
+ * `GEAR_DROP_RATE` 는 **퍼센트 단위**라 100 으로 나눈다. 0.2963 = 0.2963% 다.
+ */
+export function dropChanceFor(monsterLevel: number): number {
+  return dropGradesFor(monsterLevel).reduce((sum, g) => sum + gearDropRate(g), 0);
+}
+
+/** 등급 하나의 킬당 확률(0~1). 표는 퍼센트라 100 으로 나눈다 */
+function gearDropRate(grade: number): number {
+  return (GEAR_DROP_RATE[Math.min(GEAR_DROP_RATE.length, Math.max(1, grade)) - 1] ?? 0) / 100;
+}
 
 /**
  * 그 몬스터가 떨굴 수 있는 등급들 — **사냥터가 정한다.** ★
@@ -625,12 +646,13 @@ export function dropGradesFor(monsterLevel: number): number[] {
 /**
  * 굴림값(0~1)에서 드롭 등급 하나 — **그 몬스터가 선 사냥터 안에서만.**
  *
- * 후보는 둘(사냥터 1 은 하나)이고 **아래 등급이 두 배 흔하다.** 한 등급 오를
- * 때마다 절반이라는 예전 가중치를, 이제 전 구간이 아니라 창 안에서만 쓴다.
+ * 비율은 **설계의 등급별 드랍률 그대로**다 (`GEAR_DROP_RATE`). 예전에는
+ * `2^(n-g)` 로 임의로 반씩 깎았는데, 설계가 등급마다 절대 확률을 정해 두었으므로
+ * 그 비로 나누면 두 값이 어긋날 일이 없다. 창이 [1, 2] 면 0.2963 : 0.08 이다.
  */
 export function rollGrade(roll: number, monsterLevel: number): number {
   const grades = dropGradesFor(monsterLevel);
-  const weights = grades.map((_, i) => 2 ** (grades.length - 1 - i));
+  const weights = grades.map((g) => gearDropRate(g));
   const total = weights.reduce((a, b) => a + b, 0);
   let cursor = Math.max(0, Math.min(0.999999, roll)) * total;
   for (let i = 0; i < weights.length; i++) {
@@ -659,7 +681,7 @@ export function rollDrop(monsterLevel: number, job: JobId, rng: () => number = M
   // ±30% 흔들어 매번 같은 숫자가 나오지 않게 한다
   const gold = Math.max(1, Math.round(base * (0.7 + rng() * 0.6)));
 
-  if (rng() >= DROP_CHANCE) return { gold };
+  if (rng() >= dropChanceFor(monsterLevel)) return { gold };
 
   const tier = tierForLevel(monsterLevel);
   const tag = String(tier).padStart(2, '0');

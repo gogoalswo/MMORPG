@@ -267,14 +267,34 @@ static func drop_grades(monster_level: int) -> Array:
 	return out
 
 
-## 그 사냥터 안에서 등급 하나 — **아래 등급이 두 배 흔하다.**
-## 한 등급 오를 때마다 절반이라는 예전 가중치를 창 안에서만 쓴다
+## 등급 하나의 킬당 확률(0~1). 표는 **퍼센트 단위**라 100 으로 나눈다
+static func grade_drop_rate(grade: int) -> float:
+	var rates: Array = _t().get("gradeDropRate", [])
+	if rates.is_empty():
+		return 0.0
+	return float(rates[clampi(grade, 1, rates.size()) - 1]) / 100.0
+
+
+## 그 몬스터가 장비를 떨굴 확률 — 창에 든 등급들의 확률을 **더한 값**이다.
+##
+## 2026-09-21 까지는 `dropChance` 평면값 0.14 였다. 설계값(`GEAR_DROP_RATE`)은
+## `balance.json` 에 있기만 하고 판정이 안 읽고 있었다 → docs/features/items.md
+static func drop_chance(monster_level: int) -> float:
+	var sum := 0.0
+	for g in drop_grades(monster_level):
+		sum += grade_drop_rate(int(g))
+	return sum
+
+
+## 그 사냥터 안에서 등급 하나 — **설계의 등급별 드랍률 비 그대로.**
+## 예전에는 2^(n-g) 로 임의로 반씩 깎았는데, 설계가 절대 확률을 정해 두었으므로
+## 그 비로 나누면 두 값이 어긋날 일이 없다
 static func roll_grade(roll: float, monster_level: int) -> int:
 	var grades := drop_grades(monster_level)
 	var weights: Array = []
 	var total := 0.0
-	for i in grades.size():
-		var w: float = pow(2.0, grades.size() - 1 - i)
+	for g in grades:
+		var w := grade_drop_rate(int(g))
 		weights.append(w)
 		total += w
 
@@ -294,7 +314,7 @@ static func roll_drop(monster_level: int, job: String, rng: RandomNumberGenerato
 	# ±30% 흔들어 매번 같은 숫자가 나오지 않게 한다
 	var gold := maxi(1, roundi(base * (0.7 + rng.randf() * 0.6)))
 
-	if rng.randf() >= float(_t().get("dropChance", 0.14)):
+	if rng.randf() >= drop_chance(monster_level):
 		return {"gold": gold}
 
 	var tag := "%02d" % tier_for_level(monster_level)

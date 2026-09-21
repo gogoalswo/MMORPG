@@ -71,9 +71,10 @@ import {
   OPTION_MAX,
   OPTION_LABEL,
   MAX_ENHANCE,
-  DROP_CHANCE,
   TIER_COUNT,
 } from '../packages/shared/src/index.ts';
+// `index.ts` 가 gear.ts 를 다시 내보내지 않는다 — 설계 표는 직접 가져온다
+import { GEAR_DROP_RATE } from '../packages/shared/src/gear.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const OUT_DIR = join(ROOT, 'godot', 'data');
@@ -146,7 +147,10 @@ export function buildData() {
       optionMax: OPTION_MAX,
       optionLabel: OPTION_LABEL,
       maxEnhance: MAX_ENHANCE,
-      dropChance: DROP_CHANCE,
+      // 등급별 킬당 드랍률 — **퍼센트 단위**다 (0.2963 = 0.2963%).
+      // 설계(stat-balance.md 7장)가 "그 사냥터 체류 중에 목표 개수를 채운다"
+      // 에서 역산한 값이라, 합계 하나로는 못 줄이고 등급마다 따로 둔다
+      gradeDropRate: GEAR_DROP_RATE,
       tierCount: TIER_COUNT,
     },
     'constants.json': {

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import type { ItemBonus } from './items.ts';
 import {
   slotLabel,
-  DROP_CHANCE,
+  dropChanceFor,
   EQUIP_SLOTS,
   GRADE_MAX,
   GRADE_MIN,
@@ -231,8 +231,39 @@ test('드롭은 항상 골드를 주고, 아이템은 가끔 준다', () => {
   assert.ok(onlyGold.gold > 0);
   assert.equal(onlyGold.item, undefined);
 
-  const withItem = rollDrop(20, 'archer', fixed(0.5, DROP_CHANCE - 0.01, 0, 0));
+  const withItem = rollDrop(20, 'archer', fixed(0.5, dropChanceFor(20) - 1e-6, 0, 0));
   assert.ok(withItem.item, '확률 안에 들었는데 아이템이 없다');
+});
+
+test('드랍률이 설계값이다 — 평면 14% 가 아니다', () => {
+  // 2026-09-21 지적: "md 파일 준걸로는 1등급 드랍률 0.3% 라고 했는데 지금은 왜
+  // 말도 안 되게 높은거지?" — 설계값이 balance.json 에 있기만 하고 판정이 안
+  // 읽고 있었다. 설계 문서 7장의 표를 그대로 박아 둔다 (단위: 퍼센트)
+  const want: Record<number, number> = {
+    15: 0.2963, // 사냥터 2 — 등급1 만
+    45: 0.2963 + 0.08, // 사냥터 5 — 등급1 + 등급2
+    75: 0.08 + 0.0321,
+    105: 0.0321 + 0.0095,
+    135: 0.0095 + 0.0055,
+    165: 0.0055 + 0.0016,
+    195: 0.0016 + 0.0011, // 사냥터 20 — 등급6 + 등급7
+  };
+  for (const [level, percent] of Object.entries(want)) {
+    const got = dropChanceFor(Number(level)) * 100;
+    assert.ok(Math.abs(got - percent) < 1e-9, `Lv${level}: ${got}% (${percent}% 여야 한다)`);
+  }
+  // 예전 평면값보다 한참 낮다 — 등급1 기준 47배
+  assert.ok(dropChanceFor(15) < 0.14 / 40, '아직 평면값 수준이다');
+});
+
+test('등급 비율이 설계의 드랍률 비 그대로다', () => {
+  // 사냥터 5 = [1, 2] → 0.2963 : 0.08 = 78.7% : 21.3%
+  const counts = new Array(GRADE_MAX + 1).fill(0);
+  const N = 20000;
+  for (let i = 0; i < N; i++) counts[rollGrade(i / N, 45)]++;
+  const share = counts[1] / N;
+  const want = 0.2963 / (0.2963 + 0.08);
+  assert.ok(Math.abs(share - want) < 0.01, `1등급 비중 ${share.toFixed(3)} (${want.toFixed(3)} 여야 한다)`);
 });
 
 test('떨어지는 무기는 잡은 사람 직업 것이다', () => {
@@ -281,14 +312,17 @@ test('최고 등급은 마지막 사냥터에서만 나온다', () => {
   assert.ok(dropGradesFor(191).includes(MAX_DROP_GRADE), '마지막 사냥터에서도 안 나온다');
 });
 
-test('창 안에서는 낮은 등급이 두 배 흔하다', () => {
+test('창 안에서는 아래 등급이 더 흔하다 — 비는 설계가 정한다', () => {
+  // 예전에는 2^(n-g) 로 임의로 2:1 이었다. 이제 설계의 드랍률 비 그대로다 —
+  // 사냥터 20 = [6, 7] 이면 0.0016 : 0.0011 = 1.45 : 1
   const counts = new Array(GRADE_MAX + 1).fill(0);
-  for (let i = 0; i < 10000; i++) counts[rollGrade(i / 10000, 200)]++;
-  // 사냥터 20 = [6, 7]
+  const N = 20000;
+  for (let i = 0; i < N; i++) counts[rollGrade(i / N, 200)]++;
   assert.ok(counts[6] > counts[7], '아래 등급이 더 흔해야 한다');
   assert.ok(counts[7] > 0, '위 등급이 아예 안 나온다');
   const ratio = counts[6] / counts[7];
-  assert.ok(Math.abs(ratio - 2) < 0.1, `비가 2:1 이어야 하는데 ${ratio.toFixed(2)}:1`);
+  const want = 0.0016 / 0.0011;
+  assert.ok(Math.abs(ratio - want) < 0.05, `비가 ${want.toFixed(2)}:1 이어야 하는데 ${ratio.toFixed(2)}:1`);
 });
 
 test('기본 능력치는 등급을 타지 않는다', () => {

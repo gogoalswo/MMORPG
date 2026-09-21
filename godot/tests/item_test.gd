@@ -139,7 +139,9 @@ func _case_drop() -> void:
 	# 떨어지는 장비는 **잡은 사람이 쓸 수 있는 것만** 고른다
 	var rng := RandomNumberGenerator.new()
 	var drops := 0
-	for seed_value in 200:
+	# **20,000번 돌린다.** 설계 드랍률을 붙이고 나서 Lv35 는 340마리에 하나라
+	# 200번으로는 0개가 나와 아무것도 확인이 안 된다 (2026-09-21)
+	for seed_value in 20000:
 		rng.seed = seed_value
 		var loot := Items.roll_drop(35, "fighter", rng)
 		if int(loot.gold) < 1:
@@ -163,9 +165,17 @@ func _case_drop() -> void:
 		if not (int(loot.item.grade) in Items.drop_grades(35)):
 			_fail("사냥터 4 에서 %d등급이 떨어졌다" % loot.item.grade)
 			return
-	print("  드롭 200번: %d개 나옴 (확률 %.0f%%) — 전부 %s등급" % [
-		drops, drops / 2.0, str(Items.drop_grades(35))
-	])
+	if drops == 0:
+		_fail("20,000번 돌렸는데 하나도 안 떨어졌다")
+	# 설계값(stat-balance.md 7장)과 맞나 — 1등급 0.2963%
+	var by_design := Items.drop_chance(35)
+	var measured := float(drops) / 20000.0
+	if absf(measured - by_design) > by_design * 0.35:
+		_fail("드랍률이 %.4f%% 여야 하는데 %.4f%%" % [by_design * 100.0, measured * 100.0])
+	else:
+		print("  드롭 20,000번: %d개 (%.4f%%, 설계 %.4f%%) — 전부 %s등급" % [
+			drops, measured * 100.0, by_design * 100.0, str(Items.drop_grades(35))
+		])
 
 	# 사냥터마다 나오는 등급이 다르다. 표는 shared 가 만들고 여기는 읽기만 한다
 	var want := {1: [1], 45: [1, 2], 75: [2, 3], 105: [3, 4], 135: [4, 5], 165: [5, 6], 195: [6, 7]}

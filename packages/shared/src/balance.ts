@@ -12,6 +12,7 @@
  */
 import { JOB_IDS, type JobId } from './character.ts';
 import { EQUIP_SLOTS, type EquipSlot } from './slots.ts';
+import { MONSTER_STATS } from './monsterTable.ts';
 import {
   ASPD_MAX,
   CRIT_DMG_MAX,
@@ -330,6 +331,27 @@ export function damage(atk: number, attackerLevel: number, df: number): number {
   return Math.max(1, (atk * k) / (k + df));
 }
 
+/**
+ * 그 레벨 몬스터의 능력치 — **고정 표에서 읽는다** (`monsterTable.ts`).
+ *
+ * 표에 없는 레벨(0 이하·만렙 초과)은 양 끝으로 자른다. 역할 배수와 경험치만
+ * 여기서 얹는다 — 경험치는 HP 에 정비례한다는 설계 규칙이라 표에 안 넣었다.
+ */
+export function monster(level: number, role: MonsterRole = 'normal'): Monster {
+  const index = Math.max(0, Math.min(MONSTER_STATS.length - 1, Math.round(level) - 1));
+  const [hp, atk, df] = MONSTER_STATS[index]!;
+  const r = ROLE_MULT[role];
+  return {
+    level,
+    role,
+    hp: hp * r.hp,
+    atk: atk * r.atk,
+    df,
+    interval: MON_ATTACK_INTERVAL,
+    exp: hp * r.hp * EXP_COEF,
+  };
+}
+
 export interface Monster extends Stats {
   level: number;
   role: MonsterRole;
@@ -347,7 +369,19 @@ export interface Monster extends Stats {
  * 1마리 공격력이 아주 작아진다 — `meleeAttackers` 마리가 동시에 때린다고 보고
  * 역산하기 때문이다. 잡몹 한 마리는 위협이 아니고 **무리가 위협**인 구조다.
  */
-export function monster(level: number, role: MonsterRole = 'normal'): Monster {
+/**
+ * 설계 역산 — **게임은 이걸 안 쓴다.** ★★
+ *
+ * 2026-09-21 지시: "몬스터 능력치가 자동으로 역산 되면 안돼." 그 전에는 아래
+ * `monster()` 가 이 식이었고, `monsters.json` 을 구울 때마다 **그 자리에서**
+ * 장비 설계로 역산했다. 그래서 장비 지분을 손대면 몬스터가 소리 없이 따라
+ * 움직였다 (치확 버킷을 걷자 Lv200 HP 가 -30%).
+ *
+ * 지금은 `monsterTable.ts` 의 고정 표가 답이고, 이 함수는 **그 표를 다시 뽑을 때만**
+ * 쓴다 (`node scripts/freeze-monsters.mjs`, 사람이 직접). 설계의 근거를 코드에
+ * 남겨 두는 자리이기도 하다 — 왜 그 숫자였는지는 여기 식에 있다.
+ */
+export function monsterByDesign(level: number, role: MonsterRole = 'normal'): Monster {
   const ref = refPlayer(level);
   const df = ref.df * MON_DEF_RATIO;
   const hp = TTK_HITS * (1 - TTK_MARGIN) * damage(ref.atk, level, df) * ref.crit;
@@ -460,6 +494,9 @@ export function balanceTable() {
     growth: GROWTH,
     targetReduce: TARGET_REDUCE,
     monDefRatio: MON_DEF_RATIO,
+    // 몬스터 고정 표 `[HP, 공격력, 방어력]` × 200레벨 — **역산이 아니다**
+    // (2026-09-21). 고도도 이 표만 읽는다 (`stats.gd` 의 `monster`)
+    monsterStats: MONSTER_STATS,
     monAttackInterval: MON_ATTACK_INTERVAL,
     playerAttackInterval: PLAYER_ATTACK_INTERVAL,
     ttkHits: TTK_HITS,

@@ -12,6 +12,7 @@
     "server:raw": "npm run dev -w @mmo/server",
     "probe": "node scripts/probe.mjs",
     "compress": "node scripts/compress-textures.mjs",
+    "freeze:monsters": "node --experimental-strip-types scripts/freeze-monsters.mjs",
     "export:godot": "node scripts/export-shared.mjs",
     "sync:godot": "node scripts/sync-godot-assets.mjs",
     "test:godot": "bash scripts/godot-test.sh",

@@ -295,29 +295,29 @@ static func damage(atk: float, attacker_level: int, df: float) -> float:
 	return maxf(1.0, atk * k / (k + df))
 
 
-## 몬스터를 **(레벨, 그 레벨의 기준 장비)** 에서 역산한다.
+## 몬스터 능력치 — **고정 표(`monsterStats`)에서 읽는다.** ★★
+##
+## 2026-09-21 지시: "몬스터 능력치가 자동으로 역산 되면 안돼." 그 전에는 여기서
+## (레벨, 그 레벨의 기준 장비) 로 역산했고, 장비를 손대면 몬스터가 소리 없이
+## 따라 움직였다. 표는 `packages/shared/src/monsterTable.ts` 가 원본이고
+## `balance.json` 으로 실려 온다 — 여기는 읽기만 한다.
+##
 ## 몬스터에게 치명타는 주지 않는다 — 유일한 경고 신호가 "몇 대 맞았나" 인데
 ## 치명타는 예고 없는 죽음을 만든다
 static func monster(level: int, role: String = "normal") -> Dictionary:
 	var b := _b()
-	var ref := ref_player(level)
-	var df: float = ref["df"] * float(b.get("monDefRatio", 0.5))
-	var hits := float(b.get("ttkHits", 6))
-	var margin := float(b.get("ttkMargin", 0.005))
-	var hp := hits * (1.0 - margin) * damage(ref["atk"], level, df) * float(ref["crit"])
-	# 한 그룹을 정리하는 동안 HP 를 hpLossPerClear 만큼 잃도록
-	var dps_in: float = ref["hp"] * float(b.get("hpLossPerClear", 0.5)) / float(b.get("clearTime", 15.0))
-	var want := dps_in * float(b.get("monAttackInterval", 1.5)) / float(melee_attackers(level))
-	var k := k_of(level)
-	var atk: float = want * (k + ref["df"]) / k
+	var table: Array = b.get("monsterStats", [])
+	if table.is_empty():
+		return {"level": level, "role": role, "hp": 1.0, "atk": 1.0, "df": 0.0, "interval": 1.5, "exp": 0.0}
+	var row: Array = table[clampi(level - 1, 0, table.size() - 1)]
 	var r: Dictionary = b.get("roleMult", {}).get(role, {"hp": 1.0, "atk": 1.0})
-	var mon_hp := hp * float(r.get("hp", 1.0))
+	var mon_hp := float(row[0]) * float(r.get("hp", 1.0))
 	return {
 		"level": level,
 		"role": role,
 		"hp": mon_hp,
-		"atk": atk * float(r.get("atk", 1.0)),
-		"df": df,
+		"atk": float(row[1]) * float(r.get("atk", 1.0)),
+		"df": float(row[2]),
 		"interval": float(b.get("monAttackInterval", 1.5)),
 		"exp": mon_hp * float(b.get("expCoef", 0.2)),
 	}

@@ -8,7 +8,9 @@
 
 | 파일 | 역할 |
 |---|---|
-| `packages/shared/src/monsters.ts` | 종류 60개 생성, 능력치 공식 |
+| `packages/shared/src/monsters.ts` | 종류 60개 생성 (능력치는 아래 표에서 읽는다) |
+| `packages/shared/src/monsterTable.ts` | ★ **몬스터 능력치 고정 표** — 손으로 고치는 파일 |
+| `scripts/freeze-monsters.mjs` | 그 표를 설계 역산값으로 다시 굽는다 (**사람이 부른다**) |
 | `packages/shared/src/combat.ts` | 레벨 곡선(`expToNext`), 경험치 보상(`expReward`) |
 | `packages/shared/src/combat.test.ts` | 곡선이 감당 범위인지 검사 |
 | `packages/server/src/combat.ts` | 옛 몬스터 AI (idle → chase → attack → 복귀). 이식 원본 |
@@ -24,16 +26,31 @@
 - 5 간격인 이유: 사냥감보다 5레벨 이상 앞서면 경험치 감쇠가 급격히 붙어
   레벨당 필요 마릿수가 몇 배로 뛴다. 5 간격이면 항상 4레벨 안쪽에 상대가 있다.
 
-### 능력치 (`statsForLevel`)
+### 능력치 — **고정 표다** ★★ (`monsterTable.ts`)
+
+2026-09-21 지시: **"몬스터 능력치가 자동으로 역산 되면 안돼. 고정 된 수치로 하고
+혹시나 너무 밸런스가 안 맞으면 그때 직접 수치를 계산해서 변경하자."**
+
 ```
-maxHp     = 20 * level + 40
-attack    = 1.8 * level + 4
-defense   = 2 * sqrt(level)
-expReward = 4 + 7 * level
+packages/shared/src/monsterTable.ts   레벨 1~200 × [HP, 공격력, 방어력]  ← 원본
+balance.ts 의 monster(level, role)    표를 읽고 역할 배수·경험치만 얹는다
+monsters.ts 의 statsForLevel          거기서 받아 반올림해 몬스터 종류를 만든다
+경험치 = HP × 0.2                     (설계 규칙이라 표에 안 넣었다)
 ```
-- **`defense` 가 √ 인 이유**: 피해 공식이 `defense/(defense+45)` 로 포화한다.
-  선형으로 올리면 고레벨에서 피해가 1로 수렴해 한 마리에 40대씩 때리게 된다.
-  √ 로 두면 전 구간에서 10~15대에 잡힌다.
+
+- **바꾸려면 `monsterTable.ts` 를 손으로 고친다.** 한 줄만 고쳐도 된다.
+  전부 다시 뽑으려면 `npm run freeze:monsters` 를 **사람이** 부른다
+  (설계 역산 `monsterByDesign` 으로 200줄을 덮어쓴다). 빌드도 CI 도 안 부른다.
+- **왜 얼렸나:** 그 전에는 몬스터를 구울 때마다 "그 레벨의 기준 장비" 에서
+  역산했다. 그래서 장비를 손대면 몬스터가 소리 없이 따라 움직였다 —
+  2026-09-21 에 장신구 배분을 바꾸자 Lv200 HP 가 **-30%** 가 됐다. 장비와 몬스터가
+  한 손잡이에 묶여 있으면 둘 중 하나만 만질 수가 없다.
+- **설계와 얼마나 벌어졌는지는 테스트가 본다.** `balance.test.ts` 의
+  `DESIGN_DRIFT`(5%)가 "방어력 = 기준 플레이어의 절반" · "한 그룹에 HP 절반" 을
+  느슨하게 대조한다. **표를 크게 고치면 이 폭도 같이 고친다** — 막으라고 둔 게
+  아니라 "얼마나 벗어났는지 알려주는" 감시다.
+- 지금 표의 값(설계 역산 당시): Lv10 HP 69 · Lv100 972 · Lv200 41,801.
+  → [stat-balance.md](stat-balance.md) 6장
 - 보스: `maxHp ×8`, `attack ×1.25`, `scale ×1.8`, `boss: true`,
   그리고 **범위 공격 `aoe: BOSS_AOE`** — 예고하고 터지는 원.
   일반 몬스터에는 붙이지 않는다. 사냥터를 지나다니는 것 자체가 피하기 놀이가
@@ -103,7 +120,8 @@ expReward = 4 + 7 * level
 ## 손댈 때
 
 - 몬스터 수치를 만지면 **반드시** `npm test` — 레벨당 필요 마릿수와 1→만렙
-  총량이 설계 범위 안인지 검사한다.
+  총량이 설계 범위 안인지 검사한다. 고친 뒤 `npm run export:godot` 도 같이 돌린다
+  (표가 `godot/data/balance.json` 과 `monsters.json` 두 곳으로 나간다).
 - 피해 공식([combat.md](combat.md))을 바꾸면 `defense` 공식도 같이 봐야 한다.
   둘은 짝이다.
 

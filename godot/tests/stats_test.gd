@@ -103,14 +103,18 @@ func _ttk() -> void:
 		level += 7
 
 
-## 한 그룹을 정리하는 동안 HP 를 절반 잃는다 (몬스터 공격력이 이 목표의 역산이다)
+## 한 그룹을 정리하는 동안 HP 를 절반쯤 잃는다.
+##
+## **딱 맞지는 않는다** — 2026-09-21 에 몬스터를 고정 표로 바꾸면서 값이 소수
+## 둘째 자리에서 끊겼다. 표를 손으로 고치면 더 벌어지는데 그건 의도된 일이라
+## 폭을 5% 로 둔다 (`balance.test.ts` 의 DESIGN_DRIFT 와 같은 기준이다)
 func _group_loss() -> void:
 	for level in [15, 100, 195]:
 		var ref := Stats.ref_player(level)
 		var m := Stats.monster(level)
 		var per := Stats.damage(m["atk"], level, ref["df"])
 		var taken: float = per * float(Stats.melee_attackers(level)) * 15.0 / float(m["interval"])
-		_near("Lv%d 그룹 HP 손실" % level, taken / float(ref["hp"]), 0.5, 1e-9)
+		_near("Lv%d 그룹 HP 손실" % level, taken / float(ref["hp"]), 0.5, 0.025)
 
 
 ## 문서 5장 — 스킬 해금에 그룹 크기가 묶인다

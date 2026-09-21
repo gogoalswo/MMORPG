@@ -7,6 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { JOB_IDS } from './character.ts';
+import { MONSTER_STATS } from './monsterTable.ts';
 import {
   CLEAR_TIME,
   EXP_COEF,
@@ -103,21 +104,50 @@ test('기준 장비로는 동레벨 몬스터를 정확히 6타에 잡는다', (
   }
 });
 
-test('몬스터 방어력은 기준 플레이어의 절반이다 — 체력형이어야 타격감이 산다', () => {
+// 아래 둘은 **고정 표가 설계에서 얼마나 벗어났는지 보는 감시**다 (2026-09-21).
+// 몬스터 수치가 더는 역산이 아니라 `monsterTable.ts` 의 고정 표라, 예전처럼
+// 1e-9 로 딱 맞을 수 없다(표가 소수 둘째 자리에서 끊긴다). **표를 손으로 고치면
+// 그만큼 더 벌어진다** — 그건 의도된 일이므로 폭을 넉넉히 둔다. 크게 바꿀 거면
+// 여기 허용 폭도 같이 고치고, 무엇을 왜 바꿨는지 표 주석에 적는다.
+const DESIGN_DRIFT = 0.05; // 5%
+
+test('몬스터 방어력이 기준 플레이어의 절반쯤이다 — 체력형이어야 타격감이 산다', () => {
   for (const level of [1, 77, 200]) {
-    assert.ok(Math.abs(monster(level).df - refPlayer(level).df * MON_DEF_RATIO) < 1e-9);
+    const want = refPlayer(level).df * MON_DEF_RATIO;
+    assert.ok(
+      Math.abs(monster(level).df - want) <= want * DESIGN_DRIFT,
+      `Lv${level}: ${monster(level).df} vs 설계 ${want}`
+    );
   }
 });
 
-test('한 그룹을 정리하는 동안 HP 를 절반 잃는다', () => {
-  // 몬스터 공격력이 이 목표에서 역산된 값이므로, 되짚으면 50% 가 나와야 한다
+test('한 그룹을 정리하는 동안 HP 를 절반쯤 잃는다', () => {
   for (const level of [15, 100, 195]) {
     const ref = refPlayer(level);
     const m = monster(level);
     const perHit = damage(m.atk, level, ref.df);
     const taken = (perHit * meleeAttackers(level) * CLEAR_TIME) / m.interval;
-    assert.ok(Math.abs(taken / ref.hp - HP_LOSS_PER_CLEAR) < 1e-9, `Lv${level} ${taken / ref.hp}`);
+    const ratio = taken / ref.hp;
+    assert.ok(
+      Math.abs(ratio - HP_LOSS_PER_CLEAR) <= HP_LOSS_PER_CLEAR * DESIGN_DRIFT,
+      `Lv${level} ${ratio}`
+    );
   }
+});
+
+test('몬스터 표는 고정 표에서 나온다 — 장비를 고쳐도 안 움직인다 ★', () => {
+  // 2026-09-21 지시: "몬스터 능력치가 자동으로 역산 되면 안돼."
+  // 표에 박힌 값이 그대로 나와야 한다 (역할 배수만 얹는다)
+  const [hp, atk, df] = MONSTER_STATS[99]!;
+  const m = monster(100);
+  assert.equal(m.hp, hp, 'Lv100 HP 가 표와 다르다');
+  assert.equal(m.atk, atk);
+  assert.equal(m.df, df);
+  assert.equal(monster(100, 'elite').hp, hp * 3, '정예 배수만 얹는다');
+  // 표 밖 레벨은 양 끝으로 자른다 — 없는 칸을 읽어 0 이 나오면 안 된다
+  assert.equal(monster(0).hp, MONSTER_STATS[0]![0]);
+  assert.equal(monster(999).hp, MONSTER_STATS[MONSTER_STATS.length - 1]![0]);
+  assert.equal(MONSTER_STATS.length, MAX_LEVEL, '레벨마다 한 줄이어야 한다');
 });
 
 test('역할 배수 — 보스는 설계 보류라 임시값이다', () => {

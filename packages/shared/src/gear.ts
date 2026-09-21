@@ -214,6 +214,32 @@ export function dropField(grade: number): number {
  */
 export const GEAR_DROP_RATE = [0.2963, 0.08, 0.0321, 0.0095, 0.0055, 0.0016, 0.0011];
 
+/**
+ * 사냥터 `field` 에서 뚫을 수 있는 **가장 높은 등급** — `dropField` 의 역함수다.
+ *
+ * 2026-09-21 에 붙였다. `dropField` 는 "등급 g 를 어디서 뚫나" 를 정해 놨는데
+ * 판정이 그걸 안 보고 있어서 **Lv1 몬스터가 최고 등급을 떨굴 수 있었다.**
+ * 사냥터 1 은 `dropField` 상으로는 아무것도 안 나오는 자리지만(시작 무기를
+ * 주므로), 게임에서는 첫 구간에 아무것도 안 떨어지면 빈 손이라 1등급을 준다.
+ */
+export function topGradeAt(field: number): number {
+  let top = 1;
+  for (let g = 1; g <= GRADE_COUNT; g++) if (dropField(g) <= field) top = g;
+  return top;
+}
+
+/**
+ * 그 사냥터에서 떨어지는 등급들 — **그 사냥터의 등급과 바로 아래 하나.**
+ *
+ * 하나만 주면 사냥터에 막 들어선 순간에는 아직 쓸 수 없는 등급만 나온다.
+ * 아래 하나를 같이 주면 갈아입는 구간이 이어지고, **강화 여벌**도 끊기지
+ * 않는다 — 강화는 실패하면 파괴라 같은 등급 재고가 계속 필요하다.
+ */
+export function dropGrades(field: number): number[] {
+  const top = topGradeAt(field);
+  return top <= 1 ? [1] : [top - 1, top];
+}
+
 /** 등급 접두어. `items.ts` 의 단계 접두어에서 일곱 개를 골라 톤을 맞췄다 */
 const GRADE_PREFIX = ['낡은', '단단한', '강철', '은빛', '고대', '심연', '종말'];
 

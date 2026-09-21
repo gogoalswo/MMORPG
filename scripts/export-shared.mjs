@@ -65,6 +65,7 @@ import {
   GRADE_MIN,
   GRADE_MAX,
   MAX_DROP_GRADE,
+  dropGradesFor,
   OPTION_KINDS,
   OPTION_MIN,
   OPTION_MAX,
@@ -137,6 +138,9 @@ export function buildData() {
       gradeMin: GRADE_MIN,
       gradeMax: GRADE_MAX,
       maxDropGrade: MAX_DROP_GRADE,
+      // 사냥터(1~20)마다 나오는 등급들 — 고도는 표만 읽고 역산하지 않는다.
+      // 칸 0 은 안 쓴다(사냥터 번호가 1부터다)
+      dropGrades: [[], ...Array.from({ length: 20 }, (_, i) => dropGradesFor(i * 10 + 1))],
       optionKinds: OPTION_KINDS,
       optionMin: OPTION_MIN,
       optionMax: OPTION_MAX,

@@ -34,6 +34,7 @@ import {
   rollBossDrop,
   rollDrop,
   rollGrade,
+  dropGradesFor,
   tierForLevel,
   tierLevel,
 } from './items.ts';
@@ -246,21 +247,48 @@ test('떨어지는 무기는 잡은 사람 직업 것이다', () => {
 
 // ---------------------------------------------------------------- 등급
 
-test('등급은 8 이상이 드롭으로 나오지 않는다', () => {
-  // 최상위는 제작으로만 — 운이 아니라 쌓아온 결과여야 한다
-  for (let i = 0; i <= 100; i++) {
-    const grade = rollGrade(i / 100);
-    assert.ok(grade >= GRADE_MIN && grade <= MAX_DROP_GRADE, `${grade}등급이 굴려졌다`);
+test('사냥터가 등급을 정한다 — 저레벨에서 최고 등급이 안 나온다', () => {
+  // 2026-09-21 지적: "1레벨짜리 잡고 최종템을 먹을수도 있는거자나"
+  // 설계 표(gear.ts 의 dropField)를 그대로 박아 둔다
+  const want: Record<number, number[]> = {
+    1: [1], 5: [1], 40: [1],
+    41: [1, 2], 70: [1, 2],
+    71: [2, 3], 100: [2, 3],
+    101: [3, 4], 130: [3, 4],
+    131: [4, 5], 160: [4, 5],
+    161: [5, 6], 190: [5, 6],
+    191: [6, 7], 200: [6, 7],
+  };
+  for (const [level, grades] of Object.entries(want)) {
+    assert.deepEqual(dropGradesFor(Number(level)), grades, `Lv${level}`);
+  }
+
+  // 굴림을 전 구간 훑어도 창 밖은 안 나온다
+  for (const level of [1, 25, 55, 95, 145, 200]) {
+    const allowed = dropGradesFor(level);
+    for (let i = 0; i <= 200; i++) {
+      const grade = rollGrade(i / 200, level);
+      assert.ok(allowed.includes(grade), `Lv${level} 에서 ${grade}등급이 굴려졌다`);
+    }
   }
 });
 
-test('낮은 등급일수록 흔하다', () => {
-  const counts = new Array(GRADE_MAX + 1).fill(0);
-  for (let i = 0; i < 10000; i++) counts[rollGrade(i / 10000)]++;
-  for (let g = GRADE_MIN; g < MAX_DROP_GRADE; g++) {
-    assert.ok(counts[g] > counts[g + 1], `${g}등급이 ${g + 1}등급보다 드물다`);
+test('최고 등급은 마지막 사냥터에서만 나온다', () => {
+  assert.equal(MAX_DROP_GRADE, 7, '설계 등급은 7개다 — 8~10 은 근거가 없었다');
+  for (let level = 1; level <= 190; level++) {
+    assert.ok(!dropGradesFor(level).includes(MAX_DROP_GRADE), `Lv${level} 에서 최고 등급이 나온다`);
   }
-  assert.ok(counts[MAX_DROP_GRADE] > 0, '최고 드롭 등급이 아예 안 나온다');
+  assert.ok(dropGradesFor(191).includes(MAX_DROP_GRADE), '마지막 사냥터에서도 안 나온다');
+});
+
+test('창 안에서는 낮은 등급이 두 배 흔하다', () => {
+  const counts = new Array(GRADE_MAX + 1).fill(0);
+  for (let i = 0; i < 10000; i++) counts[rollGrade(i / 10000, 200)]++;
+  // 사냥터 20 = [6, 7]
+  assert.ok(counts[6] > counts[7], '아래 등급이 더 흔해야 한다');
+  assert.ok(counts[7] > 0, '위 등급이 아예 안 나온다');
+  const ratio = counts[6] / counts[7];
+  assert.ok(Math.abs(ratio - 2) < 0.1, `비가 2:1 이어야 하는데 ${ratio.toFixed(2)}:1`);
 });
 
 test('기본 능력치는 등급을 타지 않는다', () => {

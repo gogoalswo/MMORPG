@@ -244,15 +244,37 @@ static func tier_for_level(monster_level: int) -> int:
 	return clampi(monster_level / 10, 0, int(_t().get("tierCount", 20)) - 1)
 
 
-## 등급별 상대 빈도 — 한 등급 오를 때마다 절반으로 준다.
-## 7등급은 전체 드롭의 1% 이하라 나오면 기억에 남는다
-static func roll_grade(roll: float) -> int:
-	var low := int(_t().get("gradeMin", 1))
-	var high := int(_t().get("maxDropGrade", 7))
+## 그 몬스터가 선 사냥터(1~20). `items.json` 의 `dropGrades` 를 찾는 열쇠다
+static func field_of(monster_level: int) -> int:
+	return clampi(ceili(monster_level / 10.0), 1, 20)
+
+
+## 그 몬스터가 떨굴 수 있는 등급들 — **사냥터가 정한다.** ★
+##
+## 2026-09-21 요청: "지금 상태면 1레벨짜리 잡고 최종템을 먹을수도 있는거자나."
+## 표는 `packages/shared/src/gear.ts` 의 `dropField` 에서 나오고 여기는 읽기만
+## 한다 → docs/features/items.md "사냥터가 등급을 정한다"
+## **정수로 돌려준다** — JSON 숫자는 실수로 들어와서 `1 in [1.0]` 이 false 다
+static func drop_grades(monster_level: int) -> Array:
+	var table: Array = _t().get("dropGrades", [])
+	var field := field_of(monster_level)
+	var row: Array = table[field] if field < table.size() else []
+	if row.is_empty():
+		return [int(_t().get("gradeMin", 1))]
+	var out: Array = []
+	for g in row:
+		out.append(int(g))
+	return out
+
+
+## 그 사냥터 안에서 등급 하나 — **아래 등급이 두 배 흔하다.**
+## 한 등급 오를 때마다 절반이라는 예전 가중치를 창 안에서만 쓴다
+static func roll_grade(roll: float, monster_level: int) -> int:
+	var grades := drop_grades(monster_level)
 	var weights: Array = []
 	var total := 0.0
-	for g in range(low, high + 1):
-		var w: float = pow(2.0, high - g)
+	for i in grades.size():
+		var w: float = pow(2.0, grades.size() - 1 - i)
 		weights.append(w)
 		total += w
 
@@ -260,8 +282,8 @@ static func roll_grade(roll: float) -> int:
 	for i in weights.size():
 		cursor -= weights[i]
 		if cursor < 0.0:
-			return low + i
-	return high
+			return int(grades[i])
+	return int(grades[grades.size() - 1])
 
 
 ## 처치 보상을 굴린다.
@@ -288,7 +310,7 @@ static func roll_drop(monster_level: int, job: String, rng: RandomNumberGenerato
 		)
 	var id := str(candidates[mini(candidates.size() - 1, int(rng.randf() * candidates.size()))])
 
-	var grade := roll_grade(rng.randf())
+	var grade := roll_grade(rng.randf(), monster_level)
 	var def := get_item(id)
 	return {
 		"gold": gold,

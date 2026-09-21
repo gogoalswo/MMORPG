@@ -16,6 +16,7 @@ import type { JobId } from './character.ts';
 // 서로를 부르는 순환이 되기 때문이다. 그대로 다시 내보내니 부르는 쪽은 그대로다
 export { EQUIP_SLOTS, SLOT_CODE, slotLabel, type EquipSlot } from './slots.ts';
 import { EQUIP_SLOTS, SLOT_CODE, slotLabel, type EquipSlot } from './slots.ts';
+import { fieldOf } from './balance.ts';
 import {
   ENH_MAX as GEAR_ENH_MAX,
   ENH_ODDS as GEAR_ENH_ODDS,
@@ -28,6 +29,7 @@ import {
   GRADE_LV_SPAN as GEAR_GRADE_LV_SPAN,
   enhanceMultiplier as gearEnhanceMultiplier,
   slotStats,
+  dropGrades as gearDropGrades,
 } from './gear.ts';
 
 /** 장비가 더해주는 능력치 */
@@ -234,13 +236,16 @@ export function canEquip(item: ItemDef, job: JobId, level: number): boolean {
 export const GRADE_MIN = 1;
 export const GRADE_MAX = 10;
 /**
- * 드롭으로 나올 수 있는 최고 등급 — **10등급, 즉 전부다.**
+ * 드롭으로 나올 수 있는 최고 등급 — **7등급.**
  *
- * 2026-09-20 에 7 → 10 이 됐다. 그전에는 8~10 을 제작으로만 만들 수 있었는데
- * (요청: "제작은 일단 제거해") 제작을 걷으면서 **드롭이 유일한 길**이 됐다.
- * 대신 가중치가 `2^(10-g)` 라 10등급은 512번에 한 번꼴이다.
+ * 2026-09-20 에 제작을 걷으면서 "드롭이 유일한 길" 이라는 이유로 7 → 10 으로
+ * 올렸다가, **2026-09-21 에 다시 7로 내렸다.** 사냥터별 상한(`dropGrades`)을
+ * 걸면서 그 이유가 사라졌기 때문이다 — 어차피 사냥터 20 이 끝이고, 8~10 은
+ * 설계([stat-balance.md](../../../docs/features/stat-balance.md) 3장)에 **근거가
+ * 없는 숫자**였다. 설계 등급은 7개이고, 카탈로그를 56종으로 갈 때 두 축이
+ * 7에서 하나로 합쳐진다.
  */
-export const MAX_DROP_GRADE = GRADE_MAX;
+export const MAX_DROP_GRADE = GEAR_GRADE_COUNT;
 
 /**
  * 등급이 올릴 **값** 배율 — 1등급이 기준이다.
@@ -603,27 +608,36 @@ export function tierForLevel(monsterLevel: number): number {
 export const DROP_CHANCE = 0.14;
 
 /**
- * 등급별 상대 빈도.
+ * 그 몬스터가 떨굴 수 있는 등급들 — **사냥터가 정한다.** ★
  *
- * 한 등급 오를 때마다 절반으로 준다. 7등급은 전체 드롭의 1% 이하라
- * 나오면 기억에 남는다.
+ * 2026-09-21 요청: "사냥터에 따라 나오는 등급 아이템 확률을 다르게 할거야.
+ * 지금 상태면 1레벨짜리 잡고 최종템을 먹을수도 있는거자나."
+ *
+ * 설계에 이미 답이 있었고 판정이 안 보고 있었다 — `dropField(g)` 가 "등급 g 는
+ * 어느 사냥터에서 뚫나" 를 정해 둔다(2·5·8·11·14·17·20). **착용 레벨보다 한
+ * 구간 위**라, 착용 레벨이 돼도 바로는 못 얻고 한 사냥터 더 올라가 이전
+ * 등급으로 뚫어야 한다. 그게 상향 압력의 정체다.
  */
-function gradeWeights(): number[] {
-  const out: number[] = [];
-  for (let g = GRADE_MIN; g <= MAX_DROP_GRADE; g++) out.push(2 ** (MAX_DROP_GRADE - g));
-  return out;
+export function dropGradesFor(monsterLevel: number): number[] {
+  return gearDropGrades(fieldOf(monsterLevel));
 }
 
-/** 굴림값(0~1)에서 드롭 등급 하나 */
-export function rollGrade(roll: number): number {
-  const weights = gradeWeights();
+/**
+ * 굴림값(0~1)에서 드롭 등급 하나 — **그 몬스터가 선 사냥터 안에서만.**
+ *
+ * 후보는 둘(사냥터 1 은 하나)이고 **아래 등급이 두 배 흔하다.** 한 등급 오를
+ * 때마다 절반이라는 예전 가중치를, 이제 전 구간이 아니라 창 안에서만 쓴다.
+ */
+export function rollGrade(roll: number, monsterLevel: number): number {
+  const grades = dropGradesFor(monsterLevel);
+  const weights = grades.map((_, i) => 2 ** (grades.length - 1 - i));
   const total = weights.reduce((a, b) => a + b, 0);
   let cursor = Math.max(0, Math.min(0.999999, roll)) * total;
   for (let i = 0; i < weights.length; i++) {
     cursor -= weights[i]!;
-    if (cursor < 0) return GRADE_MIN + i;
+    if (cursor < 0) return grades[i]!;
   }
-  return MAX_DROP_GRADE;
+  return grades[grades.length - 1]!;
 }
 
 export interface Drop {
@@ -656,7 +670,7 @@ export function rollDrop(monsterLevel: number, job: JobId, rng: () => number = M
   );
   const id = candidates[Math.min(candidates.length - 1, Math.floor(rng() * candidates.length))]!;
 
-  const grade = rollGrade(rng());
+  const grade = rollGrade(rng(), monsterLevel);
   const def = getItem(id);
   return { gold, item: { id, grade, options: def ? rollOptions(def, grade, rng) : [] } };
 }

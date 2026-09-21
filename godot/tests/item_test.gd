@@ -159,10 +159,24 @@ func _case_drop() -> void:
 		if int(def.level) != 30:
 			_fail("단계가 안 맞다: %s (레벨 %d)" % [loot.item.id, def.level])
 			return
-		if int(loot.item.grade) > 7:
-			_fail("8등급 이상이 떨어졌다 — 제작으로만 나와야 한다")
+		# **사냥터가 등급을 정한다** — Lv35 는 사냥터 4 라 1등급만 나와야 한다
+		if not (int(loot.item.grade) in Items.drop_grades(35)):
+			_fail("사냥터 4 에서 %d등급이 떨어졌다" % loot.item.grade)
 			return
-	print("  드롭 200번: %d개 나옴 (확률 %.0f%%)" % [drops, drops / 2.0])
+	print("  드롭 200번: %d개 나옴 (확률 %.0f%%) — 전부 %s등급" % [
+		drops, drops / 2.0, str(Items.drop_grades(35))
+	])
+
+	# 사냥터마다 나오는 등급이 다르다. 표는 shared 가 만들고 여기는 읽기만 한다
+	var want := {1: [1], 45: [1, 2], 75: [2, 3], 105: [3, 4], 135: [4, 5], 165: [5, 6], 195: [6, 7]}
+	for level in want:
+		if Items.drop_grades(int(level)) != want[level]:
+			_fail("Lv%d 등급이 %s 인데 %s 여야 한다" % [level, Items.drop_grades(int(level)), want[level]])
+	# 최고 등급은 마지막 사냥터에서만
+	for level in [1, 50, 100, 150, 190]:
+		if 7 in Items.drop_grades(int(level)):
+			_fail("Lv%d 에서 최고 등급이 나온다" % level)
+	print("  사냥터별 등급: Lv1 [1] · Lv75 [2,3] · Lv195 [6,7] (7등급은 마지막 사냥터만)")
 
 
 func _case_equip() -> void:

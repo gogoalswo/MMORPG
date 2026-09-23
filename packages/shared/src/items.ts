@@ -338,6 +338,17 @@ export const OPTION_LABEL: Record<OptionKind, string> = {
 };
 
 /**
+ * **옛 옵션 이름.** 옵션을 여섯 종으로 다시 지으면서(`2deb916`) 공격력·방어력 옵션이
+ * 빠졌는데, 그 전에 얻어 저장된 아이템에는 남아 있다. 이름표가 없으면 창에
+ * `defense +12` 처럼 **영어 키가 그대로** 찍혔다 (2026-09-23 지적). 판정은 이 옵션을
+ * 세지 않는다 — 이름만 한글로 찍는다. 값은 퍼센트가 아니라 고정 수치였다
+ */
+export const LEGACY_OPTION_LABEL: Record<string, string> = {
+  attack: '공격력',
+  defense: '방어력',
+};
+
+/**
  * 등급이 옵션 수치에 주는 배율 — `gear.ts` 의 `optionScale` 이다.
  * 1등급이 최대의 25%, 10등급이 100%.
  */

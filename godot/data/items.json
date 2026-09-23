@@ -757,6 +757,10 @@
     "cooldown": "쿨타임 감소",
     "penetration": "방어력 관통"
   },
+  "legacyOptionLabel": {
+    "attack": "공격력",
+    "defense": "방어력"
+  },
   "maxEnhance": 9,
   "gradeDropRate": [
     0.2963,

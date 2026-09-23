@@ -70,6 +70,7 @@ import {
   OPTION_MIN,
   OPTION_MAX,
   OPTION_LABEL,
+  LEGACY_OPTION_LABEL,
   MAX_ENHANCE,
   gradeLevel,
   gradeName,
@@ -149,6 +150,8 @@ export function buildData() {
       optionMin: OPTION_MIN,
       optionMax: OPTION_MAX,
       optionLabel: OPTION_LABEL,
+      // 저장된 옛 아이템에만 남은 옵션(공격력·방어력)의 이름 — 판정은 세지 않는다
+      legacyOptionLabel: LEGACY_OPTION_LABEL,
       maxEnhance: MAX_ENHANCE,
       // 등급별 킬당 드랍률 — **퍼센트 단위**다 (0.2963 = 0.2963%).
       // 설계(stat-balance.md 7장)가 "그 사냥터 체류 중에 목표 개수를 채운다"

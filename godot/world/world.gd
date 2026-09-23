@@ -1056,8 +1056,10 @@ func debug_gauntlets(player_id: String) -> void:
 		var item := Items.get_item(Items.item_id(grade, "weapon"))
 		if item.is_empty():
 			continue
+		# 강화도 등급 따라 +0 ~ +9 로 달리 준다 — 칸 오른쪽 아래 `+N` 을 보려고
 		var stack := {
-			"id": str(item.id), "grade": grade, "enhance": 0,
+			"id": str(item.id), "grade": grade,
+			"enhance": mini(Items.max_enhance(), roundi((grade - 1) * 1.5)),
 			"options": Items.roll_options(item, grade, _rng),
 		}
 		if not _give(player, stack):

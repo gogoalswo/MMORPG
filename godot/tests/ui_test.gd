@@ -467,8 +467,15 @@ func _case_bag(game: Node3D) -> void:
 	var info := ""
 	for label in game._detail_info.get_children():
 		info += label.text + " "
-	if not info.contains("등급") or not info.contains("+2"):
+	if not info.contains("등급"):
 		_fail("상세 창 아이템 정보가 '%s'" % info.left(60))
+	# 강화 줄은 뺐다 (2026-09-23 요청) — 강화는 이름 뒤 +N 과 칸 배지로만 보인다
+	if info.contains("강화"):
+		_fail("상세 창에 강화 줄이 남아 있다: '%s'" % info.left(60))
+	# 저장된 옛 아이템의 방어력 옵션이 영어 키(defense)로 찍혔다 (2026-09-23)
+	var old := Items.describe_option({"kind": "defense", "value": 12})
+	if old != "방어력 +12":
+		_fail("옛 방어력 옵션이 '%s' 로 찍힌다" % old)
 	if not first.get_node("pick").visible:
 		_fail("고른 칸에 금테가 안 덮였다")
 
@@ -570,6 +577,12 @@ func _case_bag(game: Node3D) -> void:
 		if game._icon("weapon_g5") != null and icon != "weapon_g5":
 			_fail("전설 건틀릿 아이콘이 '%s' (weapon_g5 여야 한다)" % icon)
 		print("  건틀릿 7등급: 전설 아이콘 %s" % icon)
+		# 태초는 +9 — 상세 창 큰 칸 오른쪽 아래에 나와야 한다
+		game._pick_bag("bag", 6)
+		await process_frame
+		var big: String = game._detail_icon.get_node("badge").text
+		if big != "+9":
+			_fail("태초 건틀릿 상세 칸 배지가 '%s' (+9 여야 한다)" % big)
 
 	# 장비 창은 따로 닫고 다시 연다 (자기 X · 인벤토리의 "장비" 단추)
 	var gear_mark: Control = game._gear_panel.find_child("close", true, false)

@@ -146,6 +146,11 @@ static func roll_options(item: Dictionary, grade: int, rng: RandomNumberGenerato
 
 static func describe_option(option: Dictionary) -> String:
 	var label: Dictionary = _t().get("optionLabel", {})
+	# 저장된 옛 아이템의 공격력·방어력 옵션 — 지금 표에 없어 영어 키가 찍혔다 (2026-09-23).
+	# 옛 값은 퍼센트가 아니라 고정 수치다
+	var legacy: Dictionary = _t().get("legacyOptionLabel", {})
+	if legacy.has(option.kind):
+		return "%s +%d" % [legacy[option.kind], int(option.value)]
 	var suffix := "%" if is_percent_option(str(option.kind)) else ""
 	return "%s +%d%s" % [label.get(option.kind, option.kind), int(option.value), suffix]
 

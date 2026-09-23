@@ -174,7 +174,7 @@ npm run shot:godot -- rising_kick@225 # @각도(도, 0 = +Z) — 그 쪽을 보�
                                       # 보는 쪽마다 화면 모양이 달라 두세 방향을 찍어 본다 (225 = 화면 위)
 npm run shot:godot -- portal         # 차원문 소용돌이 (스킬이 아니라 늘 켜진 이펙트)
 npm run shot:godot -- gate           # 차원문 창 (logs/gate_off.png · gate_on.png=줄 누른 채)
-npm run shot:godot -- range:tiger_roar   # 스킬 범위 표시 (logs/range_NN.png)
+npm run shot:godot -- range:sky_breaker  # 스킬 범위 표시 (logs/range_NN.png)
 ```
 
 - **`--headless` 로는 아무것도 안 그려진다.** 헤드리스는 더미 렌더러라 화면이
@@ -237,7 +237,6 @@ godot --headless --path godot --script tools/hitch.gd
 ```bash
 npm run fx-probe                 # 할퀴기(rising_kick)
 npm run fx-probe -- sky_breaker  # 스킬 id 를 주면 그것
-npm run fx-probe -- white_tiger -90   # 셋째 인자는 캐릭터가 보는 각(도) — 옆모습 뒤집기 확인
 npm run fx-probe -- hurt         # 스킬이 아닌 것: 캐릭터 피격
 ```
 

@@ -96,6 +96,21 @@ npm run test:godot     # 고도 테스트 — 통과는 한 줄, 실패만 자�
   - 병합은 **로컬에서** 한다 — PR 을 열어 병합하지 않는다.
   - 밀고 나면 **"배포됐습니다, 새로고침하세요" 만** 알린다. `pages.yml` 은 `main` 만
     굽기 때문에 **병합해서 밀기 전에는 웹페이지가 갱신되지 않는다.**
+  - **`main` 에는 순차적으로 민다 — 앞 배포가 끝난 걸 보고 밀고, 내 배포가 성공한 걸
+    보고 알린다.** ★★ (2026-09-23 지시: "동일한 문제가 생기지 않도록 순차적으로 밀도록 해".)
+    여러 세션이 같은 `main` 에 밀고, `pages.yml` 은 `cancel-in-progress: true` 라
+    **뒤에 민 것이 앞 배포를 취소한다.** 그날 인벤토리 배포가 다른 세션 병합에 취소되고,
+    그 병합의 배포는 테스트가 깨져 실패했는데, 확인 없이 "새로고침하세요" 라고 해서
+    사용자가 갱신 안 된 화면을 봤다.
+    1. **밀기 전** — 도는 Pages 배포가 있으면 끝날 때까지 기다린다.
+       `curl -sS "https://api.github.com/repos/gogoalswo/MMORPG/actions/workflows/pages.yml/runs?branch=main&per_page=1" | grep -E '"(status|conclusion|head_sha)"'`
+    2. **밀기 직전** — `git pull` 로 그사이 들어온 것을 합치고 `npm run test:godot` 을
+       다시 돌린다 (합친 뒤에 깨지는 일이 있다).
+    3. **민 뒤** — 내 커밋(`head_sha`)의 배포가 `completed` 될 때까지 기다린다
+       (Bash `run_in_background` 의 `until` 고리, 15초 간격). 보통 1분 30초.
+    4. `success` 면 그때 "배포됐습니다" 와 빌드 표시를 알린다. **`failure` 면 알리지 않고
+       로그(`get_job_logs`)를 보고 고친다** — 내 변경이 아니어도 배포를 막고 있으면 고친다.
+       `cancelled` 면 뒤에 민 배포를 같은 방법으로 끝까지 본다.
   - CI 는 그대로 돈다. 테스트가 깨지면 **배포가 안 될 뿐**이고, 올라가 있던
     화면은 마지막으로 성공한 것에 그대로 남는다.
   - 잘못 밀었으면 `git revert <해시>` 로 되돌리고 민다 (병합 커밋이면

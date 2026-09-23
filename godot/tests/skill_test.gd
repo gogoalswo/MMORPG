@@ -21,6 +21,7 @@ func _init() -> void:
 	_case_range()
 	_case_dead()
 	_case_upgrade()
+	_case_wide()
 	Save.clear()
 
 	if _failed == 0:
@@ -442,3 +443,32 @@ func _case_upgrade() -> void:
 	if not _first(w.drain_events(), "skill").get("upgrades", []).is_empty() \
 			or int(mob.stunned_until) != 0:
 		_fail("강화를 뗐는데 기절이 걸렸다")
+
+
+## 낙뢰 "범위" — 사거리 4 → 6m. 5m 앞의 놈은 강화 전에는 안 맞고 강화 뒤에는 맞는다.
+## 판정이 알리는 모양(`skillRange`)도 6m 여야 표시와 판정이 안 갈린다 (2026-09-23)
+func _case_wide() -> void:
+	var s := _setup(0)
+	var w: World = s[0]
+	var me: Dictionary = s[1]
+	var far := World.make_monster("far", GameData.monster_kind("mob003"), 5.0, 0.0, 10000.0, 0.0)
+	far.max_hp = 999999
+	far.hp = 999999
+	s[2].append(far)
+	w.learn_skill("me", "thunder_fall")
+	w.set_skill_bar("me", ["thunder_fall"])
+	for wide in [false, true]:
+		if wide:
+			w.debug_upgrade_all("me", 1)
+		me.skill_ready_at = {}
+		me.rot = PI / 2.0
+		w.drain_events()
+		w.cast("me", "thunder_fall")
+		var events := w.drain_events()
+		var shape := _first(events, "skillRange")
+		var hit := not _first(events, "hit").is_empty()
+		var want := 6.0 if wide else 4.0
+		if absf(float(shape.get("reach", 0.0)) - want) > 1e-3 or hit != wide:
+			_fail("범위 %s: 반경 %.1f · 5m 앞이 %s (반경 %.1f · %s 여야 한다)" % [
+				wide, float(shape.get("reach", 0.0)), hit, want, wide])
+	print("  낙뢰 범위: 4m → 6m, 5m 앞의 놈이 강화 뒤에만 맞는다")

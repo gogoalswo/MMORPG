@@ -437,6 +437,8 @@
   지금도 실 다발이다. `npm run shot:godot` → [verification.md](verification.md)
 - **"기절" 강화가 붙으면 붉은 번개다** (2026-09-23). 헤일로·색 빛·불똥만 붉은 벌
   (`PALETTE_RED`)로 바뀌고 흰 심과 금은 그대로다 → [skill-upgrades.md](skill-upgrades.md)
+- **"범위" 강화가 붙으면 좌우 살짝 옆(1.9m)에 한 번씩 더 치고 땅의 흔적이 1.5배다**
+  (2026-09-23). 사거리는 4 → 6m. 둘은 따로 논다 → [skill-upgrades.md](skill-upgrades.md)
 
 ### 이펙트 — 천붕각 (`quake_fx.gd`) ★
 

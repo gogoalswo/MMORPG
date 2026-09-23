@@ -42,6 +42,7 @@ func _run() -> void:
 	await _case_other_skill(game)
 	await _case_gone(game)
 	await _case_red(game)
+	await _case_wide(game)
 	_done()
 
 
@@ -373,11 +374,57 @@ func _case_red(game: Node3D) -> void:
 			await process_frame
 
 
-## 낙뢰 한 번씩 (붙인 순서대로)
+## **"범위" 강화가 붙으면 가운데 세 번 뒤에 좌우 살짝 옆에서 한 번씩 더** 치고,
+## 땅의 흔적(금)이 1.5배다 (2026-09-23 요청). 색은 안 바뀐다 — 기절과 따로 논다.
+## 떼면 다시 세 번이다 (풀이 한 벌이라 옆 번개가 남으면 안 된다)
+func _case_wide(game: Node3D) -> void:
+	game._transport.send(&"debugResetUpgrades", {})
+	game._transport.send(&"debugUpgradeAll", {"slot": 1})
+	game._transport.send(&"skill", {"skill": "thunder_fall"})
+	for i in 4:
+		await process_frame
+	var fx := _newest(game)
+	if fx == null:
+		_fail("넓은 낙뢰가 안 섰다")
+		return
+	var strikes := _strikes(fx)
+	if strikes.size() != LightningFx.STRIKES + LightningFx.SIDE_STRIKES:
+		_fail("넓은 낙뢰가 %d번이다 (다섯 번이어야 한다)" % strikes.size())
+		return
+	var facing: float = game._me().rot
+	var ahead := Vector3(sin(facing), 0.0, cos(facing))
+	var left: Vector3 = strikes[3].position
+	var right: Vector3 = strikes[4].position
+	if absf(left.dot(ahead)) > 0.05 or absf(right.dot(ahead)) > 0.05 or left.dot(right) >= 0.0:
+		_fail("옆 번개가 캐릭터 좌우가 아니다 (%s · %s)" % [left, right])
+	elif absf(left.length() - LightningFx.SIDE_GAP) > 0.01:
+		_fail("옆 번개가 %.2fm 옆이다 (%.2f 여야 한다)" % [left.length(), LightningFx.SIDE_GAP])
+	if strikes[4].at <= strikes[3].at or strikes[3].at <= strikes[2].at:
+		_fail("옆 번개가 가운데 뒤에 차례로 치지 않는다")
+	if absf(strikes[0].ground_mul - LightningFx.WIDE) > 1e-3:
+		_fail("땅의 흔적이 %.2f배다" % strikes[0].ground_mul)
+	var halo: Color = strikes[0]._halo.material_override.albedo_color
+	if halo.r > halo.b:
+		_fail("범위만 붙었는데 번개가 붉다")
+	else:
+		print("  넓은 낙뢰: %d번 · 옆 번개 좌우 %.1fm · 땅 흔적 %.1f배 · 색 그대로" % [
+			strikes.size(), left.length(), strikes[0].ground_mul])
+	while _newest(game) != null:
+		await process_frame
+	game._transport.send(&"debugResetUpgrades", {})
+	game._transport.send(&"skill", {"skill": "thunder_fall"})
+	for i in 4:
+		await process_frame
+	fx = _newest(game)
+	if fx != null and _strikes(fx).size() != LightningFx.STRIKES:
+		_fail("범위를 뗐는데 %d번 친다" % _strikes(fx).size())
+
+
+## 낙뢰 한 번씩 (붙인 순서대로). **이번에 치는 것만** — 옆 번개는 넓힘이 없으면 쉰다
 func _strikes(fx: LightningFx) -> Array:
 	var found: Array = []
 	for child in fx.get_children():
-		if child is LightningFx.Strike:
+		if child is LightningFx.Strike and child.active:
 			found.append(child)
 	return found
 

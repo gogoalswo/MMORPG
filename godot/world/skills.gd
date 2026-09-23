@@ -51,6 +51,14 @@ static func upgrades_of(skill_id: String) -> Array:
 	return out
 
 
+## 붙은 강화들의 판정 사거리 배율. 여럿이면 곱한다
+static func range_mul(skill_id: String, upgrade_ids: Array) -> float:
+	var out := 1.0
+	for id in upgrade_ids:
+		out *= float(upgrade(skill_id, str(id)).get("rangeMul", 1.0))
+	return out
+
+
 ## 붙은 강화들이 맞은 몬스터를 세우는 시간(ms). 여럿이면 긴 쪽이다
 static func stun_ms(skill_id: String, upgrade_ids: Array) -> int:
 	var out := 0

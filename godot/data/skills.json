@@ -356,8 +356,29 @@
       "skill": "thunder_fall",
       "name": "기절",
       "desc": "맞은 적 3초 기절",
+      "exp": 1000,
       "stunMs": 3000
     }
   ],
-  "upgradeMax": 2
+  "upgradeMax": 2,
+  "expBooks": [
+    {
+      "id": "skill_book_1",
+      "name": "하급 스킬 경험치북",
+      "short": "하급",
+      "exp": 100
+    },
+    {
+      "id": "skill_book_2",
+      "name": "중급 스킬 경험치북",
+      "short": "중급",
+      "exp": 500
+    },
+    {
+      "id": "skill_book_3",
+      "name": "상급 스킬 경험치북",
+      "short": "상급",
+      "exp": 2000
+    }
+  ]
 }

@@ -363,41 +363,48 @@ func _case_dead() -> void:
 		_fail("죽었는데 스킬이 나갔다")
 
 
-## 스킬 강화 — 스킬창에서 강화하면(`upgrade_skill`) 붙고 강화서가 한 장 준다.
-## 강화서가 없거나 이미 붙었으면 안 붙는다. 테스트 단추는 강화서 없이 붙인다.
+## 스킬 강화 — 스킬창에서 고른 강화에 **경험치북을 넣어**(`feed_upgrade`) 필요
+## 경험치(1000)에 닿으면 붙는다. 책이 없거나 이미 붙었으면 안 넣는다.
+## 테스트 단추는 경험치북 없이 붙인다.
 ## 낙뢰에 "기절" 이 붙으면 맞은 놈이 3초 동안 **서서 못 때린다** (2026-09-23)
 func _case_upgrade() -> void:
 	var s := _setup()
 	var w: World = s[0]
 	var me: Dictionary = s[1]
 	var mob: Dictionary = s[2][0]
-	var scroll := "scroll_thunder_fall_stun"
-	if not (scroll in Items.scroll_ids()):
-		_fail("낙뢰 기절 강화서가 표에 없다 (%s)" % str(Items.scroll_ids()))
+	var books: Array = Skills.exp_books()
+	if books.size() != 3:
+		_fail("경험치북이 세 종류여야 하는데 %d" % books.size())
 		return
-	w.upgrade_skill("me", "thunder_fall", 0)
-	if not me.skill_upgrades.is_empty():
-		_fail("강화서 없이 강화됐다 (%s)" % str(me.skill_upgrades))
-	w._give(me, {"id": scroll, "count": 2})
-	var at := -1
-	for i in me.bag.size():
-		if str(me.bag[i].get("id", "")) == scroll:
-			at = i
-	if at < 0 or int(me.bag[at].get("count", 0)) != 2:
-		_fail("강화서 두 장이 한 칸에 겹쳐야 한다 (%s)" % str(me.bag))
-		return
-	w.upgrade_skill("me", "thunder_fall", 0)
-	if me.skill_upgrades.get("thunder_fall", []) != ["stun"]:
-		_fail("강화했는데 기절이 안 붙었다 (%s)" % str(me.skill_upgrades))
-	w.upgrade_skill("me", "thunder_fall", 0)
-	w.upgrade_skill("me", "thunder_fall", 5)
-	if int(me.bag[at].get("count", 0)) != 1:
-		_fail("이미 붙은 강화에 강화서가 또 쓰였다 (%s)" % str(me.bag[at]))
-	# 테스트 단추 — 강화서 없이 모든 스킬의 1번이 붙고, 초기화하면 다 떨어진다
+	var small := str(books[0].id)
+	w.feed_upgrade("me", "thunder_fall", 0, small)
+	if not me.get("skill_upgrade_exp", {}).is_empty():
+		_fail("경험치북 없이 경험치가 들어갔다 (%s)" % str(me.skill_upgrade_exp))
+	w.debug_books("me")
+	for i in 3:
+		w.feed_upgrade("me", "thunder_fall", 0, small)
+	w.feed_upgrade("me", "thunder_fall", 0, str(books[1].id))
+	var got := int(me.skill_upgrade_exp.get("thunder_fall", {}).get("stun", 0))
+	if got != 800 or not me.skill_upgrades.is_empty():
+		_fail("하급 셋 + 중급 하나면 800 이고 아직 안 붙어야 한다 (%d · %s)" % [got, me.skill_upgrades])
+	w.feed_upgrade("me", "thunder_fall", 0, str(books[2].id))
+	if me.skill_upgrades.get("thunder_fall", []) != ["stun"] or me.skill_upgrade_exp.has("thunder_fall"):
+		_fail("1000 을 넘겼는데 안 붙었거나 경험치가 남았다 (%s · %s)" % [me.skill_upgrades, me.skill_upgrade_exp])
+	var small_left := 0
+	for stack in me.bag:
+		if str(stack.id) == small:
+			small_left = int(stack.count)
+	w.feed_upgrade("me", "thunder_fall", 0, small)
+	w.feed_upgrade("me", "thunder_fall", 5, small)
+	for stack in me.bag:
+		if str(stack.id) == small and int(stack.count) != small_left:
+			_fail("이미 붙은 강화(또는 없는 번호)에 경험치북이 쓰였다")
+	# 테스트 단추 — 책 없이 모든 스킬의 1번이 붙고, 초기화하면 다 떨어진다
 	w.debug_reset_upgrades("me")
+	w.feed_upgrade("me", "thunder_fall", 0, small)
 	w.debug_upgrade_all("me", 0)
-	if me.skill_upgrades.get("thunder_fall", []) != ["stun"] or int(me.bag[at].get("count", 0)) != 1:
-		_fail("'전체 1번 강화' 가 기절을 안 붙였거나 강화서를 썼다 (%s)" % str(me.skill_upgrades))
+	if me.skill_upgrades.get("thunder_fall", []) != ["stun"] or me.skill_upgrade_exp.has("thunder_fall"):
+		_fail("'전체 1번 강화' 가 기절을 안 붙였거나 쌓인 경험치가 남았다 (%s)" % str(me.skill_upgrades))
 
 	# 기절 — 한 방에 안 죽게 체력을 올려 둔다
 	mob.max_hp = 999999

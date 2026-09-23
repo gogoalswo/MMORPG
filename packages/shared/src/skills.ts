@@ -463,9 +463,10 @@ export const SKILLS: Record<string, SkillDef> = Object.fromEntries(
 );
 
 /**
- * **스킬 강화** (2026-09-23 요청) — 스킬마다 **둘까지** 붙는다. 붙이는 것은
- * **강화서**(`scrollId`)를 먹어서 쓰는 것뿐이고, 강화서는 강화 하나에 한 종류다
- * (사용자 선택 — 쓰면 바로 붙는다, 고르는 창이 없다). 나중에 던전에서 떨어진다.
+ * **스킬 강화** (2026-09-23 요청) — 스킬마다 **둘까지** 붙는다. 스킬창에서 강화
+ * 하나를 골라 **스킬 경험치북**(`SKILL_EXP_BOOKS`)으로 경험치를 넣고, `exp` 에
+ * 닿으면 붙는다. 경험치북은 모든 스킬·강화에 공용이고 나중에 던전에서 떨어진다.
+ * (같은 날 앞 판은 강화마다 강화서 한 장이었다 — "개별로 하지 말고 경험치북으로" 요청.)
  *
  * 둘은 **따로 붙고 같이 붙을 수도 있다.** 그래서 이펙트도 강화마다 따로 바뀐다 —
  * 기절은 번개 색만, 범위는 크기·줄기 수만 건드려서 둘이 섞여도 서로를 안 덮는다.
@@ -476,9 +477,11 @@ export const SKILLS: Record<string, SkillDef> = Object.fromEntries(
 export interface SkillUpgradeDef {
   id: string;
   skill: string;
-  /** 창에 적는 강화 이름 — 강화서 이름이 `낙뢰 강화서: 기절` 이 된다 */
+  /** 창에 적는 강화 이름 */
   name: string;
   desc: string;
+  /** 이만큼 경험치를 넣으면 붙는다 */
+  exp: number;
   /** 맞은 몬스터를 이만큼(ms) 세운다 — 못 움직이고 못 때린다 */
   stunMs?: number;
 }
@@ -493,14 +496,30 @@ export const SKILL_UPGRADES: SkillUpgradeDef[] = [
     name: '기절',
     // 상세 창(300px)의 한 줄에 들어가야 한다 — 색이 바뀌는 것은 적지 않는다
     desc: '맞은 적 3초 기절',
+    exp: 1000,
     stunMs: 3000,
   },
 ];
 
-/** 강화서의 가방 id — 강화 하나에 한 종류 */
-export function scrollId(upgrade: SkillUpgradeDef): string {
-  return `scroll_${upgrade.skill}_${upgrade.id}`;
+/**
+ * **스킬 경험치북** — 쓰면 스킬창에서 고른 강화에 `exp` 만큼 들어간다. 세 종류
+ * (사용자 선택: 하급 100 · 중급 500 · 상급 2000, 강화 하나에 1000). 가방에는 재료로
+ * 들어간다 (`items.ts` 의 `MATERIALS` 가 이 표에서 만든다). **넘친 경험치는 버린다** —
+ * 강화가 붙으면 그 강화에는 더 못 넣는다.
+ */
+export interface SkillExpBookDef {
+  id: string;
+  name: string;
+  /** 창의 단추에 적는 짧은 이름 */
+  short: string;
+  exp: number;
 }
+
+export const SKILL_EXP_BOOKS: SkillExpBookDef[] = [
+  { id: 'skill_book_1', name: '하급 스킬 경험치북', short: '하급', exp: 100 },
+  { id: 'skill_book_2', name: '중급 스킬 경험치북', short: '중급', exp: 500 },
+  { id: 'skill_book_3', name: '상급 스킬 경험치북', short: '상급', exp: 2000 },
+];
 
 /**
  * 직업별 배울 수 있는 스킬 — 요구 레벨 순.

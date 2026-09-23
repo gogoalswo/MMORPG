@@ -320,6 +320,18 @@
       "maxTargets": 4,
       "reqLevel": 30,
       "description": "번개를 세 번 내리꽂아 땅을 가른다."
+    },
+    "frost_pillar": {
+      "id": "frost_pillar",
+      "name": "빙주각",
+      "job": "fighter",
+      "cooldown": 20000,
+      "range": 5,
+      "arc": 6.283185307179586,
+      "power": 4.6,
+      "maxTargets": 8,
+      "reqLevel": 40,
+      "description": "땅을 짓밟아 사방에서 얼음 기둥을 솟구치게 한다."
     }
   },
   "byJob": {
@@ -328,7 +340,8 @@
       "tiger_roar",
       "white_tiger",
       "sky_breaker",
-      "thunder_fall"
+      "thunder_fall",
+      "frost_pillar"
     ],
     "mage": [
       "fireball",

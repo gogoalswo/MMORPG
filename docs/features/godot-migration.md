@@ -70,7 +70,7 @@ three.js 웹 클라이언트를 **고도 엔진으로 갈아타는 중**이다. 
 
 | | 무엇 | 어떻게 |
 |---|---|---|
-| **생성기** | `items.ts` `skills.ts` `monsters.ts` `zones.ts` `beasts.ts` `zone.ts` (약 2,140줄) | **TS 에 그대로 둔다.** 장비 160·스킬 25·몬스터 60·존 21 을 JSON 으로 내보내고 고도는 결과만 읽는다 |
+| **생성기** | `items.ts` `skills.ts` `monsters.ts` `zones.ts` `beasts.ts` `zone.ts` (약 2,140줄) | **TS 에 그대로 둔다.** 장비 160·스킬 26·몬스터 60·존 21 을 JSON 으로 내보내고 고도는 결과만 읽는다 |
 | **런타임 공식** | `combat.ts` `movement.ts` `spatialGrid.ts` `autoHunt.ts` `character.ts` `constants.ts` (약 830줄) | **GDScript 로 이식.** 피해 공식·정면 판정·경직·경험치 곡선·격자 |
 
 이렇게 가르면 `*.test.ts` 1,559줄(데이터 전수 검사)이 **그대로 살아 있다.** 생성기가

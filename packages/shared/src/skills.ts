@@ -466,6 +466,27 @@ const SKILL_LIST: SkillDef[] = [
     reqLevel: 30,
     description: '번개를 세 번 내리꽂아 땅을 가른다.',
   },
+  {
+    /**
+     * 땅을 짓밟으면 발 주위 사방에서 **얼음 기둥이 고리를 그리며 솟는다**
+     * (`IceFx.burst`, 2026-09-23 요청). 안쪽 고리부터 바깥으로 차례로 솟으므로
+     * 전방위(`arc` 2π)이고, 기둥이 서는 가장 바깥 고리(4.3m) + 기울기만큼이
+     * 사거리(5m)다 — 기둥 끝이 사거리를 넘으면 "저기까지 맞는다" 로 읽힌다.
+     *
+     * 낙뢰(Lv.30 · 12초 · 4.2 · 넷)와 천붕각(Lv.20 · 55초 · 5.5 · 열) 사이 —
+     * 여럿을 한꺼번에 치는 광역인데 천붕각보다 자주 쓰고 약하다.
+     */
+    id: 'frost_pillar',
+    name: '빙주각',
+    job: 'fighter',
+    cooldown: 20000,
+    range: 5.0,
+    arc: Math.PI * 2,
+    power: 4.6,
+    maxTargets: 8,
+    reqLevel: 40,
+    description: '땅을 짓밟아 사방에서 얼음 기둥을 솟구치게 한다.',
+  },
 ];
 
 export const SKILLS: Record<string, SkillDef> = Object.fromEntries(

@@ -1284,6 +1284,27 @@ func equip(player_id: String, index: int) -> void:
 	_events.append({"type": "inventory", "bag": player.bag, "equipped": player.equipped})
 
 
+## 가방을 정렬한다 — 높은 등급이 앞, 같은 등급이면 슬롯 순서(무기 → 반지),
+## 그다음 강화가 높은 것. 순서만 바뀌고 물건은 그대로다
+func sort_bag(player_id: String) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	var order: Array = Items.slots()
+	player.bag.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		if int(a.get("grade", 1)) != int(b.get("grade", 1)):
+			return int(a.get("grade", 1)) > int(b.get("grade", 1))
+		var sa := order.find(str(Items.get_item(str(a.get("id", ""))).get("slot", "")))
+		var sb := order.find(str(Items.get_item(str(b.get("id", ""))).get("slot", "")))
+		if sa != sb:
+			return sa < sb
+		if int(a.get("enhance", 0)) != int(b.get("enhance", 0)):
+			return int(a.get("enhance", 0)) > int(b.get("enhance", 0))
+		return str(a.get("id", "")) < str(b.get("id", ""))
+	)
+	_events.append({"type": "inventory", "bag": player.bag, "equipped": player.equipped})
+
+
 func unequip(player_id: String, slot: String) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty():

@@ -14,13 +14,41 @@ const STOP_DISTANCE := 0.15
 ## 가방·장비 창. 가방 격자는 5열 — 웹 클라의 COLUMNS 와 같다
 ## (docs/features/inventory-equipment.md). 장비는 8칸이라 4열 두 줄로 떨어진다
 const BAG_COLUMNS := 5
-## 가방에서 한 번에 보이는 줄. 나머지는 끌어 올린다
-const BAG_ROWS := 3
-## 칸 한 변. 1280x720 안에 장착 두 줄 + 캐릭터 + 가방 5열이 들어가는 크기다.
-## **칸 크기를 제대로 세고 나니 창이 화면을 꽉 채워** 88 에서 줄였다 (2026-09-20)
-const CELL := 74
-## 칸 테두리 안쪽 여백. 칸의 실제 크기는 `CELL + 이것 * 2` 다
-const BAG_CELL_PAD := 6
+## 가방에서 한 번에 보이는 줄. 나머지는 끌어 올린다.
+## **받은 그림대로 8줄(40칸)** 이다 (2026-09-23)
+const BAG_ROWS := 8
+## 칸 한 변 — **테두리까지 친 바깥 크기**다. 8줄이 720 높이 안에 들어가는 크기다.
+## 88 → 74 (2026-09-20, 창이 화면을 꽉 채웠다) → 58 (2026-09-23, 8줄)
+const CELL := 58
+## 칸 테두리 안쪽 여백 (아이콘이 테에서 물러앉는 폭)
+const BAG_CELL_PAD := 4
+## 장비 창 칸과 상세 창의 큰 칸
+const GEAR_CELL := 64
+const DETAIL_ICON := 92
+## 상세 창 폭
+const DETAIL_W := 300
+## 창이 화면 양 끝에서 떨어지는 폭과, 상세 창·인벤토리 사이
+const WINDOW_EDGE := 16
+const WINDOW_GAP := 8
+## 인벤토리 오른쪽 세로 탭 한 개, 단추 한 개
+const INV_TAB := Vector2(64, 58)
+const INV_BUTTON := Vector2(76, 40)
+## 인벤토리 결 조각(`inv_*`)의 9조각 여백 — 그림에서 테가 차지하는 두께다.
+## 창 바탕은 안쪽 여백(`INV_PANEL_PAD`)을 따로 준다
+## (구운 크기에서 잰 값: 창 바탕 테 9 · 모서리 장식 10, 칸·탭 3, 단추 4 — 2026-09-23)
+const INV_PANEL_MARGIN := 12
+const INV_PANEL_PAD := 18
+const INV_SLOT_MARGIN := 4
+const INV_PICK_MARGIN := 8
+const INV_TAB_MARGIN := 4
+const INV_BUTTON_MARGIN := 6
+## 인벤토리 결의 글자색 — 받은 그림에서 뽑았다 (2026-09-23)
+const INV_GOLD := Color("#ceb474")
+const INV_GOLD_HI := Color("#f1dc9c")
+const INV_TEXT := Color("#ddd6c4")
+const INV_DIM := Color("#948c7a")
+const INV_RULE := Color("#4a4234")
+const INV_PICK := Color("#e8b449")
 ## 가방 격자 칸 사이
 const BAG_GRID_GAP := 4
 ## 세로 스크롤바가 먹는 폭
@@ -203,8 +231,17 @@ var _bag_head: Label
 var _bag_gold: Label
 var _bag_sum: Label
 var _bag_grid: GridContainer
-var _bag_detail: Label
 var _bag_action: Button
+## 장비 창(왼쪽 끝)과 상세 창(인벤토리 왼쪽). 인벤토리는 `_bag_panel` 이다
+var _gear_panel: PanelContainer
+var _detail_panel: PanelContainer
+var _detail_grade: Label
+var _detail_name: Label
+var _detail_kind: Label
+var _detail_state: Label
+var _detail_icon: PanelContainer
+## 상세 창 "아이템 정보" 표 — 이름 · 값 두 칸씩
+var _detail_info: GridContainer
 ## 고른 칸 — {"where": "equip"|"bag", "index": int}. 비면 아무것도 안 골랐다
 var _bag_pick: Dictionary = {}
 ## 아이콘을 한 번만 찾아 기억해 둔다 (없는 것도 기억한다)
@@ -376,7 +413,9 @@ func _build_persistent() -> void:
 
 	# **모든 창의 닫기는 오른쪽 위 X 하나로 통일한다** (2026-09-20 요청).
 	# 창이 다 지어진 뒤에 얹어야 자식 맨 뒤라 창 위에 그려진다
-	_close_button(_bag_panel, _toggle_bag)
+	_close_button(_bag_panel, _toggle_bag, 0)
+	_close_button(_gear_panel, _toggle_gear, 0)
+	_close_button(_detail_panel, _close_detail, 0)
 	_close_button(_skill_panel, _toggle_skills)
 	_close_button(_npc_panel, func() -> void: _npc_panel.visible = false)
 
@@ -721,160 +760,295 @@ func _apply_debug() -> void:
 	])
 
 
+## 가방 창은 **창 세 개**다 (2026-09-23 요청 — 받은 그림대로).
+##
+## ```
+## ┌ 장비 ──────┐                 ┌ 전설 ────┐┌ 인벤토리 ──── X ┐
+## │ [ ] 몸 [ ] │                 │ 이름     ││ [][][][][] [전체]│
+## │ [ ]    [ ] │   (게임 화면)    │ 무기 [칸]││ [][][][][] [무기]│
+## │ [ ]    [ ] │                 │ 아이템 정보││ ...           ...│
+## │ 스탯 상자   │                 │ 등급 ...  ││ 소지품 3/200 [정렬]│
+## └────────────┘                 └──────────┘└──────────────────┘
+## ```
+## - **장비 창은 왼쪽 끝**, 인벤토리는 오른쪽 끝, 상세 창은 인벤토리 바로 왼쪽이다.
+##   셋을 한 가로 상자에 두고 가운데에 늘어나는 빈칸을 넣어 양 끝으로 민다 —
+##   앵커만으로 자리를 잡으니 해상도가 바뀌어도 양 끝에 붙는다.
+## - **상세 창은 칸을 눌러야 뜬다.** 빈칸을 누르거나 X 를 누르면 닫힌다.
+## - 세 창의 높이는 가로 상자가 맞춘다(가장 큰 인벤토리 높이).
 func _build_bag_panel() -> void:
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_ui_root.add_child(center)
+	var layer := MarginContainer.new()
+	layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_theme_constant_override("margin_left", WINDOW_EDGE)
+	layer.add_theme_constant_override("margin_right", WINDOW_EDGE)
+	_ui_root.add_child(layer)
 
-	_bag_panel = PanelContainer.new()
-	_bag_panel.visible = false
-	_bag_panel.add_theme_stylebox_override("panel", _frame_box("ui_panel", PANEL_MARGIN, 16))
-	center.add_child(_bag_panel)
+	var row := HBoxContainer.new()
+	row.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_constant_override("separation", WINDOW_GAP)
+	layer.add_child(row)
 
-	var pad := MarginContainer.new()
-	for side in ["left", "right", "top", "bottom"]:
-		pad.add_theme_constant_override("margin_" + side, 28)
-	_bag_panel.add_child(pad)
+	_gear_panel = _window_panel()
+	row.add_child(_gear_panel)
+	_build_gear_window(_gear_panel)
 
-	var columns := HBoxContainer.new()
-	columns.add_theme_constant_override("separation", 26)
-	pad.add_child(columns)
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(spacer)
 
-	_build_gear_side(columns)
-	_build_bag_side(columns)
+	_detail_panel = _window_panel()
+	row.add_child(_detail_panel)
+	_build_detail_window(_detail_panel)
+
+	_bag_panel = _window_panel()
+	row.add_child(_bag_panel)
+	_build_bag_window(_bag_panel)
 
 
-## 왼쪽 — 이름표 · 장착 6칸 · 캐릭터 · 스탯 상자
-func _build_gear_side(parent: Node) -> void:
+## 창 하나 — 바르코로 뽑은 창 바탕(`inv_panel`)을 9조각으로 깐다
+func _window_panel() -> PanelContainer:
+	var panel := PanelContainer.new()
+	panel.visible = false
+	panel.add_theme_stylebox_override(
+		"panel", _inv_box("inv_panel", INV_PANEL_MARGIN, INV_PANEL_PAD, "#161b1a", "#4a3f30")
+	)
+	return panel
+
+
+## 창 머리 줄 — 제목 글자와, 오른쪽 위 X 가 앉을 빈자리
+func _window_title(parent: Node, text: String, size: int) -> Label:
+	var head := HBoxContainer.new()
+	head.custom_minimum_size = Vector2(0, CLOSE_BTN)
+	head.add_theme_constant_override("separation", 10)
+	parent.add_child(head)
+	var title := _inv_label(text, size, INV_GOLD)
+	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	head.add_child(title)
+	var room := Control.new()
+	room.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	room.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	head.add_child(room)
+	return title
+
+
+func _inv_label(text: String, size: int, color: Color) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.add_theme_font_size_override("font_size", size)
+	label.add_theme_color_override("font_color", color)
+	return label
+
+
+## 장비 창 — 이름표 · 장착 6칸 · 캐릭터 · 스탯 상자
+func _build_gear_window(panel: PanelContainer) -> void:
 	var side := VBoxContainer.new()
 	side.add_theme_constant_override("separation", 12)
-	parent.add_child(side)
+	panel.add_child(side)
 
-	# 이름표
-	var plate := PanelContainer.new()
-	plate.add_theme_stylebox_override("panel", _frame_box("ui_subpanel", 24, 8))
-	side.add_child(plate)
-	var plate_pad := MarginContainer.new()
-	for s in ["left", "right", "top", "bottom"]:
-		plate_pad.add_theme_constant_override("margin_" + s, 10)
-	plate.add_child(plate_pad)
-	_bag_level = Label.new()
-	_bag_level.add_theme_font_size_override("font_size", 26)
-	plate_pad.add_child(_bag_level)
+	var title := _window_title(side, "장비", 26)
+	_bag_level = _inv_label("", 20, INV_TEXT)
+	_bag_level.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	title.get_parent().add_child(_bag_level)
+	title.get_parent().move_child(_bag_level, 1)
 
 	# 장착 — 캐릭터를 사이에 두고 세 칸씩. 칸 순서는 데이터가 정한다 (items.json 의 slots)
 	var body := HBoxContainer.new()
-	body.add_theme_constant_override("separation", 14)
+	body.add_theme_constant_override("separation", 10)
 	body.alignment = BoxContainer.ALIGNMENT_CENTER
+	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	side.add_child(body)
 
 	var left_col := VBoxContainer.new()
-	left_col.add_theme_constant_override("separation", 10)
+	left_col.add_theme_constant_override("separation", BAG_GRID_GAP * 2)
+	left_col.alignment = BoxContainer.ALIGNMENT_CENTER
 	body.add_child(left_col)
 
 	# 가운데 캐릭터. 그림이 없으면 빈 자리로 남는다 (창이 무너지지 않게 크기만 잡아 둔다)
 	var figure := TextureRect.new()
-	figure.custom_minimum_size = Vector2(196, CELL * 3 + 20)
+	figure.custom_minimum_size = Vector2(150, GEAR_CELL * 3 + 20)
 	figure.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	figure.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	figure.texture = _icon("ui_figure")
 	body.add_child(figure)
 
 	var right_col := VBoxContainer.new()
-	right_col.add_theme_constant_override("separation", 10)
+	right_col.add_theme_constant_override("separation", BAG_GRID_GAP * 2)
+	right_col.alignment = BoxContainer.ALIGNMENT_CENTER
 	body.add_child(right_col)
 
 	_gear_cells.clear()
 	var count := Items.slots().size()
 	for index in count:
-		var cell := _make_cell(_pick_bag.bind("equip", index))
+		var cell := _make_cell(_pick_bag.bind("equip", index), GEAR_CELL)
 		(left_col if index < ceili(count / 2.0) else right_col).add_child(cell)
 		_gear_cells.append(cell)
 
-	# 스탯 상자 — 여섯 개를 두 줄로
+	# 스탯 상자 — 여섯 개를 두 줄씩 세 단으로. 바탕은 칸과 같은 움푹한 판이다
 	var box := PanelContainer.new()
-	box.add_theme_stylebox_override("panel", _frame_box("ui_subpanel", 24, 8))
+	box.add_theme_stylebox_override(
+		"panel", _inv_box("inv_slot", INV_SLOT_MARGIN, 12, "#111313", "#292d27")
+	)
 	side.add_child(box)
-	var box_pad := MarginContainer.new()
-	for s in ["left", "right", "top", "bottom"]:
-		box_pad.add_theme_constant_override("margin_" + s, 12)
-	box.add_child(box_pad)
 	var grid := GridContainer.new()
-	grid.columns = 3
-	grid.add_theme_constant_override("h_separation", 22)
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 18)
 	grid.add_theme_constant_override("v_separation", 6)
-	box_pad.add_child(grid)
+	box.add_child(grid)
 	_stat_labels.clear()
 	for name in STAT_NAMES:
-		var label := Label.new()
-		label.add_theme_font_size_override("font_size", 21)
+		var label := _inv_label("", 17, INV_TEXT)
 		label.custom_minimum_size = Vector2(150, 0)
 		grid.add_child(label)
 		_stat_labels.append(label)
 
 
-## 오른쪽 — 탭 · 가방 격자 · 상세 · 단추
-func _build_bag_side(parent: Node) -> void:
+## 상세 창 — 받은 그림의 왼쪽 창. 등급 · 이름 · 종류 · 큰 칸 · 아이템 정보 · 단추
+func _build_detail_window(panel: PanelContainer) -> void:
 	var side := VBoxContainer.new()
-	side.add_theme_constant_override("separation", 12)
-	parent.add_child(side)
+	side.custom_minimum_size = Vector2(DETAIL_W, 0)
+	side.add_theme_constant_override("separation", 8)
+	panel.add_child(side)
 
-	var tabs := HBoxContainer.new()
-	tabs.add_theme_constant_override("separation", 4)
-	side.add_child(tabs)
-	_tab_buttons.clear()
-	for index in BAG_TABS.size():
-		var tab := Button.new()
-		tab.text = BAG_TABS[index]
-		tab.custom_minimum_size = Vector2(0, 56)
-		tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		tab.pressed.connect(_pick_tab.bind(index))
-		tabs.add_child(tab)
-		_tab_buttons.append(tab)
+	_detail_grade = _window_title(side, "", 19)
 
-	# **칸은 CELL 보다 크다** — 테두리 안쪽 여백(BAG_CELL_PAD)이 양쪽에 붙기 때문이다.
-	# `CELL * 줄수` 로 잡았더니 마지막 줄이 잘려 나갔다 (2026-09-20, 찍어서 봤다)
-	var cell_box := CELL + BAG_CELL_PAD * 2
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 10)
+	side.add_child(head)
+	var lines := VBoxContainer.new()
+	lines.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	lines.add_theme_constant_override("separation", 4)
+	head.add_child(lines)
+	_detail_name = _inv_label("", 24, INV_GOLD)
+	_detail_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	lines.add_child(_detail_name)
+	_detail_kind = _inv_label("", 17, INV_DIM)
+	lines.add_child(_detail_kind)
+	_detail_state = _inv_label("", 17, INV_GOLD)
+	lines.add_child(_detail_state)
+	_detail_icon = _make_cell(func() -> void: pass, DETAIL_ICON)
+	_detail_icon.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	head.add_child(_detail_icon)
+
+	# "아이템 정보" — 제목 아래에 가는 줄 한 가닥
+	var section := _inv_label("아이템 정보", 20, INV_GOLD)
+	side.add_child(section)
+	var rule := ColorRect.new()
+	rule.color = INV_RULE
+	rule.custom_minimum_size = Vector2(0, 1)
+	side.add_child(rule)
+
+	# 이름 · 값 두 줄짜리 표. 값은 오른쪽에 붙인다 (받은 그림대로)
+	_detail_info = GridContainer.new()
+	_detail_info.columns = 2
+	_detail_info.add_theme_constant_override("h_separation", 12)
+	_detail_info.add_theme_constant_override("v_separation", 6)
+	side.add_child(_detail_info)
+
+	var room := Control.new()
+	room.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	room.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	side.add_child(room)
+
+	var buttons := HBoxContainer.new()
+	buttons.alignment = BoxContainer.ALIGNMENT_END
+	side.add_child(buttons)
+	_bag_action = _inv_button("-", _on_bag_action)
+	buttons.add_child(_bag_action)
+
+
+## 인벤토리 창 — 머리 줄 · 격자와 오른쪽 세로 탭 · 소지품 수와 정렬 · 동전
+func _build_bag_window(panel: PanelContainer) -> void:
+	var side := VBoxContainer.new()
+	side.add_theme_constant_override("separation", 10)
+	panel.add_child(side)
+
+	_window_title(side, "인벤토리", 26)
+
+	var body := HBoxContainer.new()
+	body.add_theme_constant_override("separation", 8)
+	side.add_child(body)
+
+	# 칸은 `CELL` 이 바깥 크기다. 예전 칸은 안쪽 여백만큼 더 커져서 `CELL * 줄수` 로
+	# 잡으면 마지막 줄이 잘렸다(2026-09-20). 지금은 칸 안에 최소 크기를 가진 것이
+	# 없어 `CELL` 그대로다 — 여백까지 더하면 격자 아래가 한 줄 가까이 빈다 (2026-09-23)
+	var cell_box := CELL
 	var scroll := ScrollContainer.new()
 	scroll.custom_minimum_size = Vector2(
 		cell_box * BAG_COLUMNS + BAG_GRID_GAP * (BAG_COLUMNS - 1) + SCROLLBAR_W,
 		cell_box * BAG_ROWS + BAG_GRID_GAP * (BAG_ROWS - 1)
 	)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	side.add_child(scroll)
+	body.add_child(scroll)
 	_bag_grid = GridContainer.new()
 	_bag_grid.columns = BAG_COLUMNS
 	_bag_grid.add_theme_constant_override("h_separation", BAG_GRID_GAP)
 	_bag_grid.add_theme_constant_override("v_separation", BAG_GRID_GAP)
 	scroll.add_child(_bag_grid)
 
-	# 머리 줄이 아니라 격자 아래에 둔다 — 그림처럼 "몇 칸 썼나" 가 단추 옆에 붙는다
+	# 탭은 격자 오른쪽에 세로로 (받은 그림대로)
+	var tabs := VBoxContainer.new()
+	tabs.add_theme_constant_override("separation", 6)
+	body.add_child(tabs)
+	_tab_buttons.clear()
+	for index in BAG_TABS.size():
+		var tab := Button.new()
+		tab.text = BAG_TABS[index]
+		tab.custom_minimum_size = INV_TAB
+		tab.add_theme_font_size_override("font_size", 17)
+		tab.pressed.connect(_pick_tab.bind(index))
+		tabs.add_child(tab)
+		_tab_buttons.append(tab)
+
+	# 소지품 수 · 정렬 · 장비 창 여닫기
 	var foot := HBoxContainer.new()
-	foot.add_theme_constant_override("separation", 10)
+	foot.add_theme_constant_override("separation", 8)
 	side.add_child(foot)
-	_add_icon(foot, "bag", 34)
-	_bag_head = Label.new()
+	_add_icon(foot, "bag", 28)
+	_bag_head = _inv_label("", 18, INV_TEXT)
 	_bag_head.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_bag_head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	foot.add_child(_bag_head)
-	_add_icon(foot, "gold", 34)
-	_bag_gold = Label.new()
+	foot.add_child(_inv_button("장비", _toggle_gear))
+	foot.add_child(_inv_button("정렬", _on_bag_sort))
+
+	var coins := HBoxContainer.new()
+	coins.add_theme_constant_override("separation", 8)
+	side.add_child(coins)
+	_add_icon(coins, "gold", 28)
+	_bag_gold = _inv_label("", 18, INV_GOLD)
 	_bag_gold.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_bag_gold.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	foot.add_child(_bag_gold)
+	coins.add_child(_bag_gold)
 
-	_bag_detail = Label.new()
-	_bag_detail.custom_minimum_size = Vector2(CELL * BAG_COLUMNS, 64)
-	_bag_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_bag_detail.add_theme_font_size_override("font_size", 21)
-	side.add_child(_bag_detail)
 
-	var buttons := HBoxContainer.new()
-	buttons.alignment = BoxContainer.ALIGNMENT_END
-	buttons.add_theme_constant_override("separation", 12)
-	side.add_child(buttons)
-	_bag_action = _make_button("-", _on_bag_action)
-	buttons.add_child(_bag_action)
+## 인벤토리 결의 단추 (정렬·장비·장착). 그림이 없으면 코드로 그린 판
+func _inv_button(text: String, on_press: Callable) -> Button:
+	var button := Button.new()
+	button.text = text
+	button.custom_minimum_size = INV_BUTTON
+	button.add_theme_font_size_override("font_size", 18)
+	button.add_theme_color_override("font_color", INV_TEXT)
+	for state in ["normal", "hover", "pressed", "disabled"]:
+		button.add_theme_stylebox_override(
+			state, _inv_box("inv_button", INV_BUTTON_MARGIN, 6, "#1a1a17", "#5a4c34")
+		)
+	button.pressed.connect(on_press)
+	return button
+
+
+## `_frame_box` 와 같은데, 그림이 없을 때 **받은 그림의 색으로** 판을 그린다
+## (어두운 판 + 녹슨 청동 테). 조각을 안 받은 사람도 같은 결로 보인다
+func _inv_box(name: String, margin: int, content: int, bg: String, border: String) -> StyleBox:
+	if _icon(name) != null:
+		return _frame_box(name, margin, content)
+	var flat := StyleBoxFlat.new()
+	flat.bg_color = Color(bg)
+	flat.border_color = Color(border)
+	flat.set_border_width_all(2)
+	flat.set_corner_radius_all(3)
+	flat.set_content_margin_all(content)
+	return flat
 
 
 func _make_button(text: String, on_press: Callable) -> Button:
@@ -954,10 +1128,12 @@ func _add_icon(parent: Node, name: String, size: int) -> void:
 
 ## 창의 한 칸 — 판 위에 그림 · 글자 · 배지 · 누르는 자리를 겹쳐 둔다.
 ## PanelContainer 는 자식을 모두 칸 전체에 깔기 때문에 정렬만으로 자리를 나눈다
-func _make_cell(on_press: Callable) -> PanelContainer:
+func _make_cell(on_press: Callable, size: int = CELL) -> PanelContainer:
 	var cell := PanelContainer.new()
-	cell.custom_minimum_size = Vector2(CELL, CELL)
-	cell.add_theme_stylebox_override("panel", _frame_box("ui_slot", 26, BAG_CELL_PAD))
+	cell.custom_minimum_size = Vector2(size, size)
+	cell.add_theme_stylebox_override(
+		"panel", _inv_box("inv_slot", INV_SLOT_MARGIN, BAG_CELL_PAD, "#111313", "#292d27")
+	)
 
 	var icon := TextureRect.new()
 	icon.name = "icon"
@@ -980,9 +1156,26 @@ func _make_cell(on_press: Callable) -> PanelContainer:
 	badge.name = "badge"
 	badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	badge.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
-	badge.add_theme_font_size_override("font_size", 18)
+	badge.add_theme_font_size_override("font_size", 15)
+	badge.add_theme_color_override("font_outline_color", Color.BLACK)
+	badge.add_theme_constant_override("outline_size", 4)
 	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cell.add_child(badge)
+
+	# 등급 테 — 칸 안쪽에 등급 색 가는 선. 빈칸이면 감춘다
+	var grade := Panel.new()
+	grade.name = "grade"
+	grade.visible = false
+	grade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cell.add_child(grade)
+
+	# 고른 칸 — 받은 그림처럼 밝은 금테를 덮는다
+	var pick := Panel.new()
+	pick.name = "pick"
+	pick.visible = false
+	pick.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pick.add_theme_stylebox_override("panel", _inv_pick_box())
+	cell.add_child(pick)
 
 	var hit := Button.new()
 	hit.name = "hit"
@@ -1000,20 +1193,25 @@ func _fill_cell(cell: PanelContainer, stack: Dictionary, empty_text: String, ico
 	var texture := _icon(icon_name)
 	icon.texture = texture
 
+	var grade: Panel = cell.get_node("grade")
 	if stack.is_empty():
 		# 빈 칸 — 그림을 죽여 둔다. 그림이 없으면 칸 이름을 적는다
 		icon.modulate = Color(1, 1, 1, 0.22)
 		text.text = "" if texture != null else empty_text
 		badge.text = ""
+		grade.visible = false
 		return
 
 	icon.modulate = Color(1, 1, 1, 1)
 	var item := Items.get_item(str(stack.get("id", "")))
 	text.text = "" if texture != null else str(item.get("name", stack.get("id", "?")))
 	badge.text = _stack_badge(stack)
+	grade.visible = true
+	grade.add_theme_stylebox_override("panel", _grade_box(int(stack.get("grade", 1))))
 
 
-## 칸 오른쪽 아래 배지 — 강화 +N · 개수 · 등급. 이름은 상세 칸이 맡는다
+## 칸 오른쪽 아래 배지 — 강화 +N · 개수. **등급은 칸 테 색이 말한다**
+## (2026-09-23 — 받은 그림은 숫자 대신 색으로 등급을 보인다). 이름은 상세 창이 맡는다
 func _stack_badge(stack: Dictionary) -> String:
 	var parts: Array = []
 	var enhance := int(stack.get("enhance", 0))
@@ -1022,8 +1220,43 @@ func _stack_badge(stack: Dictionary) -> String:
 	var count := int(stack.get("count", 1))
 	if count > 1:
 		parts.append("x%d" % count)
-	parts.append("%d" % int(stack.get("grade", 1)))
 	return " ".join(parts)
+
+
+## 등급 색. 표의 색은 흙빛이라 어두운 창 위에서는 조금 밝혀 쓴다
+func _grade_tint(grade: int) -> Color:
+	return Items.grade_color(grade).lerp(Color.WHITE, 0.3)
+
+
+func _grade_box(grade: int) -> StyleBox:
+	var flat := StyleBoxFlat.new()
+	flat.draw_center = false
+	flat.border_color = _grade_tint(grade)
+	flat.set_border_width_all(2)
+	flat.set_corner_radius_all(2)
+	return flat
+
+
+## 고른 칸 금테. 그림(`inv_slot_pick`)이 없으면 코드로 그린 금선
+func _inv_pick_box() -> StyleBox:
+	var texture := _icon("inv_slot_pick")
+	if texture != null:
+		var box := StyleBoxTexture.new()
+		box.texture = texture
+		for side in [SIDE_LEFT, SIDE_RIGHT, SIDE_TOP, SIDE_BOTTOM]:
+			box.set_texture_margin(side, INV_PICK_MARGIN)
+		# 칸 테 위까지 덮는다 — 칸 안쪽 여백만큼 밖으로 늘인다
+		box.set_expand_margin_all(BAG_CELL_PAD)
+		return box
+	var flat := StyleBoxFlat.new()
+	flat.draw_center = false
+	flat.border_color = INV_PICK
+	flat.set_border_width_all(3)
+	flat.set_corner_radius_all(3)
+	flat.set_expand_margin_all(BAG_CELL_PAD)
+	flat.shadow_color = Color(INV_PICK, 0.35)
+	flat.shadow_size = 4
+	return flat
 
 
 ## 격자의 칸 수를 맞춘다. **칸 수가 바뀔 때만 손댄다** — 매번 다시 지으면
@@ -1057,15 +1290,41 @@ func _tab_keeps(stack: Dictionary) -> bool:
 	return false
 
 
+## 칸을 누르면 상세 창이 뜬다. **빈칸을 누르면 닫는다**
 func _pick_bag(where: String, index: int) -> void:
 	_bag_pick = {"where": where, "index": index}
+	if _picked_stack().is_empty():
+		_bag_pick = {}
 	_show_bag_detail()
 
 
+## 가방 단추 — 인벤토리와 장비 창을 같이 열고 닫는다. 상세 창은 칸을 눌러야 뜬다
 func _toggle_bag() -> void:
-	_bag_panel.visible = not _bag_panel.visible
-	if _bag_panel.visible:
+	var open := not _bag_panel.visible
+	_bag_panel.visible = open
+	_gear_panel.visible = open
+	_bag_pick = {}
+	_detail_panel.visible = false
+	if open:
 		_redraw_bag()
+
+
+## 장비 창만 여닫는다 (자기 X, 인벤토리의 "장비" 단추)
+func _toggle_gear() -> void:
+	_gear_panel.visible = not _gear_panel.visible
+	if _gear_panel.visible:
+		_redraw_bag()
+
+
+func _close_detail() -> void:
+	_bag_pick = {}
+	_show_bag_detail()
+
+
+func _on_bag_sort() -> void:
+	_bag_pick = {}
+	_transport.send(&"sortBag", {})
+	_redraw_bag()
 
 
 func _redraw_bag() -> void:
@@ -1077,19 +1336,22 @@ func _redraw_bag() -> void:
 	var equipped: Dictionary = me.get("equipped", {})
 
 	_bag_level.text = "LV. %d" % int(me.get("level", 1))
-	_bag_head.text = "%d/%d" % [bag.size(), Items.bag_size()]
+	_bag_head.text = "소지품 %d/%d" % [bag.size(), Items.bag_size()]
 	_bag_gold.text = "%d" % int(me.get("gold", 0))
 
 	# 탭 — 고른 것만 밝게
 	for index in _tab_buttons.size():
 		var tab: Button = _tab_buttons[index]
-		var box := "ui_tab_on" if index == _bag_tab else "ui_tab_off"
-		for state in ["normal", "hover", "pressed"]:
-			tab.add_theme_stylebox_override(state, _frame_box(box, 24, 6))
-		# 고른 탭은 바탕이 상아빛이라 **글자를 어둡게** 해야 읽힌다 (2026-09-20)
-		tab.add_theme_color_override(
-			"font_color", Color("#241f16") if index == _bag_tab else Color.WHITE
+		var on := index == _bag_tab
+		var box := _inv_box(
+			"inv_tab_on" if on else "inv_tab_off", INV_TAB_MARGIN, 4,
+			"#4a4232" if on else "#0e1010", "#c9a95c" if on else "#2c2a24"
 		)
+		for state in ["normal", "hover", "pressed"]:
+			tab.add_theme_stylebox_override(state, box)
+		# 받은 그림처럼 고른 탭은 밝은 금빛, 나머지는 죽인 회색 글자
+		tab.add_theme_color_override("font_color", INV_GOLD_HI if on else INV_DIM)
+		tab.add_theme_color_override("font_hover_color", INV_GOLD_HI if on else INV_TEXT)
 
 	# 장착 — 아이콘 이름은 슬롯 이름과 같다 (assets/icons/weapon.png …)
 	var slots: Array = Items.slots()
@@ -1126,28 +1388,82 @@ func _redraw_bag() -> void:
 	_show_bag_detail()
 
 
-## 상세 칸 — 고른 것의 이름·강화·등급·옵션을 푼다. 고른 칸은 밝게 둔다
+## 상세 창 — 고른 것의 등급·이름·종류·능력치·옵션을 푼다 (받은 그림의 왼쪽 창).
+## 고른 칸에는 금테를 덮는다. 아무것도 안 골랐으면 창을 닫는다
 func _show_bag_detail() -> void:
 	for index in _gear_cells.size():
-		_gear_cells[index].modulate = _cell_tint("equip", index)
+		_gear_cells[index].get_node("pick").visible = _is_picked("equip", index)
 	for index in _bag_grid.get_child_count():
-		_bag_grid.get_child(index).modulate = _cell_tint("bag", index)
+		_bag_grid.get_child(index).get_node("pick").visible = _is_picked("bag", index)
 
 	var stack := _picked_stack()
 	if stack.is_empty():
-		_bag_detail.text = "칸을 고르면 여기에 나옵니다"
+		_detail_panel.visible = false
 		_bag_action.text = "-"
 		_bag_action.disabled = true
 		return
-	_bag_detail.text = _stack_label(stack)
-	_bag_action.text = "해제" if str(_bag_pick.get("where", "")) == "equip" else "장착"
+	_detail_panel.visible = _bag_panel.visible
+
+	var item := Items.get_item(str(stack.get("id", "")))
+	var grade := int(stack.get("grade", 1))
+	var enhance := int(stack.get("enhance", 0))
+	var worn := str(_bag_pick.get("where", "")) == "equip"
+	var tint := _grade_tint(grade)
+	var slot := str(item.get("slot", ""))
+
+	_detail_grade.text = Items.grade_name(grade)
+	_detail_grade.add_theme_color_override("font_color", tint)
+	_detail_name.text = str(item.get("name", stack.get("id", "?")))
+	if enhance > 0:
+		_detail_name.text += " +%d" % enhance
+	_detail_name.add_theme_color_override("font_color", tint)
+	_detail_kind.text = "%s · 착용 Lv.%d" % [Items.slot_label(slot), int(item.get("level", 1))]
+	_detail_state.text = "착용 중" if worn else "보유 중"
+	_fill_cell(_detail_icon, stack, "", slot)
+
+	# 아이템 정보 — 이름 · 값 두 줄짜리 표를 다시 채운다
+	var rows: Array = [
+		["등급", Items.grade_name(grade)],
+		["강화", "+%d" % enhance],
+		["보유 수량", "%d" % int(stack.get("count", 1))],
+	]
+	var bonus := Items.base_bonus(item, enhance)
+	for key in DETAIL_BONUS:
+		var value := float(bonus.get(key, 0.0))
+		if value > 0.0:
+			rows.append([DETAIL_BONUS[key], _bonus_text(key, value)])
+	for option in stack.get("options", []):
+		rows.append(["옵션", Items.describe_option(option)])
+	for child in _detail_info.get_children():
+		_detail_info.remove_child(child)
+		child.queue_free()
+	for row in rows:
+		var key_label := _inv_label(str(row[0]), 17, INV_DIM)
+		key_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_detail_info.add_child(key_label)
+		var value_label := _inv_label(str(row[1]), 17, INV_TEXT)
+		value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		_detail_info.add_child(value_label)
+
+	_bag_action.text = "해제" if worn else "장착"
 	_bag_action.disabled = false
 
 
-func _cell_tint(where: String, index: int) -> Color:
-	if str(_bag_pick.get("where", "")) == where and int(_bag_pick.get("index", -1)) == index:
-		return Color(1.35, 1.35, 1.1)
-	return Color(1, 1, 1)
+## 상세 창 능력치 줄에 적는 기본 능력치 (옵션은 따로 적는다)
+const DETAIL_BONUS := {
+	"attack": "공격력", "defense": "방어력", "maxHp": "체력",
+	"crit": "치명타", "attackSpeed": "공격 속도",
+}
+
+
+func _bonus_text(key: String, value: float) -> String:
+	if key in ["crit", "attackSpeed"]:
+		return "+%.0f%%" % (value * 100.0)
+	return "+%d" % roundi(value)
+
+
+func _is_picked(where: String, index: int) -> bool:
+	return str(_bag_pick.get("where", "")) == where and int(_bag_pick.get("index", -1)) == index
 
 
 ## 고른 칸이 가방 몇 번째인가. **탭으로 걸러 놔서 칸 번호와 다르다**
@@ -1444,11 +1760,14 @@ func _make_skill_cell(size: int, frame: String, on_press: Callable, margin: int 
 ##
 ## `PanelContainer` 는 자식을 창 전체에 깔기 때문에, 여백을 준 `MarginContainer`
 ## 안에 `Control` 을 한 겹 두고 그 오른쪽 위 구석에 앵커로 붙인다 (레벨 배지와 같은 방법)
-func _close_button(panel: PanelContainer, on_press: Callable) -> void:
+##
+## `inset` 은 창 안쪽 여백에서 **더** 들이는 폭이다. 인벤토리 결 창(`inv_panel`)은
+## 안쪽 여백이 이미 테 안쪽이라 0 을 준다 — 24 를 더 들였더니 상세 창의 큰 칸에 걸쳤다
+func _close_button(panel: PanelContainer, on_press: Callable, inset: int = CLOSE_PAD) -> void:
 	var pad := MarginContainer.new()
 	pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	pad.add_theme_constant_override("margin_right", CLOSE_PAD)
-	pad.add_theme_constant_override("margin_top", CLOSE_PAD)
+	pad.add_theme_constant_override("margin_right", inset)
+	pad.add_theme_constant_override("margin_top", inset)
 	panel.add_child(pad)
 
 	var layer := Control.new()
@@ -1459,6 +1778,14 @@ func _close_button(panel: PanelContainer, on_press: Callable) -> void:
 	button.name = "close"
 	button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE)
 	layer.add_child(button)
+	if inset == 0:
+		# **트리에 넣기 전에는 최소 크기를 8 로 읽어** 위 줄이 X 를 36px 오른쪽에 붙인다
+		# (2026-09-23 에 쟀다). 옛 창들은 그 자리에 맞춰 눈으로 `CLOSE_PAD` 를 고른 것이라
+		# 그대로 두고, 인벤토리 결 창만 넣은 뒤에 크기로 자리를 다시 잡는다
+		button.offset_left = -CLOSE_BTN
+		button.offset_right = 0
+		button.offset_top = 0
+		button.offset_bottom = CLOSE_BTN
 
 
 ## 고른 칸 테두리. 그림이 없으면 코드로 그린 금색 테 (안쪽은 비운다 — 아이콘이 보여야 한다)

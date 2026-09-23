@@ -64,6 +64,9 @@ const ICONS = [
   'ui_icon_skill.png', 'ui_icon_bag.png', 'ui_icon_auto.png', 'ui_auto_spin.png',
   // 모든 창의 오른쪽 위 닫기 X (2026-09-20)
   'ui_close.png',
+  // 인벤토리 결 — 장비·상세·인벤토리 세 창 (2026-09-23)
+  'inv_panel.png', 'inv_slot.png', 'inv_slot_pick.png',
+  'inv_tab_on.png', 'inv_tab_off.png', 'inv_button.png',
   // 차원문 창 줄 아이콘 — 지금 서 있는 곳은 소용돌이, 갈 곳은 별 (2026-09-21)
   'ui_gate_here.png', 'ui_gate_go.png',
 ];

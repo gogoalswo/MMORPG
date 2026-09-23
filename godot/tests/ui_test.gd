@@ -425,9 +425,13 @@ func _case_bag(game: Node3D) -> void:
 	elif game._bag_tab != 0:
 		_fail("처음에는 '전체' 가 골라져 있어야 한다 (%d)" % game._bag_tab)
 
-	# 아무것도 안 골랐으면 상세 칸은 안내만, 단추는 꺼져 있어야 한다
+	# 아무것도 안 골랐으면 상세 창은 닫혀 있고, 단추는 꺼져 있어야 한다
 	if not game._bag_action.disabled:
 		_fail("아무것도 안 골랐는데 끼기 단추가 켜져 있다")
+	if game._detail_panel.visible:
+		_fail("아무것도 안 골랐는데 상세 창이 떠 있다")
+	if not game._gear_panel.visible:
+		_fail("가방을 열었는데 장비 창이 같이 안 떴다")
 
 	# 가방에 하나 넣고 — 골라서 낀다
 	me.bag.append({"id": "g1_w", "grade": 1, "enhance": 2, "options": []})
@@ -445,8 +449,45 @@ func _case_bag(game: Node3D) -> void:
 		_fail("칸을 골랐는데 끼기 단추가 안 켜졌다")
 	if game._bag_action.text != "장착":
 		_fail("가방 칸을 골랐는데 단추가 '%s'" % game._bag_action.text)
-	if not game._bag_detail.text.contains("등급"):
-		_fail("상세 칸이 '%s'" % game._bag_detail.text.left(30))
+	if not game._detail_panel.visible:
+		_fail("칸을 눌렀는데 상세 창이 안 떴다")
+	if game._detail_grade.text != Items.grade_name(1):
+		_fail("상세 창 등급이 '%s'" % game._detail_grade.text)
+	var info := ""
+	for label in game._detail_info.get_children():
+		info += label.text + " "
+	if not info.contains("등급") or not info.contains("+2"):
+		_fail("상세 창 아이템 정보가 '%s'" % info.left(60))
+	if not first.get_node("pick").visible:
+		_fail("고른 칸에 금테가 안 덮였다")
+
+	# **세 창의 자리** (2026-09-23 요청) — 장비는 왼쪽 끝, 인벤토리는 오른쪽 끝,
+	# 상세는 인벤토리 바로 왼쪽. 셋 다 화면 안이고 서로 안 겹친다
+	await process_frame
+	var gear_box: Rect2 = game._gear_panel.get_global_rect()
+	var detail_box: Rect2 = game._detail_panel.get_global_rect()
+	var bag_box: Rect2 = game._bag_panel.get_global_rect()
+	var screen_box := Rect2(Vector2.ZERO, Vector2(1280, 720))
+	for pair in [["장비", gear_box], ["상세", detail_box], ["인벤토리", bag_box]]:
+		if not screen_box.encloses(pair[1]):
+			_fail("%s 창이 화면 밖으로 나갔다: %s" % [pair[0], pair[1]])
+	if gear_box.position.x > 40.0:
+		_fail("장비 창이 왼쪽 끝이 아니다: x=%.0f" % gear_box.position.x)
+	if bag_box.end.x < 1240.0:
+		_fail("인벤토리가 오른쪽 끝이 아니다: 끝 x=%.0f" % bag_box.end.x)
+	if detail_box.end.x > bag_box.position.x or bag_box.position.x - detail_box.end.x > 20.0:
+		_fail("상세 창이 인벤토리 바로 왼쪽이 아니다: %s / %s" % [detail_box, bag_box])
+	if gear_box.intersects(detail_box):
+		_fail("장비 창과 상세 창이 겹친다: %s / %s" % [gear_box, detail_box])
+	print("  창 셋: 장비 %s · 상세 %s · 인벤토리 %s" % [gear_box, detail_box, bag_box])
+
+	# 빈칸을 누르면 상세 창이 닫힌다
+	game._bag_grid.get_child(game._bag_grid.get_child_count() - 1).get_node("hit").pressed.emit()
+	await process_frame
+	if game._detail_panel.visible:
+		_fail("빈칸을 눌렀는데 상세 창이 그대로다")
+	first.get_node("hit").pressed.emit()
+	await process_frame
 
 	game._on_bag_action()
 	for i in 3:
@@ -456,17 +497,6 @@ func _case_bag(game: Node3D) -> void:
 	else:
 		var worn: Dictionary = Items.get_item(str(me.equipped.weapon.id))
 		print("  골라서 끼기: 무기 칸에 '%s'" % worn.get("name", "?"))
-
-	# 창이 화면 안에, 그리고 **가운데에** 있나. 눈으로 볼 수 없는 것은 재서 본다 —
-	# set_anchors_preset 만 부르면 왼쪽 위에 붙는다 (2026-09-18 에 그랬다)
-	var rect: Rect2 = game._bag_panel.get_global_rect()
-	if rect.size.x > 1280.0 or rect.size.y > 720.0:
-		_fail("가방 창이 화면(1280x720)보다 크다: %.0fx%.0f" % [rect.size.x, rect.size.y])
-	var off: Vector2 = (rect.position + rect.size * 0.5) - Vector2(640, 360)
-	if abs(off.x) > 8.0 or abs(off.y) > 8.0:
-		_fail("가방 창이 가운데가 아니다 — 중심이 (%.0f, %.0f) 만큼 밀렸다" % [off.x, off.y])
-	else:
-		print("  창 %.0fx%.0f, 화면 한가운데" % [rect.size.x, rect.size.y])
 
 	# 끼운 칸을 골라 벗긴다
 	var slot_index := slots.find("weapon")
@@ -501,6 +531,34 @@ func _case_bag(game: Node3D) -> void:
 		print("  탭으로 거른 칸을 골라도 제대로 끼워진다")
 	game._pick_tab(0)
 	await process_frame
+
+	# 정렬 — 높은 등급이 앞으로 온다. 순서만 바뀌고 물건 수는 그대로다
+	me.bag.clear()
+	me.bag.append({"id": "g1_r", "grade": 1, "enhance": 0, "options": []})
+	me.bag.append({"id": "g3_w", "grade": 3, "enhance": 0, "options": []})
+	me.bag.append({"id": "g1_w", "grade": 1, "enhance": 0, "options": []})
+	game._on_bag_sort()
+	for i in 3:
+		await process_frame
+	var order: Array = me.bag.map(func(s: Dictionary) -> String: return str(s.id))
+	if order != ["g3_w", "g1_w", "g1_r"]:
+		_fail("정렬했는데 순서가 %s (g3_w, g1_w, g1_r 이어야 한다)" % str(order))
+	else:
+		print("  정렬: %s" % str(order))
+
+	# 장비 창은 따로 닫고 다시 연다 (자기 X · 인벤토리의 "장비" 단추)
+	var gear_mark: Control = game._gear_panel.find_child("close", true, false)
+	if gear_mark == null:
+		_fail("장비 창에 닫기 X 가 없다")
+	else:
+		gear_mark.find_child("hit", true, false).pressed.emit()
+		await process_frame
+		if game._gear_panel.visible or not game._bag_panel.visible:
+			_fail("장비 창 X 는 장비 창만 닫아야 한다")
+		game._toggle_gear()
+		await process_frame
+		if not game._gear_panel.visible:
+			_fail("'장비' 단추로 장비 창이 다시 안 열렸다")
 
 	game._toggle_bag()
 	await process_frame

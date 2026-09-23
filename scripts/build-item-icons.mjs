@@ -67,6 +67,14 @@ const FRAME_SIZE = {
   'ui_level_badge.png': 192,
   'ui_quick_slot.png': 128,
   'ui_close.png': 128,
+  // 인벤토리 결 (2026-09-23) — 칸이 58px 이라 칸 조각은 64 로 작게 굽는다.
+  // 모서리 조각이 원본 픽셀 그대로 그려지므로 칸보다 크면 겹친다
+  'inv_panel.png': 256,
+  'inv_slot.png': 64,
+  'inv_slot_pick.png': 64,
+  'inv_tab_on.png': 96,
+  'inv_tab_off.png': 96,
+  'inv_button.png': 128,
 };
 /**
  * **배경을 걷지 않는 것.** 스킬 아이콘은 칸을 꽉 채운 그림이라 가장자리가 곧 그림이다.
@@ -79,7 +87,7 @@ const FULL = /^skill_/;
  * 9조각으로 늘여 쓰려면 테가 그림 가장자리에 닿아 있어야 여백을 재기 쉽다.
  * 배경을 걷은 다음 남은 부분에 딱 맞게 자른다. 비율은 그대로 두고 긴 변을 맞춘다
  */
-const TRIM = /^ui_/;
+const TRIM = /^(ui|inv)_/;
 /**
  * **안쪽도 뚫는 것.** 칸 테두리는 가운데가 흰 판으로 차 있는데, 테두리에서
  * 번져 들어가는 채우기로는 닿지 못한다 (테가 막고 있다). 이 이름들은 한가운데에서
@@ -90,6 +98,7 @@ const HOLLOW = new Set([
   'ui_slot_pick.png',
   // 고리 한가운데는 비어야 한다 — 칸 아이콘 위에서 도는 것이라
   'ui_auto_spin.png',
+  'inv_slot_pick.png',
 ]);
 /**
  * **배경을 한 겹만 걷는 것.** ★ 얇은 선으로 그린 HUD 조각(막대 홈·배지·칸)은
@@ -109,6 +118,11 @@ const SINGLE_LAYER = new Set([
   'ui_tab_on.png',
   'ui_tab_off.png',
   'ui_button.png',
+  'inv_panel.png',
+  'inv_slot.png',
+  'inv_tab_on.png',
+  'inv_tab_off.png',
+  'inv_button.png',
 ]);
 /**
  * **배경을 넓은 폭으로 걷는 것.** ★ 칠해서 받은 조각은 테 바깥에 **흰 배경과

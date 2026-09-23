@@ -2108,6 +2108,19 @@ func _build_test_switches() -> void:
 	)
 	column.add_child(gauntlets)
 	column.move_child(gauntlets, 0)  # 쿨타임 단추가 맨 아래 구석에 남아야 한다 (ui_test 가 본다)
+	# 크리스탈 30개를 가방에 넣는다 (2026-09-23 요청 — "가방에 30개 넣어". 드랍이 0.01% 라
+	# 주워서는 시험해 볼 수 없다)
+	var crystals := Button.new()
+	crystals.custom_minimum_size = Vector2(230, 52)
+	crystals.add_theme_font_size_override("font_size", 18)
+	crystals.text = "테스트: 크리스탈 30"
+	crystals.pressed.connect(func() -> void:
+		_transport.send(&"debugCrystals", {"count": 30})
+		if _bag_panel.visible:
+			_redraw_bag()
+	)
+	column.add_child(crystals)
+	column.move_child(crystals, 0)
 	# 무적은 플레이어 값이라 표 스위치와 따로 논다 — 요청은 `invincible`
 	_invincible_button = Button.new()
 	_invincible_button.custom_minimum_size = Vector2(230, 52)

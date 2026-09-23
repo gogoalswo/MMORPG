@@ -63,25 +63,34 @@ const MARK_FADE := 0.8
 const GLOW_LIFE := 0.6
 const GROUND := 0.05
 
-## 솟을 때 튀는 얼음 조각
-const BURST_COUNT := 40
-const BURST_SPEED_MIN := 4.0
-const BURST_SPEED_MAX := 8.5
+## 솟을 때 **기둥 밑동에서** 튀는 얼음 조각 — 길쭉한 조각(`COUNT`)과 뭉툭한 덩이(`BITS`)
+## 두 벌이다. 한 모양만 쓰면 찍어낸 것으로 보인다
+const BURST_COUNT := 24
+const BURST_BITS := 20
+const BURST_SPEED_MIN := 3.5
+const BURST_SPEED_MAX := 7.0
 const BURST_LIFE := 0.8
-## 꺼질 때 부서지는 얼음 조각
-const SHATTER_COUNT := 56
-const SHATTER_SPEED_MIN := 2.5
-const SHATTER_SPEED_MAX := 6.0
+## 꺼질 때 **기둥 허리에서** 부서지는 조각
+const SHATTER_COUNT := 30
+const SHATTER_BITS := 30
+const SHATTER_SPEED_MIN := 2.0
+const SHATTER_SPEED_MAX := 5.0
 const SHATTER_LIFE := 0.7
-const SHARD_SIZE := Vector3(0.09, 0.3, 0.09)
 const SHARD_GRAVITY := -20.0
-## 냉기 — 낮게 깔려 밀려난다. 멈추는 거리 = 속도² / (2 × 감속) ≈ 3~4.5m
-const MIST_COUNT := 30
-const MIST_SIZE := 1.9
-const MIST_SPEED_MIN := 5.0
-const MIST_SPEED_MAX := 6.0
-const MIST_DAMP := 4.0
-const MIST_LIFE := 1.5
+## 조각이 도는 빠르기(도/s). 입자는 Y 축으로만 돌릴 수 있어서, 조각 메시를
+## 비스듬히 눕혀 깔아 둔다 — 그러면 Y 로 돌려도 구르며 떨어지는 것으로 보인다
+const SHARD_SPIN := 540.0
+## 냉기 — **기둥 밑동마다** 흘러나와 바깥으로 느리게 번진다. 한가운데서 사방으로
+## 밀려나게 했더니 "캐릭터에서 나온다" 로 읽혔다 (2026-09-23 지적)
+const MIST_COUNT := 44
+const MIST_SIZE := 1.5
+const MIST_SPEED_MIN := 0.8
+const MIST_SPEED_MAX := 2.0
+const MIST_DAMP := 0.9
+const MIST_LIFE := 1.2
+## 1 이면 한꺼번에 — 낮출수록 수명에 걸쳐 나눠 흘린다. 기둥이 차례로 솟는 동안
+## 계속 피어오르게 반쯤 둔다 (마지막 것도 이펙트가 끝나기 전에 스러진다)
+const MIST_EXPLOSIVE := 0.5
 
 const FLARE_SIZE := 2.6
 const FLARE_LIFE := 0.22
@@ -100,7 +109,6 @@ const COLOR_CRACK := Color("#15314d")
 const COLOR_GLOW := Color("#6fd6ff")
 const COLOR_FLARE := Color("#bfeeff")
 const COLOR_MIST := Color("#e6f7ff")
-const COLOR_SHARD := Color("#d8f4ff")
 
 ## 기둥 셰이더. 메시는 다 깔려 있고, **아직 솟지 않은 기둥은 땅속에 있다.**
 ## 빛은 받지 않는다(unshaded) — 면마다 구워 둔 밝기(`COLOR.a`)와 가장자리
@@ -136,6 +144,25 @@ void fragment() {
 	ALBEDO = c;
 }
 """
+## 조각 셰이더 — 기둥 셰이더의 색 칠하기만 떼어 왔다. 빛(`light`)은 월드 방향이라
+## 화면 공간으로 돌려 면 방향(`NORMAL`)과 댄다
+const SHARD_SHADER := """
+shader_type spatial;
+render_mode unshaded, cull_disabled, shadows_disabled;
+uniform vec4 deep : source_color = vec4(0.12, 0.44, 0.68, 1.0);
+uniform vec4 pale : source_color = vec4(0.74, 0.93, 1.0, 1.0);
+uniform vec4 rim_color : source_color = vec4(0.96, 0.99, 1.0, 1.0);
+uniform vec3 light = vec3(0.35, 0.85, 0.4);
+void fragment() {
+	vec3 l = normalize((VIEW_MATRIX * vec4(light, 0.0)).xyz);
+	float shade = clamp(dot(NORMAL, l) * 0.5 + 0.5, 0.0, 1.0);
+	float rim = pow(1.0 - clamp(abs(dot(NORMAL, VIEW)), 0.0, 1.0), 2.0);
+	float edge = smoothstep(0.7, 1.0, abs(UV.x * 2.0 - 1.0));
+	vec3 c = mix(deep.rgb, pale.rgb, clamp(shade * 0.9 + UV.y * 0.3 - 0.1, 0.0, 1.0));
+	c = mix(c, rim_color.rgb, clamp(rim * 0.8 + edge * 0.5, 0.0, 1.0));
+	ALBEDO = c;
+}
+"""
 static var _shader: Shader
 static var _mesh: ArrayMesh
 ## 굽는 빛의 방향 — 위 앞쪽. 면마다 밝기가 달라야 각진 결정으로 보인다
@@ -151,8 +178,14 @@ var _glow: MeshInstance3D
 var _flare: MeshInstance3D
 var _light: OmniLight3D
 var _burst: CPUParticles3D
+var _burst_bits: CPUParticles3D
 var _shatter: CPUParticles3D
+var _shatter_bits: CPUParticles3D
 var _mist: CPUParticles3D
+## 조각 재질 — 기둥과 같은 결(면 밝기·가장자리 흰 빛)이고 게임에 하나다
+static var _shard_mat: ShaderMaterial
+## [길쭉한 조각, 뭉툭한 덩이]
+static var _shard_meshes: Array = []
 
 
 ## 빙주각을 띄운다. `at` 은 시전자 발밑(월드 좌표), `facing` 은 보는 쪽(rad).
@@ -223,11 +256,15 @@ func _build() -> void:
 	_light.light_energy = LIGHT_ENERGY
 	add_child(_light)
 
-	_burst = _shards(BURST_COUNT, BURST_LIFE, BURST_SPEED_MIN, BURST_SPEED_MAX, 30.0)
-	_shatter = _shards(SHATTER_COUNT, SHATTER_LIFE, SHATTER_SPEED_MIN, SHATTER_SPEED_MAX, 55.0)
-	_mist = _mist_emitter()
+	var feet := emit_points(false)
+	var waist := emit_points(true)
+	_burst = _shards(BURST_COUNT, BURST_LIFE, BURST_SPEED_MIN, BURST_SPEED_MAX, 25.0, 0, feet)
+	_burst_bits = _shards(BURST_BITS, BURST_LIFE, BURST_SPEED_MIN, BURST_SPEED_MAX, 35.0, 1, feet)
+	_shatter = _shards(SHATTER_COUNT, SHATTER_LIFE, SHATTER_SPEED_MIN, SHATTER_SPEED_MAX, 50.0, 0, waist)
+	_shatter_bits = _shards(SHATTER_BITS, SHATTER_LIFE, SHATTER_SPEED_MIN, SHATTER_SPEED_MAX, 60.0, 1, waist)
+	_mist = _mist_emitter(feet)
 	# **만든 다음 프레임에 켠다** — 같은 프레임에 켜면 방출이 안 나온 적이 있다 (3절)
-	for e in [_burst, _shatter, _mist]:
+	for e in _emitters():
 		e.emitting = false
 		add_child(e)
 
@@ -236,7 +273,8 @@ func _build() -> void:
 func _start(at: Vector3, facing: float) -> void:
 	position = at
 	# **캐릭터가 보는 쪽 기준이다** — 메시는 보는 쪽 0 으로 깔려 있다
-	for node in [_frost, _crack, _glow, _pillars]:
+	# 방출기도 돌린다 — 나오는 자리가 기둥 밑동이라 기둥과 같이 돌아야 한다
+	for node in [_frost, _crack, _glow, _pillars] + _emitters():
 		node.rotation.y = facing
 	_t = 0.0
 	_started = false
@@ -249,11 +287,13 @@ func _process(delta: float) -> void:
 		_started = true
 		# 되감아 쓰는 방출기라 켜기(`emitting`)가 아니라 처음부터 다시(`restart`)
 		_burst.restart()
+		_burst_bits.restart()
 		_mist.restart()
 	_t += delta
 	if not _shattered and _t >= shatter_at():
 		_shattered = true
 		_shatter.restart()
+		_shatter_bits.restart()
 	_show()
 	if _t >= span():
 		finish()
@@ -305,49 +345,48 @@ func _sheet(mat: Material) -> MeshInstance3D:
 	return node
 
 
-## 얼음 조각 — 기둥 고리 자리(고리 모양 방출)에서 튀었다 **떨어진다.**
-## 조각은 날아가는 쪽으로 눕는다(`align_y`) — 고드름이 튀는 것으로 보인다
+## 떠 있는 방출기 전부
+func _emitters() -> Array:
+	return [_burst, _burst_bits, _shatter, _shatter_bits, _mist]
+
+
+## 얼음 조각 — **기둥마다** 그 자리(`points`)에서 바깥 위로 튀었다 **구르며 떨어진다.**
+## `shape` 0 은 길쭉한 조각, 1 은 뭉툭한 덩이. 옛날엔 흰 삼각기둥(`PrismMesh`)이
+## 날아가는 쪽으로 누워 흰 바늘로 보였다 (2026-09-23 "파편이 생긴 게 좀 다르게")
 func _shards(count: int, life: float, speed_min: float, speed_max: float,
-		spread: float) -> CPUParticles3D:
+		spread: float, shape: int, points: Array) -> CPUParticles3D:
 	var e := CPUParticles3D.new()
 	e.amount = count
 	e.lifetime = life
 	e.one_shot = true
-	e.explosiveness = 0.9
-	var shard := PrismMesh.new()
-	shard.size = SHARD_SIZE
-	e.mesh = shard
-	e.emission_shape = CPUParticles3D.EMISSION_SHAPE_RING
-	e.emission_ring_axis = Vector3.UP
-	e.emission_ring_radius = float(RINGS[RINGS.size() - 1][0])
-	e.emission_ring_inner_radius = float(RINGS[0][0]) * 0.6
-	e.emission_ring_height = 0.2
-	e.direction = Vector3.UP
+	e.explosiveness = 0.85
+	e.mesh = shard_meshes()[shape]
+	_from_points(e, points, 0.9)
 	e.spread = spread
 	e.initial_velocity_min = speed_min
 	e.initial_velocity_max = speed_max
 	e.gravity = Vector3(0.0, SHARD_GRAVITY, 0.0)
-	e.particle_flag_align_y = true
+	e.particle_flag_rotate_y = true
+	e.angle_min = -180.0
+	e.angle_max = 180.0
+	e.angular_velocity_min = -SHARD_SPIN
+	e.angular_velocity_max = SHARD_SPIN
 	e.scale_amount_min = 0.6
-	e.scale_amount_max = 1.4
+	e.scale_amount_max = 1.5
 	e.scale_amount_curve = LightningFx.fade_curve()
-	e.color = COLOR_SHARD
-	var mat := StandardMaterial3D.new()
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.vertex_color_use_as_albedo = true
-	e.material_override = mat
-	e.position.y = 0.3
+	e.material_override = shard_material()
 	return e
 
 
-## 냉기 — **지면을 따라 수평으로** 밀려난다. 먼지와 같은 뭉치(`FxTex.puff`)를 흰
-## 하늘색으로 쓴다. 재질 색은 흰색이다 — 입자 색과 두 번 곱해지면 탁해진다
-func _mist_emitter() -> CPUParticles3D:
+## 냉기 — **기둥 밑동마다** 흘러나와 바깥으로 느리게 번지며 조금 떠오른다.
+## 먼지와 같은 뭉치(`FxTex.puff`)를 흰 하늘색으로 쓴다. 재질 색은 흰색이다 —
+## 입자 색과 두 번 곱해지면 탁해진다
+func _mist_emitter(points: Array) -> CPUParticles3D:
 	var e := CPUParticles3D.new()
 	e.amount = MIST_COUNT
 	e.lifetime = MIST_LIFE
 	e.one_shot = true
-	e.explosiveness = 1.0
+	e.explosiveness = MIST_EXPLOSIVE
 	var dot := QuadMesh.new()
 	dot.size = Vector2(MIST_SIZE, MIST_SIZE)
 	e.mesh = dot
@@ -355,15 +394,14 @@ func _mist_emitter() -> CPUParticles3D:
 	e.angle_max = 180.0
 	e.angular_velocity_min = -60.0
 	e.angular_velocity_max = 60.0
-	e.direction = Vector3(1.0, 0.0, 0.0)
-	e.spread = 180.0
-	e.flatness = 1.0
+	_from_points(e, points, 0.25)
+	e.spread = 30.0
 	e.initial_velocity_min = MIST_SPEED_MIN
 	e.initial_velocity_max = MIST_SPEED_MAX
 	e.damping_min = MIST_DAMP
 	e.damping_max = MIST_DAMP
-	e.gravity = Vector3(0.0, 0.3, 0.0)
-	e.scale_amount_curve = LightningFx.grow_curve(1.8)
+	e.gravity = Vector3(0.0, 0.35, 0.0)
+	e.scale_amount_curve = LightningFx.grow_curve(2.0)
 	e.color = COLOR_MIST
 	e.color_ramp = LightningFx.fade_ramp(COLOR_MIST, 0.5)
 	var mat := LightningFx.mote(COLOR_MIST)
@@ -372,8 +410,91 @@ func _mist_emitter() -> CPUParticles3D:
 	mat.proximity_fade_enabled = true
 	mat.proximity_fade_distance = 1.0
 	e.material_override = mat
-	e.position.y = 0.3
 	return e
+
+
+## 방출기가 `points` = [자리들, 바깥 방향들] 에서 나오게 한다. 방향은 바깥에서
+## `up` 만큼 위로 든다. 입자는 `direction`(+Z)을 자리마다의 방향으로 돌려 쓴다
+static func _from_points(e: CPUParticles3D, points: Array, up: float) -> void:
+	var dirs := PackedVector3Array()
+	for d: Vector3 in points[1]:
+		dirs.append((d + Vector3.UP * up).normalized())
+	e.emission_shape = CPUParticles3D.EMISSION_SHAPE_DIRECTED_POINTS
+	e.emission_points = points[0]
+	e.emission_normals = dirs
+	e.direction = Vector3(0.0, 0.0, 1.0)
+
+
+## 큰 결정마다 [자리들, 바깥 방향들]. `waist` 면 기둥 허리(부서질 때), 아니면 밑동
+static func emit_points(waist: bool) -> Array:
+	var at := PackedVector3Array()
+	var out := PackedVector3Array()
+	for c in crystals():
+		if not c[5]:
+			continue
+		var base: Vector3 = c[0]
+		var axis: Vector3 = c[1]
+		at.append(base + axis * float(c[2]) * 0.45 if waist else base + Vector3.UP * 0.2)
+		out.append(Vector3(base.x, 0.0, base.z).normalized())
+	return [at, out]
+
+
+## 조각 재질. 기둥과 같은 색·가장자리 빛이다. 입자라 꼭짓점 색을 못 쓰므로
+## 면 밝기는 면 방향과 고정된 빛(`LIGHT_DIR`)으로 그 자리에서 셈한다
+static func shard_material() -> ShaderMaterial:
+	if _shard_mat != null:
+		return _shard_mat
+	var shader := Shader.new()
+	shader.code = SHARD_SHADER
+	_shard_mat = ShaderMaterial.new()
+	_shard_mat.shader = shader
+	_shard_mat.set_shader_parameter(&"deep", COLOR_DEEP)
+	_shard_mat.set_shader_parameter(&"pale", COLOR_PALE)
+	_shard_mat.set_shader_parameter(&"rim_color", COLOR_RIM)
+	_shard_mat.set_shader_parameter(&"light", LIGHT_DIR.normalized())
+	return _shard_mat
+
+
+## [길쭉한 조각, 뭉툭한 덩이] — 모난 쌍뿔(위아래가 뾰족한 결정)이다. 한 번만 깐다
+static func shard_meshes() -> Array:
+	if _shard_meshes.is_empty():
+		_shard_meshes = [_shard(5, 0.06, 0.26, -0.1, 20260926),
+			_shard(4, 0.11, 0.1, -0.09, 20260927)]
+	return _shard_meshes
+
+
+## 쌍뿔 조각 하나. 둘레 꼭짓점을 흔들어 모나게 하고, **55° 눕혀** 깐다 —
+## 입자가 Y 로만 돌아서, 곧게 세우면 제자리 팽이가 된다
+static func _shard(sides: int, radius: float, top: float, bottom: float,
+		seed: int) -> ArrayMesh:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed
+	var lean := Basis(Vector3.RIGHT, deg_to_rad(55.0))
+	var ring: Array = []
+	for i in sides:
+		var a := TAU * float(i) / float(sides) + rng.randf_range(-0.3, 0.3)
+		var r := radius * rng.randf_range(0.7, 1.25)
+		ring.append(Vector3(cos(a) * r, rng.randf_range(-0.02, 0.02), sin(a) * r))
+	var up := Vector3(rng.randf_range(-0.03, 0.03), top, rng.randf_range(-0.03, 0.03))
+	var down := Vector3(rng.randf_range(-0.03, 0.03), bottom, rng.randf_range(-0.03, 0.03))
+	var tool := SurfaceTool.new()
+	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for i in sides:
+		var a: Vector3 = ring[i]
+		var b: Vector3 = ring[(i + 1) % sides]
+		for face in [[a, b, up, Vector2(0.0, 0.4), Vector2(1.0, 0.4), Vector2(0.5, 1.0)],
+				[b, a, down, Vector2(1.0, 0.4), Vector2(0.0, 0.4), Vector2(0.5, 0.0)]]:
+			var p0: Vector3 = face[0]
+			var p1: Vector3 = face[1]
+			var p2: Vector3 = face[2]
+			var n := (p1 - p0).cross(p2 - p0).normalized()
+			if n.dot(p0 + p1 + p2) < 0.0:
+				n = -n
+			for k in 3:
+				tool.set_normal(lean * n)
+				tool.set_uv(face[3 + k])
+				tool.add_vertex(lean * (face[k] as Vector3))
+	return tool.commit()
 
 
 ## 기둥 재질 — 셰이더는 하나를 같이 쓰고, `now` 가 이펙트마다 달라 재질은 따로다
@@ -393,7 +514,7 @@ static func pillar_material() -> ShaderMaterial:
 	return mat
 
 
-## 결정들 — 각각 [밑동, 축(단위), 길이(m), 굵기(m), 솟기 시작하는 시각(s)].
+## 결정들 — 각각 [밑동, 축(단위), 길이(m), 굵기(m), 솟기 시작하는 시각(s), 큰 결정인가].
 ## **씨앗을 박아 둔다** — 늘 같은 모양이어야 테스트가 읽고, 한 번만 깔면 된다
 static func crystals() -> Array:
 	var rng := RandomNumberGenerator.new()
@@ -414,7 +535,7 @@ static func crystals() -> Array:
 			var start := RING_GAP * float(k) + rng.randf_range(0.0, RING_JITTER)
 			var length := tall * rng.randf_range(0.8, 1.2)
 			var tilt := deg_to_rad(rng.randf_range(TILT_MIN, TILT_MAX))
-			out.append([base, _axis(out_dir, tilt, rng), length, length * GIRTH, start])
+			out.append([base, _axis(out_dir, tilt, rng), length, length * GIRTH, start, true])
 			# 곁 결정 — 밑동 옆에서 더 기울어 짧게. 없거나 하나 — 둘씩 달면 덤불이다
 			for _j in rng.randi_range(0, 1):
 				var side := angle + rng.randf_range(0.35, 0.9) * (1.0 if rng.randf() > 0.5 else -1.0)
@@ -424,7 +545,7 @@ static func crystals() -> Array:
 				# 곁 결정은 **안쪽으로** 조금 물려 둔다 — 바깥으로 두면 사거리를 넘는다
 				var at := base + side_dir * length * GIRTH * 1.2 - out_dir * 0.15
 				out.append([at, _axis(side_dir, lean, rng), small, small * GIRTH * 1.1,
-					start + 0.02])
+					start + 0.02, false])
 	return out
 
 

@@ -106,6 +106,15 @@ func _case_layout() -> void:
 		_fail("기둥이 %d번에 솟는다 — 한꺼번에 켜지면 얼음 숲 한 장이다" % starts.size())
 	if not (inner_start < outer_start):
 		_fail("바깥 고리가 안쪽보다 먼저 솟는다 — 밟은 힘이 퍼져 나가는 것으로 안 읽힌다")
+	# 냉기·조각은 **기둥에서** 나온다 — 한가운데서 나오면 캐릭터가 뿜는 것으로 읽힌다
+	var feet: PackedVector3Array = IceFx.emit_points(false)[0]
+	var nearest := INF
+	for p in feet:
+		nearest = minf(nearest, Vector2(p.x, p.z).length())
+	if feet.size() != IceFx.RINGS.reduce(func(n, r): return n + int(r[1]), 0):
+		_fail("나오는 자리 %d곳 — 큰 결정마다 하나여야 한다" % feet.size())
+	if nearest < first_ring - 0.4:
+		_fail("냉기·조각이 한가운데(%.1fm)에서 나온다 — 기둥에서 나와야 한다" % nearest)
 	print("  결정 %d개 · 고리 %d겹 · 끝 %.2fm (사거리 %.0fm) · 안 %.2fs → 밖 %.2fs" % [
 		list.size(), IceFx.RINGS.size(), far, reach, inner_start, outer_start])
 

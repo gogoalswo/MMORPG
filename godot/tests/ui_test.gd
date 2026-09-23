@@ -512,12 +512,19 @@ func _case_bag(game: Node3D) -> void:
 		_fail("빈칸을 눌렀는데 상세 창이 그대로다")
 	first.get_node("hit").pressed.emit()
 	await process_frame
-
-	game._on_bag_action()
+	# 고른 칸에 "장착" 이 얹히고, **한 번 더 누르면 낀다** (2026-09-23 요청)
+	var act: Label = first.get_node("act")
+	if not act.visible or act.text != "장착":
+		_fail("고른 칸에 '장착' 이 안 얹혔다 (%s '%s')" % [act.visible, act.text])
+	if game._bag_grid.get_child(1).get_node("act").visible:
+		_fail("안 고른 칸에도 글자가 얹혔다")
+	first.get_node("hit").pressed.emit()
 	for i in 3:
 		await process_frame
 	if me.equipped.get("weapon", {}).is_empty():
-		_fail("끼기를 눌렀는데 무기가 안 끼워졌다")
+		_fail("고른 칸을 한 번 더 눌렀는데 무기가 안 끼워졌다")
+	elif act.visible:
+		_fail("끼운 뒤에도 칸에 '%s' 가 남았다" % act.text)
 	else:
 		var worn: Dictionary = Items.get_item(str(me.equipped.weapon.id))
 		print("  골라서 끼기: 무기 칸에 '%s'" % worn.get("name", "?"))
@@ -583,16 +590,21 @@ func _case_bag(game: Node3D) -> void:
 		_fail("크리스탈을 골랐는데 단추가 '%s'" % game._bag_action.text)
 	if game._detail_name.text != "크리스탈":
 		_fail("크리스탈 상세 이름이 '%s'" % game._detail_name.text)
+	var use_act: Label = game._bag_grid.get_child(0).get_node("act")
+	if not use_act.visible or use_act.text != "사용":
+		_fail("크리스탈 칸에 '사용' 이 안 얹혔다 (%s '%s')" % [use_act.visible, use_act.text])
 	# 아이콘(바르코, 2026-09-23)을 받았으면 칸에 글자 대신 그림이 뜬다
 	var crystal_cell: PanelContainer = game._bag_grid.get_child(0)
 	if game._icon("crystal") != null and crystal_cell.get_node("text").text != "":
 		_fail("크리스탈 그림이 있는데 칸에 글자가 찍혔다")
 
-	game._on_bag_action()
+	game._bag_grid.get_child(0).get_node("hit").pressed.emit()  # 한 번 더 누르면 사용
 	await process_frame
 	await process_frame
 	if not game._crystal_panel.visible or game._detail_panel.visible:
-		_fail("'사용' 을 눌렀는데 크리스탈 창이 안 떴다 (상세 %s)" % game._detail_panel.visible)
+		_fail("크리스탈 칸을 한 번 더 눌렀는데 크리스탈 창이 안 떴다 (상세 %s)" % game._detail_panel.visible)
+	if use_act.visible:
+		_fail("크리스탈 창이 떴는데 칸에 '사용' 이 남았다")
 	if not game._crystal_roll.disabled:
 		_fail("대상을 안 골랐는데 굴리기가 켜져 있다")
 	var crystal_box: Rect2 = game._crystal_panel.get_global_rect()

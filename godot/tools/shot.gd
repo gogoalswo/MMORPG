@@ -89,6 +89,11 @@ func _run() -> void:
 		await _range(game, skill.trim_prefix("range:"))
 		return
 
+	# 몬스터를 한 대로 잡는다 — 피해 숫자와 `+n EXP` 가 겹치지 않는지 본다
+	if skill == "kill":
+		await _kill(game)
+		return
+
 	# 창은 열어 놓고 한 장만 찍는다 — 움직이는 것이 없다
 	if skill == "bag" or skill == "skills":
 		await _window(game, skill)
@@ -241,6 +246,57 @@ func _range(game: Node3D, skill: String) -> void:
 			root.get_texture().get_image().save_png("res://../logs/range_%02d.png" % frame)
 			taken += 1
 			print("logs/range_%02d.png  %s" % [frame, game._range_label.text])
+	quit(0)
+
+
+## 사냥터에서 가장 가까운 몬스터를 한 대에 잡는다. 정면·사거리 판정은 건너뛰고
+## 맞히는 자리(`_hit_monster`)부터 탄다 — 처치·보상 이벤트는 게임과 같은 길로 나온다.
+## 처치 섬광·피해 숫자·`+n EXP`(`ExpFx`)가 차례로 뜨는 것을 **게임 시간으로** 찍는다 —
+## 글자가 1.4초 살아서 스킬처럼 0.08배로 늦추면 너무 오래 걸린다
+func _kill(game: Node3D) -> void:
+	var world = game._transport._world
+	game._transport.send(&"travel", {"zone": RANGE_ZONE})
+	await process_frame
+	var me: String = game._transport.my_id()
+	var player: Dictionary = world._players[me]
+	player["x"] = RANGE_PACK.x
+	player["z"] = RANGE_PACK.z
+	var mob: Dictionary = {}
+	var best := INF
+	for m in world.snapshot().monsters:
+		m.aggro = 0.0
+		m.target = ""
+		var d: float = Vector2(m.x - player.x, m.z - player.z).length()
+		if int(m.hp) > 0 and d < best:
+			best = d
+			mob = m
+	# 몬스터 코앞에서 그쪽을 보고 선다
+	var dir: Vector2 = Vector2(player.x - mob.x, player.z - mob.z).normalized()
+	player["x"] = mob.x + dir.x * 1.5
+	player["z"] = mob.z + dir.y * 1.5
+	player["rot"] = atan2(mob.x - player.x, mob.z - player.z)
+	mob["hp"] = 1
+	for i in 6:
+		await process_frame
+
+	Engine.time_scale = 0.25
+	world._hit_monster(player, mob, 1.0, "")
+	var began := Time.get_ticks_msec()
+	var at := [0.05, 0.15, 0.3, 0.5, 0.8, 1.15]
+	var taken := 0
+	var sheet: Image = null
+	while taken < at.size():
+		await process_frame
+		var t := float(Time.get_ticks_msec() - began) * 0.001 * 0.25
+		if t >= at[taken]:
+			await RenderingServer.frame_post_draw
+			var img := root.get_texture().get_image()
+			img.save_png("res://../logs/shot_kill_%d.png" % taken)
+			sheet = _add_to_sheet(sheet, img, taken)
+			print("logs/shot_kill_%d.png  (게임 시간 %.2f초)" % [taken, t])
+			taken += 1
+	sheet.save_png("res://../logs/shot_sheet.png")
+	print("logs/shot_sheet.png")
 	quit(0)
 
 

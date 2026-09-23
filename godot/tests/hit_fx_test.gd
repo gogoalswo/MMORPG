@@ -52,6 +52,7 @@ func _run() -> void:
 	await _case_model(game)
 	await _case_player(game)
 	await _case_heal(game)
+	await _case_exp(game, mob)
 	_done()
 
 
@@ -255,6 +256,37 @@ func _case_heal(game: Node3D) -> void:
 		_fail("회복했는데 화면이 붉어졌다")
 	if _failed == 0:
 		print("  회복: %s, 섬광 없음, 화면 안 붉어짐" % fx._number.text)
+
+
+## 잡으면 쓰러진 자리에서 `+n EXP` 가 늦게 떠올라 스스로 사라진다
+func _case_exp(game: Node3D, mob: Dictionary) -> void:
+	game._on_event(&"reward", {"exp": 25, "target": str(mob.id), "x": mob.x, "z": mob.z})
+	await process_frame
+	var fx: ExpFx = null
+	for child in game._zone_node.get_children():
+		if child is ExpFx:
+			fx = child
+	if fx == null:
+		_fail("보상을 받았는데 경험치 글자가 안 떴다")
+		return
+	if fx._label.text != "+25 EXP":
+		_fail("경험치 글자가 '+25 EXP' 가 아니다 (%s)" % fx._label.text)
+	if Vector2(fx.position.x - mob.x, fx.position.z - mob.z).length() > 0.01:
+		_fail("경험치 글자가 쓰러진 자리에서 안 떴다")
+	# 0 이면 띄우지 않는다 — 빈 `+0 EXP` 는 잡음이다
+	var before: int = game._zone_node.get_child_count()
+	game._on_event(&"reward", {"exp": 0, "target": str(mob.id), "x": mob.x, "z": mob.z})
+	await process_frame
+	if game._zone_node.get_child_count() > before:
+		_fail("경험치 0 인데 글자가 떴다")
+	var waited := 0
+	while is_instance_valid(fx) and waited < 300:
+		await process_frame
+		waited += 1
+	if is_instance_valid(fx):
+		_fail("%d프레임이 지나도 경험치 글자가 안 사라졌다" % waited)
+	else:
+		print("  경험치 글자: +25 EXP, %d프레임 뒤 스스로 사라짐" % waited)
 
 
 func _hit(mob: Dictionary, amount: int, crit: bool, killed: bool) -> Dictionary:

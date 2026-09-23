@@ -547,7 +547,14 @@ func _kill(player: Dictionary, target: Dictionary, now: int) -> void:
 	var grown := Combat.apply_exp(before, int(player.exp), gained)
 	player.level = grown.level
 	player.exp = grown.exp
-	_events.append({"type": "reward", "exp": gained})
+	# 자리를 같이 싣는다 — 화면이 쓰러진 자리에서 `+n EXP` 를 띄운다 (`ExpFx`)
+	_events.append({
+		"type": "reward",
+		"exp": gained,
+		"target": target.id,
+		"x": target.x,
+		"z": target.z,
+	})
 
 	if grown.level > before:
 		# 레벨이 오르면 스탯을 다시 만들고 체력을 채운다

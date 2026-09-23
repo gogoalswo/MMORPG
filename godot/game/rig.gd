@@ -26,6 +26,10 @@ const FILES := {
 var _anim: AnimationPlayer
 var _clips: Array = []
 var _playing := ""
+## 틀라고 한 배속. 멈춰 있는 동안(`freeze`)에도 기억해 두었다가 풀 때 되돌린다
+var _speed := 1.0
+## 히트스톱이 남은 시간(초)
+var _freeze := 0.0
 
 
 ## 없으면 null. 부르는 쪽이 기둥으로 대신한다
@@ -70,13 +74,37 @@ func _measure(model: Node) -> float:
 func play(clip: String, speed: float = 1.0, from: float = 0.0) -> void:
 	if _anim == null or not _clips.has(clip):
 		return
-	if _playing == clip and _anim.is_playing() and is_equal_approx(_anim.speed_scale, speed):
+	if _playing == clip and _anim.is_playing() and is_equal_approx(_speed, speed):
 		return
 	_playing = clip
-	_anim.speed_scale = speed
+	_speed = speed
+	# 멈춰 있는 동안 클립이 바뀌어도 멈춘 채로 둔다 — 풀 때 `_speed` 로 돌아간다
+	_anim.speed_scale = 0.0 if _freeze > 0.0 else speed
 	_anim.play(clip)
 	if from > 0.0:
 		_anim.seek(from, true)
+
+
+## 히트스톱 — 맞는 순간 동작을 잠깐 세운다. **애니메이션만 멈춘다.**
+## `Engine.time_scale` 을 쓰면 판정(`World`) 시간까지 같이 멈춰서 공격 간격이
+## 늘어난다. 겹치면 긴 쪽이 남는다 (더하면 연타에 멈춘 채로 굳는다)
+func freeze(seconds: float) -> void:
+	if _anim == null or seconds <= 0.0:
+		return
+	_freeze = maxf(_freeze, seconds)
+	_anim.speed_scale = 0.0
+	set_process(true)
+
+
+func _process(delta: float) -> void:
+	if _freeze <= 0.0:
+		set_process(false)
+		return
+	_freeze -= delta
+	if _freeze <= 0.0:
+		_freeze = 0.0
+		_anim.speed_scale = _speed
+		set_process(false)
 
 
 func has_clip(clip: String) -> bool:

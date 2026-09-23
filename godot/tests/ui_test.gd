@@ -876,6 +876,43 @@ func _case_design_panel(game: Node3D) -> void:
 		_fail("설계 창이 안 닫힌다")
 
 
+## 스킬창 셋째 칸 — 강화 1번·2번 (2026-09-23). 가장 오른쪽 칸이고 창이 화면 안이며,
+## 강화서가 없으면 단추가 꺼지고, 있으면 눌러서 붙고 "완료" 가 된다.
+func _check_upgrades(game: Node3D, me: Dictionary, panel: Control, screen: Vector2) -> void:
+	var world: World = game._transport._world
+	world.debug_reset_upgrades("me")
+	var index: int = Skills.for_job(str(me.job)).find("thunder_fall")
+	game._pick_skill(index)
+	await process_frame
+	var cards: Array = game._upgrade_cards
+	if cards.size() != 2:
+		_fail("강화 칸이 둘이어야 하는데 %d" % cards.size())
+		return
+	var box: Rect2 = panel.get_global_rect()
+	var first: Button = cards[0].button
+	if not Rect2(Vector2.ZERO, screen).encloses(box):
+		_fail("강화 칸을 더한 스킬창 %s 이 화면 밖이다" % box)
+	if first.get_global_rect().position.x <= game._skill_grid.get_global_rect().end.x:
+		_fail("강화 칸이 목록 오른쪽에 있지 않다")
+	if str(cards[0].name.text) != "기절" or not first.disabled:
+		_fail("낙뢰 1번 강화가 '기절'·단추 꺼짐이어야 하는데 '%s'·%s" % [cards[0].name.text, first.disabled])
+	if cards[1].button.visible:
+		_fail("없는 2번 강화에 단추가 떠 있다")
+
+	var scroll := Items.scroll_for("thunder_fall", "stun")
+	world._give(world._players["me"], {"id": scroll, "count": 1})
+	game._redraw_skills()
+	if first.disabled or str(cards[0].own.text) != "강화서 1개":
+		_fail("강화서가 있는데 단추가 꺼져 있다 ('%s')" % cards[0].own.text)
+	first.pressed.emit()
+	await process_frame
+	if me.skill_upgrades.get("thunder_fall", []) != ["stun"] or first.text != "완료" or not first.disabled:
+		_fail("강화 단추를 눌렀는데 안 붙었다 (%s · '%s')" % [str(me.skill_upgrades), first.text])
+	else:
+		print("  강화 칸: %s · 강화서 없으면 꺼짐 → 누르면 '%s'" % [box, first.text])
+	world.debug_reset_upgrades("me")
+
+
 func _case_skills(game: Node3D) -> void:
 	var me: Dictionary = game._transport.snapshot().players[game._transport.my_id()]
 	var screen := Vector2(1280, 720)
@@ -994,6 +1031,8 @@ func _case_skills(game: Node3D) -> void:
 			_fail("3번 칸을 골랐는데 %s 가 들어갔다" % str(me.skill_bar[2]))
 		else:
 			print("  스킬창: 목록 %d칸, 해제·장착·바꾸기(3번 칸 → %s) 확인" % [ids.size(), last_id])
+
+	await _check_upgrades(game, me, panel, screen)
 
 	game._toggle_skills()
 	await process_frame

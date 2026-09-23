@@ -341,7 +341,12 @@ func _window(game: Node3D, which: String) -> void:
 	if which == "skills":
 		for skill in Skills.for_job(str(player.get("job", "fighter"))).slice(0, 4):
 			game._transport.send(&"learnSkill", {"skill": skill})
+		# 강화 칸이 비어 보이지 않도록 낙뢰를 고르고 강화서 한 장을 쥐여 준다
+		player.bag.append({"id": Items.scroll_for("thunder_fall", "stun"), "count": 1})
 		game._toggle_skills()
+		var ids: Array = Skills.for_job(str(player.get("job", "fighter")))
+		if "thunder_fall" in ids:
+			game._pick_skill(ids.find("thunder_fall"))
 	else:
 		# 상세 창까지 한 장에 나오도록 등급이 다른 것을 몇 개 넣고 하나를 고른다
 		game._transport.send(&"debugGauntlets", {})

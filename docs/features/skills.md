@@ -35,7 +35,7 @@
 | `packages/client/src/scene/skillFx.ts` | **스킬 이펙트** — 시전 고리, 전방위 고리, 명중 섬광, 회복 |
 | `packages/server/src/ZoneRoom.ts` | `handleLearnSkill` / `handleSetSkillBar` / `handleSkill` / `tryAutoSkill` |
 | **`godot/game/game.gd`** `_build_skill_bar` · `_build_skill_panel` · `_redraw_skills` | ★ **고도 퀵슬롯(HUD 하단 4칸)과 스킬창** — 아래 "스킬창과 퀵슬롯" |
-| `public/assets/icons/skill_<id>.png` · `ui_skill_slot` · `ui_slot_pick` | 바르코로 만든 스킬 아이콘(격투가 5개)과 칸 테두리·고른 칸 테두리. 주소는 `fetch-assets.sh` |
+| `public/assets/icons/skill_<id>.png` · `ui_skill_slot` · `ui_slot_pick` | 바르코로 만든 스킬 아이콘(격투가 6개)과 칸 테두리·고른 칸 테두리. 주소는 `fetch-assets.sh` |
 | **`godot/game/skill_fx.gd`** | ★ **고도 스킬 이펙트** — 할퀴기(`SkillFx.claw`): 발톱 세 가닥 초승달이 앞 120° 를 다섯 번 쓴다. 에셋 없이 코드로, **줄기는 리본 메시**(`LightningFx` 도구를 돌려 쓴다) |
 | **`godot/game/lightning_fx.gd`** | ★ **낙뢰**(`LightningFx.bolt`) — 번개 세 번 · 갈라지는 땅 · 튀는 파편. **줄기는 리본 메시**(`trail`·`ribbon`), 파편만 파티클 |
 | **`godot/game/quake_fx.gd`** | ★ **천붕각**(`QuakeFx.slam`) — 금 여덟 갈래가 어긋나게 갈라지고 모래 먼지가 충격파로 밀려난다. 금은 한 번 깐 메시를 셰이더가 자라게 한다 |
@@ -509,7 +509,13 @@
 - 찍기: `npm run shot:godot -- frost_pillar 6,25,50,110,330,480` (솟기) ·
   `530,580,640,700,760,840` (꺼지기). **처음 찍을 때 한 번은 셰이더 캐시가 비어**
   첫 시전(제 속도)이 늦게 끝나 두 벌이 겹쳐 찍힌다 — 한 번 더 찍는다.
-- 아이콘(`skill_frost_pillar.png`)은 아직 없다 — 칸에 이름 글자가 대신 뜬다.
+- **아이콘**(`skill_frost_pillar.png`)은 바르코(`nano-banana-pro`)로 뽑았다. 스킬 아이콘은
+  칸을 꽉 채운 채색 그림이라 [ui-art-style.md](ui-art-style.md) 의 "아이콘류" 틀(테두리 없는
+  상아빛 문장)이 아니라, **낙뢰·천붕각 아이콘 두 장을 붙인 참고 그림**
+  (`https://3d.varco.ai/api/objects/c5a9467ee8c6773f507c4d34430b9420.jpg`)을 물리고
+  "MATCH THE REFERENCE IMAGES' STYLE EXACTLY … bare foot stomping … ice crystal pillars
+  bursting up … in a ring" 로 두 장 뽑아 첫 장을 썼다 — 한 번에 결이 맞았다.
+  다음 격투가 스킬 아이콘도 이 참고 그림을 그대로 쓰면 된다.
 
 ### 이펙트 — 옛 웹 클라이언트 (`skillFx.ts`, 지워짐)
 스킬은 오랫동안 **투사체와 피해 숫자만** 있었다. 근접기와 자기 주위로 터지는

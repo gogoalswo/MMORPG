@@ -236,6 +236,8 @@ fetch_icon 3335dffd51390210007c5b2eb5a8adb7 skill_tiger_roar
 fetch_icon 844c2e93d9c7b8f9d6c3717b2334b9ca skill_white_tiger
 fetch_icon 3d66ba0be1ec8bec0bc0b2a11fcce4f9 skill_sky_breaker
 fetch_icon 627417215a6f50209f7d0a20cbd1c607 skill_thunder_fall
+# 빙주각 (2026-09-23) — 낙뢰·천붕각 아이콘을 참고 그림으로 물려 결을 맞췄다 (두 장 중 첫 장)
+fetch_icon eb9cc29622b3030bd7d35e327ef00e9d skill_frost_pillar
 # 메인 HUD. 아트를 **두 번** 갈았다 — 처음 뽑은 두꺼운 금테가 "너무 두껍다" 는
 # 지적을 받고(2026-09-20), 받은 그림대로 **머리카락처럼 얇은 금선**과 **테 없는
 # 선화 아이콘**으로 다시 뽑았다. 아래 주소가 그 두 번째 것이다.

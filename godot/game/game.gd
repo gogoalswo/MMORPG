@@ -49,6 +49,8 @@ const INV_TEXT := Color("#ddd6c4")
 const INV_DIM := Color("#948c7a")
 const INV_RULE := Color("#4a4234")
 const INV_PICK := Color("#e8b449")
+## 못 하는 것 — 착용 레벨이 모자란 장비의 "착용 Lv" 줄과 "레벨 부족" 글자
+const INV_WARN := Color("#d9644f")
 ## 가방 격자 칸 사이
 const BAG_GRID_GAP := 4
 ## 세로 스크롤바가 먹는 폭
@@ -1599,6 +1601,13 @@ func _show_bag_detail() -> void:
 		_detail_name.text += " +%d" % enhance
 	_detail_name.add_theme_color_override("font_color", tint)
 	_detail_kind.text = "%s · 착용 Lv.%d" % [Items.slot_label(slot), int(item.get("level", 1))]
+	# **낄 수 있는지 판정과 같은 식으로 미리 본다** — 테스트 창·옛 저장은 레벨이 모자란
+	# 장비를 끼워 주는데, 한 번 벗으면 판정이 다시 끼기를 거부한다. 그때 "장착" 이 켜져
+	# 있으면 눌러도 아무 일이 없어 보인다 (2026-09-23)
+	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
+	var level := int(me.get("level", 1))
+	var fits := worn or Items.can_equip(item, str(me.get("job", "")), level)
+	_detail_kind.add_theme_color_override("font_color", INV_DIM if fits else INV_WARN)
 	_detail_state.text = "착용 중" if worn else "보유 중"
 	_fill_cell(_detail_icon, stack, "", _item_icon(stack))
 
@@ -1625,20 +1634,27 @@ func _show_bag_detail() -> void:
 				_: rows.append([head, "비어 있음"])
 	_fill_detail_rows(rows)
 
-	_bag_action.text = "해제" if worn else "장착"
-	_bag_action.disabled = false
+	if fits:
+		_bag_action.text = "해제" if worn else "장착"
+	else:
+		_bag_action.text = "레벨 부족" if level < int(item.get("level", 1)) else "착용 불가"
+	_bag_action.disabled = not fits
 	_show_cell_action()
 
 
 ## 고른 가방 칸에만 상세 창 단추와 같은 글자("장착"/"사용")를 얹는다.
+## 못 끼면 "레벨 부족" 을 붉게 얹는다 — 다시 눌러도 안 끼운다 (`_pick_bag` 이 단추를 본다).
 ## 장비 창 칸·크리스탈 대상 고르기 중에는 얹지 않는다
 func _show_cell_action() -> void:
-	var on := not _crystal_panel.visible and not _bag_action.disabled \
+	var on := not _crystal_panel.visible and _bag_action.text != "-" \
 		and str(_bag_pick.get("where", "")) == "bag"
 	for index in _bag_grid.get_child_count():
 		var act: Label = _bag_grid.get_child(index).get_node("act")
 		act.visible = on and _is_picked("bag", index)
-		act.text = _bag_action.text
+		# 칸이 58px 라 네 글자는 두 줄로 접는다
+		act.text = _bag_action.text.replace(" ", "\n")
+		act.add_theme_color_override("font_color", INV_WARN if _bag_action.disabled else INV_GOLD_HI)
+		act.add_theme_font_size_override("font_size", 15 if act.text.contains("\n") else 18)
 
 
 ## 이름 · 값 두 줄짜리 표를 다시 채운다. 줄에 세 번째 칸(색)이 있으면 값을 그 색으로
@@ -1666,6 +1682,7 @@ func _show_material_detail(stack: Dictionary) -> void:
 	_detail_name.text = Items.stack_name(stack)
 	_detail_name.add_theme_color_override("font_color", INV_TEXT)
 	_detail_kind.text = "재료"
+	_detail_kind.add_theme_color_override("font_color", INV_DIM)
 	_detail_state.text = "보유 중"
 	_fill_cell(_detail_icon, stack, "", _item_icon(stack))
 	_fill_detail_rows([

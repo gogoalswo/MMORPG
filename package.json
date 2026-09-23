@@ -16,7 +16,8 @@
     "export:godot": "node scripts/export-shared.mjs",
     "sync:godot": "node scripts/sync-godot-assets.mjs",
     "test:godot": "bash scripts/godot-test.sh",
-    "shot:godot": "bash scripts/godot-shot.sh"
+    "shot:godot": "bash scripts/godot-shot.sh",
+    "blender": "bash scripts/blender.sh"
   },
   "devDependencies": {
     "ktx2-encoder": "^0.6.0",

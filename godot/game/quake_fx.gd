@@ -86,6 +86,12 @@ const STAIN_ALPHA := 0.5
 const LIGHT_RANGE := 8.0
 const LIGHT_ENERGY := 5.0
 const LIGHT_LIFE := 0.2
+## 화면 흔들림 — **살짝**(2026-09-23 "그럼 살짝 흔들어"). 세기(m)와 길이(s).
+## 초점까지 26.7m 라 0.14m 면 720p 에서 4px 남짓이다 — 크면 멀미가 난다.
+## 흔드는 것은 `CameraRig.shake` 이고, 부르는 쪽은 `game.gd` 의 `_show_skill` 이다
+## (이펙트가 카메라를 찾아다니지 않는다)
+const SHAKE := 0.14
+const SHAKE_TIME := 0.35
 
 ## 옛 천붕각의 금빛(0xffc23c) — 진해야 가산으로 겹쳐도 흰 덩어리가 안 된다
 const COLOR_GLOW := Color("#ffb13c")

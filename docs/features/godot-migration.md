@@ -36,7 +36,7 @@ three.js 웹 클라이언트를 **고도 엔진으로 갈아타는 중**이다. 
 | `godot/game/select_ring.gd` | **골라 둔 몬스터 발밑의 고리.** 반지름·두께·도는 속도가 상수다 |
 | `godot/game/hp_bar_3d.gd` | **머리 위 체력 막대.** 내 것은 늘, 몬스터는 고른 놈과 때린 놈만 |
 | `godot/game/hurt_flash.gd` | 내가 맞았을 때 화면 가장자리 비네트 |
-| `godot/game/camera_rig.gd` | 고정각 쿼터뷰 카메라 |
+| `godot/game/camera_rig.gd` | 고정각 쿼터뷰 카메라. `shake(세기, 시간)` — 화면 흔들림 (각은 그대로, 자리만 떤다. 지금은 천붕각만 쓴다 → [skills.md](skills.md)) |
 | `godot/world/build.gd` | 빌드 표시와 "새 빌드 있음" 확인 |
 | `scripts/sync-godot-assets.mjs` | `public/assets` → `godot/assets` 복사. 모델은 텍스처를 줄여 넣는다 (`npm run sync:godot`) |
 | `scripts/shrink-glb-textures.mjs` | `.glb` 안 텍스처를 512px 로 줄인다 |

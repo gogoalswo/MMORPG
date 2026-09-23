@@ -31,6 +31,7 @@ func _run() -> void:
 	await process_frame
 
 	await _case_cast(game)
+	await _case_shake(game)
 	await _case_cracks(game)
 	await _case_dust(game)
 	await _case_once(game)
@@ -59,9 +60,43 @@ func _case_cast(game: Node3D) -> void:
 		_fail("천붕각을 썼는데 이펙트가 안 섰다")
 
 
+## 화면이 **살짝** 흔들린다 — 몇 px 인지 재고, 끝나면 멈추고, 다른 스킬은 안 흔든다.
+## 떨림 자체는 정지 화면으로 못 본다 (한 장에는 어긋난 자리 하나만 찍힌다)
+func _case_shake(game: Node3D) -> void:
+	var cam: CameraRig = game._camera
+	if cam._shake_left <= 0.0:
+		_fail("천붕각을 썼는데 화면이 안 흔들린다")
+		return
+	var at: Vector3 = game._player.global_position + Vector3.UP
+	var per_m := (cam.unproject_position(at) - cam.unproject_position(at + Vector3.UP)).length()
+	var px := QuakeFx.SHAKE * per_m
+	print("  흔들림 %.2fm = %.1fpx, %.2f초" % [QuakeFx.SHAKE, px, QuakeFx.SHAKE_TIME])
+	if px < 2.0:
+		_fail("흔들림이 %.1fpx 다 — 안 느껴진다" % px)
+	if px > 10.0:
+		_fail("흔들림이 %.1fpx 다 — '살짝' 이 아니다" % px)
+	var waited := 0
+	while cam._shake_left > 0.0 and waited < 600:
+		await process_frame
+		waited += 1
+	if cam._shake_left > 0.0:
+		_fail("흔들림이 안 멈춘다")
+	game._on_event(&"skill", {
+		"id": game._transport.my_id(), "skill": "tiger_roar", "root_ms": 400,
+	})
+	await process_frame
+	if cam._shake_left > 0.0:
+		_fail("호포각에도 화면이 흔들린다")
+
+
 ## 금 — 길이가 규칙(키의 1.5~4배) 안이고 **판정 사거리를 넘지 않는다.**
 ## 한꺼번에가 아니라 **어긋나게** 갈라지고, 흙이라 **가산이 아니다**
 func _case_cracks(game: Node3D) -> void:
+	# 흔들림을 기다리는 동안 첫 이펙트가 끝났을 수 있다 — 하나 새로 띄운다
+	if _newest(game) == null:
+		QuakeFx.slam(game._zone_node, game._player.position, 0.0)
+		await process_frame
+		await process_frame
 	var fx := _newest(game)
 	if fx == null:
 		_fail("금을 볼 이펙트가 없다")

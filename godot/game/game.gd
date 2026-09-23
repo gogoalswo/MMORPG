@@ -253,7 +253,18 @@ var _bag_gold: Label
 var _bag_sum: Label
 var _bag_grid: GridContainer
 var _bag_action: Button
-var _enhance_button: Button  # 상세 창 "강화" — 장비를 고르면 뜬다
+var _enhance_button: Button  # 상세 창 "강화" — 장비를 고르면 뜨고, 누르면 강화 팝업을 연다
+## 강화 팝업 — 화면 가운데, 뒤를 어둡게 덮는다
+var _enhance_layer: Control
+var _enhance_panel: PanelContainer
+var _enhance_name: Label
+var _enhance_kind: Label
+var _enhance_icon: PanelContainer
+var _enhance_info: GridContainer
+var _enhance_result: Label
+var _enhance_go: Button
+## 두드릴 것 — {where: "bag"|"equip", index: 가방 번호|슬롯 번호}. 칸 번호가 아니다
+var _enhance_target: Dictionary = {}
 ## 크리스탈 창 — 크리스탈을 고르고 "사용" 을 누르면 상세 창 자리에 뜬다.
 ## 떠 있는 동안 장비 칸을 누르면 그 장비가 대상이 된다 (`_crystal_target`)
 var _crystal_panel: PanelContainer
@@ -474,6 +485,7 @@ func _build_persistent() -> void:
 	_build_test_switches()
 	_build_bag_panel()
 	_build_debug_panel()
+	_build_enhance_popup()
 
 	# **모든 창의 닫기는 오른쪽 위 X 하나로 통일한다** (2026-09-20 요청).
 	# 창이 다 지어진 뒤에 얹어야 자식 맨 뒤라 창 위에 그려진다
@@ -481,6 +493,7 @@ func _build_persistent() -> void:
 	_close_button(_gear_panel, _toggle_gear, 0)
 	_close_button(_detail_panel, _close_detail, 0)
 	_close_button(_crystal_panel, _close_crystal, 0)
+	_close_button(_enhance_panel, _close_enhance, 0)
 	_close_button(_skill_panel, _toggle_skills)
 	_close_button(_npc_panel, func() -> void: _npc_panel.visible = false)
 
@@ -1027,7 +1040,7 @@ func _build_detail_window(panel: PanelContainer) -> void:
 	buttons.alignment = BoxContainer.ALIGNMENT_END
 	buttons.add_theme_constant_override("separation", 8)
 	side.add_child(buttons)
-	_enhance_button = _inv_button("강화", _on_enhance)
+	_enhance_button = _inv_button("강화", _open_enhance)
 	_enhance_button.visible = false
 	buttons.add_child(_enhance_button)
 	_bag_action = _inv_button("-", _on_bag_action)
@@ -1092,6 +1105,78 @@ func _build_crystal_window(panel: PanelContainer) -> void:
 	foot.add_child(_crystal_have)
 	_crystal_roll = _inv_button("굴리기", _on_crystal_roll)
 	foot.add_child(_crystal_roll)
+
+
+## 강화 팝업 (2026-09-23 요청: "강화 ui창을 따로 만들어. 강화 버튼 누르면 팝업이 나오게").
+## 상세 창의 "강화" 로 연다. **화면 가운데에 뜨고 뒤를 어둡게 덮는다** — 덮은 막이 뒤 창을
+## 못 누르게 막아서, 떠 있는 동안 대상이 바뀔 일이 없다. 틀·조각은 상세 창과 같다.
+## 머리 줄 · 대상 이름과 큰 칸 · 강화 정보 표 · 결과 한 줄 · "강화" 단추
+func _build_enhance_popup() -> void:
+	_enhance_layer = Control.new()
+	_enhance_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_enhance_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_enhance_layer.visible = false
+	_ui_root.add_child(_enhance_layer)
+	var dim := ColorRect.new()
+	dim.color = Color(0, 0, 0, 0.55)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_enhance_layer.add_child(dim)
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_enhance_layer.add_child(center)
+	_enhance_panel = _window_panel()
+	_enhance_panel.visible = true
+	center.add_child(_enhance_panel)
+
+	var side := VBoxContainer.new()
+	side.custom_minimum_size = Vector2(DETAIL_W, 0)
+	side.add_theme_constant_override("separation", 8)
+	_enhance_panel.add_child(side)
+
+	_window_title(side, "장비 강화", 22)
+
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 10)
+	side.add_child(head)
+	var lines := VBoxContainer.new()
+	lines.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	lines.add_theme_constant_override("separation", 4)
+	head.add_child(lines)
+	_enhance_name = _inv_label("", 22, INV_GOLD)
+	_enhance_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	lines.add_child(_enhance_name)
+	_enhance_kind = _inv_label("", 20, INV_GOLD_HI)
+	lines.add_child(_enhance_kind)
+	_enhance_icon = _make_cell(func() -> void: pass, DETAIL_ICON)
+	_enhance_icon.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	_enhance_icon.get_node("badge").add_theme_font_size_override("font_size", 22)
+	head.add_child(_enhance_icon)
+
+	side.add_child(_inv_label("강화 정보", 20, INV_GOLD))
+	var rule := ColorRect.new()
+	rule.color = INV_RULE
+	rule.custom_minimum_size = Vector2(0, 1)
+	side.add_child(rule)
+
+	_enhance_info = GridContainer.new()
+	_enhance_info.columns = 2
+	_enhance_info.add_theme_constant_override("h_separation", 12)
+	_enhance_info.add_theme_constant_override("v_separation", 6)
+	side.add_child(_enhance_info)
+
+	# 방금 두드린 결과 — 성공은 금빛, 파괴는 붉게. 새로 열면 비운다
+	_enhance_result = _inv_label("", 22, INV_GOLD_HI)
+	_enhance_result.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_enhance_result.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_enhance_result.custom_minimum_size = Vector2(0, 34)
+	side.add_child(_enhance_result)
+
+	var foot := HBoxContainer.new()
+	foot.alignment = BoxContainer.ALIGNMENT_END
+	side.add_child(foot)
+	_enhance_go = _inv_button("강화", _on_enhance)
+	foot.add_child(_enhance_go)
 
 
 ## 인벤토리 창 — 머리 줄 · 격자와 오른쪽 세로 탭 · 소지품 수와 정렬 · 동전
@@ -1481,6 +1566,8 @@ func _pick_bag(where: String, index: int) -> void:
 ## 가방 단추 — 인벤토리와 장비 창을 같이 열고 닫는다. 상세 창은 칸을 눌러야 뜬다
 func _toggle_bag() -> void:
 	var open := not _bag_panel.visible
+	_enhance_layer.visible = false
+	_enhance_target = {}
 	_bag_panel.visible = open
 	_gear_panel.visible = open
 	_bag_pick = {}
@@ -1655,17 +1742,10 @@ func _show_bag_detail() -> void:
 				"crystal": rows.append([head, "크리스탈로 붙임"])
 				"drop": pass
 				_: rows.append([head, "비어 있음"])
-	# 다음 한 번 두드릴 때의 성공률. **실패하면 파괴**라 붉게 적는다 (설계 4장, 유지 없음).
-	# 머리말에 "강화" 를 안 쓴다 — 현재 단계 줄 `강화 +N` 은 빼 달라고 했다 (이름 뒤 +N 이 말한다)
-	if Items.can_enhance(enhance):
-		var odds := Items.enhance_odds(enhance)
-		rows.append(["성공률 +%d→+%d" % [enhance, enhance + 1], "%d%%" % roundi(float(odds.success) * 100.0)])
-		rows.append(["실패 시", "파괴", INV_WARN])
-		_enhance_button.text = "강화"
-		_enhance_button.disabled = false
-	else:
-		_enhance_button.text = "최대"
-		_enhance_button.disabled = true
+	# 성공률·실패 시 파괴는 **강화 팝업**에 적는다 (2026-09-23 요청 "강화 ui창을 따로 만들어")
+	var can := Items.can_enhance(enhance)
+	_enhance_button.text = "강화" if can else "최대"
+	_enhance_button.disabled = not can
 	_fill_detail_rows(rows)
 
 	if fits:
@@ -1914,25 +1994,116 @@ func _on_bag_action() -> void:
 	_redraw_bag()
 
 
-## 상세 창 "강화" — 고른 장비를 한 번 두드린다 (가방·장비 창 어느 쪽이든).
-## 결과는 채팅창에 찍힌다. **고른 칸은 결과를 따라간다** — 부서져 가방이 줄면 고른 것을
-## 비우고(안 비우면 다음 물건을 가리킨다), 겹친 칸에서 뗀 것이 성공하면 바로 뒤 칸을 고른다
-func _on_enhance() -> void:
-	var stack := _picked_stack()
-	if Items.get_item(str(stack.get("id", ""))).is_empty():
+## 상세 창 "강화" — 고른 장비로 강화 팝업을 연다. 대상은 **가방 번호**로 잡는다
+## (칸 번호는 탭으로 거르면 어긋난다 — 크리스탈 대상과 같다)
+func _open_enhance() -> void:
+	if Items.get_item(str(_picked_stack().get("id", ""))).is_empty():
 		return
-	if str(_bag_pick.get("where", "")) == "equip":
-		var slot := str(Items.slots()[int(_bag_pick.index)])
+	var worn := str(_bag_pick.get("where", "")) == "equip"
+	_enhance_target = {
+		"where": "equip" if worn else "bag",
+		"index": int(_bag_pick.index) if worn else _picked_bag_index(),
+	}
+	_enhance_result.text = ""
+	_enhance_layer.visible = true
+	_redraw_enhance()
+
+
+## 팝업 X — 상세 창은 그대로 둔다 (대상이 부서졌으면 이미 닫혀 있다)
+func _close_enhance() -> void:
+	_enhance_layer.visible = false
+	_enhance_target = {}
+	_redraw_bag()
+
+
+## 팝업을 채운다 — 이름(등급 색) · `+N → +N+1` · 큰 칸 · 성공률 · 실패 시 파괴 ·
+## 기본 능력치가 지금 → 성공하면 얼마. **대상이 부서졌으면** 이름만 남기고 단추를 끈다
+func _redraw_enhance() -> void:
+	var stack := _stack_at(_enhance_target)
+	var item := Items.get_item(str(stack.get("id", "")))
+	if item.is_empty():
+		_enhance_kind.text = "부서졌습니다"
+		_enhance_kind.add_theme_color_override("font_color", INV_WARN)
+		_fill_cell(_enhance_icon, {}, "", "")
+		_fill_detail_rows([], _enhance_info)
+		_enhance_go.disabled = true
+		return
+
+	var grade := int(stack.get("grade", 1))
+	var enhance := int(stack.get("enhance", 0))
+	_enhance_name.text = str(item.get("name", "?"))
+	if enhance > 0:
+		_enhance_name.text += " +%d" % enhance
+	_enhance_name.add_theme_color_override("font_color", _grade_tint(grade))
+	_fill_cell(_enhance_icon, stack, "", _item_icon(stack))
+
+	var can := Items.can_enhance(enhance)
+	_enhance_go.disabled = not can
+	_enhance_kind.add_theme_color_override("font_color", INV_GOLD_HI)
+	if not can:
+		_enhance_kind.text = "최대 강화"
+		_fill_detail_rows([["강화", "+%d (끝)" % enhance]], _enhance_info)
+		return
+
+	# 확률은 설계 4장 그대로(90% → 10%). **유지가 없다** — 실패하면 무조건 파괴
+	_enhance_kind.text = "+%d  →  +%d" % [enhance, enhance + 1]
+	var odds := Items.enhance_odds(enhance)
+	var rows: Array = [
+		["성공률", "%d%%" % roundi(float(odds.success) * 100.0)],
+		["실패 시", "아이템 파괴", INV_WARN],
+	]
+	var now := Items.base_bonus(item, enhance)
+	var next := Items.base_bonus(item, enhance + 1)
+	for key in DETAIL_BONUS:
+		if float(now.get(key, 0.0)) > 0.0:
+			rows.append([
+				DETAIL_BONUS[key],
+				"%s → %s" % [_bonus_text(key, float(now[key])), _bonus_text(key, float(next.get(key, 0.0)))],
+			])
+	if int(stack.get("count", 1)) > 1:
+		rows.append(["겹친 칸", "한 개만 강화"])
+	_fill_detail_rows(rows, _enhance_info)
+
+
+## 팝업 "강화" — 한 번 두드린다. 결과는 팝업 한 줄과 채팅창에 남는다.
+## **대상과 고른 칸은 결과를 따라간다** — 부서져 가방이 줄면 둘 다 비우고(안 비우면 다음
+## 물건을 가리킨다), 겹친 칸에서 뗀 것이 성공하면 바로 뒤 칸(뗀 것)으로 옮긴다
+func _on_enhance() -> void:
+	var stack := _stack_at(_enhance_target)
+	var item := Items.get_item(str(stack.get("id", "")))
+	if item.is_empty():
+		return
+	var level := int(stack.get("enhance", 0))
+	var count := int(stack.get("count", 1))
+	var success := false
+	if str(_enhance_target.where) == "equip":
+		var slot := str(Items.slots()[int(_enhance_target.index)])
 		_transport.send(&"enhanceItem", {"where": "equip", "key": slot})
+		success = not _stack_at(_enhance_target).is_empty()
+		if not success:
+			_bag_pick = {}
 	else:
 		var before := _bag_count()
-		_transport.send(&"enhanceItem", {"where": "bag", "key": _picked_bag_index()})
+		_transport.send(&"enhanceItem", {"where": "bag", "key": int(_enhance_target.index)})
 		var after := _bag_count()
 		if after < before:
+			_enhance_target = {}
 			_bag_pick = {}
 		elif after > before:
-			_bag_pick.index = int(_bag_pick.index) + 1
+			success = true
+			_enhance_target.index = int(_enhance_target.index) + 1
+			if not _bag_pick.is_empty():
+				_bag_pick.index = int(_bag_pick.index) + 1
+		else:
+			success = int(_stack_at(_enhance_target).get("enhance", 0)) > level
+	if success:
+		_enhance_result.text = "강화 성공!  +%d" % (level + 1)
+		_enhance_result.add_theme_color_override("font_color", INV_GOLD_HI)
+	else:
+		_enhance_result.text = "강화 실패 — %s" % ("하나가 부서졌습니다" if count > 1 else "부서졌습니다")
+		_enhance_result.add_theme_color_override("font_color", INV_WARN)
 	_redraw_bag()
+	_redraw_enhance()
 
 
 func _bag_count() -> int:

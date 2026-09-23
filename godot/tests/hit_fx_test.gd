@@ -247,7 +247,11 @@ func _case_heal(game: Node3D) -> void:
 		return
 	if fx._number.text != "+25":
 		_fail("회복 숫자가 '+25' 가 아니다 (%s)" % fx._number.text)
-	if fx._flash != null or not fx._sparks.is_empty():
+	# 풀에서 되감아 쓰므로 노드는 있다 — **꺼져 있어야** 한다
+	var shown := fx._flash.visible
+	for spark in fx._sparks:
+		shown = shown or spark.node.visible
+	if shown:
 		_fail("회복인데 섬광·파편이 있다")
 	if fx._number.modulate != HitFx.COLOR_HEAL:
 		_fail("회복 숫자가 초록이 아니다")
@@ -272,8 +276,8 @@ func _hit(mob: Dictionary, amount: int, crit: bool, killed: bool) -> Dictionary:
 ## 존 아래 살아 있는 이펙트 중 마지막 것
 func _newest(game: Node3D) -> HitFx:
 	var found: HitFx = null
-	for child in game._zone_node.get_children():
-		if child is HitFx and not child.is_queued_for_deletion():
+	for child in game._fx.get_children():
+		if child is HitFx and FxPool.busy(child):
 			found = child
 	return found
 

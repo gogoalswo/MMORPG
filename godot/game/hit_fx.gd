@@ -1,7 +1,7 @@
 class_name HitFx
 extends Node3D
 
-## 맞은 자리에서 한 번 터지고 스스로 사라지는 피격 연출.
+## 맞은 자리에서 한 번 터지고 스스로 풀로 돌아가는 피격 연출.
 ##
 ## **에셋을 쓰지 않는다.** 섬광·파편·피해 숫자를 전부 코드로 짓는다 — 모델이 없으면
 ## 기둥으로 그리는 것과 같은 이유다. 이펙트 하나 보자고 `npm run sync:godot` 을
@@ -10,8 +10,10 @@ extends Node3D
 ## **판정을 다시 하지 않는다.** 숫자·치명타·회복·처치는 `World` 가 낸 `hit` 이벤트에
 ## 다 들어 있으므로 그대로 읽어 그린다. 화면이 따로 계산하면 반드시 어긋난다.
 ##
-## 스스로 `queue_free` 하므로 부르는 쪽이 목록을 들고 있을 필요가 없다
+## 끝나면 스스로 풀(`FxPool`)로 돌아가므로 부르는 쪽이 목록을 들고 있을 필요가 없다
 ## (보스 예고 원 `_aoe_marks` 와 달리, 터진 뒤에 손댈 일이 없다).
+## **가장 자주 뜨는 이펙트다** — 할퀴기 한 번이 다섯 대 × 무리 수만큼 띄운다. 그래서
+## 노드는 처음에 한 벌만 짓고(`_build`), 다시 쓸 때는 색·숫자·자리만 넣는다(`_start`).
 
 ## 숫자가 떠 있는 시간. 이보다 길면 무리를 칠 때 화면이 숫자로 덮인다
 const LIFE := 0.75
@@ -47,16 +49,27 @@ var _flash: MeshInstance3D
 var _number: Label3D
 ## [{node, vel}, ...] — 튀어 나가 떨어지는 파편
 var _sparks: Array = []
+## 파편 일곱이 같이 쓰는 재질
+var _spark_mat: StandardMaterial3D
+## 섬광·파편이 있나 (회복이면 숫자만)
+var _burst := true
+## 처치면 섬광이 크다
+var _flash_size := 1.0
+## 맞은 몸 덧칠 — 모두가 같이 쓴다
+static var _body_mat: StandardMaterial3D
 ## 붉게 칠해 둔 몸. 시간이 지나면 되돌린다
 var _painted: Array = []
 
 
 ## 터뜨린다. `at` 은 월드 좌표(가슴 높이), `payload` 는 `hit` 이벤트 그대로다
 static func spawn(parent: Node3D, at: Vector3, payload: Dictionary, font: Font = null) -> HitFx:
-	var fx := HitFx.new()
+	var fx := FxPool.take(parent, &"hit") as HitFx
+	if fx == null:
+		fx = HitFx.new()
+		parent.add_child(fx)
+		fx._build(font)
 	fx.position = at
-	parent.add_child(fx)
-	fx._build(payload, font)
+	fx._start(payload, font)
 	return fx
 
 
@@ -86,12 +99,48 @@ static func chest_y(body: Node3D, fallback: float = 1.0) -> float:
 	return box.position.y + box.size.y * 0.6
 
 
-func _build(payload: Dictionary, font: Font) -> void:
+## 노드를 만든다 — 한 번만. 섬광 · 파편 일곱 · 숫자
+func _build(font: Font) -> void:
+	_flash = MeshInstance3D.new()
+	var ball := SphereMesh.new()
+	ball.radius = FLASH_RADIUS
+	ball.height = ball.radius * 2.0
+	ball.radial_segments = 8
+	ball.rings = 4
+	_flash.mesh = ball
+	_flash.material_override = _glow(COLOR_DAMAGE)
+	add_child(_flash)
+
+	var chip := BoxMesh.new()
+	chip.size = Vector3(SPARK_SIZE, SPARK_SIZE, SPARK_SIZE)
+	_spark_mat = _glow(COLOR_DAMAGE)
+	for i in SPARKS:
+		var node := MeshInstance3D.new()
+		node.mesh = chip
+		node.material_override = _spark_mat
+		add_child(node)
+		_sparks.append({"node": node, "vel": Vector3.ZERO})
+
+	_number = Label3D.new()
+	if font != null:
+		_number.font = font
+	_number.font_size = 64
+	_number.outline_size = 16
+	_number.outline_modulate = Color(0, 0, 0, 0.8)
+	_number.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	# 몬스터 몸에 가리면 안 보인다 — 숫자는 항상 앞에 그린다
+	_number.no_depth_test = true
+	add_child(_number)
+
+
+## 처음으로 되감는다. **아무것도 만들지 않는다** — 색·숫자·파편이 튈 쪽만 새로 넣는다
+func _start(payload: Dictionary, font: Font) -> void:
 	var heal := bool(payload.get("heal", false))
 	var crit := bool(payload.get("crit", false))
 	var killed := bool(payload.get("killed", false))
 	var on_me := str(payload.get("target_kind", "")) == "player"
 	var amount: int = int(payload.get("amount", 0))
+	_t = 0.0
 
 	var tint := COLOR_DAMAGE
 	if heal:
@@ -102,62 +151,34 @@ func _build(payload: Dictionary, font: Font) -> void:
 		tint = COLOR_CRIT
 
 	# 회복은 때린 것이 아니다 — 섬광도 파편도 없이 숫자만 뜬다
-	if not heal:
-		_build_flash(tint, 1.6 if killed else 1.0)
-		_build_sparks(tint)
-	_build_number(amount, tint, heal, crit, font)
-
-
-func _build_flash(tint: Color, size: float) -> void:
-	_flash = MeshInstance3D.new()
-	var ball := SphereMesh.new()
-	ball.radius = FLASH_RADIUS * size
-	ball.height = ball.radius * 2.0
-	ball.radial_segments = 8
-	ball.rings = 4
-	_flash.mesh = ball
-	_flash.material_override = _glow(tint)
-	add_child(_flash)
-
-
-func _build_sparks(tint: Color) -> void:
-	var chip := BoxMesh.new()
-	chip.size = Vector3(SPARK_SIZE, SPARK_SIZE, SPARK_SIZE)
-	var mat := _glow(tint)
-	for i in SPARKS:
-		var node := MeshInstance3D.new()
-		node.mesh = chip
-		node.material_override = mat
-		add_child(node)
+	_burst = not heal
+	_flash.visible = _burst
+	_flash_size = 1.6 if killed else 1.0
+	_flash.scale = Vector3.ONE * 0.5 * _flash_size
+	var flash_mat: StandardMaterial3D = _flash.material_override
+	flash_mat.albedo_color = tint
+	_spark_mat.albedo_color = tint
+	for spark in _sparks:
+		var node: MeshInstance3D = spark.node
+		node.visible = _burst
+		node.position = Vector3.ZERO
+		node.scale = Vector3.ONE
 		var angle := randf() * TAU
 		var out := randf_range(2.4, 4.2)
-		_sparks.append({
-			"node": node,
-			"vel": Vector3(cos(angle) * out, randf_range(2.6, 4.0), sin(angle) * out),
-		})
+		spark.vel = Vector3(cos(angle) * out, randf_range(2.6, 4.0), sin(angle) * out)
 
-
-func _build_number(amount: int, tint: Color, heal: bool, crit: bool, font: Font) -> void:
-	_number = Label3D.new()
 	if heal:
 		_number.text = "+%d" % amount
 	elif crit:
 		_number.text = "%d!" % amount
 	else:
 		_number.text = str(amount)
-	if font != null:
+	if font != null and _number.font != font:
 		_number.font = font
-	_number.font_size = 64
 	# 치명타는 크게. 숫자를 읽지 않아도 크기로 먼저 안다
 	_number.pixel_size = CRIT_SIZE if crit else NUMBER_SIZE
 	_number.modulate = tint
-	_number.outline_size = 16
-	_number.outline_modulate = Color(0, 0, 0, 0.8)
-	_number.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	# 몬스터 몸에 가리면 안 보인다 — 숫자는 항상 앞에 그린다
-	_number.no_depth_test = true
 	_number.position = Vector3(randf_range(-0.4, 0.4), 0.3, 0.0)
-	add_child(_number)
 
 
 ## 맞은 몸을 잠깐 붉게 물들인다. **덧칠(`material_overlay`)이라 원래 재질을
@@ -165,11 +186,14 @@ func _build_number(amount: int, tint: Color, heal: bool, crit: bool, font: Font)
 func flash_body(body: Node3D) -> void:
 	if body == null or not is_instance_valid(body):
 		return
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(1.0, 0.3, 0.25, 0.65)
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	# 덧칠 재질은 **게임에 하나** — 맞을 때마다 만들면 다 걷힌 순간 셰이더가 버려진다 (`FxPool`)
+	if _body_mat == null:
+		_body_mat = StandardMaterial3D.new()
+		_body_mat.albedo_color = Color(1.0, 0.3, 0.25, 0.65)
+		_body_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_body_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_body_mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	var mat := _body_mat
 	for mesh in meshes_of(body):
 		mesh.material_overlay = mat
 		_painted.append(mesh)
@@ -178,14 +202,16 @@ func flash_body(body: Node3D) -> void:
 func _process(delta: float) -> void:
 	_t += delta
 
-	if _flash != null:
+	if _burst:
 		var ratio := clampf(_t / FLASH, 0.0, 1.0)
-		_flash.scale = Vector3.ONE * lerpf(0.5, 2.0, ratio)
+		_flash.scale = Vector3.ONE * lerpf(0.5, 2.0, ratio) * _flash_size
 		var mat: StandardMaterial3D = _flash.material_override
 		mat.albedo_color.a = 1.0 - ratio
 		_flash.visible = ratio < 1.0
 
 	for spark in _sparks:
+		if not _burst:
+			break
 		var node: MeshInstance3D = spark.node
 		spark.vel.y -= 11.0 * delta
 		node.position += spark.vel * delta
@@ -200,7 +226,13 @@ func _process(delta: float) -> void:
 		_number.modulate.a = clampf((LIFE - _t) / (LIFE * 0.45), 0.0, 1.0)
 
 	if _t >= LIFE:
-		queue_free()
+		finish()
+
+
+## 끝낸다 — 덧칠을 걷고 풀로 돌아간다 (풀 밖이면 지운다)
+func finish() -> void:
+	_unpaint()
+	FxPool.give(self, &"hit")
 
 
 ## 존을 옮기거나 대상이 사라져 통째로 지워질 때도 덧칠은 걷어 낸다

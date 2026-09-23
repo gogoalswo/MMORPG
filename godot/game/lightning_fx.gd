@@ -165,30 +165,49 @@ var _span := 0.0
 ## 낙뢰를 떨어뜨린다.
 ##
 ## `at` 은 시전자 발밑(월드 좌표), `facing` 은 시전자가 보는 쪽(rad, `player.rot`).
+## 풀(`FxPool`)에 쉬는 것이 있으면 되감아 쓴다 — 새로 만들지 않는다.
 static func bolt(parent: Node3D, at: Vector3, facing: float) -> LightningFx:
-	var fx := LightningFx.new()
-	# 떨어지는 자리는 **화면이 아니라 캐릭터가 보는 쪽** 앞이다
-	fx.position = at + Vector3(sin(facing) * AHEAD, 0.0, cos(facing) * AHEAD)
-	# **회전은 주지 않는다.** 번개는 하늘에서 땅으로 오는 것이라 월드 기준이어야
-	# 하고, 리본의 폭도 월드 기준 시선으로 잰다. 보는 쪽은 시작점 좌표에 넣는다
-	parent.add_child(fx)
-	fx._build(facing)
+	var fx := FxPool.take(parent, &"bolt") as LightningFx
+	if fx == null:
+		fx = LightningFx.new()
+		parent.add_child(fx)
+		fx._build()
+	fx._start(at, facing)
 	return fx
 
 
-func _build(facing: float) -> void:
+## 노드를 만든다 — 한 번만. 되감기는 `_start`
+func _build() -> void:
 	for i in STRIKES:
 		var strike := Strike.new()
-		strike.plan(i, 1.0 + float(i) * STRIKE_SWELL, float(i) * STRIKE_GAP,
-			JITTER[i % JITTER.size()], facing)
+		strike.make(1.0 + float(i) * STRIKE_SWELL)
 		add_child(strike)
+
+
+## 처음으로 되감는다. 번개의 모양은 씨앗이 정하므로 매번 같다
+func _start(at: Vector3, facing: float) -> void:
+	# 떨어지는 자리는 **화면이 아니라 캐릭터가 보는 쪽** 앞이다
+	position = at + Vector3(sin(facing) * AHEAD, 0.0, cos(facing) * AHEAD)
+	# **회전은 주지 않는다.** 번개는 하늘에서 땅으로 오는 것이라 월드 기준이어야
+	# 하고, 리본의 폭도 월드 기준 시선으로 잰다. 보는 쪽은 시작점 좌표에 넣는다
+	_t = 0.0
+	_span = 0.0
+	var i := 0
+	for strike in get_children():
+		strike.plan(i, float(i) * STRIKE_GAP, JITTER[i % JITTER.size()], facing)
 		_span = maxf(_span, strike.at + strike.span())
+		i += 1
 
 
 func _process(delta: float) -> void:
 	_t += delta
 	if _t >= _span:
-		queue_free()
+		finish()
+
+
+## 끝낸다 — 풀로 돌아간다 (풀 밖이면 지운다)
+func finish() -> void:
+	FxPool.give(self, &"bolt")
 
 
 ## 번개가 오는 쪽(수평, 월드). **화면 위쪽 밖**이다.
@@ -282,8 +301,12 @@ static func cut(path: PackedVector3Array, grow: float) -> PackedVector3Array:
 ## 경로들을 리본 한 장으로 깎는다. `head` 에서 `tail` 로 가늘어진다.
 ##
 ## `flat` 이면 폭을 **지면 안에서** 준다 (금). 아니면 **시선에 수직**으로 준다
-## (줄기) — 그래야 카메라가 어디 있든 화면에서 같은 굵기다
-static func ribbon(paths: Array, head: float, tail: float, flat: bool) -> ArrayMesh:
+## (줄기) — 그래야 카메라가 어디 있든 화면에서 같은 굵기다.
+##
+## `into` 를 주면 **그 메시를 비우고 다시 채운다.** 줄기는 45ms 마다 새로 깎는데,
+## 그때마다 `ArrayMesh` 를 새로 만들면 메시 자원을 만들고 버리는 값이 붙는다
+static func ribbon(paths: Array, head: float, tail: float, flat: bool,
+		into: ArrayMesh = null) -> ArrayMesh:
 	var view := view_dir()
 	var axis := Vector3.UP if flat else view
 	var tool := SurfaceTool.new()
@@ -328,9 +351,11 @@ static func ribbon(paths: Array, head: float, tail: float, flat: bool) -> ArrayM
 			_half(tool, a - wa, a, b - wb, b, 0.0)
 			_half(tool, a + wa, a, b + wb, b, 1.0)
 			drawn += 1
+	var mesh := into if into != null else ArrayMesh.new()
+	mesh.clear_surfaces()
 	if drawn == 0:
-		return ArrayMesh.new()
-	return tool.commit()
+		return mesh
+	return tool.commit(mesh)
 
 
 ## 리본 한 토막의 반쪽. `edge` 쪽 꼭짓점은 투명하고 `mid` 쪽은 진하다 —
@@ -483,21 +508,36 @@ class Strike:
 	var _arc_halo: MeshInstance3D
 	var _arc_core: MeshInstance3D
 	var _arc_flick := 0.0
+	## 금이 다 자랐나 — 다 자라면 더 깎지 않는다
+	var _crack_done := false
 
 	## 몇 초짜리인가
 	func span() -> float:
 		return maxf(LightningFx.BOLT_LIFE, maxf(LightningFx.CRACK_LIFE,
 			maxf(LightningFx.SPARK_LIFE, LightningFx.ARC_LIFE))) + 0.1
 
-	func plan(order: int, swell_: float, at_: float, shake: Vector2, facing: float) -> void:
+	## 되감는다 — **아무것도 만들지 않는다.** 씨앗·시각·시작점만 다시 넣는다
+	func plan(order: int, at_: float, shake: Vector2, facing: float) -> void:
 		# **씨앗을 박아 둔다** — 같은 낙뢰가 늘 같은 모양이어야 테스트가 읽는다
 		_rng.seed = 20260918 + order * 9779
-		swell = swell_
 		at = at_
 		position = Vector3(shake.x, 0.0, shake.y)
 		# 시작점은 **화면 위쪽 밖**이다 — 캐릭터가 어느 쪽을 보든 같다
 		_from = LightningFx.from_dir(facing) * LightningFx.BEHIND + Vector3.UP * LightningFx.SKY
+		_crack_paths = _plan_cracks()
+		_crack_done = false
+		_t = 0.0
+		_flick = 0.0
+		_arc_flick = 0.0
+		# 지난번 끝에 꺼 둔 것들 — 이 번개 자체(`visible`)는 칠 때까지 꺼져 있다
+		for node in [_halo, _sheen, _core, _crack, _stain, _flare, _arc_halo, _arc_core]:
+			node.visible = true
+		_light.visible = false
+		visible = false
 
+	## 노드를 만든다 — 한 번만. 뒤에 오는 것일수록 굵다(`swell_`)
+	func make(swell_: float) -> void:
+		swell = swell_
 		# 넓은 헤일로 → 색 빛 → 가는 흰 심 순으로 쌓는다
 		_halo = _sheet(LightningFx.glow(LightningFx.COLOR_HALO))
 		_sheen = _sheet(LightningFx.glow(LightningFx.COLOR_SHEEN))
@@ -508,7 +548,6 @@ class Strike:
 		_stain.position = Vector3(0.0, LightningFx.GROUND, 0.0)
 		_crack = _sheet(LightningFx.dirt(LightningFx.COLOR_CRACK))
 		_crack.position = Vector3(0.0, LightningFx.GROUND + 0.01, 0.0)
-		_crack_paths = _plan_cracks()
 
 		# 꽂힌 자리의 섬광 — 카메라를 늘 마주 보는 판이다
 		_flare = _sheet(LightningFx.flare(LightningFx.COLOR_SHEEN))
@@ -601,9 +640,9 @@ class Strike:
 			paths.append([LightningFx.trail(Vector3.ZERO, tip, LightningFx.ARC_SEGMENTS,
 				reach * 0.2, _rng, true), 1.0])
 		_arc_halo.mesh = LightningFx.ribbon(paths, LightningFx.ARC_HALO * swell,
-			LightningFx.ARC_HALO * 0.2 * swell, true)
+			LightningFx.ARC_HALO * 0.2 * swell, true, _arc_halo.mesh)
 		_arc_core.mesh = LightningFx.ribbon(paths, LightningFx.ARC_CORE * swell,
-			LightningFx.ARC_CORE * 0.2 * swell, true)
+			LightningFx.ARC_CORE * 0.2 * swell, true, _arc_core.mesh)
 
 	## 전기 가닥은 **지글거리다 빨리 꺼진다**
 	func _show_arcs(age: float) -> void:
@@ -649,7 +688,8 @@ class Strike:
 		var age := _t - at
 		if not visible:
 			visible = true
-			_sparks.emitting = true
+			# 되감아 쓰는 방출기라 켜기(`emitting`)가 아니라 처음부터 다시(`restart`)
+			_sparks.restart()
 			_reshape_arcs()
 			_reshape()
 
@@ -707,11 +747,11 @@ class Strike:
 			for f in LightningFx.FORKS:
 				paths.append([LightningFx.jitter(path, LightningFx.FORK_DRIFT * swell, _rng), 0.45])
 		_halo.mesh = LightningFx.ribbon(paths, LightningFx.HALO_WIDTH * swell,
-			LightningFx.HALO_WIDTH * 0.25 * swell, false)
+			LightningFx.HALO_WIDTH * 0.25 * swell, false, _halo.mesh)
 		_sheen.mesh = LightningFx.ribbon(paths, LightningFx.SHEEN_WIDTH * swell,
-			LightningFx.SHEEN_WIDTH * 0.25 * swell, false)
+			LightningFx.SHEEN_WIDTH * 0.25 * swell, false, _sheen.mesh)
 		_core.mesh = LightningFx.ribbon(paths, LightningFx.CORE_WIDTH * swell,
-			LightningFx.CORE_WIDTH * 0.2 * swell, false)
+			LightningFx.CORE_WIDTH * 0.2 * swell, false, _core.mesh)
 
 	## 금은 **중심에서 바깥으로 자란다.** 다 그려 놓고 띄우면 갈라진 것이
 	## 아니라 그려진 그림이다
@@ -721,12 +761,13 @@ class Strike:
 			_stain.visible = false
 			return
 		var grow := clampf(age / LightningFx.CRACK_GROW, 0.0, 1.0)
-		if grow < 1.0 or _crack.mesh == null:
+		if not _crack_done:
 			var cut: Array = []
 			for entry in _crack_paths:
 				cut.append([LightningFx.cut(entry[0], grow), entry[1]])
 			_crack.mesh = LightningFx.ribbon(cut, LightningFx.CRACK_WIDTH * swell,
-				LightningFx.CRACK_WIDTH * 0.15 * swell, true)
+				LightningFx.CRACK_WIDTH * 0.15 * swell, true, _crack.mesh)
+			_crack_done = grow >= 1.0
 		# **마지막 0.8초에만 흐려진다** — 금은 남는 자국이라 오래 버틴다 (규칙 3절)
 		var fade := clampf((LightningFx.CRACK_LIFE - age) / LightningFx.CRACK_FADE, 0.0, 1.0)
 		_crack.material_override.albedo_color = Color(

@@ -23,7 +23,7 @@ extends Node3D
 ## **에셋을 쓰지 않는다.** 텍스처도 런타임에 굽는다 (`FxTex`).
 ##
 ## **판정을 하지 않는다.** `World` 가 낸 `skill` 이벤트를 받아 그리기만 한다.
-## 스스로 `queue_free` 하므로 부르는 쪽이 목록을 들고 있을 필요가 없다.
+## 끝나면 스스로 풀로 돌아가므로(`FxPool`) 부르는 쪽이 목록을 들고 있을 필요가 없다.
 
 ## 긁는 횟수 = 판정의 `hits`. 간격도 판정의 `hitGap`(80ms)과 같아야 **한 줄기가
 ## 지나갈 때 숫자 하나가 뜬다** (`skill_fx_test.gd` 가 표와 맞춰 본다)
@@ -116,15 +116,15 @@ var _slashes: Array = []
 
 
 ## 할퀴기를 띄운다. `at` 은 시전자 발밑(월드 좌표), `facing` 은 보는 쪽(rad).
+## 풀(`FxPool`)에 쉬는 것이 있으면 되감아 쓴다 — 새로 만들지 않는다
 static func claw(parent: Node3D, at: Vector3, facing: float) -> SkillFx:
-	var fx := SkillFx.new()
-	fx.name = "ClawFx"
-	# **회전은 주지 않는다.** 리본 폭을 월드 시선으로 재므로 좌표도 월드 방향이어야
-	# 한다 — 보는 쪽은 점을 찍을 때 넣는다
-	fx.position = at + Vector3(0.0, HEIGHT, 0.0)
-	fx._facing = facing
-	parent.add_child(fx)
-	fx._build()
+	var fx := FxPool.take(parent, &"claw") as SkillFx
+	if fx == null:
+		fx = SkillFx.new()
+		fx.name = "ClawFx"
+		parent.add_child(fx)
+		fx._build()
+	fx._start(at, facing)
 	return fx
 
 
@@ -133,6 +133,7 @@ static func span() -> float:
 	return float(SLASHES - 1) * GAP + maxf(SWEEP + FADE, SWEEP * 0.5 + SPARK_LIFE)
 
 
+## 노드를 만든다 — 한 번만. 되감기는 `_start`
 func _build() -> void:
 	for i in SLASHES:
 		var slash := {
@@ -142,6 +143,7 @@ func _build() -> void:
 			"tilt": TILTS[i % TILTS.size()],
 			"lift": LIFTS[i % LIFTS.size()],
 			"flashed": false,
+			"flash_t": 0.0,
 			"layers": [],
 		}
 		# 세 겹이 **같은 메시**를 쓴다 — 폭과 색만 재질이 다르다
@@ -149,8 +151,6 @@ func _build() -> void:
 		for layer in [[HALO_WIDTH, COLOR_HALO], [SHEEN_WIDTH, COLOR_SHEEN], [CORE_WIDTH, COLOR_CORE]]:
 			var mesh := MeshInstance3D.new()
 			mesh.mesh = arc
-			# 메시는 보는 쪽 0 으로 깔려 있다 — 노드를 돌려 캐릭터가 보는 쪽에 맞춘다
-			mesh.rotation.y = _facing
 			mesh.material_override = claw_material(layer[0], layer[1])
 			# 꼭짓점을 셰이더가 벌리므로 원래 상자(폭 0)보다 넉넉히 잡는다
 			mesh.extra_cull_margin = HALO_WIDTH
@@ -162,12 +162,35 @@ func _build() -> void:
 		_slashes.append(slash)
 
 
+## 처음으로 되감는다. **아무것도 만들지 않는다** — 자리·보는 쪽·시각만 넣는다
+func _start(at: Vector3, facing: float) -> void:
+	# **회전은 주지 않는다.** 리본 폭을 월드 시선으로 재므로 좌표도 월드 방향이어야
+	# 한다 — 보는 쪽은 점을 찍을 때 넣는다
+	position = at + Vector3(0.0, HEIGHT, 0.0)
+	_facing = facing
+	_t = 0.0
+	for slash in _slashes:
+		slash.flashed = false
+		for layer in slash.layers:
+			var node: MeshInstance3D = layer.node
+			# 메시는 보는 쪽 0 으로 깔려 있다 — 노드를 돌려 캐릭터가 보는 쪽에 맞춘다
+			node.rotation.y = facing
+			node.visible = false
+		var flash: MeshInstance3D = slash.flash
+		flash.visible = false
+
+
 func _process(delta: float) -> void:
 	_t += delta
 	for slash in _slashes:
 		_draw(slash)
 	if _t >= span():
-		queue_free()
+		finish()
+
+
+## 끝낸다 — 풀로 돌아간다 (풀 밖이면 지운다)
+func finish() -> void:
+	FxPool.give(self, &"claw")
 
 
 ## 한 번 긁는 것을 지금 시각에 맞춰 다시 깎는다
@@ -206,7 +229,8 @@ func _draw(slash: Dictionary) -> void:
 		flash.visible = true
 		var sparks: CPUParticles3D = slash.sparks
 		sparks.position = hit
-		sparks.emitting = true
+		# 되감아 쓰는 방출기라 켜기(`emitting`)가 아니라 처음부터 다시(`restart`)
+		sparks.restart()
 		slash["flash_t"] = s
 	if bool(slash.flashed):
 		var f := clampf((s - float(slash.flash_t)) / FLASH_LIFE, 0.0, 1.0)

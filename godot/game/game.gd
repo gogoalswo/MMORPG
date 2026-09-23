@@ -136,6 +136,9 @@ var _half_size := 0.0
 ## 존마다 다시 짓는 것들(바닥·하늘·몬스터·차원문)은 여기 아래에 둔다.
 ## 캐릭터·카메라·UI 는 존이 바뀌어도 그대로라 밖에 있다
 var _zone_node: Node3D
+## 이펙트 풀 — **존 밖에 붙는다.** 존은 차원문을 지날 때 통째로 버려지는데,
+## 거기 두면 풀도 같이 지워져 다음 시전에 다시 만든다 (`fx_pool.gd`)
+var _fx: FxPool
 var _shown_zone := ""
 ## 눌러 둔 몬스터. 사거리에 들 때까지 걸어가서 계속 친다
 var _target_mob := ""
@@ -267,6 +270,11 @@ func _ready() -> void:
 	_transport.open(GameData.start_zone())
 	_transport.event.connect(_on_event)
 	_build_persistent()
+	# 스킬·타격 이펙트를 미리 만들어 쉬게 둔다 — 시전 때 만들지 않고 되감아 쓴다
+	_fx = FxPool.new()
+	_fx.name = "FxPool"
+	add_child(_fx)
+	_fx.fill(_ui_root.theme.default_font if _ui_root.theme != null else null)
 	# 캐시한 이전 빌드를 보고 있으면 화면이 직접 알려 준다
 	Build.check_latest(self, func(latest: String) -> void:
 		_last_event = "새 빌드가 있습니다 (%s) — 새로고침하세요" % latest
@@ -2473,6 +2481,8 @@ static func environment_for(env: Dictionary) -> Environment:
 func _build_zone(zone_id: String) -> void:
 	if _zone_node != null:
 		_zone_node.queue_free()
+	# 떠 있던 이펙트는 풀로 거둔다 — 예전에는 존과 같이 지워졌다
+	_fx.recall()
 	_aoe_marks.clear()
 	_range_marks.clear()
 	_zone_node = Node3D.new()
@@ -2926,7 +2936,7 @@ func _show_hit(payload: Dictionary) -> void:
 	at.y = HitFx.chest_y(body, 1.0)
 
 	var font: Font = _ui_root.theme.default_font if _ui_root.theme != null else null
-	var fx := HitFx.spawn(_zone_node, at, payload, font)
+	var fx := HitFx.spawn(_fx, at, payload, font)
 	if body != null and not bool(payload.get("heal", false)):
 		fx.flash_body(body)
 
@@ -2959,12 +2969,12 @@ func _show_skill(payload: Dictionary) -> void:
 		return
 	var here := Vector3(me.x, 0.0, me.z)
 	if skill == "thunder_fall":
-		LightningFx.bolt(_zone_node, here, float(me.rot))
+		LightningFx.bolt(_fx, here, float(me.rot))
 	elif skill == "sky_breaker":
-		QuakeFx.slam(_zone_node, here, float(me.rot))
+		QuakeFx.slam(_fx, here, float(me.rot))
 		_camera.shake(QuakeFx.SHAKE, QuakeFx.SHAKE_TIME)
 	else:
-		SkillFx.claw(_zone_node, here, float(me.rot))
+		SkillFx.claw(_fx, here, float(me.rot))
 
 
 ## 보스 범위 공격 예고 원.

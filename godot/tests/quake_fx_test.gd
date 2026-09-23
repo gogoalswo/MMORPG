@@ -94,7 +94,7 @@ func _case_shake(game: Node3D) -> void:
 func _case_cracks(game: Node3D) -> void:
 	# 흔들림을 기다리는 동안 첫 이펙트가 끝났을 수 있다 — 하나 새로 띄운다
 	if _newest(game) == null:
-		QuakeFx.slam(game._zone_node, game._player.position, 0.0)
+		QuakeFx.slam(game._fx, game._player.position, 0.0)
 		await process_frame
 		await process_frame
 	var fx := _newest(game)
@@ -208,21 +208,21 @@ func _case_gone(game: Node3D) -> void:
 
 
 func _newest(game: Node3D) -> QuakeFx:
-	if game._zone_node == null:
+	if game._fx == null:
 		return null
 	var found: QuakeFx = null
-	for child in game._zone_node.get_children():
-		if child is QuakeFx and not child.is_queued_for_deletion():
+	for child in game._fx.get_children():
+		if child is QuakeFx and FxPool.busy(child):
 			found = child
 	return found
 
 
 func _count(game: Node3D) -> int:
-	if game._zone_node == null:
+	if game._fx == null:
 		return 0
 	var n := 0
-	for child in game._zone_node.get_children():
-		if child is QuakeFx:
+	for child in game._fx.get_children():
+		if child is QuakeFx and FxPool.busy(child):
 			n += 1
 	return n
 

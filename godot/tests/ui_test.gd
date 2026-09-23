@@ -390,8 +390,8 @@ func _case_dungeon(game: Node3D) -> void:
 		if i > 0 and absf(box.position.y - panel.card(0).get_global_rect().position.y) > 1.0:
 			_fail("카드가 한 줄로 나란하지 않다")
 		var art: TextureRect = panel.card(i).find_child("Art", true, false)
-		if art == null or art.texture == null:
-			_fail("카드 %d 에 그림이 없다" % i)
+		if art == null or art.texture == null or not art.texture.resource_path.contains("dungeon_"):
+			_fail("카드 %d 에 제 그림(dungeon_*)이 없다 — npm run sync:godot 을 돌렸나" % i)
 		for label in panel.card(i).find_children("*", "Label", true, false):
 			seen += label.text
 	print("  던전 카드: %s 창 %s" % [panel.card(0).size, panel.size])

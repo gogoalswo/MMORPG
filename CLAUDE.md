@@ -26,6 +26,9 @@ npm run export:godot   # shared 표를 godot/data/*.json 으로
 npm run test:godot     # 고도 테스트 — 통과는 한 줄, 실패만 자세히
 ```
 
+블렌더도 설치 없이 쓴다 — `npm run blender -- --python 스크립트.py` (없으면 알아서
+받는다) → [`docs/features/blender.md`](docs/features/blender.md)
+
 화면은 `https://gogoalswo.github.io/MMORPG/` 에서 본다. 밀고 나면
 **"배포됐습니다, 새로고침하세요" 와 빌드 표시**(`빌드 <커밋> <시각>`)를 알려 준다 —
 브라우저가 최대 10분 캐시해서 그게 없으면 갱신됐는지 알 수 없다.

@@ -55,9 +55,9 @@ const PATROL_REST_MAX_MS := 6000
 ## 켠 자리(앵커)에서 이만큼 안의 몬스터만 잡는다.
 ##
 ## **한 무리가 통째로 들어오는 크기다.** 사냥터의 무리는 반지름 13m 원에 50마리가
-## 흩어져 있고(zones.json 의 `monsters[].radius`), 무리끼리는 28m 떨어져 있다. 무리
+## 흩어져 있고(zones.json 의 `monsters[].radius`), 무리끼리는 32m 떨어져 있다. 무리
 ## 안 어디에 서서 켜도 그 무리 전체가 들어오려면 13 × 2 = 26 이 필요하고, 여유를
-## 얹어 27 로 잡았다. 맵을 2/3 로 줄인 뒤(2026-09-23)로는 옆 무리 가장자리가 2m 밖에
+## 얹어 27 로 잡았다. 맵을 줄인 뒤(2026-09-23)로는 옆 무리 가장자리가 6m 밖에
 ## 있어 **옆 무리도 끌려온다** — 무리를 붙이기로 하면서 받아들인 것이다
 const HUNT_RADIUS := 27.0
 ## 잡고 있던 놈은 이 거리까지는 계속 잡는다. 반경과 같으면 경계에 걸친 놈을
@@ -106,7 +106,7 @@ func _solids_near(x: float, z: float) -> Array:
 func open(id: String) -> void:
 	zone_id = id
 	zone = GameData.zone(id)
-	half_size = Movement.zone_half_size(float(zone.get("size", 62)))
+	half_size = Movement.zone_half_size(float(zone.get("size", 66)))
 	_run_speed = float(GameData.constants().get("runSpeed", 4.6))
 	# 떠난 존의 몬스터를 붙잡은 연타가 새 존에서 들어가면 안 된다
 	_combos.clear()
@@ -297,7 +297,7 @@ func travel(player_id: String, target: String) -> void:
 func snapshot() -> Dictionary:
 	return {
 		"zone": zone_id,
-		"size": zone.get("size", 62),
+		"size": zone.get("size", 66),
 		"players": _players,
 		"monsters": _monsters,
 		"gate": zone.get("gate", {}),

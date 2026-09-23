@@ -40,6 +40,11 @@ import {
   gradeName,
   itemId,
   migrateItemId,
+  OPTION_TIERS,
+  rollTierOptions,
+  CRYSTAL_ID,
+  CRYSTAL_DROP_CHANCE,
+  getMaterial,
 } from './items.ts';
 import { optionCount } from './gear.ts';
 import { MONSTER_KINDS } from './monsters.ts';
@@ -672,4 +677,44 @@ test('옵션 글은 새 이름으로 나온다', () => {
   assert.equal(describeOption({ kind: 'crit', value: 7 }), '치명타 +7%');
   assert.equal(describeOption({ kind: 'cooldown', value: 1.2 }), '쿨타임 감소 +1.2%');
   assert.equal(describeOption({ kind: 'penetration', value: 3.3 }), '방어력 관통 +3.3%');
+});
+
+test('옵션 차수 — 1차 2줄(드랍) · 2차 1줄(크리스탈) · 3차 비움', () => {
+  // 2026-09-23 지시: "1차만 드랍으로 나오게 하고 2차는 크리스탈로 붙이는 시스템. 3차는 비어둬"
+  assert.deepEqual(
+    OPTION_TIERS.map((t) => [t.tier, t.key, t.count, t.source]),
+    [
+      [1, 'options', 2, 'drop'],
+      [2, 'options2', 1, 'crystal'],
+      [3, 'options3', 0, null],
+    ]
+  );
+  for (let grade = GRADE_MIN; grade <= GRADE_MAX; grade++) {
+    const second = rollTierOptions(2, grade, Math.random);
+    assert.equal(second.length, 1, `${grade}등급 2차는 1줄`);
+    const { min, max } = optionRange(second[0]!.kind, grade);
+    assert.ok(second[0]!.value >= min && second[0]!.value <= max, '2차도 장비 등급 범위 안');
+    assert.deepEqual(rollTierOptions(3, grade, Math.random), [], '3차는 비어 있다');
+  }
+});
+
+test('드랍은 1차만 붙이고, 크리스탈은 장비와 따로 굴린다', () => {
+  const withItem = rollDrop(20, 'archer', fixed(0.5, dropChanceFor(20) - 1e-6, 0, 0));
+  assert.equal(withItem.item!.options!.length, 2);
+  assert.equal(withItem.item!.options2, undefined, '드랍에는 2차가 없다');
+
+  // 골드 → 장비(안 나옴) → 크리스탈(나옴)
+  const crystalOnly = rollDrop(20, 'archer', fixed(0.5, 0.99, CRYSTAL_DROP_CHANCE - 1e-6));
+  assert.equal(crystalOnly.item, undefined);
+  assert.equal(crystalOnly.crystal, 1);
+  assert.equal(rollDrop(20, 'archer', fixed(0.5, 0.99)).crystal, undefined);
+  assert.equal(getMaterial(CRYSTAL_ID)!.name, '크리스탈');
+  assert.equal(getItem(CRYSTAL_ID), null, '크리스탈은 장비 표에 없다');
+});
+
+test('2차 옵션도 능력치에 더한다', () => {
+  const id = itemId(3, 'ring');
+  const one = stackStats({ id, grade: 3, options: [] });
+  const two = stackStats({ id, grade: 3, options: [], options2: [{ kind: 'crit', value: 10 }] });
+  assert.ok(Math.abs(two.crit - one.crit - 0.1) < 1e-9);
 });

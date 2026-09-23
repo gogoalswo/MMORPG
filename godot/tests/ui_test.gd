@@ -564,6 +564,40 @@ func _case_bag(game: Node3D) -> void:
 	else:
 		print("  정렬: %s" % str(order))
 
+	# 크리스탈 (2026-09-23) — 장비를 고르면 상세 창에 단추가 뜨고, 누르면 2차가 붙는다.
+	# 고른 칸은 그대로라 결과가 바로 상세 창에 보인다. 크리스탈 칸을 고르면 단추가 없다
+	me.bag.clear()
+	me.bag.append({"id": Items.crystal_id(), "count": 2})
+	me.bag.append({"id": "g2_n", "grade": 2, "enhance": 0, "options": []})
+	game._redraw_bag()
+	await process_frame
+	game._bag_grid.get_child(1).get_node("hit").pressed.emit()
+	await process_frame
+	if not game._bag_crystal.visible or game._bag_crystal.disabled:
+		_fail("장비를 골랐는데 크리스탈 단추가 안 켜졌다")
+	elif game._bag_crystal.text != "크리스탈 x2":
+		_fail("크리스탈 단추가 '%s'" % game._bag_crystal.text)
+	game._on_bag_crystal()
+	for i in 3:
+		await process_frame
+	var necklace: Dictionary = me.bag[1]
+	var rows := ""
+	for label in game._detail_info.get_children():
+		rows += label.text + " "
+	if necklace.get("options2", []).size() != 1:
+		_fail("크리스탈 단추를 눌렀는데 2차가 안 붙었다")
+	elif not rows.contains("2차 옵션") or not rows.contains("3차 옵션 비어 있음"):
+		_fail("상세 창에 차수가 안 적혔다: '%s'" % rows)
+	elif game._bag_crystal.text != "크리스탈 x1":
+		_fail("크리스탈을 썼는데 단추가 '%s'" % game._bag_crystal.text)
+	game._bag_grid.get_child(0).get_node("hit").pressed.emit()
+	await process_frame
+	if game._bag_crystal.visible or not game._bag_action.disabled:
+		_fail("크리스탈 칸을 골랐는데 쓰기·끼기 단추가 켜져 있다")
+	if game._detail_name.text != "크리스탈":
+		_fail("크리스탈 상세 이름이 '%s'" % game._detail_name.text)
+	print("  크리스탈: 단추로 2차 붙이기 — %s" % Items.describe_option(necklace.options2[0]))
+
 	# 테스트 단추 — 건틀릿(무기)이 등급마다 하나씩 들어오고, 그림이 있으면 등급별 그림을 쓴다
 	me.bag.clear()
 	game._transport.send(&"debugGauntlets", {})

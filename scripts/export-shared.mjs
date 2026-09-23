@@ -69,6 +69,10 @@ import {
   OPTION_KINDS,
   OPTION_MIN,
   OPTION_MAX,
+  OPTION_TIERS,
+  MATERIALS,
+  CRYSTAL_ID,
+  CRYSTAL_DROP_CHANCE,
   OPTION_LABEL,
   LEGACY_OPTION_LABEL,
   MAX_ENHANCE,
@@ -149,6 +153,12 @@ export function buildData() {
       optionKinds: OPTION_KINDS,
       optionMin: OPTION_MIN,
       optionMax: OPTION_MAX,
+      // 옵션 차수 — 1차는 드랍, 2차는 크리스탈, 3차는 비워 둔다 (2026-09-23)
+      optionTiers: OPTION_TIERS,
+      // 장비가 아닌 가방 물건 (크리스탈). 가방에는 `{ id, count }` 로 겹쳐 쌓인다
+      materials: MATERIALS,
+      crystalId: CRYSTAL_ID,
+      crystalDropChance: CRYSTAL_DROP_CHANCE,
       optionLabel: OPTION_LABEL,
       // 저장된 옛 아이템에만 남은 옵션(공격력·방어력)의 이름 — 판정은 세지 않는다
       legacyOptionLabel: LEGACY_OPTION_LABEL,

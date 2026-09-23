@@ -574,13 +574,15 @@ func _kill(player: Dictionary, target: Dictionary, now: int) -> void:
 	# 보상을 굴린다. **굴리는 쪽은 언제나 판정하는 쪽이다**
 	var loot := Items.roll_drop(int(target.level), str(player.job), _rng)
 	player.gold = int(player.gold) + int(loot.gold)
-	if loot.has("item"):
-		if _give(player, loot.item):
-			_events.append({"type": "loot", "gold": loot.gold, "item": loot.item})
-		else:
-			_events.append({"type": "loot", "gold": loot.gold})
-	else:
-		_events.append({"type": "loot", "gold": loot.gold})
+	var event := {"type": "loot", "gold": loot.gold}
+	if loot.has("item") and _give(player, loot.item):
+		event["item"] = loot.item
+	# 크리스탈은 장비와 따로 떨어진다 — 가방에서는 한 칸에 겹친다
+	if loot.has("crystal"):
+		var crystal := {"id": Items.crystal_id(), "count": int(loot.crystal)}
+		if _give(player, crystal):
+			event["crystal"] = int(loot.crystal)
+	_events.append(event)
 
 	var gained := Combat.exp_reward(int(target.level), int(player.level), float(target.exp_reward))
 	var before := int(player.level)
@@ -1011,6 +1013,10 @@ func _restore_stack(raw: Variant) -> Dictionary:
 	if typeof(raw) != TYPE_DICTIONARY:
 		return {}
 	var stack: Dictionary = (raw as Dictionary).duplicate(true)
+	# 재료(크리스탈)는 id 와 개수만 있다
+	if Items.is_material(str(stack.get("id", ""))):
+		var count := int(stack.get("count", 0))
+		return {"id": str(stack.id), "count": count} if count > 0 else {}
 	var id := Items.migrate_id(str(stack.get("id", "")))
 	if id.is_empty():
 		return {}
@@ -1377,6 +1383,12 @@ func _refresh_stats(player: Dictionary) -> void:
 
 ## 가방에 넣는다. 꽉 찼으면 못 넣는다
 func _give(player: Dictionary, stack: Dictionary) -> bool:
+	# 재료는 **이미 있는 칸에 겹친다** — 크리스탈이 칸을 하나씩 먹으면 가방이 금방 찬다
+	if Items.is_material(str(stack.get("id", ""))):
+		for held in player.bag:
+			if str(held.get("id", "")) == str(stack.id):
+				held.count = int(held.get("count", 1)) + int(stack.get("count", 1))
+				return true
 	if player.bag.size() >= Items.bag_size():
 		_events.append({"type": "notice", "text": "가방이 가득 찼습니다"})
 		return false
@@ -1415,6 +1427,11 @@ func sort_bag(player_id: String) -> void:
 		return
 	var order: Array = Items.slots()
 	player.bag.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		# 재료는 장비 뒤로 — 장비끼리의 순서를 흐트러뜨리지 않는다
+		var ma := Items.is_material(str(a.get("id", "")))
+		var mb := Items.is_material(str(b.get("id", "")))
+		if ma != mb:
+			return mb
 		if int(a.get("grade", 1)) != int(b.get("grade", 1)):
 			return int(a.get("grade", 1)) > int(b.get("grade", 1))
 		var sa := order.find(str(Items.get_item(str(a.get("id", ""))).get("slot", "")))
@@ -1440,6 +1457,51 @@ func unequip(player_id: String, slot: String) -> void:
 	player.equipped.erase(slot)
 	_refresh_stats(player)
 	_events.append({"type": "inventory", "bag": player.bag, "equipped": player.equipped})
+
+
+## --- 크리스탈 ---
+
+## 크리스탈로 **2차 옵션을 통째로 다시 굴린다** (2026-09-23). 처음 쓰면 붙고, 다시 쓰면
+## 바뀐다. 가방(`where = "bag"`, `key` = 가방 번호)과 끼고 있는 것(`"equip"`, `key` = 슬롯)
+## 둘 다 된다 — 끼고 있는 걸 벗어야 굴릴 수 있으면 번거롭기만 하다.
+## NPC 가 필요 없다. **굴림은 판정하는 쪽이 한다**
+func use_crystal(player_id: String, where: String, key: Variant) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	var target: Dictionary = {}
+	if where == "equip":
+		target = player.equipped.get(str(key), {})
+	elif where == "bag" and int(key) >= 0 and int(key) < player.bag.size():
+		target = player.bag[int(key)]
+	var item := Items.get_item(str(target.get("id", "")))
+	if item.is_empty():
+		return  # 장비에만 붙는다
+
+	var crystal := -1
+	for index in player.bag.size():
+		if str(player.bag[index].get("id", "")) == Items.crystal_id():
+			crystal = index
+			break
+	if crystal < 0:
+		_notice("크리스탈이 없습니다")
+		return
+
+	# 먼저 굴리고 나서 크리스탈을 뺀다 — 빼다가 칸이 비면 가방 번호가 당겨진다
+	target.options2 = Items.roll_tier_options(2, int(target.get("grade", 1)), _rng)
+	var left := int(player.bag[crystal].get("count", 1)) - 1
+	if left > 0:
+		player.bag[crystal].count = left
+	else:
+		player.bag.remove_at(crystal)
+	if where == "equip":
+		_refresh_stats(player)
+
+	var lines: Array = []
+	for option in target.options2:
+		lines.append(Items.describe_option(option))
+	_notice("%s 2차 옵션 — %s" % [item.name, ", ".join(lines)])
+	_inventory_changed(player)
 
 
 ## 그 역할의 NPC 가 닿는 거리에 있나. **살 때마다 다시 잰다** —

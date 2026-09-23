@@ -191,8 +191,10 @@ func _case_combo() -> void:
 	w.set_skill_bar("me", ["rising_kick"])
 	w.drain_events()
 
-	var start := Time.get_ticks_msec()
 	w.cast("me", "rising_kick")
+	# 시작 시각은 **예약에서 읽는다** — 시전 전에 시계를 따로 읽으면 느린 CI 에서
+	# `cast` 안의 시각과 1ms 어긋나 둘째 대가 아직 안 들어온 것으로 보였다 (2026-09-23)
+	var start := int(w._combos[0].at) - gap if not w._combos.is_empty() else Time.get_ticks_msec()
 	var first := _hits(w.drain_events())
 	if first.size() != 3:
 		_fail("첫 대에 %d마리가 맞았다 (앞의 셋이어야 한다)" % first.size())

@@ -21,6 +21,8 @@
 | 낙뢰 `thunder_fall` | 2번 범위 `wide` | 1000 | **사거리 4 → 6m** (50% 증가) | 가운데 세 번 뒤 **좌우 살짝 옆에 한 번씩 더**, 땅의 흔적 1.5배 | 붙었다 |
 | 할퀴기 `rising_kick` | 1번 부채꼴 `wide` | 1000 | **판정 각 120 → 160°** | 쓸고 가는 호 140 → **180°** (같은 40°만큼 길어진다) | 붙었다 |
 | 할퀴기 `rising_kick` | 2번 연타 `combo` | 1000 | **다단 히트 3 → 5회** | 긁기 **두 번 더**, 빛이 **보라** | 붙었다 |
+| 천붕각 `sky_breaker` | 1번 진폭 `wide` | 1000 | **범위 6 → 9m · 대상 10 → 15** | 금·그을림 1.5배, 먼지 충격파가 9m 까지 | 붙었다 |
+| 천붕각 `sky_breaker` | 2번 균열 지대 `zone` | 1000 | 시전한 자리에 **3초간 0.5초마다 공격력 40%** (여섯 번) | 금이 **붉은 용암빛**으로 3초 남고 틱마다 맥동, 바닥도 붉게 | 붙었다 |
 
 | 경험치북 (`SKILL_EXP_BOOKS`) | id | 경험치 |
 |---|---|---|
@@ -41,7 +43,8 @@
 | `godot/world/items.gd` `book_exp` | 경험치북이면 넣는 경험치 |
 | `godot/world/world.gd` `feed_upgrade` | ★ 스킬창의 경험치북 단추 (`feedUpgrade`) — **판정은 여기서** (직업·번호·이미 붙었나·책이 있나 → 한 권 빼고 쌓고, 닿으면 붙인다) |
 | `godot/world/world.gd` `_add_upgrade` | 강화를 붙이고 그 강화에 쌓이던 경험치를 지운다 — 붙는 길은 전부 여기를 지난다 |
-| `godot/world/world.gd` `cast` | 붙은 강화를 `skill` 이벤트에 싣고(`upgrades`), 사거리에 배율을 곱하고, 각·대 수를 더하고, 기절을 건다 |
+| `godot/world/world.gd` `cast` | 붙은 강화를 `skill` 이벤트에 싣고(`upgrades`), 사거리에 배율을 곱하고, 각·대 수·대상 수를 더하고, 기절·지대를 건다 |
+| `godot/world/world.gd` `_open_zone` · `_run_zones` · `_zones` | ★ **남는 피해 지대** (균열 지대) — 거는 곳과 틱마다 넣는 곳 |
 | `godot/world/world.gd` `_step_monsters` | `stunned_until` 까지 `state = "stun"` 으로 서 있는다 |
 | `godot/world/world.gd` `debug_books` · `debug_upgrade_all` · `debug_reset_upgrades` | 테스트 단추 넷 |
 | `godot/world/save.gd` | `skill_upgrades` · `skill_upgrade_exp` 칸 |
@@ -53,6 +56,9 @@
 | `godot/game/skill_fx.gd` `SWEEP_WIDE` · `MESH_ARC` · `COMBO_SLASHES` · `PALETTE_PURPLE` | 강화한 할퀴기 — 긴 호·긁기 둘 더·보라 |
 | `godot/tests/skill_test.gd` `_case_claw_up` | 할퀴기 기본 120°·3타, 부채꼴 160°, 연타 5타, 둘 다 |
 | `godot/tests/skill_fx_test.gd` `_case_upgrades` · `_case_table` | 이펙트가 판정 표와 같은 수(연타 +2 · 부채꼴 +40°)인가, 강화마다 번 수·각·색, 떼면 제자리 |
+| `godot/game/quake_fx.gd` `WIDE` · `ZONE_*` · `COLOR_LAVA` · `_lava_tint` | 강화한 천붕각 — 1.5배 땅·먼지, 용암빛 금·빛 |
+| `godot/tests/skill_test.gd` `_case_quake_up` | 진폭 9m·15마리, 지대 틱 여섯 번·한 틱 = 공격력 40%·지대 밖으로 나간 놈은 안 맞음 |
+| `godot/tests/quake_fx_test.gd` `_case_upgrades` | 진폭 금 1.5배·먼지가 9m 언저리에서 멈춤, 지대 3초 붉게·틱마다 맥동·끝나면 식음, 판정 표와 시간이 같나 |
 | `godot/tests/lightning_fx_test.gd` `_case_wide` | 다섯 번 · 옆 번개가 캐릭터 좌우 1.9m · 차례로 · 땅 흔적 1.5배 · 색 그대로 · 떼면 세 번 |
 | `godot/tests/skill_test.gd` `_case_upgrade` | 책 없으면 거절 · 100×3+500 = 800 · 상급으로 붙고 경험치 지워짐 · 붙은 뒤 거절 · 전체 1번 강화 · 기절 3초 · 떼면 없음 |
 | `godot/tests/ui_test.gd` `_check_upgrades` | 강화 칸 둘 · 목록 오른쪽 · 창·단추가 화면 안 · 책 없으면 꺼짐 · 하급 둘 → `200 / 1000` · 상급 → "강화 완료" |
@@ -196,6 +202,34 @@
   찍어 보기: `npm run shot:godot -- rising_kick+wide+combo@225`.
 - 스킬창 설명의 데미지 줄(`56% * 3연타`)은 **기본값**이다 — 강화는 오른쪽 카드에만 적는다.
 
+### 천붕각 강화 ★ (2026-09-23)
+
+"천붕각 스킬은 어떤식으로 강화하는게 좋을까?" 에 여진·진폭 등을 제안했고, 사용자가
+**"균열지대만들고 진폭도 만들어. 균열지대는 0.5초마다 40% 데미지"** 로 정했다.
+
+- **1번 진폭** (`rangeMul` 1.5 · `targetsAdd` 5) — 범위 6 → **9m**, 최대 대상 10 → **15**.
+  판정·알리는 모양이 같은 값을 쓴다. 이펙트는 금·그을림 노드를 가로세로 1.5배로 키우고,
+  먼지 충격파(앞머리·덩이)의 속도에 **√1.5** 를 곱한다 — 멈추는 거리가 v²/2d 라서다
+  (6m → 9m, `quake_fx_test` 가 잰다). 먼지 알갱이 크기·줄기 굵기는 그대로다.
+- **2번 균열 지대** (`zoneMs` 3000 · `zoneTickMs` 500 · `zonePower` 0.4) — 내리찍은 자리에
+  **판정 모양 그대로(같은 중심·반경·대상 수)** 땅이 남아, 0.5 · 1.0 · … · 3.0초에 **여섯 번**
+  `공격력 × 0.4` 를 넣는다 (`World._open_zone` → `_zones` → `step` 의 `_run_zones`).
+  - **틱마다 대상을 다시 고른다** — 땅에 남은 것이라 걸어 들어온 놈은 맞고 나간 놈은
+    안 맞는다 (연타는 첫 대에서 한 번 고른다 — 거기와 갈리는 자리다).
+  - **공격력은 건 순간의 값**이다. 쓴 사람이 죽거나 존을 옮기면(`open`) 지대도 사라진다.
+  - 틱이 밀려 있으면(탭을 내렸다 올림) 밀린 만큼 한꺼번에 넣지 않고 **한 번만** 넣는다 —
+    여러 대가 한 자리에 겹쳐 뜨면 한 대로 보인다.
+  - 진폭과 같이 붙으면 지대도 9m · 15마리다.
+- **균열 지대 이펙트** — 금의 달아오른 심(`_glow`)이 평소처럼 0.8초에 식지 않고 **3초 동안
+  붉은 용암빛(`#ff4a18`)** 으로 남는다. 알파 0.55 로 깔려 있다가 **틱마다 1.0 으로 맥동**하고
+  (시간 상수 0.12초), 끝나면 0.6초에 식는다 (`_lava_tint`). 금·그을림도 같이 남는다.
+  - **금만으로는 가는 붉은 선이라 "달아오른 땅" 이 안 읽혔다** (찍어서 봤다). 번쩍임 빛
+    (`OmniLight3D`)을 용암빛(세기 3, 맥동에 맞춰)으로 남겨 **바닥이 붉게 물들게** 했다.
+  - 이펙트 시간(`ZONE_TIME` · `ZONE_TICK`)은 판정 표(`zoneMs` · `zoneTickMs`)와 같아야 한다 —
+    `quake_fx_test` 가 맞춰 본다.
+- **찍어서 봤다** — 기본·진폭을 같은 순간(0.47초)에, 지대를 틱 직후(2.52초)·틱 사이(2.80초)에.
+- 지대의 **테두리(어디까지가 지대인가) 표시는 없다** — 금이 퍼진 자리로만 보인다.
+
 ### 테스트 단추 (왼쪽 아래 테스트 줄)
 
 - **"테스트: 경험치북 +10"** — 경험치북을 **종류마다 10권** 넣는다 (`debugBooks`, 사용자 선택).
@@ -207,7 +241,7 @@
 
 ## 손댈 때
 
-- **강화를 더할 때** — `SKILL_UPGRADES` 에 한 줄(`exp` 필수, 효과는 `stunMs` · `rangeMul` · `arcAdd` · `extraHits` 중에서) → `npm run export:godot`.
+- **강화를 더할 때** — `SKILL_UPGRADES` 에 한 줄(`exp` 필수, 효과는 `stunMs` · `rangeMul` · `arcAdd` · `extraHits` · `targetsAdd` · `zoneMs`·`zoneTickMs`·`zonePower` 중에서) → `npm run export:godot`.
   효과가 새 종류면 `cast` 에 판정을, `_show_skill` 에 이펙트 분기를 더한다.
   효과 문구(`desc`)는 **카드(280px) 한 줄**에 들어가야 한다.
 - **경험치북 수치를 바꿀 때** — `SKILL_EXP_BOOKS` 한 줄. 종류를 넷 이상으로 늘리면

@@ -37,6 +37,7 @@ func _run() -> void:
 	await _case_once(game)
 	await _case_other_skill(game)
 	await _case_gone(game)
+	_case_upgrades(game)
 	_done()
 
 
@@ -205,6 +206,53 @@ func _case_gone(game: Node3D) -> void:
 		_fail("이펙트가 안 사라졌다")
 	else:
 		print("  %d프레임 뒤 치워졌다" % waited)
+
+
+## **강화** — "진폭" 이면 금·그을림 1.5배, 먼지가 사거리 9m 언저리에서 멈춘다.
+## "균열 지대" 면 금이 3초 동안 붉게 남고 틱마다 맥동하며, 없으면 0.8초에 식는다.
+## 시계를 직접 넣어 본다 (`_t` → `_show_cracks`) — 3초를 기다리지 않는다
+func _case_upgrades(game: Node3D) -> void:
+	var wide := QuakeFx.slam(game._zone_node, Vector3.ZERO, 0.0, true, false)
+	var reach := float(Skills.get_skill("fighter", "sky_breaker").get("range", 0.0)) \
+		* float(Skills.upgrade("sky_breaker", "wide").get("rangeMul", 1.0))
+	var front: CPUParticles3D = wide._emitters[0]
+	var stop := pow(front.initial_velocity_max, 2.0) / (2.0 * front.damping_min)
+	if absf(wide._crack.scale.x - QuakeFx.WIDE) > 1e-3 or stop > reach + 0.5 or stop < reach * 0.6:
+		_fail("진폭: 금 %.2f배 · 먼지 %.1fm (1.5배 · 사거리 %.0fm 언저리여야 한다)" % [wide._crack.scale.x, stop, reach])
+	else:
+		print("  진폭: 금 %.1f배, 먼지가 %.1fm 에서 멈춘다 (사거리 %.0fm)" % [wide._crack.scale.x, stop, reach])
+	wide.queue_free()
+
+	var zone_ms := float(Skills.upgrade("sky_breaker", "zone").get("zoneMs", 0)) / 1000.0
+	var tick_ms := float(Skills.upgrade("sky_breaker", "zone").get("zoneTickMs", 0)) / 1000.0
+	if absf(zone_ms - QuakeFx.ZONE_TIME) > 1e-3 or absf(tick_ms - QuakeFx.ZONE_TICK) > 1e-3:
+		_fail("균열 지대: 판정은 %.1f초·%.1f초 간격인데 이펙트는 %.1f·%.1f" % [
+			zone_ms, tick_ms, QuakeFx.ZONE_TIME, QuakeFx.ZONE_TICK])
+	var zone := QuakeFx.slam(game._zone_node, Vector3.ZERO, 0.0, false, true)
+	var plain := QuakeFx.slam(game._zone_node, Vector3.ZERO, 0.0, false, false)
+	var alphas: Array = []
+	for t in [1.0, 2.5, 2.55, 2.75]:
+		for fx in [zone, plain]:
+			fx._t = t
+			fx._show_cracks()
+		var lava: Color = zone._glow.material_override.get_shader_parameter(&"tint")
+		alphas.append(lava.a)
+		if not zone._glow.visible or lava.r < lava.g * 2.0:
+			_fail("균열 지대 %.2f초에 금이 붉게 달아올라 있지 않다 (%s)" % [t, lava])
+		if plain._glow.visible:
+			_fail("강화 없는 천붕각인데 %.2f초에 금이 아직 달아올라 있다" % t)
+	# 2.5초(틱) 직후가 가장 밝고, 틱 사이(2.75초)는 잦아든다
+	if not (float(alphas[1]) > float(alphas[3]) + 0.2):
+		_fail("틱마다 맥동하지 않는다 (%s)" % str(alphas))
+	zone._t = QuakeFx.ZONE_TIME + QuakeFx.ZONE_FADE
+	zone._show_cracks()
+	if zone._glow.visible:
+		_fail("지대가 끝났는데 금이 식지 않았다")
+	else:
+		print("  균열 지대: %.1f초 붉게 남고 틱마다 맥동 (%.2f → %.2f), 끝나면 식는다" % [
+			QuakeFx.ZONE_TIME, alphas[1], alphas[3]])
+	zone.queue_free()
+	plain.queue_free()
 
 
 func _newest(game: Node3D) -> QuakeFx:

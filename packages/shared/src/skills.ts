@@ -491,6 +491,15 @@ export interface SkillUpgradeDef {
   arcAdd?: number;
   /** 다단 히트를 이만큼 늘린다 (`hits` 에 더한다). 여럿이면 더한다 */
   extraHits?: number;
+  /** 최대 대상 수를 이만큼 늘린다. 여럿이면 더한다 */
+  targetsAdd?: number;
+  /**
+   * **남는 피해 지대** — 시전한 자리에 `zoneMs` 동안 남아 `zoneTickMs` 마다 범위 안
+   * 몬스터에게 `공격력 × zonePower` 를 준다. 첫 틱은 시전 뒤 `zoneTickMs` 에 온다
+   */
+  zoneMs?: number;
+  zoneTickMs?: number;
+  zonePower?: number;
 }
 
 /** 스킬 하나에 붙는 강화 수 */
@@ -532,6 +541,27 @@ export const SKILL_UPGRADES: SkillUpgradeDef[] = [
     desc: '다단 히트 2회 증가',
     exp: 1000,
     extraHits: 2,
+  },
+  {
+    // 이펙트는 금·그을림·먼지 충격파가 1.5배 (QuakeFx.WIDE)
+    id: 'wide',
+    skill: 'sky_breaker',
+    name: '진폭',
+    desc: '범위 50% · 대상 +5',
+    exp: 1000,
+    rangeMul: 1.5,
+    targetsAdd: 5,
+  },
+  {
+    // 이펙트는 금이 붉은 용암빛으로 3초 남고 틱마다 맥동한다 (QuakeFx.ZONE_*)
+    id: 'zone',
+    skill: 'sky_breaker',
+    name: '균열 지대',
+    desc: '3초간 0.5초마다 40% 피해',
+    exp: 1000,
+    zoneMs: 3000,
+    zoneTickMs: 500,
+    zonePower: 0.4,
   },
 ];
 

@@ -94,6 +94,22 @@ const SHAKE := 0.14
 const SHAKE_TIME := 0.35
 
 ## 옛 천붕각의 금빛(0xffc23c) — 진해야 가산으로 겹쳐도 흰 덩어리가 안 된다
+## **"진폭" 강화** — 판정 사거리가 1.5배(6 → 9m)라 땅에 남는 것(금·그을림)과 먼지
+## 충격파가 멈추는 거리도 1.5배다. 먼지는 멈추는 거리가 v²/2d 라 속도에 √1.5 를 곱한다
+const WIDE := 1.5
+## **"균열 지대" 강화** — 금이 **붉은 용암빛**으로 이만큼 달아오른 채 남는다. 판정의
+## `zoneMs`(3초)와 같아야 "땅이 아직 뜨겁다" 가 곧 "아직 피해가 들어온다" 로 읽힌다
+const ZONE_TIME := 3.0
+## 지대 피해 간격 — 판정의 `zoneTickMs`(0.5초). 틱마다 용암빛이 한 번 밝게 맥동한다
+const ZONE_TICK := 0.5
+## 지대가 끝나고 식는 시간
+const ZONE_FADE := 0.6
+## 맥동 뒤 잦아드는 시간 상수 — 짧아야 "쿵 · 쿵" 으로 끊겨 보인다
+const ZONE_PULSE := 0.12
+## 용암빛 — 평소 막 갈라진 속(주황 `#ffb13c`)보다 붉다. 알파 혼합이라 밝은 바닥에서도 보인다
+const COLOR_LAVA := Color("#ff4a18")
+## 지대 동안 남기는 용암빛 빛의 세기 (맥동 꼭대기). 번쩍임(5)보다 약하다
+const ZONE_LIGHT := 3.0
 const COLOR_GLOW := Color("#ffb13c")
 const COLOR_FLARE := Color("#ffd27a")
 const COLOR_CRACK := Color("#231910")
@@ -136,24 +152,31 @@ var _stain: MeshInstance3D
 var _flare: MeshInstance3D
 var _light: OmniLight3D
 var _emitters: Array[CPUParticles3D] = []
+## 이번 것의 땅 배율(진폭이면 `WIDE`) · 지대인가 · 몇 초짜리인가 — 되감을 때 정한다
+var _mul := 1.0
+var _zone := false
+var _span := 0.0
 
 
 ## 천붕각을 띄운다. `at` 은 시전자 발밑(월드 좌표), `facing` 은 보는 쪽(rad).
-## 풀(`FxPool`)에 쉬는 것이 있으면 되감아 쓴다 — 새로 만들지 않는다
-static func slam(parent: Node3D, at: Vector3, facing: float) -> QuakeFx:
+## 풀(`FxPool`)에 쉬는 것이 있으면 되감아 쓴다 — 새로 만들지 않는다.
+## `wide` 면 땅·먼지가 1.5배("진폭"), `zone` 이면 금이 3초 동안 용암빛으로 남는다
+## ("균열 지대"). 둘은 따로 논다
+static func slam(parent: Node3D, at: Vector3, facing: float, wide := false, zone := false) -> QuakeFx:
 	var fx := FxPool.take(parent, &"slam") as QuakeFx
 	if fx == null:
 		fx = QuakeFx.new()
 		fx.name = "QuakeFx"
 		parent.add_child(fx)
 		fx._build()
-	fx._start(at, facing)
+	fx._start(at, facing, wide, zone)
 	return fx
 
 
-## 끝나는 시각(초)
-static func span() -> float:
-	return maxf(CRACK_LIFE, maxf(PUFF_LIFE, CORE_LIFE)) + 0.1
+## 끝나는 시각(초). 지대면 용암이 식을 때까지
+static func span(zone := false) -> float:
+	var ground := ZONE_TIME + ZONE_FADE if zone else CRACK_LIFE
+	return maxf(ground, maxf(PUFF_LIFE, CORE_LIFE)) + 0.1
 
 
 ## 노드를 만든다 — 한 번만. 되감기는 `_start`
@@ -196,11 +219,23 @@ func _build() -> void:
 
 
 ## 처음으로 되감는다. **아무것도 만들지 않는다** — 자리·보는 쪽·시각만 넣는다
-func _start(at: Vector3, facing: float) -> void:
+func _start(at: Vector3, facing: float, wide := false, zone := false) -> void:
 	position = at
-	# **금은 캐릭터가 보는 쪽 기준이다** — 메시는 보는 쪽 0 으로 깔려 있다
-	for node in [_stain, _crack, _glow]:
+	_mul = WIDE if wide else 1.0
+	_zone = zone
+	_span = span(zone)
+	# **금은 캐릭터가 보는 쪽 기준이다** — 메시는 보는 쪽 0 으로 깔려 있다.
+	# 진폭이면 땅에 눕힌 채로 가로세로만 키운다 (그을림은 `_show_cracks` 가 매 프레임)
+	for node in [_crack, _glow]:
 		node.rotation.y = facing
+		node.scale = Vector3(_mul, 1.0, _mul)
+	_stain.rotation.y = facing
+	# 수평으로 밀려나는 먼지 — 멈추는 거리가 속도의 제곱이라 √배율을 곱한다
+	var push := sqrt(_mul)
+	for pair in [[_emitters[0], FRONT_SPEED_MIN, FRONT_SPEED_MAX], [_emitters[1], PUFF_SPEED_MIN, PUFF_SPEED_MAX]]:
+		var e: CPUParticles3D = pair[0]
+		e.initial_velocity_min = float(pair[1]) * push
+		e.initial_velocity_max = float(pair[2]) * push
 	_t = 0.0
 	_started = false
 	_show_cracks()
@@ -216,7 +251,7 @@ func _process(delta: float) -> void:
 	_t += delta
 	_show_cracks()
 	_show_flash()
-	if _t >= span():
+	if _t >= _span:
 		finish()
 
 
@@ -227,23 +262,40 @@ func finish() -> void:
 
 ## 금은 **셰이더가 자라게** 하고, 여기서는 시각과 알파만 넣는다
 func _show_cracks() -> void:
-	# 마지막 0.8초에만 흐려진다 — 금은 남는 자국이다
-	var fade := clampf((CRACK_LIFE - _t) / CRACK_FADE, 0.0, 1.0)
+	# 마지막 0.8초에만 흐려진다 — 금은 남는 자국이다. 지대면 용암이 식을 때까지 남는다
+	var life := ZONE_TIME + ZONE_FADE if _zone else CRACK_LIFE
+	var fade := clampf((life - _t) / CRACK_FADE, 0.0, 1.0)
 	var heat := clampf(1.0 - _t / GLOW_LIFE, 0.0, 1.0)
 	var crack: ShaderMaterial = _crack.material_override
 	crack.set_shader_parameter(&"now", _t)
 	crack.set_shader_parameter(&"tint", Color(COLOR_CRACK.r, COLOR_CRACK.g, COLOR_CRACK.b, fade))
 	var glow: ShaderMaterial = _glow.material_override
 	glow.set_shader_parameter(&"now", _t)
-	glow.set_shader_parameter(&"tint", Color(COLOR_GLOW.r, COLOR_GLOW.g, COLOR_GLOW.b, sqrt(heat)))
-	_glow.visible = heat > 0.0
+	var tint := Color(COLOR_GLOW.r, COLOR_GLOW.g, COLOR_GLOW.b, sqrt(heat))
+	if _zone:
+		tint = _lava_tint()
+	glow.set_shader_parameter(&"tint", tint)
+	_glow.visible = tint.a > 0.0
 	_crack.visible = fade > 0.0
 	# 그을림은 금이 뻗는 동안 같이 넓어진다 (규칙 3절)
 	var grow := clampf(_t * CRACK_SPEED / CRACK_LENGTH, 0.0, 1.0)
-	_stain.scale = Vector3.ONE * lerpf(0.4, 1.0, sqrt(grow))
+	_stain.scale = Vector3.ONE * lerpf(0.4, 1.0, sqrt(grow)) * _mul
 	_stain.visible = fade > 0.0
 	_stain.material_override.albedo_color = Color(
 		COLOR_STAIN.r, COLOR_STAIN.g, COLOR_STAIN.b, fade * STAIN_ALPHA)
+
+
+## 균열 지대의 용암빛 — 처음엔 막 갈라진 주황에서 붉게 옮아가고, 지대 동안
+## 옅게(0.55) 깔려 있다가 **피해가 들어가는 틱마다 한 번 밝게** 맥동한다.
+## 지대가 끝나면 `ZONE_FADE` 동안 식는다
+func _lava_tint() -> Color:
+	var shift := clampf(_t / GLOW_LIFE, 0.0, 1.0)
+	var color := COLOR_GLOW.lerp(COLOR_LAVA, shift)
+	var since := fmod(_t, ZONE_TICK) if _t >= ZONE_TICK else 99.0
+	var pulse := exp(-since / ZONE_PULSE)
+	var cool := clampf((ZONE_TIME + ZONE_FADE - _t) / ZONE_FADE, 0.0, 1.0)
+	var alpha := maxf(sqrt(clampf(1.0 - _t / GLOW_LIFE, 0.0, 1.0)), 0.55 + 0.45 * pulse) * cool
+	return Color(color.r, color.g, color.b, alpha)
 
 
 ## 섬광과 번쩍임은 **세게 켜고 제자리에서 빠르게 죈다**
@@ -255,8 +307,16 @@ func _show_flash() -> void:
 		_flare.material_override.albedo_color = Color(
 			COLOR_FLARE.r, COLOR_FLARE.g, COLOR_FLARE.b, pow(1.0 - t, 1.3))
 	_light.visible = _t < LIGHT_LIFE
+	_light.light_color = COLOR_GLOW
 	if _light.visible:
 		_light.light_energy = LIGHT_ENERGY * (1.0 - _t / LIGHT_LIFE)
+	elif _zone and _t < ZONE_TIME + ZONE_FADE:
+		# 균열 지대 — 금만으로는 가는 붉은 선이라 "달아오른 땅" 이 안 읽혔다 (찍어서 봤다).
+		# 번쩍임 빛을 용암빛으로 남겨 **바닥이 붉게 물들고**, 틱마다 같이 맥동한다
+		var lava := _lava_tint()
+		_light.visible = true
+		_light.light_color = COLOR_LAVA
+		_light.light_energy = ZONE_LIGHT * lava.a * lava.a
 
 
 func _sheet(mat: Material) -> MeshInstance3D:

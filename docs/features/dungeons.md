@@ -32,6 +32,7 @@
 | `godot/game/dungeon_panel.gd` | `DungeonPanel` — **`GatePanel` 을 물려받는다.** `_fill` 만 두 겹(종류 / 단계)으로 바꿨다 |
 | `godot/game/gate_panel.gd` | `_add_row` · `_clear_rows` · `_title` — 두 창이 같이 쓴다 |
 | `godot/game/game.gd` | `_menu_cells` 셋째 단추 · `_toggle_dungeon` · `_build_gate_panel`(같은 층에 단다) · `_on_gate_pick`(둘 다 `travel`) |
+| `public/assets/icons/ui_icon_dungeon.png` | 단추 그림 (구운 결과, 커밋한다). 원본 주소는 `scripts/fetch-assets.sh` |
 | `godot/tests/ui_test.gd` | `_case_dungeon` — 가방 옆인가 · 3줄 · 막힌 줄 · 21줄 · 뒤로 · 창 폭 · 글자 · 들어가면 보스 한 마리 |
 
 ## 규칙
@@ -77,11 +78,18 @@
 - 차원문 창과 **같은 층(layer 10)·같은 자리**라 하나를 열면 다른 하나를 닫는다.
 - 고른 뒤는 차원문과 같은 `_on_gate_pick` → `travel`. **있는 존인지 `World` 가 다시 본다.**
 
-### 단추 그림은 아직 없다
+### 단추 그림 — 돌 아치 + 쇠창살
 
-`_icon_button("ui_icon_dungeon", "던전", …)` — 그림이 없으면 글자 "던전" 이 나온다.
-아이콘을 만들면 [ui-art-style.md](ui-art-style.md) 의 "아이콘류" 프롬프트로 뽑아
-`ui_icon_dungeon` 이름으로 넣으면 바로 그림으로 바뀐다.
+`ui_icon_dungeon` (2026-09-23). [ui-art-style.md](ui-art-style.md) 의 "아이콘류" 틀에
+`<무엇>` 만 "돌 아치 문 + 반쯤 올린 쇠창살" 로 갈고, 이미 올라가 있는 참고 그림을
+물려 `nano-banana-pro` 로 두 장 뽑았다.
+
+- **첫 장은 버렸다** — 벽돌 벽이 틀 끝까지 차서 **네모 판**처럼 보였다(3번 규칙 "판 위에
+  앉히지 않는다" 와 어긋난다). 둘째 장은 아치만 서 있다.
+- 아치 안쪽 검은 곳도 바깥 배경과 이어져 있어 **같이 걷힌다**(배경 72%). 문 너머로
+  바닥이 비치는 게 문다워서 그대로 뒀다 — 창살은 남는다.
+- 주소는 `fetch-assets.sh`, 굽는 것은 `build-item-icons.mjs`(기본 128), 옮기는 것은
+  `sync-godot-assets.mjs` 의 `ICONS`. 그림이 없으면 글자 "던전" 으로 물러선다.
 
 ## 손댈 때
 

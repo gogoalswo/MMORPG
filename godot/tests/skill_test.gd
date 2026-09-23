@@ -100,7 +100,7 @@ func _case_bar() -> void:
 	var size := int(GameData.combat().get("skillBarSize", 4))
 
 	# 안 배운 것은 안 올라간다
-	w.set_skill_bar("me", ["rising_kick", "tiger_roar"])
+	w.set_skill_bar("me", ["rising_kick", "sky_breaker"])
 	if me.skill_bar.size() != 0:
 		_fail("안 배운 스킬이 액션바에 올라갔다")
 
@@ -154,22 +154,22 @@ func _case_cast() -> void:
 
 
 func _case_multi() -> void:
-	# 호포각 maxTargets 5, 전방위(arc 2PI) — 앞에 셋을 놓으면 셋 다 맞아야 한다
+	# 천붕각 maxTargets 10, 전방위(arc 2PI) — 앞에 셋을 놓으면 셋 다 맞아야 한다
 	var s := _setup(3)
 	var w: World = s[0]
-	w.learn_skill("me", "tiger_roar")
-	w.set_skill_bar("me", ["tiger_roar"])
+	w.learn_skill("me", "sky_breaker")
+	w.set_skill_bar("me", ["sky_breaker"])
 	w.drain_events()
 
-	w.cast("me", "tiger_roar")
+	w.cast("me", "sky_breaker")
 	var hits := 0
 	for e in w.drain_events():
 		if e.get("type", "") == "hit":
 			hits += 1
 	if hits != 3:
-		_fail("호포각이 3마리를 쳐야 하는데 %d마리" % hits)
+		_fail("천붕각이 3마리를 쳐야 하는데 %d마리" % hits)
 	else:
-		print("  호포각: %d마리 동시" % hits)
+		print("  천붕각: %d마리 동시" % hits)
 
 
 ## **연타** — 할퀴기는 앞 120° 안의 놈들을 `hits` 번 때린다 (2026-09-23).
@@ -256,10 +256,10 @@ func _case_range() -> void:
 		print("  근접 부채꼴: 반경 %.1fm · %d°" % [shape.reach, roundi(rad_to_deg(shape.arc))])
 
 	# 2) 전방위 근접 — 각이 한 바퀴면 부채꼴이 아니라 원이다
-	w.learn_skill("me", "tiger_roar")
-	w.set_skill_bar("me", ["tiger_roar"])
+	w.learn_skill("me", "sky_breaker")
+	w.set_skill_bar("me", ["sky_breaker"])
 	w.drain_events()
-	w.cast("me", "tiger_roar")
+	w.cast("me", "sky_breaker")
 	var events := w.drain_events()
 	var round_shape := _first(events, "skillRange")
 	var hits := 0
@@ -277,17 +277,17 @@ func _case_range() -> void:
 
 	# **그려질 모양과 맞은 놈이 같은가** — 이 도구의 값어치가 전부 여기 있다.
 	# 각을 반대로 재거나 좌우가 뒤집히면 "표시는 맞는데 안 맞는" 게 되고,
-	# 그건 디버그 도구로서 없느니만 못하다. 좁은 부채꼴(백호격 72°)로 보되
+	# 그건 디버그 도구로서 없느니만 못하다. 좁은 부채꼴(낙뢰 108°)로 보되
 	# **반경 안이지만 옆에 선 놈**을 하나 두어 양쪽을 다 건다
-	# 정면(+x)에서 90도 꺾인 자리 — 반경 4m 안이지만 72도 부채꼴 밖이다
+	# 정면(+x)에서 90도 꺾인 자리 — 반경 4m 안이지만 108도 부채꼴 밖이다
 	var aside := World.make_monster(
 		"aside", GameData.monster_kind("mob003"), 0.0, 2.0, 10000.0, 0.0
 	)
 	s[2].append(aside)
-	w.learn_skill("me", "white_tiger")
-	w.set_skill_bar("me", ["white_tiger"])
+	w.learn_skill("me", "thunder_fall")
+	w.set_skill_bar("me", ["thunder_fall"])
 	w.drain_events()
-	w.cast("me", "white_tiger")
+	w.cast("me", "thunder_fall")
 	var fan_events := w.drain_events()
 	var fan := _first(fan_events, "skillRange")
 	var struck: Array = []
@@ -295,7 +295,7 @@ func _case_range() -> void:
 		if e.get("type", "") == "hit":
 			struck.append(str(e.target))
 	if float(fan.arc) >= TAU:
-		_fail("백호격은 좁은 부채꼴이어야 한다 (%.2f)" % fan.arc)
+		_fail("낙뢰는 좁은 부채꼴이어야 한다 (%.2f)" % fan.arc)
 	for mob in s[2]:
 		var dx: float = float(mob.x) - float(fan.x)
 		var dz: float = float(mob.z) - float(fan.z)

@@ -326,11 +326,11 @@ func _case_visible(game: Node3D) -> void:
 func _case_other_skill(game: Node3D) -> void:
 	var before := _count(game)
 	game._on_event(&"skill", {
-		"id": game._transport.my_id(), "skill": "tiger_roar", "root_ms": 400,
+		"id": game._transport.my_id(), "skill": "fireball", "root_ms": 400,
 	})
 	await process_frame
 	if _count(game) != before:
-		_fail("호포각에 낙뢰 이펙트가 떴다")
+		_fail("화염구에 낙뢰 이펙트가 떴다")
 
 
 ## 스스로 사라진다. 부르는 쪽이 목록을 들고 있지 않으므로 여기서 안 지우면 쌓인다

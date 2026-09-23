@@ -1002,7 +1002,7 @@ func _case_skills(game: Node3D) -> void:
 	var band: Rect2 = game._range_button.get_global_rect()
 	if band.position.x > 40 or band.end.y > shield.position.y:
 		_fail("스킬 범위 단추가 무적 단추 위(왼쪽 아래)가 아니다: %s" % band)
-	var shape := {"x": 1.0, "z": 2.0, "reach": 4.0, "arc": TAU, "facing": 0.0, "hits": 3, "max_targets": 5, "skill": "white_tiger"}
+	var shape := {"x": 1.0, "z": 2.0, "reach": 4.0, "arc": TAU, "facing": 0.0, "hits": 3, "max_targets": 5, "skill": "thunder_fall"}
 	game._on_event(&"skillRange", shape)
 	if not game._range_marks.is_empty():
 		_fail("꺼 뒀는데 범위를 그렸다")

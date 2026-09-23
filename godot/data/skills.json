@@ -273,30 +273,6 @@
       "reqLevel": 1,
       "description": "손톱을 세워 앞 부채꼴을 다섯 번 긁어낸다."
     },
-    "tiger_roar": {
-      "id": "tiger_roar",
-      "name": "호포각",
-      "job": "fighter",
-      "cooldown": 16000,
-      "range": 6,
-      "arc": 6.283185307179586,
-      "power": 3.2,
-      "maxTargets": 5,
-      "reqLevel": 6,
-      "description": "호랑이의 기운을 끌어올려 주위를 찢는다."
-    },
-    "white_tiger": {
-      "id": "white_tiger",
-      "name": "백호격",
-      "job": "fighter",
-      "cooldown": 30000,
-      "range": 4,
-      "arc": 1.2566370614359172,
-      "power": 5.5,
-      "maxTargets": 5,
-      "reqLevel": 12,
-      "description": "백호를 앞세워 내달린다."
-    },
     "sky_breaker": {
       "id": "sky_breaker",
       "name": "천붕각",
@@ -337,8 +313,6 @@
   "byJob": {
     "fighter": [
       "rising_kick",
-      "tiger_roar",
-      "white_tiger",
       "sky_breaker",
       "thunder_fall",
       "frost_pillar"

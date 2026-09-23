@@ -82,11 +82,11 @@ func _case_shake(game: Node3D) -> void:
 	if cam._shake_left > 0.0:
 		_fail("흔들림이 안 멈춘다")
 	game._on_event(&"skill", {
-		"id": game._transport.my_id(), "skill": "tiger_roar", "root_ms": 400,
+		"id": game._transport.my_id(), "skill": "fireball", "root_ms": 400,
 	})
 	await process_frame
 	if cam._shake_left > 0.0:
-		_fail("호포각에도 화면이 흔들린다")
+		_fail("화염구에도 화면이 흔들린다")
 
 
 ## 금 — 길이가 규칙(키의 1.5~4배) 안이고 **판정 사거리를 넘지 않는다.**
@@ -189,11 +189,11 @@ func _case_once(game: Node3D) -> void:
 func _case_other_skill(game: Node3D) -> void:
 	var before := _count(game)
 	game._on_event(&"skill", {
-		"id": game._transport.my_id(), "skill": "tiger_roar", "root_ms": 400,
+		"id": game._transport.my_id(), "skill": "fireball", "root_ms": 400,
 	})
 	await process_frame
 	if _count(game) != before:
-		_fail("호포각에 천붕각 이펙트가 떴다")
+		_fail("화염구에 천붕각 이펙트가 떴다")
 
 
 func _case_gone(game: Node3D) -> void:

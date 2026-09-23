@@ -1062,7 +1062,7 @@ func _case_skills(game: Node3D) -> void:
 	# 설명 끝에 피해 배율. 연타는 "* N연타" 를 붙인다
 	if not game._skill_desc.text.ends_with(Skills.damage_text(Skills.all()[last_id])):
 		_fail("설명에 데미지 줄이 없다: '%s'" % game._skill_desc.text)
-	for want in [["fireball", "데미지 : 260%"], ["rising_kick", "데미지 : 56% * 5연타"]]:
+	for want in [["fireball", "데미지 : 260%"], ["rising_kick", "데미지 : 56% * 3연타"]]:
 		if Skills.all().has(want[0]) and Skills.damage_text(Skills.all()[want[0]]) != want[1]:
 			_fail("%s 데미지 줄이 '%s' 여야 하는데 '%s'" % [want[0], want[1], Skills.damage_text(Skills.all()[want[0]])])
 	if not game._skill_cells[ids.size() - 1].get_node("pick").visible:

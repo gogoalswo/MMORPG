@@ -19,6 +19,8 @@
 |---|---|---|---|---|---|
 | 낙뢰 `thunder_fall` | 1번 기절 `stun` | 1000 | 맞은 몬스터 **3초 기절** — 못 움직이고 못 때린다 | 번개가 **붉게** | 붙었다 |
 | 낙뢰 `thunder_fall` | 2번 범위 `wide` | 1000 | **사거리 4 → 6m** (50% 증가) | 가운데 세 번 뒤 **좌우 살짝 옆에 한 번씩 더**, 땅의 흔적 1.5배 | 붙었다 |
+| 할퀴기 `rising_kick` | 1번 부채꼴 `wide` | 1000 | **판정 각 120 → 160°** | 쓸고 가는 호 140 → **180°** (같은 40°만큼 길어진다) | 붙었다 |
+| 할퀴기 `rising_kick` | 2번 연타 `combo` | 1000 | **다단 히트 3 → 5회** | 긁기 **두 번 더**, 빛이 **보라** | 붙었다 |
 
 | 경험치북 (`SKILL_EXP_BOOKS`) | id | 경험치 |
 |---|---|---|
@@ -35,11 +37,11 @@
 | `packages/shared/src/skills.ts` `SKILL_UPGRADES` · `SKILL_UPGRADE_MAX` · `SKILL_EXP_BOOKS` | **강화 표**(스킬·id·이름·효과·`exp`·`stunMs`)와 **경험치북 표**. `skills.json` 의 `upgrades` · `upgradeMax` · `expBooks` 로 나간다 |
 | `packages/shared/src/items.ts` `MATERIALS` | 경험치북을 **경험치북 표에서 만든다** — 재료, `skillExp` 칸 |
 | `packages/shared/src/skills.test.ts` | 강화가 있는 스킬에 붙나 · 필요 경험치가 있나 · 스킬마다 둘 이하 · 경험치북이 재료에 있나 |
-| `godot/world/skills.gd` `upgrade` · `upgrades_of` · `exp_books` · `stun_ms` · `range_mul` | 표 읽기. `upgrades_of` 의 순서가 1번·2번 |
+| `godot/world/skills.gd` `upgrade` · `upgrades_of` · `exp_books` · `stun_ms` · `range_mul` · `upgrade_sum` | 표 읽기. `upgrades_of` 의 순서가 1번·2번. `upgrade_sum` 은 더하는 효과(`arcAdd` · `extraHits`) |
 | `godot/world/items.gd` `book_exp` | 경험치북이면 넣는 경험치 |
 | `godot/world/world.gd` `feed_upgrade` | ★ 스킬창의 경험치북 단추 (`feedUpgrade`) — **판정은 여기서** (직업·번호·이미 붙었나·책이 있나 → 한 권 빼고 쌓고, 닿으면 붙인다) |
 | `godot/world/world.gd` `_add_upgrade` | 강화를 붙이고 그 강화에 쌓이던 경험치를 지운다 — 붙는 길은 전부 여기를 지난다 |
-| `godot/world/world.gd` `cast` | 붙은 강화를 `skill` 이벤트에 싣고(`upgrades`), 사거리에 배율을 곱하고, 기절을 건다 |
+| `godot/world/world.gd` `cast` | 붙은 강화를 `skill` 이벤트에 싣고(`upgrades`), 사거리에 배율을 곱하고, 각·대 수를 더하고, 기절을 건다 |
 | `godot/world/world.gd` `_step_monsters` | `stunned_until` 까지 `state = "stun"` 으로 서 있는다 |
 | `godot/world/world.gd` `debug_books` · `debug_upgrade_all` · `debug_reset_upgrades` | 테스트 단추 넷 |
 | `godot/world/save.gd` | `skill_upgrades` · `skill_upgrade_exp` 칸 |
@@ -48,6 +50,9 @@
 | `godot/game/lightning_fx.gd` `PALETTE_RED` · `Strike.paint` | 붉은 번개 |
 | `godot/game/lightning_fx.gd` `SIDE_STRIKES` · `SIDE_GAP` · `WIDE` · `Strike.rest` | 넓은 낙뢰 — 옆 번개 둘과 땅 흔적 배율 |
 | `godot/tests/skill_test.gd` `_case_wide` | 사거리 4 → 6m, 알리는 모양도 6m, 5m 앞의 놈이 강화 뒤에만 맞는다 |
+| `godot/game/skill_fx.gd` `SWEEP_WIDE` · `MESH_ARC` · `COMBO_SLASHES` · `PALETTE_PURPLE` | 강화한 할퀴기 — 긴 호·긁기 둘 더·보라 |
+| `godot/tests/skill_test.gd` `_case_claw_up` | 할퀴기 기본 120°·3타, 부채꼴 160°, 연타 5타, 둘 다 |
+| `godot/tests/skill_fx_test.gd` `_case_upgrades` · `_case_table` | 이펙트가 판정 표와 같은 수(연타 +2 · 부채꼴 +40°)인가, 강화마다 번 수·각·색, 떼면 제자리 |
 | `godot/tests/lightning_fx_test.gd` `_case_wide` | 다섯 번 · 옆 번개가 캐릭터 좌우 1.9m · 차례로 · 땅 흔적 1.5배 · 색 그대로 · 떼면 세 번 |
 | `godot/tests/skill_test.gd` `_case_upgrade` | 책 없으면 거절 · 100×3+500 = 800 · 상급으로 붙고 경험치 지워짐 · 붙은 뒤 거절 · 전체 1번 강화 · 기절 3초 · 떼면 없음 |
 | `godot/tests/ui_test.gd` `_check_upgrades` | 강화 칸 둘 · 목록 오른쪽 · 창·단추가 화면 안 · 책 없으면 꺼짐 · 하급 둘 → `200 / 1000` · 상급 → "강화 완료" |
@@ -166,6 +171,31 @@
   `unproject_position` 으로 쟀다 (45° 를 볼 때 캐릭터 x=640, 옆 번개 547 · 733).
 - 찍어 보기: `npm run shot:godot -- thunder_fall+wide@45` (`+stun+wide` 면 둘 다).
 
+### 할퀴기 강화 ★ (2026-09-23)
+
+요청: "강화전 다단히트 3회로 만들고 / 강화 1 : 부채꼴 각도 40도 증가, 이펙트로 그 만큼
+길이 증가 / 강화 2 : 다단 히트 2회 증가, 이펙트 색상 변경".
+
+- **기본을 5타에서 3타로 줄였다.** 한 대는 **56% 그대로**다 (사용자 선택) — 기본 합계
+  168%, 연타 강화를 붙이면 예전 다섯 번(280%)과 같다. 설명도 "세 번 긁어낸다".
+- **1번 부채꼴** (`arcAdd` 40°) — 판정 각 120 → **160°**. 이펙트는 쓸고 가는 호를 **같은
+  40°만큼** 늘린다(140 → 180°, `SWEEP_WIDE`). 꼬리 각도 같은 비율로 늘린다 — 호만
+  늘리면 긴 호 위로 짧은 점이 지나가 보인다. 머리가 끝까지 가는 시간(0.12초)은 그대로다.
+- **2번 연타** (`extraHits` 2) — 3 → **5타**. 예약(`_combos`)이 둘 더 들어간다. 이펙트는
+  긁기가 **두 번 더**이고, 빛 두 겹(헤일로·테)이 **보라**(`PALETTE_PURPLE`)가 된다 (사용자
+  선택). **흰 심과 닿는 자리의 노란 불꽃은 그대로다.**
+- 둘은 따로 논다 — 부채꼴만이면 청백 긴 호 세 번, 연타만이면 보라 140° 다섯 번.
+- **메시는 여전히 한 번만 깐다.** 넓은 쪽(`MESH_ARC` 180°)까지 깔아 두고, 얼마나 그릴지는
+  셰이더의 `head`/`tail` 이 정한다. 토막은 40 → **52**(3.5° 씩 그대로).
+- **긁기 다섯을 늘 만들어 두고** 기본일 때 뒤의 둘은 쉬게 한다(`active`). 풀이 한 벌이라
+  강화한 할퀴기가 처음 나올 때 새로 만들면 멈칫한다.
+- 이펙트 수는 판정 표와 맞아야 한다 — `skill_fx_test` 의 `_case_table` 이 `hits` ·
+  `extraHits` · `arcAdd` 를 이펙트 상수와 맞춰 본다.
+- **찍어서 봤다** — 머리가 끝까지 간 순간(이펙트 시계 0.13초)을 기본·부채꼴 두 장으로
+  잘라 찍어 호가 양끝으로 더 뻗는 것을, 둘 다 붙인 것은 보라 다섯 줄을 봤다.
+  찍어 보기: `npm run shot:godot -- rising_kick+wide+combo@225`.
+- 스킬창 설명의 데미지 줄(`56% * 3연타`)은 **기본값**이다 — 강화는 오른쪽 카드에만 적는다.
+
 ### 테스트 단추 (왼쪽 아래 테스트 줄)
 
 - **"테스트: 경험치북 +10"** — 경험치북을 **종류마다 10권** 넣는다 (`debugBooks`, 사용자 선택).
@@ -177,7 +207,7 @@
 
 ## 손댈 때
 
-- **강화를 더할 때** — `SKILL_UPGRADES` 에 한 줄(`exp` 필수, 효과는 `stunMs` · `rangeMul` 중에서) → `npm run export:godot`.
+- **강화를 더할 때** — `SKILL_UPGRADES` 에 한 줄(`exp` 필수, 효과는 `stunMs` · `rangeMul` · `arcAdd` · `extraHits` 중에서) → `npm run export:godot`.
   효과가 새 종류면 `cast` 에 판정을, `_show_skill` 에 이펙트 분기를 더한다.
   효과 문구(`desc`)는 **카드(280px) 한 줄**에 들어가야 한다.
 - **경험치북 수치를 바꿀 때** — `SKILL_EXP_BOOKS` 한 줄. 종류를 넷 이상으로 늘리면

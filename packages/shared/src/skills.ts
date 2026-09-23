@@ -389,15 +389,16 @@ const SKILL_LIST: SkillDef[] = [
     job: 'fighter',
     cooldown: 6500,
     range: 3.0,
-    // 앞 120° 를 다섯 번 긁는다 (2026-09-23 요청). 한 대 0.56 × 5 = 2.8 —
-    // 한 방이던 때와 합계가 같다 (피해가 공격력에 비례하므로 나눠도 합이 같다)
+    // 앞 120° 를 **세 번** 긁는다. 처음엔 다섯 번이었다가 강화(연타 +2)가 생기며
+    // 기본을 셋으로 줄였다 (2026-09-23 요청). 한 대는 0.56 그대로다 (사용자 선택) —
+    // 합계 1.68, 연타 강화를 붙이면 예전 다섯 번(2.8)과 같다
     arc: (Math.PI * 2) / 3,
     power: 0.56,
-    hits: 5,
+    hits: 3,
     hitGap: 80,
     maxTargets: 4,
     reqLevel: 1,
-    description: '손톱을 세워 앞 부채꼴을 다섯 번 긁어낸다.',
+    description: '손톱을 세워 앞 부채꼴을 세 번 긁어낸다.',
   },
   {
     id: 'sky_breaker',
@@ -486,6 +487,10 @@ export interface SkillUpgradeDef {
   stunMs?: number;
   /** 판정 사거리 배율 (1.5 = 50% 증가). 여럿이면 곱한다 */
   rangeMul?: number;
+  /** 판정 부채꼴 각을 이만큼(rad) 넓힌다. 여럿이면 더한다 */
+  arcAdd?: number;
+  /** 다단 히트를 이만큼 늘린다 (`hits` 에 더한다). 여럿이면 더한다 */
+  extraHits?: number;
 }
 
 /** 스킬 하나에 붙는 강화 수 */
@@ -509,6 +514,24 @@ export const SKILL_UPGRADES: SkillUpgradeDef[] = [
     desc: '범위 50% 증가',
     exp: 1000,
     rangeMul: 1.5,
+  },
+  {
+    // 이펙트는 쓸고 가는 호가 같은 각만큼 길어진다 (SkillFx.SWEEP_ARC 140 → 180°)
+    id: 'wide',
+    skill: 'rising_kick',
+    name: '부채꼴',
+    desc: '부채꼴 각도 40° 증가',
+    exp: 1000,
+    arcAdd: (Math.PI * 40) / 180,
+  },
+  {
+    // 이펙트는 긁기가 두 번 늘고 빛이 보라로 바뀐다 (SkillFx.PALETTE_PURPLE)
+    id: 'combo',
+    skill: 'rising_kick',
+    name: '연타',
+    desc: '다단 히트 2회 증가',
+    exp: 1000,
+    extraHits: 2,
   },
 ];
 

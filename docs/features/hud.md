@@ -255,7 +255,7 @@ frame.add_child(border)         # 채움 **다음**에 붙여야 위로 온다
 | `ui_quick_slot` | 퀵슬롯·자동사냥 칸 (얇은 선, 위 모서리 잘림) | 128 · 한 겹만 걷는다 |
 | `ui_icon_skill` | 룬이 떠 있는 책 (상아빛 + 금색) | 128 |
 | `ui_icon_bag` | 배낭 (상아빛 + 금색) | 128 |
-| `ui_icon_dungeon` | 던전 — 돌 아치 + 반쯤 올린 쇠창살 (상아빛 + 금색) | 128 → [dungeons.md](dungeons.md) |
+| `ui_icon_dungeon` | 던전 — 뿔 달린 보스 머리, 정면 (상아빛 + 금색) | 128 → [dungeons.md](dungeons.md) |
 | `ui_icon_auto` | **검 두 자루가 X자** (상아빛 + 금색) | 128 |
 | `ui_auto_spin` | 굵은 화살표 고리 (얇은 것은 안 보였다) | 192 · 가운데를 뚫는다 |
 | `ui_close` | 창 오른쪽 위 닫기 X | 128 |

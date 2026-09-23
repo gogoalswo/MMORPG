@@ -444,6 +444,12 @@ func _case_bag(game: Node3D) -> void:
 	if not game._gear_panel.visible:
 		_fail("가방을 열었는데 장비 창이 같이 안 떴다")
 
+	# 처음 들어오면 크리스탈 30개가 한 번 들어와 있다 (2026-09-23 요청 "가방에 30개 넣어")
+	var gift: Array = me.bag.filter(func(s: Dictionary) -> bool: return str(s.id) == Items.crystal_id())
+	if gift.size() != 1 or int(gift[0].count) != 30:
+		_fail("처음 가방에 크리스탈 30개가 없다: %s" % str(gift))
+	me.bag.clear()
+
 	# 가방에 하나 넣고 — 골라서 낀다
 	me.bag.append({"id": "g1_w", "grade": 1, "enhance": 2, "options": []})
 	game._redraw_bag()

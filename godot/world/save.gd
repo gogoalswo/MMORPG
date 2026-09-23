@@ -36,6 +36,8 @@ static func write(zone_id: String, player: Dictionary) -> void:
 		"skill_bar": player.get("skill_bar", []),
 		"bag": player.get("bag", []),
 		"equipped": player.get("equipped", {}),
+		# 한 번만 주는 것을 받았다는 표시 — 없던 칸이라 옛 저장은 빈 목록으로 읽힌다
+		"granted": player.get("granted", []),
 	}, "\t"))
 	file.close()
 

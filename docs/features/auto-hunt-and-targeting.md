@@ -210,10 +210,10 @@ tryAutoSkill(...) || (거리 <= attackRange && handleAttack(...))
 
 | 파일 | 역할 |
 |---|---|
-| `godot/world/world.gd` | `set_auto` / `_drive_auto` / `_pick_hunt_target` / `_walk_auto` / `_patrol_auto` / `_take_manual` / `_anchor_here`, 상수 `HUNT_*` · `MANUAL_HOLD_MS` |
+| `godot/world/world.gd` | `set_auto` / `_drive_auto` / `_pick_hunt_target` / `_walk_auto` / `_auto_cast` / `_patrol_auto` / `_take_manual` / `_anchor_here`, 상수 `HUNT_*` · `MANUAL_HOLD_MS` |
 | `godot/net/local_transport.gd` | 메시지 `autoHunt {on}` |
 | `godot/game/game.gd` | 칸과 표시 — `_toggle_auto` / `_refresh_auto`. **퀵슬롯 옆 다섯 번째 칸**이고 켜면 화살표 고리가 돈다 (2026-09-19) → [hud.md](hud.md) |
-| `godot/tests/auto_hunt_test.gd` | 반경·붙어서 때리기·순찰·리쉬·끄기·조작 우선 |
+| `godot/tests/auto_hunt_test.gd` | 반경·붙어서 때리기·스킬 먼저·순찰·리쉬·끄기·조작 우선 |
 
 ### 반경은 무리 하나 크기로 고정이다 ★
 
@@ -253,7 +253,9 @@ tryAutoSkill(...) || (거리 <= attackRange && handleAttack(...))
 2. `_walk_auto` — 사거리의 `HUNT_STANDOFF`(0.7) 까지 붙는다. 사람이 모는 입력과
    같은 `Movement.apply_move` 를 타므로 경계·몬스터 충돌이 같다. **휘두르는
    동안에는 발을 멈춘다**(`rooted_until`).
-3. 대상 쪽으로 `rot` 를 대입하고 **사거리 안일 때만** `attack()` 을 부른다.
+3. 대상 쪽으로 `rot` 를 대입하고, **경직(`rooted_until`)이 풀렸을 때만** 다음 것을
+   넣는다 — 스킬이 먼저(`_auto_cast`, 아래), 나간 스킬이 없으면 **사거리 안일 때만**
+   `attack()` 을 부른다.
    - **멀리서 헛휘두르면 안 된다.** 거리를 안 보고 부르게 했더니 첫 틱에 휘두르고
      경직 400ms 가 걸려, 10m 밖에서 한 발짝도 못 나가고 제자리에서 팔만 돌았다
      (2026-09-18, 테스트가 잡았다).
@@ -313,10 +315,24 @@ tryAutoSkill(...) || (거리 <= attackRange && handleAttack(...))
 - 몬스터는 이 문제가 없다. `World` 가 `state`(`chase`·`patrol`·`attack`·`idle`)를
   스냅샷에 넣어 주고 화면은 그걸 보고 클립을 고른다.
 
+### 스킬도 쓴다 (`_auto_cast`) ★
+
+2026-09-23 "자동사냥하면 스킬을 안 사용해" 로 붙였다. **액션바에 올린 스킬 전부**를
+쓴다 — TS 의 칸마다 `A` 스위치는 옮기지 않았다(액션바에 올린 것이 곧 쓰겠다는 뜻).
+
+- 액션바 **칸 순서대로** 보고, 쿨타임이 돈 것 중 **대상이 그 스킬 `range` 안**에 든
+  첫 것을 쓴다. 칸 순서가 우선순위다. 원거리기는 걸어 붙는 도중에 사거리에 들면 나간다.
+- 회복기(`selfHeal`)는 **채울 만큼 빠졌을 때만** 쓴다 — 가득 찬 채로 쓰면 쿨타임만 버린다.
+- 쏘는 것은 사람이 누르는 것과 **같은 `cast`** 다. 나갔는지는 `rooted_until` 이 새로
+  걸렸는지로 본다. 쿨타임으로 보면 테스트 스위치(쿨타임 0)에서 나갔는데도 안 나간 걸로
+  읽혀 같은 틱에 기본 공격까지 휘두른다.
+- **경직 중에는 아무것도 넣지 않는다.** 스킬 경직 중에 기본 공격이 끼면 스킬 동작이
+  끊기고, 쿨타임 0 스위치에서는 스킬이 매 틱 나간다. 기본 공격만 쓸 때는 경직 ≤ 공격
+  간격이라 이 조건이 아무것도 바꾸지 않는다.
+
 ### 아직 없는 것
 
-자동 시전(스킬)·반경 슬라이더·"지목한 놈 먼저"는 안 옮겼다. 필요해지면 위의 TS
-절을 보고 붙인다.
+반경 슬라이더·"지목한 놈 먼저"는 안 옮겼다. 필요해지면 위의 TS 절을 보고 붙인다.
 
 ## 손댈 때
 

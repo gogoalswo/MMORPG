@@ -735,6 +735,8 @@ HUD                    [퀵1][퀵2][퀵3][퀵4][자동사냥]          [스킬][
 - 액션바 칸의 `A` 스위치. 목록은 `localStorage['mmo.autoSkills']` 에 남고
   접속하자마자 서버로 보낸다.
 - 실제 시전은 서버 `tryAutoSkill` 이 한다 → [auto-hunt-and-targeting.md](auto-hunt-and-targeting.md).
+- **고도**: `A` 스위치 없이 자동 사냥이 **액션바의 스킬을 전부** 칸 순서대로 쓴다
+  (`World._auto_cast`) → [auto-hunt-and-targeting.md](auto-hunt-and-targeting.md) 의 "스킬도 쓴다".
 
 ## 손댈 때
 

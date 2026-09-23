@@ -17,6 +17,10 @@ const HUMAN_HEIGHT := 1.8
 const FILES := {
 	"varco_fighter": "varco_fighter.glb",
 	"varco_ogre1": "varco_ogre1.glb",
+	"varco_ogre2": "varco_ogre2.glb",
+	"varco_ogre3": "varco_ogre3.glb",
+	"varco_ogre4": "varco_ogre4.glb",
+	"varco_ogre5": "varco_ogre5.glb",
 }
 
 var _anim: AnimationPlayer

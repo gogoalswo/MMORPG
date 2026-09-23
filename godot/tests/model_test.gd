@@ -15,6 +15,7 @@ func _init() -> void:
 	_case_texture_size()
 	_case_missing()
 	_case_height_table()
+	_case_every_kind()
 	_run_scene.call_deferred()
 
 
@@ -87,7 +88,7 @@ func _case_texture_size() -> void:
 
 func _case_missing() -> void:
 	# 파일이 없는 look 은 null 을 준다 — 화면이 기둥으로 대신한다.
-	# 보스(trex)와 나머지 사냥터 몬스터가 여기 해당한다
+	# 지금은 몬스터가 전부 오우거라 해당하는 게 없다. 옛 짐승 이름(trex)으로 본다
 	if Rig.create("trex", 2.0) != null:
 		_fail("파일도 없는 trex 로 리그가 만들어졌다")
 	if Rig.create("없는이름", 1.0) != null:
@@ -102,6 +103,18 @@ func _case_height_table() -> void:
 	var unknown := GameData.beast_height("없는짐승", 2.0)
 	if absf(unknown - 1.8) > 1e-9:
 		_fail("모르는 짐승은 기본 0.9 x 2.0 = 1.8 이어야 하는데 %.2f" % unknown)
+
+
+## 사냥터 20곳의 잡몹·보스가 전부 모델로 선다 — 기둥으로 떨어지는 종이 없다
+func _case_every_kind() -> void:
+	var kinds: Dictionary = GameData.load_table("monsters").get("kinds", {})
+	var looks := {}
+	for id in kinds:
+		var look := str(kinds[id].get("look", ""))
+		looks[look] = int(looks.get(look, 0)) + 1
+		if Rig.create(look, 2.0) == null:
+			_fail("%s(%s) 의 look %s 가 모델로 안 만들어진다" % [id, kinds[id].get("name", ""), look])
+	print("  몬스터 %d종 → 모델 %s" % [kinds.size(), looks])
 
 
 ## 실제 화면에서 초원까지 걸어가 몬스터가 모델로 서 있는지 본다
@@ -129,9 +142,11 @@ func _run_scene() -> void:
 				rigs += 1
 			else:
 				posts += 1
-		print("  초원: 모델 %d마리, 기둥 %d마리 (기둥은 파일 없는 보스)" % [rigs, posts])
+		print("  초원: 모델 %d마리, 기둥 %d마리" % [rigs, posts])
 		if rigs < 80:
 			_fail("모델로 선 몬스터가 %d마리뿐이다" % rigs)
+		if posts > 0:
+			_fail("기둥으로 선 몬스터가 %d마리 있다 — 보스까지 모델이어야 한다" % posts)
 
 	if _failed == 0:
 		print("모델: 전부 통과")

@@ -150,10 +150,12 @@ varco 모델은 1024² 텍스처를 셋씩 들고 있는데, 고도가 임포트
 
 `Rig.create` 는 파일이 없으면 **`null` 을 준다.** 화면은 그때 캡슐을 대신 그린다.
 `npm run sync:godot` 을 안 돌린 사람도 게임은 돌아가야 하기 때문이고, 애초에 파일이
-있는 `look` 이 둘뿐이다 — 보스(`trex`)를 비롯한 나머지는 웹 클라이언트에서도
-절차적 리그다 → [characters-and-animation.md](characters-and-animation.md).
+있는 `look` 이 여섯(격투가 + 오우거 다섯)뿐이다. 몬스터는 2026-09-23 부터 전부
+오우거라 지금 기둥으로 서는 몬스터는 없다 — 옛날에는 보스(`trex`)를 비롯한 나머지가
+기둥이었다 → [characters-and-animation.md](characters-and-animation.md).
 
-초원 201마리 중 **모델 200 · 기둥 1**(보스)이 이 규칙의 결과다.
+초원 201마리 중 **모델 201 · 기둥 0** 이다 (`model_test` 가 기둥이 하나라도 서면
+실패한다. `_case_every_kind` 는 몬스터 60종 전부가 모델로 만들어지는지 본다).
 
 ### 바닥은 `.ktx2` 를 그대로 쓴다 ★
 
@@ -452,7 +454,7 @@ Q/E 회전과 줌은 아직 안 옮겼다. 웹 쪽에는 있다.
 
 | 어디 | 주소 |
 |---|---|
-| 브라우저 | `https://gogoalswo.github.io/MMORPG/` — 약 19MB 받는다. 폰 브라우저에서도 열린다 |
+| 브라우저 | `https://gogoalswo.github.io/MMORPG/` — 약 30MB 받는다 (오우거 다섯을 넣고 19MB 에서 늘었다). 폰 브라우저에서도 열린다 |
 | 안드로이드 | Actions → `Android APK` 실행 → 산출물 `mmorpg-apk` |
 
 **웹 빌드는 스레드를 꺼야 한다.** 스레드를 켜면 `SharedArrayBuffer` 가 필요하고,
@@ -555,7 +557,11 @@ curl -o D:\MMORPG.bat https://raw.githubusercontent.com/gogoalswo/MMORPG/main/sc
 | | 파일 | 받는 양 |
 |---|---|---|
 | `index.wasm` (고도 엔진) | 37.7MB | **10.2MB** — 만드는 것과 무관하게 고정 |
-| `index.pck` (게임) | 8.2MB | 8.2MB (이미 압축된 텍스처라 gzip 이 안 먹는다) |
+| `index.pck` (게임) | 20.6MB | 20.6MB (이미 압축된 텍스처라 gzip 이 안 먹는다) |
+
+**오우거 2~5 를 넣으면서 10.3MB → 20.6MB 로 늘었다** (2026-09-23, `godot --export-pack`
+으로 잰 값). 한 벌에 2.6MB 쯤이다. 줄이려면 텍스처를 256 으로 더 줄이거나 다섯이 같은
+동작 넷을 한 벌만 싣는 방법이 있다 — 아직 안 했다.
 
 ### 지금 보는 것이 어느 빌드인지 화면에 찍는다 ★
 

@@ -104,18 +104,18 @@ const BOSS_NAMES = [
 ];
 
 /**
- * 보스 모델 — 덩치 큰 것들만 쓴다.
+ * 보스 모델 — 받아 둔 오우거 5종을 돌려 쓴다 (사냥터 잡몹과 같은 표).
  *
  * 보스가 그 사냥터 잡몹과 같은 종이면 "커진 잡몹"으로만 보인다. 15분을
  * 기다린 값이 안 난다. 그래서 같은 모델이 걸리면 다음 것으로 넘긴다.
+ * 잡몹이 `index % 5` 번째 오우거라 보스는 늘 그다음 타입이 된다.
  */
 const BOSS_LOOKS = [
-  'trex',
-  'triceratops',
-  'stegosaurus',
-  'apatosaurus',
-  'parasaurolophus',
-  'velociraptor',
+  'varco_ogre1',
+  'varco_ogre2',
+  'varco_ogre3',
+  'varco_ogre4',
+  'varco_ogre5',
 ];
 
 function bossLookFor(index: number): string {
@@ -128,26 +128,26 @@ function bossLookFor(index: number): string {
 }
 
 const TIERS: TierDef[] = [
-  { names: ['들늑대', '숲그림자'], bodyColor: '#7b6a55', accentColor: '#4a3f33', look: 'varco_ogre1' }, // 초원 — VARCO 오우거. 나머지 존은 아직 뺀 짐승 이름이다
-  { names: ['가시멧돼지', '그림자늑대'], bodyColor: '#6b5230', accentColor: '#3a2c19', look: 'bull' }, // 덤불숲
-  { names: ['바위짐승', '협곡사냥꾼'], bodyColor: '#6d6a63', accentColor: '#3d3b37', look: 'stag' }, // 메마른 협곡
-  { names: ['잿빛사냥개', '공포야수'], bodyColor: '#58545a', accentColor: '#2b2a2e', look: 'husky' }, // 잿빛 황야
-  { names: ['늪지벌레', '수렁괴물'], bodyColor: '#4d5a3f', accentColor: '#26301f', look: 'frog' }, // 안개 늪
-  { names: ['서리늑대', '얼음발톱'], bodyColor: '#9fb6c4', accentColor: '#5d707d', look: 'wolf' }, // 서리 고원
-  { names: ['검은곰', '숲의 포식자'], bodyColor: '#2f2a24', accentColor: '#171310', look: 'shibainu' }, // 검은 삼림
-  { names: ['폐허 수호병', '녹슨 기사'], bodyColor: '#7a6f5c', accentColor: '#413a2f', look: 'stegosaurus' }, // 무너진 성터
-  { names: ['모래전갈', '사막 군주'], bodyColor: '#b58a4e', accentColor: '#6b4f28', look: 'snake' }, // 붉은 사막
-  { names: ['소금거인', '백골짐승'], bodyColor: '#cfcabc', accentColor: '#8e8a7e', look: 'deer' }, // 소금 평원
-  { names: ['유황도마뱀', '불꽃이빨'], bodyColor: '#c2a63a', accentColor: '#6e5c17', look: 'wasp' }, // 유황 분지
-  { names: ['잿불사냥개', '용암거인'], bodyColor: '#6e3a2a', accentColor: '#391a12', look: 'rat' }, // 화산재 언덕
-  { names: ['빙하 수호자', '혹한의 왕'], bodyColor: '#8fb9d4', accentColor: '#4a7188', look: 'triceratops' }, // 얼어붙은 심연
-  { names: ['뒤틀린 가지', '고목괴물'], bodyColor: '#4a3b2c', accentColor: '#241c15', look: 'spider' }, // 뒤틀린 숲
-  { names: ['그림자 망령', '어둠의 사냥꾼'], bodyColor: '#3a3350', accentColor: '#1c1828', look: 'horse' }, // 그림자 계곡
-  { names: ['무너진 골렘', '폐허의 군주'], bodyColor: '#8a8479', accentColor: '#4b473f', look: 'parasaurolophus' }, // 폐허 도시
-  { names: ['빛바랜 짐승', '창백한 거인'], bodyColor: '#c9c2b4', accentColor: '#8a8477', look: 'horse_white' }, // 빛바랜 고원
-  { names: ['균열 포식자', '공간을 찢는 것'], bodyColor: '#5b3a6e', accentColor: '#2c1a37', look: 'velociraptor' }, // 균열 지대
-  { names: ['심연의 감시자', '문지기'], bodyColor: '#2a3a4a', accentColor: '#131c24', look: 'apatosaurus' }, // 심연의 문턱
-  { names: ['종말의 사자', '최후의 포식자'], bodyColor: '#5a1f28', accentColor: '#2c0d12', look: 'trex' }, // 종말의 대지
+  { names: ['들늑대', '숲그림자'], bodyColor: '#7b6a55', accentColor: '#4a3f33', look: 'varco_ogre1' }, // 초원
+  { names: ['가시멧돼지', '그림자늑대'], bodyColor: '#6b5230', accentColor: '#3a2c19', look: 'varco_ogre2' }, // 덤불숲
+  { names: ['바위짐승', '협곡사냥꾼'], bodyColor: '#6d6a63', accentColor: '#3d3b37', look: 'varco_ogre3' }, // 메마른 협곡
+  { names: ['잿빛사냥개', '공포야수'], bodyColor: '#58545a', accentColor: '#2b2a2e', look: 'varco_ogre4' }, // 잿빛 황야
+  { names: ['늪지벌레', '수렁괴물'], bodyColor: '#4d5a3f', accentColor: '#26301f', look: 'varco_ogre5' }, // 안개 늪
+  { names: ['서리늑대', '얼음발톱'], bodyColor: '#9fb6c4', accentColor: '#5d707d', look: 'varco_ogre1' }, // 서리 고원
+  { names: ['검은곰', '숲의 포식자'], bodyColor: '#2f2a24', accentColor: '#171310', look: 'varco_ogre2' }, // 검은 삼림
+  { names: ['폐허 수호병', '녹슨 기사'], bodyColor: '#7a6f5c', accentColor: '#413a2f', look: 'varco_ogre3' }, // 무너진 성터
+  { names: ['모래전갈', '사막 군주'], bodyColor: '#b58a4e', accentColor: '#6b4f28', look: 'varco_ogre4' }, // 붉은 사막
+  { names: ['소금거인', '백골짐승'], bodyColor: '#cfcabc', accentColor: '#8e8a7e', look: 'varco_ogre5' }, // 소금 평원
+  { names: ['유황도마뱀', '불꽃이빨'], bodyColor: '#c2a63a', accentColor: '#6e5c17', look: 'varco_ogre1' }, // 유황 분지
+  { names: ['잿불사냥개', '용암거인'], bodyColor: '#6e3a2a', accentColor: '#391a12', look: 'varco_ogre2' }, // 화산재 언덕
+  { names: ['빙하 수호자', '혹한의 왕'], bodyColor: '#8fb9d4', accentColor: '#4a7188', look: 'varco_ogre3' }, // 얼어붙은 심연
+  { names: ['뒤틀린 가지', '고목괴물'], bodyColor: '#4a3b2c', accentColor: '#241c15', look: 'varco_ogre4' }, // 뒤틀린 숲
+  { names: ['그림자 망령', '어둠의 사냥꾼'], bodyColor: '#3a3350', accentColor: '#1c1828', look: 'varco_ogre5' }, // 그림자 계곡
+  { names: ['무너진 골렘', '폐허의 군주'], bodyColor: '#8a8479', accentColor: '#4b473f', look: 'varco_ogre1' }, // 폐허 도시
+  { names: ['빛바랜 짐승', '창백한 거인'], bodyColor: '#c9c2b4', accentColor: '#8a8477', look: 'varco_ogre2' }, // 빛바랜 고원
+  { names: ['균열 포식자', '공간을 찢는 것'], bodyColor: '#5b3a6e', accentColor: '#2c1a37', look: 'varco_ogre3' }, // 균열 지대
+  { names: ['심연의 감시자', '문지기'], bodyColor: '#2a3a4a', accentColor: '#131c24', look: 'varco_ogre4' }, // 심연의 문턱
+  { names: ['종말의 사자', '최후의 포식자'], bodyColor: '#5a1f28', accentColor: '#2c0d12', look: 'varco_ogre5' }, // 종말의 대지
 ];
 
 /** 티어 번호(0부터)에 들어가는 두 레벨 — 3·8 / 13·18 / 23·28 … */

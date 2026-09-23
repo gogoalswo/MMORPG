@@ -20,7 +20,8 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 /** 복사할 것. 없으면 건너뛰고 화면은 기둥으로 대신 그린다 */
 const MODELS = [
   'varco_fighter.glb', // 캐릭터 (기본 직업 격투가 고정)
-  'varco_ogre1.glb', // 초원 몬스터 (mob003 · mob008 의 look)
+  // 몬스터 — 사냥터 20곳이 오우거 5종을 차례로 돌려 쓴다 (monsters.ts 의 TIERS[].look · BOSS_LOOKS)
+  'varco_ogre1.glb', 'varco_ogre2.glb', 'varco_ogre3.glb', 'varco_ogre4.glb', 'varco_ogre5.glb',
   'varco_portal.glb', // 차원문 (모든 존의 GATE_SPOT)
 ];
 

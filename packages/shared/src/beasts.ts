@@ -16,30 +16,8 @@
  * 정해진다)이 곱해지므로, 보스는 자동으로 더 커진다.
  */
 export const BEAST_HEIGHT: Record<string, number> = {
-  // 작은 것들
-  rat: 0.4,
-  frog: 0.45,
-  snake: 0.45,
-  shibainu: 0.55,
-  fox: 0.6,
-  wasp: 0.65,
-  spider: 0.65,
-  // 네발 짐승
-  husky: 0.8,
-  wolf: 0.85,
-  deer: 1.1,
-  bull: 1.15,
-  stag: 1.2,
-  horse: 1.5,
-  horse_white: 1.5,
-  // 큰 것들
-  velociraptor: 1.35,
-  stegosaurus: 1.5,
-  triceratops: 1.5,
-  parasaurolophus: 1.8,
-  trex: 2.4,
-  apatosaurus: 2.6,
-  // VARCO 오우거 — 사람(1.8)보다 머리 하나 반 크다. 파일 높이가 0.88~0.94 라 2.4 배쯤 키운다
+  // VARCO 오우거 — 사람(1.8)보다 머리 하나 반 크다. 파일 높이가 0.88~0.94 라 2.4 배쯤 키운다.
+  // 사냥터 20곳과 보스가 전부 이 다섯을 쓴다. 옛 짐승(늑대·공룡 등)은 파일을 빼서 키도 지웠다
   varco_ogre1: 2.2,
   varco_ogre2: 2.2,
   varco_ogre3: 2.2,

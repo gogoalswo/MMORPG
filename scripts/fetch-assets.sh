@@ -151,7 +151,7 @@ else
   echo "건너뜀: varco_fighter — 원본이 없다 (격투가는 절차적 리그로 나온다)"
 fi
 
-# 오우거 5종 — 몬스터 외형. 지금은 varco_ogre1 만 초원에 걸었다 (monsters.ts 의 TIERS[].look).
+# 오우거 5종 — 몬스터 외형. 사냥터 20곳과 보스가 다섯을 차례로 돌려 쓴다 (monsters.ts 의 TIERS[].look · BOSS_LOOKS).
 # 바르코 워크플로우 "오우거" 의 Type1~5. 생김새만 다르고 동작 넷은 같다.
 # 받은 파일 순서가 타입마다 같다: 오우거-Animate-오우거-1 = 대기, -2 = 달리기, -3 = 공격, -4 = 사망
 # (파일에 클립 이름이 비어 있어 동작 데이터를 재서 가렸다 — characters-and-animation.md)

@@ -11,6 +11,9 @@
 # 한글까지 겹쳤을 때 `errorlevel` 이 `orlevel` 로 잘려 실행됐다 (2026-09-17).
 # scripts/play.bat 은 그래서 CRLF 에 ASCII 전용이다.
 *.bat text eol=crlf
+# launcher.bat 은 GitHub 에서 파일 하나만 받아 쓴다. raw 다운로드는 저장소에 든
+# 바이트 그대로라 여기서도 CRLF 로 두어야 한다 — 변환을 끈다.
+scripts/launcher.bat -text
 
 *.glb  binary
 *.gltf binary

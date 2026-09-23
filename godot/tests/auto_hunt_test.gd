@@ -57,8 +57,10 @@ func _gap(a: Dictionary, b: Dictionary) -> float:
 
 
 ## 사냥터 무리는 반지름 8m 원에 흩어져 있고 무리끼리 40m 떨어져 있다.
-## 무리 안 **어디에 서서 켜도** 그 무리가 다 들어오고, 옆 무리는 한 마리도
-## 안 들어와야 한다
+## 무리 안 **어디에 서서 켜도** 그 무리가 다 들어와야 한다.
+## 옆 무리는 이제 들어온다 — 맵을 2/3 로 줄이며(2026-09-23) 무리 간격이 28 이 돼
+## 한 무리를 덮는 반경(≥26)으로는 옆 무리를 뺄 수 없고, 사용자가 그걸 받아들였다.
+## 그래서 옆 무리 거리는 검사하지 않고 적어만 둔다
 func _case_radius_covers_one_pack() -> void:
 	var w := World.new()
 	w.open("meadow")
@@ -90,7 +92,7 @@ func _case_radius_covers_one_pack() -> void:
 			widest, World.HUNT_RADIUS
 		])
 
-	# 무리 안 어느 자리에 앵커를 잡아도 옆 무리는 안 걸린다
+	# 옆 무리가 얼마나 붙어 있는지 적어만 둔다 (위 설명)
 	var nearest_other := INF
 	for key in packs:
 		for anchor in packs[key]:
@@ -99,12 +101,7 @@ func _case_radius_covers_one_pack() -> void:
 					continue
 				for mob in packs[other]:
 					nearest_other = minf(nearest_other, _gap(anchor, mob))
-	if nearest_other <= World.HUNT_RADIUS:
-		_fail("옆 무리가 %.1f m 까지 붙어 있다 — 반경 %.1f 안에 들어온다" % [
-			nearest_other, World.HUNT_RADIUS
-		])
-	else:
-		print("  옆 무리는 최소 %.1f m — 반경 밖이다" % nearest_other)
+	print("  옆 무리는 최소 %.1f m (반경 %.1f)" % [nearest_other, World.HUNT_RADIUS])
 
 
 ## 켜면 **그 자리**가 앵커다. 앵커가 없으면 몬스터를 따라 맵 끝까지 끌려간다

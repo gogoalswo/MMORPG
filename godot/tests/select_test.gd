@@ -32,6 +32,11 @@ func _run() -> void:
 	game._transport.send(&"travel", {"zone": "meadow"})
 	for i in 3:
 		await process_frame
+	# 고르기만 본다. 맵을 2/3 로 줄인 뒤로(2026-09-23) 도착 지점이 무리의 인식 범위
+	# 안이라, 몬스터가 쫓아오며 매 프레임 움직이면 고리 자리 비교가 한 프레임씩 어긋난다
+	for m in game._transport.snapshot().get("monsters", []):
+		m.aggro = 0.0
+		m.target = ""
 
 	var mob := _nearest(game)
 	if mob.is_empty():

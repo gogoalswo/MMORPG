@@ -31,7 +31,7 @@ func _fail(text: String) -> void:
 	_failed += 1
 
 
-## 마을에 시험용 한 마리. 차원문(9,0)에서 멀리 떨어진 자리를 쓴다
+## 마을에 시험용 한 마리. 차원문(4,0)에서 멀리 떨어진 자리를 쓴다
 func _setup(mob_x: float, mob_z: float, player_x: float, player_z: float) -> Array:
 	var w := World.new()
 	w.open("village")

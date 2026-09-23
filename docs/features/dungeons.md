@@ -79,12 +79,24 @@
 - 카드는 **고도 `Button` 이 직접 누름을 받는다** (`pressed`). 줄처럼 끌기와 가를 일이
   없어서다 — 셋이 한 화면에 다 들어가 스크롤하지 않는다.
 - 막힌 카드는 내용을 통째로 어둡게(`LOCKED_TINT`) 하고 `disabled` 라 눌리지 않는다.
-- **그림은 `icons/dungeon_<종류 id>.png`** (`dungeon_raid` · `dungeon_trial` ·
-  `dungeon_treasure`) 를 카드 칸에 꽉 채운다(`KEEP_ASPECT_COVERED`, 넘치는 쪽은 잘린다).
-  **그림이 없으면** 문장을 가운데에 작게 둔다 — 토벌은 던전 단추의 보스 머리, 나머지는
-  차원문 소용돌이(`CARD_FALLBACK`). 2026-09-23 현재 **세 장 다 아직 없다** — 이 세션에
-  바르코가 연결돼 있지 않아 못 뽑았다. 뽑으면 `public/assets/icons/` 에 넣고
-  `sync-godot-assets.mjs` 의 `ICONS` 에 이름을 더한다 (코드는 고칠 것 없다).
+- **그림은 `icons/dungeon_<종류 id>.png`** (384²) 를 그림 칸 가운데에 폭을 맞춰 앉힌다
+  (`KEEP_ASPECT_CENTERED`). 꽉 채우면(cover) 세로로 긴 칸에 맞추느라 좌우가 잘려
+  뿔·상자 끝이 날아간다. 그림이 없으면(`sync:godot` 전) `CARD_FALLBACK` 으로 물러선다.
+
+| 카드 | 그림 | 어디서 |
+|---|---|---|
+| 토벌 던전 | 뿔 달린 보스 머리 | 던전 단추(`ui_icon_dungeon`)와 **같은 바르코 원본**을 384 로 굽는다 (`fetch-assets.sh` 의 `dungeon_raid`) |
+| 시련의 탑 | 뾰족 지붕 돌탑 · 아치 문 | **코드로 그렸다** — `scripts/draw-dungeon-art.mjs` (SVG → PNG) |
+| 보물 창고 | 둥근 뚜껑 상자 · 자물쇠 · 반짝임 | 〃 |
+
+**둘을 코드로 그린 이유** — 2026-09-23 세션에 바르코 커넥터가 끊겨 있었고, 사용자가
+"보스 · 돌탑 · 보물 상자로 일단 그려봐" 라고 했다. 아트풍 문서의 **아이콘 틀**(검은 바탕
+위 상아빛·옅은 금색 문장, 얇은 어두운 윤곽, 판 없음)과 색 표를 그대로 썼다
+→ [ui-art-style.md](ui-art-style.md). **바르코로 다시 뽑으면** 두 장을 `fetch-assets.sh`
+주소로 바꾸고 `draw-dungeon-art.mjs` 는 지운다.
+
+다시 굽기: `node scripts/draw-dungeon-art.mjs && bash scripts/fetch-assets.sh && node scripts/build-item-icons.mjs`
+(크기는 `build-item-icons.mjs` 의 `FRAME_SIZE` 에 384) → `npm run sync:godot`.
 
 ### 창은 차원문 창을 물려받는다 ★
 

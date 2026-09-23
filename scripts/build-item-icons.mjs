@@ -75,6 +75,10 @@ const FRAME_SIZE = {
   'inv_tab_on.png': 96,
   'inv_tab_off.png': 96,
   'inv_button.png': 128,
+  // 던전 종류 카드 그림 (2026-09-23) — 카드의 그림 칸이 약 236px 폭이라 넉넉히
+  'dungeon_raid.png': 384,
+  'dungeon_trial.png': 384,
+  'dungeon_treasure.png': 384,
 };
 /**
  * **배경을 걷지 않는 것.** 스킬 아이콘은 칸을 꽉 채운 그림이라 가장자리가 곧 그림이다.

@@ -20,7 +20,9 @@ const DUNGEON_WIDTH := 680.0
 ## 카드 셋을 펼칠 때의 창 폭. 카드 한 장이 약 270 × 500 — 받은 그림처럼 세로로 길다
 const CARDS_WIDTH := 920.0
 const CARD_GAP := 20
-## 카드 그림 이름 = `dungeon_<종류 id>` (icons 폴더). 없으면 `CARD_FALLBACK` 을 가운데에 작게
+## 카드 그림 이름 = `dungeon_<종류 id>` (icons 폴더, 384² 문장). 칸 가운데에 폭을 맞춰
+## 앉힌다 — 꽉 채우면(cover) 세로로 긴 칸에 맞추느라 좌우가 잘려 뿔·상자 끝이 날아간다.
+## 그림이 없으면(`sync:godot` 전) `CARD_FALLBACK` 을 대신 앉힌다
 const CARD_ART := "dungeon_"
 const CARD_FALLBACK := {"raid": "ui_icon_dungeon"}
 const CARD_FALLBACK_ANY := "ui_gate_here"
@@ -146,13 +148,9 @@ func _add_card(type: Dictionary) -> Button:
 	art.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	art.texture = _piece(CARD_ART + id)
-	if art.texture != null:
-		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	else:
-		# 그림이 아직 없으면 문장을 가운데에 작게 둔다 — 빈 칸보다 낫다
+	if art.texture == null:
 		art.texture = _piece(str(CARD_FALLBACK.get(id, CARD_FALLBACK_ANY)))
-		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	art.clip_contents = true
+	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	body.add_child(art)
 
 	body.add_child(_card_label(str(type.get("name", "")), CARD_NAME_SIZE, TEXT_COLOR))

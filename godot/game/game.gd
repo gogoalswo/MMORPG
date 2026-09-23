@@ -2455,7 +2455,7 @@ func _build_zone(zone_id: String) -> void:
 
 	var zone := GameData.zone(zone_id)
 	var env: Dictionary = zone.get("env", {})
-	var size := float(zone.get("size", 92))
+	var size := float(zone.get("size", 62))
 	_half_size = Movement.zone_half_size(size)
 	_target = Vector3.INF
 	_marker.visible = false

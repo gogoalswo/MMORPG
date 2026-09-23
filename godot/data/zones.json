@@ -26,7 +26,7 @@
     "village": {
       "id": "village",
       "name": "마을",
-      "size": 92,
+      "size": 62,
       "spawns": {
         "default": [
           0,
@@ -35,7 +35,7 @@
       },
       "gate": {
         "position": [
-          9,
+          4,
           0
         ],
         "radius": 2.6,
@@ -104,7 +104,7 @@
     "meadow": {
       "id": "meadow",
       "name": "초원",
-      "size": 92,
+      "size": 62,
       "spawns": {
         "default": [
           0,
@@ -113,7 +113,7 @@
       },
       "gate": {
         "position": [
-          9,
+          4,
           0
         ],
         "radius": 2.6,
@@ -123,40 +123,40 @@
       "monsters": [
         {
           "kind": "boss00",
-          "x": -12,
-          "z": 20.8,
+          "x": 0,
+          "z": 23,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
         },
         {
           "kind": "mob003",
-          "x": -28,
-          "z": -28,
+          "x": -14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob003",
-          "x": 28,
-          "z": -28,
+          "x": 14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob008",
-          "x": -28,
-          "z": 28,
+          "x": -14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob008",
-          "x": 28,
-          "z": 28,
+          "x": 14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
@@ -175,7 +175,7 @@
     "thicket": {
       "id": "thicket",
       "name": "덤불숲",
-      "size": 92,
+      "size": 62,
       "spawns": {
         "default": [
           0,
@@ -184,7 +184,7 @@
       },
       "gate": {
         "position": [
-          9,
+          4,
           0
         ],
         "radius": 2.6,
@@ -194,40 +194,40 @@
       "monsters": [
         {
           "kind": "boss01",
-          "x": -12,
-          "z": 20.8,
+          "x": 0,
+          "z": 23,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
         },
         {
           "kind": "mob013",
-          "x": -28,
-          "z": -28,
+          "x": -14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob013",
-          "x": 28,
-          "z": -28,
+          "x": 14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob018",
-          "x": -28,
-          "z": 28,
+          "x": -14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob018",
-          "x": 28,
-          "z": 28,
+          "x": 14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
@@ -246,7 +246,7 @@
     "canyon": {
       "id": "canyon",
       "name": "메마른 협곡",
-      "size": 92,
+      "size": 62,
       "spawns": {
         "default": [
           0,
@@ -255,7 +255,7 @@
       },
       "gate": {
         "position": [
-          9,
+          4,
           0
         ],
         "radius": 2.6,
@@ -265,40 +265,40 @@
       "monsters": [
         {
           "kind": "boss02",
-          "x": -12,
-          "z": 20.8,
+          "x": 0,
+          "z": 23,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
         },
         {
           "kind": "mob023",
-          "x": -28,
-          "z": -28,
+          "x": -14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob023",
-          "x": 28,
-          "z": -28,
+          "x": 14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob028",
-          "x": -28,
-          "z": 28,
+          "x": -14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob028",
-          "x": 28,
-          "z": 28,
+          "x": 14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
@@ -317,7 +317,7 @@
     "waste": {
       "id": "waste",
       "name": "잿빛 황야",
-      "size": 92,
+      "size": 62,
       "spawns": {
         "default": [
           0,
@@ -326,7 +326,7 @@
       },
       "gate": {
         "position": [
-          9,
+          4,
           0
         ],
         "radius": 2.6,
@@ -336,40 +336,40 @@
       "monsters": [
         {
           "kind": "boss03",
-          "x": -12,
-          "z": 20.8,
+          "x": 0,
+          "z": 23,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
         },
         {
           "kind": "mob033",
-          "x": -28,
-          "z": -28,
+          "x": -14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob033",
-          "x": 28,
-          "z": -28,
+          "x": 14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob038",
-          "x": -28,
-          "z": 28,
+          "x": -14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob038",
-          "x": 28,
-          "z": 28,
+          "x": 14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
@@ -388,7 +388,7 @@
     "mire": {
       "id": "mire",
       "name": "안개 늪",
-      "size": 92,
+      "size": 62,
       "spawns": {
         "default": [
           0,
@@ -397,7 +397,7 @@
       },
       "gate": {
         "position": [
-          9,
+          4,
           0
         ],
         "radius": 2.6,
@@ -407,40 +407,40 @@
       "monsters": [
         {
           "kind": "boss04",
-          "x": -12,
-          "z": 20.8,
+          "x": 0,
+          "z": 23,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
         },
         {
           "kind": "mob043",
-          "x": -28,
-          "z": -28,
+          "x": -14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob043",
-          "x": 28,
-          "z": -28,
+          "x": 14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob048",
-          "x": -28,
-          "z": 28,
+          "x": -14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob048",
-          "x": 28,
-          "z": 28,
+          "x": 14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
@@ -459,7 +459,7 @@
     "frostmoor": {
       "id": "frostmoor",
       "name": "서리 고원",
-      "size": 92,
+      "size": 62,
       "spawns": {
         "default": [
           0,
@@ -468,7 +468,7 @@
       },
       "gate": {
         "position": [
-          9,
+          4,
           0
         ],
         "radius": 2.6,
@@ -478,40 +478,40 @@
       "monsters": [
         {
           "kind": "boss05",
-          "x": -12,
-          "z": 20.8,
+          "x": 0,
+          "z": 23,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
         },
         {
           "kind": "mob053",
-          "x": -28,
-          "z": -28,
+          "x": -14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob053",
-          "x": 28,
-          "z": -28,
+          "x": 14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob058",
-          "x": -28,
-          "z": 28,
+          "x": -14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob058",
-          "x": 28,
-          "z": 28,
+          "x": 14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
@@ -530,7 +530,7 @@
     "blackwood": {
       "id": "blackwood",
       "name": "검은 삼림",
-      "size": 92,
+      "size": 62,
       "spawns": {
         "default": [
           0,
@@ -539,7 +539,7 @@
       },
       "gate": {
         "position": [
-          9,
+          4,
           0
         ],
         "radius": 2.6,
@@ -549,40 +549,40 @@
       "monsters": [
         {
           "kind": "boss06",
-          "x": -12,
-          "z": 20.8,
+          "x": 0,
+          "z": 23,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
         },
         {
           "kind": "mob063",
-          "x": -28,
-          "z": -28,
+          "x": -14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob063",
-          "x": 28,
-          "z": -28,
+          "x": 14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob068",
-          "x": -28,
-          "z": 28,
+          "x": -14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob068",
-          "x": 28,
-          "z": 28,
+          "x": 14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
@@ -601,7 +601,7 @@
     "ruins": {
       "id": "ruins",
       "name": "무너진 성터",
-      "size": 92,
+      "size": 62,
       "spawns": {
         "default": [
           0,
@@ -610,7 +610,7 @@
       },
       "gate": {
         "position": [
-          9,
+          4,
           0
         ],
         "radius": 2.6,
@@ -620,40 +620,40 @@
       "monsters": [
         {
           "kind": "boss07",
-          "x": -12,
-          "z": 20.8,
+          "x": 0,
+          "z": 23,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
         },
         {
           "kind": "mob073",
-          "x": -28,
-          "z": -28,
+          "x": -14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob073",
-          "x": 28,
-          "z": -28,
+          "x": 14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob078",
-          "x": -28,
-          "z": 28,
+          "x": -14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob078",
-          "x": 28,
-          "z": 28,
+          "x": 14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
@@ -672,7 +672,7 @@
     "redsand": {
       "id": "redsand",
       "name": "붉은 사막",
-      "size": 92,
+      "size": 62,
       "spawns": {
         "default": [
           0,
@@ -681,7 +681,7 @@
       },
       "gate": {
         "position": [
-          9,
+          4,
           0
         ],
         "radius": 2.6,
@@ -691,40 +691,40 @@
       "monsters": [
         {
           "kind": "boss08",
-          "x": -12,
-          "z": 20.8,
+          "x": 0,
+          "z": 23,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
         },
         {
           "kind": "mob083",
-          "x": -28,
-          "z": -28,
+          "x": -14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob083",
-          "x": 28,
-          "z": -28,
+          "x": 14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob088",
-          "x": -28,
-          "z": 28,
+          "x": -14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob088",
-          "x": 28,
-          "z": 28,
+          "x": 14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
@@ -743,7 +743,7 @@
     "saltflat": {
       "id": "saltflat",
       "name": "소금 평원",
-      "size": 92,
+      "size": 62,
       "spawns": {
         "default": [
           0,
@@ -752,7 +752,7 @@
       },
       "gate": {
         "position": [
-          9,
+          4,
           0
         ],
         "radius": 2.6,
@@ -762,40 +762,40 @@
       "monsters": [
         {
           "kind": "boss09",
-          "x": -12,
-          "z": 20.8,
+          "x": 0,
+          "z": 23,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
         },
         {
           "kind": "mob093",
-          "x": -28,
-          "z": -28,
+          "x": -14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob093",
-          "x": 28,
-          "z": -28,
+          "x": 14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob098",
-          "x": -28,
-          "z": 28,
+          "x": -14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob098",
-          "x": 28,
-          "z": 28,
+          "x": 14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
@@ -814,7 +814,7 @@
     "sulfur": {
       "id": "sulfur",
       "name": "유황 분지",
-      "size": 92,
+      "size": 62,
       "spawns": {
         "default": [
           0,
@@ -823,7 +823,7 @@
       },
       "gate": {
         "position": [
-          9,
+          4,
           0
         ],
         "radius": 2.6,
@@ -833,40 +833,40 @@
       "monsters": [
         {
           "kind": "boss10",
-          "x": -12,
-          "z": 20.8,
+          "x": 0,
+          "z": 23,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
         },
         {
           "kind": "mob103",
-          "x": -28,
-          "z": -28,
+          "x": -14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob103",
-          "x": 28,
-          "z": -28,
+          "x": 14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob108",
-          "x": -28,
-          "z": 28,
+          "x": -14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob108",
-          "x": 28,
-          "z": 28,
+          "x": 14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
@@ -885,7 +885,7 @@
     "cinder": {
       "id": "cinder",
       "name": "화산재 언덕",
-      "size": 92,
+      "size": 62,
       "spawns": {
         "default": [
           0,
@@ -894,7 +894,7 @@
       },
       "gate": {
         "position": [
-          9,
+          4,
           0
         ],
         "radius": 2.6,
@@ -904,40 +904,40 @@
       "monsters": [
         {
           "kind": "boss11",
-          "x": -12,
-          "z": 20.8,
+          "x": 0,
+          "z": 23,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
         },
         {
           "kind": "mob113",
-          "x": -28,
-          "z": -28,
+          "x": -14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob113",
-          "x": 28,
-          "z": -28,
+          "x": 14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob118",
-          "x": -28,
-          "z": 28,
+          "x": -14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob118",
-          "x": 28,
-          "z": 28,
+          "x": 14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
@@ -956,7 +956,7 @@
     "glacier": {
       "id": "glacier",
       "name": "얼어붙은 심연",
-      "size": 92,
+      "size": 62,
       "spawns": {
         "default": [
           0,
@@ -965,7 +965,7 @@
       },
       "gate": {
         "position": [
-          9,
+          4,
           0
         ],
         "radius": 2.6,
@@ -975,40 +975,40 @@
       "monsters": [
         {
           "kind": "boss12",
-          "x": -12,
-          "z": 20.8,
+          "x": 0,
+          "z": 23,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
         },
         {
           "kind": "mob123",
-          "x": -28,
-          "z": -28,
+          "x": -14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob123",
-          "x": 28,
-          "z": -28,
+          "x": 14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob128",
-          "x": -28,
-          "z": 28,
+          "x": -14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob128",
-          "x": 28,
-          "z": 28,
+          "x": 14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
@@ -1027,7 +1027,7 @@
     "warpwood": {
       "id": "warpwood",
       "name": "뒤틀린 숲",
-      "size": 92,
+      "size": 62,
       "spawns": {
         "default": [
           0,
@@ -1036,7 +1036,7 @@
       },
       "gate": {
         "position": [
-          9,
+          4,
           0
         ],
         "radius": 2.6,
@@ -1046,40 +1046,40 @@
       "monsters": [
         {
           "kind": "boss13",
-          "x": -12,
-          "z": 20.8,
+          "x": 0,
+          "z": 23,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
         },
         {
           "kind": "mob133",
-          "x": -28,
-          "z": -28,
+          "x": -14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob133",
-          "x": 28,
-          "z": -28,
+          "x": 14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob138",
-          "x": -28,
-          "z": 28,
+          "x": -14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob138",
-          "x": 28,
-          "z": 28,
+          "x": 14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
@@ -1098,7 +1098,7 @@
     "shadowvale": {
       "id": "shadowvale",
       "name": "그림자 계곡",
-      "size": 92,
+      "size": 62,
       "spawns": {
         "default": [
           0,
@@ -1107,7 +1107,7 @@
       },
       "gate": {
         "position": [
-          9,
+          4,
           0
         ],
         "radius": 2.6,
@@ -1117,40 +1117,40 @@
       "monsters": [
         {
           "kind": "boss14",
-          "x": -12,
-          "z": 20.8,
+          "x": 0,
+          "z": 23,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
         },
         {
           "kind": "mob143",
-          "x": -28,
-          "z": -28,
+          "x": -14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob143",
-          "x": 28,
-          "z": -28,
+          "x": 14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob148",
-          "x": -28,
-          "z": 28,
+          "x": -14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob148",
-          "x": 28,
-          "z": 28,
+          "x": 14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
@@ -1169,7 +1169,7 @@
     "deadcity": {
       "id": "deadcity",
       "name": "폐허 도시",
-      "size": 92,
+      "size": 62,
       "spawns": {
         "default": [
           0,
@@ -1178,7 +1178,7 @@
       },
       "gate": {
         "position": [
-          9,
+          4,
           0
         ],
         "radius": 2.6,
@@ -1188,40 +1188,40 @@
       "monsters": [
         {
           "kind": "boss15",
-          "x": -12,
-          "z": 20.8,
+          "x": 0,
+          "z": 23,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
         },
         {
           "kind": "mob153",
-          "x": -28,
-          "z": -28,
+          "x": -14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob153",
-          "x": 28,
-          "z": -28,
+          "x": 14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob158",
-          "x": -28,
-          "z": 28,
+          "x": -14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob158",
-          "x": 28,
-          "z": 28,
+          "x": 14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
@@ -1240,7 +1240,7 @@
     "palemoor": {
       "id": "palemoor",
       "name": "빛바랜 고원",
-      "size": 92,
+      "size": 62,
       "spawns": {
         "default": [
           0,
@@ -1249,7 +1249,7 @@
       },
       "gate": {
         "position": [
-          9,
+          4,
           0
         ],
         "radius": 2.6,
@@ -1259,40 +1259,40 @@
       "monsters": [
         {
           "kind": "boss16",
-          "x": -12,
-          "z": 20.8,
+          "x": 0,
+          "z": 23,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
         },
         {
           "kind": "mob163",
-          "x": -28,
-          "z": -28,
+          "x": -14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob163",
-          "x": 28,
-          "z": -28,
+          "x": 14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob168",
-          "x": -28,
-          "z": 28,
+          "x": -14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob168",
-          "x": 28,
-          "z": 28,
+          "x": 14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
@@ -1311,7 +1311,7 @@
     "rift": {
       "id": "rift",
       "name": "균열 지대",
-      "size": 92,
+      "size": 62,
       "spawns": {
         "default": [
           0,
@@ -1320,7 +1320,7 @@
       },
       "gate": {
         "position": [
-          9,
+          4,
           0
         ],
         "radius": 2.6,
@@ -1330,40 +1330,40 @@
       "monsters": [
         {
           "kind": "boss17",
-          "x": -12,
-          "z": 20.8,
+          "x": 0,
+          "z": 23,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
         },
         {
           "kind": "mob173",
-          "x": -28,
-          "z": -28,
+          "x": -14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob173",
-          "x": 28,
-          "z": -28,
+          "x": 14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob178",
-          "x": -28,
-          "z": 28,
+          "x": -14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob178",
-          "x": 28,
-          "z": 28,
+          "x": 14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
@@ -1382,7 +1382,7 @@
     "abyssgate": {
       "id": "abyssgate",
       "name": "심연의 문턱",
-      "size": 92,
+      "size": 62,
       "spawns": {
         "default": [
           0,
@@ -1391,7 +1391,7 @@
       },
       "gate": {
         "position": [
-          9,
+          4,
           0
         ],
         "radius": 2.6,
@@ -1401,40 +1401,40 @@
       "monsters": [
         {
           "kind": "boss18",
-          "x": -12,
-          "z": 20.8,
+          "x": 0,
+          "z": 23,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
         },
         {
           "kind": "mob183",
-          "x": -28,
-          "z": -28,
+          "x": -14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob183",
-          "x": 28,
-          "z": -28,
+          "x": 14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob188",
-          "x": -28,
-          "z": 28,
+          "x": -14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob188",
-          "x": 28,
-          "z": 28,
+          "x": 14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
@@ -1453,7 +1453,7 @@
     "endland": {
       "id": "endland",
       "name": "종말의 대지",
-      "size": 92,
+      "size": 62,
       "spawns": {
         "default": [
           0,
@@ -1462,7 +1462,7 @@
       },
       "gate": {
         "position": [
-          9,
+          4,
           0
         ],
         "radius": 2.6,
@@ -1472,40 +1472,40 @@
       "monsters": [
         {
           "kind": "boss19",
-          "x": -12,
-          "z": 20.8,
+          "x": 0,
+          "z": 23,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
         },
         {
           "kind": "mob193",
-          "x": -28,
-          "z": -28,
+          "x": -14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob193",
-          "x": 28,
-          "z": -28,
+          "x": 14,
+          "z": -14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob198",
-          "x": -28,
-          "z": 28,
+          "x": -14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000
         },
         {
           "kind": "mob198",
-          "x": 28,
-          "z": 28,
+          "x": 14,
+          "z": 14,
           "radius": 13,
           "count": 50,
           "respawnMs": 10000

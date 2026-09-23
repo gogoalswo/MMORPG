@@ -85,7 +85,7 @@ func _run_scene() -> void:
 	# 차원문에 서면 고르는 화면이 뜬다
 	if game._gate_panel.visible:
 		_fail("아직 문에 안 섰는데 화면이 떠 있다")
-	me.x = 9.0
+	me.x = 4.0
 	me.z = 0.0
 	for i in 3:
 		await process_frame
@@ -151,13 +151,13 @@ func _run_scene() -> void:
 	# 문 아치를 누르면 창이 열린다 — **멀리 서 있어도 바로** 열린다
 	# (2026-09-18 요청: "포탈까지 안 걸어가도 클릭하면 UI 열리게")
 	game._gate_panel.close_panel()
-	me.x = 30.0
-	me.z = 30.0
+	me.x = 25.0
+	me.z = 25.0
 	for i in 3:
 		await process_frame
 	# 누르는 곳은 **소용돌이 원판뿐**이다 (2026-09-18: "지금 너무 넓어").
 	# 소용돌이는 문 반지름 2.6 기준 높이 2.44, 반지름 1.14 짜리 판이다
-	var swirl := Vector3(9.0, 2.6 * 2.0 * PortalSwirl.CENTER, 0.0)
+	var swirl := Vector3(4.0, 2.6 * 2.0 * PortalSwirl.CENTER, 0.0)
 	var on_swirl: Vector2 = game._camera.unproject_position(swirl)
 	if not game._gate_tapped(on_swirl):
 		_fail("소용돌이를 눌렀는데 문으로 안 잡힌다 (%s)" % on_swirl)
@@ -168,9 +168,9 @@ func _run_scene() -> void:
 		elif game._marker.visible:
 			_fail("문을 눌렀는데 창 대신 걸어가는 표시가 떴다")
 	# 아치 돌기둥 꼭대기와 받침은 이제 문이 아니다
-	if game._gate_tapped(game._camera.unproject_position(Vector3(9.0, 4.8, 0.0))):
+	if game._gate_tapped(game._camera.unproject_position(Vector3(4.0, 4.8, 0.0))):
 		_fail("아치 꼭대기가 아직 문으로 잡힌다 — 판이 너무 넓다")
-	if game._gate_tapped(game._camera.unproject_position(Vector3(9.0, 0.1, 0.0))):
+	if game._gate_tapped(game._camera.unproject_position(Vector3(4.0, 0.1, 0.0))):
 		_fail("문 발치(받침)가 아직 문으로 잡힌다")
 	if game._gate_tapped(game._camera.unproject_position(Vector3(-9.0, 0.0, 0.0))):
 		_fail("문에서 먼 땅이 문으로 잡힌다")
@@ -223,10 +223,21 @@ func _run_scene() -> void:
 
 	# 켜 둔 채로 땅을 누르면 **조작이 이긴다** — 화면이 탭을 삼키면 안 된다
 	# (판정 쪽은 tests/auto_hunt_test.gd 의 _case_manual_wins 가 본다)
+	# 누를 자리는 **빈 땅**이라야 한다. 맵을 2/3 로 줄인 뒤로(2026-09-23) 도착 지점
+	# 둘레까지 무리가 와 있어서, 화면 한 점을 박아 두면 몬스터를 누르게 된다
 	var press := InputEventMouseButton.new()
 	press.button_index = MOUSE_BUTTON_LEFT
 	press.pressed = true
 	press.position = Vector2(200, 200)
+	for i in 16:
+		var angle := TAU * float(i) / 16.0
+		var spot := Vector3(me.x + cos(angle) * 3.0, 0.0, me.z + sin(angle) * 3.0)
+		var screen: Vector2 = game._camera.unproject_position(spot)
+		var ground: Vector3 = game._ground_point(screen)
+		if ground != Vector3.INF and game._mob_at(ground) == "" \
+				and game._npc_at(ground) == "" and not game._gate_tapped(screen):
+			press.position = screen
+			break
 	game._unhandled_input(press)
 	if game._target == Vector3.INF:
 		_fail("자동사냥 중에 땅을 눌렀는데 화면이 무시했다")

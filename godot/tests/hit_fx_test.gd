@@ -33,6 +33,11 @@ func _run() -> void:
 		await process_frame
 
 	var mobs: Array = game._transport.snapshot().get("monsters", [])
+	# 이 테스트는 이벤트를 직접 넣어 본다. 맵을 2/3 로 줄인 뒤로(2026-09-23) 도착 지점이
+	# 무리의 인식 범위 안이라, 진짜 몬스터가 알아채고 때리면 그 이펙트가 섞인다
+	for m in mobs:
+		m.aggro = 0.0
+		m.target = ""
 	if mobs.is_empty():
 		_fail("존에 몬스터가 없다 — 이펙트를 걸 자리가 없다")
 		_done()

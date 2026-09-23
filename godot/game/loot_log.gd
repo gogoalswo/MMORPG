@@ -13,6 +13,11 @@ extends VBoxContainer
 ##
 ## 줄은 아래로 쌓이고(새 것이 맨 아래), `MAX_LINES` 를 넘으면 가장 오래된 것부터
 ## 지운다. 한 줄은 `LIFE` 초 뒤에 흐려지며 스스로 사라진다.
+##
+## **줄 노드는 지우지 않고 숨겨 두었다 다시 쓴다** ★ — 한 줄이 컨테이너 둘 ·
+## 글자 둘 · 테마 덮어쓰기라 만드는 데 1.6~1.9ms 였고, 범위 스킬로 무리를 잡으면
+## 한 프레임에 여러 줄이 몰려 히치가 됐다 (2026-09-23 "스킬 사용할 때 자꾸 히치").
+## 넘치면 가장 오래된 줄을 맨 아래로 옮겨 글자만 바꾼다. 이펙트 풀(`FxPool`)과 같은 생각이다.
 
 ## 한 번에 보이는 줄 수. 무리를 잡으면 한꺼번에 들어오므로 넘치면 오래된 것을 민다
 const MAX_LINES := 6
@@ -36,11 +41,19 @@ const EXP := Color("#e8c14a")
 
 ## [{row, t}, ...] — 떠 있는 줄과 산 시간
 var _rows: Array = []
+## 숨겨 둔 줄 — 다음 줄이 꺼내 쓴다
+var _spare: Array = []
 
 
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_theme_constant_override("separation", 4)
+	# 줄은 **미리 다 지어 둔다** — 처음 잡을 때 한 줄에 1ms 씩 드는 것을 게임을 열 때 치른다
+	for i in MAX_LINES:
+		var row := _make_row()
+		row.visible = false
+		add_child(row)
+		_spare.append(row)
 
 
 ## 경험치 한 줄
@@ -55,8 +68,31 @@ func add_item(name: String, tint: Color) -> void:
 	add_line("장비 획득", name, tint)
 
 
-## 머리말 + 값 한 줄을 맨 아래에 넣는다
+## 머리말 + 값 한 줄을 맨 아래에 넣는다. 가득 찼으면 가장 오래된 줄을, 아니면
+## 숨겨 둔 줄을 꺼내 쓴다 — 새로 만드는 것은 처음 `MAX_LINES` 줄뿐이다
 func add_line(head: String, value: String, tint: Color) -> void:
+	var row: PanelContainer
+	if _rows.size() >= MAX_LINES:
+		row = _rows.pop_front().row
+	elif not _spare.is_empty():
+		row = _spare.pop_back()
+	else:
+		row = _make_row()
+		add_child(row)
+	move_child(row, -1)
+	row.visible = true
+	var labels: Array = row.get_child(0).get_children()
+	labels[0].text = head
+	labels[1].text = value
+	labels[1].add_theme_color_override("font_color", tint)
+	# 첫 프레임부터 들어오는 자리에 — `_process` 가 돌기 전에 그려져도 튀지 않게
+	row.modulate.a = 0.3
+	row.get_child(0).position.x = -SLIDE + _box().content_margin_left
+	_rows.append({"row": row, "t": 0.0})
+
+
+## 줄 하나를 짓는다 — 판 · 머리말 · 값
+func _make_row() -> PanelContainer:
 	var row := PanelContainer.new()
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.custom_minimum_size = Vector2(0, LINE_H)
@@ -68,13 +104,9 @@ func add_line(head: String, value: String, tint: Color) -> void:
 	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	line.add_theme_constant_override("separation", 10)
 	row.add_child(line)
-	line.add_child(_label(head, HEAD))
-	line.add_child(_label(value, tint))
-
-	add_child(row)
-	_rows.append({"row": row, "t": 0.0})
-	while _rows.size() > MAX_LINES:
-		_drop(0)
+	line.add_child(_label("", HEAD))
+	line.add_child(_label("", HEAD))
+	return row
 
 
 ## 지금 떠 있는 줄의 글자들 (테스트가 읽는다). [[머리말, 값], ...]
@@ -100,11 +132,12 @@ func _process(delta: float) -> void:
 			_drop(i)
 
 
+## 줄을 내린다 — 지우지 않고 숨겨 둔다
 func _drop(index: int) -> void:
-	var row: Node = _rows[index].row
+	var row: Control = _rows[index].row
 	_rows.remove_at(index)
-	remove_child(row)
-	row.queue_free()
+	row.visible = false
+	_spare.append(row)
 
 
 func _label(text: String, color: Color) -> Label:

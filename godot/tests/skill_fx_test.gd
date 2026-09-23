@@ -198,21 +198,21 @@ func _case_gone(game: Node3D) -> void:
 
 
 func _newest(game: Node3D) -> SkillFx:
-	if game._zone_node == null:
+	if game._fx == null:
 		return null
 	var found: SkillFx = null
-	for child in game._zone_node.get_children():
-		if child is SkillFx:
+	for child in game._fx.get_children():
+		if child is SkillFx and FxPool.busy(child):
 			found = child
 	return found
 
 
 func _count(game: Node3D) -> int:
-	if game._zone_node == null:
+	if game._fx == null:
 		return 0
 	var n := 0
-	for child in game._zone_node.get_children():
-		if child is SkillFx:
+	for child in game._fx.get_children():
+		if child is SkillFx and FxPool.busy(child):
 			n += 1
 	return n
 

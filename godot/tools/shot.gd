@@ -117,6 +117,13 @@ func _run() -> void:
 		quit(1)
 		return
 
+	# **한 번 제 속도로 다 돌리고, 두 번째를 찍는다** — 이펙트는 풀(`FxPool`)에서
+	# 되감아 쓰므로, 한 번 끝난 것이 제대로 되감기는지가 첫 시전보다 중요하다
+	Skills.set_switch("cooldownOff", true)
+	game._transport.send(&"skill", {"skill": skill})
+	var first_end := Time.get_ticks_msec() + 2600
+	while Time.get_ticks_msec() < first_end:
+		await process_frame
 	Engine.time_scale = SLOW
 	game._transport.send(&"skill", {"skill": skill})
 	var began := Time.get_ticks_msec()

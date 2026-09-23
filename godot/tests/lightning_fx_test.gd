@@ -211,14 +211,13 @@ func _case_flicker(game: Node3D) -> void:
 		_fail("지글거림을 볼 이펙트가 없다")
 		return
 	var first: LightningFx.Strike = _strikes(fx)[0]
-	var before: Mesh = first._core.mesh
-	var was := before.get_instance_id() if before != null else 0
+	# 줄기는 **같은 메시를 비우고 다시 채운다** (`ribbon` 의 `into`) — 객체가 아니라 꼭짓점을 본다
+	var was := _verts(first._core.mesh)
 
 	# FLICK(45ms)이 지나도록 기다린다
 	for i in 20:
 		await process_frame
-	var after: Mesh = first._core.mesh
-	var now := after.get_instance_id() if after != null else 0
+	var now := _verts(first._core.mesh)
 	if now == was and first._core.visible:
 		_fail("줄기가 한 모양 그대로다 — 지글거리지 않는다")
 	else:
@@ -355,22 +354,28 @@ func _strikes(fx: LightningFx) -> Array:
 	return found
 
 
+func _verts(mesh: Mesh) -> PackedVector3Array:
+	if mesh == null or mesh.get_surface_count() == 0:
+		return PackedVector3Array()
+	return mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+
+
 func _newest(game: Node3D) -> LightningFx:
-	if game._zone_node == null:
+	if game._fx == null:
 		return null
 	var found: LightningFx = null
-	for child in game._zone_node.get_children():
-		if child is LightningFx:
+	for child in game._fx.get_children():
+		if child is LightningFx and FxPool.busy(child):
 			found = child
 	return found
 
 
 func _count(game: Node3D) -> int:
-	if game._zone_node == null:
+	if game._fx == null:
 		return 0
 	var n := 0
-	for child in game._zone_node.get_children():
-		if child is LightningFx:
+	for child in game._fx.get_children():
+		if child is LightningFx and FxPool.busy(child):
 			n += 1
 	return n
 

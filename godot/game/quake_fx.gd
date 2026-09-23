@@ -25,7 +25,7 @@ extends Node3D
 ## **방향은 캐릭터 기준이다** — 노드를 보는 쪽으로 돌린다.
 ##
 ## **판정을 하지 않는다.** `World` 가 낸 `skill` 이벤트를 받아 그리기만 한다.
-## 스스로 `queue_free` 한다.
+## 끝나면 스스로 풀로 돌아간다 (`FxPool`).
 
 ## 금 갈래 수와 길이(m). 캐릭터 키 1.7m 의 1.5~4배(2.6~6.8m, 규칙 3절)이고
 ## 판정 사거리 6m 안이다 — 금 끝이 사거리를 넘으면 "저기까지 맞는다" 로 읽힌다
@@ -139,12 +139,15 @@ var _emitters: Array[CPUParticles3D] = []
 
 
 ## 천붕각을 띄운다. `at` 은 시전자 발밑(월드 좌표), `facing` 은 보는 쪽(rad).
+## 풀(`FxPool`)에 쉬는 것이 있으면 되감아 쓴다 — 새로 만들지 않는다
 static func slam(parent: Node3D, at: Vector3, facing: float) -> QuakeFx:
-	var fx := QuakeFx.new()
-	fx.name = "QuakeFx"
-	fx.position = at
-	parent.add_child(fx)
-	fx._build(facing)
+	var fx := FxPool.take(parent, &"slam") as QuakeFx
+	if fx == null:
+		fx = QuakeFx.new()
+		fx.name = "QuakeFx"
+		parent.add_child(fx)
+		fx._build()
+	fx._start(at, facing)
 	return fx
 
 
@@ -153,7 +156,8 @@ static func span() -> float:
 	return maxf(CRACK_LIFE, maxf(PUFF_LIFE, CORE_LIFE)) + 0.1
 
 
-func _build(facing: float) -> void:
+## 노드를 만든다 — 한 번만. 되감기는 `_start`
+func _build() -> void:
 	var meshes := crack_meshes()
 	# 그을림 → 틈 → 심 순으로 쌓는다. 같은 높이면 서로 깜빡인다
 	_stain = _sheet(LightningFx.stain(COLOR_STAIN))
@@ -162,18 +166,14 @@ func _build(facing: float) -> void:
 	quad.orientation = PlaneMesh.FACE_Y
 	_stain.mesh = quad
 	_stain.position.y = GROUND
-	# **금은 캐릭터가 보는 쪽 기준이다** — 메시는 보는 쪽 0 으로 깔려 있다
-	_stain.rotation.y = facing
 
 	_crack = _sheet(crack_material("blend_mix", COLOR_CRACK))
 	_crack.mesh = meshes[0]
 	_crack.position.y = GROUND + 0.01
-	_crack.rotation.y = facing
 	# 달아오른 심도 **알파 혼합**이다 — 가산으로 두었더니 밝은 바닥에서 안 보였다
 	_glow = _sheet(crack_material("blend_mix", COLOR_GLOW))
 	_glow.mesh = meshes[1]
 	_glow.position.y = GROUND + 0.02
-	_glow.rotation.y = facing
 
 	_flare = _sheet(LightningFx.flare(COLOR_FLARE))
 	var glare := QuadMesh.new()
@@ -195,16 +195,34 @@ func _build(facing: float) -> void:
 		add_child(e)
 
 
+## 처음으로 되감는다. **아무것도 만들지 않는다** — 자리·보는 쪽·시각만 넣는다
+func _start(at: Vector3, facing: float) -> void:
+	position = at
+	# **금은 캐릭터가 보는 쪽 기준이다** — 메시는 보는 쪽 0 으로 깔려 있다
+	for node in [_stain, _crack, _glow]:
+		node.rotation.y = facing
+	_t = 0.0
+	_started = false
+	_show_cracks()
+	_show_flash()
+
+
 func _process(delta: float) -> void:
 	if not _started:
 		_started = true
+		# 되감아 쓰는 방출기라 켜기(`emitting`)가 아니라 처음부터 다시(`restart`)
 		for e in _emitters:
-			e.emitting = true
+			e.restart()
 	_t += delta
 	_show_cracks()
 	_show_flash()
 	if _t >= span():
-		queue_free()
+		finish()
+
+
+## 끝낸다 — 풀로 돌아간다 (풀 밖이면 지운다)
+func finish() -> void:
+	FxPool.give(self, &"slam")
 
 
 ## 금은 **셰이더가 자라게** 하고, 여기서는 시각과 알파만 넣는다

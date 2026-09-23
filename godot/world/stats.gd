@@ -282,10 +282,28 @@ static func ref_player(level: int) -> Dictionary:
 # ---------------------------------------------------------------- 피해·몬스터
 
 ## 피해 공식의 K. **상수로 두면 안 된다** — 기준 플레이어의 감소율이 정확히 30% 가
-## 되도록 역산한다. 공격자 레벨에 의존하므로 레벨 차이 페널티가 공식에 내장된다
+## 되도록 역산한다. 공격자 레벨에 의존하므로 레벨 차이 페널티가 공식에 내장된다.
+##
+## **레벨마다 한 번만 구한다** ★ — `ref_player` 는 기준 장비 여섯 벌을 강화까지
+## 다시 합산해서 한 번에 0.8ms 다. 한 대 칠 때마다 불렀더니 할퀴기(다섯 대 × 무리)가
+## 시전 한 번에 수십 ms 를 썼고, 무리에 둘러싸이면 몬스터가 때릴 때마다 또 불렀다
+## (2026-09-23 "스킬 사용할 때 자꾸 히치가 걸려"). 표(`balance`)가 바뀌면 다시 구한다
 static func k_of(attacker_level: int) -> float:
-	var t := float(_b().get("targetReduce", 0.3))
-	return ref_player(attacker_level)["df"] * (1.0 - t) / t
+	var b := _b()
+	if not is_same(b, _k_table):
+		_k_table = b
+		_k_memo.clear()
+	if _k_memo.has(attacker_level):
+		return _k_memo[attacker_level]
+	var t := float(b.get("targetReduce", 0.3))
+	var k: float = ref_player(attacker_level)["df"] * (1.0 - t) / t
+	_k_memo[attacker_level] = k
+	return k
+
+
+## `k_of` 의 레벨별 값과, 그 값을 구한 표
+static var _k_memo: Dictionary = {}
+static var _k_table: Dictionary = {}
 
 
 ## 피해 = 공격력 × K / (K + 방어력). **뺄셈이 아니라 나눗셈이다** —

@@ -111,8 +111,9 @@ func _case_gone(log: LootLog) -> void:
 	var waited := float(Time.get_ticks_msec() - began) / 1000.0
 	if not log.lines().is_empty():
 		_fail("%.1f초가 지나도 줄이 안 사라졌다" % waited)
-	elif log.get_child_count() != 0:
-		_fail("줄은 비었는데 노드가 %d개 남았다" % log.get_child_count())
+	elif log.get_children().any(func(row): return row.visible):
+		# 줄 노드는 숨겨 두었다 다시 쓴다 (`_spare`) — 남아 있어도 **보이면** 안 된다
+		_fail("줄은 비었는데 보이는 줄이 남았다")
 	else:
 		print("  %.1f초 뒤 전부 사라짐" % waited)
 

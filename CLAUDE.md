@@ -27,7 +27,8 @@ npm run test:godot     # 고도 테스트 — 통과는 한 줄, 실패만 자�
 ```
 
 블렌더도 설치 없이 쓴다 — `npm run blender -- --python 스크립트.py` (없으면 알아서
-받는다) → [`docs/features/blender.md`](docs/features/blender.md)
+받는다) → [`docs/features/blender.md`](docs/features/blender.md).
+**단, 사용자가 애니메이션을 만들어 달라고 할 때만 쓴다** (아래 규칙 참고).
 
 화면은 `https://gogoalswo.github.io/MMORPG/` 에서 본다. 밀고 나면
 **"배포됐습니다, 새로고침하세요" 와 빌드 표시**(`빌드 <커밋> <시각>`)를 알려 준다 —
@@ -50,6 +51,9 @@ npm run test:godot     # 고도 테스트 — 통과는 한 줄, 실패만 자�
   받았다 — 방출기 21개·알갱이 99개·338px 이 다 통과인데 화면에는 번개가 없었고,
   땅의 금은 흰 꽃, 파편은 노란 알갱이였다. **이펙트를 만들거나 고쳤으면 찍어서
   보고 나서 "됐다" 고 말한다** → [`docs/features/verification.md`](docs/features/verification.md)
+- **블렌더는 사용자가 애니메이션을 만들어 달라고 할 때만 쓴다.** ★ (2026-09-23 지시.)
+  GLB 정리·텍스처 줄이기·아이콘 렌더처럼 블렌더로 될 것 같은 일이라도 먼저 꺼내지
+  않는다 — 지금 쓰는 도구(`scripts/*.mjs`, 고도, 바르코)로 한다.
 - **시킨 범위만 한다.** 문서에 절차가 있으면 그 절차만 한다 (기존 에셋 붙이기 = 복사 →
   빌드 스크립트 → 이름 등록 → typecheck → 한 번 확인). 수치 보정 같은 범위 밖 개선은
   하지 말고 "이런 게 보인다" 한 줄로 제안만 한다.

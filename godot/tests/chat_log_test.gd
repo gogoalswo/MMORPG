@@ -90,6 +90,16 @@ func _case_item(game: Node3D, chat: ChatLog) -> void:
 		seen[c.to_html(false)] = true
 	if seen.size() != 7:
 		_fail("등급 글자 색이 %d가지뿐이다" % seen.size())
+	# 경험치 줄이 어느 등급 장비 줄과도 헷갈리면 안 된다. 겹쳐 보였던 금색끼리(영웅 ↔
+	# 옛 경험치 `#e8c14a`)가 0.03 이었다. 청록 ↔ 초월 파랑(0.23)은 찍어 보니 갈려 보였다
+	for g in range(1, 8):
+		var c := ChatLog.grade_text_color(g)
+		var gap := Vector3(c.r - ChatLog.EXP.r, c.g - ChatLog.EXP.g, c.b - ChatLog.EXP.b).length()
+		if gap < 0.2:
+			_fail("경험치 색이 %d등급 색과 가깝다 (%.2f)" % [g, gap])
+	# 가방 칸도 같은 등급 색을 쓴다
+	if not game._grade_tint(4).is_equal_approx(ChatLog.grade_text_color(4)):
+		_fail("가방 칸 등급 색이 채팅창과 다르다")
 
 
 ## 왼쪽 아래 구석, 경험치 띠 위. 테스트 단추·퀵슬롯과 안 겹친다

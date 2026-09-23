@@ -1260,9 +1260,11 @@ func _stack_badge(stack: Dictionary) -> String:
 	return " ".join(parts)
 
 
-## 등급 색. 표의 색은 흙빛이라 어두운 창 위에서는 조금 밝혀 쓴다
+## 등급 색. 표의 색은 흙빛이라 어두운 창 위에서는 밝혀 쓴다 — **채팅창과 같은 식**
+## (색상은 그대로, 밝기만 올림). 흰색을 섞던 때(2026-09-23 까지)는 등급끼리 옅어져
+## 비슷해 보였다 → hud.md "채팅창"
 func _grade_tint(grade: int) -> Color:
-	return Items.grade_color(grade).lerp(Color.WHITE, 0.3)
+	return ChatLog.grade_text_color(grade)
 
 
 func _grade_box(grade: int) -> StyleBox:

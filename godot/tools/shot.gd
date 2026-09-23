@@ -280,9 +280,12 @@ func _kill(game: Node3D) -> void:
 		await process_frame
 
 	Engine.time_scale = 0.25
+	# 등급 일곱 색이 한 창에 보이게 등급마다 하나씩 (슬롯은 돌려 가며)
+	var codes := ["w", "a", "h", "b", "n", "r", "w"]
+	for g in range(2, 8):
+		var id := "g%d_%s" % [g, codes[g - 1]]
+		game._on_event(&"loot", {"gold": 3, "item": {"id": id, "grade": g, "enhance": 0}})
 	world._hit_monster(player, mob, 1.0, "")
-	game._on_event(&"loot", {"gold": 3, "item": {"id": "g3_w", "grade": 3, "enhance": 0}})
-	game._on_event(&"loot", {"gold": 3, "item": {"id": "g6_a", "grade": 6, "enhance": 0}})
 	var began := Time.get_ticks_msec()
 	var at := [0.05, 0.15, 0.3, 0.5, 0.8, 1.15]
 	var taken := 0

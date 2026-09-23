@@ -2,7 +2,7 @@
   "items": {
     "g1_w": {
       "id": "g1_w",
-      "name": "일반 무기",
+      "name": "가죽 건틀릿",
       "slot": "weapon",
       "grade": 1,
       "level": 1,
@@ -17,7 +17,7 @@
     },
     "g1_a": {
       "id": "g1_a",
-      "name": "일반 갑옷",
+      "name": "가죽 갑옷",
       "slot": "armor",
       "grade": 1,
       "level": 1,
@@ -32,7 +32,7 @@
     },
     "g1_h": {
       "id": "g1_h",
-      "name": "일반 투구",
+      "name": "가죽 투구",
       "slot": "helmet",
       "grade": 1,
       "level": 1,
@@ -47,7 +47,7 @@
     },
     "g1_b": {
       "id": "g1_b",
-      "name": "일반 신발",
+      "name": "가죽 장화",
       "slot": "boots",
       "grade": 1,
       "level": 1,
@@ -62,7 +62,7 @@
     },
     "g1_n": {
       "id": "g1_n",
-      "name": "일반 목걸이",
+      "name": "구리 목걸이",
       "slot": "necklace",
       "grade": 1,
       "level": 1,
@@ -77,7 +77,7 @@
     },
     "g1_r": {
       "id": "g1_r",
-      "name": "일반 반지",
+      "name": "구리 반지",
       "slot": "ring",
       "grade": 1,
       "level": 1,
@@ -92,7 +92,7 @@
     },
     "g2_w": {
       "id": "g2_w",
-      "name": "고급 무기",
+      "name": "강철 건틀릿",
       "slot": "weapon",
       "grade": 2,
       "level": 31,
@@ -107,7 +107,7 @@
     },
     "g2_a": {
       "id": "g2_a",
-      "name": "고급 갑옷",
+      "name": "강철 갑옷",
       "slot": "armor",
       "grade": 2,
       "level": 31,
@@ -122,7 +122,7 @@
     },
     "g2_h": {
       "id": "g2_h",
-      "name": "고급 투구",
+      "name": "강철 투구",
       "slot": "helmet",
       "grade": 2,
       "level": 31,
@@ -137,7 +137,7 @@
     },
     "g2_b": {
       "id": "g2_b",
-      "name": "고급 신발",
+      "name": "강철 장화",
       "slot": "boots",
       "grade": 2,
       "level": 31,
@@ -152,7 +152,7 @@
     },
     "g2_n": {
       "id": "g2_n",
-      "name": "고급 목걸이",
+      "name": "은 목걸이",
       "slot": "necklace",
       "grade": 2,
       "level": 31,
@@ -167,7 +167,7 @@
     },
     "g2_r": {
       "id": "g2_r",
-      "name": "고급 반지",
+      "name": "은 반지",
       "slot": "ring",
       "grade": 2,
       "level": 31,
@@ -182,7 +182,7 @@
     },
     "g3_w": {
       "id": "g3_w",
-      "name": "희귀 무기",
+      "name": "흑철 건틀릿",
       "slot": "weapon",
       "grade": 3,
       "level": 61,
@@ -197,7 +197,7 @@
     },
     "g3_a": {
       "id": "g3_a",
-      "name": "희귀 갑옷",
+      "name": "흑철 갑옷",
       "slot": "armor",
       "grade": 3,
       "level": 61,
@@ -212,7 +212,7 @@
     },
     "g3_h": {
       "id": "g3_h",
-      "name": "희귀 투구",
+      "name": "흑철 투구",
       "slot": "helmet",
       "grade": 3,
       "level": 61,
@@ -227,7 +227,7 @@
     },
     "g3_b": {
       "id": "g3_b",
-      "name": "희귀 신발",
+      "name": "흑철 장화",
       "slot": "boots",
       "grade": 3,
       "level": 61,
@@ -242,7 +242,7 @@
     },
     "g3_n": {
       "id": "g3_n",
-      "name": "희귀 목걸이",
+      "name": "흑요석 목걸이",
       "slot": "necklace",
       "grade": 3,
       "level": 61,
@@ -257,7 +257,7 @@
     },
     "g3_r": {
       "id": "g3_r",
-      "name": "희귀 반지",
+      "name": "흑요석 반지",
       "slot": "ring",
       "grade": 3,
       "level": 61,
@@ -272,7 +272,7 @@
     },
     "g4_w": {
       "id": "g4_w",
-      "name": "영웅 무기",
+      "name": "투사의 건틀릿",
       "slot": "weapon",
       "grade": 4,
       "level": 91,
@@ -287,7 +287,7 @@
     },
     "g4_a": {
       "id": "g4_a",
-      "name": "영웅 갑옷",
+      "name": "투사의 갑옷",
       "slot": "armor",
       "grade": 4,
       "level": 91,
@@ -302,7 +302,7 @@
     },
     "g4_h": {
       "id": "g4_h",
-      "name": "영웅 투구",
+      "name": "투사의 투구",
       "slot": "helmet",
       "grade": 4,
       "level": 91,
@@ -317,7 +317,7 @@
     },
     "g4_b": {
       "id": "g4_b",
-      "name": "영웅 신발",
+      "name": "투사의 장화",
       "slot": "boots",
       "grade": 4,
       "level": 91,
@@ -332,7 +332,7 @@
     },
     "g4_n": {
       "id": "g4_n",
-      "name": "영웅 목걸이",
+      "name": "투사의 목걸이",
       "slot": "necklace",
       "grade": 4,
       "level": 91,
@@ -347,7 +347,7 @@
     },
     "g4_r": {
       "id": "g4_r",
-      "name": "영웅 반지",
+      "name": "투사의 반지",
       "slot": "ring",
       "grade": 4,
       "level": 91,
@@ -362,7 +362,7 @@
     },
     "g5_w": {
       "id": "g5_w",
-      "name": "전설 무기",
+      "name": "용린 건틀릿",
       "slot": "weapon",
       "grade": 5,
       "level": 121,
@@ -377,7 +377,7 @@
     },
     "g5_a": {
       "id": "g5_a",
-      "name": "전설 갑옷",
+      "name": "용린 갑옷",
       "slot": "armor",
       "grade": 5,
       "level": 121,
@@ -392,7 +392,7 @@
     },
     "g5_h": {
       "id": "g5_h",
-      "name": "전설 투구",
+      "name": "용린 투구",
       "slot": "helmet",
       "grade": 5,
       "level": 121,
@@ -407,7 +407,7 @@
     },
     "g5_b": {
       "id": "g5_b",
-      "name": "전설 신발",
+      "name": "용린 장화",
       "slot": "boots",
       "grade": 5,
       "level": 121,
@@ -422,7 +422,7 @@
     },
     "g5_n": {
       "id": "g5_n",
-      "name": "전설 목걸이",
+      "name": "용안 목걸이",
       "slot": "necklace",
       "grade": 5,
       "level": 121,
@@ -437,7 +437,7 @@
     },
     "g5_r": {
       "id": "g5_r",
-      "name": "전설 반지",
+      "name": "용안 반지",
       "slot": "ring",
       "grade": 5,
       "level": 121,
@@ -452,7 +452,7 @@
     },
     "g6_w": {
       "id": "g6_w",
-      "name": "초월 무기",
+      "name": "성운 건틀릿",
       "slot": "weapon",
       "grade": 6,
       "level": 151,
@@ -467,7 +467,7 @@
     },
     "g6_a": {
       "id": "g6_a",
-      "name": "초월 갑옷",
+      "name": "성운 갑옷",
       "slot": "armor",
       "grade": 6,
       "level": 151,
@@ -482,7 +482,7 @@
     },
     "g6_h": {
       "id": "g6_h",
-      "name": "초월 투구",
+      "name": "성운 투구",
       "slot": "helmet",
       "grade": 6,
       "level": 151,
@@ -497,7 +497,7 @@
     },
     "g6_b": {
       "id": "g6_b",
-      "name": "초월 신발",
+      "name": "성운 장화",
       "slot": "boots",
       "grade": 6,
       "level": 151,
@@ -512,7 +512,7 @@
     },
     "g6_n": {
       "id": "g6_n",
-      "name": "초월 목걸이",
+      "name": "성운 목걸이",
       "slot": "necklace",
       "grade": 6,
       "level": 151,
@@ -527,7 +527,7 @@
     },
     "g6_r": {
       "id": "g6_r",
-      "name": "초월 반지",
+      "name": "성운 반지",
       "slot": "ring",
       "grade": 6,
       "level": 151,
@@ -542,7 +542,7 @@
     },
     "g7_w": {
       "id": "g7_w",
-      "name": "태초 무기",
+      "name": "창세의 건틀릿",
       "slot": "weapon",
       "grade": 7,
       "level": 181,
@@ -557,7 +557,7 @@
     },
     "g7_a": {
       "id": "g7_a",
-      "name": "태초 갑옷",
+      "name": "창세의 갑옷",
       "slot": "armor",
       "grade": 7,
       "level": 181,
@@ -572,7 +572,7 @@
     },
     "g7_h": {
       "id": "g7_h",
-      "name": "태초 투구",
+      "name": "창세의 투구",
       "slot": "helmet",
       "grade": 7,
       "level": 181,
@@ -587,7 +587,7 @@
     },
     "g7_b": {
       "id": "g7_b",
-      "name": "태초 신발",
+      "name": "창세의 장화",
       "slot": "boots",
       "grade": 7,
       "level": 181,
@@ -602,7 +602,7 @@
     },
     "g7_n": {
       "id": "g7_n",
-      "name": "태초 목걸이",
+      "name": "창세의 목걸이",
       "slot": "necklace",
       "grade": 7,
       "level": 181,
@@ -617,7 +617,7 @@
     },
     "g7_r": {
       "id": "g7_r",
-      "name": "태초 반지",
+      "name": "창세의 반지",
       "slot": "ring",
       "grade": 7,
       "level": 181,

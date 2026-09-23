@@ -76,8 +76,20 @@ func _case_item(game: Node3D, chat: ChatLog) -> void:
 		_fail("장비 획득 줄이 '%s' 가 아니다 (%s)" % [name, last])
 	elif not chat._text.get_parsed_text().ends_with(name):
 		_fail("창 글자 맨 끝이 '%s' 가 아니다" % name)
+	elif name.begins_with(Items.grade_name(3)):
+		_fail("이름에 등급 글자가 붙어 있다 (%s) — 등급은 색이 알린다" % name)
 	else:
 		print("  장비 획득: %s" % name)
+	# 등급마다 색이 달라야 한다 — 흰색을 섞던 때는 서로 비슷했다
+	var seen := {}
+	for g in range(1, 8):
+		var c := ChatLog.grade_text_color(g)
+		var hue := absf(c.h - Items.grade_color(g).h)
+		if g != 2 and minf(hue, 1.0 - hue) > 0.02:
+			_fail("%d등급 글자 색의 색상이 표와 다르다" % g)
+		seen[c.to_html(false)] = true
+	if seen.size() != 7:
+		_fail("등급 글자 색이 %d가지뿐이다" % seen.size())
 
 
 ## 왼쪽 아래 구석, 경험치 띠 위. 테스트 단추·퀵슬롯과 안 겹친다

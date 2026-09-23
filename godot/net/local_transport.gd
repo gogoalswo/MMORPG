@@ -49,6 +49,8 @@ func send(message: StringName, payload: Dictionary) -> void:
 			_world.set_skill_bar(MY_ID, payload.get("bar", []))
 		&"invincible":
 			_world.set_invincible(MY_ID, bool(payload.get("on", false)))
+		&"debugGauntlets":
+			_world.debug_gauntlets(MY_ID)
 		&"debugGear":
 			_world.debug_gear(
 				MY_ID,

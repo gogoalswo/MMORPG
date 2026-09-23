@@ -1038,6 +1038,28 @@ func set_invincible(player_id: String, on: bool) -> void:
 ##
 ## 등급은 착용 레벨(1/31/61/…)에 가장 가까운 **단계**로 옮긴다 — 지금 카탈로그가
 ## 단계 20개 축이기 때문이다(설계의 56종 표로 갈아끼우면 이 변환이 사라진다).
+## **테스트 — 무기(건틀릿)를 등급마다 하나씩 가방에 넣는다** (2026-09-23 요청).
+## 등급별 아이콘이 제대로 붙는지 보려는 것이다. 옵션은 그 등급대로 굴린다
+func debug_gauntlets(player_id: String) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	var added := 0
+	for grade in range(1, Stats.grade_count() + 1):
+		var item := Items.get_item(Items.item_id(grade, "weapon"))
+		if item.is_empty():
+			continue
+		var stack := {
+			"id": str(item.id), "grade": grade, "enhance": 0,
+			"options": Items.roll_options(item, grade, _rng),
+		}
+		if not _give(player, stack):
+			break
+		added += 1
+	_events.append({"type": "inventory", "bag": player.bag, "equipped": player.equipped})
+	_events.append({"type": "notice", "text": "테스트: 건틀릿 %d개를 넣었다" % added})
+
+
 func debug_gear(player_id: String, level: int, grade: int, enhance: int) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty():

@@ -185,6 +185,16 @@ fetch_icon() { # $1=객체 해시  $2=출력 이름
 }
 
 fetch_icon 5e1236b3e6ad6dc7fec570a9bd187a9f weapon    # 검
+# 등급별 무기 = 건틀릿 (2026-09-23). 사용자가 바르코에서 만든 것 — 등급마다 두 장
+# 중 첫 장이다. 일반은 그 워크플로우의 참고 그림(흰 붕대 주먹)이다.
+# 이름이 `<슬롯>_g<등급>` 이면 game.gd 의 `_item_icon` 이 슬롯 그림 대신 쓴다
+fetch_icon 20b5d75fc0f3cb52c3607c41ff4bc56b weapon_g1 # 일반 — 붕대 감은 주먹
+fetch_icon 8b16863b330e87c312eee0d1d2079392 weapon_g2 # 고급 — 가죽 덮개 · 리벳
+fetch_icon b5a8a101294b626d7c3f49ca68da5f9c weapon_g3 # 희귀 — 은빛 판금
+fetch_icon 7dd9fcea4f4443c8d79a1bb0a7a94c7a weapon_g4 # 영웅 — 보랏빛 보석
+fetch_icon 432b36454810c91498d2a86dcf5b3d92 weapon_g5 # 전설 — 용린
+fetch_icon 5cdd1dcc38b9efcdbd1ca5d3346244fb weapon_g6 # 초월 — 붉게 갈라진 검은 쇠
+fetch_icon 9cb037d770778e71703e7a9b4fe2279c weapon_g7 # 태초 — 빛나는 흰 주먹과 고리
 fetch_icon 5c25daa856bca458f26f703fe63424f4 offhand   # 방패
 fetch_icon 756fe1b855b1e5cff5038c21253b244a helmet    # 투구
 fetch_icon 0779fa082cdcbc922c8bf8104e9212ea armor     # 갑옷

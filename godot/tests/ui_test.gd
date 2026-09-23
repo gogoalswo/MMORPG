@@ -546,6 +546,20 @@ func _case_bag(game: Node3D) -> void:
 	else:
 		print("  정렬: %s" % str(order))
 
+	# 테스트 단추 — 건틀릿(무기)이 등급마다 하나씩 들어오고, 그림이 있으면 등급별 그림을 쓴다
+	me.bag.clear()
+	game._transport.send(&"debugGauntlets", {})
+	for i in 3:
+		await process_frame
+	var grades: Array = me.bag.map(func(s: Dictionary) -> int: return int(s.grade))
+	if grades != [1, 2, 3, 4, 5, 6, 7]:
+		_fail("건틀릿 테스트 단추가 넣은 등급이 %s" % str(grades))
+	else:
+		var icon: String = game._item_icon(me.bag[4])
+		if game._icon("weapon_g5") != null and icon != "weapon_g5":
+			_fail("전설 건틀릿 아이콘이 '%s' (weapon_g5 여야 한다)" % icon)
+		print("  건틀릿 7등급: 전설 아이콘 %s" % icon)
+
 	# 장비 창은 따로 닫고 다시 연다 (자기 X · 인벤토리의 "장비" 단추)
 	var gear_mark: Control = game._gear_panel.find_child("close", true, false)
 	if gear_mark == null:

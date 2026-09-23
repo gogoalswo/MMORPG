@@ -45,6 +45,9 @@ const FONTS = ['NotoSansKR-subset.ttf'];
  */
 const ICONS = [
   'weapon.png', 'armor.png', 'helmet.png',
+  // 등급별 무기 = 건틀릿 일곱 장 (2026-09-23) — `_item_icon` 이 슬롯 그림보다 먼저 찾는다
+  'weapon_g1.png', 'weapon_g2.png', 'weapon_g3.png', 'weapon_g4.png',
+  'weapon_g5.png', 'weapon_g6.png', 'weapon_g7.png',
   'boots.png', 'necklace.png', 'ring.png',
   'bag.png', 'gold.png',
   // 창을 짓는 그림들. 9조각으로 늘여 쓴다 (game.gd 의 _frame_box)

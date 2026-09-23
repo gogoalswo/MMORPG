@@ -1210,6 +1210,15 @@ func _fill_cell(cell: PanelContainer, stack: Dictionary, empty_text: String, ico
 	grade.add_theme_stylebox_override("panel", _grade_box(int(stack.get("grade", 1))))
 
 
+## 물건 아이콘 이름. **등급별 그림(`<슬롯>_g<등급>`)이 있으면 그것**, 없으면 슬롯 그림.
+## 2026-09-23 에 무기만 등급별 건틀릿 일곱 장(`weapon_g1`~`weapon_g7`)을 받았다 —
+## 다른 슬롯도 같은 이름으로 넣으면 따로 고칠 것 없이 붙는다
+func _item_icon(stack: Dictionary) -> String:
+	var slot := str(Items.get_item(str(stack.get("id", ""))).get("slot", ""))
+	var graded := "%s_g%d" % [slot, int(stack.get("grade", 1))]
+	return graded if _icon(graded) != null else slot
+
+
 ## 칸 오른쪽 아래 배지 — 강화 +N · 개수. **등급은 칸 테 색이 말한다**
 ## (2026-09-23 — 받은 그림은 숫자 대신 색으로 등급을 보인다). 이름은 상세 창이 맡는다
 func _stack_badge(stack: Dictionary) -> String:
@@ -1357,7 +1366,11 @@ func _redraw_bag() -> void:
 	var slots: Array = Items.slots()
 	for index in _gear_cells.size():
 		var slot := str(slots[index])
-		_fill_cell(_gear_cells[index], equipped.get(slot, {}), Items.slot_label(slot, job), slot)
+		var worn: Dictionary = equipped.get(slot, {})
+		_fill_cell(
+			_gear_cells[index], worn, Items.slot_label(slot, job),
+			slot if worn.is_empty() else _item_icon(worn)
+		)
 
 	# 스탯 여섯 — 상태바에 안 나오는 것까지 한자리에 모은다
 	var stats: Dictionary = me.get("stats", {})
@@ -1382,7 +1395,7 @@ func _redraw_bag() -> void:
 		var stack: Dictionary = bag[_bag_view[index]] if index < _bag_view.size() else {}
 		var icon_name := ""
 		if not stack.is_empty():
-			icon_name = str(Items.get_item(str(stack.get("id", ""))).get("slot", ""))
+			icon_name = _item_icon(stack)
 		_fill_cell(_bag_grid.get_child(index), stack, "", icon_name)
 
 	_show_bag_detail()
@@ -1419,7 +1432,7 @@ func _show_bag_detail() -> void:
 	_detail_name.add_theme_color_override("font_color", tint)
 	_detail_kind.text = "%s · 착용 Lv.%d" % [Items.slot_label(slot), int(item.get("level", 1))]
 	_detail_state.text = "착용 중" if worn else "보유 중"
-	_fill_cell(_detail_icon, stack, "", slot)
+	_fill_cell(_detail_icon, stack, "", _item_icon(stack))
 
 	# 아이템 정보 — 이름 · 값 두 줄짜리 표를 다시 채운다
 	var rows: Array = [
@@ -1978,6 +1991,18 @@ func _build_test_switches() -> void:
 		button.pressed.connect(_on_switch_pressed.bind(name))
 		column.add_child(button)
 		_switch_buttons[name] = button
+	# 등급별 건틀릿(무기) 일곱 개를 가방에 넣는다 (2026-09-23 요청 — 아이콘 확인용)
+	var gauntlets := Button.new()
+	gauntlets.custom_minimum_size = Vector2(230, 52)
+	gauntlets.add_theme_font_size_override("font_size", 18)
+	gauntlets.text = "테스트: 건틀릿 7등급"
+	gauntlets.pressed.connect(func() -> void:
+		_transport.send(&"debugGauntlets", {})
+		if _bag_panel.visible:
+			_redraw_bag()
+	)
+	column.add_child(gauntlets)
+	column.move_child(gauntlets, 0)  # 쿨타임 단추가 맨 아래 구석에 남아야 한다 (ui_test 가 본다)
 	# 무적은 플레이어 값이라 표 스위치와 따로 논다 — 요청은 `invincible`
 	_invincible_button = Button.new()
 	_invincible_button.custom_minimum_size = Vector2(230, 52)

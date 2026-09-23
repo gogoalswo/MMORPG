@@ -19,7 +19,7 @@
 | `packages/client/src/game/player.ts` | `solids` 필드, 예측과 되돌려 재생에 넘긴다 |
 | `packages/client/src/main.ts` | 매 프레임 두 목록을 `solidBuffer` 에 합쳐 `player.solids` 로 |
 | `godot/world/movement.gd` | `pushOutOfSolids`·`applyMove`·`scatterSpawn` 이식본 |
-| `godot/world/world.gd` | `_solids_near` (ZoneRoom 의 `solidsNear`), `input_move`·`_walk_auto`·`_move_monster` 에서 적용 |
+| `godot/world/world.gd` | `_solids_near` (ZoneRoom 의 `solidsNear`), `input_move`·`_walk_auto`·`_move_monster` 에서 적용. 몬스터끼리의 이웃은 **격자**(`_fill_grid`)에서 찾는다 |
 | `godot/tests/monster_test.gd` | 살아 있는 놈에 막히는지 · **시체를 지나가는지** |
 
 ## 규칙
@@ -158,6 +158,20 @@
 
 서버는 이 목록을 `solidsNear` 하나로 만든다(몬스터 + 캐릭터). 클라이언트는 두 클래스에
 나뉘어 있어 `main.ts` 가 매 프레임 합친다.
+
+### 몬스터끼리의 이웃은 격자에서 찾는다 ★ (2026-09-23)
+
+움직인 몬스터가 서로 밀어내려고 4m 안의 이웃을 찾는다(`_move_monster`). 예전에는
+**그때마다 사냥터 전체(201마리)를 훑어서** 무리 한가운데서 그것만 프레임당 1.1ms
+였다 — 몬스터 틱(`_step_monsters`) 1.7ms 의 3분의 2. 지금은 몬스터 틱 처음에 한 번
+살아 있는 놈을 **4m(`NEAR`) 칸**에 나눠 담고(`_fill_grid`), 둘레 아홉 칸만 본다.
+몬스터 틱이 **1.7 → 0.96ms** 가 됐다 (`tools/hitch.gd`, 헤드리스).
+
+- 칸은 **프레임 처음 자리**로 나눈다. 한 프레임에 움직이는 거리는 수 cm 이고 미는
+  판정은 1m 안팎이라 빠지는 놈이 없다 — 무리 속 300프레임(몬스터·프레임 6만 번)을
+  옛 방식과 대조해 이웃이 한 번도 다르지 않았다.
+- 칸 크기를 찾는 거리와 같게 둔다. 줄이면 아홉 칸 밖의 놈을 놓치고, 늘리면 도로 많이 훑는다.
+- 옛 서버의 `spatialGrid.ts` 와 같은 생각이다.
 
 ### 원으로 잡는다
 

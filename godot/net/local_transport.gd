@@ -92,6 +92,8 @@ func send(message: StringName, payload: Dictionary) -> void:
 			_world.npc_buy(MY_ID, str(payload.get("item", "")))
 		&"npcSell":
 			_world.npc_sell(MY_ID, int(payload.get("index", -1)))
+		&"enhanceItem":
+			_world.enhance_item(MY_ID, str(payload.get("where", "")), payload.get("key", -1))
 		&"npcEnhance":
 			_world.npc_enhance(MY_ID, int(payload.get("index", -1)))
 		&"save":

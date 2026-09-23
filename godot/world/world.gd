@@ -1744,17 +1744,35 @@ func npc_sell(player_id: String, index: int) -> void:
 
 ## 제작(새로 만들기·등급 올리기)은 2026-09-20 에 걷었다 — 장비는 사냥으로만 나온다
 
-## 강화 — 골드만 쓴다. 성공 / 유지 / 파괴. **굴림은 판정하는 쪽이 한다**
+## 대장간 강화 — 대장간 곁에서 가방의 것을 두드린다. 알맹이는 `enhance_item` 과 같다
 func npc_enhance(player_id: String, index: int) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty() or not _npc_near(player, "smith"):
 		return
-	if index < 0 or index >= player.bag.size():
+	_enhance(player, "bag", index)
+
+
+## 상세 창의 "강화" — **NPC 없이** 가방에 든 것과 끼고 있는 것 둘 다 두드린다.
+## where 는 "bag"(가방 번호) · "equip"(슬롯 이름). 확률은 설계표(90% → 10%),
+## 실패하면 무조건 파괴다 → docs/features/stat-balance.md 4장
+func enhance_item(player_id: String, where: String, key: Variant) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
 		return
-	var stack: Dictionary = player.bag[index]
-	var item := Items.get_item(str(stack.id))
+	_enhance(player, where, key)
+
+
+## 한 번 두드린다. **겹친 칸이면 한 개만 떼어서** 두드린다 — 통째로 두드리면 파괴 한 번에
+## 여러 개가 사라지고, 성공 한 번에 여러 개가 오른다. 뗀 것은 성공하면 원래 칸 바로 뒤에 선다
+func _enhance(player: Dictionary, where: String, key: Variant) -> void:
+	var stack: Dictionary = {}
+	if where == "equip":
+		stack = player.equipped.get(str(key), {})
+	elif where == "bag" and int(key) >= 0 and int(key) < player.bag.size():
+		stack = player.bag[int(key)]
+	var item := Items.get_item(str(stack.get("id", "")))
 	if item.is_empty():
-		return
+		return  # 장비만 두드린다
 
 	var level := int(stack.get("enhance", 0))
 	if not Items.can_enhance(level):
@@ -1766,15 +1784,31 @@ func npc_enhance(player_id: String, index: int) -> void:
 		return
 
 	player.gold = int(player.gold) - cost
+	var count := int(stack.get("count", 1)) if where == "bag" else 1  # 끼운 것은 늘 하나
 	var result := Items.roll_enhance(level, _rng.randf())
 	match result:
 		"success":
-			stack.enhance = level + 1
-			_notice("%s +%d 성공" % [item.name, stack.enhance])
+			if count > 1:
+				stack.count = count - 1
+				var one := stack.duplicate(true)
+				one.erase("count")
+				one.enhance = level + 1
+				player.bag.insert(int(key) + 1, one)
+			else:
+				stack.enhance = level + 1
+			_notice("%s +%d 성공" % [item.name, level + 1])
 		"keep":
 			_notice("%s +%d 유지" % [item.name, level])
 		"destroy":
-			player.bag.remove_at(index)
-			_notice("%s 가 부서졌습니다" % item.name)
-	_events.append({"type": "enhanceResult", "result": result, "level": stack.get("enhance", level)})
+			if count > 1:
+				stack.count = count - 1
+			elif where == "equip":
+				player.equipped.erase(str(key))
+			else:
+				player.bag.remove_at(int(key))
+			_notice("%s +%d 강화 실패 — 부서졌습니다" % [item.name, level])
+	if where == "equip":
+		_refresh_stats(player)
+	var after := level + 1 if result == "success" else level
+	_events.append({"type": "enhanceResult", "result": result, "level": after, "name": str(item.name)})
 	_inventory_changed(player)

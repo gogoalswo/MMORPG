@@ -253,6 +253,7 @@ var _bag_gold: Label
 var _bag_sum: Label
 var _bag_grid: GridContainer
 var _bag_action: Button
+var _enhance_button: Button  # 상세 창 "강화" — 장비를 고르면 뜬다
 ## 크리스탈 창 — 크리스탈을 고르고 "사용" 을 누르면 상세 창 자리에 뜬다.
 ## 떠 있는 동안 장비 칸을 누르면 그 장비가 대상이 된다 (`_crystal_target`)
 var _crystal_panel: PanelContainer
@@ -373,6 +374,13 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 				_redraw_skills()
 		&"notice":
 			_last_event = str(payload.get("text", ""))
+		&"enhanceResult":
+			# 강화 결과는 채팅창에 남긴다 — 부서진 것은 상세 창이 닫혀서 달리 알 길이 없다
+			var enhanced := "%s +%d" % [str(payload.get("name", "")), int(payload.get("level", 0))]
+			match str(payload.get("result", "")):
+				"success": _chat.add_line("강화 성공", enhanced, INV_GOLD_HI)
+				"destroy": _chat.add_line("강화 실패", enhanced + " 파괴", INV_WARN)
+				_: _chat.add_line("강화 유지", enhanced, INV_TEXT)
 		&"gate":
 			# 차원문에 섰다. 어디로 갈지는 사람이 고른다
 			_open_gate()
@@ -1017,7 +1025,11 @@ func _build_detail_window(panel: PanelContainer) -> void:
 
 	var buttons := HBoxContainer.new()
 	buttons.alignment = BoxContainer.ALIGNMENT_END
+	buttons.add_theme_constant_override("separation", 8)
 	side.add_child(buttons)
+	_enhance_button = _inv_button("강화", _on_enhance)
+	_enhance_button.visible = false
+	buttons.add_child(_enhance_button)
 	_bag_action = _inv_button("-", _on_bag_action)
 	buttons.add_child(_bag_action)
 
@@ -1586,6 +1598,7 @@ func _show_bag_detail() -> void:
 		return
 
 	var stack := _picked_stack()
+	_enhance_button.visible = not Items.get_item(str(stack.get("id", ""))).is_empty()
 	if stack.is_empty():
 		_detail_panel.visible = false
 		_bag_action.text = "-"
@@ -1642,6 +1655,17 @@ func _show_bag_detail() -> void:
 				"crystal": rows.append([head, "크리스탈로 붙임"])
 				"drop": pass
 				_: rows.append([head, "비어 있음"])
+	# 다음 한 번 두드릴 때의 성공률. **실패하면 파괴**라 붉게 적는다 (설계 4장, 유지 없음).
+	# 머리말에 "강화" 를 안 쓴다 — 현재 단계 줄 `강화 +N` 은 빼 달라고 했다 (이름 뒤 +N 이 말한다)
+	if Items.can_enhance(enhance):
+		var odds := Items.enhance_odds(enhance)
+		rows.append(["성공률 +%d→+%d" % [enhance, enhance + 1], "%d%%" % roundi(float(odds.success) * 100.0)])
+		rows.append(["실패 시", "파괴", INV_WARN])
+		_enhance_button.text = "강화"
+		_enhance_button.disabled = false
+	else:
+		_enhance_button.text = "최대"
+		_enhance_button.disabled = true
 	_fill_detail_rows(rows)
 
 	if fits:
@@ -1888,6 +1912,32 @@ func _on_bag_action() -> void:
 		_transport.send(&"equip", {"index": _picked_bag_index()})
 	_bag_pick = {}
 	_redraw_bag()
+
+
+## 상세 창 "강화" — 고른 장비를 한 번 두드린다 (가방·장비 창 어느 쪽이든).
+## 결과는 채팅창에 찍힌다. **고른 칸은 결과를 따라간다** — 부서져 가방이 줄면 고른 것을
+## 비우고(안 비우면 다음 물건을 가리킨다), 겹친 칸에서 뗀 것이 성공하면 바로 뒤 칸을 고른다
+func _on_enhance() -> void:
+	var stack := _picked_stack()
+	if Items.get_item(str(stack.get("id", ""))).is_empty():
+		return
+	if str(_bag_pick.get("where", "")) == "equip":
+		var slot := str(Items.slots()[int(_bag_pick.index)])
+		_transport.send(&"enhanceItem", {"where": "equip", "key": slot})
+	else:
+		var before := _bag_count()
+		_transport.send(&"enhanceItem", {"where": "bag", "key": _picked_bag_index()})
+		var after := _bag_count()
+		if after < before:
+			_bag_pick = {}
+		elif after > before:
+			_bag_pick.index = int(_bag_pick.index) + 1
+	_redraw_bag()
+
+
+func _bag_count() -> int:
+	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
+	return (me.get("bag", []) as Array).size()
 
 
 ## "낡은 장검 +3 (5등급) 공격 +7, 치명타 +2%"

@@ -58,25 +58,7 @@ mkdir -p assets-src/textures/varco
 # 게임이 쓰는 512² **회색조** 판은 커밋해 두었다. 만드는 법은 docs/ASSETS.md.
 # 먼지 구름(fx/dust.png)도 여기서 안 받는다 — 바르코가 아니라 코드로 만든 그림이다.
 # (예전에 쓰던 kick_flurry.png 는 지웠다. 주소가 필요하면 이 파일의 이력에 있다)
-
-# 호포각 — 포효하는 호랑이 머리. 받는 원본은 주황이지만, 게임에 쓰는 판은
-# **회색조로 바꿔서** 커밋했다 (sharp 의 grayscale + linear(1.25)). 그래야 코드에서
-# 색을 입힐 수 있다 — 주황 그림에 파랑을 곱하면 탁한 녹색이 된다.
-# 까만 바탕에 **불꽃 선으로만** 그려서
-# 가산 혼합에 얹으면 바탕이 저절로 빠지고 겹쳐도 뭉개지지 않는다.
-# 같은 실행에서 두 장이 나왔는데(다른 하나는 d597eed9…) 속을 색으로 채운 쪽이라 안 썼다.
-if [ ! -f assets-src/textures/varco/fx_tiger_roar.png ]; then
-  echo "받는 중: textures/varco/fx_tiger_roar.png"
-  curl -sL --max-time 120 -o assets-src/textures/varco/fx_tiger_roar.png "${VARCO}/7e7e10aa5498c117edb792114d0a65cb.png"
-fi
-
-# 백호격 — 오른쪽으로 도약하는 백호 옆모습. **옆모습이라 방향이 있다**: 코드가 화면에서
-# 왼쪽으로 갈 때 좌우로 뒤집는다 (skillFx 의 flipX). 같은 실행의 다른 판(4ef9eaad…)은
-# 몸이 위로 솟아 도약에 가까웠고, 이쪽이 수평으로 길게 뻗어 달리는 것으로 읽혔다.
-if [ ! -f assets-src/textures/varco/fx_white_tiger.png ]; then
-  echo "받는 중: textures/varco/fx_white_tiger.png"
-  curl -sL --max-time 120 -o assets-src/textures/varco/fx_white_tiger.png "${VARCO}/d936deb7ebf6fe5c48389f90ec878465.png"
-fi
+# (호포각·백호격 그림도 2026-09-23 에 스킬째 지웠다. 주소가 필요하면 이 파일의 이력에 있다)
 
 # 캐릭터 피격 — 발톱 자국과 붉은 불티. 작게 뜨므로 사방으로 고르게 퍼진 판을 골랐다
 # (발톱 자국이 더 또렷한 7c6d0d07… 도 같이 나왔다).
@@ -232,8 +214,6 @@ fetch_icon f17150f251000766c28f5692f905204a inv_slot_pick # 고른 칸 금테 (�
 fetch_icon 67616623f2d7038e61f1a6aa35f63113 ui_skill_slot  # 스킬창 장착 칸 (2026-09-20 에 창 결로 맞췄다)
 fetch_icon 09535596db087ab0c6d3b9de0ae6b086 ui_slot_pick   # 고른 칸 테두리 (안쪽을 뚫는다, 2026-09-20)
 fetch_icon 6688952f8b0187efe7f96935796fa7a8 skill_rising_kick
-fetch_icon 3335dffd51390210007c5b2eb5a8adb7 skill_tiger_roar
-fetch_icon 844c2e93d9c7b8f9d6c3717b2334b9ca skill_white_tiger
 fetch_icon 3d66ba0be1ec8bec0bc0b2a11fcce4f9 skill_sky_breaker
 fetch_icon 627417215a6f50209f7d0a20cbd1c607 skill_thunder_fall
 # 빙주각 (2026-09-23) — 낙뢰·천붕각 아이콘을 참고 그림으로 물려 결을 맞췄다 (두 장 중 첫 장)

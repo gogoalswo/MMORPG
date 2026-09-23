@@ -59,7 +59,7 @@ const ICONS = [
   'ui_figure.png',
   // 스킬창·퀵슬롯 — 칸 테두리, 고른 칸 표시, 격투가 스킬 아이콘 (이름 = skill_<id>)
   'ui_skill_slot.png', 'ui_slot_pick.png',
-  'skill_rising_kick.png', 'skill_tiger_roar.png', 'skill_white_tiger.png',
+  'skill_rising_kick.png',
   'skill_sky_breaker.png', 'skill_thunder_fall.png', 'skill_frost_pillar.png',
   // 메인 HUD — 왼쪽 위 상태판(초상 테두리·막대 홈·막대 채움),
   // 오른쪽 위 메뉴 단추 둘, 자동사냥 칸과 켜졌을 때 도는 고리

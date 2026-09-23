@@ -119,12 +119,10 @@ Quaternius 짐승·공룡 20종(CC0, 미러 trebeljahr/quaternius-showcase)은
 | 합친 결과 | `public/assets/models/varco_fighter.glb` (2.4MB) | 격투가 직업 |
 | 같이 온 `skill.png` (1024², 빛나는 주먹) | `public/assets/fx/fist.png` (256², 69KB) | 격투가 스킬 명중 이펙트 (`SkillFx.fist`) |
 | GenerateImage (나노바나나 프로·영어 프롬프트, 2026-09-12) — 발톱 자국과 붉은 불티가 사방으로 터지는 충격 (발톱 자국이 더 또렷한 판도 같이 나왔지만, 작게 떠도 어느 방향에서나 읽히는 이쪽을 골랐다) | `public/assets/fx/hit.png` (256², 80KB), 원본 `assets-src/textures/varco/fx_hit.png` (1024²) | **캐릭터 피격** 이펙트 (`SkillFx.hurt`) — 몬스터가 맞을 때는 안 쓴다 |
-| GenerateImage (나노바나나 프로·영어 프롬프트, 2026-09-12) — 오른쪽으로 도약하는 백호 옆모습, 흰빛·연청빛 에너지와 뒤로 흩날리는 입자 (몸이 위로 솟은 판도 같이 나왔지만 수평으로 뻗은 이쪽이 달리는 것으로 읽혔다) | `public/assets/fx/white_tiger.png` (256², 80KB), 원본 `assets-src/textures/varco/fx_white_tiger.png` (1024²) | '백호격' 이펙트 (`SkillFx.whiteTiger` — 잔상 두 장을 달고 달린다). **옆모습이라 방향이 있다** — 화면에서 왼쪽으로 갈 때 코드가 뒤집는다 |
-| GenerateImage (나노바나나 프로·영어 프롬프트, 2026-09-12) — 정면을 향해 포효하는 호랑이 머리, 까만 바탕에 **불꽃 선으로만** 그렸다 (속을 색으로 채운 판도 같이 나왔지만 겹치면 뭉개져 안 썼다) | `public/assets/fx/tiger_roar.png` (256², **회색조**), 원본 `assets-src/textures/varco/fx_tiger_roar.png` (1024², 주황) | '호포각' 이펙트 (`SkillFx.tigerRoar` — 캐릭터 위로 커지며 솟는다). **회색조로 바꿔서 커밋했다** — 그래야 코드에서 아무 색이나 입힌다 (지금은 푸른색). 주황 그림에 파랑을 곱하면 탁한 녹색이 된다 |
 | 바르코 **워크플로우 화면을 찍은 것** (2026-09-16) — 까만 바탕에 파랑·초록 네온 선으로 그린 맹금의 발, 발톱 끝에 주황 불빛 | `public/assets/fx/sky_foot.png` (512², **회색조**, 83KB), 원본 `assets-src/textures/varco/fx_sky_foot_src.png` (217×417) | **'천붕각' 의 떨어지는 발** (`SkillFx.skyBreaker`). 예전에 쓰던 `kick_flurry.png` 를 갈아 끼웠다. **회색조로 커밋한다** — 코드가 금색(0xffc23c)을 입힌다 |
 | **우리가 코드로 만든다** (외부 에셋이 아니다) — 흐릿한 덩이 열한 개를 뭉친 먼지 구름 | `public/assets/fx/dust.png` (256², **RGBA**, 16KB) | '천붕각' 이 밟은 자리에서 터지는 먼지 (`SkillFx.skyBreaker` 의 `DUST`). **알파가 있어야 한다** — 이것만 보통 혼합으로 그리므로, 알파가 없으면 까만 네모가 된다 |
 
-`fist.png`·`sky_foot.png`·`tiger_roar.png`·`white_tiger.png`·`hit.png`·`dust.png` 는 한 번 만들어 **그대로 커밋한다** — `fetch-assets.sh` 가 다시 만들지 않는다.
+`fist.png`·`sky_foot.png`·`hit.png`·`dust.png` 는 한 번 만들어 **그대로 커밋한다** — `fetch-assets.sh` 가 다시 만들지 않는다.
 
 ### 천붕각의 발 (`sky_foot.png`) 은 출력물이 아니라 화면 캡처다 ★
 

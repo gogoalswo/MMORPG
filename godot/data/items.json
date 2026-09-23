@@ -777,7 +777,7 @@
     }
   },
   "crystalId": "crystal",
-  "crystalDropChance": 0.01,
+  "crystalDropChance": 0.0001,
   "optionLabel": {
     "crit": "치명타",
     "critDamage": "치명타 데미지",

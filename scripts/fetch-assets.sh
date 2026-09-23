@@ -200,6 +200,8 @@ fetch_icon 756fe1b855b1e5cff5038c21253b244a helmet    # 투구
 fetch_icon 0779fa082cdcbc922c8bf8104e9212ea armor     # 갑옷
 fetch_icon 9fc33631108021fa8ec41db82b8ed378 boots     # 장화
 fetch_icon 7798ba00c5755e15d7a9fa28c38083ef ring      # 반지
+# 재료 — 크리스탈 (2026-09-23). 건틀릿 워크플로우에 일반 건틀릿을 참고로 물려 뽑은 두 장 중 첫 장
+fetch_icon 6cd39aca0eb28083b14b49c8fab67303 crystal   # 크리스탈
 fetch_icon 624e1a1a10e8576c2ce473e0155dd4f0 necklace  # 목걸이
 fetch_icon 5fd4ab55b5c3e682f35f8cf81b2a266d bag       # 가방
 fetch_icon 0f5c8a9b06c498361643b69fc4b3d97c gold      # 동전

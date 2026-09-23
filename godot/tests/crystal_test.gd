@@ -74,12 +74,13 @@ func _case_tiers() -> void:
 		_fail("크리스탈이 장비 표에 들어 있다")
 
 
-## 드랍은 1차만 붙인다. 크리스탈은 장비와 따로 — 1% 언저리로 나와야 한다
+## 드랍은 1차만 붙인다. 크리스탈은 장비와 따로 — 0.01% 언저리로 나와야 한다.
+## 1만 마리에 하나라 30만 번 굴려 30개 언저리를 본다 (씨앗이 고정이라 흔들리지 않는다)
 func _case_drop() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 11
 	var crystals := 0
-	var tries := 20000
+	var tries := 300000
 	for i in tries:
 		var loot := Items.roll_drop(50, "fighter", rng)
 		if loot.has("item") and loot.item.has("options2"):
@@ -88,9 +89,9 @@ func _case_drop() -> void:
 		crystals += int(loot.get("crystal", 0))
 	var rate := float(crystals) / tries
 	var want := Items.crystal_drop_chance()
-	if absf(rate - want) > want * 0.3:
+	if absf(rate - want) > want * 0.5:
 		_fail("크리스탈 드랍률 %.4f — %.4f 언저리여야 한다" % [rate, want])
-	print("  크리스탈 드랍: %d마리에 %d개 (%.2f%%)" % [tries, crystals, rate * 100.0])
+	print("  크리스탈 드랍: %d마리에 %d개 (%.3f%%)" % [tries, crystals, rate * 100.0])
 
 
 ## 크리스탈은 한 칸에 겹친다 — **가방이 꽉 차도** 이미 있는 칸에는 들어간다

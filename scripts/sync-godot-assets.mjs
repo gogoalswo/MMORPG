@@ -49,6 +49,8 @@ const ICONS = [
   'weapon_g1.png', 'weapon_g2.png', 'weapon_g3.png', 'weapon_g4.png',
   'weapon_g5.png', 'weapon_g6.png', 'weapon_g7.png',
   'boots.png', 'necklace.png', 'ring.png',
+  // 재료 — 크리스탈 (2026-09-23). `_item_icon` 이 재료는 id 를 그림 이름으로 쓴다
+  'crystal.png',
   'bag.png', 'gold.png',
   // 창을 짓는 그림들. 9조각으로 늘여 쓴다 (game.gd 의 _frame_box)
   'ui_panel.png', 'ui_subpanel.png', 'ui_slot.png',

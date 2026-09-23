@@ -2929,7 +2929,7 @@ func _show_skill(payload: Dictionary) -> void:
 	if str(payload.get("id", "")) != _transport.my_id():
 		return
 	var skill := str(payload.get("skill", ""))
-	if not (skill in ["rising_kick", "thunder_fall"]):
+	if not (skill in ["rising_kick", "thunder_fall", "sky_breaker"]):
 		return
 	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
 	if me.is_empty():
@@ -2937,6 +2937,8 @@ func _show_skill(payload: Dictionary) -> void:
 	var here := Vector3(me.x, 0.0, me.z)
 	if skill == "thunder_fall":
 		LightningFx.bolt(_zone_node, here, float(me.rot))
+	elif skill == "sky_breaker":
+		QuakeFx.slam(_zone_node, here, float(me.rot))
 	else:
 		SkillFx.claw(_zone_node, here, float(me.rot))
 

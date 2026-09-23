@@ -60,6 +60,7 @@ func _start(font: Font) -> void:
 func _spawn(font: Font) -> void:
 	SkillFx.claw(_stage, Vector3.ZERO, 0.0)
 	LightningFx.bolt(_stage, Vector3.ZERO, 0.0)
+	QuakeFx.slam(_stage, Vector3.ZERO, 0.0)
 	for crit in [false, true]:
 		HitFx.spawn(_stage, Vector3.UP, {
 			"amount": 1234, "crit": crit, "heal": false, "target_kind": "monster",

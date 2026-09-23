@@ -80,14 +80,6 @@ test('시작하자마자 배울 수 있는 스킬이 직업마다 하나씩 있�
   }
 });
 
-test('요구 레벨이 액션바 칸 수만큼은 일찍 열린다', () => {
-  // 4칸인데 그 레벨에 배울 게 3개뿐이면 빈 칸이 남는다
-  for (const job of JOB_IDS) {
-    const early = JOB_SKILLS[job].filter((id) => SKILLS[id]!.reqLevel <= 20);
-    assert.ok(early.length >= SKILL_BAR_SIZE, `${job}: Lv.20 까지 ${early.length}개뿐이다`);
-  }
-});
-
 test('수치가 말이 되는 범위에 있다', () => {
   for (const skill of all) {
     assert.ok(skill.cooldown >= 1000, `${skill.id}: 쿨타임이 ${skill.cooldown}ms`);

@@ -84,7 +84,7 @@ func _run() -> void:
 		await _hud(game)
 		return
 
-	# 스킬 범위 표시 — `npm run shot:godot -- range:tiger_roar`
+	# 스킬 범위 표시 — `npm run shot:godot -- range:sky_breaker`
 	if skill.begins_with("range:"):
 		await _range(game, skill.trim_prefix("range:"))
 		return

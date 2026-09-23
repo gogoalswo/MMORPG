@@ -400,37 +400,6 @@ const SKILL_LIST: SkillDef[] = [
     description: '손톱을 세워 앞 부채꼴을 다섯 번 긁어낸다.',
   },
   {
-    /**
-     * 호랑이 포효를 정면으로 날린다. 격투가만 스킬이 하나 많은데,
-     * 직업끼리 개수를 맞추던 검사를 뺐기 때문이다 (`skills.test.ts`).
-     */
-    id: 'tiger_roar',
-    name: '호포각',
-    job: 'fighter',
-    cooldown: 16000,
-    // 기운 줄기가 사거리만큼 뻗는다 — 넓게 터지는 그림에 맞춰 4 에서 올렸다
-    range: 6,
-    // 호랑이가 몸에서 솟아 주위로 터진다 — 이펙트가 사방이라 판정도 전방위여야 한다
-    arc: Math.PI * 2,
-    power: 3.2,
-    maxTargets: 5,
-    reqLevel: 6,
-    description: '호랑이의 기운을 끌어올려 주위를 찢는다.',
-  },
-  {
-    /** 백호가 앞장서 내달린다 — 이펙트가 잔상을 남기며 질주한다 (`SkillFx.whiteTiger`) */
-    id: 'white_tiger',
-    name: '백호격',
-    job: 'fighter',
-    cooldown: 30000,
-    range: 4,
-    arc: Math.PI * 0.4,
-    power: 5.5,
-    maxTargets: 5,
-    reqLevel: 12,
-    description: '백호를 앞세워 내달린다.',
-  },
-  {
     id: 'sky_breaker',
     name: '천붕각',
     job: 'fighter',

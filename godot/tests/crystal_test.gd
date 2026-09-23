@@ -19,6 +19,7 @@ func _init() -> void:
 	_case_use_worn()
 	_case_no_crystal()
 	_case_restore()
+	_case_grant_once()
 	Save.clear()
 
 	if _failed == 0:
@@ -184,6 +185,26 @@ func _case_no_crystal() -> void:
 			told = true
 	if not told:
 		_fail("크리스탈이 없다고 알려 주지 않았다")
+
+
+## 접속할 때 크리스탈 30개를 **한 번만** 준다 — 저장했다 다시 들어와도 또 주지 않는다
+func _case_grant_once() -> void:
+	Save.clear()
+	var s := _world()
+	var w: World = s[0]
+	var me: Dictionary = s[1]
+	var gift := _crystal(30)
+	w.grant_once("me", "crystal30", gift)
+	w.grant_once("me", "crystal30", gift)
+	_eq("한 번만 준다", int(me.bag[0].count), 30)
+	w.save("me")
+
+	var again := World.new()
+	again.open("village")
+	again.restore("me")
+	again.grant_once("me", "crystal30", gift)
+	var bag: Array = again.snapshot().players["me"].bag
+	_eq("다시 들어와도 또 주지 않는다", int(bag[0].count), 30)
 
 
 ## 저장했다 불러도 크리스탈 개수와 2차가 남는다. **옛 저장(2차 칸 없음)도 그대로 읽힌다**

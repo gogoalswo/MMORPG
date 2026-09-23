@@ -195,6 +195,8 @@ func join(player_id: String) -> void:
 		# --- 아이템 ---
 		"bag": kept.get("bag", []).duplicate(true),
 		"equipped": kept.get("equipped", {}).duplicate(true),
+		# 한 번만 주는 것을 받았다는 표시 (`grant_once`) — 저장에 남는다
+		"granted": kept.get("granted", []).duplicate(),
 	}
 	_refresh_stats(_players[player_id])
 
@@ -981,6 +983,7 @@ func restore(player_id: String) -> bool:
 		if str(id) in learned:
 			bar.append(str(id))
 	player.skill_bar = bar
+	player.granted = saved.get("granted", []).duplicate()
 
 	# 가방·장비도 되살린다. **옛 id 는 지금 id 로 옮긴다** (2026-09-21 에 단계 축을
 	# 없앴다) — 갈 자리가 없는 것만 버린다. 등급은 아이템이 들고 있으므로
@@ -1136,6 +1139,19 @@ func debug_gauntlets(player_id: String) -> void:
 		added += 1
 	_events.append({"type": "inventory", "bag": player.bag, "equipped": player.equipped})
 	_events.append({"type": "notice", "text": "테스트: 건틀릿 %d개를 넣었다" % added})
+
+
+## 한 번만 준다 — 받았으면 `granted` 에 `key` 가 남아 다음 접속에는 안 준다.
+## 2026-09-23 요청 "가방에 30개 넣어" 로 크리스탈 30개를 이걸로 준다 (`LocalTransport.open`)
+func grant_once(player_id: String, key: String, stack: Dictionary) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty() or key in player.get("granted", []):
+		return
+	if not _give(player, stack.duplicate(true)):
+		return  # 가방이 꽉 찼으면 다음 접속에 다시 준다
+	player.granted.append(key)
+	_inventory_changed(player)
+	_notice("%s %d개를 가방에 넣었다" % [Items.stack_name(stack), int(stack.get("count", 1))])
 
 
 ## 테스트 단추 — 크리스탈을 가방에 넣는다. 한 칸에 겹친다 (`_give`)

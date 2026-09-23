@@ -281,6 +281,8 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 				" 치명타!" if payload.get("crit", false) else "",
 				"  처치!" if payload.get("killed", false) else "",
 			]
+		&"reward":
+			_show_exp(payload)
 		&"levelUp":
 			_last_event = "레벨 %d 이 되었습니다" % payload.get("level", 0)
 		&"swing":
@@ -2913,6 +2915,19 @@ func _show_hit(payload: Dictionary) -> void:
 		var max_hp := float(me.get("stats", {}).get("maxHp", 100))
 		# 최대 체력의 4분의 1을 한 번에 맞으면 제일 진하다
 		_hurt.hit(float(payload.get("amount", 0)) / maxf(1.0, max_hp * 0.25))
+
+
+## 몬스터를 잡으면 쓰러진 자리에서 `+n EXP` 가 떠오른다 (`ExpFx`).
+## 높이는 피해 숫자와 같이 그려 둔 몸에서 잰다 — 보상 이벤트가 처치 `hit` 바로
+## 뒤에 오므로 몸은 아직 그 자리에 있다
+func _show_exp(payload: Dictionary) -> void:
+	if _zone_node == null or int(payload.get("exp", 0)) <= 0:
+		return
+	var body: Node3D = _mob_nodes.get(str(payload.get("target", "")), null)
+	var at := Vector3(payload.get("x", 0.0), 0.0, payload.get("z", 0.0))
+	at.y = HitFx.chest_y(body, 1.0)
+	var font: Font = _ui_root.theme.default_font if _ui_root.theme != null else null
+	ExpFx.spawn(_zone_node, at, int(payload.exp), font)
 
 
 ## 스킬 이펙트.

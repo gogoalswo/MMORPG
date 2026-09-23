@@ -177,6 +177,8 @@ func _fight() -> void:
 	_eq("죽었다고 알린다", _first(events, "hit").get("killed", false), true)
 	# 레벨 차이 보정을 걷었다 — 경험치는 몬스터 HP 에 정비례하므로 그대로 들어온다
 	_eq("경험치 보상", _first(events, "reward").get("exp", 0), int(mobs3[0].exp_reward))
+	# 화면이 쓰러진 자리에서 `+n EXP` 를 띄우려면 자리가 있어야 한다
+	_eq("보상에 쓰러진 자리", _first(events, "reward").get("x", null), mobs3[0].x)
 	_eq("아직 레벨업은 아니다", w3.snapshot().players["k"].level, 1)
 
 	w3.step(0.016)

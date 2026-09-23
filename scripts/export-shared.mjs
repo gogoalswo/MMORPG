@@ -54,6 +54,7 @@ import {
   NPC_REACH,
   START_ZONE,
   FIELD_ORDER,
+  DUNGEON_TYPES,
   GROUND_KINDS,
   GROUND_LOOKS,
   ITEMS,
@@ -94,6 +95,8 @@ export function buildData() {
     'zones.json': {
       start: START_ZONE,
       fieldOrder: FIELD_ORDER,
+      // 던전 창이 읽는다 — 종류 셋과 단계별 존 id·보스 (dungeons.ts)
+      dungeons: DUNGEON_TYPES,
       zones: ZONES,
       groundKinds: GROUND_KINDS,
       groundLooks: GROUND_LOOKS,

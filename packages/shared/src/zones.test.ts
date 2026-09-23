@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FIELD_ORDER, START_ZONE, ZONES, getSpawn, getZone } from './zones.ts';
+import { DUNGEON_TYPES, DUNGEON_ZONES } from './dungeons.ts';
 import { MONSTER_KINDS } from './monsters.ts';
 import { GROUND_KINDS } from './zone.ts';
 import { MONSTER_GAP, monsterRadius, scatterSpawn, zoneHalfSize, type Solid } from './movement.ts';
@@ -67,7 +68,8 @@ test('바닥 텍스처가 전부 쓰이고, 길·풀 잎이 되살아나지 않�
 test('차원문 목록이 세상의 모든 존을 덮는다', () => {
   // 목록에 없는 존은 만들어놓고 못 가는 콘텐츠가 된다.
   // 창은 마을 + FIELD_ORDER 로 줄을 만든다 (zoneGate.ts).
-  const reachable = new Set<string>([START_ZONE, ...FIELD_ORDER]);
+  // 던전 단계는 차원문이 아니라 던전 창으로 간다 (dungeons.ts)
+  const reachable = new Set<string>([START_ZONE, ...FIELD_ORDER, ...DUNGEON_ZONES]);
   assert.deepEqual([...reachable].sort(), Object.keys(ZONES).sort());
 });
 
@@ -80,6 +82,32 @@ test('사냥터 순서가 몬스터 레벨 순서와 같다', () => {
     assert.ok(lowest > previous, `${id} 가 앞 사냥터보다 낮은 레벨대다`);
     previous = lowest;
   }
+});
+
+test('던전 — 종류 셋, 열린 종류는 단계마다 보스 한 마리', () => {
+  assert.equal(DUNGEON_TYPES.length, 3);
+  assert.ok(DUNGEON_TYPES.some((t) => t.open), '열린 던전이 하나도 없다');
+  for (const type of DUNGEON_TYPES) {
+    // 닫힌 종류에 단계가 있으면 창에서 못 가는 존이 생긴다
+    assert.equal(type.open, type.stages.length > 0, `${type.id}: 열림과 단계 유무가 어긋난다`);
+    let previous = 0;
+    for (const s of type.stages) {
+      const zone = getZone(s.zone);
+      const monsters = zone.monsters ?? [];
+      assert.equal(monsters.length, 1, `${s.zone}: 보스 한 무리만 있어야 한다`);
+      assert.equal(monsters[0]!.count, 1);
+      assert.equal(monsters[0]!.kind, s.boss);
+      const kind = MONSTER_KINDS[s.boss];
+      assert.ok(kind?.boss, `${s.zone}: ${s.boss} 가 보스가 아니다`);
+      assert.equal(kind.level, s.level);
+      // 단계가 오를수록 보스가 세진다
+      assert.ok(s.level > previous, `${s.zone}: 앞 단계보다 낮은 레벨`);
+      previous = s.level;
+      // 사냥터 창으로 가는 곳과 섞이면 차원문 목록이 던전까지 늘어난다
+      assert.ok(!FIELD_ORDER.includes(s.zone));
+    }
+  }
+  assert.equal(new Set(DUNGEON_ZONES).size, DUNGEON_ZONES.length, '단계 존 id 가 겹친다');
 });
 
 test('없는 스폰 이름은 default 로 떨어진다', () => {

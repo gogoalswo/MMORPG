@@ -12,6 +12,7 @@
 | `godot/game/portal.gd` | `Portal.create(gate)` — 아치 모델을 세운다. 없으면 빛나는 원판. `Portal.hit` — 화면에서 쏜 선이 **소용돌이 판**에 닿나 |
 | `godot/game/portal_swirl.gd` | `PortalSwirl` — 아치 구멍에서 **빨려들어가는 소용돌이**. 나선 팔 5개 + 끌려드는 알갱이 + 가운데 빛 |
 | `godot/game/gate_panel.gd` | `GatePanel` — 창(`PanelContainer`). 조각은 가방창과 같은 `ui_panel`·`ui_button`·`ui_close`. 목록은 **끌어서** 내리고 줄 전체가 누르는 자리다(`_on_list_input`·`_row_at`). 고르면 `picked(zone_id)` |
+| `godot/game/dungeon_panel.gd` | **던전 창이 이 창을 물려받는다** — 줄은 `_add_row`, 제목은 `_title`. 여기를 고치면 던전 창도 같이 바뀐다 → [dungeons.md](dungeons.md) |
 | `godot/game/game.gd` | `_gate_tapped`(누름 판정) · `_on_gate_tapped`(문 안이면 열고 멀면 걸어감) · `_open_gate` · `_on_gate_pick`(`travel` 요청) |
 | `scripts/build-item-icons.mjs` | 줄 아이콘(`ui_gate_here`·`ui_gate_go`)을 128px 로 굽는다 → `public/assets/icons/` |
 | `scripts/fetch-assets.sh` | 바르코 결과물 주소. 포탈 GLB 는 여기서 1024 JPEG 로 줄여 커밋본을 만든다 |

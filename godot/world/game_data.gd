@@ -65,3 +65,9 @@ static func beast_height(look: String, scale: float) -> float:
 ## 사냥터 순서. 지금은 첫 곳만 쓴다 (World 의 임시 게이트)
 static func field_order() -> Array:
 	return zones().get("fieldOrder", [])
+
+
+## 던전 종류 셋 — `{id, name, desc, open, stages: [{zone, stage, boss, level}]}`.
+## 표는 shared 의 dungeons.ts 가 만든다 (docs/features/dungeons.md)
+static func dungeons() -> Array:
+	return zones().get("dungeons", [])

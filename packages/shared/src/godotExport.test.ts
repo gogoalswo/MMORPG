@@ -26,7 +26,8 @@ for (const [name, value] of Object.entries(data)) {
 }
 
 test('내보낸 개수가 문서와 맞는다', () => {
-  assert.equal(Object.keys(data['zones.json'].zones).length, 21, '존 21곳');
+  // 마을 1 + 사냥터 20 + 토벌 던전 20단계 (dungeons.ts)
+  assert.equal(Object.keys(data['zones.json'].zones).length, 41, '존 41곳');
   assert.equal(Object.keys(data['monsters.json'].kinds).length, 60, '몬스터 60종');
   assert.equal(Object.keys(data['skills.json'].skills).length, 26, '스킬 26종');
 });

@@ -173,6 +173,8 @@ var _exp_text: Label
 ## 맞았을 때 화면 가장자리가 붉어지는 비네트 (game/hurt_flash.gd)
 var _hurt: HurtFlash
 var _gate_panel: GatePanel
+## 던전 창 — 가방 옆 단추로 연다 (docs/features/dungeons.md)
+var _dungeon_panel: DungeonPanel
 ## 보스 범위 공격 예고. [{node, fill, start, end, radius}, ...]
 var _aoe_marks: Array = []
 ## 스킬 범위 표시(테스트 단추). 살아 있는 SkillRange 들
@@ -319,6 +321,7 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			_target_mob = ""
 			_marker.visible = false
 			_gate_panel.visible = false
+			_dungeon_panel.visible = false
 		&"revived":
 			_last_event = "마을에서 되살아났습니다"
 		&"aoe":
@@ -1950,6 +1953,8 @@ func _build_skill_bar() -> void:
 	_menu_cells = [
 		_icon_button("ui_icon_skill", "스킬", _toggle_skills),
 		_icon_button("ui_icon_bag", "가방", _toggle_bag),
+		# 던전 — 가방 바로 옆 (2026-09-23 요청). 아직 그림이 없어 글자로 나온다
+		_icon_button("ui_icon_dungeon", "던전", _toggle_dungeon),
 		_icon_button("", "설계", _toggle_debug),
 	]
 	for cell in _menu_cells:
@@ -2742,9 +2747,25 @@ func _build_gate_panel() -> void:
 	_gate_panel.picked.connect(_on_gate_pick)
 	top.add_child(_gate_panel)
 
+	# 던전 창도 같은 층이다 — 틀·줄·끌기를 차원문 창에서 물려받는다
+	_dungeon_panel = DungeonPanel.make(_frame_box, _icon)
+	_dungeon_panel.theme = _ui_root.theme
+	_dungeon_panel.picked.connect(_on_gate_pick)
+	top.add_child(_dungeon_panel)
+
 
 func _open_gate() -> void:
+	_dungeon_panel.visible = false
 	_gate_panel.open(_shown_zone)
+
+
+## 던전 단추. 열려 있으면 닫는다. 차원문 창과 한 자리라 둘이 겹치지 않게 한쪽을 닫는다
+func _toggle_dungeon() -> void:
+	if _dungeon_panel.visible:
+		_dungeon_panel.close_panel()
+		return
+	_gate_panel.visible = false
+	_dungeon_panel.open(_shown_zone)
 
 
 ## 문을 눌렀다. **거리와 상관없이 바로 창을 연다** (2026-09-18 요청: "포탈까지
@@ -2759,8 +2780,10 @@ func _on_gate_tapped() -> void:
 	_open_gate()
 
 
+## 차원문 창과 던전 창이 같이 쓴다 — 둘 다 결국 `travel` 요청이고 World 가 다시 본다
 func _on_gate_pick(zone_id: String) -> void:
 	_gate_panel.visible = false
+	_dungeon_panel.visible = false
 	_target = Vector3.INF
 	_target_mob = ""
 	_marker.visible = false

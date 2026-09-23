@@ -2452,6 +2452,9 @@ func _build_zone(zone_id: String) -> void:
 	_zone_node = Node3D.new()
 	add_child(_zone_node)
 	_shown_zone = zone_id
+	# 이펙트 셰이더를 미리 굽는다 — 스킬을 처음 쓸 때 멈칫하지 않게 (한 게임에 한 번)
+	if _camera != null:
+		FxWarm.run(self, _camera, _ui_root.theme.default_font if _ui_root != null and _ui_root.theme != null else null)
 
 	var zone := GameData.zone(zone_id)
 	var env: Dictionary = zone.get("env", {})

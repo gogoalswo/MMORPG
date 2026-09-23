@@ -114,7 +114,10 @@ func _case_selected(game: Node3D, mob: Dictionary) -> void:
 		_fail("몬스터 막대가 머리(%.2f m) 아래다 (%.2f m)" % [head, bar.position.y])
 	else:
 		print("  몬스터 막대 %.2f m (머리 %.2f m)" % [bar.position.y, head])
-	var gap := Vector2(bar.position.x - mob.x, bar.position.z - mob.z).length()
+	# **그려진 몸과 댄다.** 몬스터는 순찰로 걷는다 — 받아 둔 `mob` 좌표나 판정의 지금
+	# 좌표와 대면, 막대·몸이 그려진 뒤 판정이 한 틱 더 걸은 만큼(0.05 m) 어긋나
+	# CI 에서 운 나쁘게 깨졌다 (2026-09-23). 눈에 보이는 건 몸과 막대의 관계다
+	var gap := Vector2(bar.position.x - node.position.x, bar.position.z - node.position.z).length()
 	if gap > 0.05:
 		_fail("몬스터 막대가 몸 위가 아니다 (%.2f m 떨어져 있다)" % gap)
 

@@ -147,14 +147,16 @@ test('차원문 목록의 사냥터가 전부 default 스폰을 가진다', () =
     const zone = getZone(zoneId);
     assert.ok(zone.spawns.default, `${zoneId} 에 default 스폰이 없다`);
     const [x, z] = getSpawn(zone, 'default');
-    // 한가운데는 무리(±20)에서 충분히 떨어져 있어야 도착하자마자 안 물린다
+    // 도착 지점이 무리 원 안이면 몬스터 사이에 떨어진다. 인식 범위(반경 + aggroRange)
+    // 밖까지는 안 본다 — 맵을 2/3 로 줄이며(2026-09-23) 무리가 ±14 로 붙어서, 도착하면
+    // 몬스터가 알아채는 것을 받아들였다 (docs/features/world-zones.md "무리 자리")
     for (const pack of zone.monsters ?? []) {
       const d = Math.hypot(pack.x - x, pack.z - z);
       const kind = MONSTER_KINDS[pack.kind];
       assert.ok(kind, `${zoneId} 에 없는 몬스터 ${pack.kind}`);
       assert.ok(
-        d > pack.radius + kind.aggroRange,
-        `${zoneId}: 도착 지점이 ${kind.name} 무리의 인식 범위 안이다 (${d.toFixed(1)}m)`
+        d > pack.radius,
+        `${zoneId}: 도착 지점이 ${kind.name} 무리 안이다 (${d.toFixed(1)}m)`
       );
     }
   }

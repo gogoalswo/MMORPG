@@ -103,9 +103,8 @@ const AUTO_GAP := 8
 const SPIN_LIFT := 13
 ## 화면 맨 아래 경험치 게이지 높이. 가운데에 퍼센트를 적으므로 글자가 들어갈 만큼은 된다
 const EXP_GAUGE_H := 20
-## 획득 알림이 시작하는 높이(px). 위 글자줄이 두 줄(24~70)이라 그 아래,
-## 6줄(38px씩) 쌓아도 왼쪽 아래 테스트 단추(474~)에 닿지 않는다
-const LOOT_LOG_TOP := 96
+## 채팅창을 화면 왼쪽·아래(경험치 띠)에서 띄우는 거리(px)
+const CHAT_MARGIN := 12
 const ICON_DIR := "res://assets/icons/"
 ## 가방 탭. 0 은 전체, 나머지는 `_tab_keeps` 가 슬롯으로 가른다
 const BAG_TABS := ["전체", "무기", "방어구", "장신구"]
@@ -158,8 +157,8 @@ var _mob_bar_until: Dictionary = {}
 const MOB_BAR_MS := 5000
 ## 마지막으로 일어난 일 한 줄 (맞았다·레벨 올랐다)
 var _last_event := ""
-## 왼쪽 획득 알림 — 경험치·장비 획득 (`LootLog`)
-var _loot_log: LootLog
+## 왼쪽 아래 채팅창 — 경험치·장비 획득을 적는다 (`ChatLog`)
+var _chat: ChatLog
 var _ui_root: Control
 ## 퀵슬롯 위 한 묶음 — 레벨 배지 안 숫자, 체력 막대와 그 위 숫자, 경험치 퍼센트
 var _level_label: Label
@@ -287,7 +286,7 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 				"  처치!" if payload.get("killed", false) else "",
 			]
 		&"reward":
-			_loot_log.add_exp(int(payload.get("exp", 0)))
+			_chat.add_exp(int(payload.get("exp", 0)))
 		&"levelUp":
 			_last_event = "레벨 %d 이 되었습니다" % payload.get("level", 0)
 		&"swing":
@@ -326,7 +325,7 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 					payload.get("gold", 0), Items.get_item(got).get("name", got)
 				]
 				var grade := int(payload.item.get("grade", 1))
-				_loot_log.add_item(str(Items.get_item(got).get("name", got)), _grade_tint(grade))
+				_chat.add_item(str(Items.get_item(got).get("name", got)), _grade_tint(grade))
 		&"inventory":
 			if _bag_panel.visible:
 				_redraw_bag()
@@ -412,11 +411,16 @@ func _build_persistent() -> void:
 	_label.add_theme_font_size_override("font_size", 16)
 	_ui_root.add_child(_label)
 
-	# 획득 알림은 왼쪽에 쌓는다 — 위 글자줄(두 줄) 아래, 왼쪽 아래 테스트 단추 위.
-	# 가운데는 전투(피해 숫자)가 쓰므로 비운다 → hit-effects.md "획득 알림"
-	_loot_log = LootLog.new()
-	_loot_log.position = Vector2(24, LOOT_LOG_TOP)
-	_ui_root.add_child(_loot_log)
+	# 채팅창은 왼쪽 아래 구석, 경험치 띠 바로 위. 테스트 단추 묶음은 그 위로 올린다
+	# (`_build_test_switches`) → hud.md "채팅창"
+	_chat = ChatLog.new()
+	_ui_root.add_child(_chat)
+	_chat.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE)
+	_chat.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_chat.offset_left = CHAT_MARGIN
+	_chat.offset_bottom = -(EXP_GAUGE_H + CHAT_MARGIN)
+	_chat.offset_top = _chat.offset_bottom - ChatLog.SIZE.y
+	_chat.offset_right = CHAT_MARGIN + ChatLog.SIZE.x
 
 	_build_gate_panel()
 	_build_npc_panel()
@@ -2045,6 +2049,10 @@ func _build_test_switches() -> void:
 	_refresh_switches()
 	column.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 20)
 	column.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	# 왼쪽 아래 구석은 채팅창 자리다 (2026-09-23) — 묶음을 채팅창 위로 올린다
+	var lift := ChatLog.SIZE.y + EXP_GAUGE_H + CHAT_MARGIN + 8 - 20
+	column.offset_top -= lift
+	column.offset_bottom -= lift
 
 
 func _on_switch_pressed(name: String) -> void:

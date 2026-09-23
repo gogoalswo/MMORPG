@@ -93,6 +93,10 @@ func _run() -> void:
 	if skill == "kill":
 		await _kill(game)
 		return
+	# 치명타 한 대 — 자홍 숫자 · 몸 튕김 · 찌그러짐 · 흔들림 (잡지 않는다)
+	if skill == "crit":
+		await _kill(game, true)
+		return
 
 	# 창은 열어 놓고 한 장만 찍는다 — 움직이는 것이 없다
 	if skill == "bag" or skill == "skills":
@@ -260,7 +264,7 @@ func _range(game: Node3D, skill: String) -> void:
 ## 맞히는 자리(`_hit_monster`)부터 탄다 — 처치·보상 이벤트는 게임과 같은 길로 나온다.
 ## 처치 섬광·피해 숫자와 왼쪽 아래 채팅창(`ChatLog`)을 **게임 시간으로** 찍는다.
 ## 채팅창에 장비 줄도 보이도록 장비 두 개를 떨어뜨린 것처럼 넣는다 (드롭은 운이라)
-func _kill(game: Node3D) -> void:
+func _kill(game: Node3D, crit := false) -> void:
 	var world = game._transport._world
 	game._transport.send(&"travel", {"zone": RANGE_ZONE})
 	await process_frame
@@ -282,24 +286,34 @@ func _kill(game: Node3D) -> void:
 	player["x"] = mob.x + dir.x * 1.5
 	player["z"] = mob.z + dir.y * 1.5
 	player["rot"] = atan2(mob.x - player.x, mob.z - player.z)
-	mob["hp"] = 1
+	if not crit:
+		mob["hp"] = 1
 	for i in 6:
 		await process_frame
 
-	Engine.time_scale = 0.25
-	# 등급 일곱 색이 한 창에 보이게 등급마다 하나씩 (슬롯은 돌려 가며)
-	var codes := ["w", "a", "h", "b", "n", "r", "w"]
-	for g in range(2, 8):
-		var id := "g%d_%s" % [g, codes[g - 1]]
-		game._on_event(&"loot", {"gold": 3, "item": {"id": id, "grade": g, "enhance": 0}})
-	world._hit_monster(player, mob, 1.0, "")
-	var began := Time.get_ticks_msec()
+	var slow := 0.04 if crit else 0.25
+	Engine.time_scale = slow
 	var at := [0.05, 0.15, 0.3, 0.5, 0.8, 1.15]
+	if crit:
+		# 치명타는 판정이 주사위라 이벤트를 직접 넣는다. 튕김이 0.18초 안에 끝나서 앞을 촘촘히
+		at = [0.02, 0.05, 0.1, 0.16, 0.3, 0.55]
+		game._on_event(&"hit", {
+			"target": str(mob.id), "target_kind": "monster", "amount": 128,
+			"crit": true, "killed": false, "x": mob.x, "z": mob.z,
+		})
+	else:
+		# 등급 일곱 색이 한 창에 보이게 등급마다 하나씩 (슬롯은 돌려 가며)
+		var codes := ["w", "a", "h", "b", "n", "r", "w"]
+		for g in range(2, 8):
+			var id := "g%d_%s" % [g, codes[g - 1]]
+			game._on_event(&"loot", {"gold": 3, "item": {"id": id, "grade": g, "enhance": 0}})
+		world._hit_monster(player, mob, 1.0, "")
+	var began := Time.get_ticks_msec()
 	var taken := 0
 	var sheet: Image = null
 	while taken < at.size():
 		await process_frame
-		var t := float(Time.get_ticks_msec() - began) * 0.001 * 0.25
+		var t := float(Time.get_ticks_msec() - began) * 0.001 * slow
 		if t >= at[taken]:
 			await RenderingServer.frame_post_draw
 			var img := root.get_texture().get_image()

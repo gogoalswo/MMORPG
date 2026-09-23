@@ -48,6 +48,7 @@ func _run() -> void:
 	await _case_monster(game, mob, body)
 	await _case_visible(game, mob)
 	await _case_crit(game, mob)
+	await _case_feel(game, mob, body)
 	await _case_gone(game, body)
 	await _case_model(game)
 	await _case_player(game)
@@ -141,12 +142,80 @@ func _case_crit(game: Node3D, mob: Dictionary) -> void:
 		return
 	if fx._number.text != "91!":
 		_fail("치명타 숫자가 '91!' 이 아니다 (%s)" % fx._number.text)
+	if fx._number.modulate.to_html(false) != HitFx.COLOR_CRIT.to_html(false):
+		_fail("치명타 숫자가 치명타 색이 아니다 (%s)" % fx._number.modulate.to_html(false))
 	if fx._number.pixel_size <= 0.006:
 		_fail("치명타가 평타보다 크지 않다 (%.4f)" % fx._number.pixel_size)
 	else:
 		print("  치명타: %s, 글자 %.3f (평타 %.3f)" % [
 			fx._number.text, fx._number.pixel_size, HitFx.NUMBER_SIZE
 		])
+
+
+## 타격감 — 단계가 평타 < 치명타 < 처치 < 보스 로 오르고, 맞은 몸이 퍼졌다가
+## 제 모양으로 돌아오고, 치명타에 화면이 흔들리고, 히트스톱이 풀린다
+func _case_feel(game: Node3D, mob: Dictionary, body: Node3D) -> void:
+	var tiers := [
+		HitFx.tier_of(_hit(mob, 1, false, false), false),
+		HitFx.tier_of(_hit(mob, 1, true, false), false),
+		HitFx.tier_of(_hit(mob, 1, false, true), false),
+		HitFx.tier_of(_hit(mob, 1, false, true), true),
+	]
+	if tiers != [0, 1, 2, 3]:
+		_fail("단계가 평타·치명타·처치·보스처치 순으로 0~3 이 아니다 %s" % [tiers])
+	var hurt := _hit(mob, 1, false, false)
+	hurt.target_kind = "player"
+	if HitFx.tier_of(hurt, false) < 1:
+		_fail("내가 맞았는데 평타 단계다 — 진동이 안 온다")
+	var heal := hurt.duplicate()
+	heal.heal = true
+	if HitFx.tier_of(heal, false) != -1:
+		_fail("회복에 타격감이 걸린다")
+	for i in HitFx.TIERS.size() - 1:
+		var lo: Dictionary = HitFx.TIERS[i]
+		var hi: Dictionary = HitFx.TIERS[i + 1]
+		for key in ["stop", "shake", "kick", "squash", "buzz"]:
+			if float(hi[key]) < float(lo[key]):
+				_fail("%d단계 %s 가 %d단계보다 약하다" % [i + 1, key, i])
+	if float(HitFx.TIERS[0].shake) > 0.0:
+		_fail("평타에 화면이 흔들린다 — 초당 몇 번씩 흔들리면 멀미가 난다")
+
+	game._camera._shake_left = 0.0
+	game._on_event(&"hit", _hit(mob, 50, true, false))
+	await process_frame
+	await process_frame
+	if game._camera._shake_left <= 0.0:
+		_fail("치명타에 화면이 안 흔들렸다")
+	if body != null:
+		if not body.has_meta(&"hit_react"):
+			_fail("맞은 몸에 반응이 안 걸렸다")
+		elif body.scale.x <= 1.0:
+			_fail("맞은 몸이 안 퍼졌다 (%.3f)" % body.scale.x)
+		var waited := 0
+		while body.has_meta(&"hit_react") and waited < 240:
+			await process_frame
+			waited += 1
+		if body.has_meta(&"hit_react") or not body.scale.is_equal_approx(Vector3.ONE):
+			_fail("맞은 몸이 제 모양으로 안 돌아왔다 (%s)" % body.scale)
+
+	# 히트스톱 — 모델 파일이 없는 곳(CI)에서도 보도록 빈 재생기를 단 리그로 본다
+	var rig := Rig.new()
+	var player := AnimationPlayer.new()
+	rig.add_child(player)
+	rig._anim = player
+	game.add_child(rig)
+	rig.freeze(0.05)
+	if player.speed_scale != 0.0:
+		_fail("히트스톱에 동작이 안 멈췄다")
+	var waited_stop := 0
+	while player.speed_scale == 0.0 and waited_stop < 240:
+		await process_frame
+		waited_stop += 1
+	if player.speed_scale != 1.0:
+		_fail("히트스톱이 안 풀렸다 (배속 %.2f)" % player.speed_scale)
+	else:
+		print("  타격감: 단계 %s, 히트스톱 %d프레임 뒤 풀림" % [tiers, waited_stop])
+	rig.queue_free()
 
 
 ## 스스로 사라지고 **덧칠도 걷어 간다.** 안 걷으면 몬스터가 영영 빨갛다

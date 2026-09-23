@@ -168,6 +168,7 @@ npm run probe -- god --zone meadow              # 무적 모드 — 안 깎이�
 npm run shot:godot                   # 낙뢰(thunder_fall)
 npm run shot:godot -- rising_kick    # 스킬 id 를 주면 그것
 npm run shot:godot -- kill           # 가까운 몬스터를 한 대에 잡는다 — 피해 숫자·왼쪽 아래 채팅창
+npm run shot:godot -- crit           # 치명타 한 대 — 자홍 숫자·몸 튕김·찌그러짐 (0.03~0.56초)
 npm run shot:godot -- sky_breaker 8,27,54,108,243,432   # 찍을 프레임을 준다 (긴 이펙트)
 npm run shot:godot -- rising_kick@225 # @각도(도, 0 = +Z) — 그 쪽을 보고 쓴다. 캐릭터 기준 이펙트는
                                       # 보는 쪽마다 화면 모양이 달라 두세 방향을 찍어 본다 (225 = 화면 위)

@@ -39,10 +39,43 @@ const SPARK_SIZE := 0.15
 
 ## 내가 때렸다
 const COLOR_DAMAGE := Color("#ffe6a0")
-const COLOR_CRIT := Color("#ff8a3d")
+## 치명타는 **색부터 다르다** — 주황(`#ff8a3d`)이던 것을 자홍으로 바꿨다 (2026-09-23,
+## "크리티컬 터지면 데미지 플로터 색상도 바꿔"). 주황은 평타의 연노랑과 같은 난색이라
+## 한 화면에 섞이면 크기로만 갈렸다. 자홍은 게임 안 어디에도 안 쓰는 색이다
+## (내가 맞음 빨강 · 회복 초록 · 낙뢰 청백과도 겹치지 않는다)
+const COLOR_CRIT := Color("#ff4fd8")
 ## 내가 맞았다 — 남을 때린 숫자와 색으로 갈라야 한 화면에서 구분이 된다
 const COLOR_HURT := Color("#ff5a4a")
 const COLOR_HEAL := Color("#7ce08a")
+
+## ── 타격감 ─────────────────────────────────────────────
+## 섬광·숫자 말고 **시간·움직임·손끝**으로 주는 것. 세기는 네 단계다 —
+## **평타 < 치명타 < 처치 < 보스.** 매번 같은 세기면 금방 무뎌진다.
+##
+## - `stop`   히트스톱(초). 때린 쪽·맞은 쪽 동작을 멈춘다 (`Rig.freeze`)
+## - `shake`  화면 흔들림 세기·`shake_time` 길이 (`CameraRig.shake`). **평타는 0** —
+##            초당 몇 번씩 흔들리면 멀미가 난다
+## - `kick`   맞은 몸이 밀려나는 거리(m). 몸만 밀고 판정 좌표는 그대로다
+## - `squash` 맞은 몸이 옆으로 퍼지는 비율
+## - `buzz`   폰 진동(ms). 평타는 0
+const TIERS := [
+	{"stop": 0.045, "shake": 0.0, "shake_time": 0.0, "kick": 0.12, "squash": 0.08, "buzz": 0},
+	{"stop": 0.07, "shake": 0.05, "shake_time": 0.18, "kick": 0.22, "squash": 0.14, "buzz": 25},
+	{"stop": 0.09, "shake": 0.09, "shake_time": 0.24, "kick": 0.32, "squash": 0.18, "buzz": 35},
+	{"stop": 0.13, "shake": 0.14, "shake_time": 0.35, "kick": 0.40, "squash": 0.22, "buzz": 60},
+]
+## 밀려나는 데 걸리는 시간. 나머지(`REACT_TIME` 까지) 동안 제자리로 돌아온다
+const KICK_OUT := 0.05
+const REACT_TIME := 0.18
+## 퍼졌다가 돌아오는 시간
+const SQUASH_TIME := 0.14
+## 보스는 무겁다 — 덜 밀린다
+const BOSS_KICK := 0.5
+## 진동 사이 최소 간격(ms). 할퀴기 한 번이 다섯 대라 그대로 떨면 한 덩어리로 뭉개진다
+const BUZZ_GAP := 120
+## 진동을 쓸까. 설정 창이 생기면 여기에 잇는다
+static var buzz_on := true
+static var _buzz_at := -BUZZ_GAP
 
 var _t := 0.0
 var _flash: MeshInstance3D
@@ -179,6 +212,81 @@ func _start(payload: Dictionary, font: Font) -> void:
 	_number.pixel_size = CRIT_SIZE if crit else NUMBER_SIZE
 	_number.modulate = tint
 	_number.position = Vector3(randf_range(-0.4, 0.4), 0.3, 0.0)
+
+
+## 이 한 대가 몇 단계인가 (0~3). 회복은 때린 것이 아니라 -1.
+##
+## 치명타 1 · 처치 2 에서 시작해 **보스가 끼면 한 단계 올린다** — 보스 평타가
+## 잡몹 치명타만큼, 보스를 잡으면 맨 위다. **내가 맞으면 적어도 1** 이다 —
+## 맞은 걸 손끝으로 알아야 하는데 평타 단계는 진동이 없다
+static func tier_of(payload: Dictionary, boss: bool) -> int:
+	if bool(payload.get("heal", false)):
+		return -1
+	var tier := 0
+	if bool(payload.get("crit", false)):
+		tier = 1
+	if bool(payload.get("killed", false)):
+		tier = 2
+	if str(payload.get("target_kind", "")) == "player":
+		tier = maxi(tier, 1)
+	if boss:
+		tier += 1
+	return mini(tier, TIERS.size() - 1)
+
+
+## 히트스톱. 모델이 없는 기둥은 멈출 동작이 없다
+static func hitstop(body: Node3D, seconds: float) -> void:
+	if body is Rig and is_instance_valid(body):
+		body.freeze(seconds)
+
+
+## 맞은 몸을 밀고 퍼뜨린다. **값만 적어 두고 움직이는 건 `apply_react` 다.**
+##
+## 몸 자리는 화면이 매 프레임 `World` 좌표로 덮어쓴다. 그래서 여기서 자리를
+## 옮기면 다음 프레임에 지워진다 — 덮어쓴 **뒤에** 부르는 `apply_react` 가
+## 그 위에 얹는다. 새로 맞으면 적어 둔 값을 갈아 끼우므로 겹쳐도 되돌릴 게 없다.
+## `kick` 이 0 이면 퍼지기만 한다 (내 캐릭터 — 아래 `apply_react` 참고)
+static func react(body: Node3D, from: Vector3, kick: float, squash: float) -> void:
+	if body == null or not is_instance_valid(body):
+		return
+	var dir := Vector3(body.position.x - from.x, 0.0, body.position.z - from.z)
+	dir = dir.normalized() if dir.length() > 0.01 else Vector3.ZERO
+	body.set_meta(&"hit_react", {"t": 0.0, "dir": dir, "kick": kick, "squash": squash})
+
+
+## `react` 로 적어 둔 것을 얹는다. **자리를 `World` 좌표로 덮어쓴 바로 뒤에** 부른다
+static func apply_react(body: Node3D, delta: float) -> void:
+	if not body.has_meta(&"hit_react"):
+		return
+	var r: Dictionary = body.get_meta(&"hit_react")
+	r.t += delta
+	var t: float = r.t
+	if t >= REACT_TIME:
+		settle(body)
+		return
+	# 짧게 튀어 나갔다가 천천히 돌아온다 — 똑같은 속도로 오가면 흔들림으로 읽힌다
+	var out := t / KICK_OUT if t < KICK_OUT else pow(1.0 - (t - KICK_OUT) / (REACT_TIME - KICK_OUT), 2.0)
+	body.position += r.dir * float(r.kick) * out
+	var s: float = float(r.squash) * maxf(0.0, 1.0 - t / SQUASH_TIME)
+	body.scale = Vector3(1.0 + s, 1.0 - s * 0.5, 1.0 + s)
+
+
+## 반응을 걷는다. 죽어서 숨긴 몸도 이걸로 되돌린다 — 안 걷으면 되살아날 때 찌그러져 있다
+static func settle(body: Node3D) -> void:
+	if body.has_meta(&"hit_react"):
+		body.remove_meta(&"hit_react")
+		body.scale = Vector3.ONE
+
+
+## 폰 진동. 데스크톱에서는 아무 일도 없다
+static func buzz(ms: int) -> void:
+	if not buzz_on or ms <= 0:
+		return
+	var now := Time.get_ticks_msec()
+	if now - _buzz_at < BUZZ_GAP:
+		return
+	_buzz_at = now
+	Input.vibrate_handheld(ms)
 
 
 ## 맞은 몸을 잠깐 붉게 물들인다. **덧칠(`material_overlay`)이라 원래 재질을

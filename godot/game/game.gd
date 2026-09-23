@@ -2855,6 +2855,7 @@ func _draw_state() -> void:
 		_moving = step / _last_delta > RUN_SPEED_EPS
 
 	_player.position = walked_to
+	HitFx.apply_react(_player, _last_delta)
 	_player.rotation.y = me.rot
 	_play_player_clip(me)
 
@@ -2870,9 +2871,11 @@ func _draw_state() -> void:
 		node.visible = int(monster.hp) > 0
 		_tick_mob_bar(monster, node)
 		if not node.visible:
+			HitFx.settle(node)
 			continue
 		node.position.x = monster.x
 		node.position.z = monster.z
+		HitFx.apply_react(node, _last_delta)
 		node.rotation.y = monster.get("rot", 0.0)
 		if node is Rig:
 			var state := str(monster.get("state", "idle"))
@@ -2947,6 +2950,36 @@ func _show_hit(payload: Dictionary) -> void:
 		var max_hp := float(me.get("stats", {}).get("maxHp", 100))
 		# 최대 체력의 4분의 1을 한 번에 맞으면 제일 진하다
 		_hurt.hit(float(payload.get("amount", 0)) / maxf(1.0, max_hp * 0.25))
+
+	_feel_hit(payload, on_me, body)
+
+
+## 타격감 — 히트스톱·흔들림·몸 튕김·찌그러짐·진동. 세기는 `HitFx.TIERS` 네 단계다
+## (평타 < 치명타 < 처치 < 보스) → docs/features/hit-effects.md 의 "타격감"
+func _feel_hit(payload: Dictionary, on_me: bool, body: Node3D) -> void:
+	var tier := HitFx.tier_of(payload, false)
+	if tier < 0:
+		return
+	# 보스가 끼었나 — 내가 맞았으면 때린 놈, 아니면 맞은 놈을 본다
+	var mob_id := str(payload.get("source", "")) if on_me else str(payload.get("target", ""))
+	var mob := _find_mob(_transport.snapshot(), mob_id)
+	var boss := bool(mob.get("boss", false))
+	tier = HitFx.tier_of(payload, boss)
+	var feel: Dictionary = HitFx.TIERS[tier]
+
+	# 때린 쪽도 같이 멈춰야 "걸렸다" 가 된다
+	var attacker: Node3D = _mob_nodes.get(mob_id, null) if on_me else _player
+	HitFx.hitstop(body, feel.stop)
+	HitFx.hitstop(attacker, feel.stop)
+	if body != null:
+		# **내 캐릭터는 밀지 않는다** — 카메라가 쫓아가 화면째 흔들리고, 걷는지 보는
+		# 거리 계산(`_moving`)이 밀린 거리를 달린 걸로 읽는다. 퍼지기만 한다
+		var kick: float = 0.0 if on_me else float(feel.kick) * (HitFx.BOSS_KICK if boss else 1.0)
+		var from := attacker.position if attacker != null else body.position
+		HitFx.react(body, from, kick, feel.squash)
+	if float(feel.shake) > 0.0:
+		_camera.shake(feel.shake, feel.shake_time)
+	HitFx.buzz(feel.buzz)
 
 
 ## 스킬 이펙트.

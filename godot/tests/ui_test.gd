@@ -596,6 +596,10 @@ func _case_bag(game: Node3D) -> void:
 		_fail("크리스탈 칸을 골랐는데 쓰기·끼기 단추가 켜져 있다")
 	if game._detail_name.text != "크리스탈":
 		_fail("크리스탈 상세 이름이 '%s'" % game._detail_name.text)
+	# 아이콘(바르코, 2026-09-23)을 받았으면 칸에 글자 대신 그림이 뜬다
+	var crystal_cell: PanelContainer = game._bag_grid.get_child(0)
+	if game._icon("crystal") != null and crystal_cell.get_node("text").text != "":
+		_fail("크리스탈 그림이 있는데 칸에 글자가 찍혔다")
 	print("  크리스탈: 단추로 2차 붙이기 — %s" % Items.describe_option(necklace.options2[0]))
 
 	# 테스트 단추 — 건틀릿(무기)이 등급마다 하나씩 들어오고, 그림이 있으면 등급별 그림을 쓴다

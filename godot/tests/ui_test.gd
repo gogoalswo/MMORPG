@@ -716,6 +716,8 @@ func _case_bag(game: Node3D) -> void:
 		_fail("크리스탈을 골랐는데 단추가 '%s'" % game._bag_action.text)
 	if game._detail_name.text != "크리스탈":
 		_fail("크리스탈 상세 이름이 '%s'" % game._detail_name.text)
+	if game._enhance_button.visible:
+		_fail("재료(크리스탈)를 골랐는데 강화 단추가 떠 있다")
 	var use_act: Label = game._bag_grid.get_child(0).get_node("act")
 	if not use_act.visible or use_act.text != "사용":
 		_fail("크리스탈 칸에 '사용' 이 안 얹혔다 (%s '%s')" % [use_act.visible, use_act.text])
@@ -794,6 +796,34 @@ func _case_bag(game: Node3D) -> void:
 		var big: String = game._detail_icon.get_node("badge").text
 		if big != "+9":
 			_fail("태초 건틀릿 상세 칸 배지가 '%s' (+9 여야 한다)" % big)
+		# 강화 (2026-09-23 요청) — 상세 창에 "강화" 단추. +9 는 끝이라 꺼진다
+		if not game._enhance_button.visible or not game._enhance_button.disabled:
+			_fail("+9 인데 강화 단추가 %s/%s" % [game._enhance_button.visible, game._enhance_button.disabled])
+		# 일반(+0)을 골라 한 번 두드린다 — 성공률 90% 줄이 있고, 결과는 채팅창에 남는다
+		game._pick_bag("bag", 0)
+		await process_frame
+		if not game._enhance_button.visible or game._enhance_button.disabled:
+			_fail("+0 장비인데 강화 단추가 %s/%s" % [game._enhance_button.visible, game._enhance_button.disabled])
+		var odds_rows: Array = game._detail_info.get_children().map(func(l: Label) -> String: return l.text)
+		var odds_at := odds_rows.find("성공률 +0→+1")
+		if odds_at < 0 or odds_rows[odds_at + 1] != "90%":
+			_fail("상세 표에 강화 성공률 90%% 가 없다: %s" % str(odds_rows))
+		game._on_enhance()
+		for i in 3:
+			await process_frame
+		var last_line: Array = game._chat.lines().back() if not game._chat.lines().is_empty() else ["", ""]
+		if not str(last_line[0]).begins_with("강화"):
+			_fail("강화했는데 채팅창 마지막 줄이 %s" % str(last_line))
+		if me.bag.size() == 7:
+			if int(me.bag[0].enhance) != 1 or game._bag_pick.is_empty():
+				_fail("강화 성공인데 +%d · 고른 것 %s" % [int(me.bag[0].enhance), game._bag_pick])
+			print("  강화: 성공 → +1, 채팅 %s" % str(last_line))
+		elif me.bag.size() == 6:
+			if not game._bag_pick.is_empty() or game._detail_panel.visible:
+				_fail("부서졌는데 고른 것이 남았다 (%s)" % game._bag_pick)
+			print("  강화: 파괴 → 상세 창 닫힘")
+		else:
+			_fail("강화 뒤 가방이 %d칸" % me.bag.size())
 
 	# 장비 창은 따로 닫고 다시 연다 (자기 X · 인벤토리의 "장비" 단추)
 	var gear_mark: Control = game._gear_panel.find_child("close", true, false)

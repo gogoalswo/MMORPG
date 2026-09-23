@@ -1706,7 +1706,7 @@ func _show_scroll_detail(stack: Dictionary, material: Dictionary, link: Dictiona
 	_detail_kind.text = "스킬 강화서"
 	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
 	var skill_id := str(link.get("skill", ""))
-	var done := str(link.get("id", "")) in me.get("skill_upgrades", {}).get(skill_id, [])
+	var done: bool = str(link.get("id", "")) in me.get("skill_upgrades", {}).get(skill_id, [])
 	_fill_detail_rows([
 		["보유 수량", "%d" % int(stack.get("count", 1))],
 		["스킬", str(Skills.all().get(skill_id, {}).get("name", skill_id))],

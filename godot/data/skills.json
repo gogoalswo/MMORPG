@@ -267,11 +267,11 @@
       "range": 3,
       "arc": 2.0943951023931953,
       "power": 0.56,
-      "hits": 5,
+      "hits": 3,
       "hitGap": 80,
       "maxTargets": 4,
       "reqLevel": 1,
-      "description": "손톱을 세워 앞 부채꼴을 다섯 번 긁어낸다."
+      "description": "손톱을 세워 앞 부채꼴을 세 번 긁어낸다."
     },
     "sky_breaker": {
       "id": "sky_breaker",
@@ -366,6 +366,22 @@
       "desc": "범위 50% 증가",
       "exp": 1000,
       "rangeMul": 1.5
+    },
+    {
+      "id": "wide",
+      "skill": "rising_kick",
+      "name": "부채꼴",
+      "desc": "부채꼴 각도 40° 증가",
+      "exp": 1000,
+      "arcAdd": 0.6981317007977318
+    },
+    {
+      "id": "combo",
+      "skill": "rising_kick",
+      "name": "연타",
+      "desc": "다단 히트 2회 증가",
+      "exp": 1000,
+      "extraHits": 2
     }
   ],
   "upgradeMax": 2,

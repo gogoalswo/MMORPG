@@ -22,6 +22,7 @@ func _init() -> void:
 	_case_dead()
 	_case_upgrade()
 	_case_wide()
+	_case_claw_up()
 	Save.clear()
 
 	if _failed == 0:
@@ -474,3 +475,30 @@ func _case_wide() -> void:
 			_fail("범위 %s: 반경 %.1f · 5m 앞이 %s (반경 %.1f · %s 여야 한다)" % [
 				wide, float(shape.get("reach", 0.0)), hit, want, wide])
 	print("  낙뢰 범위: 4m → 6m, 5m 앞의 놈이 강화 뒤에만 맞는다")
+
+
+## 할퀴기 강화 — "부채꼴" 은 판정 각 120 → 160°, "연타" 는 3 → 5타 (2026-09-23).
+## 둘은 따로 논다. 각은 판정이 알리는 모양(`skillRange`)으로, 대 수는 예약으로 본다
+func _case_claw_up() -> void:
+	var s := _setup(1)
+	var w: World = s[0]
+	var me: Dictionary = s[1]
+	var mob: Dictionary = s[2][0]
+	mob.max_hp = 999999
+	mob.hp = 999999
+	w.learn_skill("me", "rising_kick")
+	w.set_skill_bar("me", ["rising_kick"])
+	for c in [[[], 120.0, 3], [["wide"], 160.0, 3], [["combo"], 120.0, 5], [["wide", "combo"], 160.0, 5]]:
+		me.skill_upgrades = {"rising_kick": c[0].duplicate()}
+		me.skill_ready_at = {}
+		w._combos.clear()
+		w.drain_events()
+		w.cast("me", "rising_kick")
+		var shape := _first(w.drain_events(), "skillRange")
+		var arc := rad_to_deg(float(shape.get("arc", 0.0)))
+		var hits := 1 + w._combos.size()
+		if absf(arc - float(c[1])) > 0.5 or hits != int(c[2]):
+			_fail("할퀴기 %s: %.0f° · %d타 (%.0f° · %d타 여야 한다)" % [str(c[0]), arc, hits, c[1], c[2]])
+	w._combos.clear()
+	me.skill_upgrades = {}
+	print("  할퀴기 강화: 기본 120°·3타, 부채꼴 160°, 연타 5타, 둘 다 160°·5타")

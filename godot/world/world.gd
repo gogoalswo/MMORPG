@@ -1434,7 +1434,8 @@ func cast(player_id: String, skill_id: String) -> void:
 		reach = Skills.blast_radius(skill)
 
 	var attack := float(stats.attack) * float(skill.get("power", 1.0))
-	var arc := float(skill.arc)
+	# 부채꼴 강화는 각을 넓힌다 — 한 바퀴를 넘지는 않는다
+	var arc := minf(TAU, float(skill.arc) + Skills.upgrade_sum(skill_id, upgrades, "arcAdd"))
 	var cap := int(skill.get("maxTargets", 1))
 	var picked := _pick_targets(player, reach, arc, cap, origin)
 
@@ -1468,7 +1469,9 @@ func cast(player_id: String, skill_id: String) -> void:
 	# 대마다 다시 고르지 않는 이유 — 첫 대에 죽은 놈 자리를 옆 놈이 채우면 "다섯 번"
 	# 이 대상마다 제각각이 된다
 	var gap := int(skill.get("hitGap", 80))
-	for n in range(1, int(skill.get("hits", 1))):
+	# 연타 강화는 대 수를 늘린다
+	var hits := int(skill.get("hits", 1)) + roundi(Skills.upgrade_sum(skill_id, upgrades, "extraHits"))
+	for n in range(1, hits):
 		for target in picked:
 			_combos.append({
 				"player": player_id, "target": target, "attack": attack,

@@ -38,6 +38,8 @@ static func write(zone_id: String, player: Dictionary) -> void:
 		"equipped": player.get("equipped", {}),
 		# 한 번만 주는 것을 받았다는 표시 — 없던 칸이라 옛 저장은 빈 목록으로 읽힌다
 		"granted": player.get("granted", []),
+		# 스킬 강화 `{ 스킬 id: [강화 id, …] }` — 없던 칸이라 옛 저장은 빈 사전으로 읽힌다
+		"skill_upgrades": player.get("skill_upgrades", {}),
 	}, "\t"))
 	file.close()
 

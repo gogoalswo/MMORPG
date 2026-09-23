@@ -6,9 +6,13 @@ import {
   SKILLS,
   SKILL_BAR_SIZE,
   SKILL_UNLOCK_ALL,
+  SKILL_UPGRADES,
+  SKILL_UPGRADE_MAX,
   canLearn,
+  scrollId,
   skillForJob,
 } from './skills.ts';
+import { MATERIALS } from './items.ts';
 import { JOB_IDS } from './character.ts';
 import { MAX_LEVEL } from './combat.ts';
 
@@ -166,5 +170,21 @@ test('만렙까지 올리면 모든 스킬을 배울 수 있다', () => {
     for (const id of JOB_SKILLS[job]) {
       assert.ok(canLearn(SKILLS[id]!, job, MAX_LEVEL), `${id}: 만렙에도 못 배운다`);
     }
+  }
+});
+
+test('스킬 강화는 있는 스킬에 붙고, 스킬마다 둘까지이며, 강화서가 하나씩 있다', () => {
+  const perSkill: Record<string, string[]> = {};
+  for (const upgrade of SKILL_UPGRADES) {
+    assert.ok(SKILLS[upgrade.skill], `${upgrade.skill} 이 없다`);
+    const ids = (perSkill[upgrade.skill] ??= []);
+    assert.ok(!ids.includes(upgrade.id), `${upgrade.skill} 의 ${upgrade.id} 가 겹친다`);
+    ids.push(upgrade.id);
+    const scroll = MATERIALS[scrollId(upgrade)];
+    assert.ok(scroll, `${scrollId(upgrade)} 강화서가 없다`);
+    assert.deepEqual(scroll.upgrade, { skill: upgrade.skill, id: upgrade.id });
+  }
+  for (const [skill, ids] of Object.entries(perSkill)) {
+    assert.ok(ids.length <= SKILL_UPGRADE_MAX, `${skill} 강화가 ${ids.length}개`);
   }
 });

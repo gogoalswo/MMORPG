@@ -774,6 +774,15 @@
       "id": "crystal",
       "name": "크리스탈",
       "desc": "장비의 2차 옵션을 다시 굴린다"
+    },
+    "scroll_thunder_fall_stun": {
+      "id": "scroll_thunder_fall_stun",
+      "name": "낙뢰 강화서: 기절",
+      "desc": "맞은 적 3초 기절",
+      "upgrade": {
+        "skill": "thunder_fall",
+        "id": "stun"
+      }
     }
   },
   "crystalId": "crystal",

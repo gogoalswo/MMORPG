@@ -349,5 +349,15 @@
   },
   "cooldownOff": true,
   "unlockAll": true,
-  "autoTestGapMs": 1000
+  "autoTestGapMs": 1000,
+  "upgrades": [
+    {
+      "id": "stun",
+      "skill": "thunder_fall",
+      "name": "기절",
+      "desc": "맞은 적 3초 기절",
+      "stunMs": 3000
+    }
+  ],
+  "upgradeMax": 2
 }

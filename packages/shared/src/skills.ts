@@ -463,6 +463,46 @@ export const SKILLS: Record<string, SkillDef> = Object.fromEntries(
 );
 
 /**
+ * **스킬 강화** (2026-09-23 요청) — 스킬마다 **둘까지** 붙는다. 붙이는 것은
+ * **강화서**(`scrollId`)를 먹어서 쓰는 것뿐이고, 강화서는 강화 하나에 한 종류다
+ * (사용자 선택 — 쓰면 바로 붙는다, 고르는 창이 없다). 나중에 던전에서 떨어진다.
+ *
+ * 둘은 **따로 붙고 같이 붙을 수도 있다.** 그래서 이펙트도 강화마다 따로 바뀐다 —
+ * 기절은 번개 색만, 범위는 크기·줄기 수만 건드려서 둘이 섞여도 서로를 안 덮는다.
+ *
+ * `id` 는 **스킬 안에서만** 겹치지 않으면 된다. 저장에는
+ * `{ 스킬 id: [강화 id, …] }` 로 남는다.
+ */
+export interface SkillUpgradeDef {
+  id: string;
+  skill: string;
+  /** 창에 적는 강화 이름 — 강화서 이름이 `낙뢰 강화서: 기절` 이 된다 */
+  name: string;
+  desc: string;
+  /** 맞은 몬스터를 이만큼(ms) 세운다 — 못 움직이고 못 때린다 */
+  stunMs?: number;
+}
+
+/** 스킬 하나에 붙는 강화 수 */
+export const SKILL_UPGRADE_MAX = 2;
+
+export const SKILL_UPGRADES: SkillUpgradeDef[] = [
+  {
+    id: 'stun',
+    skill: 'thunder_fall',
+    name: '기절',
+    // 상세 창(300px)의 한 줄에 들어가야 한다 — 색이 바뀌는 것은 적지 않는다
+    desc: '맞은 적 3초 기절',
+    stunMs: 3000,
+  },
+];
+
+/** 강화서의 가방 id — 강화 하나에 한 종류 */
+export function scrollId(upgrade: SkillUpgradeDef): string {
+  return `scroll_${upgrade.skill}_${upgrade.id}`;
+}
+
+/**
  * 직업별 배울 수 있는 스킬 — 요구 레벨 순.
  *
  * 예전에는 이 목록이 곧 액션바였다. 이제는 **배울 수 있는 전체 목록**이고,

@@ -1,4 +1,5 @@
 import type { JobId } from './character.ts';
+import { SKILLS, SKILL_UPGRADES, scrollId } from './skills.ts';
 
 /**
  * 아이템과 드롭.
@@ -486,6 +487,8 @@ export interface MaterialDef {
   name: string;
   /** 상세 창에 적는 한 줄 */
   desc: string;
+  /** 강화서면 붙이는 스킬 강화 (`SKILL_UPGRADES`). 쓰면 바로 붙는다 */
+  upgrade?: { skill: string; id: string };
 }
 
 export const CRYSTAL_ID = 'crystal';
@@ -496,6 +499,18 @@ export const MATERIALS: Record<string, MaterialDef> = {
     name: '크리스탈',
     desc: '장비의 2차 옵션을 다시 굴린다',
   },
+  // 스킬 강화서 — 강화 표에서 만든다. 강화 하나에 한 종류 (2026-09-23)
+  ...Object.fromEntries(
+    SKILL_UPGRADES.map((upgrade) => [
+      scrollId(upgrade),
+      {
+        id: scrollId(upgrade),
+        name: `${SKILLS[upgrade.skill]?.name ?? upgrade.skill} 강화서: ${upgrade.name}`,
+        desc: upgrade.desc,
+        upgrade: { skill: upgrade.skill, id: upgrade.id },
+      },
+    ])
+  ),
 };
 
 export function getMaterial(id: string): MaterialDef | null {

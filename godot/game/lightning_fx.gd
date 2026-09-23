@@ -158,6 +158,14 @@ const COLOR_STAIN := Color("#2a2118")
 ## 전기 불똥은 줄기와 같은 빛이다 — 흙빛(`#5f4c36`)에서 바꿨다
 const COLOR_SPARK := Color("#8fc8ff")
 
+## 빛의 색 한 벌 — 헤일로 · 색 빛 · 불똥. **심(흰빛)과 금·그을림(흙)은 안 바뀐다**:
+## 가장 밝은 자리가 희어야 빛으로 읽히고, 땅은 번개 색과 상관없이 흙이다
+const PALETTE_BLUE := {"halo": COLOR_HALO, "sheen": COLOR_SHEEN, "spark": COLOR_SPARK}
+## **붉은 번개** — 낙뢰에 "기절" 강화가 붙으면 (2026-09-23 요청: "스턴 3초 강화하면
+## 이펙트 색상이 붉은색으로"). 푸른 벌과 밝기 순서를 맞췄다 — 헤일로가 가장 짙고
+## 색 빛이 옅다. 피격 붉힘(몸에 입히는 붉은색)과는 모양이 달라 섞이지 않는다
+const PALETTE_RED := {"halo": Color("#ff2a1a"), "sheen": Color("#ffa090"), "spark": Color("#ff8a70")}
+
 var _t := 0.0
 var _span := 0.0
 
@@ -166,13 +174,14 @@ var _span := 0.0
 ##
 ## `at` 은 시전자 발밑(월드 좌표), `facing` 은 시전자가 보는 쪽(rad, `player.rot`).
 ## 풀(`FxPool`)에 쉬는 것이 있으면 되감아 쓴다 — 새로 만들지 않는다.
-static func bolt(parent: Node3D, at: Vector3, facing: float) -> LightningFx:
+## `red` 면 붉은 번개다 (낙뢰 "기절" 강화). 풀은 한 벌을 같이 쓰고 색만 다시 칠한다.
+static func bolt(parent: Node3D, at: Vector3, facing: float, red := false) -> LightningFx:
 	var fx := FxPool.take(parent, &"bolt") as LightningFx
 	if fx == null:
 		fx = LightningFx.new()
 		parent.add_child(fx)
 		fx._build()
-	fx._start(at, facing)
+	fx._start(at, facing, PALETTE_RED if red else PALETTE_BLUE)
 	return fx
 
 
@@ -185,7 +194,7 @@ func _build() -> void:
 
 
 ## 처음으로 되감는다. 번개의 모양은 씨앗이 정하므로 매번 같다
-func _start(at: Vector3, facing: float) -> void:
+func _start(at: Vector3, facing: float, pal: Dictionary = PALETTE_BLUE) -> void:
 	# 떨어지는 자리는 **화면이 아니라 캐릭터가 보는 쪽** 앞이다
 	position = at + Vector3(sin(facing) * AHEAD, 0.0, cos(facing) * AHEAD)
 	# **회전은 주지 않는다.** 번개는 하늘에서 땅으로 오는 것이라 월드 기준이어야
@@ -195,6 +204,7 @@ func _start(at: Vector3, facing: float) -> void:
 	var i := 0
 	for strike in get_children():
 		strike.plan(i, float(i) * STRIKE_GAP, JITTER[i % JITTER.size()], facing)
+		strike.paint(pal)
 		_span = maxf(_span, strike.at + strike.span())
 		i += 1
 
@@ -489,6 +499,8 @@ class Strike:
 
 	## 언제 치나 (이펙트가 선 뒤 몇 초)
 	var at := 0.0
+	## 빛의 색 한 벌 (`PALETTE_BLUE` · `PALETTE_RED`). 매 프레임 여기서 읽는다
+	var _pal: Dictionary = LightningFx.PALETTE_BLUE
 	## 뒤에 오는 것일수록 굵다
 	var swell := 1.0
 
@@ -535,12 +547,27 @@ class Strike:
 		_light.visible = false
 		visible = false
 
+	## 색을 칠한다 — 되감을 때마다. 리본·섬광은 매 프레임 `_pal` 을 읽으므로
+	## 만들 때 굳는 것(빛·불똥)만 여기서 바꾼다. 같은 색이면 아무것도 안 한다
+	func paint(pal: Dictionary) -> void:
+		if pal == _pal:
+			return
+		_pal = pal
+		_light.light_color = pal.halo
+		_sparks.color = pal.spark
+		_sparks.color_ramp = LightningFx.fade_ramp(pal.spark, 1.0)
+		_sparks.material_override.albedo_color = pal.spark
+		for node in [_halo, _arc_halo]:
+			node.material_override.albedo_color = pal.halo
+		_sheen.material_override.albedo_color = pal.sheen
+		_flare.material_override.albedo_color = pal.sheen
+
 	## 노드를 만든다 — 한 번만. 뒤에 오는 것일수록 굵다(`swell_`)
 	func make(swell_: float) -> void:
 		swell = swell_
 		# 넓은 헤일로 → 색 빛 → 가는 흰 심 순으로 쌓는다
-		_halo = _sheet(LightningFx.glow(LightningFx.COLOR_HALO))
-		_sheen = _sheet(LightningFx.glow(LightningFx.COLOR_SHEEN))
+		_halo = _sheet(LightningFx.glow(_pal.halo))
+		_sheen = _sheet(LightningFx.glow(_pal.sheen))
 		_core = _sheet(LightningFx.glow(LightningFx.COLOR_CORE))
 		# 그을림을 먼저 깔고 그 위에 금을 얹는다 — 같은 높이면 서로 깜빡인다
 		_stain = _sheet(LightningFx.stain(LightningFx.COLOR_STAIN))
@@ -550,7 +577,7 @@ class Strike:
 		_crack.position = Vector3(0.0, LightningFx.GROUND + 0.01, 0.0)
 
 		# 꽂힌 자리의 섬광 — 카메라를 늘 마주 보는 판이다
-		_flare = _sheet(LightningFx.flare(LightningFx.COLOR_SHEEN))
+		_flare = _sheet(LightningFx.flare(_pal.sheen))
 		var glare := QuadMesh.new()
 		glare.size = Vector2(LightningFx.FLARE_SIZE, LightningFx.FLARE_SIZE) * swell
 		_flare.mesh = glare
@@ -559,7 +586,7 @@ class Strike:
 		_light = OmniLight3D.new()
 		_light.position = Vector3(0.0, 1.2, 0.0)
 		_light.omni_range = LightningFx.LIGHT_RANGE
-		_light.light_color = LightningFx.COLOR_HALO
+		_light.light_color = _pal.halo
 		_light.visible = false
 		add_child(_light)
 
@@ -568,7 +595,7 @@ class Strike:
 		add_child(_sparks)
 
 		# 지면 전기 가닥 — 줄기와 같은 두 겹 리본이다
-		_arc_halo = _sheet(LightningFx.glow(LightningFx.COLOR_HALO))
+		_arc_halo = _sheet(LightningFx.glow(_pal.halo))
 		_arc_halo.position = Vector3(0.0, LightningFx.ARC_HEIGHT, 0.0)
 		_arc_core = _sheet(LightningFx.glow(LightningFx.COLOR_CORE))
 		_arc_core.position = Vector3(0.0, LightningFx.ARC_HEIGHT + 0.01, 0.0)
@@ -615,7 +642,7 @@ class Strike:
 	## **모서리가 없어야 한다** — 카메라를 마주 보는 둥근 점(`FxTex.glow`)이다
 	func _make_sparks() -> CPUParticles3D:
 		var sparks := _motes(LightningFx.SPARK_COUNT, LightningFx.SPARK_LIFE,
-			LightningFx.SPARK_SIZE, LightningFx.COLOR_SPARK, 1.0, true)
+			LightningFx.SPARK_SIZE, _pal.spark, 1.0, true)
 		sparks.direction = Vector3(0.0, 1.0, 0.0)
 		sparks.spread = LightningFx.SPARK_SPREAD
 		sparks.initial_velocity_min = LightningFx.SPARK_SPEED_MIN
@@ -656,7 +683,7 @@ class Strike:
 			_reshape_arcs()
 		var fade := clampf((1.0 - age / LightningFx.ARC_LIFE) * 1.5, 0.0, 1.0)
 		_arc_halo.material_override.albedo_color = Color(
-			LightningFx.COLOR_HALO.r, LightningFx.COLOR_HALO.g, LightningFx.COLOR_HALO.b, fade * 0.6)
+			_pal.halo.r, _pal.halo.g, _pal.halo.b, fade * 0.6)
 		_arc_core.material_override.albedo_color = Color(1.0, 1.0, 1.0, fade)
 
 	## 둥근 점 방출기 한 벌 — 알갱이와 먼지가 같은 뼈대를 쓴다
@@ -708,7 +735,7 @@ class Strike:
 		var t := age / LightningFx.FLARE_LIFE
 		_flare.scale = Vector3.ONE * lerpf(0.75, LightningFx.FLARE_SWELL, sqrt(t))
 		_flare.material_override.albedo_color = Color(
-			LightningFx.COLOR_SHEEN.r, LightningFx.COLOR_SHEEN.g, LightningFx.COLOR_SHEEN.b,
+			_pal.sheen.r, _pal.sheen.g, _pal.sheen.b,
 			pow(1.0 - t, 1.2))
 
 	## 줄기는 **지글거리며 꺼진다.** 45ms 마다 경로를 새로 잡는다 —
@@ -728,9 +755,9 @@ class Strike:
 		# 가장 투명한 순간과 겹친다
 		var fade := clampf(left * 1.6, 0.0, 1.0)
 		_halo.material_override.albedo_color = Color(
-			LightningFx.COLOR_HALO.r, LightningFx.COLOR_HALO.g, LightningFx.COLOR_HALO.b, fade * 0.6)
+			_pal.halo.r, _pal.halo.g, _pal.halo.b, fade * 0.6)
 		_sheen.material_override.albedo_color = Color(
-			LightningFx.COLOR_SHEEN.r, LightningFx.COLOR_SHEEN.g, LightningFx.COLOR_SHEEN.b, fade * 0.9)
+			_pal.sheen.r, _pal.sheen.g, _pal.sheen.b, fade * 0.9)
 		_core.material_override.albedo_color = Color(1.0, 1.0, 1.0, fade)
 
 	## **한 줄기를 폭만 다른 3겹으로 쌓는다.** 가닥을 늘려 굵게 만들면 한 줄기가

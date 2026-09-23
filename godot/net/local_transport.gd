@@ -51,6 +51,8 @@ func send(message: StringName, payload: Dictionary) -> void:
 			_world.set_invincible(MY_ID, bool(payload.get("on", false)))
 		&"debugGauntlets":
 			_world.debug_gauntlets(MY_ID)
+		&"debugCrystals":
+			_world.debug_crystals(MY_ID, int(payload.get("count", 30)))
 		&"debugGear":
 			_world.debug_gear(
 				MY_ID,

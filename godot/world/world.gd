@@ -1138,6 +1138,17 @@ func debug_gauntlets(player_id: String) -> void:
 	_events.append({"type": "notice", "text": "테스트: 건틀릿 %d개를 넣었다" % added})
 
 
+## 테스트 단추 — 크리스탈을 가방에 넣는다. 한 칸에 겹친다 (`_give`)
+func debug_crystals(player_id: String, count: int) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty() or count <= 0:
+		return
+	if not _give(player, {"id": Items.crystal_id(), "count": count}):
+		return
+	_inventory_changed(player)
+	_notice("테스트: 크리스탈 %d개를 넣었다" % count)
+
+
 func debug_gear(player_id: String, level: int, grade: int, enhance: int) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty():

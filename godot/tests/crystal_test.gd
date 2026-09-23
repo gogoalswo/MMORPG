@@ -112,6 +112,15 @@ func _case_stack() -> void:
 	if str(me.bag[me.bag.size() - 1].id) != Items.crystal_id():
 		_fail("정렬하면 재료는 장비 뒤로 가야 한다")
 
+	# 테스트 단추 "크리스탈 30" — 있던 칸에 겹친다
+	var t := _world()
+	var tw: World = t[0]
+	var tme: Dictionary = t[1]
+	tw.debug_crystals("me", 30)
+	tw.debug_crystals("me", 30)
+	_eq("테스트 단추 두 번 — 칸 수", tme.bag.size(), 1)
+	_eq("테스트 단추 두 번 — 개수", int(tme.bag[0].count), 60)
+
 
 ## 가방의 장비에 쓴다 — 크리스탈이 앞 칸이어도 **고른 장비에** 붙어야 한다
 func _case_use_bag() -> void:

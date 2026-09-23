@@ -1278,6 +1278,22 @@ func _make_cell(on_press: Callable, size: int = CELL) -> PanelContainer:
 	grade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cell.add_child(grade)
 
+	# 고른 가방 칸에 "장착"/"사용" 을 얹는다 — 한 번 더 누르면 그대로 한다 (`_pick_bag`)
+	var act := Label.new()
+	act.name = "act"
+	act.visible = false
+	act.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	act.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	act.add_theme_font_size_override("font_size", 18)
+	act.add_theme_color_override("font_color", INV_GOLD_HI)
+	act.add_theme_color_override("font_outline_color", Color.BLACK)
+	act.add_theme_constant_override("outline_size", 5)
+	var shade := StyleBoxFlat.new()
+	shade.bg_color = Color(0, 0, 0, 0.55)
+	act.add_theme_stylebox_override("normal", shade)
+	act.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cell.add_child(act)
+
 	# 고른 칸 — 받은 그림처럼 밝은 금테를 덮는다
 	var pick := Panel.new()
 	pick.name = "pick"
@@ -1414,6 +1430,7 @@ func _tab_keeps(stack: Dictionary) -> bool:
 
 
 ## 칸을 누르면 상세 창이 뜬다. **빈칸을 누르면 닫는다**.
+## **고른 가방 칸을 한 번 더 누르면** 칸에 얹힌 "장착"/"사용" 을 한다 (상세 창 단추와 같다).
 ## 크리스탈 창이 떠 있으면 **장비 칸은 크리스탈 대상이 된다** — 재료·빈칸은 무시한다
 func _pick_bag(where: String, index: int) -> void:
 	if _crystal_panel.visible:
@@ -1424,6 +1441,9 @@ func _pick_bag(where: String, index: int) -> void:
 		if not Items.get_item(str(_stack_at(target).get("id", ""))).is_empty():
 			_crystal_target = target
 			_redraw_bag()
+		return
+	if where == "bag" and _is_picked(where, index) and not _bag_action.disabled:
+		_on_bag_action()
 		return
 	_bag_pick = {"where": where, "index": index}
 	if _picked_stack().is_empty():
@@ -1546,6 +1566,7 @@ func _show_bag_detail() -> void:
 	# 크리스탈 창이 떠 있으면 상세 창은 쉰다 — 같은 자리를 번갈아 쓴다
 	if _crystal_panel.visible:
 		_detail_panel.visible = false
+		_show_cell_action()
 		_redraw_crystal()
 		return
 
@@ -1554,6 +1575,7 @@ func _show_bag_detail() -> void:
 		_detail_panel.visible = false
 		_bag_action.text = "-"
 		_bag_action.disabled = true
+		_show_cell_action()
 		return
 	_detail_panel.visible = _bag_panel.visible
 	if Items.is_material(str(stack.get("id", ""))):
@@ -1602,6 +1624,18 @@ func _show_bag_detail() -> void:
 
 	_bag_action.text = "해제" if worn else "장착"
 	_bag_action.disabled = false
+	_show_cell_action()
+
+
+## 고른 가방 칸에만 상세 창 단추와 같은 글자("장착"/"사용")를 얹는다.
+## 장비 창 칸·크리스탈 대상 고르기 중에는 얹지 않는다
+func _show_cell_action() -> void:
+	var on := not _crystal_panel.visible and not _bag_action.disabled \
+		and str(_bag_pick.get("where", "")) == "bag"
+	for index in _bag_grid.get_child_count():
+		var act: Label = _bag_grid.get_child(index).get_node("act")
+		act.visible = on and _is_picked("bag", index)
+		act.text = _bag_action.text
 
 
 ## 이름 · 값 두 줄짜리 표를 다시 채운다. 줄에 세 번째 칸(색)이 있으면 값을 그 색으로
@@ -1638,6 +1672,7 @@ func _show_material_detail(stack: Dictionary) -> void:
 	# "사용" 을 누르면 크리스탈 창이 뜬다 (2026-09-23 요청)
 	_bag_action.text = "사용"
 	_bag_action.disabled = int(stack.get("count", 1)) <= 0
+	_show_cell_action()
 
 
 ## 가방에 든 크리스탈 수

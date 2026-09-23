@@ -638,6 +638,32 @@ func _case_bag(game: Node3D) -> void:
 	game._pick_tab(0)
 	await process_frame
 
+	# 착용 레벨이 모자란 장비 (2026-09-23) — 테스트 창이 끼워 준 Lv.181 반지를 벗으면
+	# 다시 못 낀다. "장착" 이 켜져 있으면 눌러도 아무 일이 없어 보이므로 "레벨 부족" 을 띄운다
+	me.bag.clear()
+	me.bag.append({"id": "g7_r", "grade": 7, "enhance": 0, "options": []})
+	var worn_ring: Dictionary = me.equipped.get("ring", {})
+	game._redraw_bag()
+	await process_frame
+	var high: PanelContainer = game._bag_grid.get_child(0)
+	high.get_node("hit").pressed.emit()
+	await process_frame
+	var high_act: Label = high.get_node("act")
+	if int(me.level) >= int(Items.get_item("g7_r").level):
+		_fail("레벨이 이미 %d 이라 레벨 부족을 볼 수 없다" % int(me.level))
+	elif game._bag_action.text != "레벨 부족" or not game._bag_action.disabled:
+		_fail("레벨이 모자란 반지인데 단추가 '%s' (꺼짐 %s)" % [game._bag_action.text, game._bag_action.disabled])
+	elif not high_act.visible or not high_act.text.contains("부족"):
+		_fail("레벨이 모자란 반지 칸에 '레벨 부족' 이 안 얹혔다 ('%s')" % high_act.text)
+	high.get_node("hit").pressed.emit()
+	for i in 3:
+		await process_frame
+	if me.bag.size() != 1 or me.equipped.get("ring", {}) != worn_ring:
+		_fail("레벨이 모자란 반지를 두 번 눌렀는데 뭔가 바뀌었다")
+	else:
+		print("  레벨 부족: 칸 '%s' · 단추 '%s'" % [high_act.text.replace("\n", " "), game._bag_action.text])
+	game._close_detail()
+
 	# 정렬 — 높은 등급이 앞으로 온다. 순서만 바뀌고 물건 수는 그대로다
 	me.bag.clear()
 	me.bag.append({"id": "g1_r", "grade": 1, "enhance": 0, "options": []})

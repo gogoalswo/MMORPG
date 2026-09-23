@@ -508,6 +508,24 @@ set GODOT_DIR=D:\godot  둘 곳을 바꾼다 (기본 C:\godot)
 `goto`/라벨도 쓰지 않고, `.gitattributes` 에 `*.bat text eol=crlf` 예외를 뒀다 (저장소 기본은
 LF). **화면에 찍는 글은 영어로 둔다** — 안내와 설명은 이 문서가 한다.
 
+#### 클론이 없는 PC — `scripts/launcher.bat` 한 파일
+
+새 PC 에서는 `play.bat` 을 부를 클론부터 없다. 이 파일 **하나만** 받아 바탕화면에 두고
+더블클릭한다:
+
+```bat
+curl -o "%USERPROFILE%\Desktop\MMORPG.bat" https://raw.githubusercontent.com/gogoalswo/MMORPG/main/scripts/launcher.bat
+```
+
+1. git 이 없으면 `winget install Git.Git` 으로 깐다. 막 깐 git 은 PATH 에 아직 없으므로
+   `%ProgramFiles%\Git\cmd` 를 직접 붙인다.
+2. `C:\MMORPG` 에 클론이 없으면 클론한다 (`set MMORPG_DIR=...` 로 바꾼다).
+3. **`main` 으로 전환한 뒤** `play.bat` 에 넘긴다. 작업은 전부 `main` 에 밀기 때문이다.
+   PC 에서 고친 파일이 있어 전환이 안 되면 지금 브랜치 그대로 돈다.
+
+**이 파일만 `.gitattributes` 에서 `-text` 로 뺐다.** 다른 `.bat` 은 체크아웃할 때 CRLF 로
+바뀌지만 raw 다운로드는 저장소 바이트(LF) 그대로라, 저장소에도 CRLF 로 넣어 두어야 한다.
+
 ## 단계
 
 1. ~~**골격** — 프로젝트·임시 화면·APK 워크플로우~~ 끝 (2026-09-16)

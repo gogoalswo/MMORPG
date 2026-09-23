@@ -799,18 +799,33 @@ func _case_bag(game: Node3D) -> void:
 		# 강화 (2026-09-23 요청) — 상세 창에 "강화" 단추. +9 는 끝이라 꺼진다
 		if not game._enhance_button.visible or not game._enhance_button.disabled:
 			_fail("+9 인데 강화 단추가 %s/%s" % [game._enhance_button.visible, game._enhance_button.disabled])
-		# 일반(+0)을 골라 한 번 두드린다 — 성공률 90% 줄이 있고, 결과는 채팅창에 남는다
+		# 일반(+0)을 골라 "강화" 를 누르면 **팝업**이 화면 가운데 뜬다 (2026-09-23 요청
+		# "강화 ui창을 따로 만들어. 강화 버튼 누르면 팝업이 나오게") — 성공률 90%·파괴가 적혀 있다
 		game._pick_bag("bag", 0)
 		await process_frame
 		if not game._enhance_button.visible or game._enhance_button.disabled:
 			_fail("+0 장비인데 강화 단추가 %s/%s" % [game._enhance_button.visible, game._enhance_button.disabled])
-		var odds_rows: Array = game._detail_info.get_children().map(func(l: Label) -> String: return l.text)
-		var odds_at := odds_rows.find("성공률 +0→+1")
-		if odds_at < 0 or odds_rows[odds_at + 1] != "90%":
-			_fail("상세 표에 강화 성공률 90%% 가 없다: %s" % str(odds_rows))
-		game._on_enhance()
+		game._enhance_button.pressed.emit()
+		await process_frame
+		await process_frame
+		if not game._enhance_layer.visible:
+			_fail("강화 단추를 눌렀는데 팝업이 안 떴다")
+		var pop_box: Rect2 = game._enhance_panel.get_global_rect()
+		var screen := Rect2(Vector2.ZERO, Vector2(1280, 720))
+		if not screen.encloses(pop_box) or absf(pop_box.get_center().x - 640.0) > 2.0:
+			_fail("강화 팝업이 화면 가운데가 아니다: %s" % pop_box)
+		var odds_rows: Array = game._enhance_info.get_children().map(func(l: Label) -> String: return l.text)
+		var odds_at := odds_rows.find("성공률")
+		if odds_at < 0 or odds_rows[odds_at + 1] != "90%" or not odds_rows.has("아이템 파괴"):
+			_fail("팝업 표에 성공률 90%%·파괴가 없다: %s" % str(odds_rows))
+		if game._enhance_kind.text != "+0  →  +1":
+			_fail("팝업 단계 줄이 '%s'" % game._enhance_kind.text)
+		print("  강화 팝업: %s · %s" % [pop_box, str(odds_rows)])
+		game._enhance_go.pressed.emit()
 		for i in 3:
 			await process_frame
+		if game._enhance_result.text == "":
+			_fail("팝업에서 강화했는데 결과 줄이 비었다")
 		var last_line: Array = game._chat.lines().back() if not game._chat.lines().is_empty() else ["", ""]
 		if not str(last_line[0]).begins_with("강화"):
 			_fail("강화했는데 채팅창 마지막 줄이 %s" % str(last_line))
@@ -821,9 +836,16 @@ func _case_bag(game: Node3D) -> void:
 		elif me.bag.size() == 6:
 			if not game._bag_pick.is_empty() or game._detail_panel.visible:
 				_fail("부서졌는데 고른 것이 남았다 (%s)" % game._bag_pick)
-			print("  강화: 파괴 → 상세 창 닫힘")
+			if not game._enhance_go.disabled:
+				_fail("부서졌는데 팝업의 강화 단추가 켜져 있다")
+			print("  강화: 파괴 → 상세 창 닫힘, 팝업 '%s'" % game._enhance_result.text)
 		else:
 			_fail("강화 뒤 가방이 %d칸" % me.bag.size())
+		# 팝업 X — 팝업만 닫힌다
+		game._enhance_panel.find_child("close", true, false).find_child("hit", true, false).pressed.emit()
+		await process_frame
+		if game._enhance_layer.visible:
+			_fail("강화 팝업 X 를 눌렀는데 그대로다")
 
 	# 장비 창은 따로 닫고 다시 연다 (자기 X · 인벤토리의 "장비" 단추)
 	var gear_mark: Control = game._gear_panel.find_child("close", true, false)

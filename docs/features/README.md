@@ -40,7 +40,7 @@ ZoneRoom 돌리기) · `DEPLOY.md`(터널로 친구에게 열어주기). 셋 다
 | [combat.md](combat.md) | **직업 스탯 표(`combat.ts` 의 `JOB_STATS`)**, 피해 공식, 정면 판정, 치명타·공격 속도, **공격 경직(휘두르는 동안 이동 금지)**, 투사체, 사망·부활 |
 | [stat-balance.md](stat-balance.md) | ★ **스탯 밸런스 설계(2026-09-18)** — 레벨 1~200, 사냥터 20개, 등급 7개, 데미지 공식·강화·드랍률·성장 곡선. 검증은 `python tools/balance_sim.py`. **아직 설계 문서이고 코드에는 안 들어갔다** |
 | [items.md](items.md) | 아이템 42종(등급 7 × 슬롯 6), 등급, **랜덤 옵션**, 강화, 드롭 |
-| [inventory-equipment.md](inventory-equipment.md) | 가방 200칸, 장비 8슬롯, 창 UI |
+| [inventory-equipment.md](inventory-equipment.md) | 가방 200칸, 장비 6슬롯, **창 셋**(장비 왼쪽 끝 · 칸을 누르면 뜨는 상세 · 인벤토리 오른쪽 끝), 정렬 |
 | [ui-art-style.md](ui-art-style.md) | ★★ **UI 아트풍 (굳힌 것)** — 어두운 판 + 얇은 금테 + 상아빛 아이콘. 색·프롬프트 틀·참고 그림 주소·굽는 설정. **UI 를 만들기 전에 읽는다** |
 | [hud.md](hud.md) | ★ **메인 HUD** — 퀵슬롯 위 묶음(레벨 배지·경험치 %·체력 막대), 오른쪽 위 스킬·가방 아이콘, **자동사냥 칸과 도는 고리**, 조각 아트(얇은 금선 · 테 없는 선화 아이콘) |
 | [skills.md](skills.md) | 스킬 24종(격투가는 이펙트 붙은 4개), 스킬창, 액션바 4칸, 자동 시전, **테스트 스위치(쿨타임·레벨 잠금 해제)** |

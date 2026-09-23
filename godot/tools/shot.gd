@@ -224,7 +224,17 @@ func _window(game: Node3D, which: String) -> void:
 			game._transport.send(&"learnSkill", {"skill": skill})
 		game._toggle_skills()
 	else:
+		# 상세 창까지 한 장에 나오도록 등급이 다른 것을 몇 개 넣고 하나를 고른다
+		for grade in [5, 3, 1, 7, 2]:
+			for slot in ["weapon", "armor", "ring"]:
+				player.bag.append({
+					"id": Items.item_id(grade, slot), "grade": grade,
+					"enhance": grade % 4, "options": [],
+				})
+		game._transport.send(&"equip", {"index": 0})
 		game._toggle_bag()
+		await process_frame
+		game._pick_bag("bag", 1)
 	for i in 6:
 		await process_frame
 	await RenderingServer.frame_post_draw

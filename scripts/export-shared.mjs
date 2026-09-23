@@ -72,6 +72,8 @@ import {
   OPTION_LABEL,
   MAX_ENHANCE,
   gradeLevel,
+  gradeName,
+  GRADE_COLOR,
 } from '../packages/shared/src/index.ts';
 // `index.ts` 가 gear.ts 를 다시 내보내지 않는다 — 설계 표는 직접 가져온다
 import { GEAR_DROP_RATE } from '../packages/shared/src/gear.ts';
@@ -155,6 +157,9 @@ export function buildData() {
       // 등급별 착용 레벨 (1·31·61·91·121·151·181). 고도는 이걸로 "이 레벨에서
       // 낄 수 있는 최고 등급" 을 찾는다 — 30레벨 간격을 두 곳에 적지 않으려고 표로 준다
       gradeLevels: Array.from({ length: MAX_DROP_GRADE }, (_, i) => gradeLevel(i + 1)),
+      // 등급 이름과 색 (일반 → 태초). 가방 상세 창이 이름을 이 색으로 적는다
+      gradeNames: Array.from({ length: MAX_DROP_GRADE }, (_, i) => gradeName(i + 1)),
+      gradeColors: GRADE_COLOR,
     },
     'constants.json': {
       tickRate: TICK_RATE,

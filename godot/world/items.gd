@@ -36,6 +36,23 @@ static func bag_size() -> int:
 	return int(_t().get("bagSize", 200))
 
 
+## 등급 이름 (1 일반 → 7 태초). 표는 shared 의 gradeName 이 낸다
+static func grade_name(grade: int) -> String:
+	var names: Array = _t().get("gradeNames", [])
+	if names.is_empty():
+		return "%d등급" % grade
+	return str(names[clampi(grade - 1, 0, names.size() - 1)])
+
+
+## 등급 색. 표(shared 의 GRADE_COLOR)는 어두운 흙빛에서 시작하므로
+## 어두운 창 위에 글자로 쓸 때는 부르는 쪽이 밝혀 쓴다
+static func grade_color(grade: int) -> Color:
+	var colors: Array = _t().get("gradeColors", [])
+	if colors.is_empty():
+		return Color.WHITE
+	return Color(str(colors[clampi(grade - 1, 0, colors.size() - 1)]))
+
+
 ## 설계표(`balance.json`)의 장비 쪽 — 옵션 수치도 여기 들어 있다
 static func _g() -> Dictionary:
 	return GameData.balance().get("gear", {})

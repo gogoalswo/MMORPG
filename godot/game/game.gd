@@ -1539,7 +1539,7 @@ func _stack_label(stack: Dictionary) -> String:
 ## HUD 하단. **가운데에 퀵슬롯 4칸**, 오른쪽 아래에 자동사냥·스킬·가방 단추.
 ##
 ## 퀵슬롯은 스킬 아이콘을 칸 테두리(ui_skill_slot)에 넣고, 쿨타임이 남았으면
-## 시계 방향으로 걷히는 어둠과 남은 초를 얹는다. 빈 칸은 "+" — 누르면 스킬창이 열린다.
+## 시계 방향으로 걷히는 어둠과 남은 초를 얹는다. 빈 칸은 "+" — 눌러도 아무 일 없다.
 ##
 ## **앵커로 자리를 잡는다** (UI 는 조각을 앵커로 조립한다). 자식을 다 넣은 뒤에
 ## 최소 크기로 오프셋을 맞추고, 양쪽으로 자라게 해서 해상도가 바뀌어도 가운데에 남는다
@@ -2170,6 +2170,9 @@ func _redraw_skills() -> void:
 		"주위 %d명" % targets if float(skill.get("arc", 0)) >= TAU - 0.01 else "대상 %d명" % targets,
 	]
 	_skill_desc.text = str(skill.get("description", ""))
+	var damage := Skills.damage_text(skill)
+	if damage != "":
+		_skill_desc.text += "\n\n" + damage
 
 	var equipped := _skill_pick in bar
 	if _skill_swap:
@@ -2262,9 +2265,8 @@ func _toggle_auto() -> void:
 func _on_bar_pressed(slot: int) -> void:
 	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
 	var bar: Array = me.get("skill_bar", [])
+	# 빈 칸은 아무 일도 안 한다 — 스킬창을 열던 것은 뺐다 (2026-09-23 요청)
 	if slot >= bar.size():
-		if not _skill_panel.visible:
-			_toggle_skills()
 		return
 	_transport.send(&"skill", {"skill": str(bar[slot])})
 

@@ -86,3 +86,17 @@ static func blast_radius(skill: Dictionary) -> float:
 		float(c.get("skillBlastMax", 6.0)),
 		maxf(minimum, float(skill.get("range", 0)) * float(c.get("skillBlastRatio", 0.35))),
 	)
+
+
+## 스킬창 설명에 붙이는 피해 줄. "데미지 : 260%", 연타는 "데미지 : 56% * 5연타".
+##
+## World 가 한 대마다 `공격력 × power` 를 넣고 `hits` 대를 치므로 그 두 값을
+## 그대로 적는다. 회복기는 공격 판정을 안 하므로 빈 글자
+static func damage_text(skill: Dictionary) -> String:
+	if skill.is_empty() or float(skill.get("selfHeal", 0.0)) > 0.0:
+		return ""
+	var text := "데미지 : %d%%" % roundi(float(skill.get("power", 1.0)) * 100.0)
+	var hits := int(skill.get("hits", 1))
+	if hits > 1:
+		text += " * %d연타" % hits
+	return text

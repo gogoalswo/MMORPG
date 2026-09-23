@@ -374,22 +374,35 @@ func _case_dungeon(game: Node3D) -> void:
 	if not panel.visible:
 		_fail("던전 단추를 눌렀는데 창이 안 떴다")
 		return
-	# 종류 셋 — 첫째(토벌)만 열려 있다
+	# 종류 셋 = 세로로 긴 카드 셋을 나란히 (2026-09-23 요청 그림) — 첫째(토벌)만 열려 있다
 	var font: Font = load(FONT)
 	var seen := ""
-	if panel.row_count() != 3:
-		_fail("던전 종류가 3줄이어야 하는데 %d줄" % panel.row_count())
+	await process_frame
+	if panel.card_count() != 3 or panel._scroll.visible:
+		_fail("던전 종류가 카드 3장이어야 하는데 %d장 (목록 보임 %s)" % [panel.card_count(), panel._scroll.visible])
 		return
-	if panel.row(0).disabled or not panel.row(1).disabled or not panel.row(2).disabled:
+	if panel.card(0).disabled or not panel.card(1).disabled or not panel.card(2).disabled:
 		_fail("토벌만 열리고 나머지 둘은 막혀야 한다")
 	for i in 3:
-		seen += panel.row(i).text
-	# 막힌 줄은 눌러도 아무 일이 없다
-	await _tap_row(panel, 1)
-	if panel.row_count() != 3:
-		_fail("준비 중인 종류를 눌렀는데 목록이 바뀌었다")
+		var box: Rect2 = panel.card(i).get_global_rect()
+		if box.size.y < box.size.x * 1.4:
+			_fail("카드 %d 가 세로로 길지 않다: %s" % [i, box.size])
+		if i > 0 and absf(box.position.y - panel.card(0).get_global_rect().position.y) > 1.0:
+			_fail("카드가 한 줄로 나란하지 않다")
+		var art: TextureRect = panel.card(i).find_child("Art", true, false)
+		if art == null or art.texture == null:
+			_fail("카드 %d 에 그림이 없다" % i)
+		for label in panel.card(i).find_children("*", "Label", true, false):
+			seen += label.text
+	print("  던전 카드: %s 창 %s" % [panel.card(0).size, panel.size])
+	if panel.get_global_rect().end.x > panel.get_viewport_rect().size.x:
+		_fail("카드 창이 화면 밖으로 넘친다: %s" % panel.get_global_rect())
+	# 막힌 카드는 눌러도 아무 일이 없다
+	await _tap_card(panel, 1)
+	if panel.card_count() != 3 or panel._scroll.visible:
+		_fail("준비 중인 종류를 눌렀는데 화면이 바뀌었다")
 	# 토벌을 누르면 단계 목록 — "뒤로" + 20단계
-	await _tap_row(panel, 0)
+	await _tap_card(panel, 0)
 	if panel.row_count() != 21:
 		_fail("토벌 던전 단계 목록이 21줄(뒤로 + 20)이어야 하는데 %d줄" % panel.row_count())
 		return
@@ -399,8 +412,8 @@ func _case_dungeon(game: Node3D) -> void:
 	if panel.size.x > DungeonPanel.DUNGEON_WIDTH + 1.0:
 		_fail("단계 줄이 창 폭을 넘겨 창이 %.0fpx 로 넓어졌다" % panel.size.x)
 	await _tap_row(panel, 0)
-	if panel.row_count() != 3:
-		_fail("뒤로를 눌렀는데 종류 목록으로 안 돌아갔다")
+	if not panel._cards.visible or panel.card_count() != 3:
+		_fail("뒤로를 눌렀는데 종류 카드로 안 돌아갔다")
 	var missing := ""
 	for ch in seen:
 		if ch != " " and not font.has_char(ch.unicode_at(0)):
@@ -408,7 +421,7 @@ func _case_dungeon(game: Node3D) -> void:
 	if missing != "":
 		_fail("던전 창 글자가 폰트에 없다: %s" % missing)
 	# 1단계로 들어간다 — 보스 한 마리뿐이다
-	await _tap_row(panel, 0)
+	await _tap_card(panel, 0)
 	await _tap_row(panel, 1)
 	if panel.visible:
 		_fail("단계를 골랐는데 창이 안 닫혔다")
@@ -422,6 +435,15 @@ func _case_dungeon(game: Node3D) -> void:
 		_fail("던전 안에 보스 한 마리만 있어야 하는데 %d마리" % monsters.size())
 	else:
 		print("  던전 1단계: 보스 %s 한 마리" % GameData.monster_kind(str(monsters[0].kind)).get("name", ""))
+
+
+## 던전 종류 카드 i 를 누른다 — 막힌 카드는 고도 단추처럼 아무 일도 없다
+func _tap_card(panel: DungeonPanel, i: int) -> void:
+	var card := panel.card(i)
+	if not card.disabled:
+		card.pressed.emit()
+	await process_frame
+	await process_frame
 
 
 ## 목록의 i 번째 줄 가운데를 눌렀다 뗀다 (끌지 않는다)

@@ -16,10 +16,10 @@ static func _c() -> Dictionary:
 
 
 ## 공격 속도를 반영한 실제 공격 간격 (ms)
+## **상한이 없다** (2026-09-23 지시). `cooldown / (1 + 공속)` 이라 아무리 높아도
+## 0 으로 나누지 않는다. 음수만 막는다 — 0 미만이면 값이 뒤집힌다
 static func effective_cooldown(cooldown: float, attack_speed: float) -> int:
-	var cap := float(_c().get("attackSpeedCap", 1.0))
-	var speed := clampf(attack_speed, 0.0, cap)
-	return maxi(1, roundi(cooldown / (1.0 + speed)))
+	return maxi(1, roundi(cooldown / (1.0 + maxf(attack_speed, 0.0))))
 
 
 ## 이번 공격이 몸을 묶는 시간. 다음 공격까지의 간격을 넘지 않는다.
@@ -37,10 +37,9 @@ static func monster_root_ms(cooldown_ms: float) -> int:
 	return maxi(0, mini(int(_c().get("monsterSwingMs", 650)), roundi(cooldown_ms)))
 
 
-## 굴림값(0~1)이 치명타인지
+## 굴림값(0~1)이 치명타인지. **상한이 없다** — 100% 를 넘기면 늘 치명타다
 static func roll_crit(chance: float, roll: float) -> bool:
-	var cap := float(_c().get("critCap", 0.75))
-	return roll < clampf(chance, 0.0, cap)
+	return roll < maxf(chance, 0.0)
 
 
 ## 직업·레벨로 스탯을 만든다. 바탕값 + 레벨당 x (레벨 - 1)

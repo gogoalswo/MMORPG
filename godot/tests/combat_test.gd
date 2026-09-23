@@ -103,8 +103,10 @@ func _cooldown() -> void:
 func _crit() -> void:
 	_eq("치명타 .05/.04", Combat.roll_crit(0.05, 0.04), true)
 	_eq("치명타 .05/.06", Combat.roll_crit(0.05, 0.06), false)
-	# 상한 0.75 — 0.9 를 줘도 0.8 굴림은 안 터진다
-	_eq("치명타 상한", Combat.roll_crit(0.9, 0.8), false)
+	# **상한이 없다** (2026-09-23 지시). 0.9 면 0.8 굴림도 터져야 한다
+	_eq("치명타 상한 없음", Combat.roll_crit(0.9, 0.8), true)
+	_eq("치명타 100% 초과", Combat.roll_crit(1.5, 0.99), true)
+	_eq("치명타 음수", Combat.roll_crit(-1.0, 0.0), false)
 
 
 ## World 에서 실제로 때려 죽여 본다.

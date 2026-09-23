@@ -75,13 +75,14 @@ func _reduce() -> void:
 ## 문서 6장 표 — 사냥터 끝 레벨에서 잰 값
 func _monster_table() -> void:
 	var rows := [
-		# 2026-09-21 에 다시 뽑았다 — 장비에서 치확·치피·공속을 걷으면서
-		# 기준 플레이어의 평균 피해 배수가 사라져 몬스터 HP 가 같이 내려갔다
-		{"level": 10, "grade": 1.0, "hp": 69, "atk": 2},
-		{"level": 50, "grade": 1.63, "hp": 213, "atk": 4},
-		{"level": 100, "grade": 3.3, "hp": 972, "atk": 14},
-		{"level": 150, "grade": 4.97, "hp": 5781, "atk": 64},
-		{"level": 200, "grade": 6.63, "hp": 41801, "atk": 394},
+		# **2026-09-23 에 HP 를 되돌렸다** (지시: "몬스터 HP 30%를 다시 올려").
+		# 2026-09-21 에 장신구 배분을 고치면서 소리 없이 따라 내려갔던 값을
+		# 장신구 변경 직전 것으로 복원했다 — 공격력·방어력은 그때도 안 바뀌었다
+		{"level": 10, "grade": 1.0, "hp": 71, "atk": 2},
+		{"level": 50, "grade": 1.63, "hp": 214, "atk": 4},
+		{"level": 100, "grade": 3.3, "hp": 1043, "atk": 14},
+		{"level": 150, "grade": 4.97, "hp": 7044, "atk": 64},
+		{"level": 200, "grade": 6.63, "hp": 60224, "atk": 394},
 	]
 	for row in rows:
 		var level := int(row["level"])
@@ -91,16 +92,33 @@ func _monster_table() -> void:
 		_eq("Lv%d 몬스터 공격력" % level, roundi(m["atk"]), int(row["atk"]))
 
 
-## 기준 장비로는 동레벨 몬스터를 정확히 6타에 잡는다.
-## 여유(ttkMargin)가 없으면 경계에 얹혀 조금만 모자라도 7타가 된다
+## 동레벨 타수 — **6타는 목표이지 불변식이 아니다.**
+##
+## 2026-09-23 지시: "동레벨 6타, 만렙 2880 시간을 무조건 적으로 지키려고 하지마.
+## 후반부에 가면 동레벨 몬스터가 6타가 넘을 수 있어."
+##
+## 6타에 딱 맞추라고 걸어 두면 장비 배분이나 옵션을 고칠 때마다 몬스터 표를
+## 되맞추게 되는데, 그게 바로 하지 말라고 한 일이다. 말이 되는 범위만 본다
 func _ttk() -> void:
 	var level := 1
+	var first := 0
+	var last := 0
 	while level <= Stats.max_level():
 		var ref := Stats.ref_player(level)
 		var m := Stats.monster(level)
 		var per := Stats.damage(ref["atk"], level, m["df"]) * float(ref["crit"])
-		_eq("Lv%d 타수" % level, int(ceil(float(m["hp"]) / per)), 6)
+		var hits := int(ceil(float(m["hp"]) / per))
+		if first == 0:
+			first = hits
+		last = hits
+		if hits < 6:
+			_fail("Lv%d 타수 %d — 기준 장비로 설계보다 쉬우면 곡선이 무너진다" % [level, hits])
+		elif hits > 18:
+			_fail("Lv%d 타수 %d — 기준 장비로도 너무 오래 걸린다" % [level, hits])
 		level += 7
+	if last < first:
+		_fail("초반 %d타 -> 후반 %d타 로 되레 쉬워졌다" % [first, last])
+	print("  동레벨 타수: 초반 %d타 -> 후반 %d타 (6타는 목표, 후반은 넘어도 된다)" % [first, last])
 
 
 ## 한 그룹을 정리하는 동안 HP 를 절반쯤 잃는다.

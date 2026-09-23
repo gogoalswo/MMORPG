@@ -2,13 +2,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ATTACK_ROOT_MS,
-  ATTACK_SPEED_CAP,
   attackRootMs,
   MONSTER_SWING_MS,
   monsterRootMs,
   BASE_CRIT,
   BASE_CRIT_DAMAGE,
-  CRIT_CAP,
   MAX_LEVEL,
   applyExp,
   computeDamage,
@@ -118,8 +116,9 @@ test('레벨업 직전 경험치는 다음 레벨로 이월된다', () => {
 
 test('공격 경직은 공격 간격보다 짧다 — 때리는 사이에 움직일 틈이 남는다', () => {
   for (const job of JOB_IDS) {
-    // 공격 속도 상한까지 붙은 최악의 경우로 본다 (간격이 절반이 된다)
-    const cooldown = effectiveCooldown(statsFor(job, 1).attackCooldown, ATTACK_SPEED_CAP);
+    // 공속이 아주 높은 최악의 경우로 본다. 상한을 걷었으므로(2026-09-23)
+    // 여기서도 상수 대신 큰 값을 직접 넣는다
+    const cooldown = effectiveCooldown(statsFor(job, 1).attackCooldown, 20);
     const root = attackRootMs(cooldown);
     assert.ok(root > 0, `${job}: 경직이 0 이면 휘두르며 달린다`);
     assert.ok(root <= cooldown, `${job}: 경직 ${root} 이 간격 ${cooldown} 을 넘으면 영영 못 움직인다`);
@@ -208,30 +207,29 @@ test('레벨당 마릿수는 초반이 가볍고 뒤로 갈수록 가파르다',
 /**
  * 옵션으로만 붙는 두 축.
  *
- * 여덟 자리에 옵션이 3개씩 붙으므로 상한이 없으면 치명타 100%, 공격 간격 0 이
- * 나온다. 상한이 실제로 작동하는지는 눈으로 못 본다.
+ * **상한은 2026-09-23 에 걷었다** (지시: "상한 없애."). 그러니 여기서 볼 것은
+ * "상한에서 멈추나" 가 아니라 **상한 없이도 판정이 안 깨지나** 다 — 음수가
+ * 들어와도 안전한지, 공속이 아무리 높아도 간격이 0 이나 음수가 안 되는지.
  */
 
-test('치명타 확률은 상한에서 멈춘다', () => {
+test('치명타 확률에 상한이 없다 — 100% 를 넘기면 늘 터진다', () => {
   assert.equal(rollCrit(0, 0), false, '0% 는 절대 안 터진다');
   assert.equal(rollCrit(1, 0.5), true);
-  // 굴림값이 상한보다 크면, 확률을 아무리 올려도 안 터진다
-  assert.equal(rollCrit(999, CRIT_CAP + 0.01), false, `상한(${CRIT_CAP})을 넘었다`);
-  assert.equal(rollCrit(999, CRIT_CAP - 0.01), true);
+  // 예전 상한(0.75)을 넘는 굴림도 확률이 높으면 터져야 한다
+  assert.equal(rollCrit(999, 0.76), true, '상한이 아직 남아 있다');
+  assert.equal(rollCrit(1, 0.999), true);
   assert.equal(rollCrit(-5, 0), false, '음수여도 안전해야 한다');
 });
 
-test('공격 속도는 간격을 줄이되 0 으로 만들지 않는다', () => {
+test('공격 속도에 상한이 없다 — 그래도 간격은 0 이 안 된다', () => {
   const base = 900;
   assert.equal(effectiveCooldown(base, 0), base, '옵션이 없으면 그대로여야 한다');
   assert.ok(effectiveCooldown(base, 0.2) < base, '빨라지지 않았다');
-  assert.equal(effectiveCooldown(base, ATTACK_SPEED_CAP), Math.round(base / (1 + ATTACK_SPEED_CAP)));
-  assert.equal(
-    effectiveCooldown(base, 99),
-    effectiveCooldown(base, ATTACK_SPEED_CAP),
-    `상한(+${ATTACK_SPEED_CAP * 100}%)을 넘어도 더 빨라지면 안 된다`
-  );
-  assert.ok(effectiveCooldown(base, 99) > 0);
+  // 예전 상한(+100%)을 넘으면 더 빨라져야 한다
+  assert.ok(effectiveCooldown(base, 99) < effectiveCooldown(base, 1), '상한이 아직 남아 있다');
+  // `cooldown / (1 + 공속)` 이라 0 으로 안 나뉘고, 1ms 아래로도 안 내려간다
+  assert.ok(effectiveCooldown(base, 1e9) >= 1);
+  assert.equal(effectiveCooldown(base, -5), base, '음수는 0 으로 본다');
 });
 
 test('치명타·공속은 맨몸에서 0 이다 — 전부 장비에서 온다', () => {

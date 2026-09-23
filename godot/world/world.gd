@@ -1115,7 +1115,12 @@ func cast(player_id: String, skill_id: String) -> void:
 	# **스킬 쿨타임 감소** — 옵션으로만 붙는다. 이 설계는 범위 스킬로 무리를
 	# 정리하는 사냥이라 쿨감은 사실상 DPS 다 (그래서 옵션 하나의 값어치를
 	# 공속과 같은 "DPS +1%" 로 맞춰 뒀다)
-	var cut := clampf(float(stats.get("cooldown", 0.0)), 0.0, 0.9)
+	# `_refresh_stats` 가 이미 상한에 걸어 두지만, 저장값이 바로 들어오는 길이
+	# 생겨도 안전하도록 여기서 한 번 더 자른다
+	var cut := clampf(
+		float(stats.get("cooldown", 0.0)), 0.0,
+		float(GameData.combat().get("cooldownCap", 0.9))
+	)
 	ready_at[skill_id] = now + roundi(Skills.cooldown_of(skill) * (1.0 - cut))
 
 	# 겨눈 놈 쪽으로 몸을 돌리는 것은 **쿨타임을 돌리기 전이 아니라** 여기서 한다.
@@ -1231,17 +1236,18 @@ func _refresh_stats(player: Dictionary) -> void:
 	stats.attack = maxi(1, roundi(float(stats.attack) * (1.0 + float(gear.attack) / 100.0)))
 	stats.defense = maxi(0, roundi(float(stats.defense) * (1.0 + float(gear.defense) / 100.0)))
 	stats.maxHp = maxi(1, roundi(float(stats.maxHp) * (1.0 + float(gear.maxHp) / 100.0)))
-	# 상한이 있는 것들 — 옵션이 여덟 자리에 붙으므로 안 막으면 치명타 100% 가 나온다
-	var c := GameData.combat()
-	stats.crit = minf(float(stats.crit) + gear.crit, float(c.get("critCap", 0.75)))
+	# **상한이 없다** ★ (2026-09-23 지시: "상한 없애."). 치확 100% 면 늘 치명타,
+	# 공속은 `cooldown / (1 + 공속)` 이라 얼마든 올라가도 0 으로 안 나뉜다.
+	stats.crit = maxf(float(stats.crit) + gear.crit, 0.0)
 	stats.critDamage += gear.critDamage
-	stats.attackSpeed = minf(
-		float(stats.attackSpeed) + gear.attackSpeed, float(c.get("attackSpeedCap", 1.0))
+	stats.attackSpeed = maxf(float(stats.attackSpeed) + gear.attackSpeed, 0.0)
+	# **쿨감·관통만 90% 에서 멈춘다** ★ (2026-09-23 지시). 수치를 더 주고 싶으면
+	# 이 줄이 아니라 옵션 최대치(`OPTION_MAX_VALUE`)를 올린다
+	var c := GameData.combat()
+	stats["cooldown"] = clampf(float(gear.get("cooldown", 0.0)), 0.0, float(c.get("cooldownCap", 0.9)))
+	stats["penetration"] = clampf(
+		float(gear.get("penetration", 0.0)), 0.0, float(c.get("penetrationCap", 0.9))
 	)
-	# **옵션으로만 붙는 두 축.** 상한을 두는 이유는 위와 같다 — 여섯 칸에 옵션이
-	# 넷씩 붙으므로 안 막으면 쿨타임 0 · 방어 무시 100% 가 나온다
-	stats["cooldown"] = minf(float(gear.get("cooldown", 0.0)), 0.5)
-	stats["penetration"] = minf(float(gear.get("penetration", 0.0)), 0.8)
 	player.stats = stats
 	player.hp = mini(int(player.hp), int(stats.maxHp))
 

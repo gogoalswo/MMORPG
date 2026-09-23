@@ -37,18 +37,25 @@ export const BASE_CRIT = 0.05;
 export const BASE_CRIT_DAMAGE = 1.5;
 
 /**
- * 상한.
+ * **치명타·공격 속도에 상한이 없다.** ★ (2026-09-23 지시: "상한 없애.")
  *
- * 옵션이 여덟 자리에 3개씩 붙으므로 그냥 두면 치명타 100%, 공격 속도 몇 배가
- * 나온다. 그러면 다른 옵션은 고를 이유가 없어지고 전투는 숫자가 아니라
- * 장비 뽑기가 된다.
+ * 2026-09-16 부터 `CRIT_CAP = 0.75` · `ATTACK_SPEED_CAP = 1` 이 있었는데
+ * **지시받은 값이 아니었다.** 치확이 100% 면 항상 치명타고, 공격 속도는
+ * `cooldown / (1 + 공속)` 이라 아무리 높아도 0 으로 나누지 않는다 — 둘 다
+ * 없애도 판정이 깨지지 않는다. 음수만 막는다(0 미만은 값이 뒤집힌다).
+ *
+ * **쿨감·관통만 90% 에서 멈춘다** ★ (2026-09-23 지시: "관통이랑 쿨타임 감소만
+ * 상한을 90%로 설정해"). 이 둘은 100% 에 뜻이 없거나 판정이 깨진다 —
+ * 쿨감 100% 는 쿨타임 0 이라 프레임마다 시전이고, 관통 100% 를 넘기면 상대
+ * 방어력이 음수가 되어 `ATK × K/(K+DEF)` 가 K 근처에서 발산한다(무한 피해).
+ * 수치를 더 주고 싶으면 이 상한이 아니라 옵션 최대치(`OPTION_MAX_VALUE`)를 올린다.
  */
-export const CRIT_CAP = 0.75;
-export const ATTACK_SPEED_CAP = 1;
+export const COOLDOWN_CAP = 0.9;
+export const PENETRATION_CAP = 0.9;
 
 /** 공격 속도를 반영한 실제 공격 간격 (ms) */
 export function effectiveCooldown(cooldown: number, attackSpeed: number): number {
-  const speed = Math.max(0, Math.min(ATTACK_SPEED_CAP, attackSpeed || 0));
+  const speed = Math.max(0, attackSpeed || 0);
   return Math.max(1, Math.round(cooldown / (1 + speed)));
 }
 
@@ -109,9 +116,9 @@ export function monsterRootMs(cooldownMs: number): number {
  */
 export const GODMODE_ALLOWED = true;
 
-/** 굴림값(0~1)이 치명타인지 */
+/** 굴림값(0~1)이 치명타인지. **상한이 없다** — 100% 를 넘기면 늘 치명타다 */
 export function rollCrit(chance: number, roll: number): boolean {
-  return roll < Math.max(0, Math.min(CRIT_CAP, chance || 0));
+  return roll < Math.max(0, chance || 0);
 }
 
 /**

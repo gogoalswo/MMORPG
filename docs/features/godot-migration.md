@@ -514,12 +514,14 @@ LF). **화면에 찍는 글은 영어로 둔다** — 안내와 설명은 이 �
 더블클릭한다:
 
 ```bat
-curl -o "%USERPROFILE%\Desktop\MMORPG.bat" https://raw.githubusercontent.com/gogoalswo/MMORPG/main/scripts/launcher.bat
+curl -o D:\MMORPG.bat https://raw.githubusercontent.com/gogoalswo/MMORPG/main/scripts/launcher.bat
 ```
 
 1. git 이 없으면 `winget install Git.Git` 으로 깐다. 막 깐 git 은 PATH 에 아직 없으므로
    `%ProgramFiles%\Git\cmd` 를 직접 붙인다.
-2. `C:\MMORPG` 에 클론이 없으면 클론한다 (`set MMORPG_DIR=...` 로 바꾼다).
+2. 클론이 없으면 클론한다. **저장소와 엔진은 이 파일이 놓인 드라이브를 따른다** —
+   `D:\MMORPG.bat` 이면 `D:\MMORPG` 와 `D:\godot` (`MMORPG_DIR`·`GODOT_DIR` 로 바꾼다).
+   C 드라이브를 비워 두려는 PC 가 있어서다.
 3. **`main` 으로 전환한 뒤** `play.bat` 에 넘긴다. 작업은 전부 `main` 에 밀기 때문이다.
    PC 에서 고친 파일이 있어 전환이 안 되면 지금 브랜치 그대로 돈다.
 

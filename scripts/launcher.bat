@@ -4,12 +4,15 @@ rem  One-file launcher for a PC that has no copy of the repo yet.
 rem  Put it anywhere (Desktop is fine) and double-click it.
 rem
 rem    1. no git     -> installs Git with winget (asks for consent)
-rem    2. no clone   -> clones into C:\MMORPG
+rem    2. no clone   -> clones into <this drive>:\MMORPG
 rem    3. switches to main, then hands over to scripts\play.bat
 rem       (engine download, pull, assets, import, run)
 rem
 rem    launcher.bat edit       open the Godot editor instead
-rem    set MMORPG_DIR=D:\MMORPG  clone somewhere else
+rem    set MMORPG_DIR=E:\MMORPG  clone somewhere else
+rem
+rem  Repo and engine follow the drive this file sits on: saved as
+rem  D:\MMORPG.bat it uses D:\MMORPG and D:\godot.
 rem
 rem  ASCII only, no goto/labels, stored as CRLF even on GitHub
 rem  (.gitattributes: -text) so the raw download works as is.
@@ -18,7 +21,8 @@ rem ============================================================
 setlocal
 
 set "REPO_URL=https://github.com/gogoalswo/MMORPG.git"
-if "%MMORPG_DIR%"=="" set "MMORPG_DIR=C:\MMORPG"
+if "%MMORPG_DIR%"=="" set "MMORPG_DIR=%~d0\MMORPG"
+if "%GODOT_DIR%"=="" set "GODOT_DIR=%~d0\godot"
 
 rem ---- git: a fresh winget install is not on PATH yet --------
 where git >nul 2>nul

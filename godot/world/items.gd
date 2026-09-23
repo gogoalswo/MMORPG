@@ -33,6 +33,16 @@ static func is_material(id: String) -> bool:
 	return not get_material(id).is_empty()
 
 
+## 스킬 강화서 id 들 — 재료 중 `upgrade` 가 있는 것 (표에서 만든다, `items.ts`)
+static func scroll_ids() -> Array:
+	var out: Array = []
+	var materials: Dictionary = _t().get("materials", {})
+	for id in materials:
+		if not materials[id].get("upgrade", {}).is_empty():
+			out.append(str(id))
+	return out
+
+
 static func crystal_id() -> String:
 	return str(_t().get("crystalId", "crystal"))
 

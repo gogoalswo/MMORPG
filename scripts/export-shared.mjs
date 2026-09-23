@@ -28,6 +28,8 @@ import {
   SKILL_COOLDOWN_OFF,
   SKILL_UNLOCK_ALL,
   AUTO_SKILL_TEST_GAP,
+  SKILL_UPGRADES,
+  SKILL_UPGRADE_MAX,
   JOB_IDS,
   JOB_STATS,
   PROJECTILE_SPEED,
@@ -115,6 +117,9 @@ export function buildData() {
       cooldownOff: SKILL_COOLDOWN_OFF,
       unlockAll: SKILL_UNLOCK_ALL,
       autoTestGapMs: AUTO_SKILL_TEST_GAP,
+      // 스킬 강화 — 스킬마다 둘까지, 강화서로만 붙는다 (2026-09-23)
+      upgrades: SKILL_UPGRADES,
+      upgradeMax: SKILL_UPGRADE_MAX,
     },
     // 밸런스 설계(stat-balance.md)의 수치. **아직 게임이 안 읽는다** — 판정은
     // 여전히 combat.json 으로 돈다. 설계 문서 9장 순서대로 stats.gd 가 먼저 서야 한다

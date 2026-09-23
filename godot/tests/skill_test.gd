@@ -20,6 +20,7 @@ func _init() -> void:
 	_case_combo()
 	_case_range()
 	_case_dead()
+	_case_upgrade()
 	Save.clear()
 
 	if _failed == 0:
@@ -360,3 +361,68 @@ func _case_dead() -> void:
 	w.cast("me", "rising_kick")
 	if not w.drain_events().is_empty():
 		_fail("죽었는데 스킬이 나갔다")
+
+
+## 스킬 강화 — 강화서를 쓰면 **바로** 붙고 한 장이 준다. 같은 강화는 두 번 안 붙는다.
+## 낙뢰에 "기절" 이 붙으면 맞은 놈이 3초 동안 **서서 못 때린다** (2026-09-23)
+func _case_upgrade() -> void:
+	var s := _setup()
+	var w: World = s[0]
+	var me: Dictionary = s[1]
+	var mob: Dictionary = s[2][0]
+	var scroll := "scroll_thunder_fall_stun"
+	if not (scroll in Items.scroll_ids()):
+		_fail("낙뢰 기절 강화서가 표에 없다 (%s)" % str(Items.scroll_ids()))
+		return
+	w.debug_scrolls("me")
+	w.debug_scrolls("me")
+	var at := -1
+	for i in me.bag.size():
+		if str(me.bag[i].get("id", "")) == scroll:
+			at = i
+	if at < 0 or int(me.bag[at].get("count", 0)) != 2:
+		_fail("강화서 두 장이 한 칸에 겹쳐야 한다 (%s)" % str(me.bag))
+		return
+	w.use_scroll("me", at)
+	if me.skill_upgrades.get("thunder_fall", []) != ["stun"]:
+		_fail("강화서를 썼는데 기절이 안 붙었다 (%s)" % str(me.skill_upgrades))
+	w.use_scroll("me", at)
+	if int(me.bag[at].get("count", 0)) != 1:
+		_fail("이미 붙은 강화에 강화서가 또 쓰였다 (%s)" % str(me.bag[at]))
+
+	# 기절 — 한 방에 안 죽게 체력을 올려 둔다
+	mob.max_hp = 999999
+	mob.hp = 999999
+	w.learn_skill("me", "thunder_fall")
+	w.set_skill_bar("me", ["thunder_fall"])
+	w.drain_events()
+	var now := Time.get_ticks_msec()
+	w.cast("me", "thunder_fall")
+	var cast_event := _first(w.drain_events(), "skill")
+	if cast_event.get("upgrades", []) != ["stun"]:
+		_fail("시전 이벤트에 강화가 안 실렸다 (%s)" % str(cast_event))
+	var left := int(mob.get("stunned_until", 0)) - now
+	if left < 2900 or left > 3200:
+		_fail("기절이 3초가 아니다 (%dms)" % left)
+	var hp := int(me.hp)
+	var spot := Vector2(mob.x, mob.z)
+	me.x = 6.0  # 멀어져도 쫓아오지 않아야 한다
+	for i in 20:
+		w.step(0.05)
+	if str(mob.state) != "stun" or int(me.hp) != hp or Vector2(mob.x, mob.z).distance_to(spot) > 1e-3:
+		_fail("기절한 놈이 움직이거나 때렸다 (%s · 체력 %d→%d)" % [mob.state, hp, me.hp])
+	mob.stunned_until = 0
+	w.step(0.05)
+	if str(mob.state) == "stun":
+		_fail("기절이 풀렸는데 그대로 서 있다")
+	else:
+		print("  낙뢰 기절: %dms 동안 제자리 · 풀리면 다시 %s" % [left, mob.state])
+
+	# 떼면 기절도 없다
+	me.x = 0.0
+	w.debug_reset_upgrades("me")
+	w.drain_events()
+	w.cast("me", "thunder_fall")
+	if not _first(w.drain_events(), "skill").get("upgrades", []).is_empty() \
+			or int(mob.stunned_until) != 0:
+		_fail("강화를 뗐는데 기절이 걸렸다")

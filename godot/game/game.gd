@@ -1685,6 +1685,11 @@ func _show_material_detail(stack: Dictionary) -> void:
 	_detail_kind.add_theme_color_override("font_color", INV_DIM)
 	_detail_state.text = "보유 중"
 	_fill_cell(_detail_icon, stack, "", _item_icon(stack))
+	var material := Items.get_material(str(stack.get("id", "")))
+	var link: Dictionary = material.get("upgrade", {})
+	if not link.is_empty():
+		_show_scroll_detail(stack, material, link)
+		return
 	_fill_detail_rows([
 		["보유 수량", "%d" % int(stack.get("count", 1))],
 		["쓰임", "2차 옵션 굴리기"],
@@ -1692,6 +1697,23 @@ func _show_material_detail(stack: Dictionary) -> void:
 	# "사용" 을 누르면 크리스탈 창이 뜬다 (2026-09-23 요청)
 	_bag_action.text = "사용"
 	_bag_action.disabled = int(stack.get("count", 1)) <= 0
+	_show_cell_action()
+
+
+## 스킬 강화서 — "사용" 을 누르면 **바로** 붙는다 (창 없이, `useScroll`).
+## 이미 붙었으면 "강화 완료" 로 꺼 둔다 — 판정도 다시 막는다 (`World.use_scroll`)
+func _show_scroll_detail(stack: Dictionary, material: Dictionary, link: Dictionary) -> void:
+	_detail_kind.text = "스킬 강화서"
+	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
+	var skill_id := str(link.get("skill", ""))
+	var done: bool = str(link.get("id", "")) in me.get("skill_upgrades", {}).get(skill_id, [])
+	_fill_detail_rows([
+		["보유 수량", "%d" % int(stack.get("count", 1))],
+		["스킬", str(Skills.all().get(skill_id, {}).get("name", skill_id))],
+		["효과", str(material.get("desc", ""))],
+	])
+	_bag_action.text = "강화 완료" if done else "사용"
+	_bag_action.disabled = done or int(stack.get("count", 1)) <= 0
 	_show_cell_action()
 
 
@@ -1842,6 +1864,12 @@ func _picked_stack() -> Dictionary:
 func _on_bag_action() -> void:
 	var stack := _picked_stack()
 	if stack.is_empty():
+		return
+	# 강화서 "사용" — 바로 붙는다. 가방 번호를 보낸다 (탭으로 거르면 칸 번호와 다르다)
+	if not Items.get_material(str(stack.get("id", ""))).get("upgrade", {}).is_empty():
+		_transport.send(&"useScroll", {"index": _picked_bag_index()})
+		_bag_pick = {}
+		_redraw_bag()
 		return
 	# 크리스탈 "사용" — 상세 창 자리에 크리스탈 창을 띄운다. 대상은 칸을 눌러 고른다
 	if Items.is_material(str(stack.get("id", ""))):
@@ -2359,6 +2387,24 @@ func _build_test_switches() -> void:
 	)
 	column.add_child(crystals)
 	column.move_child(crystals, 0)
+	# 스킬 강화서를 종류마다 하나씩 넣는다 — 던전 드랍 전까지 얻을 길이 이것뿐이다.
+	# 붙인 강화를 떼는 단추도 같이 둔다 (2026-09-23 사용자 선택). 줄이 위로 자라므로
+	# 둘을 **한 줄에 반씩** 놓는다
+	var upgrade_row := HBoxContainer.new()
+	upgrade_row.add_theme_constant_override("separation", 6)
+	for pair in [["강화서 +1", &"debugScrolls"], ["강화 떼기", &"debugResetUpgrades"]]:
+		var extra := Button.new()
+		extra.custom_minimum_size = Vector2(112, 52)
+		extra.add_theme_font_size_override("font_size", 18)
+		extra.text = pair[0]
+		extra.pressed.connect(func() -> void:
+			_transport.send(pair[1], {})
+			if _bag_panel.visible:
+				_redraw_bag()
+		)
+		upgrade_row.add_child(extra)
+	column.add_child(upgrade_row)
+	column.move_child(upgrade_row, 0)
 	# 무적은 플레이어 값이라 표 스위치와 따로 논다 — 요청은 `invincible`
 	_invincible_button = Button.new()
 	_invincible_button.custom_minimum_size = Vector2(230, 52)
@@ -3350,7 +3396,8 @@ func _show_skill(payload: Dictionary) -> void:
 		return
 	var here := Vector3(me.x, 0.0, me.z)
 	if skill == "thunder_fall":
-		LightningFx.bolt(_fx, here, float(me.rot))
+		# "기절" 강화가 붙었으면 붉은 번개 — 판정이 이벤트에 실어 보낸다
+		LightningFx.bolt(_fx, here, float(me.rot), "stun" in payload.get("upgrades", []))
 	elif skill == "sky_breaker":
 		QuakeFx.slam(_fx, here, float(me.rot))
 		_camera.shake(QuakeFx.SHAKE, QuakeFx.SHAKE_TIME)

@@ -73,6 +73,12 @@ func send(message: StringName, payload: Dictionary) -> void:
 			_world.unequip(MY_ID, str(payload.get("slot", "")))
 		&"sortBag":
 			_world.sort_bag(MY_ID)
+		&"useScroll":
+			_world.use_scroll(MY_ID, int(payload.get("index", -1)))
+		&"debugScrolls":
+			_world.debug_scrolls(MY_ID)
+		&"debugResetUpgrades":
+			_world.debug_reset_upgrades(MY_ID)
 		&"useCrystal":
 			_world.use_crystal(MY_ID, str(payload.get("where", "")), payload.get("key", -1))
 		&"npcBuy":

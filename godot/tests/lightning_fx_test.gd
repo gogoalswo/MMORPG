@@ -41,6 +41,7 @@ func _run() -> void:
 	await _case_visible(game)
 	await _case_other_skill(game)
 	await _case_gone(game)
+	await _case_red(game)
 	_done()
 
 
@@ -343,6 +344,39 @@ func _case_gone(game: Node3D) -> void:
 		_fail("이펙트가 안 사라졌다")
 	else:
 		print("  %d프레임 뒤 치워졌다" % waited)
+
+
+## **"기절" 강화가 붙으면 붉은 번개**, 떼면 다시 푸른 번개 (2026-09-23 요청).
+## 강화서를 실제 경로(테스트 단추 → 가방 → 사용)로 붙인다. 풀이 한 벌을 되감아
+## 쓰므로 붉게 칠한 것이 **다음 푸른 낙뢰에 남지 않는지**도 본다
+func _case_red(game: Node3D) -> void:
+	game._transport.send(&"debugScrolls", {})
+	var me: Dictionary = game._transport.snapshot().players[game._transport.my_id()]
+	var at := -1
+	for i in me.bag.size():
+		if str(me.bag[i].get("id", "")) == "scroll_thunder_fall_stun":
+			at = i
+	game._transport.send(&"useScroll", {"index": at})
+	for pair in [[true, "붉은"], [false, "푸른"]]:
+		if not pair[0]:
+			game._transport.send(&"debugResetUpgrades", {})
+		game._transport.send(&"skill", {"skill": "thunder_fall"})
+		for i in 4:
+			await process_frame
+		var fx := _newest(game)
+		if fx == null:
+			_fail("%s 낙뢰가 안 섰다" % pair[1])
+			return
+		var halo: Color = _strikes(fx)[0]._halo.material_override.albedo_color
+		var spark: Color = _strikes(fx)[0]._sparks.color
+		var red: bool = halo.r > halo.b and spark.r > spark.b
+		var blue: bool = halo.b > halo.r and spark.b > spark.r
+		if (pair[0] and not red) or (not pair[0] and not blue):
+			_fail("%s 번개여야 하는데 헤일로 %s · 불똥 %s" % [pair[1], halo.to_html(false), spark.to_html(false)])
+		else:
+			print("  %s 번개: 헤일로 #%s" % [pair[1], halo.to_html(false)])
+		while _newest(game) != null:
+			await process_frame
 
 
 ## 낙뢰 한 번씩 (붙인 순서대로)

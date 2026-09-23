@@ -192,6 +192,8 @@ func join(player_id: String) -> void:
 		"skill_bar": kept.get("skill_bar", []).duplicate(),
 		# 스킬별 다음에 쓸 수 있는 시각
 		"skill_ready_at": {},
+		# 스킬 강화 — `{ 스킬 id: [강화 id, …] }`. 강화서로만 붙는다 (`use_scroll`)
+		"skill_upgrades": kept.get("skill_upgrades", {}).duplicate(true),
 		# --- 아이템 ---
 		"bag": kept.get("bag", []).duplicate(true),
 		"equipped": kept.get("equipped", {}).duplicate(true),
@@ -611,6 +613,7 @@ func _respawn(now: int) -> void:
 			continue
 		monster.hp = monster.max_hp
 		monster.respawn_at = 0
+		monster.stunned_until = 0
 		# 죽은 자리에서 다시 선다. 집에서 멀면 다음 틱의 리쉬 검사가 도로 켠다
 		monster.leashing = false
 
@@ -644,6 +647,12 @@ func _step_monsters(delta: float, now: int) -> void:
 				monster.burst_at = 0
 				monster.rooted_until = now + Combat.monster_root_ms(float(monster.attack_cooldown))
 				_burst_aoe(monster)
+			continue
+
+		# **기절** — 못 움직이고 못 때린다. 예고한 범위 공격(위)보다 뒤에 본다:
+		# 한번 예고한 것은 그대로 터진다는 규칙을 기절도 깨지 않는다
+		if now < int(monster.get("stunned_until", 0)):
+			monster.state = "stun"
 			continue
 
 		# 휘두르는 동안은 못 움직인다. 화면이 공격 클립을 보여 주는 창과 같은 길이다
@@ -937,6 +946,8 @@ static func make_monster(
 		"patrol_rest_until": 0,
 		"next_attack_at": 0,
 		"rooted_until": 0,
+		# 기절이 풀리는 시각 (스킬 강화 — 낙뢰 기절). 그때까지 못 움직이고 못 때린다
+		"stunned_until": 0,
 		# 정확히 겹쳤을 때 밀려날 방향. **서로 달라야 풀린다**
 		"push_angle": push_angle,
 		# --- 보스 범위 공격 (없는 몬스터는 aoe 가 비어 있다) ---
@@ -984,6 +995,18 @@ func restore(player_id: String) -> bool:
 			bar.append(str(id))
 	player.skill_bar = bar
 	player.granted = saved.get("granted", []).duplicate()
+	# 강화도 **지금 표에 있는 것만** 되살린다 — 없던 칸이라 옛 저장은 빈 사전이다
+	var upgraded: Dictionary = {}
+	var raw_upgrades = saved.get("skill_upgrades", {})
+	if typeof(raw_upgrades) == TYPE_DICTIONARY:
+		for skill_id in raw_upgrades:
+			var kept_ids: Array = []
+			for id in raw_upgrades[skill_id]:
+				if not Skills.upgrade(str(skill_id), str(id)).is_empty() and not (str(id) in kept_ids):
+					kept_ids.append(str(id))
+			if not kept_ids.is_empty():
+				upgraded[str(skill_id)] = kept_ids
+	player.skill_upgrades = upgraded
 
 	# 가방·장비도 되살린다. **옛 id 는 지금 id 로 옮긴다** (2026-09-21 에 단계 축을
 	# 없앴다) — 갈 자리가 없는 것만 버린다. 등급은 아이템이 들고 있으므로
@@ -1154,6 +1177,64 @@ func grant_once(player_id: String, key: String, stack: Dictionary) -> void:
 	_notice("%s %d개를 가방에 넣었다" % [Items.stack_name(stack), int(stack.get("count", 1))])
 
 
+## --- 스킬 강화 ---
+
+## 강화서를 쓴다 — 가방 번호 `index` 의 강화서가 붙이는 강화를 **바로** 붙인다.
+## 이미 붙어 있거나 남의 직업 스킬이면 강화서를 쓰지 않는다
+func use_scroll(player_id: String, index: int) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty() or index < 0 or index >= player.bag.size():
+		return
+	var stack: Dictionary = player.bag[index]
+	var link: Dictionary = Items.get_material(str(stack.get("id", ""))).get("upgrade", {})
+	if link.is_empty():
+		return  # 강화서가 아니다
+	var skill_id := str(link.get("skill", ""))
+	var upgrade := Skills.upgrade(skill_id, str(link.get("id", "")))
+	var skill := Skills.get_skill(str(player.job), skill_id)
+	if upgrade.is_empty() or skill.is_empty():
+		_notice("쓸 수 없는 강화서입니다")
+		return
+	var have: Array = player.skill_upgrades.get_or_add(skill_id, [])
+	if str(upgrade.id) in have:
+		_notice("이미 강화했습니다 — %s %s" % [skill.name, upgrade.name])
+		return
+
+	have.append(str(upgrade.id))
+	var left := int(stack.get("count", 1)) - 1
+	if left > 0:
+		stack.count = left
+	else:
+		player.bag.remove_at(index)
+	_notice("%s 강화 — %s" % [skill.name, upgrade.name])
+	_inventory_changed(player)
+
+
+## 테스트 단추 — 강화서를 종류마다 하나씩 가방에 넣는다. 던전 드랍을 붙이기 전까지
+## 얻을 길이 이것뿐이다 (2026-09-23 사용자 선택)
+func debug_scrolls(player_id: String) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	var names: Array = []
+	for id in Items.scroll_ids():
+		if _give(player, {"id": id, "count": 1}):
+			names.append(Items.stack_name({"id": id}))
+	if names.is_empty():
+		return
+	_inventory_changed(player)
+	_notice("테스트: %s 을 넣었다" % ", ".join(names))
+
+
+## 테스트 단추 — 붙은 강화를 전부 뗀다. 강화서는 돌려주지 않는다
+func debug_reset_upgrades(player_id: String) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	player.skill_upgrades = {}
+	_notice("테스트: 스킬 강화를 전부 뗐다")
+
+
 ## 테스트 단추 — 크리스탈을 가방에 넣는다. 한 칸에 겹친다 (`_give`)
 func debug_crystals(player_id: String, count: int) -> void:
 	var player: Dictionary = _players.get(player_id, {})
@@ -1266,7 +1347,12 @@ func cast(player_id: String, skill_id: String) -> void:
 		Combat.effective_cooldown(stats.attackCooldown, stats.attackSpeed)
 	)
 	player.rooted_until = now + root
-	_events.append({"type": "skill", "id": player_id, "skill": skill_id, "root_ms": root})
+	# 붙은 강화도 싣는다 — 화면이 이펙트를 고른다 (기절이면 붉은 번개)
+	var upgrades: Array = player.get("skill_upgrades", {}).get(skill_id, [])
+	_events.append({
+		"type": "skill", "id": player_id, "skill": skill_id, "root_ms": root,
+		"upgrades": upgrades.duplicate(),
+	})
 
 	# 회복형은 공격 판정을 하지 않는다
 	var heal := float(skill.get("selfHeal", 0.0))
@@ -1316,8 +1402,13 @@ func cast(player_id: String, skill_id: String) -> void:
 		"hits": picked.size(),
 	})
 
+	# **기절은 첫 대에서 건다** — 살아남은 놈만. 연타가 있어도 다시 걸지 않는다
+	var stun := Skills.stun_ms(skill_id, upgrades)
 	for target in picked:
 		_hit_monster(player, target, attack, skill_id)
+		if stun > 0 and int(target.hp) > 0:
+			target.stunned_until = now + stun
+			target.state = "stun"
 
 	# **연타는 첫 대에서 고른 대상에게 간격을 두고 들어간다.** 한꺼번에 넣으면
 	# 피해 숫자가 한 자리에 겹쳐 한 대로 보이고, 이펙트의 다섯 줄기와 박자가 안 맞는다.

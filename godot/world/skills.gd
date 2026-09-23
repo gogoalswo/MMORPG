@@ -29,6 +29,22 @@ static func get_skill(job: String, skill_id: String) -> Dictionary:
 	return skill
 
 
+## 스킬 강화 하나 (`SKILL_UPGRADES`). 없으면 빈 사전
+static func upgrade(skill_id: String, upgrade_id: String) -> Dictionary:
+	for entry in _table().get("upgrades", []):
+		if str(entry.get("skill", "")) == skill_id and str(entry.get("id", "")) == upgrade_id:
+			return entry
+	return {}
+
+
+## 붙은 강화들이 맞은 몬스터를 세우는 시간(ms). 여럿이면 긴 쪽이다
+static func stun_ms(skill_id: String, upgrade_ids: Array) -> int:
+	var out := 0
+	for id in upgrade_ids:
+		out = maxi(out, int(upgrade(skill_id, str(id)).get("stunMs", 0)))
+	return out
+
+
 static func cooldown_off() -> bool:
 	return bool(_table().get("cooldownOff", false))
 

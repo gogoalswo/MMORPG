@@ -42,7 +42,16 @@ func _case_round_trip() -> void:
 	me.exp = 123
 	me.hp = 88
 	me.gold = 4500
+	me.skill_upgrades = {"thunder_fall": ["stun", "stun", "gone"], "gone_skill": ["stun"]}
 	w.save("me")
+	# 강화는 **지금 표에 있는 것만** 되살아난다 — 겹친 것·없는 것은 버린다
+	var back := World.new()
+	back.open("meadow")
+	back.join("me")
+	back.restore("me")
+	var restored: Dictionary = back.snapshot().players["me"].skill_upgrades
+	if restored != {"thunder_fall": ["stun"]}:
+		_fail("스킬 강화가 %s 로 돌아왔다" % str(restored))
 
 	var saved := Save.read()
 	if saved.is_empty():

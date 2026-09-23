@@ -435,6 +435,8 @@
   넓게 퍼지는데, **금은 사거리 표시가 아니라 터진 흔적**이라 그대로 뒀다.
 - **찍어 보고 고쳤다.** 수치 테스트는 첫 판부터 전부 통과였다 — 화면을 보지 않았으면
   지금도 실 다발이다. `npm run shot:godot` → [verification.md](verification.md)
+- **"기절" 강화가 붙으면 붉은 번개다** (2026-09-23). 헤일로·색 빛·불똥만 붉은 벌
+  (`PALETTE_RED`)로 바뀌고 흰 심과 금은 그대로다 → [skill-upgrades.md](skill-upgrades.md)
 
 ### 이펙트 — 천붕각 (`quake_fx.gd`) ★
 

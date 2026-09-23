@@ -30,6 +30,7 @@ func _run() -> void:
 	await process_frame
 
 	_case_table()
+	_case_warm(game)
 	await _case_cast(game)
 	await _case_shape(game)
 	await _case_visible(game)
@@ -53,6 +54,21 @@ func _case_table() -> void:
 		_fail("이펙트가 %.0f° 만 쓴다 — 판정 부채꼴 %.0f° 보다 좁다" % [
 			rad_to_deg(SkillFx.SWEEP_ARC), rad_to_deg(float(kick.arc))
 		])
+
+
+## **셰이더 미리 굽기** — 게임에 들어가면 한 번 돌고, 본 화면에는 안 보인다
+## (본 카메라가 굽는 레이어를 안 본다). 안 돌면 스킬을 처음 쓸 때 멈칫한다
+func _case_warm(game: Node3D) -> void:
+	if not FxWarm._done:
+		_fail("이펙트 셰이더 미리 굽기가 안 돌았다")
+	if game._camera.cull_mask & FxWarm.LAYER != 0:
+		_fail("본 화면 카메라가 굽는 레이어를 본다 — 굽는 이펙트가 화면에 보인다")
+	var warm := game.get_node_or_null("FxWarm")
+	if warm != null:
+		for node in warm._stage.find_children("*", "", true, false):
+			if node is VisualInstance3D and node.layers != FxWarm.LAYER:
+				_fail("굽는 이펙트 %s 가 다른 레이어에 있다" % node.name)
+				break
 
 
 ## 액션바의 할퀴기를 누르면(= 서버가 `skill` 이벤트를 낸다) 이펙트가 선다.
@@ -121,6 +137,10 @@ func _case_shape(game: Node3D) -> void:
 	var core: MeshInstance3D = fx._slashes[0].layers[2].node
 	if not core.visible or core.mesh == null or core.mesh.get_surface_count() == 0:
 		_fail("첫 긁기의 심이 안 그려졌다")
+	# **메시를 다시 깎지 않는다** — 매 프레임 깎았더니 웹·폰에서 히치가 났다
+	# (2026-09-23). 할퀴기마다 새로 만들어도 한 번 튄다. 모두가 같은 것을 쓴다
+	elif core.mesh != SkillFx.arc_mesh(0) or fx._slashes[0].layers[0].node.mesh != core.mesh:
+		_fail("호 메시를 새로 만들었다 — 한 번 깔아 둔 것(arc_mesh)을 같이 써야 한다")
 	else:
 		print("  모양: %d번 × 발톱 %d가닥 × 3겹, 간격 %.0fms, %.0f° 를 쓴다" % [
 			SkillFx.SLASHES, SkillFx.CLAWS, SkillFx.GAP * 1000.0, rad_to_deg(SkillFx.SWEEP_ARC)

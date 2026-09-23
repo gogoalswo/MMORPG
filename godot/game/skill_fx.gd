@@ -8,9 +8,16 @@ extends Node3D
 ## 한 번 긁을 때 **나란한 발톱 자국 셋**이 부채꼴을 쓸고 가고, 다섯 번이
 ## 좌 → 우, 우 → 좌로 번갈아 기울기를 달리해 겹친다.
 ##
-## **줄기는 파티클이 아니라 직접 메시다** (effect-rules.md 3절). 프레임마다 머리가
-## 호를 따라 나아가고 꼬리가 따라붙는 초승달을 다시 깎는다. 폭은 시선에 수직
-## (`LightningFx.view_dir`)이라 카메라 각이 어떻든 같은 굵기로 보인다.
+## **줄기는 파티클이 아니라 직접 메시다** (effect-rules.md 3절). 머리가 호를 따라
+## 나아가고 꼬리가 따라붙는 초승달이다. 폭은 시선에 수직(`LightningFx.view_dir`)이라
+## 카메라 각이 어떻든 같은 굵기로 보인다.
+##
+## **메시는 쓸 때 한 번만 만들고, 움직임은 셰이더가 한다** (`CLAW_SHADER`) ★
+## 처음에는 프레임마다 메시 15장을 GDScript 로 다시 깎았는데 **스킬을 쓸 때마다
+## 히치가 걸렸다** (2026-09-23 지적). 재 보니 떠 있는 동안 프레임당 1.6ms(최대 3ms,
+## PC) — 낙뢰의 10배였고 웹·폰에서는 몇 배로 불어난다. 지금은 호 전체(140°)를
+## 폭 0 으로 깔아 두고, 셰이더가 `tail`~`head` 사이만 초승달 폭으로 벌린다.
+## 프레임마다 하는 일은 재질 세 개에 숫자 몇 개를 넣는 것뿐이다.
 ## **방향은 캐릭터 기준이다** — 호의 가운데가 늘 캐릭터가 보는 쪽이다.
 ##
 ## **에셋을 쓰지 않는다.** 텍스처도 런타임에 굽는다 (`FxTex`).
@@ -47,8 +54,9 @@ const TILTS: Array[float] = [-0.34, 0.3, -0.14, 0.4, -0.24]
 ## 번마다 높이를 조금씩 흔든다 — 같은 자리를 다섯 번 지나면 한 줄이 된다
 const LIFTS: Array[float] = [0.05, -0.1, 0.15, -0.02, 0.08]
 
-## 호를 몇 토막으로 깎나
-const SEGMENTS := 22
+## 호 전체(140°)를 몇 토막으로 까나. 머리 끝이 토막 단위로 나아가므로
+## 너무 성기면 끝이 뚝뚝 끊겨 보인다 (40 이면 3.5° 씩)
+const SEGMENTS := 40
 
 ## 세 겹 — **폭만 다르고 같은 길**이다 (effect-rules.md 5절). 넓은 청백 빛 +
 ## 밝은 테 + 가는 흰 심. 폭은 초승달의 가장 굵은 자리 기준(m)
@@ -69,6 +77,38 @@ const SPARK_COUNT := 12
 const SPARK_SIZE := 0.13
 const SPARK_LIFE := 0.26
 const COLOR_SPARK := Color("#ffd98a")
+
+## 초승달 셰이더. 꼭짓점은 전부 호 위(가운데 선)에 있고, 가장자리 꼭짓점만
+## 시선 × `NORMAL`(호의 진행 방향) 쪽으로 `UV2.y`(±발톱 굵기) 만큼 벌린다. `UV2.x` 는 그 점의 각(rad)이라
+## `tail`~`head` 밖이면 폭이 0 이 되어 안 보인다. 가장자리를 죄는 것은
+## `LightningFx.glow` 와 같은 `FxTex.streak` 이다
+const CLAW_SHADER := """
+shader_type spatial;
+render_mode unshaded, blend_add, depth_test_disabled, cull_disabled, world_vertex_coords;
+uniform sampler2D streak : source_color, filter_linear;
+uniform vec4 tint : source_color = vec4(1.0);
+uniform float width = 0.3;
+uniform float head = 0.0;
+uniform float tail = 0.0;
+void vertex() {
+	// 초승달 폭 — 꼬리는 실처럼 가늘고, 머리 쪽 3분의 2 에서 가장 굵고, 머리 끝은
+	// 뾰족하다. 폭이 일정하면 막대가 날아가는 것으로 보인다
+	float u = (UV2.x - tail) / max(head - tail, 1e-4);
+	float w = (u < 0.0 || u > 1.0) ? 0.0 : sin(PI * pow(u, 1.6));
+	// 폭 방향은 **시선과 호의 진행 방향에 수직**이다. 월드에서 구하므로 메시는
+	// 보는 쪽과 무관하다 — 노드만 돌리면 되고, 메시는 게임 전체에서 한 번만 만든다
+	vec3 across = normalize(cross(INV_VIEW_MATRIX[2].xyz, NORMAL));
+	VERTEX += across * UV2.y * width * 0.5 * w;
+}
+void fragment() {
+	vec4 t = texture(streak, UV);
+	ALBEDO = tint.rgb * t.rgb;
+	ALPHA = tint.a * t.a;
+}
+"""
+static var _shader: Shader
+## 긁기 다섯의 호 메시 — **처음 한 번만** 만들어 모든 할퀴기가 같이 쓴다 (보는 쪽 0 기준)
+static var _arcs: Array = []
 
 var _t := 0.0
 var _facing := 0.0
@@ -104,9 +144,16 @@ func _build() -> void:
 			"flashed": false,
 			"layers": [],
 		}
+		# 세 겹이 **같은 메시**를 쓴다 — 폭과 색만 재질이 다르다
+		var arc := arc_mesh(i)
 		for layer in [[HALO_WIDTH, COLOR_HALO], [SHEEN_WIDTH, COLOR_SHEEN], [CORE_WIDTH, COLOR_CORE]]:
 			var mesh := MeshInstance3D.new()
-			mesh.material_override = LightningFx.glow(layer[1])
+			mesh.mesh = arc
+			# 메시는 보는 쪽 0 으로 깔려 있다 — 노드를 돌려 캐릭터가 보는 쪽에 맞춘다
+			mesh.rotation.y = _facing
+			mesh.material_override = claw_material(layer[0], layer[1])
+			# 꼭짓점을 셰이더가 벌리므로 원래 상자(폭 0)보다 넉넉히 잡는다
+			mesh.extra_cull_margin = HALO_WIDTH
 			mesh.visible = false
 			add_child(mesh)
 			slash.layers.append({"node": mesh, "width": layer[0], "color": layer[1]})
@@ -144,10 +191,11 @@ func _draw(slash: Dictionary) -> void:
 			node.visible = false
 			continue
 		node.visible = true
-		node.mesh = _crescents(slash, tail, head, float(layer.width))
-		var mat: StandardMaterial3D = node.material_override
+		var mat: ShaderMaterial = node.material_override
 		var c: Color = layer.color
-		mat.albedo_color = Color(c.r, c.g, c.b, c.a * alpha)
+		mat.set_shader_parameter(&"head", head)
+		mat.set_shader_parameter(&"tail", tail)
+		mat.set_shader_parameter(&"tint", Color(c.r, c.g, c.b, c.a * alpha))
 
 	# 머리가 가운데(보는 쪽 정면)를 지날 때 닿는다 — 거기서 불꽃
 	if not bool(slash.flashed) and sweep >= 0.5:
@@ -168,44 +216,95 @@ func _draw(slash: Dictionary) -> void:
 		mat.albedo_color = Color(COLOR_FLASH.r, COLOR_FLASH.g, COLOR_FLASH.b, 1.0 - f)
 
 
-## 발톱 자국 셋을 한 메시로. 각은 `tail` → `head`(보는 쪽 기준 rad, 부호는 `side`)
-func _crescents(slash: Dictionary, tail: float, head: float, width: float) -> ArrayMesh:
-	var view := LightningFx.view_dir()
-	var tool := SurfaceTool.new()
-	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+## `i` 번째 긁기의 발톱 자국 셋을 한 메시로 — **게임 전체에서 한 번만** 만든다.
+## 쓸 때마다 만들었더니 그것만으로 2.8ms(PC) 가 튀었다 (2026-09-23).
+## 호 전체(`SWEEP_ARC`)를 보는 쪽 0 으로 깔아 두고 폭은 0 이다. 점마다 꼭짓점
+## 셋(바깥 · 가운데 · 바깥)이 같은 자리에 있고, 셰이더가 바깥 둘만 벌린다.
+## `NORMAL` 에는 폭 방향이 아니라 **호의 진행 방향**을 넣는다 — 폭 방향은 시선에
+## 달려 있어서 셰이더가 월드에서 구한다
+static func arc_mesh(i: int) -> ArrayMesh:
+	if _arcs.size() > i and _arcs[i] != null:
+		return _arcs[i]
+	var side_sign := 1.0 if i % 2 == 0 else -1.0
+	var tilt := TILTS[i % TILTS.size()]
+	var lift := LIFTS[i % LIFTS.size()]
+	var verts := PackedVector3Array()
+	var normals := PackedVector3Array()
+	var uvs := PackedVector2Array()
+	var uv2s := PackedVector2Array()
+	var index := PackedInt32Array()
 	for k in CLAWS:
 		var radius := RADIUS + CLAW_SPACING * float(k)
-		var w := width * CLAW_SCALE[k % CLAW_SCALE.size()]
+		var scale := CLAW_SCALE[k % CLAW_SCALE.size()]
 		var path := PackedVector3Array()
-		for i in SEGMENTS + 1:
-			path.append(arc_point(lerpf(tail, head, float(i) / float(SEGMENTS)), radius, slash))
-		var across: Array = []
-		for i in path.size():
-			var along := path[mini(i + 1, SEGMENTS)] - path[maxi(i - 1, 0)]
-			across.append(view.cross(along.normalized()).normalized())
-		for i in SEGMENTS:
-			var wa: Vector3 = across[i] * crescent(float(i) / float(SEGMENTS)) * w * 0.5
-			var wb: Vector3 = across[i + 1] * crescent(float(i + 1) / float(SEGMENTS)) * w * 0.5
-			LightningFx._half(tool, path[i] - wa, path[i], path[i + 1] - wb, path[i + 1], 0.0)
-			LightningFx._half(tool, path[i] + wa, path[i], path[i + 1] + wb, path[i + 1], 1.0)
-	return tool.commit()
+		var angles := PackedFloat32Array()
+		for p in SEGMENTS + 1:
+			var a := -SWEEP_ARC * 0.5 + SWEEP_ARC * float(p) / float(SEGMENTS)
+			angles.append(a)
+			path.append(local_point(a, radius, side_sign, tilt, lift))
+		var base := verts.size()
+		for p in path.size():
+			var along := path[mini(p + 1, SEGMENTS)] - path[maxi(p - 1, 0)]
+			var dir := along.normalized()
+			# 바깥(-) · 가운데 · 바깥(+). 셰이더는 UV2.y 를 곱해 벌린다
+			for side in [-1.0, 0.0, 1.0]:
+				verts.append(path[p])
+				normals.append(dir)
+				uvs.append(Vector2(0.5 + side * 0.5, float(p) / float(SEGMENTS)))
+				uv2s.append(Vector2(angles[p], side * scale))
+		for p in SEGMENTS:
+			var a := base + p * 3
+			var b := a + 3
+			# 왼쪽 반 · 오른쪽 반 (가운데 줄을 나눠 가진다)
+			index.append_array([a, a + 1, b, b, a + 1, b + 1])
+			index.append_array([a + 2, a + 1, b + 2, b + 2, a + 1, b + 1])
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = verts
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_TEX_UV] = uvs
+	arrays[Mesh.ARRAY_TEX_UV2] = uv2s
+	arrays[Mesh.ARRAY_INDEX] = index
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	if _arcs.size() <= i:
+		_arcs.resize(i + 1)
+	_arcs[i] = mesh
+	return mesh
+
+
+## 초승달 한 겹의 재질. 셰이더는 한 번만 만들어 모두가 같이 쓴다
+static func claw_material(width: float, tint: Color) -> ShaderMaterial:
+	if _shader == null:
+		_shader = Shader.new()
+		_shader.code = CLAW_SHADER
+	var mat := ShaderMaterial.new()
+	mat.shader = _shader
+	mat.set_shader_parameter(&"streak", FxTex.streak())
+	mat.set_shader_parameter(&"width", width)
+	mat.set_shader_parameter(&"tint", tint)
+	return mat
 
 
 ## 호 위의 한 점 (이펙트 원점 = 가슴 기준, 월드 방향).
 ## `angle` 0 이 캐릭터가 보는 쪽이고, `side` 가 쓸고 가는 쪽을 뒤집는다.
 ## 호를 품은 판을 **보는 쪽을 축으로 `tilt` 만큼 기울여** 한쪽 끝이 높아진다
 func arc_point(angle: float, radius: float, slash: Dictionary) -> Vector3:
-	var a := angle * float(slash.side)
+	return local_point(
+		angle, radius, float(slash.side), float(slash.tilt), float(slash.lift)
+	).rotated(Vector3.UP, _facing)
+
+
+## 보는 쪽이 +Z(0) 일 때의 점. 메시는 이것으로 깔고 노드를 돌린다
+static func local_point(angle: float, radius: float, side: float, tilt: float, lift: float) -> Vector3:
+	var a := angle * side
 	var local := Vector3(sin(a) * radius, 0.0, cos(a) * radius)
-	local = local.rotated(Vector3.BACK, float(slash.tilt))
-	local.y += float(slash.lift)
-	return local.rotated(Vector3.UP, _facing)
+	local = local.rotated(Vector3.BACK, tilt)
+	local.y += lift
+	return local
 
 
-## 초승달 폭 (0 = 꼬리, 1 = 머리). 꼬리는 실처럼 가늘고, 머리 쪽 3분의 2 에서
-## 가장 굵고, **머리 끝은 뾰족하다** — 폭이 일정하면 막대가 날아가는 것으로 보인다
-static func crescent(t: float) -> float:
-	return sin(PI * pow(clampf(t, 0.0, 1.0), 1.6))
+## (초승달 폭 곡선은 셰이더에 있다 — `CLAW_SHADER`)
 
 
 static func _ease_out(t: float) -> float:

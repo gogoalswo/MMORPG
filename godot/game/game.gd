@@ -3087,7 +3087,7 @@ func _show_skill(payload: Dictionary) -> void:
 	if str(payload.get("id", "")) != _transport.my_id():
 		return
 	var skill := str(payload.get("skill", ""))
-	if not (skill in ["rising_kick", "thunder_fall", "sky_breaker"]):
+	if not (skill in ["rising_kick", "thunder_fall", "sky_breaker", "frost_pillar"]):
 		return
 	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
 	if me.is_empty():
@@ -3098,6 +3098,9 @@ func _show_skill(payload: Dictionary) -> void:
 	elif skill == "sky_breaker":
 		QuakeFx.slam(_fx, here, float(me.rot))
 		_camera.shake(QuakeFx.SHAKE, QuakeFx.SHAKE_TIME)
+	elif skill == "frost_pillar":
+		IceFx.burst(_fx, here, float(me.rot))
+		_camera.shake(IceFx.SHAKE, IceFx.SHAKE_TIME)
 	else:
 		SkillFx.claw(_fx, here, float(me.rot))
 

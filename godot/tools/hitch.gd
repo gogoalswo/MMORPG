@@ -19,7 +19,7 @@ extends SceneTree
 const ZONE := "meadow"
 const PACK := Vector3(-28.0, 0.0, -28.0)
 ## 마지막 `none` 은 안 쓰고 서 있기만 한다 — 판정 틱의 바닥값
-const SKILLS := ["rising_kick", "thunder_fall", "sky_breaker", "none"]
+const SKILLS := ["rising_kick", "thunder_fall", "sky_breaker", "frost_pillar", "none"]
 ## 첫 번째는 버리고(글자·재질을 처음 굽는 값) 나머지의 최댓값을 본다
 const CASTS := 4
 const WATCH_FRAMES := 60

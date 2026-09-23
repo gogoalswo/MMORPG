@@ -28,7 +28,7 @@ for (const [name, value] of Object.entries(data)) {
 test('내보낸 개수가 문서와 맞는다', () => {
   assert.equal(Object.keys(data['zones.json'].zones).length, 21, '존 21곳');
   assert.equal(Object.keys(data['monsters.json'].kinds).length, 60, '몬스터 60종');
-  assert.equal(Object.keys(data['skills.json'].skills).length, 25, '스킬 25종');
+  assert.equal(Object.keys(data['skills.json'].skills).length, 26, '스킬 26종');
 });
 
 test('아이템도 내보낸다 — 등급·랜덤옵션·강화를 그대로 가기로 했다 (2026-09-17)', () => {

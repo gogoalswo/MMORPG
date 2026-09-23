@@ -18,7 +18,7 @@ extends Node3D
 ## 거기 두면 풀도 같이 사라진다. 이펙트는 월드 좌표로 서므로 원점에 있는 이
 ## 노드 아래에 둬도 자리가 같다.
 ##
-## 이펙트 쪽 규격 (`SkillFx` · `LightningFx` · `QuakeFx` · `HitFx`):
+## 이펙트 쪽 규격 (`SkillFx` · `LightningFx` · `QuakeFx` · `IceFx` · `HitFx`):
 ## - 띄우는 `static func` 가 `FxPool.take(parent, 키)` 로 쉬는 것을 먼저 꺼낸다.
 ##   없으면 새로 만든다. **부모가 풀이 아니면 늘 새로 만든다** (테스트 무대·`FxWarm`).
 ## - 노드를 만드는 일(`_build`)과 되감는 일(`_start`)을 나눈다. 되감기에서는
@@ -28,7 +28,7 @@ extends Node3D
 
 ## 게임을 열 때 미리 만들어 두는 수. **하나는 꼭 있어야 한다** — 재질을 붙들고
 ## 있어야 셰이더가 안 버려진다. 타격은 할퀴기 다섯 대 × 무리 여럿이라 여럿 둔다
-const PREFILL := {&"claw": 2, &"bolt": 1, &"slam": 1, &"hit": 12}
+const PREFILL := {&"claw": 2, &"bolt": 1, &"slam": 1, &"ice": 1, &"hit": 12}
 
 ## 키 → 쉬고 있는 이펙트
 var _idle: Dictionary = {}
@@ -82,6 +82,8 @@ func fill(font: Font) -> void:
 		made.append(LightningFx.bolt(self, Vector3.ZERO, 0.0))
 	for i in PREFILL[&"slam"]:
 		made.append(QuakeFx.slam(self, Vector3.ZERO, 0.0))
+	for i in PREFILL[&"ice"]:
+		made.append(IceFx.burst(self, Vector3.ZERO, 0.0))
 	for i in PREFILL[&"hit"]:
 		made.append(HitFx.spawn(self, Vector3.ZERO, {"amount": 0}, font))
 	for fx in made:

@@ -21,6 +21,34 @@ static func get_item(id: String) -> Dictionary:
 	return all().get(id, {})
 
 
+## --- 재료 (크리스탈) ---
+## 장비 표(`items`)와 따로 있다 — 넣으면 슬롯·등급을 묻는 자리마다 "장비가 아니면"
+## 을 걸어야 한다. 가방에는 `{ id, count }` 로 겹쳐 쌓인다 (shared 의 `MATERIALS`)
+
+static func get_material(id: String) -> Dictionary:
+	return _t().get("materials", {}).get(id, {})
+
+
+static func is_material(id: String) -> bool:
+	return not get_material(id).is_empty()
+
+
+static func crystal_id() -> String:
+	return str(_t().get("crystalId", "crystal"))
+
+
+static func crystal_drop_chance() -> float:
+	return float(_t().get("crystalDropChance", 0.0))
+
+
+## 가방 물건의 이름 — 장비든 재료든
+static func stack_name(stack: Dictionary) -> String:
+	var id := str(stack.get("id", ""))
+	if is_material(id):
+		return str(get_material(id).get("name", id))
+	return str(get_item(id).get("name", id))
+
+
 static func slots() -> Array:
 	return _t().get("slots", [])
 
@@ -144,6 +172,37 @@ static func roll_options(item: Dictionary, grade: int, rng: RandomNumberGenerato
 	return out
 
 
+## --- 옵션 차수 ---
+## **1차는 드랍, 2차는 크리스탈, 3차는 비워 둔다** (2026-09-23). 표는 `optionTiers`
+## — 차수마다 저장 칸(`options` · `options2` · `options3`)과 줄 수가 있다.
+## 수치 범위는 셋 다 장비 등급의 `option_range` 다
+
+static func option_tiers() -> Array:
+	return _t().get("optionTiers", [])
+
+
+static func option_tier(tier: int) -> Dictionary:
+	for row in option_tiers():
+		if int(row.get("tier", 0)) == tier:
+			return row
+	return {}
+
+
+## 그 차수의 옵션을 굴린다. 종류는 **같은 차수 안에서만** 안 겹친다
+static func roll_tier_options(tier: int, grade: int, rng: RandomNumberGenerator) -> Array:
+	var count := int(option_tier(tier).get("count", 0))
+	var pool: Array = _t().get("optionKinds", []).duplicate()
+	var out: Array = []
+	for i in mini(count, pool.size()):
+		var kind := str(pool.pop_at(int(rng.randf() * pool.size())))
+		var span := option_range(kind, grade)
+		out.append({
+			"kind": kind,
+			"value": snappedf(span.min + rng.randf() * (span.max - span.min), 0.1),
+		})
+	return out
+
+
 static func describe_option(option: Dictionary) -> String:
 	var label: Dictionary = _t().get("optionLabel", {})
 	# 저장된 옛 아이템의 공격력·방어력 옵션 — 지금 표에 없어 영어 키가 찍혔다 (2026-09-23).
@@ -239,8 +298,11 @@ static func stack_stats(stack: Dictionary) -> Dictionary:
 	total.attackSpeed = base.attackSpeed / 100.0
 
 	# 옵션 여섯 종은 전부 퍼센트다. HP 만 **기본 스탯에 곱할 %** 라 같은 자리에 더하고,
-	# 나머지 다섯은 비율(0.07 = 7%)로 바꿔 담는다
-	for option in stack.get("options", []):
+	# 나머지 다섯은 비율(0.07 = 7%)로 바꿔 담는다. **1·2·3차를 다 더한다**
+	var options: Array = []
+	for row in option_tiers():
+		options.append_array(stack.get(str(row.key), []))
+	for option in options:
 		var value := float(option.value)
 		match str(option.kind):
 			"maxHp": total.maxHp += value
@@ -371,9 +433,17 @@ static func roll_drop(monster_level: int, job: String, rng: RandomNumberGenerato
 	# ±30% 흔들어 매번 같은 숫자가 나오지 않게 한다
 	var gold := maxi(1, roundi(base * (0.7 + rng.randf() * 0.6)))
 
-	if rng.randf() >= drop_chance(monster_level):
-		return {"gold": gold}
+	# 크리스탈은 장비와 **따로** 굴린다. 순서는 골드 → 장비 → (슬롯 → 등급 → 옵션) → 크리스탈
+	# — `items.ts` 와 같은 순서라야 같은 씨앗에서 같은 것이 나온다
+	var drop := {"gold": gold}
+	if rng.randf() < drop_chance(monster_level):
+		drop["item"] = _roll_gear_drop(monster_level, rng)
+	if rng.randf() < crystal_drop_chance():
+		drop["crystal"] = 1
+	return drop
 
+
+static func _roll_gear_drop(monster_level: int, rng: RandomNumberGenerator) -> Dictionary:
 	# 슬롯은 고루 나와야 한다 — 한쪽만 나오면 나머지 자리는 영영 빈다.
 	# 직업은 더 이상 후보를 가르지 않는다. **굴리는 순서는 슬롯 → 등급** —
 	# `items.ts` 와 같은 순서라야 같은 씨앗에서 같은 것이 나온다
@@ -383,13 +453,10 @@ static func roll_drop(monster_level: int, job: String, rng: RandomNumberGenerato
 	var id := item_id(grade, str(all_slots[pick]))
 	var def := get_item(id)
 	return {
-		"gold": gold,
-		"item": {
-			"id": id,
-			"grade": grade,
-			"enhance": 0,
-			"options": roll_options(def, grade, rng) if not def.is_empty() else [],
-		},
+		"id": id,
+		"grade": grade,
+		"enhance": 0,
+		"options": roll_options(def, grade, rng) if not def.is_empty() else [],
 	}
 
 

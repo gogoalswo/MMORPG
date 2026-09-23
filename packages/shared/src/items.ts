@@ -280,12 +280,18 @@ export interface ItemStack {
   /** 강화 수치 (+0 ~ +10). 없으면 0 */
   enhance?: number;
   /**
-   * 만들어질 때 굴린 옵션 1~3개.
+   * **1차 옵션** — 만들어질 때(드랍·상점) 굴린 2개.
    *
    * **물건마다 다르다.** 같은 이름·등급이라도 이게 다르면 다른 물건이라
    * 가방에서도 한 칸에 겹치지 않는다.
    */
   options?: ItemOption[];
+  /** **2차 옵션** — 크리스탈로 붙인다. 쓸 때마다 통째로 다시 굴린다 (`OPTION_TIERS`) */
+  options2?: ItemOption[];
+  /** **3차 옵션** — 자리만 있다. 붙이는 방법이 아직 없다 */
+  options3?: ItemOption[];
+  /** 재료(크리스탈)만 겹쳐 쌓는다. 장비는 늘 1 */
+  count?: number;
 }
 
 // ---------------------------------------------------------------- 옵션
@@ -408,8 +414,109 @@ export function rollOptions(
   return out;
 }
 
+// ---------------------------------------------------------------- 옵션 차수
+
+/**
+ * **옵션을 1차·2차·3차로 나눈다** (2026-09-23 지시: "1차만 드랍으로 나오게 하고
+ * 2차는 크리스탈이라는 아이템 만들어서 해당 아이템으로 붙이는 시스템. 3차는 비어둬").
+ *
+ * - 1차 — 드랍·상점에서 물건이 생길 때 굴린다 (지금까지의 `options`, 2줄)
+ * - 2차 — 크리스탈을 쓰면 **2차 칸을 통째로 다시 굴린다** (1줄). 처음 쓰면 붙고,
+ *   다시 쓰면 바뀐다
+ * - 3차 — 자리만 있다 (`count: 0`, 붙이는 곳 없음)
+ *
+ * 차수마다 저장 칸을 따로 둔다(`options` · `options2` · `options3`). 1차가 옛 `options`
+ * 그대로라 **옛 저장은 손대지 않아도 1차로 읽힌다.** 수치 범위는 셋 다 장비 등급의
+ * `optionRange` 다 — 차수는 "어디서 붙나" 만 가른다.
+ *
+ * 종류는 **같은 차수 안에서만** 안 겹친다. 2차가 1차와 같은 종류여도 된다 — 막으면
+ * 크리스탈 결과가 1차에 따라 달라져 "무엇이 나올 수 있나" 를 설명하기 어렵다.
+ */
+export type OptionTierKey = 'options' | 'options2' | 'options3';
+
+export interface OptionTier {
+  tier: number;
+  key: OptionTierKey;
+  /** 붙는 줄 수. 0 이면 빈 차수 */
+  count: number;
+  /** 어디서 붙나 — `drop`(드랍·상점) · `crystal` · 없음 */
+  source: 'drop' | 'crystal' | null;
+}
+
+export const OPTION_TIERS: OptionTier[] = [
+  { tier: 1, key: 'options', count: OPTION_MAX, source: 'drop' },
+  { tier: 2, key: 'options2', count: 1, source: 'crystal' },
+  { tier: 3, key: 'options3', count: 0, source: null },
+];
+
+export function optionTier(tier: number): OptionTier | undefined {
+  return OPTION_TIERS.find((t) => t.tier === tier);
+}
+
+/** 그 차수의 옵션을 굴린다 — 수치는 장비 등급, 줄 수는 차수 표가 정한다 */
+export function rollTierOptions(
+  tier: number,
+  grade: number,
+  rng: () => number = Math.random
+): ItemOption[] {
+  const count = optionTier(tier)?.count ?? 0;
+  const pool = [...OPTION_KINDS];
+  const out: ItemOption[] = [];
+  for (let i = 0; i < Math.min(count, pool.length); i++) {
+    const kind = pool.splice(Math.floor(rng() * pool.length), 1)[0]!;
+    const { min, max } = optionRange(kind, grade);
+    out.push({ kind, value: Math.round((min + rng() * (max - min)) * 10) / 10 });
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------- 재료 (크리스탈)
+
+/**
+ * **재료** — 장비가 아닌 가방 물건. 지금은 크리스탈 하나다.
+ *
+ * `ITEMS`(장비 42종) 에 넣지 않는다 — 넣으면 슬롯·등급·능력치를 묻는 자리마다
+ * "장비가 아니면" 을 걸어야 한다. 가방에는 `{ id, count }` 로 겹쳐 쌓인다.
+ *
+ * 크리스탈은 **한 종류**다 (2026-09-23 사용자 선택). 붙는 수치는 크리스탈이 아니라
+ * **장비 등급**이 정한다.
+ */
+export interface MaterialDef {
+  id: string;
+  name: string;
+  /** 상세 창에 적는 한 줄 */
+  desc: string;
+}
+
+export const CRYSTAL_ID = 'crystal';
+
+export const MATERIALS: Record<string, MaterialDef> = {
+  [CRYSTAL_ID]: {
+    id: CRYSTAL_ID,
+    name: '크리스탈',
+    desc: '장비의 2차 옵션을 다시 굴린다',
+  },
+};
+
+export function getMaterial(id: string): MaterialDef | null {
+  return MATERIALS[id] ?? null;
+}
+
+/**
+ * 몬스터 한 마리가 크리스탈을 떨굴 확률 — **1%** (임시값, 2026-09-23).
+ * 장비와 **따로** 굴린다. 사냥터 1 의 장비(0.30%)보다 흔해야 한 물건에 여러 번
+ * 굴려 볼 수 있다. 설계([stat-balance.md](../../../docs/features/stat-balance.md))에는
+ * 아직 없는 값이라 손볼 자리는 여기 한 곳이다
+ */
+export const CRYSTAL_DROP_CHANCE = 0.01;
+
 /** 저장된 값이 지금 규칙에 맞는지 — 서버가 불러올 때 반드시 거친다 */
-export function sanitizeOptions(raw: unknown, item: ItemDef, grade: number): ItemOption[] {
+export function sanitizeOptions(
+  raw: unknown,
+  item: ItemDef,
+  grade: number,
+  limit: number = OPTION_MAX
+): ItemOption[] {
   if (!Array.isArray(raw)) return [];
 
   const seen = new Set<OptionKind>();
@@ -425,7 +532,7 @@ export function sanitizeOptions(raw: unknown, item: ItemDef, grade: number): Ite
     seen.add(kind);
     const clamped = Math.min(max, Math.max(min, value));
     out.push({ kind, value: Math.round(clamped * 10) / 10 });
-    if (out.length >= OPTION_MAX) break;
+    if (out.length >= limit) break;
   }
   return out;
 }
@@ -575,8 +682,9 @@ export function stackStats(stack: ItemStack): ItemStats {
   total.attackSpeed = base.attackSpeed / 100;
 
   // 옵션 여섯 종은 전부 퍼센트다. HP 만 **기본 스탯에 곱할 %** 라 같은 자리에 더하고,
-  // 나머지 넷은 비율(0.07 = 7%)로 바꿔 담는다
-  for (const option of stack.options ?? []) {
+  // 나머지 넷은 비율(0.07 = 7%)로 바꿔 담는다. **1·2·3차를 다 더한다**
+  const options = OPTION_TIERS.flatMap((t) => stack[t.key] ?? []);
+  for (const option of options) {
     switch (option.kind) {
       case 'maxHp': total.maxHp += option.value; break;
       case 'crit': total.crit += option.value / 100; break;
@@ -685,6 +793,8 @@ export interface Drop {
   gold: number;
   /** 없으면 골드만 나온 것 */
   item?: ItemStack;
+  /** 크리스탈 개수. 없으면 안 나온 것 (`CRYSTAL_DROP_CHANCE`, 장비와 따로 굴린다) */
+  crystal?: number;
 }
 
 /**
@@ -700,8 +810,15 @@ export function rollDrop(monsterLevel: number, job: JobId, rng: () => number = M
   // ±30% 흔들어 매번 같은 숫자가 나오지 않게 한다
   const gold = Math.max(1, Math.round(base * (0.7 + rng() * 0.6)));
 
-  if (rng() >= dropChanceFor(monsterLevel)) return { gold };
+  // 크리스탈은 장비와 **따로** 굴린다. 순서는 골드 → 장비 → (슬롯 → 등급 → 옵션) → 크리스탈
+  // — 고도 `items.gd` 도 같은 순서라야 같은 씨앗에서 같은 것이 나온다
+  const drop: Drop = { gold };
+  if (rng() < dropChanceFor(monsterLevel)) drop.item = rollGearDrop(monsterLevel, rng);
+  if (rng() < CRYSTAL_DROP_CHANCE) drop.crystal = 1;
+  return drop;
+}
 
+function rollGearDrop(monsterLevel: number, rng: () => number): ItemStack {
   // 슬롯은 고루 나와야 한다 — 한쪽만 나오면 나머지 자리는 영영 빈다.
   // 직업은 더 이상 후보를 가르지 않는다. 등급은 사냥터가 정한다
   // (굴리는 순서는 슬롯 → 등급. 고도 `items.gd` 도 같은 순서라야 같은 씨앗에서 같은 것이 나온다)
@@ -710,7 +827,7 @@ export function rollDrop(monsterLevel: number, job: JobId, rng: () => number = M
   const id = itemId(grade, EQUIP_SLOTS[pick]!);
 
   const def = getItem(id);
-  return { gold, item: { id, grade, options: def ? rollOptions(def, grade, rng) : [] } };
+  return { id, grade, options: def ? rollOptions(def, grade, rng) : [] };
 }
 
 export interface BossDrop {

@@ -239,6 +239,8 @@ var _bag_gold: Label
 var _bag_sum: Label
 var _bag_grid: GridContainer
 var _bag_action: Button
+## 상세 창의 크리스탈 단추 — 고른 장비의 2차 옵션을 다시 굴린다
+var _bag_crystal: Button
 ## 장비 창(왼쪽 끝)과 상세 창(인벤토리 왼쪽). 인벤토리는 `_bag_panel` 이다
 var _gear_panel: PanelContainer
 var _detail_panel: PanelContainer
@@ -333,6 +335,8 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 					payload.get("gold", 0), Items.get_item(got).get("name", got)
 				]
 				_chat.add_item(str(Items.get_item(got).get("name", got)), int(payload.item.get("grade", 1)))
+			if int(payload.get("crystal", 0)) > 0:
+				_chat.add_line("재료 획득", Items.stack_name({"id": Items.crystal_id()}), INV_TEXT)
 		&"inventory":
 			if _bag_panel.visible:
 				_redraw_bag()
@@ -982,6 +986,8 @@ func _build_detail_window(panel: PanelContainer) -> void:
 	var buttons := HBoxContainer.new()
 	buttons.alignment = BoxContainer.ALIGNMENT_END
 	side.add_child(buttons)
+	_bag_crystal = _inv_button("크리스탈", _on_bag_crystal)
+	buttons.add_child(_bag_crystal)
 	_bag_action = _inv_button("-", _on_bag_action)
 	buttons.add_child(_bag_action)
 
@@ -1231,10 +1237,10 @@ func _fill_cell(cell: PanelContainer, stack: Dictionary, empty_text: String, ico
 		return
 
 	icon.modulate = Color(1, 1, 1, 1)
-	var item := Items.get_item(str(stack.get("id", "")))
-	text.text = "" if texture != null else str(item.get("name", stack.get("id", "?")))
+	text.text = "" if texture != null else Items.stack_name(stack)
 	badge.text = _stack_badge(stack)
-	grade.visible = true
+	# 재료(크리스탈)는 등급이 없다 — 등급 테를 두르지 않는다
+	grade.visible = not Items.is_material(str(stack.get("id", "")))
 	grade.add_theme_stylebox_override("panel", _grade_box(int(stack.get("grade", 1))))
 
 
@@ -1242,6 +1248,9 @@ func _fill_cell(cell: PanelContainer, stack: Dictionary, empty_text: String, ico
 ## 2026-09-23 에 무기만 등급별 건틀릿 일곱 장(`weapon_g1`~`weapon_g7`)을 받았다 —
 ## 다른 슬롯도 같은 이름으로 넣으면 따로 고칠 것 없이 붙는다
 func _item_icon(stack: Dictionary) -> String:
+	# 재료는 제 id 가 그림 이름이다 (`crystal.png`). 그림이 없으면 칸에 이름을 적는다
+	if Items.is_material(str(stack.get("id", ""))):
+		return str(stack.id)
 	var slot := str(Items.get_item(str(stack.get("id", ""))).get("slot", ""))
 	var graded := "%s_g%d" % [slot, int(stack.get("grade", 1))]
 	return graded if _icon(graded) != null else slot
@@ -1444,8 +1453,12 @@ func _show_bag_detail() -> void:
 		_detail_panel.visible = false
 		_bag_action.text = "-"
 		_bag_action.disabled = true
+		_bag_crystal.visible = false
 		return
 	_detail_panel.visible = _bag_panel.visible
+	if Items.is_material(str(stack.get("id", ""))):
+		_show_material_detail(stack)
+		return
 
 	var item := Items.get_item(str(stack.get("id", "")))
 	var grade := int(stack.get("grade", 1))
@@ -1474,8 +1487,29 @@ func _show_bag_detail() -> void:
 		var value := float(bonus.get(key, 0.0))
 		if value > 0.0:
 			rows.append([DETAIL_BONUS[key], _bonus_text(key, value)])
-	for option in stack.get("options", []):
-		rows.append(["옵션", Items.describe_option(option)])
+	# 옵션은 **차수별로** 적는다 — 1차(드랍) · 2차(크리스탈) · 3차(비어 있음)
+	for tier in Items.option_tiers():
+		var head := "%d차 옵션" % int(tier.tier)
+		var lines: Array = stack.get(str(tier.key), [])
+		for option in lines:
+			rows.append([head, Items.describe_option(option)])
+		if lines.is_empty():
+			match str(tier.get("source", "")):
+				"crystal": rows.append([head, "크리스탈로 붙임"])
+				"drop": pass
+				_: rows.append([head, "비어 있음"])
+	_fill_detail_rows(rows)
+
+	_bag_action.text = "해제" if worn else "장착"
+	_bag_action.disabled = false
+	var crystals := _crystal_count()
+	_bag_crystal.visible = true
+	_bag_crystal.text = "크리스탈 x%d" % crystals
+	_bag_crystal.disabled = crystals <= 0
+
+
+## 이름 · 값 두 줄짜리 표를 다시 채운다
+func _fill_detail_rows(rows: Array) -> void:
 	for child in _detail_info.get_children():
 		_detail_info.remove_child(child)
 		child.queue_free()
@@ -1487,8 +1521,49 @@ func _show_bag_detail() -> void:
 		value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		_detail_info.add_child(value_label)
 
-	_bag_action.text = "해제" if worn else "장착"
-	_bag_action.disabled = false
+
+## 재료(크리스탈)를 고르면 — 등급·능력치가 없고, 낄 수도 없다.
+## 쓰는 곳은 **장비 쪽 상세 창의 크리스탈 단추**다
+func _show_material_detail(stack: Dictionary) -> void:
+	_detail_grade.text = "재료"
+	_detail_grade.add_theme_color_override("font_color", INV_DIM)
+	_detail_name.text = Items.stack_name(stack)
+	_detail_name.add_theme_color_override("font_color", INV_TEXT)
+	_detail_kind.text = "재료"
+	_detail_state.text = "보유 중"
+	_fill_cell(_detail_icon, stack, "", _item_icon(stack))
+	_fill_detail_rows([
+		["보유 수량", "%d" % int(stack.get("count", 1))],
+		["쓰임", "2차 옵션 굴리기"],
+	])
+	_bag_action.text = "-"
+	_bag_action.disabled = true
+	_bag_crystal.visible = false
+
+
+## 가방에 든 크리스탈 수
+func _crystal_count() -> int:
+	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
+	for stack in me.get("bag", []):
+		if str(stack.get("id", "")) == Items.crystal_id():
+			return int(stack.get("count", 1))
+	return 0
+
+
+## 크리스탈 단추 — 고른 장비의 2차 옵션을 다시 굴린다. **고른 칸은 그대로 둔다** —
+## 결과를 바로 상세 창에서 보고 또 굴릴지 정해야 한다
+func _on_bag_crystal() -> void:
+	var stack := _picked_stack()
+	if stack.is_empty() or Items.is_material(str(stack.get("id", ""))):
+		return
+	if str(_bag_pick.get("where", "")) == "equip":
+		_transport.send(&"useCrystal", {
+			"where": "equip", "key": str(Items.slots()[int(_bag_pick.index)])
+		})
+	else:
+		var at := _picked_bag_index()
+		_transport.send(&"useCrystal", {"where": "bag", "key": at})
+	_redraw_bag()
 
 
 ## 상세 창 능력치 줄에 적는 기본 능력치 (옵션은 따로 적는다)
@@ -1550,14 +1625,15 @@ func _on_bag_action() -> void:
 
 ## "낡은 장검 +3 (5등급) 공격 +7, 치명타 +2%"
 func _stack_label(stack: Dictionary) -> String:
-	var item := Items.get_item(str(stack.get("id", "")))
-	var text := str(item.get("name", stack.get("id", "?")))
+	var text := Items.stack_name(stack)
+	if Items.is_material(str(stack.get("id", ""))):
+		return "%s x%d" % [text, int(stack.get("count", 1))]
 	var enhance := int(stack.get("enhance", 0))
 	if enhance > 0:
 		text += " +%d" % enhance
 	text += " (%d등급)" % int(stack.get("grade", 1))
 	var options: Array = []
-	for option in stack.get("options", []):
+	for option in stack.get("options", []) + stack.get("options2", []):
 		options.append(Items.describe_option(option))
 	if not options.is_empty():
 		text += "\n" + ", ".join(options)
@@ -2396,6 +2472,9 @@ func _list_bag(me: Dictionary, verb: String, action: Callable) -> void:
 		return
 	for index in mini(me.bag.size(), 12):
 		var stack: Dictionary = me.bag[index]
+		# 재료는 팔지도 강화하지도 않는다
+		if Items.is_material(str(stack.get("id", ""))):
+			continue
 		var button := Button.new()
 		button.text = "%s  [%s]" % [_stack_label(stack), verb]
 		button.pressed.connect(func() -> void:

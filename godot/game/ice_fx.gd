@@ -52,9 +52,10 @@ const SHOULDER := 0.72
 ## 묻어야 뚫린 밑동이 안 보인다
 const SUNK := 0.3
 
-## 서리 번짐 — 가장 바깥 고리를 조금 넘게 덮는다
+## 서리 번짐 — 가장 바깥 고리를 조금 넘게 덮는다. 색과 진하기는 텍스처에 구워 있다
+## (`FxTex.frost`) — 여기서는 전체를 얼마나 비치게 하나만 준다
 const FROST_SIZE := 10.5
-const FROST_ALPHA := 0.55
+const FROST_ALPHA := 1.0
 ## 지면 자국이 사는 시간과, 마지막 이만큼만 흐려진다 (규칙 3절)
 const MARK_LIFE := 1.9
 const MARK_FADE := 0.8
@@ -95,8 +96,6 @@ const SHAKE_TIME := 0.3
 const COLOR_DEEP := Color("#1f6fae")
 const COLOR_PALE := Color("#bdeeff")
 const COLOR_RIM := Color("#f4fdff")
-## 서리는 조금 짙은 하늘색 — 옅게 두면 밝은 바닥에서 안 보인다
-const COLOR_FROST := Color("#9fd6f2")
 const COLOR_CRACK := Color("#15314d")
 const COLOR_GLOW := Color("#6fd6ff")
 const COLOR_FLARE := Color("#bfeeff")
@@ -188,7 +187,8 @@ static func span() -> float:
 ## 노드를 만든다 — 한 번만. 되감기는 `_start`
 func _build() -> void:
 	# 서리 → 틈 → 심 순으로 쌓는다. 같은 높이면 서로 깜빡인다
-	_frost = _sheet(LightningFx.stain(COLOR_FROST))
+	_frost = _sheet(LightningFx.stain(Color.WHITE))
+	_frost.material_override.albedo_texture = FxTex.frost()
 	var quad := QuadMesh.new()
 	quad.size = Vector2(FROST_SIZE, FROST_SIZE)
 	quad.orientation = PlaneMesh.FACE_Y
@@ -283,8 +283,7 @@ func _show() -> void:
 	var grow := clampf(_t / (last_start() + RISE), 0.0, 1.0)
 	_frost.scale = Vector3.ONE * lerpf(0.25, 1.0, sqrt(grow))
 	_frost.visible = fade > 0.0
-	_frost.material_override.albedo_color = Color(
-		COLOR_FROST.r, COLOR_FROST.g, COLOR_FROST.b, fade * FROST_ALPHA)
+	_frost.material_override.albedo_color = Color(1.0, 1.0, 1.0, fade * FROST_ALPHA)
 
 	# 섬광과 번쩍임은 **세게 켜고 제자리에서 빠르게 죈다**
 	var t := _t / FLARE_LIFE

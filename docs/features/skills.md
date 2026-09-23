@@ -35,7 +35,7 @@
 | `packages/client/src/scene/skillFx.ts` | **스킬 이펙트** — 시전 고리, 전방위 고리, 명중 섬광, 회복 |
 | `packages/server/src/ZoneRoom.ts` | `handleLearnSkill` / `handleSetSkillBar` / `handleSkill` / `tryAutoSkill` |
 | **`godot/game/game.gd`** `_build_skill_bar` · `_build_skill_panel` · `_redraw_skills` | ★ **고도 퀵슬롯(HUD 하단 4칸)과 스킬창** — 아래 "스킬창과 퀵슬롯" |
-| `public/assets/icons/skill_<id>.png` · `ui_skill_slot` · `ui_slot_pick` | 바르코로 만든 스킬 아이콘(격투가 5개)과 칸 테두리·고른 칸 테두리. 주소는 `fetch-assets.sh` |
+| `public/assets/icons/skill_<id>.png` · `ui_skill_slot` · `ui_slot_pick` | 바르코로 만든 스킬 아이콘(격투가 6개)과 칸 테두리·고른 칸 테두리. 주소는 `fetch-assets.sh` |
 | **`godot/game/skill_fx.gd`** | ★ **고도 스킬 이펙트** — 할퀴기(`SkillFx.claw`): 발톱 세 가닥 초승달이 앞 120° 를 다섯 번 쓴다. 에셋 없이 코드로, **줄기는 리본 메시**(`LightningFx` 도구를 돌려 쓴다) |
 | **`godot/game/lightning_fx.gd`** | ★ **낙뢰**(`LightningFx.bolt`) — 번개 세 번 · 갈라지는 땅 · 튀는 파편. **줄기는 리본 메시**(`trail`·`ribbon`), 파편만 파티클 |
 | **`godot/game/quake_fx.gd`** | ★ **천붕각**(`QuakeFx.slam`) — 금 여덟 갈래가 어긋나게 갈라지고 모래 먼지가 충격파로 밀려난다. 금은 한 번 깐 메시를 셰이더가 자라게 한다 |
@@ -45,7 +45,7 @@
 | **`godot/game/fx_warm.gd`** | ★ **이펙트 셰이더 미리 굽기** (`FxWarm.run`) — 게임에 들어갈 때 이펙트를 안 보이는 레이어로 한 번 띄워 첫 사용 멈칫을 없앤다. 새 이펙트는 `_spawn` 에 한 줄 |
 | **`godot/game/fx_pool.gd`** | ★ **이펙트 풀** (`FxPool`) — 다 쓴 이펙트를 지우지 않고 숨겨 두었다 되감아 쓴다. 게임에 하나, 존 밖에 붙는다. 아래 "히치 — 이펙트 풀" |
 | **`godot/tools/hitch.gd`** | **히치를 덩어리별로 재는 도구** — 시전 판정 · 판정 틱 · 이벤트별 그리기 · 화면 틱 |
-| **`godot/game/fx_tex.gd`** | ★ **이펙트 텍스처를 런타임에 굽는다** (`FxTex.glow`·`streak`·`scorch`) — 파일로 받지 않는다 |
+| **`godot/game/fx_tex.gd`** | ★ **이펙트 텍스처를 런타임에 굽는다** (`FxTex.glow`·`streak`·`scorch`·`puff`·`frost`) — 파일로 받지 않는다 |
 | **`godot/game/game.gd`** `_show_skill` | `skill` 이벤트를 받아 위를 부르는 **유일한** 자리 |
 | **`godot/tests/skill_fx_test.gd`** | 헤드리스 확인 — 몇 번·몇 겹·번갈아·앞쪽·px 크기·**판정 표와 박자가 같나**·치웠나 |
 | **`godot/world/world.gd`** `_run_combos` | **연타** — `hits` 가 2 이상인 스킬의 둘째 대부터를 `hitGap` 간격으로 넣는다 |
@@ -486,7 +486,7 @@
 | 기둥 | 세 겹 고리(1.7 · 2.9 · 3.95m, 7 · 10 · 13개). 큰 결정 하나 + 곁 결정 0~1개, 바깥으로 10~24° 기운다. **안쪽 고리부터 0.07s 씩 늦게** 0.14s 만에 솟아(살짝 넘쳤다 앉는다) 0.95s 서 있다가 0.28s 에 땅으로 꺼진다. 안쪽이 크다(2.3 → 1.45m) | ~1.6s |
 | 얼음 조각 | 솟을 때 40개, 꺼질 때 56개 — 고리 자리에서 튀었다 떨어진다. 날아가는 쪽으로 눕는다(`align_y`) | 0.8 / 0.7s |
 | 냉기 | 30덩이가 지면을 따라 밀려나다 멈춘다 (`FxTex.puff`, 흰 하늘색) | 1.5s |
-| 금·서리 | 천붕각 금 메시를 짙은 남색 틈 + 하늘색 심으로. 서리는 고리가 퍼지는 빠르기로 번진다 | 1.9s (마지막 0.8s 흐려짐) |
+| 금·서리 | 천붕각 금 메시를 짙은 남색 틈 + 하늘색 심으로. 서리(`FxTex.frost`)는 고리가 퍼지는 빠르기로 번진다 | 1.9s (마지막 0.8s 흐려짐) |
 | 섬광·번쩍임·흔들림 | 제자리에서 사그라든다 / 흔들림 0.11m · 0.3s (천붕각보다 약하게) | 0.22 / 0.3s |
 
 - **기둥은 불투명이고 깊이 검사를 켠다.** 셰이더가 기둥을 **축을 따라 땅속으로 밀어
@@ -497,6 +497,11 @@
   넣어 두고 셰이더(`PILLAR_SHADER`)가 `now` 로 올리고 내린다.
 - **빛을 받지 않는다(unshaded).** 면마다 구워 둔 밝기 + 가장자리 흰 빛(`VIEW` 각) +
   모서리 흰 선으로 결정다운 면을 낸다 — 밤낮 조명에 얼음색이 흐려지지 않게.
+- **서리는 전용 텍스처(`FxTex.frost`)로 그린다.** 처음엔 그을림 얼룩(`FxTex.scorch`)에
+  옅은 하늘색을 입혔는데, 가운데만 진하고 바깥이 급히 옅어져 **밝은 바닥에서 안 보였다**
+  ("번짐이 밝은 곳에서도 보이게", 2026-09-23). 지금은 안쪽이 고르게 진한 **푸른 판**
+  (`#5ea9dc`)에 **흰 가장자리 띠와 흰 결정 알갱이**를 구워 넣었다 — 밝은 바닥에서는
+  푸른 판이, 어두운 바닥에서는 흰 결정이 보인다. 색은 텍스처에 있고 재질은 흰색 + 알파뿐이다.
 - **첫 고리를 1.7m 밖에 둔다.** 1.2m 부터 네 겹 92개를 세웠더니 얼음 덤불이 되어
   캐릭터가 묻혔다 (첫 캡처). 세 겹 45개로 줄이고 굵게(`GIRTH` 0.17) 했다.
 - **밑동을 0.3m 묻는다**(`SUNK`). 솟을 때 1할쯤 넘치므로 덜 묻으면 뚫린 밑동이 보인다.
@@ -504,7 +509,13 @@
 - 찍기: `npm run shot:godot -- frost_pillar 6,25,50,110,330,480` (솟기) ·
   `530,580,640,700,760,840` (꺼지기). **처음 찍을 때 한 번은 셰이더 캐시가 비어**
   첫 시전(제 속도)이 늦게 끝나 두 벌이 겹쳐 찍힌다 — 한 번 더 찍는다.
-- 아이콘(`skill_frost_pillar.png`)은 아직 없다 — 칸에 이름 글자가 대신 뜬다.
+- **아이콘**(`skill_frost_pillar.png`)은 바르코(`nano-banana-pro`)로 뽑았다. 스킬 아이콘은
+  칸을 꽉 채운 채색 그림이라 [ui-art-style.md](ui-art-style.md) 의 "아이콘류" 틀(테두리 없는
+  상아빛 문장)이 아니라, **낙뢰·천붕각 아이콘 두 장을 붙인 참고 그림**
+  (`https://3d.varco.ai/api/objects/c5a9467ee8c6773f507c4d34430b9420.jpg`)을 물리고
+  "MATCH THE REFERENCE IMAGES' STYLE EXACTLY … bare foot stomping … ice crystal pillars
+  bursting up … in a ring" 로 두 장 뽑아 첫 장을 썼다 — 한 번에 결이 맞았다.
+  다음 격투가 스킬 아이콘도 이 참고 그림을 그대로 쓰면 된다.
 
 ### 이펙트 — 옛 웹 클라이언트 (`skillFx.ts`, 지워짐)
 스킬은 오랫동안 **투사체와 피해 숫자만** 있었다. 근접기와 자기 주위로 터지는

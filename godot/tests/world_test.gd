@@ -29,7 +29,7 @@ func _init() -> void:
 	# 계속 달리면 존 경계에서 멈춘다
 	for i in 2000:
 		t.send(&"input", {"seq": 1000 + i, "dx": 1.0, "dz": 0.0, "dt": 0.1})
-	_expect("경계에서 멈춘다", Vector2(_me(t).x, 0), Vector2(27.0, 0))
+	_expect("경계에서 멈춘다", Vector2(_me(t).x, 0), Vector2(29.0, 0))
 
 	# 방향을 보냈으면 그쪽을 본다
 	t.send(&"input", {"seq": 9000, "dx": 0.0, "dz": -1.0, "dt": 0.05})

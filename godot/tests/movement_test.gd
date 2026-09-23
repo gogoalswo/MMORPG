@@ -9,7 +9,7 @@ extends SceneTree
 ##
 ## 실패하면 종료코드 1 로 끝나므로 CI 에서도 쓸 수 있다.
 
-const HALF := 27.0        # zoneHalfSize(62) — 마을
+const HALF := 29.0        # zoneHalfSize(66) — 마을
 const RUN_SPEED := 4.6
 const EPS := 1e-6
 
@@ -42,7 +42,7 @@ func _expect(label: String, got: float, want: float) -> void:
 func _check_constants() -> void:
 	# 내보낸 JSON 이 기준값과 같은 세계인지 먼저 본다
 	var zone := GameData.zone("village")
-	_expect("마을 크기", float(zone.get("size", 0)), 62.0)
+	_expect("마을 크기", float(zone.get("size", 0)), 66.0)
 	_expect("경계", Movement.zone_half_size(float(zone.size)), HALF)
 	_expect("달리기 속도", float(GameData.constants().get("runSpeed", 0)), RUN_SPEED)
 

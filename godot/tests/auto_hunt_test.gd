@@ -17,6 +17,7 @@ func _init() -> void:
 	_case_radius_covers_one_pack()
 	_case_anchor_on_toggle()
 	_case_walks_in_and_hits()
+	_case_casts_skills()
 	_case_patrol_when_empty()
 	_case_outside_radius()
 	_case_off_stops()
@@ -142,6 +143,41 @@ func _case_walks_in_and_hits() -> void:
 
 	if str(me.auto_target) != "dummy":
 		_fail("대상을 안 잡았다 (%s)" % me.auto_target)
+
+
+## 액션바에 올린 스킬을 쓴다 (2026-09-23 "자동사냥하면 스킬을 안 사용해").
+## 붙기 전에는 안 쓰고(사거리 밖), 사거리에 들면 기본 공격보다 먼저 쓴다
+func _case_casts_skills() -> void:
+	var s := _setup(10.0, 0.0)
+	var w: World = s[0]
+	var me: Dictionary = s[1]
+	var mob: Dictionary = s[2]
+	me.skills = ["rising_kick"]
+	me.skill_bar = ["rising_kick"]
+	var reach := float(Skills.get_skill(str(me.job), "rising_kick").range)
+	w.set_auto("me", true)
+	w.drain_events()
+
+	var cast_at := -1.0
+	var swung_first := false
+	for i in 600:
+		w.step(1.0 / 60.0)
+		for e in w.drain_events():
+			if e.type == "swing" and cast_at < 0.0:
+				swung_first = true
+			if e.type == "skill" and str(e.skill) == "rising_kick" and cast_at < 0.0:
+				cast_at = _gap(me, mob)
+		if cast_at >= 0.0:
+			break
+
+	if cast_at < 0.0:
+		_fail("600 프레임 동안 액션바의 스킬을 한 번도 안 썼다")
+	elif cast_at > reach + 1e-3:
+		_fail("스킬 사거리(%.1f) 밖 %.2f m 에서 썼다" % [reach, cast_at])
+	elif swung_first:
+		_fail("돌아온 스킬을 두고 기본 공격을 먼저 휘둘렀다")
+	else:
+		print("  사거리 안(%.2f m)에 들자 스킬부터 썼다" % cast_at)
 
 
 ## 잡을 것이 없으면 앵커 주변을 서성인다 — 선 채로 굳어 있으면 멈춘 것처럼 보인다.

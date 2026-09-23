@@ -442,10 +442,46 @@ func _drive_auto(delta: float, now: int) -> void:
 		# 치기 전에 그쪽을 본다. 판정 부채꼴이 rot 를 보기 때문이다 —
 		# 안 돌리면 마지막으로 걷던 쪽으로 헛친다 (attack 은 정면에서 다시 고른다)
 		player.rot = atan2(float(target.x) - player.x, float(target.z) - player.z)
+		# 휘두르는 중에는 다음 것을 넣지 않는다. 스킬 경직 중에 기본 공격이 끼면
+		# 스킬 동작이 끊기고, 쿨타임이 0 인 테스트 스위치에서는 스킬이 매 틱 나간다
+		if now < int(player.rooted_until):
+			continue
+		var gap := Vector2(float(target.x) - player.x, float(target.z) - player.z).length()
+		# 스킬이 먼저다. 돌아온 스킬이 있으면 기본 공격 대신 그걸 쓴다
+		if _auto_cast(player, id, gap, now):
+			continue
 		# **사거리 안일 때만 휘두른다.** 멀리서 헛휘두르면 그때마다 경직(400ms)이
 		# 걸려 한 발짝도 못 나간다 — 붙기 전에 제자리에서 팔만 돌게 된다
-		if Vector2(float(target.x) - player.x, float(target.z) - player.z).length() <= reach:
+		if gap <= reach:
 			attack(id)
+
+
+## 자동 사냥의 스킬. 액션바 **칸 순서대로** 보고, 쿨타임이 돈 것 중 대상이 그 스킬
+## 사거리 안에 든 첫 것을 쓴다 — 칸 순서가 곧 우선순위다.
+##
+## 쏘는 것은 사람이 누를 때와 **같은 `cast`** 다. 쿨타임·액션바·조준 검증을 두 벌
+## 만들면 반드시 어긋난다. 나갔는지는 경직이 새로 걸렸는지로 본다 — 쿨타임으로
+## 보면 테스트 스위치(쿨타임 0)에서 나갔는데도 안 나간 것으로 읽힌다.
+func _auto_cast(player: Dictionary, id: String, gap: float, now: int) -> bool:
+	var ready_at: Dictionary = player.skill_ready_at
+	for skill_id in player.skill_bar:
+		if now < int(ready_at.get(skill_id, 0)):
+			continue
+		var skill := Skills.get_skill(str(player.job), str(skill_id))
+		if skill.is_empty():
+			continue
+		var heal := float(skill.get("selfHeal", 0.0))
+		if heal > 0.0:
+			# 회복기는 채울 만큼 빠졌을 때만 쓴다. 가득 찬 채로 쓰면 쿨타임만 버린다
+			var max_hp := float(player.stats.maxHp)
+			if max_hp - float(player.hp) < max_hp * heal:
+				continue
+		elif gap > float(skill.range):
+			continue
+		cast(id, str(skill_id))
+		if int(player.rooted_until) > now:
+			return true
+	return false
 
 
 ## 앵커 반경 안에서 **가장 가까운** 산 몬스터. 잡고 있던 놈은 리쉬까지 봐준다 —

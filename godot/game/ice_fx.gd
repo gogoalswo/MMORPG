@@ -12,7 +12,8 @@ extends Node3D
 ##   곧게 선 기둥만 늘어서면 울타리로 보인다.
 ##   솟을 때 **살짝 넘쳤다 앉고**(easeOutBack), 머물다 **땅으로 도로 꺼진다.**
 ## - **파편** — 솟을 때 한 번, 꺼질 때 한 번 얼음 조각이 튀었다 떨어진다.
-## - **서리·금** — 발밑부터 서리가 번지고, 천붕각의 금 메시를 **얼음 색으로** 다시 쓴다.
+## - **금** — 천붕각의 금 메시를 **얼음 색으로** 다시 쓴다. 바닥에 까는 서리 판(얼음
+##   장판)은 **없다** — 넣었다가 "바닥에 얼음 장판 이상하다" 는 말을 듣고 지웠다.
 ## - **냉기** — 낮게 깔려 밀려나는 흰 안개. 기둥 밑동을 감싼다.
 ## - **섬광·번쩍임** — 퍼지지 않고 제자리에서 사그라든다 (규칙 3절).
 ##
@@ -52,10 +53,6 @@ const SHOULDER := 0.72
 ## 묻어야 뚫린 밑동이 안 보인다
 const SUNK := 0.3
 
-## 서리 번짐 — 가장 바깥 고리를 조금 넘게 덮는다. 색과 진하기는 텍스처에 구워 있다
-## (`FxTex.frost`) — 여기서는 전체를 얼마나 비치게 하나만 준다
-const FROST_SIZE := 10.5
-const FROST_ALPHA := 1.0
 ## 지면 자국이 사는 시간과, 마지막 이만큼만 흐려진다 (규칙 3절)
 const MARK_LIFE := 1.9
 const MARK_FADE := 0.8
@@ -172,7 +169,6 @@ var _t := 0.0
 var _started := false
 var _shattered := false
 var _pillars: MeshInstance3D
-var _frost: MeshInstance3D
 var _crack: MeshInstance3D
 var _glow: MeshInstance3D
 var _flare: MeshInstance3D
@@ -219,15 +215,7 @@ static func span() -> float:
 
 ## 노드를 만든다 — 한 번만. 되감기는 `_start`
 func _build() -> void:
-	# 서리 → 틈 → 심 순으로 쌓는다. 같은 높이면 서로 깜빡인다
-	_frost = _sheet(LightningFx.stain(Color.WHITE))
-	_frost.material_override.albedo_texture = FxTex.frost()
-	var quad := QuadMesh.new()
-	quad.size = Vector2(FROST_SIZE, FROST_SIZE)
-	quad.orientation = PlaneMesh.FACE_Y
-	_frost.mesh = quad
-	_frost.position.y = GROUND
-
+	# 틈 → 심 순으로 쌓는다. 같은 높이면 서로 깜빡인다.
 	# 금은 천붕각 것을 **얼음 색으로** 다시 쓴다 — 메시도 셰이더도 같은 것이다
 	var cracks := QuakeFx.crack_meshes()
 	_crack = _sheet(QuakeFx.crack_material("blend_mix", COLOR_CRACK))
@@ -274,7 +262,7 @@ func _start(at: Vector3, facing: float) -> void:
 	position = at
 	# **캐릭터가 보는 쪽 기준이다** — 메시는 보는 쪽 0 으로 깔려 있다
 	# 방출기도 돌린다 — 나오는 자리가 기둥 밑동이라 기둥과 같이 돌아야 한다
-	for node in [_frost, _crack, _glow, _pillars] + _emitters():
+	for node in [_crack, _glow, _pillars] + _emitters():
 		node.rotation.y = facing
 	_t = 0.0
 	_started = false
@@ -319,11 +307,6 @@ func _show() -> void:
 	glow.set_shader_parameter(&"tint", Color(COLOR_GLOW.r, COLOR_GLOW.g, COLOR_GLOW.b, sqrt(heat)))
 	_crack.visible = fade > 0.0
 	_glow.visible = heat > 0.0
-	# 서리는 기둥 고리가 퍼지는 빠르기로 같이 번진다 (규칙 3절: 단계적으로 넓어진다)
-	var grow := clampf(_t / (last_start() + RISE), 0.0, 1.0)
-	_frost.scale = Vector3.ONE * lerpf(0.25, 1.0, sqrt(grow))
-	_frost.visible = fade > 0.0
-	_frost.material_override.albedo_color = Color(1.0, 1.0, 1.0, fade * FROST_ALPHA)
 
 	# 섬광과 번쩍임은 **세게 켜고 제자리에서 빠르게 죈다**
 	var t := _t / FLARE_LIFE

@@ -86,55 +86,6 @@ static func scorch(size := 128) -> ImageTexture:
 	return tex
 
 
-## **서리 번짐.** 그을림(`scorch`)처럼 울퉁불퉁한 얼룩인데, **안쪽이 고르게 진하고**
-## 색을 굽는다 — 몸통은 푸른 판, 가장자리 띠와 반짝이는 결정 알갱이는 흰색이다.
-## `scorch` 에 옅은 하늘색을 입혔더니 가운데만 진해 **밝은 바닥에서 안 보였다**
-## (2026-09-23). 밝은 바닥에서는 푸른 판이, 어두운 바닥에서는 흰 결정이 보인다.
-## 재질 색은 흰색으로 두고 알파만 준다
-static func frost(size := 192) -> ImageTexture:
-	var key := "frost_%d" % size
-	if _cache.has(key):
-		return _cache[key]
-
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 20260925
-	# 판 모서리에 닿지 않게 0.9 에서 멈춘다 (`scorch` 와 같은 이유)
-	var lobes := 20
-	var edge: Array[float] = []
-	for i in lobes:
-		edge.append(rng.randf_range(0.62, 0.9))
-	var body := Color("#5ea9dc")
-	var rim := Color("#eef9ff")
-
-	var img := Image.create(size, size, false, Image.FORMAT_RGBA8)
-	var mid := float(size - 1) * 0.5
-	for y in size:
-		for x in size:
-			var away := Vector2(float(x) - mid, float(y) - mid)
-			var d := away.length() / mid
-			var turn := (atan2(away.y, away.x) + PI) / TAU * float(lobes)
-			var i0 := int(floor(turn)) % lobes
-			var i1 := (i0 + 1) % lobes
-			var reach: float = lerpf(edge[i0], edge[i1], smoothstep(0.0, 1.0, turn - floor(turn)))
-			var r := d / reach
-			if r >= 1.0:
-				img.set_pixel(x, y, Color(1.0, 1.0, 1.0, 0.0))
-				continue
-			# 안쪽은 고르게 진하고, 끝에서만 빠르게 흐려진다
-			var a := 0.72 * (1.0 - smoothstep(0.82, 1.0, r))
-			# 가장자리 띠 — 서리가 번져 나가는 앞머리가 하얗게 선다
-			var white := smoothstep(0.62, 0.9, r) * (1.0 - smoothstep(0.9, 1.0, r))
-			# 결정 알갱이 — 드문드문 흰 점. 안쪽에도 있어야 어두운 바닥에서 판이 읽힌다
-			if rng.randf() < 0.07:
-				white = maxf(white, rng.randf_range(0.6, 1.0))
-				a = maxf(a, 0.85 * (1.0 - smoothstep(0.9, 1.0, r)))
-			var c := body.lerp(rim, white)
-			img.set_pixel(x, y, Color(c.r, c.g, c.b, a))
-	var tex := ImageTexture.create_from_image(img)
-	_cache[key] = tex
-	return tex
-
-
 ## **흙먼지 뭉치.** 가운데가 넓게 고르고 가장자리가 울퉁불퉁 흐려진다.
 ## `glow` 로 먼지를 띄웠더니 가운데만 진한 점이라 **물방울무늬**가 됐다
 ## (2026-09-23 천붕각 캡처) — 먼지는 겹쳐서 한 덩어리 구름이 되어야 한다.

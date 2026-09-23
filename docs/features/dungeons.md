@@ -32,6 +32,7 @@
 | `godot/game/dungeon_panel.gd` | `DungeonPanel` — **`GatePanel` 을 물려받는다.** `_fill` 만 두 겹(종류 / 단계)으로 바꿨다 |
 | `godot/game/gate_panel.gd` | `_add_row` · `_clear_rows` · `_title` — 두 창이 같이 쓴다 |
 | `godot/game/game.gd` | `_menu_cells` 셋째 단추 · `_toggle_dungeon` · `_build_gate_panel`(같은 층에 단다) · `_on_gate_pick`(둘 다 `travel`) |
+| `public/assets/icons/ui_icon_dungeon.png` | 단추 그림 (구운 결과, 커밋한다). 원본 주소는 `scripts/fetch-assets.sh` |
 | `godot/tests/ui_test.gd` | `_case_dungeon` — 가방 옆인가 · 3줄 · 막힌 줄 · 21줄 · 뒤로 · 창 폭 · 글자 · 들어가면 보스 한 마리 |
 
 ## 규칙
@@ -77,11 +78,19 @@
 - 차원문 창과 **같은 층(layer 10)·같은 자리**라 하나를 열면 다른 하나를 닫는다.
 - 고른 뒤는 차원문과 같은 `_on_gate_pick` → `travel`. **있는 존인지 `World` 가 다시 본다.**
 
-### 단추 그림은 아직 없다
+### 단추 그림 — 보스 머리 ★
 
-`_icon_button("ui_icon_dungeon", "던전", …)` — 그림이 없으면 글자 "던전" 이 나온다.
-아이콘을 만들면 [ui-art-style.md](ui-art-style.md) 의 "아이콘류" 프롬프트로 뽑아
-`ui_icon_dungeon` 이름으로 넣으면 바로 그림으로 바뀐다.
+`ui_icon_dungeon` (2026-09-23). [ui-art-style.md](ui-art-style.md) 의 "아이콘류" 틀에
+`<무엇>` 만 "뿔 두 개 달린 도깨비(오거) 보스 머리, 정면" 으로 갈고, 이미 올라가 있는
+참고 그림을 물려 `nano-banana-pro` 로 두 장 뽑았다.
+
+- **처음엔 문(돌 아치 + 쇠창살)으로 뽑았다가 "문으로 만들지 말고 보스 몬스터 이미지로"
+  라는 지적을 받았다.** 던전의 알맹이는 보스라서다. 문 그림은 밀지 않고 버렸다.
+- 두 장 중 **위로 솟은 뿔** 쪽을 골랐다 — 옆으로 말린 양뿔은 가로로 넓어 작은 칸에서
+  얼굴이 작아진다.
+- 배경은 가장자리에서 번져 들어가는 것만 걷힌다(54%). 굽은 크기는 107x128.
+- 주소는 `fetch-assets.sh`, 굽는 것은 `build-item-icons.mjs`(기본 128), 옮기는 것은
+  `sync-godot-assets.mjs` 의 `ICONS`. 그림이 없으면 글자 "던전" 으로 물러선다.
 
 ## 손댈 때
 

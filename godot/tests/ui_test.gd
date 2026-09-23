@@ -366,6 +366,9 @@ func _case_dungeon(game: Node3D) -> void:
 	# 가방 **바로 옆**이다 (2026-09-23 요청)
 	if absf(cell_rect.position.x - bag_rect.end.x) > 12.0 or absf(cell_rect.position.y - bag_rect.position.y) > 1.0:
 		_fail("던전 단추가 가방 옆이 아니다: 가방 %s · 던전 %s" % [bag_rect, cell_rect])
+	# 글자가 아니라 그림(ui_icon_dungeon)이 나와야 한다
+	if game._menu_cells[2].find_children("*", "TextureRect", true, false).is_empty():
+		_fail("던전 단추에 그림이 없다 — npm run sync:godot 을 돌렸나 (ui_icon_dungeon)")
 	game._menu_cells[2].find_child("hit", true, false).pressed.emit()
 	await process_frame
 	if not panel.visible:

@@ -43,6 +43,12 @@ func _run() -> void:
 		_done()
 		return
 
+	# **세워 둔다.** 막대는 그리는 순간의 좌표를 따라 서고 그 뒤 `World.step` 이
+	# 몸을 옮기므로(누르면 쫓아온다), 걷는 놈이면 한 프레임에 걸은 만큼 어긋나
+	# 보인다. CI 는 프레임이 느려 그게 0.05m 를 넘었다 (2026-09-23, 막대는
+	# 멀쩡했다 — `--fixed-fps 5` 로 재현하면 0.88m)
+	mob["speed"] = 0.0
+
 	await _case_quiet(game, mob)
 	await _case_selected(game, mob)
 	await _case_hit(game)

@@ -214,6 +214,7 @@ fetch_icon 35efeeeb2f3c5e2057c402bcf637a004 inv_slot     # 칸 (움푹한 어두
 fetch_icon aab8913d12bcb3f6e61792f57591c7c4 inv_tab_on   # 고른 세로 탭 (청동빛 + 금선)
 fetch_icon 321697844636399efc7e32efaa490a4f inv_tab_off  # 안 고른 세로 탭
 fetch_icon 5e0955210d0ec5ff49a18b04fe9c8845 inv_button   # 정렬·장비·장착 단추
+fetch_icon f17150f251000766c28f5692f905204a inv_slot_pick # 고른 칸 금테 (안쪽을 뚫는다)
 # 스킬창·퀵슬롯 (2026-09-19). 조각 둘은 ui_slot 을 참고 그림으로 넣어 결을 맞췄다.
 # 스킬 아이콘은 **꽉 찬 그림**이라 배경을 걷지 않는다 (build-item-icons.mjs 의 FULL)
 fetch_icon 67616623f2d7038e61f1a6aa35f63113 ui_skill_slot  # 스킬창 장착 칸 (2026-09-20 에 창 결로 맞췄다)

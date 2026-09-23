@@ -2939,6 +2939,7 @@ func _show_skill(payload: Dictionary) -> void:
 		LightningFx.bolt(_zone_node, here, float(me.rot))
 	elif skill == "sky_breaker":
 		QuakeFx.slam(_zone_node, here, float(me.rot))
+		_camera.shake(QuakeFx.SHAKE, QuakeFx.SHAKE_TIME)
 	else:
 		SkillFx.claw(_zone_node, here, float(me.rot))
 

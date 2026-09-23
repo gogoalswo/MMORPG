@@ -23,6 +23,11 @@ const DISTANCE := 40.0 / 1.5
 const FOCUS_HEIGHT := 1.0
 
 var _focus := Vector3.ZERO
+## 흔들림 — 세기(m), 남은 시간, 처음 길이, 흐른 시간
+var _shake := 0.0
+var _shake_left := 0.0
+var _shake_time := 0.0
+var _shake_t := 0.0
 
 
 func _init() -> void:
@@ -46,3 +51,30 @@ func follow(target: Vector3, delta: float, snap: bool = false) -> void:
 	) * DISTANCE
 	position = _focus + offset
 	look_at(_focus, Vector3.UP)
+	_apply_shake(delta)
+
+
+## 화면을 흔든다 — `strength`(m) 만큼 `time`(초) 동안 떨다 잦아든다.
+## 이미 흔들리는 중이면 센 쪽을 남긴다 (겹쳐 더하면 연타에 화면이 날아간다)
+func shake(strength: float, time: float) -> void:
+	if strength >= _shake * (_shake_left / maxf(_shake_time, 1e-4)):
+		_shake = strength
+		_shake_time = time
+		_shake_left = time
+		_shake_t = 0.0
+
+
+## **자리만 옮기고 각은 그대로다.** 기울이면 쿼터뷰가 흔들려 멀미가 난다.
+## 화면의 가로·세로(카메라 로컬 x·y)로만 떨고, 남은 시간의 제곱으로 잦아든다 —
+## 선형으로 줄이면 끝에서 힘없이 흐느적거린다. 떨림은 난수가 아니라 서로
+## 어긋난 사인 둘이다 — 프레임마다 난수면 fps 에 따라 결이 달라진다
+func _apply_shake(delta: float) -> void:
+	if _shake_left <= 0.0:
+		return
+	_shake_left = maxf(_shake_left - delta, 0.0)
+	_shake_t += delta
+	var k := _shake_left / _shake_time
+	var amp := _shake * k * k
+	var sx := sin(_shake_t * 53.0) * amp
+	var sy := sin(_shake_t * 67.0 + 1.3) * amp
+	position += global_transform.basis.x * sx + global_transform.basis.y * sy

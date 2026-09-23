@@ -239,8 +239,19 @@ var _bag_gold: Label
 var _bag_sum: Label
 var _bag_grid: GridContainer
 var _bag_action: Button
-## 상세 창의 크리스탈 단추 — 고른 장비의 2차 옵션을 다시 굴린다
-var _bag_crystal: Button
+## 크리스탈 창 — 크리스탈을 고르고 "사용" 을 누르면 상세 창 자리에 뜬다.
+## 떠 있는 동안 장비 칸을 누르면 그 장비가 대상이 된다 (`_crystal_target`)
+var _crystal_panel: PanelContainer
+var _crystal_icon: PanelContainer
+var _crystal_name: Label
+var _crystal_kind: Label
+var _crystal_info: GridContainer
+var _crystal_hint: Label
+var _crystal_have: Label
+var _crystal_roll: Button
+## 대상 — `{"where": "bag"|"equip", "index": 가방 번호|슬롯 번호}`. **가방은 칸 번호가
+## 아니라 가방 번호다** (탭으로 거르면 둘이 어긋난다)
+var _crystal_target: Dictionary = {}
 ## 장비 창(왼쪽 끝)과 상세 창(인벤토리 왼쪽). 인벤토리는 `_bag_panel` 이다
 var _gear_panel: PanelContainer
 var _detail_panel: PanelContainer
@@ -446,6 +457,7 @@ func _build_persistent() -> void:
 	_close_button(_bag_panel, _toggle_bag, 0)
 	_close_button(_gear_panel, _toggle_gear, 0)
 	_close_button(_detail_panel, _close_detail, 0)
+	_close_button(_crystal_panel, _close_crystal, 0)
 	_close_button(_skill_panel, _toggle_skills)
 	_close_button(_npc_panel, func() -> void: _npc_panel.visible = false)
 
@@ -832,6 +844,11 @@ func _build_bag_panel() -> void:
 	row.add_child(_detail_panel)
 	_build_detail_window(_detail_panel)
 
+	# 크리스탈 창은 상세 창과 **같은 자리**에 번갈아 뜬다
+	_crystal_panel = _window_panel()
+	row.add_child(_crystal_panel)
+	_build_crystal_window(_crystal_panel)
+
 	_bag_panel = _window_panel()
 	row.add_child(_bag_panel)
 	_build_bag_window(_bag_panel)
@@ -986,10 +1003,68 @@ func _build_detail_window(panel: PanelContainer) -> void:
 	var buttons := HBoxContainer.new()
 	buttons.alignment = BoxContainer.ALIGNMENT_END
 	side.add_child(buttons)
-	_bag_crystal = _inv_button("크리스탈", _on_bag_crystal)
-	buttons.add_child(_bag_crystal)
 	_bag_action = _inv_button("-", _on_bag_action)
 	buttons.add_child(_bag_action)
+
+
+## 크리스탈 창 — 상세 창과 같은 틀이다: 머리 줄 · 대상 이름과 큰 칸 · 옵션 표 · 아래 단추.
+## 대상은 **장비·인벤토리 창의 칸을 눌러** 고른다 (창 안에 격자를 또 두지 않는다)
+func _build_crystal_window(panel: PanelContainer) -> void:
+	var side := VBoxContainer.new()
+	side.custom_minimum_size = Vector2(DETAIL_W, 0)
+	side.add_theme_constant_override("separation", 8)
+	panel.add_child(side)
+
+	_window_title(side, "크리스탈 강화", 22)
+
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 10)
+	side.add_child(head)
+	var lines := VBoxContainer.new()
+	lines.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	lines.add_theme_constant_override("separation", 4)
+	head.add_child(lines)
+	_crystal_name = _inv_label("", 22, INV_GOLD)
+	_crystal_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	lines.add_child(_crystal_name)
+	_crystal_kind = _inv_label("", 17, INV_DIM)
+	lines.add_child(_crystal_kind)
+	_crystal_icon = _make_cell(func() -> void: pass, DETAIL_ICON)
+	_crystal_icon.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	_crystal_icon.get_node("badge").add_theme_font_size_override("font_size", 22)
+	head.add_child(_crystal_icon)
+
+	side.add_child(_inv_label("옵션", 20, INV_GOLD))
+	var rule := ColorRect.new()
+	rule.color = INV_RULE
+	rule.custom_minimum_size = Vector2(0, 1)
+	side.add_child(rule)
+
+	_crystal_info = GridContainer.new()
+	_crystal_info.columns = 2
+	_crystal_info.add_theme_constant_override("h_separation", 12)
+	_crystal_info.add_theme_constant_override("v_separation", 6)
+	side.add_child(_crystal_info)
+
+	# 무엇을 하는 창인지 한 줄 — 대상이 없을 때는 "장비 칸을 누르세요"
+	_crystal_hint = _inv_label("", 16, INV_DIM)
+	_crystal_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	side.add_child(_crystal_hint)
+
+	var room := Control.new()
+	room.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	room.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	side.add_child(room)
+
+	var foot := HBoxContainer.new()
+	foot.add_theme_constant_override("separation", 10)
+	side.add_child(foot)
+	_crystal_have = _inv_label("", 18, INV_TEXT)
+	_crystal_have.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_crystal_have.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	foot.add_child(_crystal_have)
+	_crystal_roll = _inv_button("굴리기", _on_crystal_roll)
+	foot.add_child(_crystal_roll)
 
 
 ## 인벤토리 창 — 머리 줄 · 격자와 오른쪽 세로 탭 · 소지품 수와 정렬 · 동전
@@ -1338,8 +1413,18 @@ func _tab_keeps(stack: Dictionary) -> bool:
 	return false
 
 
-## 칸을 누르면 상세 창이 뜬다. **빈칸을 누르면 닫는다**
+## 칸을 누르면 상세 창이 뜬다. **빈칸을 누르면 닫는다**.
+## 크리스탈 창이 떠 있으면 **장비 칸은 크리스탈 대상이 된다** — 재료·빈칸은 무시한다
 func _pick_bag(where: String, index: int) -> void:
+	if _crystal_panel.visible:
+		var at := index
+		if where == "bag":
+			at = int(_bag_view[index]) if index >= 0 and index < _bag_view.size() else -1
+		var target := {"where": where, "index": at}
+		if not Items.get_item(str(_stack_at(target).get("id", ""))).is_empty():
+			_crystal_target = target
+			_redraw_bag()
+		return
 	_bag_pick = {"where": where, "index": index}
 	if _picked_stack().is_empty():
 		_bag_pick = {}
@@ -1353,6 +1438,8 @@ func _toggle_bag() -> void:
 	_gear_panel.visible = open
 	_bag_pick = {}
 	_detail_panel.visible = false
+	_crystal_panel.visible = false
+	_crystal_target = {}
 	if open:
 		_redraw_bag()
 
@@ -1369,8 +1456,17 @@ func _close_detail() -> void:
 	_show_bag_detail()
 
 
+## 크리스탈 창 X — 상세 창으로 돌아가지 않고 둘 다 닫는다 (칸을 다시 누르면 상세가 뜬다)
+func _close_crystal() -> void:
+	_crystal_panel.visible = false
+	_crystal_target = {}
+	_bag_pick = {}
+	_show_bag_detail()
+
+
 func _on_bag_sort() -> void:
 	_bag_pick = {}
+	_crystal_target = {}  # 정렬하면 가방 번호가 바뀐다
 	_transport.send(&"sortBag", {})
 	_redraw_bag()
 
@@ -1447,13 +1543,17 @@ func _show_bag_detail() -> void:
 		_gear_cells[index].get_node("pick").visible = _is_picked("equip", index)
 	for index in _bag_grid.get_child_count():
 		_bag_grid.get_child(index).get_node("pick").visible = _is_picked("bag", index)
+	# 크리스탈 창이 떠 있으면 상세 창은 쉰다 — 같은 자리를 번갈아 쓴다
+	if _crystal_panel.visible:
+		_detail_panel.visible = false
+		_redraw_crystal()
+		return
 
 	var stack := _picked_stack()
 	if stack.is_empty():
 		_detail_panel.visible = false
 		_bag_action.text = "-"
 		_bag_action.disabled = true
-		_bag_crystal.visible = false
 		return
 	_detail_panel.visible = _bag_panel.visible
 	if Items.is_material(str(stack.get("id", ""))):
@@ -1502,24 +1602,23 @@ func _show_bag_detail() -> void:
 
 	_bag_action.text = "해제" if worn else "장착"
 	_bag_action.disabled = false
-	var crystals := _crystal_count()
-	_bag_crystal.visible = true
-	_bag_crystal.text = "크리스탈 x%d" % crystals
-	_bag_crystal.disabled = crystals <= 0
 
 
-## 이름 · 값 두 줄짜리 표를 다시 채운다
-func _fill_detail_rows(rows: Array) -> void:
-	for child in _detail_info.get_children():
-		_detail_info.remove_child(child)
+## 이름 · 값 두 줄짜리 표를 다시 채운다. 줄에 세 번째 칸(색)이 있으면 값을 그 색으로
+func _fill_detail_rows(rows: Array, grid: GridContainer = null) -> void:
+	if grid == null:
+		grid = _detail_info
+	for child in grid.get_children():
+		grid.remove_child(child)
 		child.queue_free()
 	for row in rows:
 		var key_label := _inv_label(str(row[0]), 17, INV_DIM)
 		key_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		_detail_info.add_child(key_label)
-		var value_label := _inv_label(str(row[1]), 17, INV_TEXT)
+		grid.add_child(key_label)
+		var tint: Color = row[2] if row.size() > 2 else INV_TEXT
+		var value_label := _inv_label(str(row[1]), 17, tint)
 		value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		_detail_info.add_child(value_label)
+		grid.add_child(value_label)
 
 
 ## 재료(크리스탈)를 고르면 — 등급·능력치가 없고, 낄 수도 없다.
@@ -1536,9 +1635,9 @@ func _show_material_detail(stack: Dictionary) -> void:
 		["보유 수량", "%d" % int(stack.get("count", 1))],
 		["쓰임", "2차 옵션 굴리기"],
 	])
-	_bag_action.text = "-"
-	_bag_action.disabled = true
-	_bag_crystal.visible = false
+	# "사용" 을 누르면 크리스탈 창이 뜬다 (2026-09-23 요청)
+	_bag_action.text = "사용"
+	_bag_action.disabled = int(stack.get("count", 1)) <= 0
 
 
 ## 가방에 든 크리스탈 수
@@ -1550,19 +1649,86 @@ func _crystal_count() -> int:
 	return 0
 
 
-## 크리스탈 단추 — 고른 장비의 2차 옵션을 다시 굴린다. **고른 칸은 그대로 둔다** —
-## 결과를 바로 상세 창에서 보고 또 굴릴지 정해야 한다
-func _on_bag_crystal() -> void:
-	var stack := _picked_stack()
-	if stack.is_empty() or Items.is_material(str(stack.get("id", ""))):
+## 대상(`{"where", "index"}`)이 가리키는 물건. 가방은 **가방 번호**, 장비는 슬롯 번호다
+func _stack_at(target: Dictionary) -> Dictionary:
+	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
+	var index := int(target.get("index", -1))
+	if me.is_empty() or index < 0:
+		return {}
+	if str(target.get("where", "")) == "equip":
+		var slots: Array = Items.slots()
+		return me.get("equipped", {}).get(str(slots[index]), {}) if index < slots.size() else {}
+	var bag: Array = me.get("bag", [])
+	return bag[index] if index < bag.size() else {}
+
+
+## 크리스탈 창을 채운다 — 대상의 이름·큰 칸·1·2·3차 옵션, 보유 수, 굴리기 단추.
+## **2차 줄은 금빛**이다 — 크리스탈이 바꾸는 줄이 어느 것인지 한눈에 보여야 한다
+func _redraw_crystal() -> void:
+	var crystals := _crystal_count()
+	_crystal_have.text = "보유 크리스탈 x%d" % crystals
+	var stack := _stack_at(_crystal_target)
+	var item := Items.get_item(str(stack.get("id", "")))
+	if item.is_empty():
+		_crystal_target = {}
+		_crystal_name.text = "대상 없음"
+		_crystal_name.add_theme_color_override("font_color", INV_DIM)
+		_crystal_kind.text = ""
+		_fill_cell(_crystal_icon, {}, "", "")
+		_fill_detail_rows([], _crystal_info)
+		_crystal_hint.text = "장비나 인벤토리에서 장비 칸을 누르세요.\n2차 옵션 1줄을 새로 굴립니다."
+		_crystal_roll.disabled = true
 		return
-	if str(_bag_pick.get("where", "")) == "equip":
-		_transport.send(&"useCrystal", {
-			"where": "equip", "key": str(Items.slots()[int(_bag_pick.index)])
-		})
+
+	var grade := int(stack.get("grade", 1))
+	var enhance := int(stack.get("enhance", 0))
+	_crystal_name.text = str(item.name) + (" +%d" % enhance if enhance > 0 else "")
+	_crystal_name.add_theme_color_override("font_color", _grade_tint(grade))
+	var worn := str(_crystal_target.get("where", "")) == "equip"
+	_crystal_kind.text = "%s · %s" % [Items.grade_name(grade), "착용 중" if worn else "보유 중"]
+	_fill_cell(_crystal_icon, stack, "", _item_icon(stack))
+
+	var rows: Array = []
+	for tier in Items.option_tiers():
+		var head := "%d차 옵션" % int(tier.tier)
+		var tint := INV_GOLD_HI if str(tier.get("source", "")) == "crystal" else INV_TEXT
+		var lines: Array = stack.get(str(tier.key), [])
+		for option in lines:
+			rows.append([head, Items.describe_option(option), tint])
+		if lines.is_empty() and str(tier.get("source", "")) != "drop":
+			rows.append([head, "비어 있음", INV_DIM])
+	_fill_detail_rows(rows, _crystal_info)
+	var second: Array = stack.get("options2", [])
+	var has_second := not second.is_empty()
+	_crystal_hint.text = "굴리면 2차 옵션이 새로 바뀝니다." if has_second \
+		else "굴리면 2차 옵션 1줄이 붙습니다."
+	_crystal_roll.disabled = crystals <= 0
+
+
+## 크리스탈 쓰기. **대상은 그대로 둔다** — 결과를 보고 또 굴릴지 정해야 한다.
+## 마지막 크리스탈을 쓰면 그 칸이 빠져 **뒤쪽 가방 번호가 하나씩 당겨지므로** 대상 번호도 맞춘다
+func _on_crystal_roll() -> void:
+	var stack := _stack_at(_crystal_target)
+	if Items.get_item(str(stack.get("id", ""))).is_empty():
+		return
+	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
+	var bag: Array = me.get("bag", [])
+	var crystal_at := -1
+	for index in bag.size():
+		if str(bag[index].get("id", "")) == Items.crystal_id():
+			crystal_at = index
+			break
+	if crystal_at < 0:
+		return
+	var last := int(bag[crystal_at].get("count", 1)) <= 1
+
+	var index := int(_crystal_target.index)
+	if str(_crystal_target.where) == "equip":
+		_transport.send(&"useCrystal", {"where": "equip", "key": str(Items.slots()[index])})
 	else:
-		var at := _picked_bag_index()
-		_transport.send(&"useCrystal", {"where": "bag", "key": at})
+		_transport.send(&"useCrystal", {"where": "bag", "key": index})
+		if last and crystal_at < index:
+			_crystal_target.index = index - 1
 	_redraw_bag()
 
 
@@ -1580,6 +1746,14 @@ func _bonus_text(key: String, value: float) -> String:
 
 
 func _is_picked(where: String, index: int) -> bool:
+	# 크리스탈 창이 떠 있으면 금테는 **크리스탈 대상**에 두른다 (가방은 칸 → 가방 번호로 바꿔 댄다)
+	if _crystal_panel.visible:
+		if str(_crystal_target.get("where", "")) != where:
+			return false
+		var at := index
+		if where == "bag":
+			at = int(_bag_view[index]) if index < _bag_view.size() else -1
+		return int(_crystal_target.get("index", -1)) == at
 	return str(_bag_pick.get("where", "")) == where and int(_bag_pick.get("index", -1)) == index
 
 
@@ -1613,6 +1787,13 @@ func _picked_stack() -> Dictionary:
 func _on_bag_action() -> void:
 	var stack := _picked_stack()
 	if stack.is_empty():
+		return
+	# 크리스탈 "사용" — 상세 창 자리에 크리스탈 창을 띄운다. 대상은 칸을 눌러 고른다
+	if Items.is_material(str(stack.get("id", ""))):
+		_bag_pick = {}
+		_crystal_target = {}
+		_crystal_panel.visible = true
+		_redraw_bag()
 		return
 	if str(_bag_pick.get("where", "")) == "equip":
 		_transport.send(&"unequip", {"slot": str(Items.slots()[int(_bag_pick.index)])})

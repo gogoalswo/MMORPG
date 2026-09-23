@@ -2954,7 +2954,7 @@ func _show_hit(payload: Dictionary) -> void:
 	_feel_hit(payload, on_me, body)
 
 
-## 타격감 — 히트스톱·흔들림·몸 튕김·찌그러짐·진동. 세기는 `HitFx.TIERS` 네 단계다
+## 타격감 — 히트스톱·흔들림·몸 튕김·찌그러짐. 세기는 `HitFx.TIERS` 네 단계다
 ## (평타 < 치명타 < 처치 < 보스) → docs/features/hit-effects.md 의 "타격감"
 func _feel_hit(payload: Dictionary, on_me: bool, body: Node3D) -> void:
 	var tier := HitFx.tier_of(payload, false)
@@ -2979,7 +2979,6 @@ func _feel_hit(payload: Dictionary, on_me: bool, body: Node3D) -> void:
 		HitFx.react(body, from, kick, feel.squash)
 	if float(feel.shake) > 0.0:
 		_camera.shake(feel.shake, feel.shake_time)
-	HitFx.buzz(feel.buzz)
 
 
 ## 스킬 이펙트.

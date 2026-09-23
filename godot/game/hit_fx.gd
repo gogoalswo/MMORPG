@@ -49,7 +49,7 @@ const COLOR_HURT := Color("#ff5a4a")
 const COLOR_HEAL := Color("#7ce08a")
 
 ## ── 타격감 ─────────────────────────────────────────────
-## 섬광·숫자 말고 **시간·움직임·손끝**으로 주는 것. 세기는 네 단계다 —
+## 섬광·숫자 말고 **시간·움직임**으로 주는 것. 세기는 네 단계다 —
 ## **평타 < 치명타 < 처치 < 보스.** 매번 같은 세기면 금방 무뎌진다.
 ##
 ## - `stop`   히트스톱(초). 때린 쪽·맞은 쪽 동작을 멈춘다 (`Rig.freeze`)
@@ -57,12 +57,13 @@ const COLOR_HEAL := Color("#7ce08a")
 ##            초당 몇 번씩 흔들리면 멀미가 난다
 ## - `kick`   맞은 몸이 밀려나는 거리(m). 몸만 밀고 판정 좌표는 그대로다
 ## - `squash` 맞은 몸이 옆으로 퍼지는 비율
-## - `buzz`   폰 진동(ms). 평타는 0
+##
+## **폰 진동은 쓰지 않는다** — 넣었다가 바로 뺐다 (2026-09-23, "핸드폰에 진동은 제거해")
 const TIERS := [
-	{"stop": 0.045, "shake": 0.0, "shake_time": 0.0, "kick": 0.12, "squash": 0.08, "buzz": 0},
-	{"stop": 0.07, "shake": 0.05, "shake_time": 0.18, "kick": 0.22, "squash": 0.14, "buzz": 25},
-	{"stop": 0.09, "shake": 0.09, "shake_time": 0.24, "kick": 0.32, "squash": 0.18, "buzz": 35},
-	{"stop": 0.13, "shake": 0.14, "shake_time": 0.35, "kick": 0.40, "squash": 0.22, "buzz": 60},
+	{"stop": 0.045, "shake": 0.0, "shake_time": 0.0, "kick": 0.12, "squash": 0.08},
+	{"stop": 0.07, "shake": 0.05, "shake_time": 0.18, "kick": 0.22, "squash": 0.14},
+	{"stop": 0.09, "shake": 0.09, "shake_time": 0.24, "kick": 0.32, "squash": 0.18},
+	{"stop": 0.13, "shake": 0.14, "shake_time": 0.35, "kick": 0.40, "squash": 0.22},
 ]
 ## 밀려나는 데 걸리는 시간. 나머지(`REACT_TIME` 까지) 동안 제자리로 돌아온다
 const KICK_OUT := 0.05
@@ -71,11 +72,6 @@ const REACT_TIME := 0.18
 const SQUASH_TIME := 0.14
 ## 보스는 무겁다 — 덜 밀린다
 const BOSS_KICK := 0.5
-## 진동 사이 최소 간격(ms). 할퀴기 한 번이 다섯 대라 그대로 떨면 한 덩어리로 뭉개진다
-const BUZZ_GAP := 120
-## 진동을 쓸까. 설정 창이 생기면 여기에 잇는다
-static var buzz_on := true
-static var _buzz_at := -BUZZ_GAP
 
 var _t := 0.0
 var _flash: MeshInstance3D
@@ -218,7 +214,7 @@ func _start(payload: Dictionary, font: Font) -> void:
 ##
 ## 치명타 1 · 처치 2 에서 시작해 **보스가 끼면 한 단계 올린다** — 보스 평타가
 ## 잡몹 치명타만큼, 보스를 잡으면 맨 위다. **내가 맞으면 적어도 1** 이다 —
-## 맞은 걸 손끝으로 알아야 하는데 평타 단계는 진동이 없다
+## 맞은 걸 알아야 하는데 평타 단계는 화면이 안 흔들린다
 static func tier_of(payload: Dictionary, boss: bool) -> int:
 	if bool(payload.get("heal", false)):
 		return -1
@@ -276,17 +272,6 @@ static func settle(body: Node3D) -> void:
 	if body.has_meta(&"hit_react"):
 		body.remove_meta(&"hit_react")
 		body.scale = Vector3.ONE
-
-
-## 폰 진동. 데스크톱에서는 아무 일도 없다
-static func buzz(ms: int) -> void:
-	if not buzz_on or ms <= 0:
-		return
-	var now := Time.get_ticks_msec()
-	if now - _buzz_at < BUZZ_GAP:
-		return
-	_buzz_at = now
-	Input.vibrate_handheld(ms)
 
 
 ## 맞은 몸을 잠깐 붉게 물들인다. **덧칠(`material_overlay`)이라 원래 재질을

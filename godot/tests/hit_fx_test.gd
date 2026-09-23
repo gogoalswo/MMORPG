@@ -166,7 +166,7 @@ func _case_feel(game: Node3D, mob: Dictionary, body: Node3D) -> void:
 	var hurt := _hit(mob, 1, false, false)
 	hurt.target_kind = "player"
 	if HitFx.tier_of(hurt, false) < 1:
-		_fail("내가 맞았는데 평타 단계다 — 진동이 안 온다")
+		_fail("내가 맞았는데 평타 단계다 — 화면이 안 흔들린다")
 	var heal := hurt.duplicate()
 	heal.heal = true
 	if HitFx.tier_of(heal, false) != -1:
@@ -174,7 +174,7 @@ func _case_feel(game: Node3D, mob: Dictionary, body: Node3D) -> void:
 	for i in HitFx.TIERS.size() - 1:
 		var lo: Dictionary = HitFx.TIERS[i]
 		var hi: Dictionary = HitFx.TIERS[i + 1]
-		for key in ["stop", "shake", "kick", "squash", "buzz"]:
+		for key in ["stop", "shake", "kick", "squash"]:
 			if float(hi[key]) < float(lo[key]):
 				_fail("%d단계 %s 가 %d단계보다 약하다" % [i + 1, key, i])
 	if float(HitFx.TIERS[0].shake) > 0.0:

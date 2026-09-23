@@ -703,7 +703,7 @@ func _case_skills(game: Node3D) -> void:
 		if quick[slot].find_child("key", true, false).text != str(slot + 1):
 			_fail("%d번 퀵슬롯에 단축키 번호가 없다" % (slot + 1))
 
-	# 빈 칸을 누르면 창이 열린다
+	# 스킬 단추를 누르면 창이 열린다
 	game._toggle_skills()
 	await process_frame
 	var panel: Control = game._skill_panel
@@ -735,6 +735,12 @@ func _case_skills(game: Node3D) -> void:
 	game._pick_skill(ids.size() - 1)
 	if game._skill_name.text != str(Skills.all()[last_id].name) or game._skill_desc.text == "":
 		_fail("고른 스킬(%s)이 설명에 안 나온다: '%s'" % [last_id, game._skill_name.text])
+	# 설명 끝에 피해 배율. 연타는 "* N연타" 를 붙인다
+	if not game._skill_desc.text.ends_with(Skills.damage_text(Skills.all()[last_id])):
+		_fail("설명에 데미지 줄이 없다: '%s'" % game._skill_desc.text)
+	for want in [["fireball", "데미지 : 260%"], ["rising_kick", "데미지 : 56% * 5연타"]]:
+		if Skills.all().has(want[0]) and Skills.damage_text(Skills.all()[want[0]]) != want[1]:
+			_fail("%s 데미지 줄이 '%s' 여야 하는데 '%s'" % [want[0], want[1], Skills.damage_text(Skills.all()[want[0]])])
 	if not game._skill_cells[ids.size() - 1].get_node("pick").visible:
 		_fail("고른 칸에 테두리가 안 뜬다")
 	# 배운 것은 레벨 글자를 지우고, 안 배운 것은 "Lv.N 습득"
@@ -769,6 +775,15 @@ func _case_skills(game: Node3D) -> void:
 	await process_frame
 	if panel.visible:
 		_fail("닫기를 눌렀는데 스킬창이 안 닫혔다")
+
+	# 빈 퀵슬롯을 눌러도 스킬창이 열리지 않는다 (2026-09-23 요청으로 뺐다)
+	var kept: Array = me.skill_bar.duplicate()
+	me.skill_bar.resize(mini(kept.size(), 3))
+	game._on_bar_pressed(me.skill_bar.size())
+	await process_frame
+	me.skill_bar.assign(kept)
+	if panel.visible:
+		_fail("빈 퀵슬롯을 눌렀는데 스킬창이 열렸다")
 
 	# 테스트 스위치 단추 — 누르면 뒤집히고, 다시 누르면 돌아온다
 	if game._switch_buttons.has("unlockAll"):

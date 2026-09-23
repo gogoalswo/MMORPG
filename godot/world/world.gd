@@ -23,6 +23,9 @@ var _monsters: Array = []
 var _rng := RandomNumberGenerator.new()
 ## 밖으로 내보낼 일들 (맞았다·죽었다·레벨 올랐다). Transport 가 비워 간다
 var _events: Array = []
+## 아직 안 들어간 연타 (`hits` 가 2 이상인 스킬의 둘째 대부터).
+## `{player, target, attack, skill, at}` — `step` 이 때가 된 것부터 넣는다
+var _combos: Array = []
 
 ## 어느 직업으로 시작하나. 만드는 화면이 없어서 당분간 고정이다
 const DEFAULT_JOB := "fighter"
@@ -105,6 +108,8 @@ func open(id: String) -> void:
 	zone = GameData.zone(id)
 	half_size = Movement.zone_half_size(float(zone.get("size", 62)))
 	_run_speed = float(GameData.constants().get("runSpeed", 4.6))
+	# 떠난 존의 몬스터를 붙잡은 연타가 새 존에서 들어가면 안 된다
+	_combos.clear()
 	_spawn_monsters()
 
 
@@ -241,6 +246,7 @@ func input_move(player_id: String, seq: int, dx: float, dz: float, dt: float) ->
 func step(delta: float) -> void:
 	var now := Time.get_ticks_msec()
 	_respawn(now)
+	_run_combos(now)
 	_step_monsters(delta, now)
 	_drive_auto(delta, now)
 	_check_gate()
@@ -1214,6 +1220,35 @@ func cast(player_id: String, skill_id: String) -> void:
 
 	for target in picked:
 		_hit_monster(player, target, attack, skill_id)
+
+	# **연타는 첫 대에서 고른 대상에게 간격을 두고 들어간다.** 한꺼번에 넣으면
+	# 피해 숫자가 한 자리에 겹쳐 한 대로 보이고, 이펙트의 다섯 줄기와 박자가 안 맞는다.
+	# 대마다 다시 고르지 않는 이유 — 첫 대에 죽은 놈 자리를 옆 놈이 채우면 "다섯 번"
+	# 이 대상마다 제각각이 된다
+	var gap := int(skill.get("hitGap", 80))
+	for n in range(1, int(skill.get("hits", 1))):
+		for target in picked:
+			_combos.append({
+				"player": player_id, "target": target, "attack": attack,
+				"skill": skill_id, "at": now + gap * n,
+			})
+
+
+## 때가 된 연타를 넣는다. 그 사이 죽은 쪽(때린 쪽이든 맞는 쪽이든)은 건너뛴다
+func _run_combos(now: int) -> void:
+	if _combos.is_empty():
+		return
+	var left: Array = []
+	for combo in _combos:
+		if now < int(combo.at):
+			left.append(combo)
+			continue
+		var player: Dictionary = _players.get(str(combo.player), {})
+		var target: Dictionary = combo.target
+		if player.is_empty() or bool(player.dead) or int(target.hp) <= 0:
+			continue
+		_hit_monster(player, target, float(combo.attack), str(combo.skill))
+	_combos = left
 
 
 ## 몬스터 하나를 때린다. 기본 공격과 스킬이 같은 자리를 쓴다

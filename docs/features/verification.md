@@ -167,6 +167,8 @@ npm run probe -- god --zone meadow              # 무적 모드 — 안 깎이�
 ```bash
 npm run shot:godot                   # 낙뢰(thunder_fall)
 npm run shot:godot -- rising_kick    # 스킬 id 를 주면 그것
+npm run shot:godot -- rising_kick@225 # @각도(도, 0 = +Z) — 그 쪽을 보고 쓴다. 캐릭터 기준 이펙트는
+                                      # 보는 쪽마다 화면 모양이 달라 두세 방향을 찍어 본다 (225 = 화면 위)
 npm run shot:godot -- portal         # 차원문 소용돌이 (스킬이 아니라 늘 켜진 이펙트)
 npm run shot:godot -- gate           # 차원문 창 (logs/gate_off.png · gate_on.png=줄 누른 채)
 npm run shot:godot -- range:tiger_roar   # 스킬 범위 표시 (logs/range_NN.png)

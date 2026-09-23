@@ -17,6 +17,7 @@ func _init() -> void:
 	_case_bar()
 	_case_cast()
 	_case_multi()
+	_case_combo()
 	_case_range()
 	_case_dead()
 	Save.clear()
@@ -169,6 +170,60 @@ func _case_multi() -> void:
 		_fail("호포각이 3마리를 쳐야 하는데 %d마리" % hits)
 	else:
 		print("  호포각: %d마리 동시" % hits)
+
+
+## **연타** — 할퀴기는 앞 120° 안의 놈들을 `hits` 번 때린다 (2026-09-23).
+## 첫 대는 누르는 순간, 나머지는 `hitGap` 간격으로 `step` 이 넣는다.
+## 시간을 기다리지 않고 `_run_combos` 에 앞선 시각을 줘서 본다
+func _case_combo() -> void:
+	var s := _setup(3)
+	var w: World = s[0]
+	var mobs: Array = s[2]
+	# 옆(90°)에 하나 더 — 120° 부채꼴(반각 60°) 밖이라 안 맞아야 한다
+	var side := World.make_monster("side", GameData.monster_kind("mob003"), 0.0, 1.5, 10000.0, 0.0)
+	mobs.append(side)
+	var kick := Skills.get_skill("fighter", "rising_kick")
+	var times := int(kick.get("hits", 1))
+	var gap := int(kick.get("hitGap", 0))
+	w.learn_skill("me", "rising_kick")
+	w.set_skill_bar("me", ["rising_kick"])
+	w.drain_events()
+
+	var start := Time.get_ticks_msec()
+	w.cast("me", "rising_kick")
+	var first := _hits(w.drain_events())
+	if first.size() != 3:
+		_fail("첫 대에 %d마리가 맞았다 (앞의 셋이어야 한다)" % first.size())
+		return
+	if "side" in first:
+		_fail("120° 밖(옆 90°)의 놈이 맞았다")
+
+	# 둘째 대 — 아직 셋째 대 시각이 아니므로 셋만 더 들어온다
+	w._run_combos(start + gap)
+	var second := _hits(w.drain_events())
+	if second.size() != 3:
+		_fail("둘째 대가 %d번 들어왔다 (3번이어야 한다)" % second.size())
+
+	# 도중에 죽으면 남은 대는 건너뛴다 — 부활한 놈을 때리면 안 된다
+	mobs[0].hp = 0
+	w._run_combos(start + gap * times + 1000)
+	var rest := _hits(w.drain_events())
+	var want := 2 * (times - 2)
+	if rest.size() != want:
+		_fail("남은 대가 %d번이다 (%d번이어야 한다 — 죽은 놈은 빠진다)" % [rest.size(), want])
+	elif not w._combos.is_empty():
+		_fail("다 넣었는데 예약이 %d개 남았다" % w._combos.size())
+	else:
+		print("  할퀴기: %d타 × 3마리, %dms 간격, 120° 밖·죽은 놈 제외" % [times, gap])
+
+
+## 맞은 놈 id 들
+func _hits(events: Array) -> Array:
+	var ids: Array = []
+	for e in events:
+		if e.get("type", "") == "hit":
+			ids.append(str(e.target))
+	return ids
 
 
 ## 범위 표시(`skillRange`)가 **판정이 실제로 쓴 모양**을 싣고 오는지.

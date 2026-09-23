@@ -84,3 +84,30 @@ static func scorch(size := 128) -> ImageTexture:
 	var tex := ImageTexture.create_from_image(img)
 	_cache[key] = tex
 	return tex
+
+
+## **흙먼지 뭉치.** 가운데가 넓게 고르고 가장자리가 울퉁불퉁 흐려진다.
+## `glow` 로 먼지를 띄웠더니 가운데만 진한 점이라 **물방울무늬**가 됐다
+## (2026-09-23 천붕각 캡처) — 먼지는 겹쳐서 한 덩어리 구름이 되어야 한다.
+## 안쪽도 잡음으로 얼룩지게 해서, 여럿이 겹쳐도 찍어낸 것으로 안 보인다
+static func puff(size := 96) -> ImageTexture:
+	var key := "puff_%d" % size
+	if _cache.has(key):
+		return _cache[key]
+	var noise := FastNoiseLite.new()
+	noise.seed = 20260923
+	noise.frequency = 0.045
+	noise.fractal_octaves = 3
+	var img := Image.create(size, size, false, Image.FORMAT_RGBA8)
+	var mid := float(size - 1) * 0.5
+	for y in size:
+		for x in size:
+			var d := Vector2(float(x) - mid, float(y) - mid).length() / mid
+			var n := noise.get_noise_2d(float(x), float(y)) * 0.5 + 0.5
+			# 가장자리를 잡음으로 들쭉날쭉하게 — 둥근 원이면 동전이다
+			var edge := 1.0 - smoothstep(0.35 + n * 0.3, 1.0, d)
+			var a := edge * lerpf(0.55, 1.0, n)
+			img.set_pixel(x, y, Color(1.0, 1.0, 1.0, clampf(a, 0.0, 1.0)))
+	var tex := ImageTexture.create_from_image(img)
+	_cache[key] = tex
+	return tex

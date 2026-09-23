@@ -26,5 +26,5 @@ fi
 mkdir -p logs
 rm -f logs/shot_*.png
 xvfb-run -a "$GODOT" --path godot --rendering-driver opengl3 --resolution 1280x720 \
-  --script tools/shot.gd -- "${1:-}" 2>&1 |
+  --script tools/shot.gd -- "${1:-}" "${2:-}" 2>&1 |
   grep -vE 'Leaked|ObjectDB|RID|ALSA|audio|^$|Godot Engine|WARNING:|ERROR: Condition'

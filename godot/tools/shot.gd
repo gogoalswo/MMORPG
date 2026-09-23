@@ -12,6 +12,11 @@ extends SceneTree
 ##   npm run shot:godot                  낙뢰(thunder_fall)
 ##   npm run shot:godot -- rising_kick    스킬 id 를 주면 그것
 ##   npm run shot:godot -- rising_kick@90 그 쪽(도, 0 = +Z)을 보고 쓴다
+##   npm run shot:godot -- sky_breaker 2,9,20,45,90,150   찍을 프레임을 준다
+##                                        (긴 이펙트는 기본 0.36초로 모자란다)
+##
+## 여섯 장의 **가운데를 잘라 한 장으로 붙인 것**(`logs/shot_sheet.png`)도 뽑는다.
+## 한 장씩 읽으면 여섯 배를 낸다 — 시간 순서를 보는 데는 이것 한 장이면 된다.
 ##
 ## **시간을 늦춰서 찍는다** (`SLOW`). 소프트웨어 렌더가 5~9fps 라 프레임 간격이
 ## 0.1~0.2초인데 이펙트 한 토막은 0.12초짜리다 — 제 속도로 찍으면 이미 꺼진
@@ -55,6 +60,9 @@ func _run() -> void:
 	var args := OS.get_cmdline_user_args()
 	if args.size() > 0 and str(args[0]) != "":
 		skill = str(args[0])
+	var shots: Array = SHOTS
+	if args.size() > 1 and str(args[1]) != "":
+		shots = Array(str(args[1]).split(",")).map(func(s): return int(s))
 
 	await process_frame
 	var game: Node3D = root.get_node("Game")
@@ -106,19 +114,36 @@ func _run() -> void:
 
 	Engine.time_scale = SLOW
 	game._transport.send(&"skill", {"skill": skill})
+	var began := Time.get_ticks_msec()
 
 	var frame := 0
 	var taken := 0
-	while taken < SHOTS.size():
+	var sheet: Image = null
+	while taken < shots.size():
 		await process_frame
 		frame += 1
-		if frame in SHOTS:
+		if frame in shots:
 			await RenderingServer.frame_post_draw
 			var img := root.get_texture().get_image()
 			img.save_png("res://../logs/shot_%02d.png" % frame)
+			sheet = _add_to_sheet(sheet, img, taken)
 			taken += 1
-			print("logs/shot_%02d.png  (%.2f초쯤)" % [frame, float(frame) * 0.15 * SLOW])
+			print("logs/shot_%02d.png  (게임 시간 %.2f초)" % [
+				frame, float(Time.get_ticks_msec() - began) * 0.001 * SLOW])
+	sheet.resize(int(sheet.get_width() * 0.6), int(sheet.get_height() * 0.6), Image.INTERPOLATE_BILINEAR)
+	sheet.save_png("res://../logs/shot_sheet.png")
+	print("logs/shot_sheet.png  (가운데를 잘라 3열로 붙인 것)")
 	quit(0)
+
+
+## 화면 가운데(캐릭터 둘레)를 잘라 3열 판에 붙인다
+func _add_to_sheet(sheet: Image, img: Image, index: int) -> Image:
+	var cell := Vector2i(int(img.get_width() * 0.6), int(img.get_height() * 0.66))
+	if sheet == null:
+		sheet = Image.create(cell.x * 3, cell.y * 2, false, img.get_format())
+	var from := Vector2i((img.get_width() - cell.x) / 2, (img.get_height() - cell.y) / 2)
+	sheet.blit_rect(img, Rect2i(from, cell), Vector2i((index % 3) * cell.x, (index / 3) * cell.y))
+	return sheet
 
 
 ## 차원문 창을 열어 찍는다. 한 장은 그냥, 한 장은 **줄을 누른 채**로 —

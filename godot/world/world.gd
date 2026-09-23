@@ -30,6 +30,9 @@ var _events: Array = []
 ## 아직 안 들어간 연타 (`hits` 가 2 이상인 스킬의 둘째 대부터).
 ## `{player, target, attack, skill, at}` — `step` 이 때가 된 것부터 넣는다
 var _combos: Array = []
+## 남아 있는 피해 지대 (천붕각 "균열 지대" 강화). `{player, x, z, reach, cap, attack,
+## skill, next_at, until, tick}` — `step` 이 `tick` 마다 범위 안에 피해를 넣는다
+var _zones: Array = []
 
 ## 어느 직업으로 시작하나. 만드는 화면이 없어서 당분간 고정이다
 const DEFAULT_JOB := "fighter"
@@ -112,8 +115,9 @@ func open(id: String) -> void:
 	zone = GameData.zone(id)
 	half_size = Movement.zone_half_size(float(zone.get("size", 66)))
 	_run_speed = float(GameData.constants().get("runSpeed", 4.6))
-	# 떠난 존의 몬스터를 붙잡은 연타가 새 존에서 들어가면 안 된다
+	# 떠난 존의 몬스터를 붙잡은 연타가 새 존에서 들어가면 안 된다 (지대도 같다)
 	_combos.clear()
+	_zones.clear()
 	_spawn_monsters()
 
 
@@ -257,6 +261,7 @@ func step(delta: float) -> void:
 	var now := Time.get_ticks_msec()
 	_respawn(now)
 	_run_combos(now)
+	_run_zones(now)
 	_step_monsters(delta, now)
 	_drive_auto(delta, now)
 	_check_gate()
@@ -1436,7 +1441,8 @@ func cast(player_id: String, skill_id: String) -> void:
 	var attack := float(stats.attack) * float(skill.get("power", 1.0))
 	# 부채꼴 강화는 각을 넓힌다 — 한 바퀴를 넘지는 않는다
 	var arc := minf(TAU, float(skill.arc) + Skills.upgrade_sum(skill_id, upgrades, "arcAdd"))
-	var cap := int(skill.get("maxTargets", 1))
+	# 진폭 강화는 최대 대상 수를 늘린다
+	var cap := int(skill.get("maxTargets", 1)) + roundi(Skills.upgrade_sum(skill_id, upgrades, "targetsAdd"))
 	var picked := _pick_targets(player, reach, arc, cap, origin)
 
 	# **판정이 쓴 모양을 그대로 알린다** — 화면이 다시 계산하면 두 값이 갈라져서
@@ -1464,6 +1470,10 @@ func cast(player_id: String, skill_id: String) -> void:
 			target.stunned_until = now + stun
 			target.state = "stun"
 
+	# 균열 지대 — 판정 모양 그대로 땅에 남는다
+	_open_zone(player, skill_id, upgrades,
+		float(origin.get("x", player.x)), float(origin.get("z", player.z)), reach, cap, now)
+
 	# **연타는 첫 대에서 고른 대상에게 간격을 두고 들어간다.** 한꺼번에 넣으면
 	# 피해 숫자가 한 자리에 겹쳐 한 대로 보이고, 이펙트의 다섯 줄기와 박자가 안 맞는다.
 	# 대마다 다시 고르지 않는 이유 — 첫 대에 죽은 놈 자리를 옆 놈이 채우면 "다섯 번"
@@ -1477,6 +1487,47 @@ func cast(player_id: String, skill_id: String) -> void:
 				"player": player_id, "target": target, "attack": attack,
 				"skill": skill_id, "at": now + gap * n,
 			})
+
+
+## 피해 지대를 건다 — 붙은 강화 중 `zoneMs` 가 있는 것 (천붕각 "균열 지대").
+## **판정 모양과 같은 자리·반경·대상 수**를 쓴다 — 진폭이 같이 붙으면 9m 다.
+## 공격력은 **건 순간의 값**이다 (지대가 남아 있는 동안 장비를 바꿔도 안 변한다)
+func _open_zone(player: Dictionary, skill_id: String, upgrades: Array,
+		x: float, z: float, reach: float, cap: int, now: int) -> void:
+	for id in upgrades:
+		var upgrade := Skills.upgrade(skill_id, str(id))
+		var span := int(upgrade.get("zoneMs", 0))
+		if span <= 0:
+			continue
+		var tick := maxi(100, int(upgrade.get("zoneTickMs", 500)))
+		_zones.append({
+			"player": str(player.id), "x": x, "z": z, "reach": reach, "cap": cap,
+			"attack": float(player.stats.attack) * float(upgrade.get("zonePower", 0.0)),
+			"skill": skill_id, "next_at": now + tick, "until": now + span, "tick": tick,
+		})
+
+
+## 때가 된 지대 틱을 넣는다. **틱마다 대상을 다시 고른다** — 땅에 남은 것이라 걸어
+## 들어온 놈도 맞고 나간 놈은 안 맞는다. 쓴 사람이 죽거나 떠나면 지대도 사라진다.
+## 틱이 밀려 있으면(탭을 내렸다 올림) 밀린 만큼 한꺼번에 넣지 않고 한 번만 넣는다 —
+## 한 틱에 여섯 대가 겹쳐 뜨면 피해 숫자가 한 자리에 쌓인다
+func _run_zones(now: int) -> void:
+	if _zones.is_empty():
+		return
+	var left: Array = []
+	for zone_hit in _zones:
+		var player: Dictionary = _players.get(str(zone_hit.player), {})
+		if player.is_empty() or bool(player.dead):
+			continue
+		if now >= int(zone_hit.next_at) and int(zone_hit.next_at) <= int(zone_hit.until):
+			var origin := {"x": float(zone_hit.x), "z": float(zone_hit.z)}
+			for target in _pick_targets(player, float(zone_hit.reach), TAU, int(zone_hit.cap), origin):
+				_hit_monster(player, target, float(zone_hit.attack), str(zone_hit.skill))
+			while int(zone_hit.next_at) <= now:
+				zone_hit.next_at = int(zone_hit.next_at) + int(zone_hit.tick)
+		if int(zone_hit.next_at) <= int(zone_hit.until):
+			left.append(zone_hit)
+	_zones = left
 
 
 ## 때가 된 연타를 넣는다. 그 사이 죽은 쪽(때린 쪽이든 맞는 쪽이든)은 건너뛴다

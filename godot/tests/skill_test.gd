@@ -23,6 +23,7 @@ func _init() -> void:
 	_case_upgrade()
 	_case_wide()
 	_case_claw_up()
+	_case_quake_up()
 	Save.clear()
 
 	if _failed == 0:
@@ -502,3 +503,67 @@ func _case_claw_up() -> void:
 	w._combos.clear()
 	me.skill_upgrades = {}
 	print("  할퀴기 강화: 기본 120°·3타, 부채꼴 160°, 연타 5타, 둘 다 160°·5타")
+
+
+## 천붕각 강화 — "진폭" 은 반경 6 → 9m · 대상 10 → 15, "균열 지대" 는 시전한 자리에
+## 3초 동안 0.5초마다 공격력 40% (여섯 번). 지대는 **틱마다 대상을 다시 고른다** (2026-09-23)
+func _case_quake_up() -> void:
+	var s := _setup(1)
+	var w: World = s[0]
+	var me: Dictionary = s[1]
+	var mob: Dictionary = s[2][0]
+	mob.max_hp = 999999
+	mob.hp = 999999
+	mob.defense = 0.0
+	w.learn_skill("me", "sky_breaker")
+	w.set_skill_bar("me", ["sky_breaker"])
+	me.skill_upgrades = {"sky_breaker": ["wide"]}
+	me.skill_ready_at = {}
+	w.drain_events()
+	w.cast("me", "sky_breaker")
+	var shape := _first(w.drain_events(), "skillRange")
+	if absf(float(shape.get("reach", 0.0)) - 9.0) > 1e-3 or int(shape.get("max_targets", 0)) != 15:
+		_fail("진폭: 반경 %.1f · 대상 %d (9 · 15 여야 한다)" % [float(shape.reach), int(shape.max_targets)])
+	if not w._zones.is_empty():
+		_fail("균열 지대가 안 붙었는데 지대가 생겼다")
+
+	me.skill_upgrades = {"sky_breaker": ["zone"]}
+	me.skill_ready_at = {}
+	w.drain_events()
+	var now := Time.get_ticks_msec()
+	w.cast("me", "sky_breaker")
+	w.drain_events()
+	if w._zones.size() != 1:
+		_fail("균열 지대가 %d개 생겼다" % w._zones.size())
+		return
+	var start := int(w._zones[0].until) - 3000
+	var ticks: Array = []
+	var amounts: Array = []
+	for step in range(1, 8):
+		w._run_zones(start + step * 500)
+		var events := w.drain_events()
+		ticks.append(_hits(events).size())
+		for e in events:
+			if e.get("type", "") == "hit" and not bool(e.get("crit", false)):
+				amounts.append(int(e.amount))
+	# 0.5 · 1.0 · … · 3.0 초 — 여섯 번, 3.5초에는 없다
+	if ticks != [1, 1, 1, 1, 1, 1, 0] or not w._zones.is_empty():
+		_fail("균열 지대 틱이 %s 이다 ([1×6, 0] 이어야 한다)" % str(ticks))
+	# 한 틱 = 공격력 × 0.4 로 친 피해 (방어 0 · 치명타가 아닌 대만 본다)
+	var want := roundi(Stats.damage(float(me.stats.attack) * 0.4, int(me.level), 0.0))
+	for amount in amounts:
+		if int(amount) != want:
+			_fail("균열 지대 한 틱이 %d 다 (공격력 40%% = %d 여야 한다)" % [amount, want])
+			break
+	# 지대 밖으로 나간 놈은 안 맞는다 — 틱마다 다시 고른다
+	me.skill_ready_at = {}
+	w.cast("me", "sky_breaker")
+	w.drain_events()
+	start = int(w._zones[0].until) - 3000
+	mob.x = 30.0
+	w._run_zones(start + 500)
+	if not _hits(w.drain_events()).is_empty():
+		_fail("지대 밖으로 나간 놈이 맞았다")
+	w._zones.clear()
+	me.skill_upgrades = {}
+	print("  천붕각 강화: 진폭 9m·15마리, 균열 지대 0.5초마다 여섯 번 (%.0f 공격력의 40%%)" % float(me.stats.attack))

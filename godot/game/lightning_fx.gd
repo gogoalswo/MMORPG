@@ -37,6 +37,16 @@ const STRIKE_SWELL := 0.16
 ## 상수라 테스트가 같은 값을 읽는다
 const JITTER: Array[Vector2] = [Vector2.ZERO, Vector2(0.3, -0.2), Vector2(-0.24, 0.28)]
 
+## **범위 강화("범위")가 붙으면** — 가운데 세 번 뒤에 **캐릭터 기준 좌우 살짝 옆**에서
+## 한 번씩 더 내리친다 (2026-09-23 요청: "지금처럼 가운데 하나 떨어지고 살짝 옆으로
+## 양쪽에서 내려치면"). 판정 사거리가 1.5배(4 → 6m)라 금·그을림·지면 전기도 1.5배다.
+## 줄기 굵기는 그대로 둔다 — 굵은 리본은 번개가 아니라 띠로 보인다 (얇은 쪽이 낫다)
+const SIDE_STRIKES := 2
+## 옆 번개가 가운데에서 떨어진 거리(m). 캐릭터 키(1.8m) 남짓 — "살짝 옆"
+const SIDE_GAP := 1.9
+## 넓어질 때 땅에 남는 것(금·그을림·지면 전기)의 배율 — 판정 사거리 배율과 같다
+const WIDE := 1.5
+
 ## 떨어지는 자리 — **시전자가 선 자리**다 (2026-09-18 지시: "스킬이 내 앞에서
 ## 떨어지는데 내 위치에서 떨어지도록 해"). 앞 2.8m 에 떨어뜨렸더니 내가 부른
 ## 것이 아니라 저쪽에 떨어진 것으로 보였다. 0 이 아닌 값을 주면 그만큼 앞이다
@@ -175,35 +185,50 @@ var _span := 0.0
 ## `at` 은 시전자 발밑(월드 좌표), `facing` 은 시전자가 보는 쪽(rad, `player.rot`).
 ## 풀(`FxPool`)에 쉬는 것이 있으면 되감아 쓴다 — 새로 만들지 않는다.
 ## `red` 면 붉은 번개다 (낙뢰 "기절" 강화). 풀은 한 벌을 같이 쓰고 색만 다시 칠한다.
-static func bolt(parent: Node3D, at: Vector3, facing: float, red := false) -> LightningFx:
+## `wide` 면 좌우로 두 번 더 치고 땅의 흔적이 1.5배다 (낙뢰 "범위" 강화). 둘은 따로 논다
+static func bolt(parent: Node3D, at: Vector3, facing: float, red := false, wide := false) -> LightningFx:
 	var fx := FxPool.take(parent, &"bolt") as LightningFx
 	if fx == null:
 		fx = LightningFx.new()
 		parent.add_child(fx)
 		fx._build()
-	fx._start(at, facing, PALETTE_RED if red else PALETTE_BLUE)
+	fx._start(at, facing, PALETTE_RED if red else PALETTE_BLUE, wide)
 	return fx
 
 
-## 노드를 만든다 — 한 번만. 되감기는 `_start`
+## 노드를 만든다 — 한 번만. 되감기는 `_start`.
+## **옆 번개 둘까지 늘 만들어 둔다** — 넓힘이 없을 때는 쉬게 한다(`rest`). 풀이 한 벌이라
+## 넓은 낙뢰가 처음 나올 때 새로 만들면 그 순간 멈칫한다
 func _build() -> void:
-	for i in STRIKES:
+	for i in STRIKES + SIDE_STRIKES:
 		var strike := Strike.new()
-		strike.make(1.0 + float(i) * STRIKE_SWELL)
+		# 옆 번개는 가운데 마지막 것과 같은 굵기다
+		strike.make(1.0 + float(mini(i, STRIKES - 1)) * STRIKE_SWELL)
 		add_child(strike)
 
 
 ## 처음으로 되감는다. 번개의 모양은 씨앗이 정하므로 매번 같다
-func _start(at: Vector3, facing: float, pal: Dictionary = PALETTE_BLUE) -> void:
+func _start(at: Vector3, facing: float, pal: Dictionary = PALETTE_BLUE, wide := false) -> void:
 	# 떨어지는 자리는 **화면이 아니라 캐릭터가 보는 쪽** 앞이다
 	position = at + Vector3(sin(facing) * AHEAD, 0.0, cos(facing) * AHEAD)
 	# **회전은 주지 않는다.** 번개는 하늘에서 땅으로 오는 것이라 월드 기준이어야
 	# 하고, 리본의 폭도 월드 기준 시선으로 잰다. 보는 쪽은 시작점 좌표에 넣는다
 	_t = 0.0
 	_span = 0.0
+	# 캐릭터의 오른쪽 (보는 쪽에 수직, 지면 안)
+	var side := Vector2(cos(facing), -sin(facing))
+	var reach := WIDE if wide else 1.0
 	var i := 0
 	for strike in get_children():
-		strike.plan(i, float(i) * STRIKE_GAP, JITTER[i % JITTER.size()], facing)
+		if i >= STRIKES and not wide:
+			strike.rest()
+			i += 1
+			continue
+		var spot: Vector2 = JITTER[i % JITTER.size()]
+		if i >= STRIKES:
+			# 왼쪽 먼저, 그다음 오른쪽 — 가운데 세 번과 같은 간격으로 이어진다
+			spot = side * SIDE_GAP * (-1.0 if i == STRIKES else 1.0)
+		strike.plan(i, float(i) * STRIKE_GAP, spot, facing, reach)
 		strike.paint(pal)
 		_span = maxf(_span, strike.at + strike.span())
 		i += 1
@@ -522,6 +547,10 @@ class Strike:
 	var _arc_flick := 0.0
 	## 금이 다 자랐나 — 다 자라면 더 깎지 않는다
 	var _crack_done := false
+	## 이번에 치나 — 넓힘이 없으면 옆 번개는 쉰다 (`rest`)
+	var active := true
+	## 땅에 남는 것(금·그을림·지면 전기)의 배율 — 넓힘이면 `LightningFx.WIDE`
+	var ground_mul := 1.0
 
 	## 몇 초짜리인가
 	func span() -> float:
@@ -529,7 +558,10 @@ class Strike:
 			maxf(LightningFx.SPARK_LIFE, LightningFx.ARC_LIFE))) + 0.1
 
 	## 되감는다 — **아무것도 만들지 않는다.** 씨앗·시각·시작점만 다시 넣는다
-	func plan(order: int, at_: float, shake: Vector2, facing: float) -> void:
+	func plan(order: int, at_: float, shake: Vector2, facing: float, reach_ := 1.0) -> void:
+		active = true
+		ground_mul = reach_
+		_stain.scale = Vector3(ground_mul, 1.0, ground_mul)
 		# **씨앗을 박아 둔다** — 같은 낙뢰가 늘 같은 모양이어야 테스트가 읽는다
 		_rng.seed = 20260918 + order * 9779
 		at = at_
@@ -623,7 +655,7 @@ class Strike:
 		var turn := TAU / float(LightningFx.CRACKS)
 		for i in LightningFx.CRACKS:
 			var angle := turn * float(i) + _rng.randf_range(-turn * 0.35, turn * 0.35)
-			var reach := LightningFx.CRACK_LENGTH * _rng.randf_range(0.85, 1.35) * swell
+			var reach := LightningFx.CRACK_LENGTH * _rng.randf_range(0.85, 1.35) * swell * ground_mul
 			var tip := Vector3(sin(angle), 0.0, cos(angle)) * reach
 			var path := LightningFx.trail(Vector3.ZERO, tip, LightningFx.CRACK_SEGMENTS,
 				reach * 0.16, _rng, true)
@@ -662,7 +694,7 @@ class Strike:
 		var turn := TAU / float(LightningFx.ARCS)
 		for i in LightningFx.ARCS:
 			var angle := turn * float(i) + _rng.randf_range(-turn * 0.4, turn * 0.4)
-			var reach := LightningFx.ARC_LENGTH * _rng.randf_range(0.6, 1.25) * swell
+			var reach := LightningFx.ARC_LENGTH * _rng.randf_range(0.6, 1.25) * swell * ground_mul
 			var tip := Vector3(sin(angle), 0.0, cos(angle)) * reach
 			paths.append([LightningFx.trail(Vector3.ZERO, tip, LightningFx.ARC_SEGMENTS,
 				reach * 0.2, _rng, true), 1.0])
@@ -708,7 +740,16 @@ class Strike:
 		motes.material_override = LightningFx.mote(color, additive)
 		return motes
 
+	## 이번에는 안 친다 — 숨겨 두기만 한다 (옆 번개, 넓힘이 없을 때)
+	func rest() -> void:
+		active = false
+		visible = false
+		_light.visible = false
+		_sparks.emitting = false
+
 	func _process(delta: float) -> void:
+		if not active:
+			return
 		_t += delta
 		if _t < at:
 			return

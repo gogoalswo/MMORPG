@@ -1384,9 +1384,12 @@ func cast(player_id: String, skill_id: String) -> void:
 
 	# 겨눈 놈 쪽으로 몸을 돌리는 것은 **쿨타임을 돌리기 전이 아니라** 여기서 한다.
 	# 회복기도 대상을 향해 서야 이펙트가 엉뚱한 쪽을 보지 않는다
+	# 붙은 강화 — 사거리 배율(범위)은 겨누기부터 판정까지 같은 값을 쓴다
+	var upgrades: Array = player.get("skill_upgrades", {}).get(skill_id, [])
+	var range_now := float(skill.range) * Skills.range_mul(skill_id, upgrades)
 	var aim: Dictionary = {}
 	if int(skill.get("maxTargets", 1)) > 0:
-		var near := _pick_targets(player, float(skill.range), TAU, 1)
+		var near := _pick_targets(player, range_now, TAU, 1)
 		if not near.is_empty():
 			aim = near[0]
 			player.rot = atan2(aim.x - player.x, aim.z - player.z)
@@ -1398,8 +1401,7 @@ func cast(player_id: String, skill_id: String) -> void:
 		Combat.effective_cooldown(stats.attackCooldown, stats.attackSpeed)
 	)
 	player.rooted_until = now + root
-	# 붙은 강화도 싣는다 — 화면이 이펙트를 고른다 (기절이면 붉은 번개)
-	var upgrades: Array = player.get("skill_upgrades", {}).get(skill_id, [])
+	# 붙은 강화도 싣는다 — 화면이 이펙트를 고른다 (기절이면 붉은 번개, 범위면 좌우 두 번 더)
 	_events.append({
 		"type": "skill", "id": player_id, "skill": skill_id, "root_ms": root,
 		"upgrades": upgrades.duplicate(),
@@ -1426,7 +1428,7 @@ func cast(player_id: String, skill_id: String) -> void:
 	# **겨눈 놈이 있으면 원거리 스킬은 그 자리에서 터진다.** 근접기는 내 몸이
 	# 중심이다 — 내 앞을 베는 동작인데 판정만 저쪽에서 나면 이펙트와 어긋난다
 	var origin: Dictionary = {}
-	var reach := float(skill.range)
+	var reach := range_now
 	if not aim.is_empty() and Skills.is_ranged(skill):
 		origin = {"x": aim.x, "z": aim.z}
 		reach = Skills.blast_radius(skill)

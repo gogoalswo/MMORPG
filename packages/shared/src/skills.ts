@@ -484,6 +484,8 @@ export interface SkillUpgradeDef {
   exp: number;
   /** 맞은 몬스터를 이만큼(ms) 세운다 — 못 움직이고 못 때린다 */
   stunMs?: number;
+  /** 판정 사거리 배율 (1.5 = 50% 증가). 여럿이면 곱한다 */
+  rangeMul?: number;
 }
 
 /** 스킬 하나에 붙는 강화 수 */
@@ -498,6 +500,15 @@ export const SKILL_UPGRADES: SkillUpgradeDef[] = [
     desc: '맞은 적 3초 기절',
     exp: 1000,
     stunMs: 3000,
+  },
+  {
+    // 이펙트는 좌우로 두 번 더 치고 땅의 흔적이 1.5배다 (LightningFx.SIDE_STRIKES · WIDE)
+    id: 'wide',
+    skill: 'thunder_fall',
+    name: '범위',
+    desc: '범위 50% 증가',
+    exp: 1000,
+    rangeMul: 1.5,
   },
 ];
 

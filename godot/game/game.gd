@@ -3581,8 +3581,10 @@ func _show_skill(payload: Dictionary) -> void:
 		return
 	var here := Vector3(me.x, 0.0, me.z)
 	if skill == "thunder_fall":
-		# "기절" 강화가 붙었으면 붉은 번개 — 판정이 이벤트에 실어 보낸다
-		LightningFx.bolt(_fx, here, float(me.rot), "stun" in payload.get("upgrades", []))
+		# 강화는 판정이 이벤트에 실어 보낸다 — "기절" 이면 붉은 번개, "범위" 면 좌우로
+		# 두 번 더. 둘은 따로 논다 (범위만 붙었으면 색은 그대로)
+		var upgrades: Array = payload.get("upgrades", [])
+		LightningFx.bolt(_fx, here, float(me.rot), "stun" in upgrades, "wide" in upgrades)
 	elif skill == "sky_breaker":
 		QuakeFx.slam(_fx, here, float(me.rot))
 		_camera.shake(QuakeFx.SHAKE, QuakeFx.SHAKE_TIME)

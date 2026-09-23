@@ -12,7 +12,7 @@ extends SceneTree
 ##   npm run shot:godot                  낙뢰(thunder_fall)
 ##   npm run shot:godot -- rising_kick    스킬 id 를 주면 그것
 ##   npm run shot:godot -- rising_kick@90 그 쪽(도, 0 = +Z)을 보고 쓴다
-##   npm run shot:godot -- thunder_fall+stun  스킬 강화를 붙여서 쓴다 (`+` 로 여럿)
+##   npm run shot:godot -- thunder_fall+stun+wide@45  스킬 강화를 붙여서 쓴다 (`+` 로 여럿, `@` 는 맨 뒤)
 ##   npm run shot:godot -- sky_breaker 2,9,20,45,90,150   찍을 프레임을 준다
 ##                                        (긴 이펙트는 기본 0.36초로 모자란다)
 ##
@@ -109,14 +109,14 @@ func _run() -> void:
 	player["skill_points"] = 99
 	# `rising_kick@90` 처럼 붙이면 그 쪽(도)을 보고 쓴다 — 캐릭터 기준 이펙트는
 	# 보는 쪽에 따라 화면에서 모양이 달라서, 한 방향만 찍으면 못 보는 게 있다
-	# `thunder_fall+stun` 처럼 붙이면 그 강화를 단 채로 쓴다 → skill-upgrades.md
+	if "@" in skill:
+		player["rot"] = deg_to_rad(float(skill.get_slice("@", 1)))
+		skill = skill.get_slice("@", 0)
+	# `thunder_fall+stun+wide` 처럼 붙이면 그 강화를 단 채로 쓴다 (`@` 는 맨 뒤) → skill-upgrades.md
 	if "+" in skill:
 		var parts := skill.split("+")
 		skill = parts[0]
 		player["skill_upgrades"] = {skill: Array(parts.slice(1))}
-	if "@" in skill:
-		player["rot"] = deg_to_rad(float(skill.get_slice("@", 1)))
-		skill = skill.get_slice("@", 0)
 	game._transport.send(&"learnSkill", {"skill": skill})
 	game._transport.send(&"setSkillBar", {"bar": [skill]})
 	await process_frame

@@ -900,8 +900,8 @@ func _check_upgrades(game: Node3D, me: Dictionary, panel: Control, screen: Vecto
 	if str(cards[0].name.text) != "기절" or not cards[0].pick.visible or not small.disabled:
 		_fail("낙뢰 1번 강화가 '기절'·골라짐·책 단추 꺼짐이어야 하는데 '%s'·%s·%s" % [
 			cards[0].name.text, cards[0].pick.visible, small.disabled])
-	if not cards[1].hit.disabled or str(cards[1].name.text) != "없음":
-		_fail("없는 2번 강화를 고를 수 있다")
+	if cards[1].hit.disabled or str(cards[1].name.text) != "범위":
+		_fail("낙뢰 2번 강화가 '범위' 로 골라질 수 있어야 하는데 '%s'" % cards[1].name.text)
 	for button in game._book_buttons.values():
 		if button.get_global_rect().end.x > box.end.x or button.get_global_rect().end.y > box.end.y:
 			_fail("경험치북 단추 %s 가 창 밖이다" % button.get_global_rect())

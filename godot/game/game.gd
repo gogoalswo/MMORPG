@@ -103,6 +103,9 @@ const AUTO_GAP := 8
 const SPIN_LIFT := 13
 ## 화면 맨 아래 경험치 게이지 높이. 가운데에 퍼센트를 적으므로 글자가 들어갈 만큼은 된다
 const EXP_GAUGE_H := 20
+## 획득 알림이 시작하는 높이(px). 위 글자줄이 두 줄(24~70)이라 그 아래,
+## 6줄(38px씩) 쌓아도 왼쪽 아래 테스트 단추(474~)에 닿지 않는다
+const LOOT_LOG_TOP := 96
 const ICON_DIR := "res://assets/icons/"
 ## 가방 탭. 0 은 전체, 나머지는 `_tab_keeps` 가 슬롯으로 가른다
 const BAG_TABS := ["전체", "무기", "방어구", "장신구"]
@@ -155,6 +158,8 @@ var _mob_bar_until: Dictionary = {}
 const MOB_BAR_MS := 5000
 ## 마지막으로 일어난 일 한 줄 (맞았다·레벨 올랐다)
 var _last_event := ""
+## 왼쪽 획득 알림 — 경험치·장비 획득 (`LootLog`)
+var _loot_log: LootLog
 var _ui_root: Control
 ## 퀵슬롯 위 한 묶음 — 레벨 배지 안 숫자, 체력 막대와 그 위 숫자, 경험치 퍼센트
 var _level_label: Label
@@ -282,7 +287,7 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 				"  처치!" if payload.get("killed", false) else "",
 			]
 		&"reward":
-			_show_exp(payload)
+			_loot_log.add_exp(int(payload.get("exp", 0)))
 		&"levelUp":
 			_last_event = "레벨 %d 이 되었습니다" % payload.get("level", 0)
 		&"swing":
@@ -320,6 +325,8 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 				_last_event = "골드 %d, %s" % [
 					payload.get("gold", 0), Items.get_item(got).get("name", got)
 				]
+				var grade := int(payload.item.get("grade", 1))
+				_loot_log.add_item(str(Items.get_item(got).get("name", got)), _grade_tint(grade))
 		&"inventory":
 			if _bag_panel.visible:
 				_redraw_bag()
@@ -404,6 +411,12 @@ func _build_persistent() -> void:
 	_label.position = Vector2(24, 24)
 	_label.add_theme_font_size_override("font_size", 16)
 	_ui_root.add_child(_label)
+
+	# 획득 알림은 왼쪽에 쌓는다 — 위 글자줄(두 줄) 아래, 왼쪽 아래 테스트 단추 위.
+	# 가운데는 전투(피해 숫자)가 쓰므로 비운다 → hit-effects.md "획득 알림"
+	_loot_log = LootLog.new()
+	_loot_log.position = Vector2(24, LOOT_LOG_TOP)
+	_ui_root.add_child(_loot_log)
 
 	_build_gate_panel()
 	_build_npc_panel()
@@ -2915,19 +2928,6 @@ func _show_hit(payload: Dictionary) -> void:
 		var max_hp := float(me.get("stats", {}).get("maxHp", 100))
 		# 최대 체력의 4분의 1을 한 번에 맞으면 제일 진하다
 		_hurt.hit(float(payload.get("amount", 0)) / maxf(1.0, max_hp * 0.25))
-
-
-## 몬스터를 잡으면 쓰러진 자리에서 `+n EXP` 가 떠오른다 (`ExpFx`).
-## 높이는 피해 숫자와 같이 그려 둔 몸에서 잰다 — 보상 이벤트가 처치 `hit` 바로
-## 뒤에 오므로 몸은 아직 그 자리에 있다
-func _show_exp(payload: Dictionary) -> void:
-	if _zone_node == null or int(payload.get("exp", 0)) <= 0:
-		return
-	var body: Node3D = _mob_nodes.get(str(payload.get("target", "")), null)
-	var at := Vector3(payload.get("x", 0.0), 0.0, payload.get("z", 0.0))
-	at.y = HitFx.chest_y(body, 1.0)
-	var font: Font = _ui_root.theme.default_font if _ui_root.theme != null else null
-	ExpFx.spawn(_zone_node, at, int(payload.exp), font)
 
 
 ## 스킬 이펙트.

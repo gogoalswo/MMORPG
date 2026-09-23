@@ -251,8 +251,8 @@ func _range(game: Node3D, skill: String) -> void:
 
 ## 사냥터에서 가장 가까운 몬스터를 한 대에 잡는다. 정면·사거리 판정은 건너뛰고
 ## 맞히는 자리(`_hit_monster`)부터 탄다 — 처치·보상 이벤트는 게임과 같은 길로 나온다.
-## 처치 섬광·피해 숫자·`+n EXP`(`ExpFx`)가 차례로 뜨는 것을 **게임 시간으로** 찍는다 —
-## 글자가 1.4초 살아서 스킬처럼 0.08배로 늦추면 너무 오래 걸린다
+## 처치 섬광·피해 숫자와 왼쪽 획득 알림(`LootLog`)을 **게임 시간으로** 찍는다.
+## 알림에 장비 줄도 보이도록 장비 두 개를 떨어뜨린 것처럼 넣는다 (드롭은 운이라)
 func _kill(game: Node3D) -> void:
 	var world = game._transport._world
 	game._transport.send(&"travel", {"zone": RANGE_ZONE})
@@ -281,6 +281,8 @@ func _kill(game: Node3D) -> void:
 
 	Engine.time_scale = 0.25
 	world._hit_monster(player, mob, 1.0, "")
+	game._on_event(&"loot", {"gold": 3, "item": {"id": "g3_w", "grade": 3, "enhance": 0}})
+	game._on_event(&"loot", {"gold": 3, "item": {"id": "g6_a", "grade": 6, "enhance": 0}})
 	var began := Time.get_ticks_msec()
 	var at := [0.05, 0.15, 0.3, 0.5, 0.8, 1.15]
 	var taken := 0

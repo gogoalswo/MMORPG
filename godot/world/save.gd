@@ -40,6 +40,8 @@ static func write(zone_id: String, player: Dictionary) -> void:
 		"granted": player.get("granted", []),
 		# 스킬 강화 `{ 스킬 id: [강화 id, …] }` — 없던 칸이라 옛 저장은 빈 사전으로 읽힌다
 		"skill_upgrades": player.get("skill_upgrades", {}),
+		# 붙기 전까지 쌓인 경험치 `{ 스킬 id: { 강화 id: 경험치 } }` — 이것도 없던 칸이다
+		"skill_upgrade_exp": player.get("skill_upgrade_exp", {}),
 	}, "\t"))
 	file.close()
 

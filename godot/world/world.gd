@@ -192,8 +192,10 @@ func join(player_id: String) -> void:
 		"skill_bar": kept.get("skill_bar", []).duplicate(),
 		# 스킬별 다음에 쓸 수 있는 시각
 		"skill_ready_at": {},
-		# 스킬 강화 — `{ 스킬 id: [강화 id, …] }`. 스킬창에서 강화서로 붙는다 (`upgrade_skill`)
+		# 스킬 강화 — `{ 스킬 id: [강화 id, …] }`. 스킬창에서 경험치북으로 채우면 붙는다 (`feed_upgrade`)
 		"skill_upgrades": kept.get("skill_upgrades", {}).duplicate(true),
+		# 붙기 전까지 쌓인 경험치 — `{ 스킬 id: { 강화 id: 경험치 } }` (`feed_upgrade`)
+		"skill_upgrade_exp": kept.get("skill_upgrade_exp", {}).duplicate(true),
 		# --- 아이템 ---
 		"bag": kept.get("bag", []).duplicate(true),
 		"equipped": kept.get("equipped", {}).duplicate(true),
@@ -1007,6 +1009,19 @@ func restore(player_id: String) -> bool:
 			if not kept_ids.is_empty():
 				upgraded[str(skill_id)] = kept_ids
 	player.skill_upgrades = upgraded
+	# 쌓인 경험치도 **지금 표에 있고 아직 안 붙은 것만** — 없던 칸이라 옛 저장은 빈 사전
+	var progress: Dictionary = {}
+	var raw_exp = saved.get("skill_upgrade_exp", {})
+	if typeof(raw_exp) == TYPE_DICTIONARY:
+		for skill_id in raw_exp:
+			if typeof(raw_exp[skill_id]) != TYPE_DICTIONARY:
+				continue
+			for id in raw_exp[skill_id]:
+				var amount := int(raw_exp[skill_id][id])
+				if amount > 0 and not Skills.upgrade(str(skill_id), str(id)).is_empty() \
+						and not (str(id) in upgraded.get(str(skill_id), [])):
+					progress.get_or_add(str(skill_id), {})[str(id)] = amount
+	player.skill_upgrade_exp = progress
 
 	# 가방·장비도 되살린다. **옛 id 는 지금 id 로 옮긴다** (2026-09-21 에 단계 축을
 	# 없앴다) — 갈 자리가 없는 것만 버린다. 등급은 아이템이 들고 있으므로
@@ -1179,30 +1194,30 @@ func grant_once(player_id: String, key: String, stack: Dictionary) -> void:
 
 ## --- 스킬 강화 ---
 
-## 스킬창에서 강화한다 — 그 스킬의 `slot` 번째(0 부터) 강화를 붙이고, 가방에서 그
-## 강화서를 한 장 뺀다. **강화서는 가방에서 쓰지 않는다** — 스킬창에서만 쓴다
-## (2026-09-23 요청). 이미 붙었거나 강화서가 없거나 남의 직업 스킬이면 아무것도 안 한다
-func upgrade_skill(player_id: String, skill_id: String, slot: int) -> void:
+## 스킬창에서 **고른 강화에 경험치북 한 권을 넣는다** — 그 스킬의 `slot` 번째(0 부터)
+## 강화에 `book` 의 경험치가 쌓이고, 필요 경험치(`exp`)에 닿으면 강화가 붙는다
+## (2026-09-23 요청: "어떤 타입을 강화할지 선택해서 경험치를 넣을 수 있으면 좋겠어").
+## **넘친 경험치는 버린다.** 이미 붙었거나 책이 없거나 남의 직업 스킬이면 안 넣는다
+func feed_upgrade(player_id: String, skill_id: String, slot: int, book: String) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty():
 		return
 	var skill := Skills.get_skill(str(player.job), skill_id)
 	var list := Skills.upgrades_of(skill_id)
-	if skill.is_empty() or slot < 0 or slot >= list.size():
+	var gain := Items.book_exp(book)
+	if skill.is_empty() or slot < 0 or slot >= list.size() or gain <= 0:
 		return
 	var upgrade: Dictionary = list[slot]
-	var have: Array = player.skill_upgrades.get(skill_id, [])
-	if str(upgrade.id) in have:
+	if str(upgrade.id) in player.skill_upgrades.get(skill_id, []):
 		_notice("이미 강화했습니다 — %s %s" % [skill.name, upgrade.name])
 		return
-	var scroll := Items.scroll_for(skill_id, str(upgrade.id))
 	var at := -1
 	for index in player.bag.size():
-		if str(player.bag[index].get("id", "")) == scroll:
+		if str(player.bag[index].get("id", "")) == book:
 			at = index
 			break
-	if scroll == "" or at < 0:
-		_notice("강화서가 없습니다 — %s" % Items.stack_name({"id": scroll}))
+	if at < 0:
+		_notice("%s 이 없습니다" % Items.stack_name({"id": book}))
 		return
 
 	var left := int(player.bag[at].get("count", 1)) - 1
@@ -1210,18 +1225,41 @@ func upgrade_skill(player_id: String, skill_id: String, slot: int) -> void:
 		player.bag[at].count = left
 	else:
 		player.bag.remove_at(at)
-	_add_upgrade(player, skill_id, str(upgrade.id))
-	_notice("%s 강화 — %s" % [skill.name, upgrade.name])
+	var need := int(upgrade.get("exp", 1))
+	var progress: Dictionary = player.skill_upgrade_exp.get_or_add(skill_id, {})
+	var now_exp := int(progress.get(str(upgrade.id), 0)) + gain
+	if now_exp >= need:
+		_add_upgrade(player, skill_id, str(upgrade.id))
+		_notice("%s 강화 완료 — %s" % [skill.name, upgrade.name])
+	else:
+		progress[str(upgrade.id)] = now_exp
+		_notice("%s %s 경험치 %d / %d" % [skill.name, upgrade.name, now_exp, need])
 	_inventory_changed(player)
 
 
+## 테스트 단추 — 스킬 경험치북을 종류마다 10권씩 넣는다 (던전 드랍 전까지, 사용자 선택)
+func debug_books(player_id: String) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	for book in Skills.exp_books():
+		_give(player, {"id": str(book.id), "count": 10})
+	_inventory_changed(player)
+	_notice("테스트: 스킬 경험치북을 10권씩 넣었다")
+
+
+## 강화를 붙이고, 그 강화에 쌓이던 경험치를 지운다 (붙은 뒤에는 더 못 넣는다)
 func _add_upgrade(player: Dictionary, skill_id: String, upgrade_id: String) -> void:
 	var have: Array = player.skill_upgrades.get_or_add(skill_id, [])
 	if not (upgrade_id in have):
 		have.append(upgrade_id)
+	var progress: Dictionary = player.skill_upgrade_exp.get(skill_id, {})
+	progress.erase(upgrade_id)
+	if progress.is_empty():
+		player.skill_upgrade_exp.erase(skill_id)
 
 
-## 테스트 단추 — 이 직업의 **모든 스킬에 `slot` 번째 강화를 강화서 없이** 붙인다
+## 테스트 단추 — 이 직업의 **모든 스킬에 `slot` 번째 강화를 경험치북 없이** 붙인다
 ## ("모든 스킬 1번 강화" · "2번 강화", 2026-09-23 요청). 그 번호 강화가 없는 스킬은 건너뛴다
 func debug_upgrade_all(player_id: String, slot: int) -> void:
 	var player: Dictionary = _players.get(player_id, {})
@@ -1237,12 +1275,13 @@ func debug_upgrade_all(player_id: String, slot: int) -> void:
 	_notice("테스트: 스킬 %d개에 %d번 강화" % [count, slot + 1])
 
 
-## 테스트 단추 — 붙은 강화를 전부 뗀다. 강화서는 돌려주지 않는다
+## 테스트 단추 — 붙은 강화를 전부 뗀다. 쌓인 경험치도 지우고, 쓴 경험치북은 돌려주지 않는다
 func debug_reset_upgrades(player_id: String) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty():
 		return
 	player.skill_upgrades = {}
+	player.skill_upgrade_exp = {}
 	_inventory_changed(player)
 	_notice("테스트: 스킬 강화를 전부 뗐다")
 

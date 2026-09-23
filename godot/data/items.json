@@ -775,14 +775,23 @@
       "name": "크리스탈",
       "desc": "장비의 2차 옵션을 다시 굴린다"
     },
-    "scroll_thunder_fall_stun": {
-      "id": "scroll_thunder_fall_stun",
-      "name": "낙뢰 강화서: 기절",
-      "desc": "맞은 적 3초 기절",
-      "upgrade": {
-        "skill": "thunder_fall",
-        "id": "stun"
-      }
+    "skill_book_1": {
+      "id": "skill_book_1",
+      "name": "하급 스킬 경험치북",
+      "desc": "스킬 강화 경험치 +100",
+      "skillExp": 100
+    },
+    "skill_book_2": {
+      "id": "skill_book_2",
+      "name": "중급 스킬 경험치북",
+      "desc": "스킬 강화 경험치 +500",
+      "skillExp": 500
+    },
+    "skill_book_3": {
+      "id": "skill_book_3",
+      "name": "상급 스킬 경험치북",
+      "desc": "스킬 강화 경험치 +2000",
+      "skillExp": 2000
     }
   },
   "crystalId": "crystal",

@@ -37,6 +37,11 @@ static func upgrade(skill_id: String, upgrade_id: String) -> Dictionary:
 	return {}
 
 
+## 스킬 경험치북 표 (`SKILL_EXP_BOOKS`) — 하급·중급·상급 순
+static func exp_books() -> Array:
+	return _table().get("expBooks", [])
+
+
 ## 이 스킬의 강화들 — **표 순서가 곧 1번·2번** 이다 (스킬창의 강화 칸 순서)
 static func upgrades_of(skill_id: String) -> Array:
 	var out: Array = []

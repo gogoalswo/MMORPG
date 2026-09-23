@@ -73,8 +73,15 @@ func send(message: StringName, payload: Dictionary) -> void:
 			_world.unequip(MY_ID, str(payload.get("slot", "")))
 		&"sortBag":
 			_world.sort_bag(MY_ID)
-		&"upgradeSkill":
-			_world.upgrade_skill(MY_ID, str(payload.get("skill", "")), int(payload.get("slot", -1)))
+		&"feedUpgrade":
+			_world.feed_upgrade(
+				MY_ID,
+				str(payload.get("skill", "")),
+				int(payload.get("slot", -1)),
+				str(payload.get("book", "")),
+			)
+		&"debugBooks":
+			_world.debug_books(MY_ID)
 		&"debugUpgradeAll":
 			_world.debug_upgrade_all(MY_ID, int(payload.get("slot", 0)))
 		&"debugResetUpgrades":

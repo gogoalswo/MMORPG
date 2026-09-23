@@ -22,6 +22,147 @@
     "abyssgate",
     "endland"
   ],
+  "dungeons": [
+    {
+      "id": "raid",
+      "name": "토벌 던전",
+      "open": true,
+      "stages": [
+        {
+          "zone": "raid_01",
+          "stage": 1,
+          "boss": "boss00",
+          "level": 9
+        },
+        {
+          "zone": "raid_02",
+          "stage": 2,
+          "boss": "boss01",
+          "level": 19
+        },
+        {
+          "zone": "raid_03",
+          "stage": 3,
+          "boss": "boss02",
+          "level": 29
+        },
+        {
+          "zone": "raid_04",
+          "stage": 4,
+          "boss": "boss03",
+          "level": 39
+        },
+        {
+          "zone": "raid_05",
+          "stage": 5,
+          "boss": "boss04",
+          "level": 49
+        },
+        {
+          "zone": "raid_06",
+          "stage": 6,
+          "boss": "boss05",
+          "level": 59
+        },
+        {
+          "zone": "raid_07",
+          "stage": 7,
+          "boss": "boss06",
+          "level": 69
+        },
+        {
+          "zone": "raid_08",
+          "stage": 8,
+          "boss": "boss07",
+          "level": 79
+        },
+        {
+          "zone": "raid_09",
+          "stage": 9,
+          "boss": "boss08",
+          "level": 89
+        },
+        {
+          "zone": "raid_10",
+          "stage": 10,
+          "boss": "boss09",
+          "level": 99
+        },
+        {
+          "zone": "raid_11",
+          "stage": 11,
+          "boss": "boss10",
+          "level": 109
+        },
+        {
+          "zone": "raid_12",
+          "stage": 12,
+          "boss": "boss11",
+          "level": 119
+        },
+        {
+          "zone": "raid_13",
+          "stage": 13,
+          "boss": "boss12",
+          "level": 129
+        },
+        {
+          "zone": "raid_14",
+          "stage": 14,
+          "boss": "boss13",
+          "level": 139
+        },
+        {
+          "zone": "raid_15",
+          "stage": 15,
+          "boss": "boss14",
+          "level": 149
+        },
+        {
+          "zone": "raid_16",
+          "stage": 16,
+          "boss": "boss15",
+          "level": 159
+        },
+        {
+          "zone": "raid_17",
+          "stage": 17,
+          "boss": "boss16",
+          "level": 169
+        },
+        {
+          "zone": "raid_18",
+          "stage": 18,
+          "boss": "boss17",
+          "level": 179
+        },
+        {
+          "zone": "raid_19",
+          "stage": 19,
+          "boss": "boss18",
+          "level": 189
+        },
+        {
+          "zone": "raid_20",
+          "stage": 20,
+          "boss": "boss19",
+          "level": 199
+        }
+      ]
+    },
+    {
+      "id": "trial",
+      "name": "시련의 탑",
+      "open": false,
+      "stages": []
+    },
+    {
+      "id": "treasure",
+      "name": "보물 창고",
+      "open": false,
+      "stages": []
+    }
+  ],
   "zones": {
     "village": {
       "id": "village",
@@ -1519,6 +1660,786 @@
         "grassLight": "#37232a",
         "ground": "lava",
         "groundTint": "#3d282e"
+      }
+    },
+    "raid_01": {
+      "id": "raid_01",
+      "name": "토벌 던전 1단계",
+      "size": 66,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          4,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss00",
+          "x": -16,
+          "z": -16,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "raid_02": {
+      "id": "raid_02",
+      "name": "토벌 던전 2단계",
+      "size": 66,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          4,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss01",
+          "x": -16,
+          "z": -16,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "raid_03": {
+      "id": "raid_03",
+      "name": "토벌 던전 3단계",
+      "size": 66,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          4,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss02",
+          "x": -16,
+          "z": -16,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "raid_04": {
+      "id": "raid_04",
+      "name": "토벌 던전 4단계",
+      "size": 66,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          4,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss03",
+          "x": -16,
+          "z": -16,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "raid_05": {
+      "id": "raid_05",
+      "name": "토벌 던전 5단계",
+      "size": 66,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          4,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss04",
+          "x": -16,
+          "z": -16,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "raid_06": {
+      "id": "raid_06",
+      "name": "토벌 던전 6단계",
+      "size": 66,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          4,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss05",
+          "x": -16,
+          "z": -16,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "raid_07": {
+      "id": "raid_07",
+      "name": "토벌 던전 7단계",
+      "size": 66,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          4,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss06",
+          "x": -16,
+          "z": -16,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "raid_08": {
+      "id": "raid_08",
+      "name": "토벌 던전 8단계",
+      "size": 66,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          4,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss07",
+          "x": -16,
+          "z": -16,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "raid_09": {
+      "id": "raid_09",
+      "name": "토벌 던전 9단계",
+      "size": 66,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          4,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss08",
+          "x": -16,
+          "z": -16,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "raid_10": {
+      "id": "raid_10",
+      "name": "토벌 던전 10단계",
+      "size": 66,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          4,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss09",
+          "x": -16,
+          "z": -16,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "raid_11": {
+      "id": "raid_11",
+      "name": "토벌 던전 11단계",
+      "size": 66,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          4,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss10",
+          "x": -16,
+          "z": -16,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "raid_12": {
+      "id": "raid_12",
+      "name": "토벌 던전 12단계",
+      "size": 66,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          4,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss11",
+          "x": -16,
+          "z": -16,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "raid_13": {
+      "id": "raid_13",
+      "name": "토벌 던전 13단계",
+      "size": 66,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          4,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss12",
+          "x": -16,
+          "z": -16,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "raid_14": {
+      "id": "raid_14",
+      "name": "토벌 던전 14단계",
+      "size": 66,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          4,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss13",
+          "x": -16,
+          "z": -16,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "raid_15": {
+      "id": "raid_15",
+      "name": "토벌 던전 15단계",
+      "size": 66,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          4,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss14",
+          "x": -16,
+          "z": -16,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "raid_16": {
+      "id": "raid_16",
+      "name": "토벌 던전 16단계",
+      "size": 66,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          4,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss15",
+          "x": -16,
+          "z": -16,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "raid_17": {
+      "id": "raid_17",
+      "name": "토벌 던전 17단계",
+      "size": 66,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          4,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss16",
+          "x": -16,
+          "z": -16,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "raid_18": {
+      "id": "raid_18",
+      "name": "토벌 던전 18단계",
+      "size": 66,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          4,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss17",
+          "x": -16,
+          "z": -16,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "raid_19": {
+      "id": "raid_19",
+      "name": "토벌 던전 19단계",
+      "size": 66,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          4,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss18",
+          "x": -16,
+          "z": -16,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "raid_20": {
+      "id": "raid_20",
+      "name": "토벌 던전 20단계",
+      "size": 66,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          4,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss19",
+          "x": -16,
+          "z": -16,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
       }
     }
   },

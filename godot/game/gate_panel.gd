@@ -60,6 +60,8 @@ const DEADZONE := 14
 const BAR_WIDTH := 18
 
 var _rows: VBoxContainer
+## 제목 — 던전 창(`DungeonPanel`)이 고른 종류 이름으로 바꿔 단다
+var _title: Label
 var _scroll: ScrollContainer
 var _here_icon: Texture2D
 var _go_icon: Texture2D
@@ -113,12 +115,12 @@ func _build() -> void:
 
 	var head := HBoxContainer.new()
 	column.add_child(head)
-	var title := Label.new()
-	title.text = "차원문"
-	title.add_theme_color_override("font_color", TITLE_COLOR)
-	title.add_theme_font_size_override("font_size", FONT_SIZE + 4)
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	head.add_child(title)
+	_title = Label.new()
+	_title.text = "차원문"
+	_title.add_theme_color_override("font_color", TITLE_COLOR)
+	_title.add_theme_font_size_override("font_size", FONT_SIZE + 4)
+	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(_title)
 	# 닫기는 다른 창과 같은 X 조각이다 (그림이 없으면 글자 X)
 	var close := Button.new()
 	close.name = "Close"
@@ -190,37 +192,48 @@ func row(i: int) -> Button:
 ## 마을 + 사냥터 20곳. 순서는 데이터가 정한다 (zones.json 의 fieldOrder).
 ## **목록 맨 위가 마을이다** — 돌아가는 길을 매번 훑지 않게 (world-zones.md)
 func _fill(current_zone: String) -> void:
-	for child in _rows.get_children():
-		_rows.remove_child(child)
-		child.queue_free()
+	_clear_rows()
 	var ids: Array = [GameData.start_zone()]
 	ids.append_array(GameData.field_order())
 	for id in ids:
 		var here := str(id) == current_zone
-		var button := Button.new()
-		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		button.text = str(GameData.zone(str(id)).get("name", id))
-		button.icon = _here_icon if here else _go_icon
-		button.add_theme_constant_override("icon_max_width", ICON)
-		button.add_theme_constant_override("h_separation", 22)
-		button.add_theme_font_size_override("font_size", FONT_SIZE)
-		button.add_theme_color_override("font_color", TEXT_COLOR)
-		button.add_theme_color_override("font_disabled_color", HERE_COLOR)
-		# **줄 하나가 칸 하나다.** 검푸른 바탕에 푸른 테 — 누르면 `_press` 가
-		# 밝은 틀로 바꿔 끼운다 (`normal` 을 갈아 끼운다: 이 단추는 입력을 안 받아
-		# 고도의 pressed 상태가 오지 않는다)
-		if here:
-			var dim := _row_box(false)
-			button.add_theme_stylebox_override("disabled", dim)
-		else:
-			button.add_theme_stylebox_override("normal", _row_box(false))
-		button.custom_minimum_size = Vector2(0, ICON + ROW_PAD * 2)
-		button.disabled = here
-		# **줄은 입력을 받지 않는다.** 누른 것이 고르기인지 끌기인지는 목록 쪽에서
-		# 판정한다 — 줄이 먼저 받으면 끌다가 손을 뗀 자리의 줄로 떠나 버린다
-		button.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		button.set_meta("zone", str(id))
-		_rows.add_child(button)
+		_add_row(str(GameData.zone(str(id)).get("name", id)), str(id), here, _here_icon if here else _go_icon)
+
+
+func _clear_rows() -> void:
+	for child in _rows.get_children():
+		_rows.remove_child(child)
+		child.queue_free()
+
+
+## 줄 하나. `key` 는 고르면 `_on_pick` 에 넘어가는 값이고, `blocked` 면 흐리게 막는다.
+## 던전 창(`DungeonPanel`)도 이것으로 줄을 단다 — 틀·누름·끌기가 차원문과 같아야 해서다
+func _add_row(text: String, key: String, blocked: bool, row_icon: Texture2D) -> Button:
+	var button := Button.new()
+	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	button.text = text
+	button.icon = row_icon
+	button.add_theme_constant_override("icon_max_width", ICON)
+	button.add_theme_constant_override("h_separation", 22)
+	button.add_theme_font_size_override("font_size", FONT_SIZE)
+	button.add_theme_color_override("font_color", TEXT_COLOR)
+	button.add_theme_color_override("font_disabled_color", HERE_COLOR)
+	# **줄 하나가 칸 하나다.** 검푸른 바탕에 푸른 테 — 누르면 `_press` 가
+	# 밝은 틀로 바꿔 끼운다 (`normal` 을 갈아 끼운다: 이 단추는 입력을 안 받아
+	# 고도의 pressed 상태가 오지 않는다)
+	if blocked:
+		var dim := _row_box(false)
+		button.add_theme_stylebox_override("disabled", dim)
+	else:
+		button.add_theme_stylebox_override("normal", _row_box(false))
+	button.custom_minimum_size = Vector2(0, ICON + ROW_PAD * 2)
+	button.disabled = blocked
+	# **줄은 입력을 받지 않는다.** 누른 것이 고르기인지 끌기인지는 목록 쪽에서
+	# 판정한다 — 줄이 먼저 받으면 끌다가 손을 뗀 자리의 줄로 떠나 버린다
+	button.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	button.set_meta("zone", key)
+	_rows.add_child(button)
+	return button
 
 
 ## 목록에 온 입력. **누르고 끌면 스크롤, 누르고 그 자리에서 떼면 고르기**다.

@@ -1,5 +1,6 @@
 import type { GroundKind, ZoneDef, ZoneEnv } from './zone.ts';
 import { bossIdFor, monsterIdFor, tierLevels } from './monsters.ts';
+import { dungeonZones } from './dungeons.ts';
 
 /**
  * 존 배치.
@@ -217,6 +218,8 @@ const VILLAGE: ZoneDef = {
 export const ZONES: Record<string, ZoneDef> = {
   [VILLAGE.id]: VILLAGE,
   ...Object.fromEntries(FIELDS.map((theme, i) => [theme.id, buildField(theme, i)])),
+  // 던전 단계마다 존 하나 — 차원문 목록에는 없고 던전 창으로만 간다 (dungeons.ts)
+  ...Object.fromEntries(dungeonZones(gateFor).map((zone) => [zone.id, zone])),
 };
 
 export const START_ZONE = VILLAGE.id;

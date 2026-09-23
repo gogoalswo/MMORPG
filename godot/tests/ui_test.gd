@@ -55,7 +55,7 @@ func _case_font() -> void:
 	if bad != "":
 		_fail("존·몬스터 이름에 없는 글자: %s" % bad)
 	else:
-		print("  존 21곳·몬스터 60종 이름 전부 그려진다")
+		print("  존 %d곳·몬스터 60종 이름 전부 그려진다" % GameData.zones().get("zones", {}).size())
 
 
 func _run_scene() -> void:
@@ -269,6 +269,8 @@ func _run_scene() -> void:
 	await _case_bag(game)
 	await _case_skills(game)
 	await _case_design_panel(game)
+	# 존을 옮기므로 맨 끝에 둔다
+	await _case_dungeon(game)
 
 	if _failed == 0:
 		print("UI: 전부 통과")
@@ -330,9 +332,9 @@ func _case_status(game: Node3D) -> void:
 		_fail("경험치 글자가 띠 가운데가 아니다: %s" % exp_rect)
 
 	# 오른쪽 위 메뉴 — 화면 안, 묶음과 안 겹침.
-	# 스킬·가방·설계(디버그) 셋이다 — 설계 재현 창은 문서 9장 5번의 디버그 수단이다
-	if game._menu_cells.size() != 3:
-		_fail("오른쪽 위 단추가 3개여야 하는데 %d개" % game._menu_cells.size())
+	# 스킬·가방·던전·설계(디버그) 넷이다 — 설계 재현 창은 문서 9장 5번의 디버그 수단이다
+	if game._menu_cells.size() != 4:
+		_fail("오른쪽 위 단추가 4개여야 하는데 %d개" % game._menu_cells.size())
 		return
 	var skill_rect: Rect2 = game._menu_cells[0].get_global_rect()
 	var bag_rect: Rect2 = game._menu_cells[1].get_global_rect()
@@ -354,6 +356,79 @@ func _case_status(game: Node3D) -> void:
 	game._toggle_bag()
 	await process_frame
 	print("  퀵슬롯 위: %s · %s · 체력 %s (막대 %.0fpx · 게이지 %.0fpx)" % [game._level_label.text, game._exp_text.text, game._hp_text.text, hp_rect.size.x, gauge.size.x])
+
+
+## 던전 — 가방 옆 단추 → 종류 셋 → 단계 목록 → 들어가면 보스 한 마리 (docs/features/dungeons.md)
+func _case_dungeon(game: Node3D) -> void:
+	var panel: DungeonPanel = game._dungeon_panel
+	var bag_rect: Rect2 = game._menu_cells[1].get_global_rect()
+	var cell_rect: Rect2 = game._menu_cells[2].get_global_rect()
+	# 가방 **바로 옆**이다 (2026-09-23 요청)
+	if absf(cell_rect.position.x - bag_rect.end.x) > 12.0 or absf(cell_rect.position.y - bag_rect.position.y) > 1.0:
+		_fail("던전 단추가 가방 옆이 아니다: 가방 %s · 던전 %s" % [bag_rect, cell_rect])
+	game._menu_cells[2].find_child("hit", true, false).pressed.emit()
+	await process_frame
+	if not panel.visible:
+		_fail("던전 단추를 눌렀는데 창이 안 떴다")
+		return
+	# 종류 셋 — 첫째(토벌)만 열려 있다
+	var font: Font = load(FONT)
+	var seen := ""
+	if panel.row_count() != 3:
+		_fail("던전 종류가 3줄이어야 하는데 %d줄" % panel.row_count())
+		return
+	if panel.row(0).disabled or not panel.row(1).disabled or not panel.row(2).disabled:
+		_fail("토벌만 열리고 나머지 둘은 막혀야 한다")
+	for i in 3:
+		seen += panel.row(i).text
+	# 막힌 줄은 눌러도 아무 일이 없다
+	await _tap_row(panel, 1)
+	if panel.row_count() != 3:
+		_fail("준비 중인 종류를 눌렀는데 목록이 바뀌었다")
+	# 토벌을 누르면 단계 목록 — "뒤로" + 20단계
+	await _tap_row(panel, 0)
+	if panel.row_count() != 21:
+		_fail("토벌 던전 단계 목록이 21줄(뒤로 + 20)이어야 하는데 %d줄" % panel.row_count())
+		return
+	seen += panel._title.text + panel.row(0).text + panel.row(20).text
+	print("  던전 창: 종류 3 → '%s' %d줄, 첫 단계 '%s'" % [panel._title.text, panel.row_count(), panel.row(1).text])
+	# 한 줄에 들어가야 한다 — 넘치면 줄이 창을 밀어 넓힌다
+	if panel.size.x > DungeonPanel.DUNGEON_WIDTH + 1.0:
+		_fail("단계 줄이 창 폭을 넘겨 창이 %.0fpx 로 넓어졌다" % panel.size.x)
+	await _tap_row(panel, 0)
+	if panel.row_count() != 3:
+		_fail("뒤로를 눌렀는데 종류 목록으로 안 돌아갔다")
+	var missing := ""
+	for ch in seen:
+		if ch != " " and not font.has_char(ch.unicode_at(0)):
+			missing += ch
+	if missing != "":
+		_fail("던전 창 글자가 폰트에 없다: %s" % missing)
+	# 1단계로 들어간다 — 보스 한 마리뿐이다
+	await _tap_row(panel, 0)
+	await _tap_row(panel, 1)
+	if panel.visible:
+		_fail("단계를 골랐는데 창이 안 닫혔다")
+	for i in 3:
+		await process_frame
+	var snap: Dictionary = game._transport.snapshot()
+	var monsters: Array = snap.get("monsters", [])
+	if str(snap.get("zone", "")) != "raid_01":
+		_fail("1단계를 골랐는데 존이 %s" % snap.get("zone", ""))
+	elif monsters.size() != 1 or not bool(GameData.monster_kind(str(monsters[0].get("kind", ""))).get("boss", false)):
+		_fail("던전 안에 보스 한 마리만 있어야 하는데 %d마리" % monsters.size())
+	else:
+		print("  던전 1단계: 보스 %s 한 마리" % GameData.monster_kind(str(monsters[0].kind)).get("name", ""))
+
+
+## 목록의 i 번째 줄 가운데를 눌렀다 뗀다 (끌지 않는다)
+func _tap_row(panel: GatePanel, i: int) -> void:
+	var list: ScrollContainer = panel._scroll
+	var box := panel.row(i).get_global_rect()
+	var at := Vector2(list.size.x * 0.5, box.get_center().y - list.global_position.y)
+	panel._on_list_input(_mouse(at, true))
+	panel._on_list_input(_mouse(at, false))
+	await process_frame
 
 
 ## 가방·장비 창 — 열리나, 칸이 제대로 깔리나, 골라서 낄 수 있나.

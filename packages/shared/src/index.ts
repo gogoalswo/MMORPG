@@ -10,3 +10,4 @@ export * from './items.ts';
 export * from './movement.ts';
 export * from './zone.ts';
 export * from './zones.ts';
+export * from './dungeons.ts';

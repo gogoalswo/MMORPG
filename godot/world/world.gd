@@ -19,6 +19,10 @@ var _run_speed: float = 4.6
 var _players: Dictionary = {}
 ## [{id, kind, x, z, r, scale, color}, ...] — 스폰 자리는 서버(여기)가 정한다
 var _monsters: Array = []
+## 몬스터 격자 — 칸(`NEAR` m) → 그 칸의 살아 있는 몬스터. `_fill_grid` 가 채운다
+var _grid: Dictionary = {}
+## 서로 미는 이웃을 찾는 거리(m)이자 격자 한 칸의 크기
+const NEAR := 4.0
 ## 스폰을 매번 같은 자리에 놓는다. 자리를 정하는 건 언제나 판정하는 쪽이다
 var _rng := RandomNumberGenerator.new()
 ## 밖으로 내보낼 일들 (맞았다·죽었다·레벨 올랐다). Transport 가 비워 간다
@@ -620,6 +624,7 @@ func drain_events() -> Array:
 ## 보스의 범위 공격(aoe)은 아직 안 옮겼다 — 예고 원을 그리는 화면이 필요해서
 ## UI 단계와 같이 한다.
 func _step_monsters(delta: float, now: int) -> void:
+	_fill_grid()
 	for monster in _monsters:
 		if int(monster.hp) <= 0:
 			continue
@@ -782,17 +787,39 @@ func _move_monster(monster: Dictionary, tx: float, tz: float, speed: float, delt
 	monster.z = clampf(monster.z + (dz / dist) * step_len, -half_size, half_size)
 	monster.rot = atan2(dx, dz)
 
-	# 움직인 놈만 민다. 서 있는 80마리까지 매 프레임 밀면 폰에서 버겁다
+	# 움직인 놈만 민다. 서 있는 80마리까지 매 프레임 밀면 폰에서 버겁다.
+	# 이웃은 **격자에서 둘레 아홉 칸만** 본다 (`_fill_grid`)
 	var near: Array = []
-	for other in _monsters:
-		if other.id == monster.id or int(other.hp) <= 0:
-			continue
-		if absf(other.x - monster.x) > 4.0 or absf(other.z - monster.z) > 4.0:
-			continue
-		near.append(other)
+	var cx := floori(float(monster.x) / NEAR)
+	var cz := floori(float(monster.z) / NEAR)
+	for gx in range(cx - 1, cx + 2):
+		for gz in range(cz - 1, cz + 2):
+			for other in _grid.get(Vector2i(gx, gz), []):
+				if is_same(other, monster) or int(other.hp) <= 0:
+					continue
+				if absf(other.x - monster.x) > NEAR or absf(other.z - monster.z) > NEAR:
+					continue
+				near.append(other)
 	Movement.push_out_of_solids(
 		monster, near, half_size, float(monster.r), float(monster.push_angle)
 	)
+
+
+## 살아 있는 몬스터를 `NEAR` 크기 칸에 나눠 담는다 — 몬스터 틱마다 한 번.
+##
+## 움직이는 놈마다 서로 밀어내려고 이웃을 찾는데, 예전에는 **사냥터 전체(201마리)를
+## 매번 훑었다.** 무리 한가운데서 그것만 프레임당 1.1ms 였다 (2026-09-23 재 보니
+## 몬스터 틱 1.7ms 중). 옛 서버의 `spatialGrid.ts` 와 같은 생각이다.
+## 칸은 프레임 처음 자리로 나누지만 한 프레임에 움직이는 거리는 수 cm 이고,
+## 미는 판정은 1m 안팎이라 찾는 범위(4m) 안에서 빠지는 놈이 없다
+func _fill_grid() -> void:
+	_grid.clear()
+	for monster in _monsters:
+		if int(monster.hp) <= 0:
+			continue
+		var cell := Vector2i(floori(float(monster.x) / NEAR), floori(float(monster.z) / NEAR))
+		var bucket: Array = _grid.get_or_add(cell, [])
+		bucket.append(monster)
 
 
 ## attack 을 따로 받는 것은 범위 공격이 평타의 power 배로 때리기 때문이다

@@ -144,6 +144,21 @@ const WIDE_TOLERANCE = new Set([
   'ui_figure.png',
 ]);
 
+/**
+ * **색을 빼는 것.** ★ 일반 등급 무기는 "더 안 좋아 보이게" 회색조로 굽는다
+ * (2026-09-23 요청). 받은 그림은 상아빛 붕대라 고급(가죽·초록)과 나란히 두면
+ * 오히려 밝고 깨끗해 보였다. 밝기만 남기고 조금 어둡게(`GREY_DIM`) 한다
+ */
+const GREY = new Set(['weapon_g1.png']);
+const GREY_DIM = 0.8;
+
+function toGrey(data) {
+  for (let i = 0; i < data.length; i += 4) {
+    const lum = (data[i] * 0.3 + data[i + 1] * 0.59 + data[i + 2] * 0.11) * GREY_DIM;
+    data[i] = data[i + 1] = data[i + 2] = Math.round(lum);
+  }
+}
+
 /** 알파가 남아 있는 칸의 바깥 테두리 상자 */
 function alphaBounds(data, width, height) {
   let x0 = width;
@@ -323,6 +338,7 @@ for (const name of readdirSync(SRC).filter((f) => f.endsWith('.png')).sort()) {
       WIDE_TOLERANCE.has(name) ? WIDE : TOLERANCE,
     );
   if (HOLLOW.has(name)) cut += cutCenter(data, info.width, info.height);
+  if (GREY.has(name)) toGrey(data);
   const out = join(DST, basename(name));
   const size = FRAME_SIZE[name] ?? SIZE;
   const raw = { width: info.width, height: info.height, channels: 4 };

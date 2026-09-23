@@ -929,6 +929,8 @@ func _build_detail_window(panel: PanelContainer) -> void:
 	lines.add_child(_detail_state)
 	_detail_icon = _make_cell(func() -> void: pass, DETAIL_ICON)
 	_detail_icon.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	# 강화는 큰 칸 오른쪽 아래 `+9` 로만 보인다 — 정보 표의 강화 줄은 뺐다 (2026-09-23 요청)
+	_detail_icon.get_node("badge").add_theme_font_size_override("font_size", 22)
 	head.add_child(_detail_icon)
 
 	# "아이템 정보" — 제목 아래에 가는 줄 한 가닥
@@ -1437,7 +1439,6 @@ func _show_bag_detail() -> void:
 	# 아이템 정보 — 이름 · 값 두 줄짜리 표를 다시 채운다
 	var rows: Array = [
 		["등급", Items.grade_name(grade)],
-		["강화", "+%d" % enhance],
 		["보유 수량", "%d" % int(stack.get("count", 1))],
 	]
 	var bonus := Items.base_bonus(item, enhance)

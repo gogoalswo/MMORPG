@@ -139,7 +139,7 @@
 - 능력치는 1·2·3차를 **다 더한다** (`stackStats` / `stack_stats`).
 
 **스킬 강화서** (2026-09-23) — 재료다. 강화 표(`SKILL_UPGRADES`)에서 `MATERIALS` 로 만든다
-(`scroll_<스킬>_<강화>`, `upgrade` 칸이 있다). 쓰면 바로 스킬에 붙는다
+(`scroll_<스킬>_<강화>`, `upgrade` 칸이 있다). **가방에서는 안 쓰고** 스킬창의 강화 칸에서 쓴다
 → [skill-upgrades.md](skill-upgrades.md).
 
 **크리스탈**

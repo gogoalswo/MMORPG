@@ -192,7 +192,7 @@ func join(player_id: String) -> void:
 		"skill_bar": kept.get("skill_bar", []).duplicate(),
 		# 스킬별 다음에 쓸 수 있는 시각
 		"skill_ready_at": {},
-		# 스킬 강화 — `{ 스킬 id: [강화 id, …] }`. 강화서로만 붙는다 (`use_scroll`)
+		# 스킬 강화 — `{ 스킬 id: [강화 id, …] }`. 스킬창에서 강화서로 붙는다 (`upgrade_skill`)
 		"skill_upgrades": kept.get("skill_upgrades", {}).duplicate(true),
 		# --- 아이템 ---
 		"bag": kept.get("bag", []).duplicate(true),
@@ -1179,51 +1179,62 @@ func grant_once(player_id: String, key: String, stack: Dictionary) -> void:
 
 ## --- 스킬 강화 ---
 
-## 강화서를 쓴다 — 가방 번호 `index` 의 강화서가 붙이는 강화를 **바로** 붙인다.
-## 이미 붙어 있거나 남의 직업 스킬이면 강화서를 쓰지 않는다
-func use_scroll(player_id: String, index: int) -> void:
+## 스킬창에서 강화한다 — 그 스킬의 `slot` 번째(0 부터) 강화를 붙이고, 가방에서 그
+## 강화서를 한 장 뺀다. **강화서는 가방에서 쓰지 않는다** — 스킬창에서만 쓴다
+## (2026-09-23 요청). 이미 붙었거나 강화서가 없거나 남의 직업 스킬이면 아무것도 안 한다
+func upgrade_skill(player_id: String, skill_id: String, slot: int) -> void:
 	var player: Dictionary = _players.get(player_id, {})
-	if player.is_empty() or index < 0 or index >= player.bag.size():
+	if player.is_empty():
 		return
-	var stack: Dictionary = player.bag[index]
-	var link: Dictionary = Items.get_material(str(stack.get("id", ""))).get("upgrade", {})
-	if link.is_empty():
-		return  # 강화서가 아니다
-	var skill_id := str(link.get("skill", ""))
-	var upgrade := Skills.upgrade(skill_id, str(link.get("id", "")))
 	var skill := Skills.get_skill(str(player.job), skill_id)
-	if upgrade.is_empty() or skill.is_empty():
-		_notice("쓸 수 없는 강화서입니다")
+	var list := Skills.upgrades_of(skill_id)
+	if skill.is_empty() or slot < 0 or slot >= list.size():
 		return
-	var have: Array = player.skill_upgrades.get_or_add(skill_id, [])
+	var upgrade: Dictionary = list[slot]
+	var have: Array = player.skill_upgrades.get(skill_id, [])
 	if str(upgrade.id) in have:
 		_notice("이미 강화했습니다 — %s %s" % [skill.name, upgrade.name])
 		return
+	var scroll := Items.scroll_for(skill_id, str(upgrade.id))
+	var at := -1
+	for index in player.bag.size():
+		if str(player.bag[index].get("id", "")) == scroll:
+			at = index
+			break
+	if scroll == "" or at < 0:
+		_notice("강화서가 없습니다 — %s" % Items.stack_name({"id": scroll}))
+		return
 
-	have.append(str(upgrade.id))
-	var left := int(stack.get("count", 1)) - 1
+	var left := int(player.bag[at].get("count", 1)) - 1
 	if left > 0:
-		stack.count = left
+		player.bag[at].count = left
 	else:
-		player.bag.remove_at(index)
+		player.bag.remove_at(at)
+	_add_upgrade(player, skill_id, str(upgrade.id))
 	_notice("%s 강화 — %s" % [skill.name, upgrade.name])
 	_inventory_changed(player)
 
 
-## 테스트 단추 — 강화서를 종류마다 하나씩 가방에 넣는다. 던전 드랍을 붙이기 전까지
-## 얻을 길이 이것뿐이다 (2026-09-23 사용자 선택)
-func debug_scrolls(player_id: String) -> void:
+func _add_upgrade(player: Dictionary, skill_id: String, upgrade_id: String) -> void:
+	var have: Array = player.skill_upgrades.get_or_add(skill_id, [])
+	if not (upgrade_id in have):
+		have.append(upgrade_id)
+
+
+## 테스트 단추 — 이 직업의 **모든 스킬에 `slot` 번째 강화를 강화서 없이** 붙인다
+## ("모든 스킬 1번 강화" · "2번 강화", 2026-09-23 요청). 그 번호 강화가 없는 스킬은 건너뛴다
+func debug_upgrade_all(player_id: String, slot: int) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty():
 		return
-	var names: Array = []
-	for id in Items.scroll_ids():
-		if _give(player, {"id": id, "count": 1}):
-			names.append(Items.stack_name({"id": id}))
-	if names.is_empty():
-		return
+	var count := 0
+	for skill_id in Skills.for_job(str(player.job)):
+		var list := Skills.upgrades_of(str(skill_id))
+		if slot >= 0 and slot < list.size():
+			_add_upgrade(player, str(skill_id), str(list[slot].id))
+			count += 1
 	_inventory_changed(player)
-	_notice("테스트: %s 을 넣었다" % ", ".join(names))
+	_notice("테스트: 스킬 %d개에 %d번 강화" % [count, slot + 1])
 
 
 ## 테스트 단추 — 붙은 강화를 전부 뗀다. 강화서는 돌려주지 않는다
@@ -1232,6 +1243,7 @@ func debug_reset_upgrades(player_id: String) -> void:
 	if player.is_empty():
 		return
 	player.skill_upgrades = {}
+	_inventory_changed(player)
 	_notice("테스트: 스킬 강화를 전부 뗐다")
 
 

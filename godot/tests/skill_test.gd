@@ -363,7 +363,8 @@ func _case_dead() -> void:
 		_fail("죽었는데 스킬이 나갔다")
 
 
-## 스킬 강화 — 강화서를 쓰면 **바로** 붙고 한 장이 준다. 같은 강화는 두 번 안 붙는다.
+## 스킬 강화 — 스킬창에서 강화하면(`upgrade_skill`) 붙고 강화서가 한 장 준다.
+## 강화서가 없거나 이미 붙었으면 안 붙는다. 테스트 단추는 강화서 없이 붙인다.
 ## 낙뢰에 "기절" 이 붙으면 맞은 놈이 3초 동안 **서서 못 때린다** (2026-09-23)
 func _case_upgrade() -> void:
 	var s := _setup()
@@ -374,8 +375,10 @@ func _case_upgrade() -> void:
 	if not (scroll in Items.scroll_ids()):
 		_fail("낙뢰 기절 강화서가 표에 없다 (%s)" % str(Items.scroll_ids()))
 		return
-	w.debug_scrolls("me")
-	w.debug_scrolls("me")
+	w.upgrade_skill("me", "thunder_fall", 0)
+	if not me.skill_upgrades.is_empty():
+		_fail("강화서 없이 강화됐다 (%s)" % str(me.skill_upgrades))
+	w._give(me, {"id": scroll, "count": 2})
 	var at := -1
 	for i in me.bag.size():
 		if str(me.bag[i].get("id", "")) == scroll:
@@ -383,12 +386,18 @@ func _case_upgrade() -> void:
 	if at < 0 or int(me.bag[at].get("count", 0)) != 2:
 		_fail("강화서 두 장이 한 칸에 겹쳐야 한다 (%s)" % str(me.bag))
 		return
-	w.use_scroll("me", at)
+	w.upgrade_skill("me", "thunder_fall", 0)
 	if me.skill_upgrades.get("thunder_fall", []) != ["stun"]:
-		_fail("강화서를 썼는데 기절이 안 붙었다 (%s)" % str(me.skill_upgrades))
-	w.use_scroll("me", at)
+		_fail("강화했는데 기절이 안 붙었다 (%s)" % str(me.skill_upgrades))
+	w.upgrade_skill("me", "thunder_fall", 0)
+	w.upgrade_skill("me", "thunder_fall", 5)
 	if int(me.bag[at].get("count", 0)) != 1:
 		_fail("이미 붙은 강화에 강화서가 또 쓰였다 (%s)" % str(me.bag[at]))
+	# 테스트 단추 — 강화서 없이 모든 스킬의 1번이 붙고, 초기화하면 다 떨어진다
+	w.debug_reset_upgrades("me")
+	w.debug_upgrade_all("me", 0)
+	if me.skill_upgrades.get("thunder_fall", []) != ["stun"] or int(me.bag[at].get("count", 0)) != 1:
+		_fail("'전체 1번 강화' 가 기절을 안 붙였거나 강화서를 썼다 (%s)" % str(me.skill_upgrades))
 
 	# 기절 — 한 방에 안 죽게 체력을 올려 둔다
 	mob.max_hp = 999999

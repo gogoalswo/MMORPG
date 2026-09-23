@@ -347,16 +347,10 @@ func _case_gone(game: Node3D) -> void:
 
 
 ## **"기절" 강화가 붙으면 붉은 번개**, 떼면 다시 푸른 번개 (2026-09-23 요청).
-## 강화서를 실제 경로(테스트 단추 → 가방 → 사용)로 붙인다. 풀이 한 벌을 되감아
+## 테스트 단추 요청("전체 1번 강화")으로 붙인다. 풀이 한 벌을 되감아
 ## 쓰므로 붉게 칠한 것이 **다음 푸른 낙뢰에 남지 않는지**도 본다
 func _case_red(game: Node3D) -> void:
-	game._transport.send(&"debugScrolls", {})
-	var me: Dictionary = game._transport.snapshot().players[game._transport.my_id()]
-	var at := -1
-	for i in me.bag.size():
-		if str(me.bag[i].get("id", "")) == "scroll_thunder_fall_stun":
-			at = i
-	game._transport.send(&"useScroll", {"index": at})
+	game._transport.send(&"debugUpgradeAll", {"slot": 0})
 	for pair in [[true, "붉은"], [false, "푸른"]]:
 		if not pair[0]:
 			game._transport.send(&"debugResetUpgrades", {})

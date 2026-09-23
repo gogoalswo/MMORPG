@@ -37,6 +37,15 @@ static func upgrade(skill_id: String, upgrade_id: String) -> Dictionary:
 	return {}
 
 
+## 이 스킬의 강화들 — **표 순서가 곧 1번·2번** 이다 (스킬창의 강화 칸 순서)
+static func upgrades_of(skill_id: String) -> Array:
+	var out: Array = []
+	for entry in _table().get("upgrades", []):
+		if str(entry.get("skill", "")) == skill_id:
+			out.append(entry)
+	return out
+
+
 ## 붙은 강화들이 맞은 몬스터를 세우는 시간(ms). 여럿이면 긴 쪽이다
 static func stun_ms(skill_id: String, upgrade_ids: Array) -> int:
 	var out := 0

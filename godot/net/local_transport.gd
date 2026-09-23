@@ -73,10 +73,10 @@ func send(message: StringName, payload: Dictionary) -> void:
 			_world.unequip(MY_ID, str(payload.get("slot", "")))
 		&"sortBag":
 			_world.sort_bag(MY_ID)
-		&"useScroll":
-			_world.use_scroll(MY_ID, int(payload.get("index", -1)))
-		&"debugScrolls":
-			_world.debug_scrolls(MY_ID)
+		&"upgradeSkill":
+			_world.upgrade_skill(MY_ID, str(payload.get("skill", "")), int(payload.get("slot", -1)))
+		&"debugUpgradeAll":
+			_world.debug_upgrade_all(MY_ID, int(payload.get("slot", 0)))
 		&"debugResetUpgrades":
 			_world.debug_reset_upgrades(MY_ID)
 		&"useCrystal":

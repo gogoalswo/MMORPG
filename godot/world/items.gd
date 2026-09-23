@@ -43,6 +43,16 @@ static func scroll_ids() -> Array:
 	return out
 
 
+## 그 강화를 붙이는 강화서 id. 없으면 ""
+static func scroll_for(skill_id: String, upgrade_id: String) -> String:
+	var materials: Dictionary = _t().get("materials", {})
+	for id in scroll_ids():
+		var link: Dictionary = materials[id].upgrade
+		if str(link.get("skill", "")) == skill_id and str(link.get("id", "")) == upgrade_id:
+			return str(id)
+	return ""
+
+
 static func crystal_id() -> String:
 	return str(_t().get("crystalId", "crystal"))
 

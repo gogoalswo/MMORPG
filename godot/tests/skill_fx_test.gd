@@ -1,10 +1,11 @@
 extends SceneTree
 
-## 할퀴기 스킬 이펙트가 **파티클로** 서고, 양쪽에서 엇갈리고, 제 시간에 사라지는지 본다.
+## 할퀴기 스킬 이펙트 — **초승달 다섯 번**이 앞 120° 를 번갈아 쓸고, 제 시간에
+## 사라지는지 본다.
 ##
-## 스크린샷을 찍지 않는다 — "방출기가 몇 개인가 · 파티클이 몇 개인가 · 진행 방향으로
-## 서는가 · 두 세트가 반대로 뻗는가 · 화면에서 몇 px 인가 · 치우고 갔나" 는 전부
-## 노드로 읽을 수 있다. 눈으로 볼 것은 색과 속도감뿐이다.
+## 모양의 **수치**(몇 번 · 몇 가닥 · 앞쪽인가 · 번갈아 도나 · 몇 px 인가 · 판정과
+## 박자가 같은가 · 치웠나)는 노드로 읽는다. **생김새는 찍어서 본다** —
+## `npm run shot:godot -- rising_kick@225` (effect-rules.md 4절)
 ##
 ##   godot --headless --path godot --script tests/skill_fx_test.gd
 
@@ -28,13 +29,30 @@ func _run() -> void:
 	var game: Node3D = root.get_node("Game")
 	await process_frame
 
+	_case_table()
 	await _case_cast(game)
-	await _case_particles(game)
 	await _case_shape(game)
 	await _case_visible(game)
 	await _case_other_skill(game)
 	await _case_gone(game)
 	_done()
+
+
+## **판정과 박자가 같아야 한다** — 한 줄기가 지나갈 때 숫자 하나가 떠야 긁은 것이
+## 곧 맞은 것으로 읽힌다. 표(`skills.json`)가 바뀌면 여기서 걸린다
+func _case_table() -> void:
+	var kick := Skills.get_skill("fighter", "rising_kick")
+	if int(kick.get("hits", 1)) != SkillFx.SLASHES:
+		_fail("판정은 %d타인데 이펙트는 %d번 긁는다" % [int(kick.get("hits", 1)), SkillFx.SLASHES])
+	if roundi(SkillFx.GAP * 1000.0) != int(kick.get("hitGap", 0)):
+		_fail("판정 간격 %dms 와 이펙트 간격 %.0fms 가 다르다" % [
+			int(kick.get("hitGap", 0)), SkillFx.GAP * 1000.0
+		])
+	# 쓸고 가는 각은 판정 부채꼴보다 넓어야 끝에 선 놈도 긁힌 것으로 보인다
+	if SkillFx.SWEEP_ARC < float(kick.arc):
+		_fail("이펙트가 %.0f° 만 쓴다 — 판정 부채꼴 %.0f° 보다 좁다" % [
+			rad_to_deg(SkillFx.SWEEP_ARC), rad_to_deg(float(kick.arc))
+		])
 
 
 ## 액션바의 할퀴기를 누르면(= 서버가 `skill` 이벤트를 낸다) 이펙트가 선다.
@@ -57,83 +75,55 @@ func _case_cast(game: Node3D) -> void:
 		_fail("할퀴기를 썼는데 이펙트가 안 섰다")
 
 
-## **파티클이어야 한다.** 판 모양 메시를 세워 두었더니 "이미지 붙여 놓은 것 같다"
-## 는 지적을 받았다 (2026-09-17). 방출기가 있고, 뿌리는 알갱이가 있고,
-## 진행 방향으로 서는지를 여기서 본다
-func _case_particles(game: Node3D) -> void:
-	var fx := _newest(game)
-	if fx == null:
-		_fail("파티클을 볼 이펙트가 없다")
-		return
-
-	var jets := _jets(fx)
-	# 코어 하나 + 발톱 넷(두 세트 × 좌우) + 불똥 하나
-	var want := 1 + SkillFx.SETS * 2 + 1
-	if jets.size() != want:
-		_fail("방출기가 %d개다 (%d개여야 한다)" % [jets.size(), want])
-		return
-
-	var total := 0
-	for jet in jets:
-		total += jet.amount
-		if not jet.one_shot:
-			_fail("한 번 터지고 마는 것이 아니다 (one_shot 이 꺼져 있다)")
-		if jet.mesh == null:
-			_fail("알갱이에 메시가 없다 — 점으로도 안 보인다")
-	if total < 40:
-		_fail("알갱이가 %d개뿐이다 — 파티클로 안 보인다" % total)
-	else:
-		print("  파티클: 방출기 %d개, 알갱이 %d개" % [jets.size(), total])
-
-	# 발톱과 불똥은 날아가는 쪽으로 서야 한다. 안 세우면 알갱이가 아무 데나 누워
-	# 뿌려진 부스러기가 된다
-	for jet in _claws(fx):
-		if not jet.particle_flag_align_y:
-			_fail("발톱이 진행 방향으로 서지 않는다")
-
-
-## **양쪽에서 들어와 X 로 엇갈려야 한다.** 한 세트는 서로 반대쪽으로 뻗는 방출기
-## 둘이고, 두 세트는 기울기 부호가 반대다. 나란하게만 두면 빗금이 된다
+## 다섯 번 · 세 겹 · 번갈아 · **캐릭터가 보는 쪽 앞** · 기울기가 엇갈리나
 func _case_shape(game: Node3D) -> void:
 	var fx := _newest(game)
 	if fx == null:
 		_fail("모양을 볼 이펙트가 없다")
 		return
-
-	var claws := _claws(fx)
-	if claws.size() != SkillFx.SETS * 2:
-		_fail("발톱 방출기가 %d개다" % claws.size())
+	if fx._slashes.size() != SkillFx.SLASHES:
+		_fail("긁기가 %d번이다" % fx._slashes.size())
 		return
 
-	# 한 세트(앞의 둘)는 서로 정반대로 뻗는다
-	if claws[0].direction.normalized().dot(claws[1].direction.normalized()) > -0.99:
-		_fail("한 세트가 양쪽으로 안 갈렸다 — 한 손으로만 긁은 빗금이 된다")
-	# 두 세트는 기울기가 반대다 (X 로 엇갈린다)
-	if claws[0].direction.y * claws[2].direction.y >= 0.0:
-		_fail("두 세트가 같은 쪽으로 기울었다 (%.2f, %.2f)" % [
-			claws[0].direction.y, claws[2].direction.y
-		])
+	# 줄기는 **직접 메시**다 (effect-rules.md 3절) — 한 번에 세 겹(빛·테·심)
+	for slash in fx._slashes:
+		if slash.layers.size() != 3:
+			_fail("겹이 %d개다 (빛·테·심 셋이어야 한다)" % slash.layers.size())
+			return
 
-	# 두 번째 세트는 **늦게 켜진다.** 동시에 그으면 X 가 한 번에 찍힌다
-	var late := 0
-	for waiting in fx._delayed:
-		late += 1
-	if late == 0 and claws[2].emitting and claws[0].emitting:
-		_fail("두 세트가 한꺼번에 나갔다")
+	# 번갈아 쓸고, 기울기는 이웃끼리 반대다 — 같으면 한 줄로 겹친다
+	for i in range(1, SkillFx.SLASHES):
+		var a: Dictionary = fx._slashes[i - 1]
+		var b: Dictionary = fx._slashes[i]
+		if float(a.side) * float(b.side) > 0.0:
+			_fail("%d·%d번째가 같은 쪽으로 쓴다" % [i, i + 1])
+		if float(a.tilt) * float(b.tilt) >= 0.0:
+			_fail("%d·%d번째 기울기가 같은 쪽이다" % [i, i + 1])
 
-	# **캐릭터가 보는 쪽 앞에 선다.** 화면이 아니라 몸이 보는 쪽이어야 한다
+	# **호의 가운데는 캐릭터가 보는 쪽이다** — 화면이 아니라 몸 기준
 	var me: Dictionary = game._transport.snapshot().get("players", {}).get(game._transport.my_id(), {})
-	var here := Vector3(me.x, 0.0, me.z)
 	var facing := Vector3(sin(float(me.rot)), 0.0, cos(float(me.rot)))
-	var away := fx.global_position - here
-	away.y = 0.0
-	if away.normalized().dot(facing) < 0.9:
-		_fail("이펙트가 앞쪽에 없다 (보는 쪽과 %.2f)" % away.normalized().dot(facing))
-	elif absf(fx.global_position.y - SkillFx.HEIGHT) > 1e-3:
+	var mid: Vector3 = fx.arc_point(0.0, SkillFx.RADIUS, fx._slashes[0])
+	mid.y = 0.0
+	if mid.normalized().dot(facing) < 0.95:
+		_fail("호 가운데가 앞쪽이 아니다 (보는 쪽과 %.2f)" % mid.normalized().dot(facing))
+	# 양 끝은 보는 쪽에서 반각만큼 벌어진다 — 뒤로 넘어가면 등을 긁는다
+	var edge: Vector3 = fx.arc_point(SkillFx.SWEEP_ARC * 0.5, SkillFx.RADIUS, fx._slashes[0])
+	edge.y = 0.0
+	if edge.normalized().dot(facing) < 0.0:
+		_fail("호 끝이 등 뒤로 넘어갔다")
+	if absf(fx.global_position.y - SkillFx.HEIGHT) > 1e-3:
 		_fail("이펙트 높이가 %.2f 다 — 가슴 높이여야 한다" % fx.global_position.y)
+
+	# 몇 프레임 지나면 첫 긁기의 메시가 서 있어야 한다
+	for i in 4:
+		await process_frame
+	var core: MeshInstance3D = fx._slashes[0].layers[2].node
+	if not core.visible or core.mesh == null or core.mesh.get_surface_count() == 0:
+		_fail("첫 긁기의 심이 안 그려졌다")
 	else:
-		print("  자리: 앞 %.1fm, 높이 %.2fm, 세트 간격 %.0fms" % [
-			away.length(), fx.global_position.y, SkillFx.SET_DELAY * 1000.0
+		print("  모양: %d번 × 발톱 %d가닥 × 3겹, 간격 %.0fms, %.0f° 를 쓴다" % [
+			SkillFx.SLASHES, SkillFx.CLAWS, SkillFx.GAP * 1000.0, rad_to_deg(SkillFx.SWEEP_ARC)
 		])
 
 
@@ -149,22 +139,19 @@ func _case_visible(game: Node3D) -> void:
 	var cam: Camera3D = game._camera
 	var at: Vector3 = game._player.global_position + Vector3.UP
 	var per_m := (cam.unproject_position(at) - cam.unproject_position(at + Vector3.UP)).length()
-	var claw := SkillFx.CLAW_LENGTH * per_m
-	var width := SkillFx.CLAW_WIDTH * per_m
-	var core := SkillFx.CORE_SIZE * per_m
-	# 광선은 뻗어 나가므로 실제로 덮는 자리는 길이 + 날아간 거리다
-	var reach := (SkillFx.CLAW_LENGTH + SkillFx.CLAW_SPEED * SkillFx.CLAW_LIFE * 0.5) * per_m
-	print("  1m=%.0fpx — 발톱 %.0fpx(폭 %.0fpx, 뻗어서 %.0fpx) · 코어 %.0fpx" % [
-		per_m, claw, width, reach, core
+	# 호 양 끝 사이(현) — 화면에서 긁고 간 길이
+	var chord := 2.0 * SkillFx.RADIUS * sin(SkillFx.SWEEP_ARC * 0.5) * per_m
+	var halo := SkillFx.HALO_WIDTH * per_m
+	var core := SkillFx.CORE_WIDTH * per_m
+	print("  1m=%.0fpx — 쓸고 간 길이 %.0fpx · 빛 폭 %.0fpx · 심 폭 %.0fpx" % [
+		per_m, chord, halo, core
 	])
-
-	# 기준은 피격 이펙트에서 눈으로 정한 선을 따른다 — 파편이 5px 하한이었다
-	if claw < 50.0:
-		_fail("발톱이 %.0fpx 다 — 캐릭터(68px)보다 한참 짧으면 안 읽힌다" % claw)
-	if width < 4.0:
-		_fail("발톱 폭이 %.0fpx 다 — 배경에 묻힌다" % width)
-	if core < 12.0:
-		_fail("코어가 %.0fpx 다 — 터진 자리가 안 보인다" % core)
+	if chord < 100.0:
+		_fail("쓸고 간 길이가 %.0fpx 다 — 캐릭터(68px)보다 넉넉히 커야 부채꼴로 읽힌다" % chord)
+	if core < 3.0:
+		_fail("심이 %.0fpx 다 — 흰 줄이 안 보인다" % core)
+	if halo < 20.0:
+		_fail("빛 폭이 %.0fpx 다 — 배경에 묻힌다" % halo)
 
 
 ## 다른 스킬은 이 이펙트를 그리지 않는다. 스킬마다 그림이 달라야 한다
@@ -187,24 +174,7 @@ func _case_gone(game: Node3D) -> void:
 	if _newest(game) != null:
 		_fail("이펙트가 안 사라졌다")
 	else:
-		print("  %d프레임 뒤 치워졌다" % waited)
-
-
-## 이펙트 안의 방출기 전부 (붙인 순서대로: 코어 · 발톱 넷 · 불똥)
-func _jets(fx: SkillFx) -> Array:
-	var found: Array = []
-	for child in fx.get_children():
-		if child is CPUParticles3D:
-			found.append(child)
-	return found
-
-
-## 발톱만 — 코어(첫째)와 불똥(마지막)을 뺀 가운데 넷
-func _claws(fx: SkillFx) -> Array:
-	var jets := _jets(fx)
-	if jets.size() < 3:
-		return []
-	return jets.slice(1, jets.size() - 1)
+		print("  %d프레임 뒤 치워졌다 (%.2f초짜리)" % [waited, SkillFx.span()])
 
 
 func _newest(game: Node3D) -> SkillFx:

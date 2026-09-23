@@ -45,6 +45,13 @@ export interface SkillDef {
   power: number;
   /** 최대 대상 수 */
   maxTargets: number;
+  /**
+   * 한 번 쓰면 몇 번 때리나 (없으면 1). `power` 는 **한 대의** 배율이다.
+   * 대상은 첫 대에서 한 번만 고르고, 나머지는 `hitGap` 간격으로 같은 대상에 들어간다
+   */
+  hits?: number;
+  /** 연타 간격 (ms). `hits` 가 2 이상일 때만 쓴다 */
+  hitGap?: number;
   /** 자기 회복량 (최대 체력 대비 비율). 있으면 공격 대신 회복만 한다 */
   selfHeal?: number;
   /** 날아가는 무언가가 보여야 하는 스킬 */
@@ -382,11 +389,15 @@ const SKILL_LIST: SkillDef[] = [
     job: 'fighter',
     cooldown: 6500,
     range: 3.0,
-    arc: Math.PI * 0.5,
-    power: 2.8,
-    maxTargets: 1,
+    // 앞 120° 를 다섯 번 긁는다 (2026-09-23 요청). 한 대 0.56 × 5 = 2.8 —
+    // 한 방이던 때와 합계가 같다 (피해가 공격력에 비례하므로 나눠도 합이 같다)
+    arc: (Math.PI * 2) / 3,
+    power: 0.56,
+    hits: 5,
+    hitGap: 80,
+    maxTargets: 4,
     reqLevel: 1,
-    description: '손톱을 세워 앞을 긁어낸다.',
+    description: '손톱을 세워 앞 부채꼴을 다섯 번 긁어낸다.',
   },
   {
     /**

@@ -265,11 +265,13 @@
       "job": "fighter",
       "cooldown": 6500,
       "range": 3,
-      "arc": 1.5707963267948966,
-      "power": 2.8,
-      "maxTargets": 1,
+      "arc": 2.0943951023931953,
+      "power": 0.56,
+      "hits": 5,
+      "hitGap": 80,
+      "maxTargets": 4,
       "reqLevel": 1,
-      "description": "손톱을 세워 앞을 긁어낸다."
+      "description": "손톱을 세워 앞 부채꼴을 다섯 번 긁어낸다."
     },
     "tiger_roar": {
       "id": "tiger_roar",

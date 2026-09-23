@@ -332,8 +332,7 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 				_last_event = "골드 %d, %s" % [
 					payload.get("gold", 0), Items.get_item(got).get("name", got)
 				]
-				var grade := int(payload.item.get("grade", 1))
-				_chat.add_item(str(Items.get_item(got).get("name", got)), _grade_tint(grade))
+				_chat.add_item(str(Items.get_item(got).get("name", got)), int(payload.item.get("grade", 1)))
 		&"inventory":
 			if _bag_panel.visible:
 				_redraw_bag()

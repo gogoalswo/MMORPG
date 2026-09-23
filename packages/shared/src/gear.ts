@@ -260,14 +260,34 @@ export function dropGrades(field: number): number[] {
  */
 export const GRADE_NAME = ['일반', '고급', '희귀', '영웅', '전설', '초월', '태초'];
 
-const SLOT_LABEL: Record<EquipSlot, string> = {
-  weapon: '무기',
+/**
+ * 장비 이름 — **등급마다 재질이 올라간다.** 2026-09-23 에 사용자가 고른 "안 A(재질)".
+ *
+ * 그 전에는 `등급 이름 + 슬롯 이름`("희귀 무기")이었다. 등급은 **이름 색**이 알려
+ * 주므로(채팅창·가방) 이름에는 등급 글자를 붙이지 않는다 — 붙이면 좁은 칸에서 길다.
+ *
+ * 한 등급 안에서는 같은 재질을 쓴다(가죽 → 강철 → 흑철 → 투사의 → 용린 → 성운 →
+ * 창세의). 목걸이·반지만 장신구라 가죽·강철 대신 구리·은·흑요석·용안을 쓴다.
+ * 무기는 전 직업이 같이 쓰는 **건틀릿**이다 (장비는 직업을 안 탄다, 2026-09-21).
+ */
+const GEAR_MATERIAL = ['가죽', '강철', '흑철', '투사의', '용린', '성운', '창세의'];
+const JEWEL_MATERIAL = ['구리', '은', '흑요석', '투사의', '용안', '성운', '창세의'];
+const GEAR_NOUN: Record<EquipSlot, string> = {
+  weapon: '건틀릿',
   armor: '갑옷',
   helmet: '투구',
-  boots: '신발',
+  boots: '장화',
   necklace: '목걸이',
   ring: '반지',
 };
+
+/** 등급(1~7)과 슬롯의 장비 이름 — "흑철 건틀릿", "용안 반지" */
+export function gearName(grade: number, slot: EquipSlot): string {
+  const jewel = slot === 'necklace' || slot === 'ring';
+  const table = jewel ? JEWEL_MATERIAL : GEAR_MATERIAL;
+  const g = Math.max(1, Math.min(table.length, Math.trunc(grade)));
+  return `${table[g - 1]} ${GEAR_NOUN[slot]}`;
+}
 
 export interface GearDef {
   id: string;
@@ -293,13 +313,12 @@ export interface GearDef {
 function buildGear(): Record<string, GearDef> {
   const out: Record<string, GearDef> = {};
   for (let grade = 1; grade <= GRADE_COUNT; grade++) {
-    const prefix = GRADE_NAME[grade - 1]!;
     const level = equipLevel(grade);
     for (const slot of EQUIP_SLOTS) {
       const id = `g${grade}_${SLOT_CODE[slot]}`;
       out[id] = {
         id,
-        name: `${prefix} ${SLOT_LABEL[slot]}`,
+        name: gearName(grade, slot),
         slot,
         grade,
         level,

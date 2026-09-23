@@ -68,9 +68,19 @@ func add_exp(amount: int) -> void:
 	add_line("경험치", "+%d" % amount, EXP)
 
 
-## 장비 획득 한 줄. 이름에 등급이 이미 들어 있다 ("희귀 투구") — 색도 등급을 따른다
-func add_item(name: String, tint: Color) -> void:
-	add_line("장비 획득", name, tint)
+## 장비 획득 한 줄 — "흑철 건틀릿". **이름에는 등급 글자가 없고 색이 등급을 알린다**
+## (2026-09-23, 이름을 재질로 바꾸면서)
+func add_item(name: String, grade: int) -> void:
+	add_line("장비 획득", name, grade_text_color(grade))
+
+
+## 등급 색(`Items.grade_color`)을 어두운 판 위에서 읽히게 밝힌 것.
+## **색상(hue)은 그대로 두고 밝기만 올린다** — 흰색을 섞으면(가방 칸의 `_grade_tint`)
+## 등급끼리 색이 다 옅어져 비슷해 보인다. 표의 색은 어두운 흙빛에서 시작해서
+## 그대로 쓰면 판에 묻힌다
+static func grade_text_color(grade: int) -> Color:
+	var base := Items.grade_color(grade)
+	return Color.from_hsv(base.h, clampf(base.s * 1.15, 0.0, 0.85), maxf(base.v, 0.92))
 
 
 ## 머리말 + 값 한 줄을 맨 아래에 붙인다

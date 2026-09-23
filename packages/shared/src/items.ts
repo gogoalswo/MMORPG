@@ -25,7 +25,7 @@ import type { JobId } from './character.ts';
 // 슬롯 정의는 `slots.ts` 로 옮겼다 — 여기서 `gear.ts` 를 임포트하게 되면서
 // 서로를 부르는 순환이 되기 때문이다. 그대로 다시 내보내니 부르는 쪽은 그대로다
 export { EQUIP_SLOTS, SLOT_CODE, slotLabel, type EquipSlot } from './slots.ts';
-import { EQUIP_SLOTS, SLOT_CODE, slotLabel, type EquipSlot } from './slots.ts';
+import { EQUIP_SLOTS, SLOT_CODE, type EquipSlot } from './slots.ts';
 import { fieldOf } from './balance.ts';
 import {
   ENH_MAX as GEAR_ENH_MAX,
@@ -37,6 +37,7 @@ import {
   type OptionKind,
   GRADE_COUNT as GEAR_GRADE_COUNT,
   GRADE_NAME,
+  gearName,
   equipLevel as gearEquipLevel,
   gradeOf as gearGradeOf,
   enhanceMultiplier as gearEnhanceMultiplier,
@@ -189,7 +190,7 @@ function buildItems(): Record<string, ItemDef> {
       const id = itemId(grade, slot);
       out[id] = {
         id,
-        name: `${gradeName(grade)} ${slotLabel(slot)}`,
+        name: gearName(grade, slot),
         slot,
         grade,
         level,

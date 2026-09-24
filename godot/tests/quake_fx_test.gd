@@ -209,8 +209,8 @@ func _case_gone(game: Node3D) -> void:
 
 
 ## **강화** — "진폭" 이면 먼지 충격파·금 대신 **모래 토네이도**가 휘감아 판정 반경(9m)
-## 까지 퍼진다. "균열 지대" 면 금이 3초 동안 붉게 남고 틱마다 맥동하며 **틈에서 용암이
-## 여섯 번 솟는다.** 없으면 0.8초에 식는다. 시계를 직접 넣어 본다 — 3초를 기다리지 않는다
+## 까지 퍼진다. "균열 지대" 면 **진흙 웅덩이 위로 소용돌이가 빨려 들고** 틱마다 여섯 번
+## 조여든다. 시계를 직접 넣어 본다 — 3초를 기다리지 않는다
 func _case_upgrades(game: Node3D) -> void:
 	var wide := QuakeFx.slam(game._zone_node, Vector3.ZERO, 0.0, true, false)
 	var reach := float(Skills.get_skill("fighter", "sky_breaker").get("range", 0.0)) \
@@ -243,41 +243,35 @@ func _case_upgrades(game: Node3D) -> void:
 			zone_ms, tick_ms, QuakeFx.ZONE_TIME, QuakeFx.ZONE_TICK])
 	var zone := QuakeFx.slam(game._zone_node, Vector3.ZERO, 0.0, false, true)
 	var plain := QuakeFx.slam(game._zone_node, Vector3.ZERO, 0.0, false, false)
-	var alphas: Array = []
-	for t in [1.0, 2.5, 2.55, 2.75]:
-		for fx in [zone, plain]:
-			fx._t = t
-			fx._show_cracks()
-		var lava: Color = zone._glow.material_override.get_shader_parameter(&"tint")
-		alphas.append(lava.a)
-		if not zone._glow.visible or lava.r < lava.g * 2.0:
-			_fail("균열 지대 %.2f초에 금이 붉게 달아올라 있지 않다 (%s)" % [t, lava])
-		if plain._glow.visible:
-			_fail("강화 없는 천붕각인데 %.2f초에 금이 아직 달아올라 있다" % t)
-	# 2.5초(틱) 직후가 가장 밝고, 틱 사이(2.75초)는 잦아든다
-	if not (float(alphas[1]) > float(alphas[3]) + 0.2):
-		_fail("틱마다 맥동하지 않는다 (%s)" % str(alphas))
-	# 틈에서 솟는 용암 — 0.5 · 1.0 · … · 3.0초에 여섯 번, 틈 사이 방울은 지대 동안만
-	var lava: QuakeParts.Lava = zone._lava
-	lava.start(true, 0.0, 1.0)
-	var bubbling := false
+	await process_frame
+	# 먼지 충격파가 진흙을 덮어서 끈다 — 흙 알갱이만 튄다
+	if zone._emitters[0].emitting or zone._emitters[1].emitting:
+		_fail("균열 지대인데 먼지 충격파가 나왔다 — 진흙 소용돌이를 덮는다")
+	# 진흙 소용돌이 — 웅덩이가 판정 반경(6m · 진폭이면 9m)만큼 깔리고, 0.5 · … · 3.0초에
+	# 여섯 번 조여들고(도는 속도가 빨라진다), 지대가 끝나면 마른다
+	var mud: QuakeParts.Mud = zone._mud
+	var zone_reach := float(Skills.get_skill("fighter", "sky_breaker").get("range", 0.0))
+	mud.start(true, 1.0)
+	var spins: Array = []
 	for step in range(1, 81):
-		lava.tick(step * 0.05)
-		bubbling = bubbling or lava._bubbles.emitting
-	if lava.bursts != 6 or not bubbling or lava._bubbles.emitting:
-		_fail("용암: 분수 %d번 · 방울 %s → %s (여섯 번 · 지대 동안만 방울이어야 한다)" % [
-			lava.bursts, bubbling, lava._bubbles.emitting])
+		var before := mud._spin
+		mud.tick(0.05)
+		spins.append(mud._spin - before)
+	var full := mud._radius
+	# 틱 직후(0.55초)가 틱 사이(0.95초)보다 빨리 돈다
+	var fast: float = spins[10]
+	var slow: float = spins[18]
+	if mud.squeezes != 6 or absf(full - zone_reach) > 1e-3 or fast <= slow * 1.5 or mud.alpha() > 0.0:
+		_fail("진흙: 조여듦 %d번 · 반경 %.1fm · 틱 직후 %.3f / 사이 %.3f · 끝 알파 %.2f" % [
+			mud.squeezes, full, fast, slow, mud.alpha()])
 	else:
-		print("  균열 지대: 틈 %d곳에서 용암이 여섯 번 솟고, 틱 사이 방울이 튄다" % lava._vents.size())
-	if plain._lava.active:
-		_fail("균열 지대가 없는데 용암이 솟는다")
-	zone._t = QuakeFx.ZONE_TIME + QuakeFx.ZONE_FADE
-	zone._show_cracks()
-	if zone._glow.visible:
-		_fail("지대가 끝났는데 금이 식지 않았다")
-	else:
-		print("  균열 지대: %.1f초 붉게 남고 틱마다 맥동 (%.2f → %.2f), 끝나면 식는다" % [
-			QuakeFx.ZONE_TIME, alphas[1], alphas[3]])
+		print("  균열 지대: 진흙 웅덩이 %.0fm 에 띠 %d줄이 빨려 들고, 틱마다 조여든다 (%.3f → %.3f)" % [
+			full, QuakeParts.Mud.ARMS, fast, slow])
+	mud.start(true, QuakeFx.WIDE)
+	if absf(mud._radius - zone_reach * QuakeFx.WIDE) > 1e-3:
+		_fail("진폭과 같이 붙었는데 웅덩이가 %.1fm 다" % mud._radius)
+	if plain._mud.active:
+		_fail("균열 지대가 없는데 진흙 소용돌이가 섰다")
 	zone.queue_free()
 	plain.queue_free()
 

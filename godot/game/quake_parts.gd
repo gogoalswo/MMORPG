@@ -5,12 +5,12 @@ extends RefCounted
 ## 시각을 넘긴다(`tick`). 둘 다 아무것도 새로 만들지 않고 되감아 쓴다 (풀 규칙).
 ##
 ## - `Tornado` — "진폭": 모래 바람 띠가 캐릭터를 휘감으며 9m 까지 휙 돌았다 흩어진다.
-## - `Lava` — "균열 지대": 갈라진 틈에서 0.5초마다 용암이 분수처럼 솟고, 틱 사이에도
-##   작은 방울이 뽀글뽀글 튄다.
+## - `Mud` — "균열 지대": 진흙 웅덩이 위로 진흙 띠가 소용돌이처럼 가운데로 빨려 들고,
+##   피해가 들어가는 0.5초마다 한 번 세게 조여든다.
 ##
-## 2026-09-24 요청: "진폭은 모래 먼지가 토네이도 처럼 바람이 주변을 휙 감싸서 공격하게,
-## 균열지대는 갈라진 틈새에서 지속적으로 용암이 터져 나오는 이펙트로". 참고 그림은
-## 없었다 — 말로 정한 1차 시안이다 (skill-upgrades.md "천붕각 강화").
+## 2026-09-24 요청: "진폭은 모래 먼지가 토네이도 처럼 바람이 주변을 휙 감싸서 공격하게"
+## 그리고 균열 지대는 (용암 분수를 거절하고) "진흙이 소용돌이처럼 빨려들어가는 이펙트로".
+## 참고 그림은 없었다 — 말로 정한 시안이다 (skill-upgrades.md "천붕각 강화").
 
 
 ## 모래 토네이도 — **띠는 파티클이 아니라 직접 메시**다 (effect-rules.md 3절).
@@ -220,154 +220,260 @@ void fragment() {
 		return e
 
 
-## 균열 지대 용암 — 틈 위 자리(`QuakeFx.crack_paths` 에서 뽑는다)에서 **틱마다 분수**
-## (`_fountain`)와 연기(`_smoke`)가 솟고, 지대 동안 작은 방울(`_bubbles`)이 계속 튄다.
-## 방출기는 틈과 같은 쪽으로 돈 `_pivot` 아래에 있다 — 점도 캐릭터가 보는 쪽 기준이다.
-## 용암은 빛이지만 **알파 혼합**이다 — 밝은 바닥에서 가산은 안 보인다 (흙먼지와 같은 결)
-class Lava:
+## 균열 지대 **진흙 소용돌이** (3차 시안, 2026-09-24) — 내리찍은 자리가 3초 동안 질척한
+## **진흙 웅덩이**가 되고, 웅덩이 위의 **진흙 띠가 나선을 그리며 가운데로 빨려 든다.**
+## 가장자리의 진흙 덩이도 가운데로 끌려가 가라앉는다. 피해가 들어가는 틱(0.5초)마다
+## 소용돌이가 **한 번 세게 조여든다** (도는 속도가 확 빨라졌다 풀리고 살짝 오므라든다).
+##
+## 요청: "균열지대 이펙트 별로다. 진흙이 소용돌이처럼 빨려들어가는 이펙트로" — 그 전의
+## 용암 분수(2차)·붉은 틈(1차)은 거절됐다.
+##
+## 진흙은 빛이 아니라 흙이라 **알파 혼합**이다. 띠는 파티클이 아니라 **한 번 깐 메시를
+## 셰이더가 돌린다** (토네이도와 같은 방식 — 매 프레임 깎지 않는다).
+class Mud:
 	extends Node3D
 
-	## 분수가 솟는 자리 수 — 본줄기 금마다 하나
-	const VENTS := 8
-	## 분수 한 번에 튀는 덩이 수 · 크기 · 속도 · 사는 시간
-	## 1차 캡처에서 0.26m · 64덩이는 **흩어진 불똥**이었다 — 용암은 굵은 덩이다
-	const BURST := 110
-	const BLOB_SIZE := 0.5
-	const BURST_SPEED_MIN := 6.5
-	const BURST_SPEED_MAX := 10.0
-	const BURST_LIFE := 0.9
-	const GRAVITY := -20.0
-	## 틱 사이 방울
-	const BUBBLES := 28
-	const BUBBLE_LIFE := 0.5
-	## 노랑 → 주황 → 검붉게 식는다. 흰빛에서 시작했더니 밝은 바닥에서 **옅은 불똥**이었다
-	const COLOR_HOT := Color("#ffc83a")
-	const COLOR_MID := Color("#ff5a12")
-	const COLOR_COOL := Color("#7a1004")
-	const COLOR_SMOKE := Color("#3b2f2a")
+	## 웅덩이 반지름(m) — 천붕각 사거리와 같다. 진폭이면 `mul` 배 (판정 반경과 같다)
+	const RADIUS := 6.0
+	## 웅덩이가 번지는 시간 · 다 끝나고 마르는 시간
+	const GROW := 0.3
+	const DRY := 0.6
+	## 나선 띠 수 · 띠 하나가 바깥에서 가운데까지 감기는 바퀴 수 · 점 수
+	## 1차 캡처에서 다섯 줄 · 1.15바퀴는 **겹쳐 동심원**으로 보였고, 셋 · 0.85바퀴도 여전히
+	## 옅은 고랑의 동심원이었다. **반 바퀴**면 가운데로 휘어 드는 팔로 읽힌다
+	const ARMS := 4
+	const TURNS := 0.5
+	const POINTS := 56
+	## 띠 폭(m, 바깥 끝 기준 — 가운데로 갈수록 가늘어진다)
+	const ARM_WIDTH := 2.2
+	## 평소 도는 빠르기(rad/s) · 틱에 조여들 때 더하는 빠르기 · 잦아드는 시간 상수
+	const SPIN := 1.6
+	const SQUEEZE_SPIN := 7.0
+	const SQUEEZE_DECAY := 0.18
+	## 조여들 때 오므라드는 비율
+	const SQUEEZE_SHRINK := 0.08
+	## 띠 무늬가 가운데로 흘러드는 빠르기 (띠 길이 비율/초)
+	const FLOW := 0.9
+	## 웅덩이는 짙고 띠는 조금 밝은 젖은 흙이다 — 같으면 띠가 안 보인다
+	## 1차는 짙은 웅덩이가 **어두운 바닥에 묻혀 안 보였고**, 띠의 밝은 줄이 **주황 고리**였다.
+	## 웅덩이는 바닥보다 밝은 젖은 흙, 띠는 그보다 짙은 진흙, 줄은 옅은 흙빛이다
+	const COLOR_POOL := Color(0.36, 0.25, 0.14, 0.92)
+	const COLOR_ARM := Color(0.11, 0.07, 0.035, 0.95)
+	const COLOR_SHEEN := Color(0.72, 0.6, 0.44, 0.85)
+	const COLOR_CLUMP := Color("#4a3320")
+	const CLUMPS := 36
+
+	## 점마다: `VERTEX.x` = 각(rad), `VERTEX.z` = 반지름 비율(바깥 1 → 가운데 0).
+	## `UV.x` = 폭 방향(0~1), `UV.y` = 띠를 따라(바깥 0 → 가운데 1).
+	## 폭은 **반지름 방향**으로 벌린다 — 촘촘히 감긴 나선이라 띠에 거의 수직이다
+	const SHADER := """
+shader_type spatial;
+render_mode unshaded, blend_mix, cull_disabled, depth_draw_never;
+uniform sampler2D streak : source_color, filter_linear;
+uniform vec4 tint : source_color = vec4(1.0);
+uniform float radius = 6.0;
+uniform float spin = 0.0;
+uniform float width = 1.0;
+uniform float flow = 0.0;
+void vertex() {
+	float a = VERTEX.x + spin;
+	float r = radius * VERTEX.z + (UV.x * 2.0 - 1.0) * width * 0.5 * VERTEX.z;
+	VERTEX = vec3(sin(a) * r, 0.0, cos(a) * r);
+}
+void fragment() {
+	vec4 t = texture(streak, UV);
+	// 진흙 띠는 **속이 차 있고 가장자리만 부드럽다** — 띠 텍스처를 그대로 쓰면 가운데 한
+	// 줄만 진해서(평균 알파 0.25) 웅덩이 위에서 옅은 고랑으로만 보였다 (캡처)
+	float body = smoothstep(0.0, 0.3, t.a);
+	// 띠를 따라 끊긴 무늬가 **가운데로 흘러든다** — 가만히 도는 띠는 빨려 드는 것으로 안 읽힌다
+	float dash = 0.7 + 0.3 * sin((UV.y * 5.0 - flow) * 6.2832);
+	// 바깥 끝은 웅덩이에 녹아들고, 가운데 끝은 가라앉아 사라진다
+	float ends = smoothstep(0.0, 0.12, UV.y) * (1.0 - smoothstep(0.85, 1.0, UV.y));
+	ALBEDO = tint.rgb;
+	ALPHA = tint.a * body * dash * ends;
+}
+"""
+	static var _mesh: ArrayMesh
+	static var _shader: Shader
 
 	var active := false
-	var bursts := 0
+	## 조여든 횟수 — 테스트가 "틱마다 조여드나" 를 센다
+	var squeezes := 0
+	var _t := 0.0
+	var _spin := 0.0
 	var _next := 0.0
-	var _pivot: Node3D
-	var _fountain: CPUParticles3D
-	var _smoke: CPUParticles3D
-	var _bubbles: CPUParticles3D
-	var _vents := PackedVector3Array()
-	var _along := PackedVector3Array()
+	var _since := 99.0
+	var _radius := RADIUS
+	var _pool: MeshInstance3D
+	var _arms: Array = []
+	var _clumps: CPUParticles3D
 
 	func build() -> void:
-		_pick_points()
-		_pivot = Node3D.new()
-		add_child(_pivot)
-		_fountain = _emitter(BURST, BURST_LIFE, BLOB_SIZE, true)
-		_fountain.direction = Vector3.UP
-		_fountain.spread = 10.0
-		_fountain.initial_velocity_min = BURST_SPEED_MIN
-		_fountain.initial_velocity_max = BURST_SPEED_MAX
-		_fountain.gravity = Vector3(0.0, GRAVITY, 0.0)
-		_bubbles = _emitter(BUBBLES, BUBBLE_LIFE, BLOB_SIZE * 0.6, false)
-		_bubbles.direction = Vector3.UP
-		_bubbles.spread = 30.0
-		_bubbles.initial_velocity_min = 1.5
-		_bubbles.initial_velocity_max = 3.2
-		_bubbles.gravity = Vector3(0.0, GRAVITY * 0.5, 0.0)
-		_smoke = _make_smoke()
+		# 웅덩이 — 가장자리가 부드러운 원판 (`FxTex.glow` 를 알파로). 금보다 위에 깐다 —
+		# 갈라진 틈이 진흙 속으로 묻힌다
+		_pool = MeshInstance3D.new()
+		var quad := QuadMesh.new()
+		quad.size = Vector2(2.0, 2.0)
+		quad.orientation = PlaneMesh.FACE_Y
+		_pool.mesh = quad
+		var pool_mat := StandardMaterial3D.new()
+		pool_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		pool_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		# 가장자리가 불규칙한 얼룩 — 동그란 원판이면 웅덩이가 아니라 표지판이다
+		pool_mat.albedo_texture = FxTex.pool()
+		pool_mat.albedo_color = COLOR_POOL
+		# **그리는 순서를 못 박는다** — 웅덩이와 띠가 둘 다 투명이고 중심이 같아 순서가
+		# 제멋대로라, 92% 불투명한 웅덩이가 띠를 덮어 띠가 옅은 고랑으로만 보였다
+		pool_mat.render_priority = -1
+		_pool.material_override = pool_mat
+		_pool.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_pool.position.y = QuakeFx.GROUND + 0.03
+		add_child(_pool)
+		# 띠 두 겹 — 젖은 흙 띠 + 가운데 번들거리는 줄
+		var order := 1
+		for layer in [[ARM_WIDTH, COLOR_ARM, 0.05], [ARM_WIDTH * 0.45, COLOR_SHEEN, 0.06]]:
+			var node := MeshInstance3D.new()
+			node.mesh = arm_mesh()
+			node.material_override = _material(layer[0], layer[1])
+			node.material_override.render_priority = order
+			order += 1
+			node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			node.custom_aabb = AABB(Vector3(-RADIUS * 2.0, -0.5, -RADIUS * 2.0),
+				Vector3(RADIUS * 4.0, 1.0, RADIUS * 4.0))
+			node.position.y = QuakeFx.GROUND + float(layer[2])
+			add_child(node)
+			_arms.append({"node": node, "color": layer[1]})
+		_clumps = _make_clumps()
+		add_child(_clumps)
 		visible = false
 
-	## 되감는다. `mul` 은 진폭 배율 — 틈이 넓어지면 솟는 자리도 따라 벌어진다
-	func start(on: bool, facing: float, mul: float) -> void:
+	## 되감는다. `mul` 은 진폭 배율 — 웅덩이도 판정 반경만큼 넓어진다
+	func start(on: bool, mul: float) -> void:
 		active = on
 		visible = on
-		bursts = 0
+		squeezes = 0
+		_t = 0.0
+		_spin = 0.0
+		_since = 99.0
 		_next = QuakeFx.ZONE_TICK
-		_pivot.rotation.y = facing
-		var vents := PackedVector3Array()
-		for p in _vents:
-			vents.append(Vector3(p.x * mul, p.y, p.z * mul))
-		var along := PackedVector3Array()
-		for p in _along:
-			along.append(Vector3(p.x * mul, p.y, p.z * mul))
-		_fountain.emission_points = vents
-		_smoke.emission_points = vents
-		_bubbles.emission_points = along
-		_fountain.emitting = false
-		_smoke.emitting = false
-		_bubbles.emitting = false
+		_radius = RADIUS * mul
+		_clumps.emission_ring_radius = _radius * 0.95
+		_clumps.emission_ring_inner_radius = _radius * 0.6
+		_clumps.emitting = false
+		_show()
 
-	## `t` 는 이펙트가 선 뒤 몇 초. 틱(0.5 · 1.0 · … · 3.0초)마다 분수, 그 사이 방울
-	func tick(t: float) -> void:
+	func tick(delta: float) -> void:
 		if not active:
 			return
-		if t >= _next and _next <= QuakeFx.ZONE_TIME + 1e-3:
-			# 되감아 쓰는 방출기라 켜기가 아니라 처음부터 다시(`restart`)
-			_fountain.restart()
-			_smoke.restart()
-			bursts += 1
+		_t += delta
+		_since += delta
+		if _t >= _next and _next <= QuakeFx.ZONE_TIME + 1e-3:
+			_since = 0.0
+			squeezes += 1
 			_next += QuakeFx.ZONE_TICK
-		_bubbles.emitting = t >= 0.3 and t < QuakeFx.ZONE_TIME
+		# 평소엔 천천히, 틱 직후엔 확 빨라졌다 풀린다. **가운데로 감겨 드는 쪽**으로 돈다
+		_spin += (SPIN + SQUEEZE_SPIN * exp(-_since / SQUEEZE_DECAY)) * delta
+		_clumps.emitting = _t < QuakeFx.ZONE_TIME
+		_show()
 
-	## 금 경로에서 솟는 자리를 뽑는다 — 본줄기마다 60% 지점 하나(분수), 모든 점(방울)
-	func _pick_points() -> void:
-		var paths := QuakeFx.crack_paths()
-		for entry in paths:
-			var points: PackedVector3Array = entry[0]
-			for p in points:
-				_along.append(Vector3(p.x, 0.05, p.z))
-		for i in mini(VENTS, paths.size()):
-			var points: PackedVector3Array = paths[i][0]
-			var p := points[int(points.size() * 0.6)]
-			_vents.append(Vector3(p.x, 0.05, p.z))
+	## 지금 반지름 — 틱 직후 살짝 오므라든다
+	func radius() -> float:
+		var grow := clampf(_t / GROW, 0.0, 1.0)
+		return _radius * sqrt(grow) * (1.0 - SQUEEZE_SHRINK * exp(-_since / SQUEEZE_DECAY))
 
-	func _emitter(count: int, life: float, size: float, one_shot: bool) -> CPUParticles3D:
+	func alpha() -> float:
+		return clampf((QuakeFx.ZONE_TIME + DRY - _t) / DRY, 0.0, 1.0)
+
+	func _show() -> void:
+		var a := alpha() if active else 0.0
+		var r := radius()
+		_pool.visible = active and a > 0.0
+		_pool.scale = Vector3(r * 1.12, 1.0, r * 1.12)
+		var pool_mat: StandardMaterial3D = _pool.material_override
+		pool_mat.albedo_color = Color(COLOR_POOL.r, COLOR_POOL.g, COLOR_POOL.b, COLOR_POOL.a * a)
+		for arm in _arms:
+			var node: MeshInstance3D = arm.node
+			node.visible = active and a > 0.0
+			var mat: ShaderMaterial = node.material_override
+			var c: Color = arm.color
+			mat.set_shader_parameter(&"tint", Color(c.r, c.g, c.b, c.a * a))
+			mat.set_shader_parameter(&"radius", r)
+			mat.set_shader_parameter(&"spin", _spin)
+			mat.set_shader_parameter(&"flow", _t * FLOW * 5.0 + _spin * 0.5)
+
+	func _material(width: float, color: Color) -> ShaderMaterial:
+		if _shader == null:
+			_shader = Shader.new()
+			_shader.code = SHADER
+		var mat := ShaderMaterial.new()
+		mat.shader = _shader
+		mat.set_shader_parameter(&"streak", FxTex.streak())
+		mat.set_shader_parameter(&"width", width)
+		mat.set_shader_parameter(&"tint", color)
+		return mat
+
+	## 나선 띠 다섯 — 처음 한 번만. 바깥(반지름 1)에서 가운데(0)로 감겨 든다.
+	## 반지름을 `(1 - u)^0.8` 로 줄여 가운데 쪽이 촘촘하다 — 빨려 드는 구멍이 보인다
+	static func arm_mesh() -> ArrayMesh:
+		if _mesh != null:
+			return _mesh
+		var verts := PackedVector3Array()
+		var uvs := PackedVector2Array()
+		var index := PackedInt32Array()
+		for b in ARMS:
+			var base := TAU * float(b) / float(ARMS)
+			var first := verts.size()
+			for p in POINTS + 1:
+				var u := float(p) / float(POINTS)
+				# 가운데로 갈수록 각이 빨리 돈다 — 안으로 감겨 드는 나선
+				var angle := base - u * TURNS * TAU
+				var rf := 1.0 - u
+				for side in [0.0, 1.0]:
+					verts.append(Vector3(angle, 0.0, rf))
+					uvs.append(Vector2(side, u))
+			for p in POINTS:
+				var a := first + p * 2
+				index.append_array([a, a + 1, a + 2, a + 2, a + 1, a + 3])
+		var arrays := []
+		arrays.resize(Mesh.ARRAY_MAX)
+		arrays[Mesh.ARRAY_VERTEX] = verts
+		arrays[Mesh.ARRAY_TEX_UV] = uvs
+		arrays[Mesh.ARRAY_INDEX] = index
+		_mesh = ArrayMesh.new()
+		_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+		return _mesh
+
+	## 가장자리에서 가운데로 끌려가는 진흙 덩이 — **안으로 당기고**(`radial_accel` 음수)
+	## 옆으로 돌리며(`tangential_accel`) 땅에 붙어 있다가 가라앉는다
+	func _make_clumps() -> CPUParticles3D:
 		var e := CPUParticles3D.new()
-		e.amount = count
-		e.lifetime = life
-		e.one_shot = one_shot
-		e.explosiveness = 0.9 if one_shot else 0.0
+		e.amount = CLUMPS
+		e.lifetime = 1.1
+		e.explosiveness = 0.0
 		var dot := QuadMesh.new()
-		dot.size = Vector2(size, size)
+		dot.size = Vector2(0.45, 0.45)
 		e.mesh = dot
-		e.emission_shape = CPUParticles3D.EMISSION_SHAPE_POINTS
-		# 솟을수록 작아진다 — 덩이가 식으며 흩어지는 것
-		e.scale_amount_curve = LightningFx.grow_curve(0.45)
-		var ramp := Gradient.new()
-		ramp.set_color(0, COLOR_HOT)
-		ramp.set_color(1, Color(COLOR_COOL.r, COLOR_COOL.g, COLOR_COOL.b, 0.0))
-		ramp.add_point(0.35, COLOR_MID)
-		e.color_ramp = ramp
-		var mat := LightningFx.mote(Color.WHITE)
-		mat.albedo_color = Color.WHITE
-		e.material_override = mat
-		e.emitting = false
-		_pivot.add_child(e)
-		return e
-
-	## 틱마다 틈에서 오르는 검은 연기 — 조금만, 느리게. 많으면 용암을 가린다
-	func _make_smoke() -> CPUParticles3D:
-		var e := CPUParticles3D.new()
-		e.amount = 10
-		e.lifetime = 1.2
-		e.one_shot = true
-		e.explosiveness = 0.8
-		var dot := QuadMesh.new()
-		dot.size = Vector2(1.1, 1.1)
-		e.mesh = dot
-		e.emission_shape = CPUParticles3D.EMISSION_SHAPE_POINTS
+		e.emission_shape = CPUParticles3D.EMISSION_SHAPE_RING
+		e.emission_ring_axis = Vector3.UP
+		e.emission_ring_radius = RADIUS * 0.95
+		e.emission_ring_inner_radius = RADIUS * 0.6
+		e.emission_ring_height = 0.0
+		e.position.y = 0.15
 		e.direction = Vector3.UP
-		e.spread = 20.0
-		e.initial_velocity_min = 1.2
-		e.initial_velocity_max = 2.2
-		e.gravity = Vector3(0.0, 0.5, 0.0)
-		e.scale_amount_curve = LightningFx.grow_curve(1.8)
-		e.color = COLOR_SMOKE
-		e.color_ramp = LightningFx.fade_ramp(COLOR_SMOKE, 0.45)
-		var mat := LightningFx.mote(COLOR_SMOKE)
+		e.spread = 10.0
+		e.initial_velocity_min = 0.3
+		e.initial_velocity_max = 0.8
+		e.radial_accel_min = -9.0
+		e.radial_accel_max = -6.0
+		e.tangential_accel_min = 4.0
+		e.tangential_accel_max = 7.0
+		e.gravity = Vector3(0.0, -1.5, 0.0)
+		e.scale_amount_curve = LightningFx.grow_curve(0.3)
+		e.color = COLOR_CLUMP
+		e.color_ramp = LightningFx.fade_ramp(COLOR_CLUMP, 0.95)
+		var mat := LightningFx.mote(COLOR_CLUMP)
 		mat.albedo_color = Color.WHITE
 		mat.albedo_texture = FxTex.puff()
-		mat.proximity_fade_enabled = true
-		mat.proximity_fade_distance = 1.0
 		e.material_override = mat
 		e.emitting = false
-		_pivot.add_child(e)
 		return e

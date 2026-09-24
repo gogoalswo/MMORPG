@@ -93,7 +93,14 @@ func send(message: StringName, payload: Dictionary) -> void:
 		&"npcSell":
 			_world.npc_sell(MY_ID, int(payload.get("index", -1)))
 		&"enhanceItem":
-			_world.enhance_item(MY_ID, str(payload.get("where", "")), payload.get("key", -1))
+			_world.enhance_item(
+				MY_ID, str(payload.get("where", "")), payload.get("key", -1), int(payload.get("goal", -1))
+			)
+		&"enhanceBatch":
+			_world.enhance_batch(
+				MY_ID, str(payload.get("mode", "")), str(payload.get("id", "")),
+				int(payload.get("grade", 0)), int(payload.get("goal", -1))
+			)
 		&"npcEnhance":
 			_world.npc_enhance(MY_ID, int(payload.get("index", -1)))
 		&"save":

@@ -249,6 +249,31 @@ static func can_enhance(level: int) -> bool:
 	return level < max_enhance()
 
 
+## +from 에서 +goal 까지 **한 번도 안 부서지고** 오를 확률 — 단계 확률의 곱.
+## 자동 강화 팝업이 "목표 도달" 로 적는다
+static func enhance_reach_odds(from: int, goal: int) -> float:
+	var odds := 1.0
+	for level in range(maxi(from, 0), mini(goal, max_enhance())):
+		odds *= float(enhance_odds(level).success)
+	return odds
+
+
+## 일괄 강화에 드는 칸인가 — **판정(World)과 팝업이 같은 규칙을 쓴다.**
+## 장비이고, `mode` 가 "item" 이면 같은 아이템(id·등급), "grade" 면 같은 등급,
+## 그리고 강화가 `cap` 아래인 것. 재료·+cap 이상은 빠진다
+static func batch_match(stack: Dictionary, mode: String, ref_id: String, grade: int, cap: int) -> bool:
+	if get_item(str(stack.get("id", ""))).is_empty():
+		return false
+	if int(stack.get("enhance", 0)) >= mini(cap, max_enhance()):
+		return false
+	if int(stack.get("grade", 1)) != grade:
+		return false
+	match mode:
+		"item": return str(stack.get("id", "")) == ref_id
+		"grade": return true
+	return false
+
+
 ## 굴림값(0~1)에서 결과 하나 — "success" · "keep" · "destroy"
 static func roll_enhance(level: int, roll: float) -> String:
 	var odds := enhance_odds(level)

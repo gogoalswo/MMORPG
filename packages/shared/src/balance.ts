@@ -17,6 +17,7 @@ import {
   ASPD_MAX,
   CRIT_DMG_MAX,
   CRIT_RATE_MAX,
+  atkGradeRatio,
   ENH_ACCEL,
   ENH_MAX,
   ENH_ODDS,
@@ -529,6 +530,8 @@ export function balanceTable() {
       gradeLvSpan: GRADE_LV_SPAN,
       sumStart: GRADE_SUM_START,
       sumEnd: GRADE_SUM_END,
+      // 공격력 축만 등급 배수가 따로다 (`gear.ts` `atkGradeRatio`)
+      atkRatio: atkGradeRatio(),
       atkFactor: GEAR_ATK_FACTOR,
       defFactor: GEAR_DEF_FACTOR,
       hpFactor: GEAR_HP_FACTOR,

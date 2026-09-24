@@ -14,8 +14,8 @@
 | `packages/shared/src/combat.ts` | 레벨 곡선(`expToNext`), 경험치 보상(`expReward`) |
 | `packages/shared/src/combat.test.ts` | 곡선이 감당 범위인지 검사 |
 | `packages/server/src/combat.ts` | 옛 몬스터 AI (idle → chase → attack → 복귀). 이식 원본 |
-| `godot/world/world.gd` | **지금 도는 몬스터 AI** — `_step_monsters`(상태 기계) · `_patrol`(순찰) |
-| `godot/tests/aggro_test.gd` | 어그로·추적·반격·사망 확인 |
+| `godot/world/world.gd` | **지금 도는 몬스터 AI** — `_step_monsters`(상태 기계) · `_patrol`(순찰) · `_chase_monster`(막히면 우회) |
+| `godot/tests/aggro_test.gd` | 어그로·추적·**우회**·반격·사망 확인 |
 | `godot/tests/mob_swing_test.gd` | 때린 만큼 화면에서도 휘두르는지 (연속으로 맞는 중에도) |
 | `godot/tests/patrol_test.gd` | 순찰 확인 (목적지·반경·쉬는 시각·어그로 우선) |
 
@@ -122,6 +122,34 @@ monsters.ts 의 statsForLevel          거기서 받아 반올림해 몬스터 �
 `godot/tests/aggro_test.gd` 의 `_case_leash_goes_home` 이 이것을 지킨다 —
 사람을 집 반대쪽 2m 에 붙여 따라가게 해 두고, **한 번도 물러서지 않고** 집에
 닿는지 본다. 고치기 전에는 10초를 줘도 경계(22.1m)에 붙어 떨고 있었다.
+
+### 쫓는 길이 막히면 (우회) ★ (2026-09-24)
+
+사람을 쫓다가 앞이 막히면 **옆으로 한 칸(1m)씩 돌아서** 온다.
+`godot/world/world.gd` 의 `_chase_monster` · `_try_step` 이고, 쫓을 때(`chase`)만 쓴다.
+
+- 몬스터를 막는 것은 **다른 몬스터뿐**이다 (벽·지형은 없다 → [collision.md](collision.md)).
+- 곧장 한 걸음 가 보고, 밀려서 걸음의 `DETOUR_BLOCKED`(30%)도 못 나갔으면 막힌 것이다.
+- 막히면 사람 쪽에서 **45° → 90° → 135°** 로 틀어 대 보고, 처음 뚫린 쪽으로
+  `DETOUR_STEP`(1m) 을 간다. 한 칸을 다 가면 다시 곧장 가 본다.
+- **돌던 쪽(`detour_side`)을 먼저 본다.** 처음 막혔을 때의 쪽은 놈마다 다르다
+  (`push_angle` 로 정한다).
+- 사방이 다 막혔으면(둘러싸였으면) 예전처럼 사람 쪽으로 밀어 본다.
+- 순찰·귀환에는 안 쓴다 — 거기서는 좀 밀려 늦게 도착해도 티가 나지 않는다.
+
+**왜 필요했나** — 앞 놈이 사람을 때리고 있으면 바로 뒤에 선 놈은 정면으로 밀려서
+옆으로 미끄러질 방향이 없다. 그 자리에 굳어 사람에게 영영 못 왔다. 비스듬히
+닿은 놈(약 33° 까지)은 밀리면서 저절로 미끄러져 돌아가므로 건드리지 않는다.
+
+**왜 한 칸을 다 가고 나서 다시 보나** — 매 프레임 다시 고르면 막힌 자리와 옆 자리를
+오가며 떤다. **왜 같은 쪽을 먼저 보나** — 줄지어 선 무리 앞에서 왼쪽·오른쪽을
+번갈아 고르면 지그재그만 하고 끝을 못 돈다. **왜 놈마다 처음 쪽이 다른가** — 한
+사람에게 몰린 무리가 다 같은 쪽으로 돌면 그쪽에서 또 막힌다.
+
+`godot/tests/aggro_test.gd` 의 `_case_detour` 가 지킨다 — 기절한 놈 한 마리, 그리고
+1m 간격으로 선 세 마리가 사람과의 사이를 막았을 때 10초 안에 사거리에 오는지,
+도는 동안 막은 놈에게 파고들지 않는지 본다. 고치기 전에는 두 경우 다
+(-20, 1.73) 에 굳어 있었다 (고친 뒤 1.6초 · 2.1초).
 
 ### 레벨 곡선
 - `MAX_LEVEL = 200`, `expToNext(L) = round(55 * L^1.2)`.

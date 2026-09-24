@@ -61,6 +61,19 @@ const PATROL_ARRIVE := 0.3
 const PATROL_REST_MIN_MS := 2000
 const PATROL_REST_MAX_MS := 6000
 
+## --- 우회 (쫓는 길이 막혔을 때) ---
+## 앞 놈 바로 뒤에 선 놈은 곧장 가려다 밀려 제자리에 굳는다 — 몬스터를 막는 건
+## 다른 몬스터뿐이고, 정면으로 밀리면 옆으로 미끄러질 방향이 없어서다.
+## 한 걸음이 이 비율만큼도 못 나아가면 막힌 것으로 보고 옆으로 돈다.
+## 비스듬히 닿으면 밀려서 미끄러지며 저절로 돌아가므로(약 33° 까지) 그건 건드리지 않는다
+const DETOUR_BLOCKED := 0.3
+## 옆으로 도는 "한 칸". 몬스터 한 몸(지름 0.76 + 틈 0.2)쯤이다.
+## 한 칸을 다 가기 전에는 곧장 가기를 다시 시도하지 않는다 — 매 프레임 다시 고르면
+## 막힌 자리와 옆 자리 사이를 오가며 떤다
+const DETOUR_STEP := 1.0
+## 돌아가는 각도. 목표 쪽에 가까운 것부터 대 본다
+const DETOUR_TURNS := [PI * 0.25, PI * 0.5, PI * 0.75]
+
 ## --- 자동 사냥 ---
 ## 켠 자리(앵커)에서 이만큼 안의 몬스터만 잡는다.
 ##
@@ -735,7 +748,7 @@ func _step_monsters(delta: float, now: int) -> void:
 
 		if dist > float(monster.attack_range):
 			monster.state = "chase"
-			_move_monster(monster, target.x, target.z, float(monster.speed), delta)
+			_chase_monster(monster, target.x, target.z, delta)
 			continue
 
 		monster.state = "attack"
@@ -795,6 +808,68 @@ func _nearest_player(x: float, z: float, reach: float) -> Dictionary:
 			best = player
 			best["id"] = id
 	return best
+
+
+## 사람을 쫓는 한 걸음. 길이 막혔으면 **옆으로 한 칸씩** 돌아간다.
+##
+## 1. 우회 중이면 정해 둔 방향으로 한 칸(`DETOUR_STEP`)을 마저 간다.
+## 2. 아니면 곧장 한 걸음. 밀려서 거의 못 나갔으면 막힌 것이다.
+## 3. 막혔으면 45° → 90° → 135° 순으로 옆 방향을 대 보고, 처음 뚫린 쪽으로
+##    한 칸 우회를 시작한다. **돌던 쪽(`detour_side`)을 먼저 본다** — 줄지어 선 무리를
+##    돌 때 왼쪽·오른쪽을 번갈아 고르면 그 앞에서 지그재그만 한다.
+## 4. 사방이 다 막혔으면 예전처럼 사람 쪽으로 밀어 본다 (둘러싸였을 때).
+##
+## 순찰·귀환에는 안 쓴다 — 거기서는 좀 밀려 늦게 도착해도 티가 나지 않는다
+func _chase_monster(monster: Dictionary, tx: float, tz: float, delta: float) -> void:
+	var ahead := Vector2(tx - monster.x, tz - monster.z)
+	if ahead.length() < 1e-3:
+		return
+	ahead = ahead.normalized()
+	var step_len := float(monster.speed) * delta
+
+	if float(monster.get("detour_left", 0.0)) > 0.0:
+		var way := Vector2(float(monster.detour_x), float(monster.detour_z))
+		if _try_step(monster, way, delta):
+			monster.detour_left = float(monster.detour_left) - step_len
+			return
+		# 돌던 길도 막혔다 — 아래에서 다시 고른다
+		monster.detour_left = 0.0
+	elif _try_step(monster, ahead, delta):
+		return
+
+	# 처음 막혔으면 놈마다 다른 쪽을 먼저 본다. 한 사람에게 몰린 무리가
+	# 전부 같은 쪽으로 돌면 그쪽에서 또 막힌다
+	var side := int(monster.get("detour_side", 0))
+	if side == 0:
+		side = 1 if sin(float(monster.push_angle)) >= 0.0 else -1
+	for s in [side, -side]:
+		for turn in DETOUR_TURNS:
+			var way := ahead.rotated(s * float(turn))
+			if _try_step(monster, way, delta):
+				monster.detour_side = s
+				monster.detour_x = way.x
+				monster.detour_z = way.y
+				monster.detour_left = DETOUR_STEP - step_len
+				return
+
+	_move_monster(monster, tx, tz, float(monster.speed), delta)
+
+
+## `way` 쪽으로 한 걸음 가 본다. 밀려서 `DETOUR_BLOCKED` 만큼도 못 나갔으면
+## **제자리로 되돌리고** false. 미는 것은 이 놈 자신뿐이라 되돌리기가 깨끗하다
+func _try_step(monster: Dictionary, way: Vector2, delta: float) -> bool:
+	var x0: float = monster.x
+	var z0: float = monster.z
+	var rot0: float = monster.rot
+	var step_len := float(monster.speed) * delta
+	_move_monster(monster, x0 + way.x * DETOUR_STEP, z0 + way.y * DETOUR_STEP, float(monster.speed), delta)
+	var moved := Vector2(float(monster.x) - x0, float(monster.z) - z0)
+	if moved.dot(way) >= step_len * DETOUR_BLOCKED:
+		return true
+	monster.x = x0
+	monster.z = z0
+	monster.rot = rot0
+	return false
 
 
 ## 몬스터끼리도 통과하지 않는다. **미는 쪽은 지금 움직인 이 놈**이다 —
@@ -961,6 +1036,12 @@ static func make_monster(
 		"stunned_until": 0,
 		# 정확히 겹쳤을 때 밀려날 방향. **서로 달라야 풀린다**
 		"push_angle": push_angle,
+		# --- 우회 --- 쫓는 길이 막혔을 때 옆으로 도는 방향과 남은 거리,
+		# 돌던 쪽(+1/-1, 0 은 아직 안 막혀 봤다). `_chase_monster` 가 쓴다
+		"detour_x": 0.0,
+		"detour_z": 0.0,
+		"detour_left": 0.0,
+		"detour_side": 0,
 		# --- 보스 범위 공격 (없는 몬스터는 aoe 가 비어 있다) ---
 		"aoe": kind.get("aoe", {}),
 		"next_aoe_at": 0,

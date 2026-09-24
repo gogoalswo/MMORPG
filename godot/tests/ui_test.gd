@@ -333,11 +333,12 @@ func _case_status(game: Node3D) -> void:
 
 	# 오른쪽 위 메뉴 — 화면 안, 묶음과 안 겹침.
 	# 스킬·가방·던전·설계(디버그) 넷이다 — 설계 재현 창은 문서 9장 5번의 디버그 수단이다
-	if game._menu_cells.size() != 4:
-		_fail("오른쪽 위 단추가 4개여야 하는데 %d개" % game._menu_cells.size())
+	# 스킬 · 강화 · 가방 · 던전 · 설계 (강화는 2026-09-24 에 가방 왼쪽 옆에 더했다)
+	if game._menu_cells.size() != 5:
+		_fail("오른쪽 위 단추가 5개여야 하는데 %d개" % game._menu_cells.size())
 		return
 	var skill_rect: Rect2 = game._menu_cells[0].get_global_rect()
-	var bag_rect: Rect2 = game._menu_cells[1].get_global_rect()
+	var bag_rect: Rect2 = game._menu_cells[2].get_global_rect()
 	if bag_rect.end.x > screen.x or skill_rect.position.y < 0.0 or bag_rect.position.y > 120.0:
 		_fail("메뉴 단추가 오른쪽 위에 안 붙었다: %s / %s" % [skill_rect, bag_rect])
 	if skill_rect.intersects(hp_rect) or skill_rect.intersects(badge):
@@ -349,27 +350,42 @@ func _case_status(game: Node3D) -> void:
 	if not game._skill_panel.visible:
 		_fail("오른쪽 위 스킬 단추를 눌렀는데 스킬창이 안 열렸다")
 	game._toggle_skills()
-	game._menu_cells[1].find_child("hit", true, false).pressed.emit()
+	game._menu_cells[2].find_child("hit", true, false).pressed.emit()
 	await process_frame
 	if not game._bag_panel.visible:
 		_fail("오른쪽 위 가방 단추를 눌렀는데 가방이 안 열렸다")
 	game._toggle_bag()
 	await process_frame
+	# 강화 — 가방 **바로 왼쪽**. 누르면 강화 팝업이 대상 없이 **다중 강화 · 전체** 목록으로 뜬다
+	var enh_rect: Rect2 = game._menu_cells[1].get_global_rect()
+	if absf(bag_rect.position.x - enh_rect.end.x) > 12.0 or absf(enh_rect.position.y - bag_rect.position.y) > 1.0:
+		_fail("강화 단추가 가방 옆이 아니다: 강화 %s · 가방 %s" % [enh_rect, bag_rect])
+	game._menu_cells[1].find_child("hit", true, false).pressed.emit()
+	await process_frame
+	var pop: EnhancePopup = game._enhance
+	if not pop.visible or pop.mode != "multi" or pop.filter != "all" or not pop.list_panel.visible:
+		_fail("가방 옆 강화 단추 — 보임 %s · 탭 %s · 목록 %s · 목록 창 %s" % [pop.visible, pop.mode, pop.filter, pop.list_panel.visible])
+	else:
+		print("  가방 옆 강화: 다중 강화 · 전체 목록 %d칸" % pop._list_view.size())
+	game._menu_cells[1].find_child("hit", true, false).pressed.emit()
+	await process_frame
+	if pop.visible:
+		_fail("강화 단추를 다시 눌렀는데 팝업이 안 닫혔다")
 	print("  퀵슬롯 위: %s · %s · 체력 %s (막대 %.0fpx · 게이지 %.0fpx)" % [game._level_label.text, game._exp_text.text, game._hp_text.text, hp_rect.size.x, gauge.size.x])
 
 
 ## 던전 — 가방 옆 단추 → 종류 셋 → 단계 목록 → 들어가면 보스 한 마리 (docs/features/dungeons.md)
 func _case_dungeon(game: Node3D) -> void:
 	var panel: DungeonPanel = game._dungeon_panel
-	var bag_rect: Rect2 = game._menu_cells[1].get_global_rect()
-	var cell_rect: Rect2 = game._menu_cells[2].get_global_rect()
+	var bag_rect: Rect2 = game._menu_cells[2].get_global_rect()
+	var cell_rect: Rect2 = game._menu_cells[3].get_global_rect()
 	# 가방 **바로 옆**이다 (2026-09-23 요청)
 	if absf(cell_rect.position.x - bag_rect.end.x) > 12.0 or absf(cell_rect.position.y - bag_rect.position.y) > 1.0:
 		_fail("던전 단추가 가방 옆이 아니다: 가방 %s · 던전 %s" % [bag_rect, cell_rect])
 	# 글자가 아니라 그림(ui_icon_dungeon)이 나와야 한다
-	if game._menu_cells[2].find_children("*", "TextureRect", true, false).is_empty():
+	if game._menu_cells[3].find_children("*", "TextureRect", true, false).is_empty():
 		_fail("던전 단추에 그림이 없다 — npm run sync:godot 을 돌렸나 (ui_icon_dungeon)")
-	game._menu_cells[2].find_child("hit", true, false).pressed.emit()
+	game._menu_cells[3].find_child("hit", true, false).pressed.emit()
 	await process_frame
 	if not panel.visible:
 		_fail("던전 단추를 눌렀는데 창이 안 떴다")

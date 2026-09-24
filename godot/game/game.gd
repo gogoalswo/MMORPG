@@ -1988,6 +1988,17 @@ func _open_enhance() -> void:
 	})
 
 
+## 오른쪽 위 "강화" — 대상 없이 강화 팝업을 연다. 고른 장비가 없으니 **다중 강화 탭의
+## "전체" 목록**으로 연다 — 거기서 담아 강화한다. 한 개만 두드리려면 한 칸만 담으면 된다
+func _toggle_enhance() -> void:
+	if _enhance.visible:
+		_enhance.close()
+		return
+	_enhance.open({})
+	_enhance.pick_mode("multi")
+	_enhance.pick_filter("all")
+
+
 ## 강화 팝업이 한 개를 두드린 뒤 — **고른 칸은 결과를 따라간다.** 부서졌거나 일괄로 가방이
 ## 흔들렸으면 비우고(안 비우면 다음 물건을 가리킨다), 겹친 칸에서 뗀 것이 오르면 한 칸 뒤로
 func _on_enhance_acted(kept: bool, shift: int) -> void:
@@ -2109,6 +2120,9 @@ func _build_skill_bar() -> void:
 	# 무엇인지는 그림으로 알린다 — 그림이 없으면 글자가 대신 나온다
 	_menu_cells = [
 		_icon_button("ui_icon_skill", "스킬", _toggle_skills),
+		# 강화 — 가방 왼쪽 옆 (2026-09-24 요청 "가방 ui 옆에 강화 ui 버튼 만들어").
+		# 오른쪽 옆은 던전 자리다. 아직 그림이 없어 글자로 나온다
+		_icon_button("ui_icon_enhance", "강화", _toggle_enhance),
 		_icon_button("ui_icon_bag", "가방", _toggle_bag),
 		# 던전 — 가방 바로 옆 (2026-09-23 요청). 아직 그림이 없어 글자로 나온다
 		_icon_button("ui_icon_dungeon", "던전", _toggle_dungeon),

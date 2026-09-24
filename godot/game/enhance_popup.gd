@@ -668,8 +668,13 @@ func _step() -> void:
 			if picked[k] >= 0:
 				var art: TextureRect = picked_grid.get_child(k).get_node("icon")
 				_slot_tex[k] = [art.texture, _icon_box(art)]
+		# **낮은 강화부터 한 단계씩** (2026-09-24 "강화 수치가 다른게 있으면 낮은 강화부터 천천히
+		# 한 단계씩 진행해") — 이번 바퀴는 가장 낮은 단계인 칸만 두드린다(cap = 최저 + 1).
+		# 나머지도 번호는 따라가야 해서 같이 보낸다. +3·+5·+5 → +4 → +5 → 셋이 같이 +6 …
+		var lowest := _lowest()
 		_game._transport.send(&"enhanceMany", {
-			"indices": picked.filter(func(at: int) -> bool: return at >= 0), "cap": goal,
+			"indices": picked.filter(func(at: int) -> bool: return at >= 0),
+			"cap": mini(goal, lowest + 1) if lowest >= 0 else goal,
 		})
 		_waiting = true
 		if str(target.get("where", "")) != "equip":
@@ -760,6 +765,19 @@ func _finish(stopped: bool) -> void:
 	redraw()
 
 
+## 담은 칸 중 목표 아래에서 가장 낮은 강화 단계 (없으면 -1) — 다중은 이 단계부터 한 단계씩 올린다
+func _lowest() -> int:
+	var bag := _bag()
+	var lowest := -1
+	for at in picked:
+		if at < 0 or at >= bag.size():
+			continue
+		var level := int(bag[at].get("enhance", 0))
+		if level < goal and (lowest < 0 or level < lowest):
+			lowest = level
+	return lowest
+
+
 ## TextureRect 가 그림을 실제로 그린 자리 — 가운데에 비율을 지켜 앉힌다 (KEEP_ASPECT_CENTERED)
 func _icon_box(art: TextureRect) -> Rect2:
 	var box := art.get_global_rect()
@@ -818,7 +836,7 @@ func show_result(type: StringName, payload: Dictionary) -> void:
 		]
 		if running:
 			_run.destroyed = int(_run.destroyed) + int(payload.destroyed)
-			result.text = "%d바퀴  ·  " % int(_run.steps) + result.text
+			result.text = "+%d → +%d  ·  %d바퀴\n" % [cap - 1, cap, int(_run.steps)] + result.text
 		good = int(payload.destroyed) == 0 or int(payload.success) > 0
 		result.add_theme_color_override("font_color", _game.INV_GOLD_HI if good else _game.INV_WARN)
 		redraw()

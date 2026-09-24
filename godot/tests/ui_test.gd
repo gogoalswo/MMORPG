@@ -1324,3 +1324,32 @@ func _case_enhance_batch(game: Node, me: Dictionary) -> void:
 	if not left.is_empty() and int(left.get("enhance", 0)) != 2:
 		_fail("목표 +2 인데 +%d 에서 멈췄다" % int(left.get("enhance", 0)))
 	print("  단일 자동 +2: '%s'" % pop.result.text)
+	# 낮은 강화부터 한 단계씩 (2026-09-24 "강화 수치가 다른게 있으면 낮은 강화부터 천천히 한 단계씩") —
+	# +0 셋과 +2 둘을 +3 목표로 돌리면 첫 바퀴는 +0 만 두드리고 +2 는 그대로다
+	var low: Array = []
+	var high: Array = []
+	for level in [0, 2, 0, 2, 0]:
+		me.bag.append({"id": ref_id, "grade": 1, "enhance": level, "options": []})
+		(low if level == 0 else high).append(me.bag.size() - 1)
+	pop.open({"where": "bag", "index": low[0]})
+	pop.pick_mode("multi")
+	pop.set_goal(3)
+	pop.picked = low + high
+	pop.picked.sort()
+	pop.step_time = 5.0
+	var chat_mark: int = game._chat.lines().size()
+	pop.run_button.pressed.emit()
+	for i in 3:
+		await process_frame
+	var twos := 0
+	for at in high:  # +0 칸은 한 칸씩이라 갈라지지 않는다 — +2 칸 번호는 그대로다
+		if int(me.bag[at].enhance) == 2:
+			twos += 1
+	var ones: Array = me.bag.slice(me.bag.size() - 8).filter(func(s: Dictionary) -> bool: return int(s.enhance) == 1)
+	if twos != 2 or not pop.result.text.begins_with("+0 → +1"):
+		_fail("섞인 단계 첫 바퀴에 +2 가 %d개 남음 (2 여야) · 결과 '%s'" % [twos, pop.result.text])
+	print("  낮은 것부터: 첫 바퀴 +0 → +1 에서 %d칸 성공, +2 둘은 그대로 · '%s'" % [
+		ones.size(), pop.result.text.replace("\n", " / ")])
+	pop.run_button.pressed.emit()  # 중지
+	if game._chat.lines().size() != chat_mark + 1:
+		_fail("중지했는데 채팅이 한 줄이 아니다")

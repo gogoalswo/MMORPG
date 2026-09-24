@@ -2906,14 +2906,13 @@ func _redraw_skills() -> void:
 	var skill: Dictionary = Skills.all().get(_skill_pick, {})
 	_fill_skill_cell(_skill_big, _skill_pick, "")
 	_skill_name.text = str(skill.get("name", ""))
-	# 범위기는 범위에 든 놈을 **전부** 친다 — 명수 상한이 없어서 숫자를 적지 않는다
+	# 범위기는 범위에 든 놈을 **전부** 친다 — 명수 상한이 없어서 "범위" 라고만 적는다
 	var targets := int(skill.get("maxTargets", 1))
-	var whole := float(skill.get("arc", 0)) >= TAU - 0.01
 	_skill_info.text = "요구 레벨 %d\n재사용 %s초\n사거리 %s, %s" % [
 		int(skill.get("reqLevel", 1)),
 		str(snappedf(float(skill.get("cooldown", 0)) / 1000.0, 0.1)),
 		str(skill.get("range", 0)),
-		"대상 %d명" % targets if targets <= 1 else ("주위 전부" if whole else "범위 안 전부"),
+		"대상 %d명" % targets if targets <= 1 else "범위",
 	]
 	_skill_desc.text = str(skill.get("description", ""))
 	var damage := Skills.damage_text(skill)

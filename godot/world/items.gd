@@ -258,19 +258,18 @@ static func enhance_reach_odds(from: int, goal: int) -> float:
 	return odds
 
 
-## 일괄 강화에 드는 칸인가 — **판정(World)과 팝업이 같은 규칙을 쓴다.**
-## 장비이고, `mode` 가 "item" 이면 같은 아이템(id·등급), "grade" 면 같은 등급,
-## 그리고 강화가 `cap` 아래인 것. 재료·+cap 이상은 빠진다
+## 다중 강화 목록에 드는 칸인가 — 장비이고 강화가 `cap` 아래인 것 중에서
+## `mode` 가 "all" 이면 전부, "item" 이면 같은 아이템(id·등급), "grade" 면 같은 등급.
+## 재료·+cap 이상은 빠진다. 팝업의 오른쪽 목록 탭과 "모두 담기" 가 쓴다
 static func batch_match(stack: Dictionary, mode: String, ref_id: String, grade: int, cap: int) -> bool:
 	if get_item(str(stack.get("id", ""))).is_empty():
 		return false
 	if int(stack.get("enhance", 0)) >= mini(cap, max_enhance()):
 		return false
-	if int(stack.get("grade", 1)) != grade:
-		return false
 	match mode:
-		"item": return str(stack.get("id", "")) == ref_id
-		"grade": return true
+		"all": return true
+		"item": return str(stack.get("id", "")) == ref_id and int(stack.get("grade", 1)) == grade
+		"grade": return int(stack.get("grade", 1)) == grade
 	return false
 
 

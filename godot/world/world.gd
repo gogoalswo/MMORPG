@@ -1881,58 +1881,74 @@ func _enhance(player: Dictionary, where: String, key: Variant) -> void:
 	_inventory_changed(player)
 
 
-## 일괄 강화 — 가방에서 **같은 아이템**(`mode` "item": id·등급) 또는 **같은 등급**("grade")
-## 장비를 **한 개씩 한 번** 두드린다. `cap` 을 주면 +cap 아래인 것만 든다 — 팝업의 자동 강화가
-## 목표를 cap 으로 넣어 한 바퀴씩 되풀이한다 (대상이 없어질 때까지).
-## 끼고 있는 것은 빠진다 — 한 번에 여럿을 부수는 요청이 몸에 걸친 것까지 걸면 되돌릴 수 없다.
-## 겹친 칸은 한 개씩 따로 굴리고, 남은 것은 **끝난 단계끼리 다시 겹쳐** 원래 자리에 선다.
-## 대상 규칙은 `Items.batch_match` — 팝업이 미리 세는 수와 같다
-func enhance_batch(player_id: String, mode: String, ref_id: String, grade: int, cap: int = -1) -> void:
+## 다중 강화 — 가방에서 **고른 칸들**(`indices`, 가방 번호)을 **한 개씩 한 번** 두드린다
+## (2026-09-24 요청: 리니지M "다중 강화" 그림 — 오른쪽 목록에서 골라 왼쪽 칸에 담는다).
+## `cap` 을 주면 +cap 아래인 칸만 든다 — 팝업은 목표를 cap 으로 넣어 한 바퀴씩 되풀이한다.
+## 끼고 있는 것은 고를 수 없다 (가방 번호만 받는다) — 한 번에 여럿을 부수는 요청이 몸에 걸친
+## 것까지 걸면 되돌릴 수 없다. 겹친 칸은 한 개씩 따로 굴리고, 남은 것은 **끝난 단계끼리 다시
+## 겹쳐** 원래 자리에 선다. 가방 번호가 흔들리므로 **남은 칸의 새 번호(`picked`)** 를 돌려준다 —
+## 팝업은 그것으로 담은 칸을 이어 간다
+func enhance_many(player_id: String, indices: Array, cap: int = -1) -> void:
 	var player: Dictionary = _players.get(player_id, {})
-	if player.is_empty() or not (mode in ["item", "grade"]):
+	if player.is_empty():
 		return
 	var limit := clampi(cap, 1, Items.max_enhance()) if cap > 0 else Items.max_enhance()
-	var total := {"pieces": 0, "success": 0, "destroyed": 0}
-	var reached := {}  # 끝난 단계 → 남은 개수
-	var i: int = player.bag.size() - 1
-	while i >= 0:  # 뒤에서부터 — 앞 칸 번호가 안 밀린다
-		var stack: Dictionary = player.bag[i]
-		if Items.batch_match(stack, mode, ref_id, grade, limit):
-			var item := Items.get_item(str(stack.id))
-			var start := int(stack.get("enhance", 0))
-			var kept := {}
-			for n in int(stack.get("count", 1)):
-				var result := _roll_once(player, item, start)
-				if result == "short":
-					kept[start] = int(kept.get(start, 0)) + 1
-					continue
-				total.pieces += 1
-				if result == "destroy":
-					total.destroyed += 1
-					continue
-				var at := start + 1 if result == "success" else start
-				if result == "success":
-					total.success += 1
-				kept[at] = int(kept.get(at, 0)) + 1
-			player.bag.remove_at(i)
-			var levels := kept.keys()
-			levels.sort()
-			levels.reverse()  # 같은 자리에 높은 것부터 끼우면 낮은 것이 앞에 선다
-			for at in levels:
-				var one := stack.duplicate(true)
-				one.enhance = int(at)
-				one.erase("count")
-				if int(kept[at]) > 1:
-					one.count = int(kept[at])
-				player.bag.insert(i, one)
-				reached[int(at)] = int(reached.get(int(at), 0)) + int(kept[at])
-		i -= 1
-	if int(total.pieces) == 0:
+	var chosen: Array = []
+	for value in indices:
+		var at := int(value)
+		if at < 0 or at >= player.bag.size() or chosen.has(at):
+			continue
+		var stack: Dictionary = player.bag[at]
+		if Items.get_item(str(stack.get("id", ""))).is_empty() or int(stack.get("enhance", 0)) >= limit:
+			continue
+		chosen.append(at)
+	if chosen.is_empty():
 		_notice("강화할 장비가 없습니다")
 		return
-	_notice("일괄 강화 %d개 — 성공 %d · 파괴 %d" % [total.pieces, total.success, total.destroyed])
+	chosen.sort()
+	chosen.reverse()  # 뒤에서부터 — 앞 칸 번호가 안 밀린다
+	var total := {"pieces": 0, "success": 0, "destroyed": 0}
+	var reached := {}  # 끝난 단계 → 남은 개수
+	var picked: Array = []  # 남은 칸의 새 가방 번호
+	for i in chosen:
+		var stack: Dictionary = player.bag[i]
+		var item := Items.get_item(str(stack.id))
+		var start := int(stack.get("enhance", 0))
+		var kept := {}
+		for n in int(stack.get("count", 1)):
+			var result := _roll_once(player, item, start)
+			if result == "short":
+				kept[start] = int(kept.get(start, 0)) + 1
+				continue
+			total.pieces += 1
+			if result == "destroy":
+				total.destroyed += 1
+				continue
+			var at := start + 1 if result == "success" else start
+			if result == "success":
+				total.success += 1
+			kept[at] = int(kept.get(at, 0)) + 1
+		player.bag.remove_at(i)
+		var levels := kept.keys()
+		levels.sort()
+		levels.reverse()  # 같은 자리에 높은 것부터 끼우면 낮은 것이 앞에 선다
+		for at in levels:
+			var one := stack.duplicate(true)
+			one.enhance = int(at)
+			one.erase("count")
+			if int(kept[at]) > 1:
+				one.count = int(kept[at])
+			player.bag.insert(i, one)
+			reached[int(at)] = int(reached.get(int(at), 0)) + int(kept[at])
+		# 먼저 적은 번호(i 뒤)는 한 칸이 levels.size() 칸이 된 만큼 밀린다
+		for j in picked.size():
+			picked[j] = int(picked[j]) + levels.size() - 1
+		for n in levels.size():
+			picked.append(i + n)
+	picked.sort()
+	_notice("다중 강화 %d개 — 성공 %d · 파괴 %d" % [total.pieces, total.success, total.destroyed])
 	_events.append({
-		"type": "enhanceBatch", "mode": mode, "cap": limit,
+		"type": "enhanceBatch", "cap": limit, "picked": picked,
 		"pieces": total.pieces, "success": total.success, "destroyed": total.destroyed,
 		"reached": reached,
 	})

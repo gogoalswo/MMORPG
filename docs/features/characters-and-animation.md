@@ -274,9 +274,8 @@ Rig(humanoid) → Animate 로 나온 것을 합쳤다. 출처와 약관은
   node scripts/add-clips.mjs public/assets/models/varco_fighter.glb public/assets/models/varco_fighter.glb public/assets/anim/fighter_moves.glb
   ```
   `fetch-assets.sh` 도 격투가를 다시 지은 뒤 두 번째 줄을 돌린다 (블렌더 없이).
-  **로컬에서 확인할 때는 `godot/assets/models/varco_fighter.glb*` 를 지우고 `sync:godot` 한다** —
-  동기화는 원본 **크기만** 보고 건너뛰는데, 키 값만 바뀌면 크기가 같아서 옛 모델로 테스트가 돈다
-  (2026-09-24 에 한 번 속았다). CI 는 매번 새로 복사하므로 배포는 상관없다.
+  그다음 `npm run sync:godot` — 동기화는 원본 **내용 해시**로 바뀐 것을 가린다. 예전엔 크기만
+  봐서 키 값만 바뀐 모델(크기가 같다)을 건너뛰고 옛 모델로 테스트가 돌았다 (2026-09-24 에 고쳤다).
 - **아직 화면으로 확인 전이다.** 손발 자리·굽는 방향은 숫자로 봤고, 생김새는 사용자 확인을 기다린다.
 
 ### VARCO 오우거 (`varco_ogre1` ~ `varco_ogre5`) — 전 사냥터·보스에 배치

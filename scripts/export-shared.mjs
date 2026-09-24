@@ -73,6 +73,7 @@ import {
   OPTION_KINDS,
   OPTION_MIN,
   OPTION_MAX,
+  OPTION_STEP_WEIGHTS,
   OPTION_TIERS,
   MATERIALS,
   CRYSTAL_ID,
@@ -164,6 +165,8 @@ export function buildData() {
       optionKinds: OPTION_KINDS,
       optionMin: OPTION_MIN,
       optionMax: OPTION_MAX,
+      // 옵션 수치 5단계 확률(%) — 낮은 단계가 많이 나온다 (2026-09-24)
+      optionStepWeights: OPTION_STEP_WEIGHTS,
       // 옵션 차수 — 1차는 드랍, 2차는 크리스탈, 3차는 비워 둔다 (2026-09-23)
       optionTiers: OPTION_TIERS,
       // 장비가 아닌 가방 물건 (크리스탈). 가방에는 `{ id, count }` 로 겹쳐 쌓인다

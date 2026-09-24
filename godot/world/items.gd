@@ -169,12 +169,27 @@ static func roll_options(item: Dictionary, grade: int, rng: RandomNumberGenerato
 	for i in mini(count, pool.size()):
 		var kind := str(pool.pop_at(int(rng.randf() * pool.size())))
 		var span := option_range(kind, grade)
-		# 소수 한 자리로 저장한다 — 정수로 자르면 낮은 등급에서 0 이 되어 버린다
-		out.append({
-			"kind": kind,
-			"value": snappedf(span.min + rng.randf() * (span.max - span.min), 0.1),
-		})
+		out.append({"kind": kind, "value": roll_option_value(span, rng)})
 	return out
+
+
+## 옵션 수치를 **5단계 확률**로 굴린다 (2026-09-24 지시) — 범위를 5등분해 구간을
+## `optionStepWeights`(40·30·20·8·2%) 로 고르고 그 안에서 고르게 굴린다.
+## 1차(드랍)·2차(크리스탈)가 같이 쓴다. 원본은 `items.ts` 의 `rollOptionValue`
+static func roll_option_value(span: Dictionary, rng: RandomNumberGenerator) -> float:
+	var weights: Array = _t().get("optionStepWeights", [1])
+	var total := 0.0
+	for w in weights:
+		total += float(w)
+	var pick := rng.randf() * total
+	var step := 0
+	while step < weights.size() - 1 and pick >= float(weights[step]):
+		pick -= float(weights[step])
+		step += 1
+	var width := (float(span.max) - float(span.min)) / weights.size()
+	var value := float(span.min) + width * (step + rng.randf())
+	# 소수 한 자리로 저장한다 — 정수로 자르면 낮은 등급에서 0 이 되어 버린다
+	return clampf(snappedf(value, 0.1), float(span.min), float(span.max))
 
 
 ## --- 옵션 차수 ---
@@ -201,10 +216,7 @@ static func roll_tier_options(tier: int, grade: int, rng: RandomNumberGenerator)
 	for i in mini(count, pool.size()):
 		var kind := str(pool.pop_at(int(rng.randf() * pool.size())))
 		var span := option_range(kind, grade)
-		out.append({
-			"kind": kind,
-			"value": snappedf(span.min + rng.randf() * (span.max - span.min), 0.1),
-		})
+		out.append({"kind": kind, "value": roll_option_value(span, rng)})
 	return out
 
 

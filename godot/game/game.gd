@@ -3623,6 +3623,7 @@ func _draw_state() -> void:
 	HitFx.apply_react(_player, _last_delta)
 	_player.rotation.y = me.rot
 	_play_player_clip(me)
+	_wear_weapon(me)
 
 	# 뒤 위에서 내려다본다. 지금은 고정 각도다
 	# 존을 옮긴 프레임에는 보간 없이 곧바로 자리잡는다
@@ -3685,6 +3686,15 @@ func _draw_state() -> void:
 		Build.stamp(),
 		_last_event,
 	]
+
+
+## 낀 무기를 주먹 소켓에 보인다 — 무기를 바꾸면 모델이 바뀌고, 벗으면 맨주먹이다.
+## 등급이 곧 생김새다 (무기는 등급마다 하나). 같은 등급이면 Rig 가 다시 짓지 않는다
+func _wear_weapon(me: Dictionary) -> void:
+	if not _player is Rig:
+		return
+	var weapon: Dictionary = me.get("equipped", {}).get("weapon", {})
+	(_player as Rig).set_weapon(0 if weapon.is_empty() else int(weapon.get("grade", 1)))
 
 
 ## 맞았다. 맞은 자리에서 터뜨리고, 맞은 몸을 붉게 물들이고, 내가 맞았으면

@@ -30,6 +30,13 @@ var _playing := ""
 var _speed := 1.0
 ## 히트스톱이 남은 시간(초)
 var _freeze := 0.0
+## 지금 낀 무기 등급 (0 = 맨주먹). 같은 등급이면 다시 짓지 않는다
+var _weapon_grade := 0
+## 손 뼈 이름 → BoneAttachment3D. 처음 무기를 낄 때 만든다
+var _sockets := {}
+
+## 주먹 소켓이 붙는 뼈 — 건틀릿은 두 손에 한 짝씩 낀다
+const FIST_BONES := ["RightHand", "LeftHand"]
 
 
 ## 없으면 null. 부르는 쪽이 기둥으로 대신한다
@@ -137,6 +144,46 @@ func _process(delta: float) -> void:
 		_freeze = 0.0
 		_anim.speed_scale = _speed
 		set_process(false)
+
+
+## 주먹 소켓에 무기를 끼운다. `grade` 는 무기 등급, 0 이면 벗긴다.
+## 같은 등급이면 아무것도 하지 않는다 — 매 프레임 불러도 된다.
+## 뼈가 없는 모델(기둥·짐승)은 조용히 넘어간다
+func set_weapon(grade: int) -> void:
+	if grade == _weapon_grade:
+		return
+	_weapon_grade = grade
+	for bone in FIST_BONES:
+		var socket := fist_socket(bone)
+		if socket == null:
+			continue
+		for old in socket.get_children():
+			socket.remove_child(old)
+			old.queue_free()
+		if grade > 0:
+			socket.add_child(Gauntlet.build(grade, bone == "LeftHand"))
+
+
+func weapon_grade() -> int:
+	return _weapon_grade
+
+
+## 손 뼈를 따라다니는 자리. 뼈가 없으면 null
+func fist_socket(bone: String) -> BoneAttachment3D:
+	if _sockets.has(bone):
+		return _sockets[bone]
+	var found := find_children("*", "Skeleton3D", true, false)
+	if found.is_empty():
+		return null
+	var skeleton: Skeleton3D = found[0]
+	if skeleton.find_bone(bone) < 0:
+		return null
+	var socket := BoneAttachment3D.new()
+	socket.name = "Socket" + bone
+	socket.bone_name = bone
+	skeleton.add_child(socket)
+	_sockets[bone] = socket
+	return socket
 
 
 func has_clip(clip: String) -> bool:

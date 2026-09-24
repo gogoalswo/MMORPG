@@ -28,7 +28,8 @@ three.js 웹 클라이언트를 **고도 엔진으로 갈아타는 중**이다. 
 | `godot/net/transport.gd` | 화면과 판정 사이의 유일한 통로 |
 | `godot/net/local_transport.gd` | 서버 없이 `World` 를 이 자리에서 돌린다 |
 | `godot/game/game.gd` | 화면. 바닥·카메라·모델·터치 이동. **`World` 를 직접 안 만진다** |
-| `godot/game/rig.gd` | `.glb` 하나를 씌우고 클립을 트는 껍데기. **없으면 `null`** |
+| `godot/game/rig.gd` | `.glb` 하나를 씌우고 클립을 트는 껍데기. **없으면 `null`**. 손 뼈에 **주먹 소켓**을 달아 무기를 끼운다(`set_weapon`) |
+| `godot/game/gauntlet.gd` | 주먹에 끼는 건틀릿 — 등급마다 생김새를 코드로 짓는다 → [characters-and-animation.md](characters-and-animation.md) "무기 소켓" |
 | `godot/game/ground.gd` | 존 바닥 재질 — 텍스처·타일 크기·존 틴트 |
 | `godot/game/hit_fx.gd` | **피격 이펙트.** 맞은 자리의 섬광·파편·피해 숫자. 에셋 없이 코드로 짓는다 |
 | `godot/game/skill_fx.gd` | **스킬 이펙트.** 지금은 할퀴기 하나 — `CPUParticles3D` 여섯으로 짓는다 (판 메시 금지) |

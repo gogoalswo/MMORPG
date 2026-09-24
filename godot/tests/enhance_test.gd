@@ -19,9 +19,8 @@ func _init() -> void:
 	_case_worn()
 	_case_max()
 	_case_reach()
-	_case_batch_item()
-	_case_batch_grade()
-	_case_batch_auto()
+	_case_many()
+	_case_many_rounds()
 	Save.clear()
 
 	if _failed == 0:
@@ -171,104 +170,82 @@ func _case_reach() -> void:
 	_eq("+5→+5 는 1", Items.enhance_reach_odds(5, 5), 1.0)
 
 
-## 같은 아이템 일괄 — 같은 id·등급만, 겹친 칸은 한 개씩, 끼운 것·다른 것·재료는 그대로
-func _case_batch_item() -> void:
+## 다중 강화 (리니지M "다중 강화" 그림) — 고른 가방 번호만, 겹친 칸은 한 개씩,
+## 끼운 것·안 고른 것·재료·+cap 이상은 그대로. 남은 칸의 새 번호(`picked`)를 돌려준다
+func _case_many() -> void:
 	var s := _world()
 	var w: World = s[0]
 	var me: Dictionary = s[1]
 	w._rng.seed = 5
 	var pile := _gear(0)
 	pile.count = 4
-	me.bag.append(pile)                                               # 대상 4
-	me.bag.append({"id": "g1_a", "grade": 1, "enhance": 0, "options": []})  # 다른 아이템
-	me.bag.append(_gear(3))                                           # 대상 1
-	me.bag.append({"id": Items.crystal_id(), "count": 2})             # 재료
-	me.bag.append(_gear(Items.max_enhance()))                         # +9 는 빠진다
-	me.equipped.weapon = _gear(1)                                     # 끼운 것은 빠진다
-	w.enhance_batch("me", "item", "g1_w", 1)
+	me.bag.append(pile)                                                     # 0 고름 — 4개
+	me.bag.append({"id": "g1_a", "grade": 1, "enhance": 0, "options": []})  # 1 안 고름
+	me.bag.append(_gear(3))                                                 # 2 고름
+	me.bag.append({"id": Items.crystal_id(), "count": 2})                   # 3 재료(고려도 빠진다)
+	me.bag.append(_gear(Items.max_enhance()))                               # 4 +9 는 빠진다
+	me.equipped.weapon = _gear(1)
+	w.enhance_many("me", [0, 2, 3, 4, 2, 99])
+	var event := _batch_event(w)
+	_eq("대상 개수", int(event.get("pieces", 0)), 5)
+	_eq("성공+파괴 = 대상", int(event.success) + int(event.destroyed), 5)
+	_eq("끼운 것 그대로", int(me.equipped.weapon.enhance), 1)
+	_eq("안 고른 것 그대로", me.bag.filter(func(x: Dictionary) -> bool: return str(x.id) == "g1_a").size(), 1)
+	_eq("재료 그대로", me.bag.filter(func(x: Dictionary) -> bool: return Items.is_material(str(x.id))).size(), 1)
+	# picked 는 남은 칸을 정확히 가리킨다 — 고른 것에서 남은 수와 같고, 가리키는 칸은 +1 / +4
+	var alive := 0
+	for at in event.picked:
+		var stack: Dictionary = me.bag[int(at)]
+		_eq("picked 는 강화한 칸", int(stack.enhance) in [1, 4] and str(stack.id) == "g1_w", true)
+		alive += int(stack.get("count", 1))
+	_eq("picked 개수 = 성공 수", alive, int(event.success))
+	# 고른 것이 없으면 아무것도 안 한다
+	w.enhance_many("me", [1 + 99])
+	_eq("대상 없음 → 이벤트 없음", _batch_event(w).is_empty(), true)
+
+
+func _batch_event(w: World) -> Dictionary:
 	var event: Dictionary = {}
 	for e in w.drain_events():
 		if str(e.get("type", "")) == "enhanceBatch":
 			event = e
-	_eq("대상 개수", int(event.get("pieces", 0)), 5)
-	_eq("성공+파괴 = 대상", int(event.success) + int(event.destroyed), 5)
-	_eq("끼운 것 그대로", int(me.equipped.weapon.enhance), 1)
-	var left := 0
-	for stack in me.bag:
-		if str(stack.id) == "g1_w" and int(stack.enhance) < Items.max_enhance():
-			left += int(stack.get("count", 1))
-			_eq("한 단계만 (+0→+1 · +3→+4)", int(stack.enhance) in [1, 4], true)
-	_eq("남은 수 = 성공 수", left, int(event.success))
-	_eq("다른 아이템 그대로", me.bag.filter(func(x: Dictionary) -> bool: return str(x.id) == "g1_a").size(), 1)
-	_eq("재료 그대로", me.bag.filter(func(x: Dictionary) -> bool: return Items.is_material(str(x.id))).size(), 1)
-	# 대상이 없으면 아무것도 안 한다
-	me.bag.clear()
-	w.enhance_batch("me", "item", "g1_w", 1)
-	_eq("대상 없음 → 이벤트 없음", w.drain_events().filter(
-		func(e: Dictionary) -> bool: return str(e.type) == "enhanceBatch"
-	).size(), 0)
+	return event
 
 
-## 같은 등급 일괄 — 슬롯이 달라도 등급이 같으면 다 든다
-func _case_batch_grade() -> void:
-	var s := _world()
-	var w: World = s[0]
-	var me: Dictionary = s[1]
-	me.bag.append(_gear(0))
-	me.bag.append({"id": "g1_a", "grade": 1, "enhance": 2, "options": []})
-	me.bag.append({"id": "g1_r", "grade": 1, "enhance": 0, "options": []})
-	me.bag.append({"id": "g3_w", "grade": 3, "enhance": 0, "options": []})
-	w.enhance_batch("me", "grade", "g1_w", 1)
-	var pieces := 0
-	for e in w.drain_events():
-		if str(e.get("type", "")) == "enhanceBatch":
-			pieces = int(e.pieces)
-	_eq("1등급 셋", pieces, 3)
-	_eq("3등급은 그대로", me.bag.filter(func(x: Dictionary) -> bool: return int(x.grade) == 3).size(), 1)
-	_eq("모르는 방식은 무시", _batch_pieces(w, "me", "slot"), 0)
-
-
-func _batch_pieces(w: World, who: String, mode: String) -> int:
-	w.enhance_batch(who, mode, "g1_w", 1)
-	for e in w.drain_events():
-		if str(e.get("type", "")) == "enhanceBatch":
-			return int(e.pieces)
-	return 0
-
-
-## 일괄 한 바퀴에 목표(cap) — +cap 아래만 한 번씩 두드린다. 팝업의 자동 강화는 이 바퀴를
-## 대상이 없어질 때까지 되풀이한다 (2026-09-24 "한 단계씩 연출") → 끝나면 남은 것은 전부 +cap
-func _case_batch_auto() -> void:
+## 목표(cap) 바퀴 되풀이 — +cap 아래만 한 번씩 두드리고, `picked` 로 이어 가면 끝에 남은 것은
+## 전부 +cap 이다 (팝업의 다중 강화가 이렇게 돈다). 사이에 안 고른 칸이 있어도 번호가 맞는다
+func _case_many_rounds() -> void:
 	var s := _world()
 	var w: World = s[0]
 	var me: Dictionary = s[1]
 	w._rng.seed = 7
+	var chosen: Array = []
+	for i in 12:
+		me.bag.append({"id": "g1_a", "grade": 1, "enhance": 0, "options": []})  # 안 고름
+		me.bag.append(_gear(1))
+		chosen.append(i * 2 + 1)
 	var pile := _gear(1)
-	pile.count = 30
+	pile.count = 10
 	me.bag.append(pile)
-	me.bag.append(_gear(3))  # 목표(+3) 이상은 빠진다
-	w.enhance_batch("me", "item", "g1_w", 1, 3)
-	var first := 0
-	for e in w.drain_events():
-		if str(e.get("type", "")) == "enhanceBatch":
-			first = int(e.pieces)
-	_eq("첫 바퀴는 +3 아래 30개만", first, 30)
-	var rounds := 1
+	chosen.append(me.bag.size() - 1)
+	var rounds := 0
+	var destroyed := 0
 	while rounds < 20:
-		var pieces := 0
-		w.enhance_batch("me", "item", "g1_w", 1, 3)
-		for e in w.drain_events():
-			if str(e.get("type", "")) == "enhanceBatch":
-				pieces = int(e.pieces)
-		if pieces == 0:
+		var below := chosen.filter(func(at: int) -> bool: return int(me.bag[at].enhance) < 3)
+		if below.is_empty():
 			break
+		w.enhance_many("me", chosen, 3)
+		var event := _batch_event(w)
+		destroyed += int(event.destroyed)
+		chosen = event.picked
 		rounds += 1
-	var levels: Array = me.bag.map(func(x: Dictionary) -> int: return int(x.enhance))
-	_eq("다 돌면 +3 뿐", levels.filter(func(v: int) -> bool: return v != 3).size(), 0)
-	var at3: Array = me.bag.filter(func(x: Dictionary) -> bool: return int(x.enhance) == 3)
 	var alive := 0
-	for stack in at3:
-		alive += int(stack.get("count", 1))
-	print("  일괄 +1→+3 을 %d바퀴: 30개 중 %d개 도달 (기댓값 약 17), 원래 +3 하나 포함 %d칸" % [
-		rounds, alive - 1, at3.size()
-	])
+	for at in chosen:
+		_eq("다 돌면 +3 뿐", int(me.bag[at].enhance), 3)
+		_eq("고른 것만", str(me.bag[at].id), "g1_w")
+		alive += int(me.bag[at].get("count", 1))
+	_eq("남은 수 + 파괴 = 22", alive + destroyed, 22)
+	_eq("안 고른 12개 그대로", me.bag.filter(
+		func(x: Dictionary) -> bool: return str(x.id) == "g1_a" and int(x.enhance) == 0
+	).size(), 12)
+	print("  다중 +1→+3 을 %d바퀴: 22개 중 %d개 도달 (기댓값 약 12)" % [rounds, alive])

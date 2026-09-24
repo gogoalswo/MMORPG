@@ -419,7 +419,7 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 		&"enhanceBatch":
 			# 일괄은 한 줄로 — 수십 개를 줄마다 적으면 채팅창이 강화로 덮인다
 			if not _enhance.running:
-				_chat.add_line("일괄 강화", "%d개 중 성공 %d · 파괴 %d" % [
+				_chat.add_line("다중 강화", "%d개 중 성공 %d · 파괴 %d" % [
 					int(payload.get("pieces", 0)), int(payload.get("success", 0)), int(payload.get("destroyed", 0))
 				], INV_GOLD_HI if int(payload.get("success", 0)) > 0 else INV_WARN)
 			_enhance.show_result(name, payload)

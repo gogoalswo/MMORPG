@@ -286,12 +286,9 @@ var _bag_gold: Label
 var _bag_sum: Label
 var _bag_grid: GridContainer
 var _bag_scroll: ScrollContainer
-## 가방 끌기 — 누른 자리(목록 기준 세로), 누를 때의 스크롤, 데드존을 넘겼나, 누른 칸
-var _bag_hold := false
-var _bag_hold_y := 0.0
-var _bag_hold_scroll := 0
-var _bag_dragging := false
-var _bag_held := -1
+## 가방·스킬 목록을 끌어서 내린다 (`DragScroll`)
+var _bag_drag: DragScroll
+var _skill_drag: DragScroll
 var _bag_action: Button
 var _enhance_button: Button  # 상세 창 "강화" — 장비를 고르면 뜨고, 누르면 강화 팝업을 연다
 ## 강화 팝업 — 화면 가운데, 뒤를 어둡게 덮는다. 한 개 · 같은 아이템 · 같은 등급, 자동 강화
@@ -1191,8 +1188,6 @@ func _build_bag_window(panel: PanelContainer) -> void:
 		cell_box * BAG_ROWS + BAG_GRID_GAP * (BAG_ROWS - 1)
 	)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	# **끌어서 내린다** — 입력은 `_on_bag_input` 이 받는다 (칸 단추가 끌기를 먹었다)
-	scroll.gui_input.connect(_on_bag_input)
 	body.add_child(scroll)
 	_bag_scroll = scroll
 	_bag_grid = GridContainer.new()
@@ -1200,6 +1195,8 @@ func _build_bag_window(panel: PanelContainer) -> void:
 	_bag_grid.add_theme_constant_override("h_separation", BAG_GRID_GAP)
 	_bag_grid.add_theme_constant_override("v_separation", BAG_GRID_GAP)
 	scroll.add_child(_bag_grid)
+	# **끌어서 내린다** — 칸 단추가 끌기를 먹었다 (`DragScroll`)
+	_bag_drag = DragScroll.attach(scroll, _bag_grid, BAG_GRID_GAP)
 
 	# 탭은 격자 오른쪽에 세로로 (받은 그림대로)
 	var tabs := VBoxContainer.new()
@@ -1511,62 +1508,7 @@ func _fit_cells(grid: GridContainer, want: int, where: String) -> void:
 		grid.remove_child(last)
 		last.queue_free()
 	while grid.get_child_count() < want:
-		var cell := _make_cell(_pick_bag.bind(where, grid.get_child_count()))
-		# 가방 칸의 단추는 입력을 흘려보낸다 — 누르기·끌기는 `_on_bag_input` 이 받는다
-		cell.get_node("hit").mouse_filter = Control.MOUSE_FILTER_IGNORE
-		grid.add_child(cell)
-
-
-## 가방 격자에 온 입력. **누르고 끌면 스크롤, 누르고 그 자리에서 떼면 그 칸을 누른 것**이다.
-##
-## 칸마다 `hit` 단추가 칸 전체를 덮고 있어서 끌기를 단추가 다 먹었다 — 휠로만
-## 내려가고 끌어서는 안 내려갔다 (2026-09-24 지적: "인벤토리 ui 스크롤이 안돼").
-## 그래서 가방 칸 단추는 입력을 흘려보내고(`_fit_cells`) 여기서 받는다.
-## 방식은 차원문 목록(`GatePanel._on_list_input`)과 같다: 휠은 `ScrollContainer` 에
-## 넘기고, 손가락 이벤트는 삼킨다 — 고도가 같은 손짓을 마우스로 흉내 내 한 번 더
-## 보내므로(`emulate_mouse_from_touch`) 둘 다 받으면 두 배로 내려간다
-func _on_bag_input(event: InputEvent) -> void:
-	if event is InputEventScreenTouch or event is InputEventScreenDrag:
-		_bag_scroll.accept_event()
-		return
-	var click := event as InputEventMouseButton
-	if click != null and click.button_index == MOUSE_BUTTON_LEFT:
-		if click.pressed:
-			_bag_hold = true
-			_bag_dragging = false
-			_bag_hold_y = click.position.y
-			_bag_hold_scroll = _bag_scroll.scroll_vertical
-			_bag_held = _bag_cell_at(click.position)
-		elif _bag_hold:
-			_bag_hold = false
-			# 누른 칸에서 뗐을 때만 누른 것이다 — 끌었거나 다른 칸으로 미끄러졌으면 취소
-			var held := _bag_held
-			_bag_held = -1
-			if not _bag_dragging and held >= 0 and held == _bag_cell_at(click.position):
-				_bag_grid.get_child(held).get_node("hit").pressed.emit()
-		_bag_scroll.accept_event()
-		return
-	var move := event as InputEventMouseMotion
-	if move != null and _bag_hold:
-		var moved := move.position.y - _bag_hold_y
-		if not _bag_dragging and absf(moved) > GatePanel.DEADZONE:
-			_bag_dragging = true
-		if _bag_dragging:
-			# 손을 따라간다 — 위로 끌면 목록이 올라온다. 범위는 고도가 죈다
-			_bag_scroll.scroll_vertical = _bag_hold_scroll - int(moved)
-			_bag_scroll.accept_event()
-
-
-## 그 자리의 가방 칸 번호 (없으면 -1). `at` 은 목록 기준이라 화면 기준으로 옮겨서
-## 견준다 (칸은 스크롤만큼 밀려 있다). 칸 사이 틈도 가까운 칸에 붙여 준다
-func _bag_cell_at(at: Vector2) -> int:
-	var point := _bag_scroll.global_position + at
-	var half := BAG_GRID_GAP * 0.5
-	for index in _bag_grid.get_child_count():
-		var box: Rect2 = _bag_grid.get_child(index).get_global_rect().grow(half)
-		if box.has_point(point):
-			return index
-	return -1
+		grid.add_child(_make_cell(_pick_bag.bind(where, grid.get_child_count())))
 
 
 ## 탭 — 무엇을 보여줄지 거른다. **거르면 칸 번호와 가방 번호가 어긋나므로**
@@ -1621,8 +1563,7 @@ func _toggle_bag() -> void:
 	_detail_panel.visible = false
 	_crystal_panel.visible = false
 	_crystal_target = {}
-	_bag_hold = false
-	_bag_held = -1
+	_bag_drag.forget()
 	if open:
 		_redraw_bag()
 
@@ -2547,6 +2488,8 @@ func _build_skill_panel() -> void:
 	_skill_grid.add_theme_constant_override("h_separation", SKILL_GAP)
 	_skill_grid.add_theme_constant_override("v_separation", SKILL_GAP)
 	scroll.add_child(_skill_grid)
+	# **끌어서 내린다** — 가방과 같다 (`DragScroll`)
+	_skill_drag = DragScroll.attach(scroll, _skill_grid, SKILL_GAP)
 
 	var buttons := HBoxContainer.new()
 	buttons.alignment = BoxContainer.ALIGNMENT_END
@@ -2919,6 +2862,7 @@ func _caption(text: String) -> Label:
 func _toggle_skills() -> void:
 	_skill_panel.visible = not _skill_panel.visible
 	_skill_swap = false
+	_skill_drag.forget()
 	if _skill_panel.visible:
 		# 맨 앞으로 — 강화 칸을 더해 1234px 가 되면서 왼쪽 테스트 단추 줄 밑으로
 		# 들어갔다. 단추 글자가 창 위에 찍혔다 (2026-09-23 캡처)
@@ -3504,6 +3448,43 @@ func _tick_ring(snap: Dictionary) -> void:
 ## 세우고 치우는 자리는 여기 한 군데다 — 고리와 같은 이유로, 죽는 길이 여럿이라
 ## 각자 지우게 두면 반드시 한 곳이 빠지고 **막대가 시체에 남는다.**
 ## 몬스터마다 매 프레임 한 번 불린다 (`_draw_state` 의 몬스터 고리 안).
+## 얼음빛 덧칠 — 모두가 같이 쓴다 (맞을 때 붉히기와 같은 `material_overlay` 방식)
+var _ice_overlay: StandardMaterial3D
+
+
+## **빙결** — 판정이 `stun_look = "ice"` 로 세운 놈은 몸이 얼음빛으로 굳는다 (빙주각 빙결).
+## 덧칠(`material_overlay`)을 입히고 동작을 멈춘다(`Rig.freeze` — 히트스톱과 같은 멈춤).
+## **매 프레임 다시 본다** — 맞을 때 붉히기가 덧칠을 걷어 가면 다음 프레임에 도로 입힌다.
+## 풀리면 얼음 덧칠만 걷는다 (붉히기 중이면 그건 두다)
+func _tick_frozen(monster: Dictionary, node: Node3D) -> void:
+	var frozen: bool = str(monster.get("state", "")) == "stun" \
+		and str(monster.get("stun_look", "")) == "ice"
+	var was: bool = node.get_meta(&"frozen", false)
+	if not frozen and not was:
+		return
+	if _ice_overlay == null:
+		_ice_overlay = StandardMaterial3D.new()
+		_ice_overlay.albedo_color = Color(0.55, 0.85, 1.0, 0.7)
+		_ice_overlay.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_ice_overlay.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_ice_overlay.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	var meshes: Array = node.get_meta(&"meshes", [])
+	if meshes.is_empty():
+		meshes = HitFx.meshes_of(node)
+		node.set_meta(&"meshes", meshes)
+	for mesh in meshes:
+		if not is_instance_valid(mesh):
+			continue
+		if frozen and mesh.material_overlay == null:
+			mesh.material_overlay = _ice_overlay
+		elif not frozen and mesh.material_overlay == _ice_overlay:
+			mesh.material_overlay = null
+	if frozen and node is Rig:
+		# 한 프레임 조금 넘게만 세운다 — 풀리는 즉시 다시 움직인다
+		(node as Rig).freeze(0.1)
+	node.set_meta(&"frozen", frozen)
+
+
 func _tick_mob_bar(monster: Dictionary, node: Node3D) -> void:
 	var id := str(monster.id)
 	var hit_until := int(_mob_bar_until.get(id, 0))
@@ -3729,6 +3710,7 @@ func _draw_state() -> void:
 		node.position.x = monster.x
 		node.position.z = monster.z
 		HitFx.apply_react(node, _last_delta)
+		_tick_frozen(monster, node)
 		node.rotation.y = monster.get("rot", 0.0)
 		if node is Rig:
 			var state := str(monster.get("state", "idle"))
@@ -3895,7 +3877,9 @@ func _show_skill(payload: Dictionary) -> void:
 		QuakeFx.slam(_fx, here, float(me.rot), "wide" in quake_up, "zone" in quake_up)
 		_camera.shake(QuakeFx.SHAKE, QuakeFx.SHAKE_TIME)
 	elif skill == "frost_pillar":
-		IceFx.burst(_fx, here, float(me.rot))
+		# 강화 — "파쇄" 면 기둥이 부서지고, "빙결" 이면 짙은 청색 (따로 논다)
+		var ice_up: Array = payload.get("upgrades", [])
+		IceFx.burst(_fx, here, float(me.rot), "shatter" in ice_up, "freeze" in ice_up)
 		_camera.shake(IceFx.SHAKE, IceFx.SHAKE_TIME)
 	else:
 		# 강화 — "부채꼴" 이면 호가 40° 길고, "연타" 면 두 번 더 긁고 보라다 (따로 논다)

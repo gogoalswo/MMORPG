@@ -928,9 +928,9 @@ func _case_bag(game: Node3D) -> void:
 	print("  닫기는 창 오른쪽 위 X 하나다")
 
 
-## 가방은 **끌어서 내린다** — 칸 단추가 끌기를 먹어 휠로만 내려갔다
-## (2026-09-24 지적: "인벤토리 ui 스크롤이 안돼"). 끌기만 하면 칸을 고르지 않고,
-## 그 자리에서 떼면 그 칸을 고른 것이다
+## 칸 목록은 **끌어서 내린다** (`DragScroll`) — 칸 단추가 끌기를 먹어 휠로만 내려갔다
+## (2026-09-24 지적: "인벤토리 ui 스크롤이 안돼" → 스킬 목록·강화 목록도 같이).
+## 끌기만 하면 칸을 누르지 않고, 그 자리에서 떼면 그 칸을 누른 것이다
 func _case_bag_drag(game: Node3D) -> void:
 	var me: Dictionary = game._transport.snapshot().players[game._transport.my_id()]
 	var kept: Array = me.bag.duplicate(true)
@@ -942,38 +942,80 @@ func _case_bag_drag(game: Node3D) -> void:
 		game._toggle_bag()
 	await process_frame
 	await process_frame
-	var list: ScrollContainer = game._bag_scroll
-	list.scroll_vertical = 0
-	var grab := list.size * 0.5
-	game._on_bag_input(_mouse(grab, true))
-	for i in 6:
-		grab.y -= 20
-		game._on_bag_input(_move(grab))
-		await process_frame
-	var dragged := list.scroll_vertical
-	game._on_bag_input(_mouse(grab, false))
-	await process_frame
-	if dragged <= 0:
-		_fail("가방을 끌었는데 안 내려갔다 (스크롤 %d)" % dragged)
-	elif game._detail_panel.visible:
-		_fail("가방을 끌기만 했는데 칸이 골라졌다 (상세 창이 떴다)")
-	else:
-		print("  가방 끌기: %dpx 내려감" % dragged)
 
-	# 끌지 않고 그 자리에서 떼면 그 칸을 고른 것이다 — 스크롤된 채로 누른 칸이어야 한다
-	var cell: Control = game._bag_grid.get_child(BAG_TAP_CELL)
-	var at: Vector2 = cell.get_global_rect().get_center() - list.global_position
-	game._on_bag_input(_mouse(at, true))
-	game._on_bag_input(_mouse(at, false))
-	await process_frame
+	# 가방 — 끈 뒤 누른 칸이 골라져야 한다 (스크롤된 채로 누른 칸)
+	await _drag_list("가방", game._bag_drag, game._bag_scroll, game._bag_grid)
+	if game._detail_panel.visible:
+		_fail("가방을 끌기만 했는데 칸이 골라졌다 (상세 창이 떴다)")
+	await _tap_cell(game._bag_drag, game._bag_scroll, game._bag_grid, BAG_TAP_CELL)
 	if not game._detail_panel.visible:
 		_fail("가방 칸을 눌렀는데 상세 창이 안 떴다")
 	elif int(game._bag_pick.get("index", -1)) != BAG_TAP_CELL:
 		_fail("%d 번 칸을 눌렀는데 %s 가 골라졌다" % [BAG_TAP_CELL, game._bag_pick])
 
+	# 강화 목록(다중 강화) — 끈 뒤 누른 칸이 담겨야 한다
+	var pop: EnhancePopup = game._enhance
+	pop.open({"where": "bag", "index": 0})
+	pop.tabs["multi"].pressed.emit()
+	await process_frame
+	await process_frame
+	pop.clear_picked()
+	await _drag_list("강화 목록", pop.list_drag, pop.list_drag._scroll, pop.list_grid)
+	if not pop.picked.is_empty():
+		_fail("강화 목록을 끌기만 했는데 담겼다 (%s)" % str(pop.picked))
+	await _tap_cell(pop.list_drag, pop.list_drag._scroll, pop.list_grid, BAG_TAP_CELL)
+	if not pop.picked.has(pop._list_view[BAG_TAP_CELL]):
+		_fail("강화 목록 %d 번 칸을 눌렀는데 %s 가 담겼다" % [BAG_TAP_CELL, str(pop.picked)])
+	pop.hide_now()
+
 	me.bag.clear()
 	me.bag.append_array(kept)
 	game._toggle_bag()
+	await process_frame
+
+	# 스킬 목록 — 직업 스킬이 두 줄을 안 넘으면 끌 거리가 없다. 누르기만 본다
+	game._toggle_skills()
+	await process_frame
+	await process_frame
+	await _drag_list("스킬 목록", game._skill_drag, game._skill_drag._scroll, game._skill_grid)
+	if game._skill_ids.size() > 1:
+		await _tap_cell(game._skill_drag, game._skill_drag._scroll, game._skill_grid, 1)
+		if game._skill_pick != game._skill_ids[1]:
+			_fail("스킬 목록 1 번 칸을 눌렀는데 '%s' 가 골라졌다" % game._skill_pick)
+	game._toggle_skills()
+	await process_frame
+
+
+## 목록 가운데를 잡아 위로 끈다. **칸 단추가 입력을 흘려보내야** 목록이 받는다.
+## 내용이 목록보다 크면 내려가야 하고, 작으면 그대로다 (범위는 고도가 죈다)
+func _drag_list(name: String, drag: DragScroll, list: ScrollContainer, grid: Container) -> void:
+	for cell in grid.get_children():
+		var hit: Control = cell.get_node_or_null("hit")
+		if hit != null and hit.mouse_filter != Control.MOUSE_FILTER_IGNORE:
+			_fail("%s 칸 단추가 입력을 먹는다 — 끌기가 목록에 안 간다" % name)
+			break
+	list.scroll_vertical = 0
+	var grab := list.size * 0.5
+	drag.on_input(_mouse(grab, true))
+	for i in 6:
+		grab.y -= 20
+		drag.on_input(_move(grab))
+		await process_frame
+	var dragged := list.scroll_vertical
+	drag.on_input(_mouse(grab, false))
+	await process_frame
+	var overflow := grid.size.y > list.size.y + 1.0
+	if overflow and dragged <= 0:
+		_fail("%s 을 끌었는데 안 내려갔다 (스크롤 %d)" % [name, dragged])
+	else:
+		print("  %s 끌기: %dpx 내려감%s" % [name, dragged, "" if overflow else " (한 화면에 다 들어간다)"])
+
+
+## 끌지 않고 i 번째 칸 가운데를 눌렀다 뗀다 — 스크롤된 채로 보이는 칸이어야 한다
+func _tap_cell(drag: DragScroll, list: ScrollContainer, grid: Container, i: int) -> void:
+	var at: Vector2 = grid.get_child(i).get_global_rect().get_center() - list.global_position
+	drag.on_input(_mouse(at, true))
+	drag.on_input(_mouse(at, false))
 	await process_frame
 
 ## 퀵슬롯과 스킬창 — 자리, 크기, 그림, 장착·해제·바꾸기.

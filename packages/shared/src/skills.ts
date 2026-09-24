@@ -528,6 +528,14 @@ export interface SkillUpgradeDef {
   zoneMs?: number;
   zoneTickMs?: number;
   zonePower?: number;
+  /**
+   * **뒤따르는 한 대** — 첫 대로 맞은 놈에게 `followMs` 뒤 `한 대 × followPower` 를 한 번 더
+   * 넣는다 (빙주각 "파쇄": 기둥이 부서질 때). 연타(`extraHits`)와 달리 간격·배율이 따로다
+   */
+  followMs?: number;
+  followPower?: number;
+  /** 기절이 **어떻게 보이나** — `ice` 면 몸이 얼음빛으로 굳는다 (빙주각 "빙결") */
+  stunLook?: 'ice';
 }
 
 /** 스킬 하나에 붙는 강화 수 */
@@ -591,6 +599,27 @@ export const SKILL_UPGRADES: SkillUpgradeDef[] = [
     zoneMs: 3000,
     zoneTickMs: 500,
     zonePower: 1.0,
+  },
+  {
+    // 이펙트는 기둥이 땅으로 꺼지는 대신 **부서져 파편이 튄다** (IceFx.SHATTER_*).
+    // 1.1초 = 첫 고리 기둥이 부서지는 때 (IceFx.shatter_at)
+    id: 'shatter',
+    skill: 'frost_pillar',
+    name: '파쇄',
+    desc: '부서지며 80% 한 번 더',
+    exp: 1000,
+    followMs: 1100,
+    followPower: 0.8,
+  },
+  {
+    // 이펙트는 맞은 몸이 얼음빛으로 굳고, 기둥이 짙은 청색이다 (IceFx.DEEP_*)
+    id: 'freeze',
+    skill: 'frost_pillar',
+    name: '빙결',
+    desc: '맞은 적 2초 빙결',
+    exp: 1000,
+    stunMs: 2000,
+    stunLook: 'ice',
   },
 ];
 

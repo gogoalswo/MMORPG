@@ -25,6 +25,7 @@ func _init() -> void:
 	_case_wide()
 	_case_claw_up()
 	_case_quake_up()
+	_case_ice_up()
 	Save.clear()
 
 	if _failed == 0:
@@ -639,3 +640,45 @@ func _case_quake_up() -> void:
 	me.skill_upgrades = {}
 	print("  천붕각 강화: 진폭 9m·15마리, 균열 지대 0.5초마다 여섯 번 (%.0f 공격력의 %.0f%%)" % [
 		float(me.stats.attack), float(Skills.upgrade("sky_breaker", "zone").get("zonePower", 0.0)) * 100.0])
+
+
+## 빙주각 강화 — "파쇄" 는 첫 대로 맞은 놈에게 1.1초 뒤 **한 대의 80%** 를 한 번 더,
+## "빙결" 은 맞은 놈을 2초 세우고 **얼음 모양**(`stun_look = "ice"`)을 단다 (2026-09-24)
+func _case_ice_up() -> void:
+	var s := _setup(1)
+	var w: World = s[0]
+	var me: Dictionary = s[1]
+	var mob: Dictionary = s[2][0]
+	mob.max_hp = 999999
+	mob.hp = 999999
+	w.learn_skill("me", "frost_pillar")
+	w.set_skill_bar("me", ["frost_pillar"])
+	var skill := Skills.get_skill("fighter", "frost_pillar")
+	var shatter := Skills.upgrade("frost_pillar", "shatter")
+	# 파쇄 — 예약 하나가 followMs 뒤, 공격 × power × followPower 로
+	me.skill_upgrades = {"frost_pillar": ["shatter"]}
+	me.skill_ready_at = {}
+	w._combos.clear()
+	var now := Time.get_ticks_msec()
+	w.cast("me", "frost_pillar")
+	var want_attack := float(me.stats.attack) * float(skill.power) * float(shatter.followPower)
+	if w._combos.size() != 1:
+		_fail("파쇄: 뒤따르는 한 대 예약이 %d개다 (하나여야 한다)" % w._combos.size())
+	else:
+		var combo: Dictionary = w._combos[0]
+		var late := int(combo.at) - now
+		if absf(float(combo.attack) - want_attack) > 1e-3 or late < int(shatter.followMs) - 20 or late > int(shatter.followMs) + 50:
+			_fail("파쇄: %dms 뒤 공격 %.2f (%dms 뒤 %.2f 여야 한다)" % [
+				late, float(combo.attack), int(shatter.followMs), want_attack])
+	w._combos.clear()
+	# 빙결 — 2초, 얼음 모양
+	me.skill_upgrades = {"frost_pillar": ["freeze"]}
+	me.skill_ready_at = {}
+	now = Time.get_ticks_msec()
+	w.cast("me", "frost_pillar")
+	var left := int(mob.stunned_until) - now
+	if str(mob.stun_look) != "ice" or left < 1900 or left > 2200 or str(mob.state) != "stun":
+		_fail("빙결: %dms · 모양 '%s' · 상태 %s (2000ms · ice · stun 여야 한다)" % [left, mob.stun_look, mob.state])
+	else:
+		print("  빙주각 강화: 파쇄 %dms 뒤 80%%, 빙결 %dms 얼음" % [int(shatter.followMs), left])
+	me.skill_upgrades = {}

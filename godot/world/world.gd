@@ -1042,6 +1042,8 @@ static func make_monster(
 		"rooted_until": 0,
 		# 기절이 풀리는 시각 (스킬 강화 — 낙뢰 기절). 그때까지 못 움직이고 못 때린다
 		"stunned_until": 0,
+		# 기절이 어떻게 보이나 — `ice` 면 화면이 몸을 얼음빛으로 굳힌다 (빙주각 빙결)
+		"stun_look": "",
 		# 정확히 겹쳤을 때 밀려날 방향. **서로 달라야 풀린다**
 		"push_angle": push_angle,
 		# --- 우회 --- 쫓는 길이 막혔을 때 옆으로 도는 방향과 남은 거리,
@@ -1633,11 +1635,27 @@ func _land(player: Dictionary, skill: Dictionary, skill_id: String, upgrades: Ar
 
 	# **기절은 첫 대에서 건다** — 살아남은 놈만. 연타가 있어도 다시 걸지 않는다
 	var stun := Skills.stun_ms(skill_id, upgrades)
+	var look := Skills.stun_look(skill_id, upgrades)
 	for target in picked:
 		_hit_monster(player, target, attack, skill_id)
 		if stun > 0 and int(target.hp) > 0:
 			target.stunned_until = now + stun
+			target.stun_look = look
 			target.state = "stun"
+
+	# **뒤따르는 한 대** (빙주각 파쇄) — 첫 대로 맞은 놈에게 정해 둔 때에 한 번 더.
+	# 연타 예약(`_combos`)을 그대로 쓴다 — 그 사이 죽은 쪽은 건너뛴다
+	for id in upgrades:
+		var up := Skills.upgrade(skill_id, str(id))
+		var follow := int(up.get("followMs", 0))
+		if follow <= 0:
+			continue
+		for target in picked:
+			_combos.append({
+				"player": player_id, "target": target,
+				"attack": attack * float(up.get("followPower", 1.0)),
+				"skill": skill_id, "at": now + follow,
+			})
 
 	# 균열 지대 — 판정 모양 그대로 땅에 남는다
 	_open_zone(player, skill_id, upgrades,

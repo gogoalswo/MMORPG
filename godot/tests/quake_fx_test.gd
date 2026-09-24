@@ -209,7 +209,7 @@ func _case_gone(game: Node3D) -> void:
 
 
 ## **강화** — "진폭" 이면 먼지 충격파·금 대신 **모래 토네이도**가 휘감아 판정 반경(9m)
-## 까지 퍼진다. "균열 지대" 면 **진흙 웅덩이 위로 소용돌이가 빨려 들고** 틱마다 여섯 번
+## 까지 퍼진다. "균열 지대" 면 **진흙 소용돌이가 빨려 들고** 틱마다 여섯 번
 ## 조여든다. 시계를 직접 넣어 본다 — 3초를 기다리지 않는다
 func _case_upgrades(game: Node3D) -> void:
 	var wide := QuakeFx.slam(game._zone_node, Vector3.ZERO, 0.0, true, false)
@@ -247,7 +247,7 @@ func _case_upgrades(game: Node3D) -> void:
 	# 먼지 충격파가 진흙을 덮어서 끈다 — 흙 알갱이만 튄다
 	if zone._emitters[0].emitting or zone._emitters[1].emitting:
 		_fail("균열 지대인데 먼지 충격파가 나왔다 — 진흙 소용돌이를 덮는다")
-	# 진흙 소용돌이 — 웅덩이가 판정 반경(6m · 진폭이면 9m)만큼 깔리고, 0.5 · … · 3.0초에
+	# 진흙 소용돌이 — 판정 반경(6m · 진폭이면 9m)만큼 돌고, 0.5 · … · 3.0초에
 	# 여섯 번 조여들고(도는 속도가 빨라진다), 지대가 끝나면 마른다
 	var mud: QuakeParts.Mud = zone._mud
 	var zone_reach := float(Skills.get_skill("fighter", "sky_breaker").get("range", 0.0))
@@ -265,11 +265,11 @@ func _case_upgrades(game: Node3D) -> void:
 		_fail("진흙: 조여듦 %d번 · 반경 %.1fm · 틱 직후 %.3f / 사이 %.3f · 끝 알파 %.2f" % [
 			mud.squeezes, full, fast, slow, mud.alpha()])
 	else:
-		print("  균열 지대: 진흙 웅덩이 %.0fm 에 띠 %d줄이 빨려 들고, 틱마다 조여든다 (%.3f → %.3f)" % [
+		print("  균열 지대: 진흙 띠 %.0fm · %d줄이 빨려 들고, 틱마다 조여든다 (%.3f → %.3f)" % [
 			full, QuakeParts.Mud.ARMS, fast, slow])
 	mud.start(true, QuakeFx.WIDE)
 	if absf(mud._radius - zone_reach * QuakeFx.WIDE) > 1e-3:
-		_fail("진폭과 같이 붙었는데 웅덩이가 %.1fm 다" % mud._radius)
+		_fail("진폭과 같이 붙었는데 소용돌이가 %.1fm 다" % mud._radius)
 	if plain._mud.active:
 		_fail("균열 지대가 없는데 진흙 소용돌이가 섰다")
 	zone.queue_free()

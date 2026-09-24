@@ -5,7 +5,7 @@ extends RefCounted
 ## 시각을 넘긴다(`tick`). 둘 다 아무것도 새로 만들지 않고 되감아 쓴다 (풀 규칙).
 ##
 ## - `Tornado` — "진폭": 모래 바람 띠가 캐릭터를 휘감으며 9m 까지 휙 돌았다 흩어진다.
-## - `Mud` — "균열 지대": 진흙 웅덩이 위로 진흙 띠가 소용돌이처럼 가운데로 빨려 들고,
+## - `Mud` — "균열 지대": 진흙 띠가 소용돌이처럼 가운데로 빨려 들고,
 ##   피해가 들어가는 0.5초마다 한 번 세게 조여든다.
 ##
 ## 2026-09-24 요청: "진폭은 모래 먼지가 토네이도 처럼 바람이 주변을 휙 감싸서 공격하게"
@@ -220,10 +220,10 @@ void fragment() {
 		return e
 
 
-## 균열 지대 **진흙 소용돌이** (3차 시안, 2026-09-24) — 내리찍은 자리가 3초 동안 질척한
-## **진흙 웅덩이**가 되고, 웅덩이 위의 **진흙 띠가 나선을 그리며 가운데로 빨려 든다.**
-## 가장자리의 진흙 덩이도 가운데로 끌려가 가라앉는다. 피해가 들어가는 틱(0.5초)마다
+## 균열 지대 **진흙 소용돌이** (3차 시안, 2026-09-24) — 내리찍은 자리에서 3초 동안
+## **진흙 띠가 나선을 그리며 가운데로 빨려 든다.** 피해가 들어가는 틱(0.5초)마다
 ## 소용돌이가 **한 번 세게 조여든다** (도는 속도가 확 빨라졌다 풀리고 살짝 오므라든다).
+## 처음엔 갈색 웅덩이와 끌려가는 진흙 덩이도 있었는데 걷었다 (사용자 요청) — 띠만 남는다.
 ##
 ## 요청: "균열지대 이펙트 별로다. 진흙이 소용돌이처럼 빨려들어가는 이펙트로" — 그 전의
 ## 용암 분수(2차)·붉은 틈(1차)은 거절됐다.
@@ -233,9 +233,9 @@ void fragment() {
 class Mud:
 	extends Node3D
 
-	## 웅덩이 반지름(m) — 천붕각 사거리와 같다. 진폭이면 `mul` 배 (판정 반경과 같다)
+	## 소용돌이 반지름(m) — 천붕각 사거리와 같다. 진폭이면 `mul` 배 (판정 반경과 같다)
 	const RADIUS := 6.0
-	## 웅덩이가 번지는 시간 · 다 끝나고 마르는 시간
+	## 소용돌이가 번지는 시간 · 다 끝나고 흐려지는 시간
 	const GROW := 0.3
 	const DRY := 0.6
 	## 나선 띠 수 · 띠 하나가 바깥에서 가운데까지 감기는 바퀴 수 · 점 수
@@ -254,14 +254,11 @@ class Mud:
 	const SQUEEZE_SHRINK := 0.08
 	## 띠 무늬가 가운데로 흘러드는 빠르기 (띠 길이 비율/초)
 	const FLOW := 0.9
-	## 웅덩이는 짙고 띠는 조금 밝은 젖은 흙이다 — 같으면 띠가 안 보인다
-	## 1차는 짙은 웅덩이가 **어두운 바닥에 묻혀 안 보였고**, 띠의 밝은 줄이 **주황 고리**였다.
-	## 웅덩이는 바닥보다 밝은 젖은 흙, 띠는 그보다 짙은 진흙, 줄은 옅은 흙빛이다
-	const COLOR_POOL := Color(0.36, 0.25, 0.14, 0.92)
+	## 띠는 짙은 진흙, 가운데 줄은 옅은 흙빛이다. **갈색 웅덩이와 진흙 덩이는 걷었다**
+	## (2026-09-24 요청: "아래 회오리는 냅두고 갈색 바닥이랑 조그만한 모래알 같은 파티클은
+	## 제거해") — 소용돌이 띠만 남는다
 	const COLOR_ARM := Color(0.11, 0.07, 0.035, 0.95)
 	const COLOR_SHEEN := Color(0.72, 0.6, 0.44, 0.85)
-	const COLOR_CLUMP := Color("#4a3320")
-	const CLUMPS := 36
 
 	## 점마다: `VERTEX.x` = 각(rad), `VERTEX.z` = 반지름 비율(바깥 1 → 가운데 0).
 	## `UV.x` = 폭 방향(0~1), `UV.y` = 띠를 따라(바깥 0 → 가운데 1).
@@ -287,7 +284,7 @@ void fragment() {
 	float body = smoothstep(0.0, 0.3, t.a);
 	// 띠를 따라 끊긴 무늬가 **가운데로 흘러든다** — 가만히 도는 띠는 빨려 드는 것으로 안 읽힌다
 	float dash = 0.7 + 0.3 * sin((UV.y * 5.0 - flow) * 6.2832);
-	// 바깥 끝은 웅덩이에 녹아들고, 가운데 끝은 가라앉아 사라진다
+	// 바깥 끝은 바닥에 녹아들고, 가운데 끝은 가라앉아 사라진다
 	float ends = smoothstep(0.0, 0.12, UV.y) * (1.0 - smoothstep(0.85, 1.0, UV.y));
 	ALBEDO = tint.rgb;
 	ALPHA = tint.a * body * dash * ends;
@@ -304,32 +301,11 @@ void fragment() {
 	var _next := 0.0
 	var _since := 99.0
 	var _radius := RADIUS
-	var _pool: MeshInstance3D
 	var _arms: Array = []
-	var _clumps: CPUParticles3D
 
 	func build() -> void:
-		# 웅덩이 — 가장자리가 부드러운 원판 (`FxTex.glow` 를 알파로). 금보다 위에 깐다 —
-		# 갈라진 틈이 진흙 속으로 묻힌다
-		_pool = MeshInstance3D.new()
-		var quad := QuadMesh.new()
-		quad.size = Vector2(2.0, 2.0)
-		quad.orientation = PlaneMesh.FACE_Y
-		_pool.mesh = quad
-		var pool_mat := StandardMaterial3D.new()
-		pool_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		pool_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		# 가장자리가 불규칙한 얼룩 — 동그란 원판이면 웅덩이가 아니라 표지판이다
-		pool_mat.albedo_texture = FxTex.pool()
-		pool_mat.albedo_color = COLOR_POOL
-		# **그리는 순서를 못 박는다** — 웅덩이와 띠가 둘 다 투명이고 중심이 같아 순서가
-		# 제멋대로라, 92% 불투명한 웅덩이가 띠를 덮어 띠가 옅은 고랑으로만 보였다
-		pool_mat.render_priority = -1
-		_pool.material_override = pool_mat
-		_pool.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		_pool.position.y = QuakeFx.GROUND + 0.03
-		add_child(_pool)
-		# 띠 두 겹 — 젖은 흙 띠 + 가운데 번들거리는 줄
+		# 띠 두 겹 — 젖은 흙 띠 + 가운데 번들거리는 줄. **그리는 순서를 못 박는다** —
+		# 둘 다 투명이고 중심이 같아 순서가 제멋대로면 줄이 띠 밑에 깔린다
 		var order := 1
 		for layer in [[ARM_WIDTH, COLOR_ARM, 0.05], [ARM_WIDTH * 0.45, COLOR_SHEEN, 0.06]]:
 			var node := MeshInstance3D.new()
@@ -343,11 +319,9 @@ void fragment() {
 			node.position.y = QuakeFx.GROUND + float(layer[2])
 			add_child(node)
 			_arms.append({"node": node, "color": layer[1]})
-		_clumps = _make_clumps()
-		add_child(_clumps)
 		visible = false
 
-	## 되감는다. `mul` 은 진폭 배율 — 웅덩이도 판정 반경만큼 넓어진다
+	## 되감는다. `mul` 은 진폭 배율 — 소용돌이도 판정 반경만큼 넓어진다
 	func start(on: bool, mul: float) -> void:
 		active = on
 		visible = on
@@ -357,9 +331,6 @@ void fragment() {
 		_since = 99.0
 		_next = QuakeFx.ZONE_TICK
 		_radius = RADIUS * mul
-		_clumps.emission_ring_radius = _radius * 0.95
-		_clumps.emission_ring_inner_radius = _radius * 0.6
-		_clumps.emitting = false
 		_show()
 
 	func tick(delta: float) -> void:
@@ -373,10 +344,9 @@ void fragment() {
 			_next += QuakeFx.ZONE_TICK
 		# 평소엔 천천히, 틱 직후엔 확 빨라졌다 풀린다. **가운데로 감겨 드는 쪽**으로 돈다
 		_spin += (SPIN + SQUEEZE_SPIN * exp(-_since / SQUEEZE_DECAY)) * delta
-		_clumps.emitting = _t < QuakeFx.ZONE_TIME
 		_show()
 
-	## 지금 반지름 — 틱 직후 살짝 오므라든다
+	## 지금 반지름 — 틱 직후 살짝 오므라든다 (테스트가 판정 반경과 맞춰 본다)
 	func radius() -> float:
 		var grow := clampf(_t / GROW, 0.0, 1.0)
 		return _radius * sqrt(grow) * (1.0 - SQUEEZE_SHRINK * exp(-_since / SQUEEZE_DECAY))
@@ -387,10 +357,6 @@ void fragment() {
 	func _show() -> void:
 		var a := alpha() if active else 0.0
 		var r := radius()
-		_pool.visible = active and a > 0.0
-		_pool.scale = Vector3(r * 1.12, 1.0, r * 1.12)
-		var pool_mat: StandardMaterial3D = _pool.material_override
-		pool_mat.albedo_color = Color(COLOR_POOL.r, COLOR_POOL.g, COLOR_POOL.b, COLOR_POOL.a * a)
 		for arm in _arms:
 			var node: MeshInstance3D = arm.node
 			node.visible = active and a > 0.0
@@ -442,38 +408,3 @@ void fragment() {
 		_mesh = ArrayMesh.new()
 		_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 		return _mesh
-
-	## 가장자리에서 가운데로 끌려가는 진흙 덩이 — **안으로 당기고**(`radial_accel` 음수)
-	## 옆으로 돌리며(`tangential_accel`) 땅에 붙어 있다가 가라앉는다
-	func _make_clumps() -> CPUParticles3D:
-		var e := CPUParticles3D.new()
-		e.amount = CLUMPS
-		e.lifetime = 1.1
-		e.explosiveness = 0.0
-		var dot := QuadMesh.new()
-		dot.size = Vector2(0.45, 0.45)
-		e.mesh = dot
-		e.emission_shape = CPUParticles3D.EMISSION_SHAPE_RING
-		e.emission_ring_axis = Vector3.UP
-		e.emission_ring_radius = RADIUS * 0.95
-		e.emission_ring_inner_radius = RADIUS * 0.6
-		e.emission_ring_height = 0.0
-		e.position.y = 0.15
-		e.direction = Vector3.UP
-		e.spread = 10.0
-		e.initial_velocity_min = 0.3
-		e.initial_velocity_max = 0.8
-		e.radial_accel_min = -9.0
-		e.radial_accel_max = -6.0
-		e.tangential_accel_min = 4.0
-		e.tangential_accel_max = 7.0
-		e.gravity = Vector3(0.0, -1.5, 0.0)
-		e.scale_amount_curve = LightningFx.grow_curve(0.3)
-		e.color = COLOR_CLUMP
-		e.color_ramp = LightningFx.fade_ramp(COLOR_CLUMP, 0.95)
-		var mat := LightningFx.mote(COLOR_CLUMP)
-		mat.albedo_color = Color.WHITE
-		mat.albedo_texture = FxTex.puff()
-		e.material_override = mat
-		e.emitting = false
-		return e

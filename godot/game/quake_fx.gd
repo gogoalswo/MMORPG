@@ -102,7 +102,7 @@ const WIDE := 1.5
 const ZONE_TIME := 3.0
 ## 지대 피해 간격 — 판정의 `zoneTickMs`(0.5초). 틱마다 소용돌이가 한 번 세게 조여든다
 const ZONE_TICK := 0.5
-## 지대가 끝나고 웅덩이가 마르는 시간 (`QuakeParts.Mud.DRY` 와 같다)
+## 지대가 끝나고 소용돌이가 흐려지는 시간 (`QuakeParts.Mud.DRY` 와 같다)
 const ZONE_FADE := 0.6
 const COLOR_GLOW := Color("#ffb13c")
 const COLOR_FLARE := Color("#ffd27a")
@@ -172,7 +172,7 @@ static func slam(parent: Node3D, at: Vector3, facing: float, wide := false, zone
 	return fx
 
 
-## 끝나는 시각(초). 지대면 진흙 웅덩이가 마를 때까지
+## 끝나는 시각(초). 지대면 진흙 소용돌이가 사라질 때까지
 static func span(zone := false) -> float:
 	var ground := ZONE_TIME + ZONE_FADE if zone else CRACK_LIFE
 	return maxf(ground, maxf(PUFF_LIFE, CORE_LIFE)) + 0.1
@@ -237,7 +237,7 @@ func _start(at: Vector3, facing: float, wide := false, zone := false) -> void:
 		node.scale = Vector3(_mul, 1.0, _mul)
 	_stain.rotation.y = facing
 	# **진폭이면 먼지 충격파·금 대신 모래 토네이도**가 휘감는다 (2026-09-24 요청).
-	# 균열 지대가 같이 붙으면 금은 남긴다 (1.5배, 진흙 밑에 묻힌다)
+	# 균열 지대가 같이 붙으면 금은 남긴다 (1.5배)
 	_ground = zone or not wide
 	_tornado.start(wide)
 	_mud.start(zone, _mul)
@@ -252,9 +252,10 @@ func _process(delta: float) -> void:
 		_started = true
 		# 되감아 쓰는 방출기라 켜기(`emitting`)가 아니라 처음부터 다시(`restart`)
 		# 진폭이면 먼지 충격파(앞머리·덩이·기둥)는 토네이도가 대신한다 — 흙 알갱이만 튄다.
-		# 균열 지대면 먼지가 진흙 소용돌이를 덮어서(캡처) 역시 끈다
+		# 균열 지대면 먼지가 진흙 소용돌이를 덮어서(캡처) 역시 끄고, **흙 알갱이도 끈다**
+		# (2026-09-24 "조그만한 모래알 같은 파티클은 제거해")
 		for i in _emitters.size():
-			if not (_tornado.active or _mud.active) or i == 3:
+			if not (_tornado.active or _mud.active) or (i == 3 and not _mud.active):
 				_emitters[i].restart()
 	_t += delta
 	_tornado.tick(delta)
@@ -272,7 +273,7 @@ func finish() -> void:
 
 ## 금은 **셰이더가 자라게** 하고, 여기서는 시각과 알파만 넣는다
 func _show_cracks() -> void:
-	# 마지막 0.8초에만 흐려진다 — 금은 남는 자국이다 (지대면 진흙 웅덩이 밑에 묻힌다)
+	# 마지막 0.8초에만 흐려진다 — 금은 남는 자국이다
 	var fade := clampf((CRACK_LIFE - _t) / CRACK_FADE, 0.0, 1.0)
 	var heat := clampf(1.0 - _t / GLOW_LIFE, 0.0, 1.0)
 	var crack: ShaderMaterial = _crack.material_override

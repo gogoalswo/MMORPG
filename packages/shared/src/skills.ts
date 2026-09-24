@@ -52,6 +52,12 @@ export interface SkillDef {
   hits?: number;
   /** 연타 간격 (ms). `hits` 가 2 이상일 때만 쓴다 */
   hitGap?: number;
+  /**
+   * 누른 뒤 **이만큼 지나서** 대상을 고르고 때린다 (ms, 없으면 0 = 누르는 순간).
+   * 뛰어올랐다 내려찍는 동작처럼 부딪히는 순간이 늦은 스킬에 쓴다 — 이펙트도 같은
+   * 시각에 선다. 그동안 발이 묶인다(경직이 이 값보다 짧으면 이 값까지 늘린다)
+   */
+  delayMs?: number;
   /** 자기 회복량 (최대 체력 대비 비율). 있으면 공격 대신 회복만 한다 */
   selfHeal?: number;
   /** 날아가는 무언가가 보여야 하는 스킬 */
@@ -406,6 +412,9 @@ const SKILL_LIST: SkillDef[] = [
     job: 'fighter',
     cooldown: 55000,
     range: 6.0,
+    // 뛰어올랐다 내려찍는 동작의 착지 시각 (2026-09-24 요청: "점프해서 땅을 강하게 내려 찍는").
+    // 동작(`fighter_moves.py` 의 SkyBreaker)이 0.42초에 땅을 찍는다 — 둘은 같이 고친다
+    delayMs: 420,
     arc: Math.PI * 2,
     power: 5.5,
     maxTargets: 10,
@@ -557,11 +566,12 @@ export const SKILL_UPGRADES: SkillUpgradeDef[] = [
     id: 'zone',
     skill: 'sky_breaker',
     name: '균열 지대',
-    desc: '3초간 0.5초마다 40% 피해',
+    // 처음엔 40% 였다 — "너무 약해" 로 100% 로 올렸다 (2026-09-24)
+    desc: '3초간 0.5초마다 100% 피해',
     exp: 1000,
     zoneMs: 3000,
     zoneTickMs: 500,
-    zonePower: 0.4,
+    zonePower: 1.0,
   },
 ];
 

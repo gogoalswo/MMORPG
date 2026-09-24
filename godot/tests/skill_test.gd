@@ -166,10 +166,20 @@ func _case_multi() -> void:
 	w.drain_events()
 
 	w.cast("me", "sky_breaker")
+	# 뛰어올랐다 내려찍는다 — **누르는 순간에는 아무도 안 맞고**, 착지(`delayMs`)에 맞는다
+	var landing := int(w._landings[0].at) if not w._landings.is_empty() else 0
+	if not _hits(w.drain_events()).is_empty():
+		_fail("천붕각이 착지 전에 맞았다")
+	w._run_landings(landing - 1)
+	if not _hits(w.drain_events()).is_empty():
+		_fail("천붕각이 착지 1ms 전에 맞았다")
+	w._run_landings(landing)
 	var hits := 0
 	for e in w.drain_events():
 		if e.get("type", "") == "hit":
 			hits += 1
+	if not w._landings.is_empty():
+		_fail("떨어졌는데 대기열에 %d개 남았다" % w._landings.size())
 	if hits != 3:
 		_fail("천붕각이 3마리를 쳐야 하는데 %d마리" % hits)
 	else:
@@ -266,6 +276,7 @@ func _case_range() -> void:
 	w.set_skill_bar("me", ["sky_breaker"])
 	w.drain_events()
 	w.cast("me", "sky_breaker")
+	w._run_landings(Time.get_ticks_msec() + 100000)
 	var events := w.drain_events()
 	var round_shape := _first(events, "skillRange")
 	var hits := 0
@@ -506,7 +517,7 @@ func _case_claw_up() -> void:
 
 
 ## 천붕각 강화 — "진폭" 은 반경 6 → 9m · 대상 10 → 15, "균열 지대" 는 시전한 자리에
-## 3초 동안 0.5초마다 공격력 40% (여섯 번). 지대는 **틱마다 대상을 다시 고른다** (2026-09-23)
+## 3초 동안 0.5초마다 공격력 × `zonePower`(표에서 읽는다) 여섯 번. 지대는 **틱마다 대상을 다시 고른다** (2026-09-23)
 func _case_quake_up() -> void:
 	var s := _setup(1)
 	var w: World = s[0]
@@ -521,6 +532,7 @@ func _case_quake_up() -> void:
 	me.skill_ready_at = {}
 	w.drain_events()
 	w.cast("me", "sky_breaker")
+	w._run_landings(Time.get_ticks_msec() + 100000)
 	var shape := _first(w.drain_events(), "skillRange")
 	if absf(float(shape.get("reach", 0.0)) - 9.0) > 1e-3 or int(shape.get("max_targets", 0)) != 15:
 		_fail("진폭: 반경 %.1f · 대상 %d (9 · 15 여야 한다)" % [float(shape.reach), int(shape.max_targets)])
@@ -532,6 +544,7 @@ func _case_quake_up() -> void:
 	w.drain_events()
 	var now := Time.get_ticks_msec()
 	w.cast("me", "sky_breaker")
+	w._run_landings(Time.get_ticks_msec() + 100000)
 	w.drain_events()
 	if w._zones.size() != 1:
 		_fail("균열 지대가 %d개 생겼다" % w._zones.size())
@@ -549,15 +562,18 @@ func _case_quake_up() -> void:
 	# 0.5 · 1.0 · … · 3.0 초 — 여섯 번, 3.5초에는 없다
 	if ticks != [1, 1, 1, 1, 1, 1, 0] or not w._zones.is_empty():
 		_fail("균열 지대 틱이 %s 이다 ([1×6, 0] 이어야 한다)" % str(ticks))
-	# 한 틱 = 공격력 × 0.4 로 친 피해 (방어 0 · 치명타가 아닌 대만 본다)
-	var want := roundi(Stats.damage(float(me.stats.attack) * 0.4, int(me.level), 0.0))
+	# 한 틱 = 공격력 × zonePower 로 친 피해 (방어 0 · 치명타가 아닌 대만 본다).
+	# 배율은 표에서 읽는다 — 40% → 100% 처럼 수치만 바뀌어도 테스트를 안 고치게
+	var power := float(Skills.upgrade("sky_breaker", "zone").get("zonePower", 0.0))
+	var want := roundi(Stats.damage(float(me.stats.attack) * power, int(me.level), 0.0))
 	for amount in amounts:
 		if int(amount) != want:
-			_fail("균열 지대 한 틱이 %d 다 (공격력 40%% = %d 여야 한다)" % [amount, want])
+			_fail("균열 지대 한 틱이 %d 다 (공격력 %.0f%% = %d 여야 한다)" % [amount, power * 100.0, want])
 			break
 	# 지대 밖으로 나간 놈은 안 맞는다 — 틱마다 다시 고른다
 	me.skill_ready_at = {}
 	w.cast("me", "sky_breaker")
+	w._run_landings(Time.get_ticks_msec() + 100000)
 	w.drain_events()
 	start = int(w._zones[0].until) - 3000
 	mob.x = 30.0
@@ -566,4 +582,5 @@ func _case_quake_up() -> void:
 		_fail("지대 밖으로 나간 놈이 맞았다")
 	w._zones.clear()
 	me.skill_upgrades = {}
-	print("  천붕각 강화: 진폭 9m·15마리, 균열 지대 0.5초마다 여섯 번 (%.0f 공격력의 40%%)" % float(me.stats.attack))
+	print("  천붕각 강화: 진폭 9m·15마리, 균열 지대 0.5초마다 여섯 번 (%.0f 공격력의 %.0f%%)" % [
+		float(me.stats.attack), float(Skills.upgrade("sky_breaker", "zone").get("zonePower", 0.0)) * 100.0])

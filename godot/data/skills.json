@@ -292,7 +292,7 @@
       "job": "fighter",
       "cooldown": 12000,
       "range": 4,
-      "arc": 1.8849555921538759,
+      "arc": 6.283185307179586,
       "power": 4.2,
       "maxTargets": 4,
       "reqLevel": 30,

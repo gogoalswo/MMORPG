@@ -431,7 +431,7 @@ const SKILL_LIST: SkillDef[] = [
      * 그래서 **손이 닿는 사거리(4m)** 로 둔다: 그보다 길면 `skills.test.ts` 의
      * "한 방향으로 쏘는 스킬에는 투사체가 붙어 있다" 에 걸리고, 실제로도 아무것도
      * 안 날아가는데 멀리서 맞는 것이 된다. 번개는 **시전자가 선 자리**에 떨어지므로
-     * (`LightningFx.AHEAD` 0) 판정 부채꼴의 한가운데다 — 2026-09-18 에 앞 2.8m 에서
+     * (`LightningFx.AHEAD` 0) 판정 원의 한가운데다 — 2026-09-18 에 앞 2.8m 에서
      * 옮겼다.
      */
     id: 'thunder_fall',
@@ -439,7 +439,9 @@ const SKILL_LIST: SkillDef[] = [
     job: 'fighter',
     cooldown: 12000,
     range: 4.0,
-    arc: Math.PI * 0.6,
+    // **내 주위 원**이다 (2026-09-24 요청: "낙뢰 범위가 부채꼴인데 원 범위로 바꿔").
+    // 처음엔 108° 부채꼴이었다 — 번개가 발밑에 떨어지는데 뒤에 선 놈이 안 맞았다
+    arc: Math.PI * 2,
     power: 4.2,
     maxTargets: 4,
     reqLevel: 30,

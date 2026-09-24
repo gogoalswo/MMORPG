@@ -294,17 +294,19 @@ func _case_range() -> void:
 
 	# **그려질 모양과 맞은 놈이 같은가** — 이 도구의 값어치가 전부 여기 있다.
 	# 각을 반대로 재거나 좌우가 뒤집히면 "표시는 맞는데 안 맞는" 게 되고,
-	# 그건 디버그 도구로서 없느니만 못하다. 좁은 부채꼴(낙뢰 108°)로 보되
-	# **반경 안이지만 옆에 선 놈**을 하나 두어 양쪽을 다 건다
-	# 정면(+x)에서 90도 꺾인 자리 — 반경 4m 안이지만 108도 부채꼴 밖이다
+	# 그건 디버그 도구로서 없느니만 못하다. 좁은 부채꼴(할퀴기 120°)로 보되
+	# **반경 안이지만 옆에 선 놈**을 하나 두어 양쪽을 다 건다. (낙뢰 108° 로 보다가
+	# 2026-09-24 에 낙뢰가 원이 되어 할퀴기로 옮겼다)
+	# 정면(+x)에서 90도 꺾인 자리 — 반경 3m 안이지만 120도 부채꼴 밖이다
 	var aside := World.make_monster(
 		"aside", GameData.monster_kind("mob003"), 0.0, 2.0, 10000.0, 0.0
 	)
 	s[2].append(aside)
-	w.learn_skill("me", "thunder_fall")
-	w.set_skill_bar("me", ["thunder_fall"])
+	w.learn_skill("me", "rising_kick")
+	w.set_skill_bar("me", ["rising_kick"])
 	w.drain_events()
-	w.cast("me", "thunder_fall")
+	w.cast("me", "rising_kick")
+	w._combos.clear()
 	var fan_events := w.drain_events()
 	var fan := _first(fan_events, "skillRange")
 	var struck: Array = []
@@ -312,7 +314,7 @@ func _case_range() -> void:
 		if e.get("type", "") == "hit":
 			struck.append(str(e.target))
 	if float(fan.arc) >= TAU:
-		_fail("낙뢰는 좁은 부채꼴이어야 한다 (%.2f)" % fan.arc)
+		_fail("할퀴기는 좁은 부채꼴이어야 한다 (%.2f)" % fan.arc)
 	for mob in s[2]:
 		var dx: float = float(mob.x) - float(fan.x)
 		var dz: float = float(mob.z) - float(fan.z)
@@ -336,14 +338,9 @@ func _case_range() -> void:
 	w.learn_skill("me", "explosive_arrow")
 	w.set_skill_bar("me", ["explosive_arrow"])
 	w.drain_events()
-	w.cast("me", "explosive_arrow")
-	var far := _first(w.drain_events(), "skillRange")
-	var arrow := Skills.get_skill("archer", "explosive_arrow")
-	if far.is_empty():
-		_fail("원거리 범위가 안 실려 왔다")
-		return
 	# 앞선 시전에 쓰러진 놈이 있을 수 있다 — **살아 있는 것 중 가장 가까운 놈**이
-	# 겨눠진다 (`World.cast` 가 `_pick_targets` 로 하나만 고른다)
+	# 겨눠진다 (`World.cast` 가 `_pick_targets` 로 하나만 고른다). **쏘기 전에** 고른다 —
+	# 쏘고 나서 고르면 화살이 그놈을 죽여 다음 놈을 기대하게 된다
 	var mob: Dictionary = {}
 	var best := INF
 	for m in s[2]:
@@ -353,6 +350,12 @@ func _case_range() -> void:
 		if gap < best:
 			best = gap
 			mob = m
+	w.cast("me", "explosive_arrow")
+	var far := _first(w.drain_events(), "skillRange")
+	var arrow := Skills.get_skill("archer", "explosive_arrow")
+	if far.is_empty():
+		_fail("원거리 범위가 안 실려 왔다")
+		return
 	if not (is_equal_approx(far.x, float(mob.x)) and is_equal_approx(far.z, float(mob.z))):
 		_fail("착탄점이 겨눈 놈(%s) 자리가 아니다 (%.1f, %.1f)" % [mob.id, far.x, far.z])
 	if not is_equal_approx(float(far.reach), Skills.blast_radius(arrow)):

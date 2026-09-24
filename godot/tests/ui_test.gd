@@ -333,12 +333,11 @@ func _case_status(game: Node3D) -> void:
 
 	# 오른쪽 위 메뉴 — 화면 안, 묶음과 안 겹침.
 	# 스킬·가방·던전·설계(디버그) 넷이다 — 설계 재현 창은 문서 9장 5번의 디버그 수단이다
-	# 스킬 · 강화 · 가방 · 던전 · 설계 (강화는 2026-09-24 에 가방 왼쪽 옆에 더했다)
-	if game._menu_cells.size() != 5:
-		_fail("오른쪽 위 단추가 5개여야 하는데 %d개" % game._menu_cells.size())
+	if game._menu_cells.size() != 4:
+		_fail("오른쪽 위 단추가 4개여야 하는데 %d개" % game._menu_cells.size())
 		return
 	var skill_rect: Rect2 = game._menu_cells[0].get_global_rect()
-	var bag_rect: Rect2 = game._menu_cells[2].get_global_rect()
+	var bag_rect: Rect2 = game._menu_cells[1].get_global_rect()
 	if bag_rect.end.x > screen.x or skill_rect.position.y < 0.0 or bag_rect.position.y > 120.0:
 		_fail("메뉴 단추가 오른쪽 위에 안 붙었다: %s / %s" % [skill_rect, bag_rect])
 	if skill_rect.intersects(hp_rect) or skill_rect.intersects(badge):
@@ -350,21 +349,11 @@ func _case_status(game: Node3D) -> void:
 	if not game._skill_panel.visible:
 		_fail("오른쪽 위 스킬 단추를 눌렀는데 스킬창이 안 열렸다")
 	game._toggle_skills()
-	game._menu_cells[2].find_child("hit", true, false).pressed.emit()
+	game._menu_cells[1].find_child("hit", true, false).pressed.emit()
 	await process_frame
 	if not game._bag_panel.visible:
 		_fail("오른쪽 위 가방 단추를 눌렀는데 가방이 안 열렸다")
 	game._toggle_bag()
-	await process_frame
-	# 강화 — 가방 **바로 왼쪽**이고, 누르면 강화 창이 대상 없이 뜬다
-	var enh_rect: Rect2 = game._menu_cells[1].get_global_rect()
-	if absf(bag_rect.position.x - enh_rect.end.x) > 12.0 or absf(enh_rect.position.y - bag_rect.position.y) > 1.0:
-		_fail("강화 단추가 가방 옆이 아니다: 강화 %s · 가방 %s" % [enh_rect, bag_rect])
-	game._menu_cells[1].find_child("hit", true, false).pressed.emit()
-	await process_frame
-	if not game._enhance_layer.visible or not game._enhance_go.disabled:
-		_fail("오른쪽 위 강화 단추로 강화 창이 안 떴다 (또는 대상 없이 단추가 켜졌다)")
-	game._close_enhance()
 	await process_frame
 	print("  퀵슬롯 위: %s · %s · 체력 %s (막대 %.0fpx · 게이지 %.0fpx)" % [game._level_label.text, game._exp_text.text, game._hp_text.text, hp_rect.size.x, gauge.size.x])
 
@@ -372,15 +361,15 @@ func _case_status(game: Node3D) -> void:
 ## 던전 — 가방 옆 단추 → 종류 셋 → 단계 목록 → 들어가면 보스 한 마리 (docs/features/dungeons.md)
 func _case_dungeon(game: Node3D) -> void:
 	var panel: DungeonPanel = game._dungeon_panel
-	var bag_rect: Rect2 = game._menu_cells[2].get_global_rect()
-	var cell_rect: Rect2 = game._menu_cells[3].get_global_rect()
+	var bag_rect: Rect2 = game._menu_cells[1].get_global_rect()
+	var cell_rect: Rect2 = game._menu_cells[2].get_global_rect()
 	# 가방 **바로 옆**이다 (2026-09-23 요청)
 	if absf(cell_rect.position.x - bag_rect.end.x) > 12.0 or absf(cell_rect.position.y - bag_rect.position.y) > 1.0:
 		_fail("던전 단추가 가방 옆이 아니다: 가방 %s · 던전 %s" % [bag_rect, cell_rect])
 	# 글자가 아니라 그림(ui_icon_dungeon)이 나와야 한다
-	if game._menu_cells[3].find_children("*", "TextureRect", true, false).is_empty():
+	if game._menu_cells[2].find_children("*", "TextureRect", true, false).is_empty():
 		_fail("던전 단추에 그림이 없다 — npm run sync:godot 을 돌렸나 (ui_icon_dungeon)")
-	game._menu_cells[3].find_child("hit", true, false).pressed.emit()
+	game._menu_cells[2].find_child("hit", true, false).pressed.emit()
 	await process_frame
 	if not panel.visible:
 		_fail("던전 단추를 눌렀는데 창이 안 떴다")
@@ -857,29 +846,6 @@ func _case_bag(game: Node3D) -> void:
 		await process_frame
 		if game._enhance_layer.visible:
 			_fail("강화 팝업 X 를 눌렀는데 그대로다")
-		# 오른쪽 위 "강화" 로 열면 대상이 없다 — 왼쪽 목록(끼운 것 + 가방의 장비)에서 고른다
-		game._toggle_enhance()
-		await process_frame
-		var gear_count: int = me.bag.filter(
-			func(s: Dictionary) -> bool: return not Items.get_item(str(s.id)).is_empty()
-		).size() + me.equipped.size()
-		if game._enhance_grid.get_child_count() != gear_count:
-			_fail("강화 목록이 %d칸 (장비 %d개)" % [game._enhance_grid.get_child_count(), gear_count])
-		elif gear_count > 0:
-			game._enhance_grid.get_child(0).get_node("hit").pressed.emit()
-			await process_frame
-			if game._enhance_target.is_empty() or game._enhance_go.disabled == Items.can_enhance(
-				int(game._stack_at(game._enhance_target).get("enhance", 0))
-			):
-				_fail("목록 첫 칸을 눌렀는데 대상 %s · 단추 꺼짐 %s" % [game._enhance_target, game._enhance_go.disabled])
-			elif not game._enhance_grid.get_child(0).get_node("pick").visible:
-				_fail("고른 목록 칸에 금테가 없다")
-			var list_box: Rect2 = game._enhance_panel.get_global_rect()
-			if not Rect2(Vector2.ZERO, Vector2(1280, 720)).encloses(list_box):
-				_fail("목록을 붙인 강화 창이 화면 밖으로 나갔다: %s" % list_box)
-			print("  강화 창(오른쪽 위): 목록 %d칸 · 창 %s · 고른 것 '%s'" % [gear_count, list_box, game._enhance_name.text])
-		game._close_enhance()
-		await process_frame
 
 	# 장비 창은 따로 닫고 다시 연다 (자기 X · 인벤토리의 "장비" 단추)
 	var gear_mark: Control = game._gear_panel.find_child("close", true, false)

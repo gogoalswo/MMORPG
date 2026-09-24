@@ -1156,7 +1156,7 @@ func _case_skills(game: Node3D) -> void:
 	var band: Rect2 = game._range_button.get_global_rect()
 	if band.position.x > 40 or band.end.y > shield.position.y:
 		_fail("스킬 범위 단추가 무적 단추 위(왼쪽 아래)가 아니다: %s" % band)
-	var shape := {"x": 1.0, "z": 2.0, "reach": 4.0, "arc": TAU, "facing": 0.0, "hits": 3, "max_targets": 5, "skill": "thunder_fall"}
+	var shape := {"x": 1.0, "z": 2.0, "reach": 4.0, "arc": TAU, "facing": 0.0, "hits": 3, "skill": "thunder_fall"}
 	game._on_event(&"skillRange", shape)
 	if not game._range_marks.is_empty():
 		_fail("꺼 뒀는데 범위를 그렸다")
@@ -1164,14 +1164,14 @@ func _case_skills(game: Node3D) -> void:
 	game._on_event(&"skillRange", shape)
 	if game._range_marks.size() != 1:
 		_fail("켰는데 범위를 안 그렸다 (%d개)" % game._range_marks.size())
-	elif not game._range_label.text.contains("3/5"):
+	elif not game._range_label.text.contains("3 마리"):
 		_fail("맞은 수가 안 적혔다: '%s'" % game._range_label.text)
 	game._range_button.pressed.emit()
 	await process_frame
 	if not game._range_marks.is_empty() or game._range_label.text != "":
 		_fail("껐는데 떠 있던 범위가 안 치워졌다")
 	print("  스킬 범위 단추: 꺼 두면 안 그리고, 켜면 그리며 '%s' (%s)" % [
-		"3/5 마리", band
+		"3 마리", band
 	])
 
 	# 새 문구 글자가 폰트에 있나 (부분집합이라 빠질 수 있다)

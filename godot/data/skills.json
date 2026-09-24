@@ -388,10 +388,9 @@
       "id": "wide",
       "skill": "sky_breaker",
       "name": "진폭",
-      "desc": "범위 50% · 대상 +5",
+      "desc": "범위 50% 증가",
       "exp": 1000,
-      "rangeMul": 1.5,
-      "targetsAdd": 5
+      "rangeMul": 1.5
     },
     {
       "id": "zone",

@@ -158,9 +158,15 @@ func _case_cast() -> void:
 
 
 func _case_multi() -> void:
-	# 천붕각 maxTargets 10, 전방위(arc 2PI) — 앞에 셋을 놓으면 셋 다 맞아야 한다
+	# 천붕각 전방위(arc 2PI) — **범위에 든 놈은 명수 상한 없이 전부 맞는다.**
+	# 표의 `maxTargets` 10 을 넘기려고 앞에 셋, 둘레 3m 에 아홉 더 해서 열두 마리를 세운다
 	var s := _setup(3)
 	var w: World = s[0]
+	for i in 9:
+		var angle := TAU * i / 9.0
+		s[2].append(World.make_monster(
+			"ring%d" % i, GameData.monster_kind("mob003"), 3.0 * cos(angle), 3.0 * sin(angle), 10000.0, 0.0
+		))
 	w.learn_skill("me", "sky_breaker")
 	w.set_skill_bar("me", ["sky_breaker"])
 	w.drain_events()
@@ -180,8 +186,8 @@ func _case_multi() -> void:
 			hits += 1
 	if not w._landings.is_empty():
 		_fail("떨어졌는데 대기열에 %d개 남았다" % w._landings.size())
-	if hits != 3:
-		_fail("천붕각이 3마리를 쳐야 하는데 %d마리" % hits)
+	if hits != 12:
+		_fail("천붕각이 범위 안 12마리를 다 쳐야 하는데 %d마리" % hits)
 	else:
 		print("  천붕각: %d마리 동시" % hits)
 
@@ -288,9 +294,7 @@ func _case_range() -> void:
 	elif int(round_shape.hits) != hits:
 		_fail("맞은 수가 %d 인데 %d 로 실려 왔다" % [hits, round_shape.hits])
 	else:
-		print("  전방위 원: 반경 %.1fm · %d/%d 마리" % [
-			round_shape.reach, round_shape.hits, round_shape.max_targets
-		])
+		print("  전방위 원: 반경 %.1fm · %d 마리" % [round_shape.reach, round_shape.hits])
 
 	# **그려질 모양과 맞은 놈이 같은가** — 이 도구의 값어치가 전부 여기 있다.
 	# 각을 반대로 재거나 좌우가 뒤집히면 "표시는 맞는데 안 맞는" 게 되고,
@@ -324,9 +328,11 @@ func _case_range() -> void:
 			var dot := (dx / gap) * sin(float(fan.facing)) + (dz / gap) * cos(float(fan.facing))
 			inside = acos(clampf(dot, -1.0, 1.0)) <= float(fan.arc) / 2.0 + 1e-3
 		var was_hit := str(mob.id) in struck
-		# 안에 있어도 `maxTargets` 에 걸려 안 맞을 수 있다 — 그 반대는 없어야 한다
+		# 명수 상한이 없으니 **안에 있으면 맞고, 밖이면 안 맞는다** — 양쪽 다 본다
 		if was_hit and not inside:
 			_fail("%s 는 그려질 모양 밖인데 맞았다 (%.2f m)" % [mob.id, gap])
+		elif inside and not was_hit:
+			_fail("%s 는 그려질 모양 안인데 안 맞았다 (%.2f m)" % [mob.id, gap])
 	if not ("aside" in struck):
 		print("  모양 밖(옆 2m)은 안 맞고, 맞은 놈은 전부 모양 안이다")
 	else:
@@ -519,7 +525,7 @@ func _case_claw_up() -> void:
 	print("  할퀴기 강화: 기본 120°·3타, 부채꼴 160°, 연타 5타, 둘 다 160°·5타")
 
 
-## 천붕각 강화 — "진폭" 은 반경 6 → 9m · 대상 10 → 15, "균열 지대" 는 시전한 자리에
+## 천붕각 강화 — "진폭" 은 반경 6 → 9m, "균열 지대" 는 시전한 자리에
 ## 3초 동안 0.5초마다 공격력 × `zonePower`(표에서 읽는다) 여섯 번. 지대는 **틱마다 대상을 다시 고른다** (2026-09-23)
 func _case_quake_up() -> void:
 	var s := _setup(1)
@@ -537,8 +543,8 @@ func _case_quake_up() -> void:
 	w.cast("me", "sky_breaker")
 	w._run_landings(Time.get_ticks_msec() + 100000)
 	var shape := _first(w.drain_events(), "skillRange")
-	if absf(float(shape.get("reach", 0.0)) - 9.0) > 1e-3 or int(shape.get("max_targets", 0)) != 15:
-		_fail("진폭: 반경 %.1f · 대상 %d (9 · 15 여야 한다)" % [float(shape.reach), int(shape.max_targets)])
+	if absf(float(shape.get("reach", 0.0)) - 9.0) > 1e-3:
+		_fail("진폭: 반경 %.1f (9 여야 한다)" % float(shape.reach))
 	if not w._zones.is_empty():
 		_fail("균열 지대가 안 붙었는데 지대가 생겼다")
 

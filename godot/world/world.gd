@@ -44,6 +44,9 @@ const DEFAULT_JOB := "fighter"
 ## 창이 열려 있다고 살 수 있는 게 아니다
 const NPC_REACH := 4.5
 
+## `_pick_targets` 에 넘기면 명수 상한 없이 범위 안을 전부 고른다
+const ALL_TARGETS := -1
+
 ## 몇 초마다 저장하나
 const SAVE_EVERY_MS := 10000
 
@@ -365,7 +368,8 @@ func attack(player_id: String) -> void:
 	_hit_monster(player, target, float(stats.attack), "")
 
 
-## 맞을 놈들을 고른다. **가까운 순서로 max_targets 만큼.**
+## 맞을 놈들을 고른다. **가까운 순서로 max_targets 만큼** — `ALL_TARGETS` 면 범위 안
+## 전부다 (스킬은 이것만 쓴다. 한 마리만 치는 건 평타뿐이다).
 ##
 ## origin 이 주어지면 그 자리를 중심으로 한 **원**으로 본다 (원거리 스킬이 날아가
 ## 터진 것). 날아가 터진 것에 "시전자 정면"은 의미가 없다. origin 이 없으면
@@ -377,7 +381,7 @@ func _pick_targets(
 	max_targets: int,
 	origin: Dictionary = {},
 ) -> Array:
-	if max_targets <= 0:
+	if max_targets == 0:
 		return []
 	var from_x: float = origin.get("x", player.x)
 	var from_z: float = origin.get("z", player.z)
@@ -406,7 +410,7 @@ func _pick_targets(
 
 	var out: Array = []
 	for entry in found:
-		if out.size() >= max_targets:
+		if max_targets > 0 and out.size() >= max_targets:
 			break
 		out.append(entry.monster)
 	return out
@@ -1590,8 +1594,10 @@ func _land(player: Dictionary, skill: Dictionary, skill_id: String, upgrades: Ar
 	var attack := float(stats.attack) * float(skill.get("power", 1.0))
 	# 부채꼴 강화는 각을 넓힌다 — 한 바퀴를 넘지는 않는다
 	var arc := minf(TAU, float(skill.arc) + Skills.upgrade_sum(skill_id, upgrades, "arcAdd"))
-	# 진폭 강화는 최대 대상 수를 늘린다
-	var cap := int(skill.get("maxTargets", 1)) + roundi(Skills.upgrade_sum(skill_id, upgrades, "targetsAdd"))
+	# **범위에 들어온 놈은 전부 맞는다** — 명수 상한이 없다 (2026-09-24 지시:
+	# "스킬 범위에 들어오면 모두 피격되게. 명수 제한 없애"). `maxTargets` 는 이제
+	# 때리느냐(0 은 회복기)와 단일기 착탄 반경(`Skills.blast_radius`)만 가른다
+	var cap := ALL_TARGETS if int(skill.get("maxTargets", 1)) > 0 else 0
 	var picked := _pick_targets(player, reach, arc, cap, origin)
 
 	# **판정이 쓴 모양을 그대로 알린다** — 화면이 다시 계산하면 두 값이 갈라져서
@@ -1607,7 +1613,6 @@ func _land(player: Dictionary, skill: Dictionary, skill_id: String, upgrades: Ar
 		"reach": reach,
 		"arc": arc if (origin.is_empty() and arc < TAU) else TAU,
 		"facing": float(player.rot),
-		"max_targets": cap,
 		"hits": picked.size(),
 	})
 

@@ -37,7 +37,7 @@ func _run() -> void:
 	await _case_once(game)
 	await _case_other_skill(game)
 	await _case_gone(game)
-	_case_upgrades(game)
+	await _case_upgrades(game)
 	_done()
 
 
@@ -208,20 +208,33 @@ func _case_gone(game: Node3D) -> void:
 		print("  %d프레임 뒤 치워졌다" % waited)
 
 
-## **강화** — "진폭" 이면 금·그을림 1.5배, 먼지가 사거리 9m 언저리에서 멈춘다.
-## "균열 지대" 면 금이 3초 동안 붉게 남고 틱마다 맥동하며, 없으면 0.8초에 식는다.
-## 시계를 직접 넣어 본다 (`_t` → `_show_cracks`) — 3초를 기다리지 않는다
+## **강화** — "진폭" 이면 먼지 충격파·금 대신 **모래 토네이도**가 휘감아 판정 반경(9m)
+## 까지 퍼진다. "균열 지대" 면 금이 3초 동안 붉게 남고 틱마다 맥동하며 **틈에서 용암이
+## 여섯 번 솟는다.** 없으면 0.8초에 식는다. 시계를 직접 넣어 본다 — 3초를 기다리지 않는다
 func _case_upgrades(game: Node3D) -> void:
 	var wide := QuakeFx.slam(game._zone_node, Vector3.ZERO, 0.0, true, false)
 	var reach := float(Skills.get_skill("fighter", "sky_breaker").get("range", 0.0)) \
 		* float(Skills.upgrade("sky_breaker", "wide").get("rangeMul", 1.0))
+	await process_frame
+	var tornado: QuakeParts.Tornado = wide._tornado
+	for i in 60:
+		tornado.tick(1.0 / 60.0)
+	wide._show_cracks()
 	var front: CPUParticles3D = wide._emitters[0]
-	var stop := pow(front.initial_velocity_max, 2.0) / (2.0 * front.damping_min)
-	if absf(wide._crack.scale.x - QuakeFx.WIDE) > 1e-3 or stop > reach + 0.5 or stop < reach * 0.6:
-		_fail("진폭: 금 %.2f배 · 먼지 %.1fm (1.5배 · 사거리 %.0fm 언저리여야 한다)" % [wide._crack.scale.x, stop, reach])
+	if not tornado.active or not tornado.visible:
+		_fail("진폭인데 토네이도가 안 섰다")
+	elif absf(tornado.radius() - reach) > 0.3:
+		_fail("토네이도가 %.1fm 까지 퍼진다 (판정 반경 %.0fm)" % [tornado.radius(), reach])
+	elif front.emitting or wide._crack.visible:
+		_fail("진폭만 붙었는데 먼지 충격파나 금이 나왔다 — 토네이도가 대신해야 한다")
 	else:
-		print("  진폭: 금 %.1f배, 먼지가 %.1fm 에서 멈춘다 (사거리 %.0fm)" % [wide._crack.scale.x, stop, reach])
+		print("  진폭: 모래 토네이도 띠 %d줄이 %.1fm 까지 휘감는다 (먼지 충격파·금 없음)" % [
+			QuakeParts.Tornado.BANDS, tornado.radius()])
+	var plain_wide := QuakeFx.slam(game._zone_node, Vector3.ZERO, 0.0, false, false)
+	if plain_wide._tornado.active:
+		_fail("진폭이 없는데 토네이도가 섰다")
 	wide.queue_free()
+	plain_wide.queue_free()
 
 	var zone_ms := float(Skills.upgrade("sky_breaker", "zone").get("zoneMs", 0)) / 1000.0
 	var tick_ms := float(Skills.upgrade("sky_breaker", "zone").get("zoneTickMs", 0)) / 1000.0
@@ -244,6 +257,20 @@ func _case_upgrades(game: Node3D) -> void:
 	# 2.5초(틱) 직후가 가장 밝고, 틱 사이(2.75초)는 잦아든다
 	if not (float(alphas[1]) > float(alphas[3]) + 0.2):
 		_fail("틱마다 맥동하지 않는다 (%s)" % str(alphas))
+	# 틈에서 솟는 용암 — 0.5 · 1.0 · … · 3.0초에 여섯 번, 틈 사이 방울은 지대 동안만
+	var lava: QuakeParts.Lava = zone._lava
+	lava.start(true, 0.0, 1.0)
+	var bubbling := false
+	for step in range(1, 81):
+		lava.tick(step * 0.05)
+		bubbling = bubbling or lava._bubbles.emitting
+	if lava.bursts != 6 or not bubbling or lava._bubbles.emitting:
+		_fail("용암: 분수 %d번 · 방울 %s → %s (여섯 번 · 지대 동안만 방울이어야 한다)" % [
+			lava.bursts, bubbling, lava._bubbles.emitting])
+	else:
+		print("  균열 지대: 틈 %d곳에서 용암이 여섯 번 솟고, 틱 사이 방울이 튄다" % lava._vents.size())
+	if plain._lava.active:
+		_fail("균열 지대가 없는데 용암이 솟는다")
 	zone._t = QuakeFx.ZONE_TIME + QuakeFx.ZONE_FADE
 	zone._show_cracks()
 	if zone._glow.visible:

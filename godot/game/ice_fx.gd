@@ -76,11 +76,17 @@ const SHATTER_LIFE := 0.7
 ## **"파쇄" 강화** — 기둥이 땅으로 꺼지는 대신 **그 자리에서 부서진다.** 기둥은 순식간에
 ## 빠지고(`BREAK_SINK`) 그보다 훨씬 많고 빠른 조각이 사방으로 터진다. 판정의 뒤따르는
 ## 한 대(`followMs` 1.1초)가 이때 들어간다 (2026-09-24)
-const BREAK_COUNT := 70
-const BREAK_BITS := 60
-const BREAK_SPEED_MIN := 4.0
-const BREAK_SPEED_MAX := 9.0
-const BREAK_LIFE := 0.9
+## **조각이 크다** (2026-09-24 요청: "너무 작아서 잘 보이지도 않아. 파편이 터지는 것처럼
+## 크게"). 처음엔 꺼질 때 조각과 같은 크기(0.2~0.5m)로 130개를 흩뿌려 색종이처럼 보였다.
+## 지금은 **기둥 덩어리만 한 조각**(길쭉한 것 0.8~1.4m)을 그 절반 남짓만 — 많고 크면
+## 얼음 더미가 되어 몬스터가 묻힌다. 잔 부스러기는 꺼질 때 조각(`SHATTER_*`)이 같이 낸다
+const BREAK_COUNT := 40
+const BREAK_BITS := 36
+const BREAK_SPEED_MIN := 5.0
+const BREAK_SPEED_MAX := 11.0
+const BREAK_LIFE := 1.0
+const BREAK_SCALE_MIN := 2.2
+const BREAK_SCALE_MAX := 4.0
 const BREAK_SINK := 0.05
 const SHARD_GRAVITY := -20.0
 ## 조각이 도는 빠르기(도/s). 입자는 Y 축으로만 돌릴 수 있어서, 조각 메시를
@@ -267,8 +273,10 @@ func _build() -> void:
 	_burst_bits = _shards(BURST_BITS, BURST_LIFE, BURST_SPEED_MIN, BURST_SPEED_MAX, 35.0, 1, feet)
 	_shatter = _shards(SHATTER_COUNT, SHATTER_LIFE, SHATTER_SPEED_MIN, SHATTER_SPEED_MAX, 50.0, 0, waist)
 	_shatter_bits = _shards(SHATTER_BITS, SHATTER_LIFE, SHATTER_SPEED_MIN, SHATTER_SPEED_MAX, 60.0, 1, waist)
-	_break = _shards(BREAK_COUNT, BREAK_LIFE, BREAK_SPEED_MIN, BREAK_SPEED_MAX, 70.0, 0, waist)
-	_break_bits = _shards(BREAK_BITS, BREAK_LIFE, BREAK_SPEED_MIN, BREAK_SPEED_MAX, 80.0, 1, waist)
+	_break = _shards(BREAK_COUNT, BREAK_LIFE, BREAK_SPEED_MIN, BREAK_SPEED_MAX, 70.0, 0, waist,
+		BREAK_SCALE_MIN, BREAK_SCALE_MAX)
+	_break_bits = _shards(BREAK_BITS, BREAK_LIFE, BREAK_SPEED_MIN, BREAK_SPEED_MAX, 80.0, 1, waist,
+		BREAK_SCALE_MIN, BREAK_SCALE_MAX)
 	_mist = _mist_emitter(feet)
 	# **만든 다음 프레임에 켠다** — 같은 프레임에 켜면 방출이 안 나온 적이 있다 (3절)
 	for e in _emitters():
@@ -368,7 +376,8 @@ func _emitters() -> Array:
 ## `shape` 0 은 길쭉한 조각, 1 은 뭉툭한 덩이. 옛날엔 흰 삼각기둥(`PrismMesh`)이
 ## 날아가는 쪽으로 누워 흰 바늘로 보였다 (2026-09-23 "파편이 생긴 게 좀 다르게")
 func _shards(count: int, life: float, speed_min: float, speed_max: float,
-		spread: float, shape: int, points: Array) -> CPUParticles3D:
+		spread: float, shape: int, points: Array,
+		scale_min := 0.6, scale_max := 1.5) -> CPUParticles3D:
 	var e := CPUParticles3D.new()
 	e.amount = count
 	e.lifetime = life
@@ -385,11 +394,22 @@ func _shards(count: int, life: float, speed_min: float, speed_max: float,
 	e.angle_max = 180.0
 	e.angular_velocity_min = -SHARD_SPIN
 	e.angular_velocity_max = SHARD_SPIN
-	e.scale_amount_min = 0.6
-	e.scale_amount_max = 1.5
-	e.scale_amount_curve = LightningFx.fade_curve()
+	e.scale_amount_min = scale_min
+	e.scale_amount_max = scale_max
+	# 큰 조각은 날아가는 동안 크기를 지키다 끝에만 줄어든다 — 처음부터 줄면 부서진
+	# 덩어리가 아니라 녹는 것으로 보인다
+	e.scale_amount_curve = _hold_curve() if scale_max > 2.0 else LightningFx.fade_curve()
 	e.material_override = shard_material()
 	return e
+
+
+## 크기를 끝 무렵까지 지키다 줄어드는 곡선 (파쇄의 큰 조각)
+static func _hold_curve() -> Curve:
+	var curve := Curve.new()
+	curve.add_point(Vector2(0.0, 1.0))
+	curve.add_point(Vector2(0.75, 0.95))
+	curve.add_point(Vector2(1.0, 0.4))
+	return curve
 
 
 ## 냉기 — **기둥 밑동마다** 흘러나와 바깥으로 느리게 번지며 조금 떠오른다.

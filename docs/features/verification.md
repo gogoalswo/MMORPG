@@ -359,6 +359,11 @@ PORT=2599 DB_PATH=<임시경로>/test.db node src/index.ts   # packages/server �
 ## 손댈 때
 
 - 새 UI 창을 만들면 `ui-probe.js` 에 그 창을 뽑는 함수를 추가한다.
+- **고도 UI 의 누르기·끌기는 창에 입력을 넣어 본다** — `root.push_input(이벤트, true)`
+  (`true` = 화면 좌표 그대로). 핸들러를 직접 부르거나 `pressed.emit()` 하면 엔진이
+  입력을 어느 컨트롤에 주는지(STOP·PASS·IGNORE, 위에 뜬 창)를 건너뛴다. 가방
+  끌기를 `on_input` 직접 호출로 통과시켰다가 화면에서는 선택도 스크롤도 안 됐다
+  (2026-09-24). 예: `tests/ui_test.gd` 의 `_push_mouse` · `_drag_list` · `_tap_cell`.
 - 이펙트를 새로 만들면 `__skillFx` 로 띄워지는지 먼저 본다 — 서버 판정을 안 거치므로
   레벨·쿨타임·몬스터 없이 모양만 확인할 수 있다.
 - 새 서버 메시지를 만들면 `probe.mjs` 의 `onMessage` 목록에 한 줄 추가한다.

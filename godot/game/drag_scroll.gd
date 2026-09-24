@@ -34,17 +34,23 @@ static func attach(scroll: ScrollContainer, grid: Container, gap: float) -> Drag
 	drag._gap = gap
 	scroll.set_meta("drag_scroll", drag)
 	scroll.gui_input.connect(drag.on_input)
-	# 칸은 나중에 채워진다 — 들어오는 칸마다 단추가 입력을 흘려보내게 한다
+	# 칸은 나중에 채워진다 — 들어오는 칸마다 입력을 흘려보내게 한다
 	grid.child_entered_tree.connect(_let_through)
 	for cell in grid.get_children():
 		_let_through(cell)
 	return drag
 
 
+## 칸은 **흘려보내고**(PASS — 목록까지 올라간다) 칸 안의 것은 **비킨다**(IGNORE).
+## 단추만 비켰더니 칸(`PanelContainer`, 기본이 STOP)이 입력을 멈춰서 목록에 안 닿았다 —
+## 누르기까지 죽었다 (2026-09-24 지적: "아이템 선택도 안 되고 스크롤도 안돼").
+## `on_input` 을 직접 부르는 테스트는 이 길을 안 거쳐서 통과했다
 static func _let_through(cell: Node) -> void:
-	var hit := cell.get_node_or_null("hit") as Control
-	if hit != null:
-		hit.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var box := cell as Control
+	if box != null:
+		box.mouse_filter = Control.MOUSE_FILTER_PASS
+	for child in cell.find_children("*", "Control", true, false):
+		(child as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
 ## 창을 여닫을 때 — 누르던 것을 잊는다 (그 사이 손을 뗐을 수 있다)

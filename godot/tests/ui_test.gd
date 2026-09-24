@@ -938,6 +938,9 @@ func _case_bag_drag(game: Node3D) -> void:
 	me.bag.clear()
 	for i in 60:
 		me.bag.append({"id": "g1_w", "grade": 1, "enhance": 0, "options": []})
+	# 입력을 창에 넣으므로 위에 뜬 창이 없어야 한다 — 앞 절에서 연 차원문 창은
+	# 제 레이어라 맨 위에서 강화 목록을 덮는다
+	game._gate_panel.close_panel()
 	if not game._bag_panel.visible:
 		game._toggle_bag()
 	await process_frame
@@ -986,23 +989,24 @@ func _case_bag_drag(game: Node3D) -> void:
 	await process_frame
 
 
-## 목록 가운데를 잡아 위로 끈다. **칸 단추가 입력을 흘려보내야** 목록이 받는다.
-## 내용이 목록보다 크면 내려가야 하고, 작으면 그대로다 (범위는 고도가 죈다)
-func _drag_list(name: String, drag: DragScroll, list: ScrollContainer, grid: Container) -> void:
-	for cell in grid.get_children():
-		var hit: Control = cell.get_node_or_null("hit")
-		if hit != null and hit.mouse_filter != Control.MOUSE_FILTER_IGNORE:
-			_fail("%s 칸 단추가 입력을 먹는다 — 끌기가 목록에 안 간다" % name)
-			break
+## 목록 가운데를 잡아 위로 끈다. 내용이 목록보다 크면 내려가야 하고, 작으면 그대로다.
+## **입력은 창에 넣는다**(`_push_*`) — 엔진이 칸 → 격자 → 목록으로 올려 보내는 길까지
+## 본다. `on_input` 을 직접 불렀더니 칸(STOP)이 입력을 멈추는 걸 못 잡고 통과했다
+## (2026-09-24: 화면에서는 선택도 스크롤도 안 됐다)
+func _drag_list(name: String, _drag: DragScroll, list: ScrollContainer, grid: Container) -> void:
 	list.scroll_vertical = 0
-	var grab := list.size * 0.5
-	drag.on_input(_mouse(grab, true))
+	await process_frame
+	# **칸 위**를 잡는다 — 목록 한가운데는 칸 사이 틈일 수 있고, 틈은 칸이 막는지 못 본다
+	var grid_cols := (grid as GridContainer).columns
+	var grab: Vector2 = grid.get_child(mini(grid.get_child_count() - 1, grid_cols * 2)).get_global_rect().get_center()
+	_push_move(grab, 0)
+	_push_mouse(grab, true)
 	for i in 6:
 		grab.y -= 20
-		drag.on_input(_move(grab))
+		_push_move(grab, MOUSE_BUTTON_MASK_LEFT)
 		await process_frame
 	var dragged := list.scroll_vertical
-	drag.on_input(_mouse(grab, false))
+	_push_mouse(grab, false)
 	await process_frame
 	var overflow := grid.size.y > list.size.y + 1.0
 	if overflow and dragged <= 0:
@@ -1012,11 +1016,27 @@ func _drag_list(name: String, drag: DragScroll, list: ScrollContainer, grid: Con
 
 
 ## 끌지 않고 i 번째 칸 가운데를 눌렀다 뗀다 — 스크롤된 채로 보이는 칸이어야 한다
-func _tap_cell(drag: DragScroll, list: ScrollContainer, grid: Container, i: int) -> void:
-	var at: Vector2 = grid.get_child(i).get_global_rect().get_center() - list.global_position
-	drag.on_input(_mouse(at, true))
-	drag.on_input(_mouse(at, false))
+func _tap_cell(_drag: DragScroll, list: ScrollContainer, grid: Container, i: int) -> void:
+	var at: Vector2 = grid.get_child(i).get_global_rect().get_center()
+	_push_move(at, 0)
+	_push_mouse(at, true)
+	_push_mouse(at, false)
 	await process_frame
+
+
+## 창에 마우스 누름/뗌을 넣는다. 자리는 **화면(캔버스) 기준** — `true` 로 늘이기 배율을 건너뛴다
+func _push_mouse(at: Vector2, pressed: bool) -> void:
+	var event := _mouse(at, pressed)
+	event.global_position = at
+	event.button_mask = MOUSE_BUTTON_MASK_LEFT if pressed else 0
+	root.push_input(event, true)
+
+
+func _push_move(at: Vector2, mask: int) -> void:
+	var event := _move(at)
+	event.global_position = at
+	event.button_mask = mask
+	root.push_input(event, true)
 
 ## 퀵슬롯과 스킬창 — 자리, 크기, 그림, 장착·해제·바꾸기.
 ## 창은 **왼쪽이 설명, 오른쪽이 고르기** 다 (2026-09-19 요청)

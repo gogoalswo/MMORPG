@@ -156,6 +156,11 @@ var _emitters: Array[CPUParticles3D] = []
 var _mul := 1.0
 var _zone := false
 var _span := 0.0
+## 금·그을림을 그리나 — 진폭만 붙으면 토네이도가 대신하므로 안 그린다
+var _ground := true
+## 강화 이펙트 — 진폭(모래 토네이도) · 균열 지대(틈에서 터지는 용암) → `quake_parts.gd`
+var _tornado: QuakeParts.Tornado
+var _lava: QuakeParts.Lava
 
 
 ## 천붕각을 띄운다. `at` 은 시전자 발밑(월드 좌표), `facing` 은 보는 쪽(rad).
@@ -211,6 +216,13 @@ func _build() -> void:
 	_light.light_energy = LIGHT_ENERGY
 	add_child(_light)
 
+	_tornado = QuakeParts.Tornado.new()
+	_tornado.build()
+	add_child(_tornado)
+	_lava = QuakeParts.Lava.new()
+	_lava.build()
+	add_child(_lava)
+
 	_emitters = [_front(), _puffs(), _core(), _chips()]
 	# **만든 다음 프레임에 켠다** — 같은 프레임에 켜면 방출이 안 나온 적이 있다 (3절)
 	for e in _emitters:
@@ -230,12 +242,11 @@ func _start(at: Vector3, facing: float, wide := false, zone := false) -> void:
 		node.rotation.y = facing
 		node.scale = Vector3(_mul, 1.0, _mul)
 	_stain.rotation.y = facing
-	# 수평으로 밀려나는 먼지 — 멈추는 거리가 속도의 제곱이라 √배율을 곱한다
-	var push := sqrt(_mul)
-	for pair in [[_emitters[0], FRONT_SPEED_MIN, FRONT_SPEED_MAX], [_emitters[1], PUFF_SPEED_MIN, PUFF_SPEED_MAX]]:
-		var e: CPUParticles3D = pair[0]
-		e.initial_velocity_min = float(pair[1]) * push
-		e.initial_velocity_max = float(pair[2]) * push
+	# **진폭이면 먼지 충격파·금 대신 모래 토네이도**가 휘감는다 (2026-09-24 요청).
+	# 균열 지대가 같이 붙으면 용암이 솟을 틈이 있어야 하므로 금은 남긴다 (1.5배)
+	_ground = zone or not wide
+	_tornado.start(wide)
+	_lava.start(zone, facing, _mul)
 	_t = 0.0
 	_started = false
 	_show_cracks()
@@ -246,9 +257,13 @@ func _process(delta: float) -> void:
 	if not _started:
 		_started = true
 		# 되감아 쓰는 방출기라 켜기(`emitting`)가 아니라 처음부터 다시(`restart`)
-		for e in _emitters:
-			e.restart()
+		# 진폭이면 먼지 충격파(앞머리·덩이·기둥)는 토네이도가 대신한다 — 흙 알갱이만 튄다
+		for i in _emitters.size():
+			if not _tornado.active or i == 3:
+				_emitters[i].restart()
 	_t += delta
+	_tornado.tick(delta)
+	_lava.tick(_t)
 	_show_cracks()
 	_show_flash()
 	if _t >= _span:
@@ -275,12 +290,12 @@ func _show_cracks() -> void:
 	if _zone:
 		tint = _lava_tint()
 	glow.set_shader_parameter(&"tint", tint)
-	_glow.visible = tint.a > 0.0
-	_crack.visible = fade > 0.0
+	_glow.visible = _ground and tint.a > 0.0
+	_crack.visible = _ground and fade > 0.0
 	# 그을림은 금이 뻗는 동안 같이 넓어진다 (규칙 3절)
 	var grow := clampf(_t * CRACK_SPEED / CRACK_LENGTH, 0.0, 1.0)
 	_stain.scale = Vector3.ONE * lerpf(0.4, 1.0, sqrt(grow)) * _mul
-	_stain.visible = fade > 0.0
+	_stain.visible = _ground and fade > 0.0
 	_stain.material_override.albedo_color = Color(
 		COLOR_STAIN.r, COLOR_STAIN.g, COLOR_STAIN.b, fade * STAIN_ALPHA)
 
@@ -317,6 +332,11 @@ func _show_flash() -> void:
 		_light.visible = true
 		_light.light_color = COLOR_LAVA
 		_light.light_energy = ZONE_LIGHT * lava.a * lava.a
+
+
+## 처음 빠르고 끝에서 느려진다 (`QuakeParts.Tornado` 가 퍼질 때 쓴다)
+static func ease_out(t: float) -> float:
+	return 1.0 - pow(1.0 - t, 3.0)
 
 
 func _sheet(mat: Material) -> MeshInstance3D:

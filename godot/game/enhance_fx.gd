@@ -18,13 +18,20 @@ extends Control
 
 const SLIDE_TIME := 0.38
 const SPARKLE_TIME := 0.75
-const CROSS_TIME := 0.2
-const SHATTER_TIME := 0.8
+## 붉은 X(0.18) → 금 가는 순간(0.16) → 흩어짐(0.62). 합이 1초 박자 안에 든다.
+## 처음엔 X 뒤 바로 흩어지고 무거운 중력으로 0.3초 만에 떨어져서 **제 속도에서는 X 만 보였다**
+## (2026-09-24 "깨질 때 깨지는 이펙트가 안 나와" — 늦춰 찍은 장만 보고 넘어갔었다)
+const CROSS_TIME := 0.18
+const CRACK_TIME := 0.16
+const SHATTER_TIME := 0.62
 const RED := Color("#e0453a")
 const GOLD := Color("#ffd98a")
-## 조각 수 — 칸이 작아서 여덟이면 "깨졌다" 로 읽히고, 더 많으면 가루가 된다
-const PIECES := 8
-const GRAVITY := 900.0
+## 조각 수 — 칸이 56px 이라 여덟이면 조각이 작아 폰에서 안 읽혔다. 여섯
+const PIECES := 6
+## 가볍게 — 위로 크게 튀었다가 천천히 떨어져야 흩어지는 게 보인다
+const GRAVITY := 520.0
+## 깨지는 순간 사방으로 튀는 불티 수
+const EMBERS := 12
 
 var kind := ""
 var _t := 0.0
@@ -42,6 +49,7 @@ var _stars: Array = []
 var _texture: Texture2D
 var _icon_rect := Rect2()
 var _pieces: Array = []
+var _embers: Array = []
 
 
 ## 숫자 슬라이드 — `badge` 는 칸의 배지 글자. 도는 동안 감춰 두고 끝나면 다시 켠다
@@ -78,7 +86,7 @@ static func sparkle(layer: Control, cell: Control) -> EnhanceFx:
 
 ## 깨짐 — `texture` · `icon_rect` 는 깨지기 **전** 아이콘 (칸은 이미 비었을 수 있다)
 static func shatter(layer: Control, cell: Control, texture: Texture2D, icon_rect: Rect2) -> EnhanceFx:
-	var fx := _make(layer, "shatter", _local_rect(layer, cell), CROSS_TIME + SHATTER_TIME)
+	var fx := _make(layer, "shatter", _local_rect(layer, cell), CROSS_TIME + CRACK_TIME + SHATTER_TIME)
 	fx._texture = texture
 	fx._icon_rect = Rect2(icon_rect.position - cell.get_global_rect().position, icon_rect.size)
 	fx._cut()
@@ -115,11 +123,14 @@ func _process(delta: float) -> void:
 	if kind == "cross":
 		return
 	_t += delta
-	if kind == "shatter" and _t > CROSS_TIME:
+	if kind == "shatter" and _t > CROSS_TIME + CRACK_TIME:
 		for piece in _pieces:
 			piece.vel.y += GRAVITY * delta
 			piece.at += piece.vel * delta
 			piece.angle += piece.spin * delta
+		for ember in _embers:
+			ember.vel *= 1.0 - 3.0 * delta
+			ember.at += ember.vel * delta
 	if _t >= _life:
 		if kind == "slide" and is_instance_valid(_badge):
 			_badge.modulate.a = 1.0
@@ -190,30 +201,46 @@ func _star(at: Vector2, r: float, turn: float, tint: Color) -> void:
 		draw_colored_polygon(points, tint)
 
 
-## 붉은 X 두 획 → 조각이 흩어진다. X 는 조각이 날기 시작하면 빠르게 흐려진다
+## 붉은 X 두 획 → 금이 가며 조각 사이가 벌어지고 칸이 떤다 → 조각이 튀어 흩어지고 불티가 난다
 func _draw_shatter() -> void:
 	if _t < CROSS_TIME:
 		if _texture != null:
 			draw_texture_rect(_texture, _icon_rect, false)
 		_draw_cross(1.0, 5.0, _t / CROSS_TIME)
 		return
-	var k := (_t - CROSS_TIME) / SHATTER_TIME
-	var fade := clampf(1.0 - (k - 0.45) / 0.55, 0.0, 1.0)
-	# 깨지는 순간 칸이 붉게 한 번 번쩍인다 (0.15초)
-	var flash := clampf(1.0 - (_t - CROSS_TIME) / 0.15, 0.0, 1.0)
+	var burst := _t - CROSS_TIME - CRACK_TIME  # 흩어진 뒤 지난 시간 (음수면 금 가는 중)
+	var k := clampf(burst / SHATTER_TIME, 0.0, 1.0)
+	var fade := clampf(1.0 - (k - 0.6) / 0.4, 0.0, 1.0)
+	# 금 가는 동안 — 조각이 제자리에서 3px 벌어지고, 칸 전체가 좌우로 떤다
+	var crack := clampf((_t - CROSS_TIME) / CRACK_TIME, 0.0, 1.0)
+	var shake := Vector2(sin(_t * 90.0), cos(_t * 70.0)) * 2.0 if burst < 0.0 else Vector2.ZERO
+	# 흩어지는 순간 칸이 붉게 번쩍인다 (0.2초)
+	var flash := clampf(1.0 - burst / 0.2, 0.0, 1.0) if burst >= 0.0 else crack * 0.5
 	if flash > 0.0:
-		draw_rect(Rect2(Vector2.ZERO, size), Color(RED, 0.45 * flash))
+		draw_rect(Rect2(Vector2.ZERO, size), Color(RED, 0.5 * flash))
+	var mid := _icon_rect.get_center()
 	for piece in _pieces:
-		var xform := Transform2D(piece.angle, piece.at)
+		var spread := (Vector2(piece.at) - mid).normalized() * 3.0 * crack if burst < 0.0 else Vector2.ZERO
+		var xform := Transform2D(piece.angle, piece.at + spread + shake)
 		var points := PackedVector2Array()
 		for p in piece.poly:
 			points.append(xform * p)
 		# 조각은 아이콘 그림 그대로, 떨어질수록 어두워진다. 테를 두르면 붉은 색종이처럼 보였다
-		var dark := lerpf(0.9, 0.45, k)
+		var dark := lerpf(1.0, 0.5, k)
 		if _texture != null:
-			draw_colored_polygon(points, Color(dark, dark * 0.82, dark * 0.78, fade), piece.uv, _texture)
+			draw_colored_polygon(points, Color(dark, dark * 0.85, dark * 0.8, fade), piece.uv, _texture)
 		else:
 			draw_colored_polygon(points, Color(0.5, 0.45, 0.4, fade))
+		# 금 — 벌어지는 동안만 조각 가장자리에 어두운 선
+		if burst < 0.0:
+			var edge := points.duplicate()
+			edge.append(points[0])
+			draw_polyline(edge, Color(0.1, 0.02, 0.0, 0.8 * crack), 1.5, true)
+	# 불티 — 흩어지는 순간부터 0.4초
+	if burst >= 0.0 and burst < 0.4:
+		var life := 1.0 - burst / 0.4
+		for ember in _embers:
+			draw_circle(ember.at, 2.2 * life + 0.8, Color(1.0, 0.55 + 0.35 * life, 0.25, life))
 	_draw_cross(clampf(1.0 - k * 3.0, 0.0, 1.0), 5.0, 1.0)
 
 
@@ -274,8 +301,13 @@ func _cut() -> void:
 		var out := (center - mid).normalized()
 		_pieces.append({
 			"poly": local, "uv": uv, "at": center, "angle": 0.0,
-			"vel": out * rng.randf_range(35.0, 80.0) + Vector2(0.0, -rng.randf_range(60.0, 110.0)),
+			"vel": out * rng.randf_range(60.0, 120.0) + Vector2(0.0, -rng.randf_range(130.0, 200.0)),
 			"spin": rng.randf_range(-4.0, 4.0),
+		})
+	for i in EMBERS:
+		var angle := rng.randf_range(0.0, TAU)
+		_embers.append({
+			"at": mid, "vel": Vector2(cos(angle), sin(angle)) * rng.randf_range(120.0, 260.0),
 		})
 
 

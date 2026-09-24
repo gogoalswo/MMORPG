@@ -174,22 +174,32 @@ func _check_moves(game: Node3D) -> void:
 	await process_frame
 	if rig._playing != "FrostStomp":
 		_fail("스킬 동작 중에 맞았더니 %s 로 끊겼다" % rig._playing)
-	# 평타는 주먹이 닿기 전이면 안 끊고, 닿은 뒤면 끊는다
+	# 평타 중에도 안 끊는다 — 막 냈을 때도, 한참 지나서도
 	game._on_event(&"swing", {"id": me, "root_ms": 400})
 	await process_frame
-	game._on_event(&"hit", hit)
-	await process_frame
 	var swing_clip: String = rig._playing
-	if swing_clip == "Hit":
-		_fail("평타를 막 냈는데 맞자마자 끊겼다")
-	game._move_started -= game.HIT_OVER_SWING_MS
-	game._on_event(&"hit", hit)
-	await process_frame
-	await process_frame
-	if rig._playing != "Hit":
-		_fail("주먹이 닿은 뒤 맞았는데 %s 그대로다" % rig._playing)
-	else:
-		print("  맞음: 서 있으면 움찔 · 스킬 중엔 안 끊음 · 평타는 닿은 뒤면 끊음")
+	for i in 2:
+		game._on_event(&"hit", hit)
+		for f in 6:
+			await process_frame
+		if rig._playing != swing_clip:
+			_fail("평타(%s) 중에 맞았더니 %s 로 끊겼다" % [swing_clip, rig._playing])
+	# 거꾸로 — 맞는 동작 중에 공격하면 공격 동작이 이긴다 (평타도 스킬도)
+	for attack in [[&"swing", {"id": me, "root_ms": 400}], [&"skill", {"id": me, "skill": "thunder_fall", "root_ms": 400}]]:
+		game._move_until = 0
+		await process_frame
+		game._on_event(&"hit", hit)
+		await process_frame
+		await process_frame
+		if rig._playing != "Hit":
+			_fail("서 있다 맞았는데 %s" % rig._playing)
+		game._on_event(attack[0], attack[1])
+		await process_frame
+		await process_frame
+		if rig._playing == "Hit":
+			_fail("맞는 동작 중에 %s 를 했는데 공격 동작이 안 나왔다" % attack[0])
+	if _failed == 0:
+		print("  맞음: 서 있으면 움찔 · 공격(평타·스킬) 중엔 안 끊음 · 맞는 중에 공격하면 공격이 이김")
 
 
 ## 실제 화면에서 초원까지 걸어가 몬스터가 모델로 서 있는지 본다

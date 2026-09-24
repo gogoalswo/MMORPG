@@ -192,9 +192,21 @@ FROST_STOMP = pose(GUARD,
                    rh=(-0.31, -0.15, 0.42), rhPole=(-1, 0.3, 0))
 FROST_HOLD = pose(FROST_STOMP, hips=(0.0, 0.0, -0.135), spine=(17, 0, 0))
 
+# 피격 — 맞은 순간 머리와 상체가 뒤로 젖혀지고 몸이 뒤로 밀리며, 두 팔을 얼굴 앞으로
+# 모아 막는다. 발은 그대로 버틴다 (2026-09-24 요청: "피격 받았을 때 모션도 넣어").
+# 짧아야 한다 — 몬스터 여럿에게 맞으면 계속 겹쳐 튼다
+HIT_SNAP = pose(GUARD,
+                hips=(0.0, 0.04, -0.04), hipsR=(-6, 0, -8),
+                spine=(-16, 0, 6), head=(-16, 0, 14),
+                lh=(0.10, -0.12, 0.84), lhPole=(1, 0.2, -0.6),
+                rh=(-0.08, -0.12, 0.83), rhPole=(-1, 0.2, -0.6))
+HIT_DEEP = pose(HIT_SNAP, hips=(0.0, 0.05, -0.06), spine=(-20, 0, 8), head=(-22, 0, 14))
+
 # 클립 — (초, 자세, 그 키에서 다음 키로 가는 보간). 자세 "IDLE" 은 대기 클립의 첫 자세다.
 # 부딪히는 키 앞은 LINEAR 로 곧게 들어가고, 뒤는 BEZIER 로 풀어진다
 CLIPS = {
+    "Hit": [(0.0, GUARD, "LINEAR"), (0.06, HIT_SNAP, "BEZIER"), (0.16, HIT_DEEP, "BEZIER"),
+            (0.45, GUARD, "BEZIER")],
     "Jab": [(0.0, GUARD, "LINEAR"), (0.09, JAB, "BEZIER"), (0.18, JAB, "BEZIER"),
             (0.40, GUARD, "BEZIER"), (0.60, GUARD, "BEZIER")],
     "Cross": [(0.0, GUARD, "LINEAR"), (0.10, CROSS, "BEZIER"), (0.20, CROSS, "BEZIER"),

@@ -141,6 +141,13 @@ const SKILL_CLIPS := {
 const MOVE_BLEND := 0.06
 ## 동작이 끝나거나 끊겨 대기·달리기로 돌아갈 때 섞는 시간
 const MOVE_OUT_BLEND := 0.15
+## 맞았을 때 — 뒤로 젖히며 팔로 얼굴을 막는다 (0.45초). **스킬 동작은 끊지 않고**,
+## 평타는 주먹이 닿은 뒤(이 시간이 지난 뒤)면 끊는다. 자동 사냥은 0.7초마다 평타를
+## 치므로 평타를 못 끊게 하면 싸우는 동안 맞는 동작이 거의 안 보인다.
+## 달리는 중에도 안 튼다 — 다리가 멈춰 미끄러진다
+const HIT_CLIP := "Hit"
+const HIT_OVER_SWING_MS := 250
+var _move_started := 0
 ## 지금 트는 동작과 언제 끝나나. `_move_fresh` 면 다음 그리기에서 처음부터 튼다
 var _move_clip := ""
 var _move_until := 0
@@ -341,6 +348,10 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 	match name:
 		&"hit":
 			_show_hit(payload)
+			if str(payload.get("target_kind", "")) == "player" \
+					and str(payload.get("target", "")) == _transport.my_id() \
+					and int(payload.get("amount", 0)) > 0 and not bool(payload.get("killed", false)):
+				_start_hit()
 			var who := "맞음" if payload.get("target_kind", "") == "player" else "피해"
 			_last_event = "%s %d%s%s" % [
 				who,
@@ -3493,10 +3504,22 @@ func _start_move(clip: String) -> void:
 		return
 	_move_clip = clip
 	_move_fresh = true
+	_move_started = Time.get_ticks_msec()
 	_move_until = Time.get_ticks_msec() + int(rig.clip_length(clip) * 1000.0)
 
 
-## 죽음 > 동작(평타·스킬) > 옛 공격 > 달리기 > 대기 순으로 고른다.
+## 맞은 동작을 건다 — 틀어도 되는 때만 (`HIT_CLIP` 위 설명)
+func _start_hit() -> void:
+	if _moving:
+		return
+	if _move_clip != "" and _move_clip != HIT_CLIP:
+		var into := Time.get_ticks_msec() - _move_started
+		if not (_move_clip in SWING_CLIPS and into >= HIT_OVER_SWING_MS):
+			return
+	_start_move(HIT_CLIP)
+
+
+## 죽음 > 동작(평타·스킬·맞음) > 옛 공격 > 달리기 > 대기 순으로 고른다.
 ##
 ## **동작은 끝까지 튼다.** 경직(0.4초)이 풀려도 서 있으면 마저 튼다 — 스킬 동작은
 ## 1초 남짓이라 경직에 맞춰 자르면 내리친 주먹이 땅에 닿자마자 대기 자세로 튄다.

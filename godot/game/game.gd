@@ -2652,6 +2652,19 @@ func _build_test_switches() -> void:
 	)
 	column.add_child(gauntlets)
 	column.move_child(gauntlets, 0)  # 쿨타임 단추가 맨 아래 구석에 남아야 한다 (ui_test 가 본다)
+	# 가방 빈칸을 장비로 꽉 채운다 (2026-09-24 요청 — "테스트하기 위해서 아이템을 인벤토리에 채워".
+	# 다중 강화를 시험하려면 같은 아이템 여럿 · 섞인 강화 단계가 필요하다)
+	var fill := Button.new()
+	fill.custom_minimum_size = Vector2(230, 52)
+	fill.add_theme_font_size_override("font_size", 18)
+	fill.text = "테스트: 가방 채우기"
+	fill.pressed.connect(func() -> void:
+		_transport.send(&"debugFillBag", {})
+		if _bag_panel.visible:
+			_redraw_bag()
+	)
+	column.add_child(fill)
+	column.move_child(fill, 0)
 	# 크리스탈 30개를 가방에 넣는다 (2026-09-23 요청 — "가방에 30개 넣어". 드랍이 0.01% 라
 	# 주워서는 시험해 볼 수 없다)
 	var crystals := Button.new()

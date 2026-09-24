@@ -1188,6 +1188,32 @@ func debug_gauntlets(player_id: String) -> void:
 	_events.append({"type": "notice", "text": "테스트: 건틀릿 %d개를 넣었다" % added})
 
 
+## **테스트 — 가방의 빈칸을 장비로 꽉 채운다** (2026-09-24 요청: "테스트하기 위해서 아이템을
+## 인벤토리에 채워"). 강화 팝업의 다중 강화를 시험하려는 것이라 **같은 아이템이 여러 개**,
+## 같은 등급에 부위가 여럿, **강화 단계가 섞여** 있어야 한다 — 42종(등급 7 × 부위 6)을
+## 돌아가며 넣고, 한 바퀴 돌 때마다 강화를 한 단계씩(+0 ~ +4) 올린다. 옵션은 그 등급대로 굴린다
+func debug_fill_bag(player_id: String) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	var slots: Array = Items.slots()
+	var kinds := Stats.grade_count() * slots.size()
+	var added := 0
+	while player.bag.size() < Items.bag_size():
+		var grade := 1 + (added / slots.size()) % Stats.grade_count()
+		var item := Items.get_item(Items.item_id(grade, str(slots[added % slots.size()])))
+		if not item.is_empty():
+			player.bag.append({
+				"id": str(item.id), "grade": grade, "enhance": (added / kinds) % 5,
+				"options": Items.roll_options(item, grade, _rng),
+			})
+		added += 1
+		if added > Items.bag_size() * 2:
+			break  # 표가 비어도 끝없이 돌지 않게
+	_events.append({"type": "inventory", "bag": player.bag, "equipped": player.equipped})
+	_events.append({"type": "notice", "text": "테스트: 가방을 채웠다 (%d칸)" % player.bag.size()})
+
+
 ## 한 번만 준다 — 받았으면 `granted` 에 `key` 가 남아 다음 접속에는 안 준다.
 ## 2026-09-23 요청 "가방에 30개 넣어" 로 크리스탈 30개를 이걸로 준다 (`LocalTransport.open`)
 func grant_once(player_id: String, key: String, stack: Dictionary) -> void:

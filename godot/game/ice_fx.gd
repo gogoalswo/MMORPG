@@ -73,6 +73,15 @@ const SHATTER_BITS := 30
 const SHATTER_SPEED_MIN := 2.0
 const SHATTER_SPEED_MAX := 5.0
 const SHATTER_LIFE := 0.7
+## **"파쇄" 강화** — 기둥이 땅으로 꺼지는 대신 **그 자리에서 부서진다.** 기둥은 순식간에
+## 빠지고(`BREAK_SINK`) 그보다 훨씬 많고 빠른 조각이 사방으로 터진다. 판정의 뒤따르는
+## 한 대(`followMs` 1.1초)가 이때 들어간다 (2026-09-24)
+const BREAK_COUNT := 70
+const BREAK_BITS := 60
+const BREAK_SPEED_MIN := 4.0
+const BREAK_SPEED_MAX := 9.0
+const BREAK_LIFE := 0.9
+const BREAK_SINK := 0.05
 const SHARD_GRAVITY := -20.0
 ## 조각이 도는 빠르기(도/s). 입자는 Y 축으로만 돌릴 수 있어서, 조각 메시를
 ## 비스듬히 눕혀 깔아 둔다 — 그러면 Y 로 돌려도 구르며 떨어지는 것으로 보인다
@@ -106,6 +115,9 @@ const COLOR_CRACK := Color("#15314d")
 const COLOR_GLOW := Color("#6fd6ff")
 const COLOR_FLARE := Color("#bfeeff")
 const COLOR_MIST := Color("#e6f7ff")
+## **"빙결" 강화** — 기둥이 더 짙은 청색이다. 흰 테는 그대로 둔다 (얼음다움은 테가 낸다)
+const COLOR_DEEP_FROZEN := Color("#0b3a86")
+const COLOR_PALE_FROZEN := Color("#86c8ff")
 
 ## 기둥 셰이더. 메시는 다 깔려 있고, **아직 솟지 않은 기둥은 땅속에 있다.**
 ## 빛은 받지 않는다(unshaded) — 면마다 구워 둔 밝기(`COLOR.a`)와 가장자리
@@ -178,6 +190,10 @@ var _burst_bits: CPUParticles3D
 var _shatter: CPUParticles3D
 var _shatter_bits: CPUParticles3D
 var _mist: CPUParticles3D
+## 파쇄 — 부서질 때 더 터지는 조각 두 벌 · 이번 것이 파쇄인가
+var _break: CPUParticles3D
+var _break_bits: CPUParticles3D
+var _breaking := false
 ## 조각 재질 — 기둥과 같은 결(면 밝기·가장자리 흰 빛)이고 게임에 하나다
 static var _shard_mat: ShaderMaterial
 ## [길쭉한 조각, 뭉툭한 덩이]
@@ -185,15 +201,16 @@ static var _shard_meshes: Array = []
 
 
 ## 빙주각을 띄운다. `at` 은 시전자 발밑(월드 좌표), `facing` 은 보는 쪽(rad).
-## 풀(`FxPool`)에 쉬는 것이 있으면 되감아 쓴다 — 새로 만들지 않는다
-static func burst(parent: Node3D, at: Vector3, facing: float) -> IceFx:
+## 풀(`FxPool`)에 쉬는 것이 있으면 되감아 쓴다 — 새로 만들지 않는다.
+## `shatter` 면 기둥이 부서지고("파쇄"), `freeze` 면 기둥이 짙은 청색이다("빙결"). 따로 논다
+static func burst(parent: Node3D, at: Vector3, facing: float, shatter := false, freeze := false) -> IceFx:
 	var fx := FxPool.take(parent, &"ice") as IceFx
 	if fx == null:
 		fx = IceFx.new()
 		fx.name = "IceFx"
 		parent.add_child(fx)
 		fx._build()
-	fx._start(at, facing)
+	fx._start(at, facing, shatter, freeze)
 	return fx
 
 
@@ -210,7 +227,7 @@ static func shatter_at() -> float:
 ## 끝나는 시각(초)
 static func span() -> float:
 	var pillars := last_start() + RISE + HOLD + SINK
-	return maxf(pillars, maxf(MARK_LIFE, shatter_at() + SHATTER_LIFE)) + 0.1
+	return maxf(pillars, maxf(MARK_LIFE, shatter_at() + BREAK_LIFE)) + 0.1
 
 
 ## 노드를 만든다 — 한 번만. 되감기는 `_start`
@@ -250,6 +267,8 @@ func _build() -> void:
 	_burst_bits = _shards(BURST_BITS, BURST_LIFE, BURST_SPEED_MIN, BURST_SPEED_MAX, 35.0, 1, feet)
 	_shatter = _shards(SHATTER_COUNT, SHATTER_LIFE, SHATTER_SPEED_MIN, SHATTER_SPEED_MAX, 50.0, 0, waist)
 	_shatter_bits = _shards(SHATTER_BITS, SHATTER_LIFE, SHATTER_SPEED_MIN, SHATTER_SPEED_MAX, 60.0, 1, waist)
+	_break = _shards(BREAK_COUNT, BREAK_LIFE, BREAK_SPEED_MIN, BREAK_SPEED_MAX, 70.0, 0, waist)
+	_break_bits = _shards(BREAK_BITS, BREAK_LIFE, BREAK_SPEED_MIN, BREAK_SPEED_MAX, 80.0, 1, waist)
 	_mist = _mist_emitter(feet)
 	# **만든 다음 프레임에 켠다** — 같은 프레임에 켜면 방출이 안 나온 적이 있다 (3절)
 	for e in _emitters():
@@ -258,8 +277,14 @@ func _build() -> void:
 
 
 ## 처음으로 되감는다. **아무것도 만들지 않는다** — 자리·보는 쪽·시각만 넣는다
-func _start(at: Vector3, facing: float) -> void:
+func _start(at: Vector3, facing: float, shatter := false, freeze := false) -> void:
 	position = at
+	_breaking = shatter
+	var mat := _pillars.material_override as ShaderMaterial
+	# 파쇄면 기둥이 **순식간에** 빠진다 — 빠지는 자리를 조각이 덮어 부서진 것으로 보인다
+	mat.set_shader_parameter(&"sink", BREAK_SINK if shatter else SINK)
+	mat.set_shader_parameter(&"deep", COLOR_DEEP_FROZEN if freeze else COLOR_DEEP)
+	mat.set_shader_parameter(&"pale", COLOR_PALE_FROZEN if freeze else COLOR_PALE)
 	# **캐릭터가 보는 쪽 기준이다** — 메시는 보는 쪽 0 으로 깔려 있다
 	# 방출기도 돌린다 — 나오는 자리가 기둥 밑동이라 기둥과 같이 돌아야 한다
 	for node in [_crack, _glow, _pillars] + _emitters():
@@ -282,6 +307,9 @@ func _process(delta: float) -> void:
 		_shattered = true
 		_shatter.restart()
 		_shatter_bits.restart()
+		if _breaking:
+			_break.restart()
+			_break_bits.restart()
 	_show()
 	if _t >= span():
 		finish()
@@ -308,16 +336,19 @@ func _show() -> void:
 	_crack.visible = fade > 0.0
 	_glow.visible = heat > 0.0
 
-	# 섬광과 번쩍임은 **세게 켜고 제자리에서 빠르게 죈다**
+	# 섬광과 번쩍임은 **세게 켜고 제자리에서 빠르게 죈다**. 파쇄면 부서지는 순간 한 번 더
 	var t := _t / FLARE_LIFE
+	if _breaking and _t >= shatter_at():
+		t = (_t - shatter_at()) / FLARE_LIFE
 	_flare.visible = t < 1.0
 	if _flare.visible:
 		_flare.scale = Vector3.ONE * lerpf(0.8, 1.15, sqrt(t))
 		_flare.material_override.albedo_color = Color(
 			COLOR_FLARE.r, COLOR_FLARE.g, COLOR_FLARE.b, pow(1.0 - t, 1.3))
-	_light.visible = _t < LIGHT_LIFE
+	var lt := _t - shatter_at() if _breaking and _t >= shatter_at() else _t
+	_light.visible = lt < LIGHT_LIFE
 	if _light.visible:
-		_light.light_energy = LIGHT_ENERGY * (1.0 - _t / LIGHT_LIFE)
+		_light.light_energy = LIGHT_ENERGY * (1.0 - lt / LIGHT_LIFE)
 
 
 func _sheet(mat: Material) -> MeshInstance3D:
@@ -330,7 +361,7 @@ func _sheet(mat: Material) -> MeshInstance3D:
 
 ## 떠 있는 방출기 전부
 func _emitters() -> Array:
-	return [_burst, _burst_bits, _shatter, _shatter_bits, _mist]
+	return [_burst, _burst_bits, _shatter, _shatter_bits, _mist, _break, _break_bits]
 
 
 ## 얼음 조각 — **기둥마다** 그 자리(`points`)에서 바깥 위로 튀었다 **구르며 떨어진다.**

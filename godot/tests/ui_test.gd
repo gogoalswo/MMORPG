@@ -1275,7 +1275,10 @@ func _case_enhance_batch(game: Node, me: Dictionary) -> void:
 		_fail("다중 강화 뒤 채팅이 %d줄 늘고 마지막이 %s (한 줄이어야 한다)" % [
 			game._chat.lines().size() - chat_before, str(line)
 		])
-	# 깨진 칸은 도는 동안 자리를 지키며 흐린 X(-1)로 남는다 (2026-09-24 "실패한 건 x자리 깨지는 연출")
+	# 깨진 칸은 터지는 한 박자 동안만 자리를 지키고, 끝나면 남은 장비가 앞으로 당겨진다
+	# (2026-09-24 "깨져서 터지면 남은 아이템 정렬을 맨 앞으로 땡겨")
+	if pop.picked.has(-1):
+		_fail("다 돈 뒤에 깨진 빈칸이 남았다: %s" % str(pop.picked))
 	for k in pop.picked.size():
 		var at: int = pop.picked[k]
 		var mark: Control = pop.picked_grid.get_child(k).get_node("broken")

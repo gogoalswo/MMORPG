@@ -58,6 +58,13 @@ export interface SkillDef {
    * 시각에 선다. 그동안 발이 묶인다(경직이 이 값보다 짧으면 이 값까지 늘린다)
    */
   delayMs?: number;
+  /**
+   * 시전 시간 (ms, 없으면 경직과 같다) — 스킬 동작이 끝날 때까지. **그동안 다른 스킬을
+   * 못 쓴다** (2026-09-24 요청: "스킬을 시전중에 다른 스킬 사용 못 하도록 막아").
+   * 동작 클립 길이(`scripts/blender/fighter_moves.py` 의 `CLIPS` 마지막 키)와 같게 둔다 —
+   * 짧으면 다음 스킬이 동작을 끊고, 길면 서 있는데도 안 나간다. 둘은 같이 고친다
+   */
+  castMs?: number;
   /** 자기 회복량 (최대 체력 대비 비율). 있으면 공격 대신 회복만 한다 */
   selfHeal?: number;
   /** 날아가는 무언가가 보여야 하는 스킬 */
@@ -402,6 +409,7 @@ const SKILL_LIST: SkillDef[] = [
     power: 0.56,
     hits: 3,
     hitGap: 80,
+    castMs: 1000,
     maxTargets: 4,
     reqLevel: 1,
     description: '손톱을 세워 앞 부채꼴을 세 번 긁어낸다.',
@@ -416,6 +424,7 @@ const SKILL_LIST: SkillDef[] = [
     // 동작(`fighter_moves.py` 의 SkyBreaker)이 0.72초에 땅을 찍는다 — 둘은 같이 고친다.
     // 5.4m 까지 뛰어오르므로 체공이 길다 (처음 0.42 → "지금의 5배" 로 늘렸다)
     delayMs: 720,
+    castMs: 1450,
     arc: Math.PI * 2,
     power: 5.5,
     maxTargets: 10,
@@ -439,6 +448,7 @@ const SKILL_LIST: SkillDef[] = [
     name: '낙뢰',
     job: 'fighter',
     cooldown: 12000,
+    castMs: 1100,
     range: 4.0,
     // **내 주위 원**이다 (2026-09-24 요청: "낙뢰 범위가 부채꼴인데 원 범위로 바꿔").
     // 처음엔 108° 부채꼴이었다 — 번개가 발밑에 떨어지는데 뒤에 선 놈이 안 맞았다
@@ -462,6 +472,7 @@ const SKILL_LIST: SkillDef[] = [
     name: '빙주각',
     job: 'fighter',
     cooldown: 20000,
+    castMs: 1000,
     range: 5.0,
     arc: Math.PI * 2,
     power: 4.6,

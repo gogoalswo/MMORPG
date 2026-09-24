@@ -190,6 +190,8 @@ func join(player_id: String) -> void:
 		"stats": stats,
 		"next_attack_at": 0,
 		"rooted_until": 0,
+		# 스킬 시전이 끝나는 시각 — 그때까지 **다른 스킬을 못 쓴다** (`cast`)
+		"cast_until": 0,
 		# --- 자동 사냥 ---
 		# **존을 옮기면 꺼진다** (join 을 다시 타므로). 앵커가 지난 존의 자리라
 		# 남겨 두면 켜 둔 채로 엉뚱한 데를 향해 걷는다
@@ -475,8 +477,10 @@ func _drive_auto(delta: float, now: int) -> void:
 		# 안 돌리면 마지막으로 걷던 쪽으로 헛친다 (attack 은 정면에서 다시 고른다)
 		player.rot = atan2(float(target.x) - player.x, float(target.z) - player.z)
 		# 휘두르는 중에는 다음 것을 넣지 않는다. 스킬 경직 중에 기본 공격이 끼면
-		# 스킬 동작이 끊기고, 쿨타임이 0 인 테스트 스위치에서는 스킬이 매 틱 나간다
-		if now < int(player.rooted_until):
+		# 스킬 동작이 끊기고, 쿨타임이 0 인 테스트 스위치에서는 스킬이 매 틱 나간다.
+		# **스킬 시전이 끝날 때까지도 기다린다** — 경직(0.4초)이 풀려도 동작은 1초 넘게
+		# 남는데, 그 사이 다음 스킬은 막혀 있으니 평타가 끼어 동작을 끊는다
+		if now < maxi(int(player.rooted_until), int(player.get("cast_until", 0))):
 			continue
 		var gap := Vector2(float(target.x) - player.x, float(target.z) - player.z).length()
 		# 스킬이 먼저다. 돌아온 스킬이 있으면 기본 공격 대신 그걸 쓴다
@@ -1483,6 +1487,11 @@ func cast(player_id: String, skill_id: String) -> void:
 		return
 
 	var now := Time.get_ticks_msec()
+	# **시전 중에는 다른 스킬을 못 쓴다** (2026-09-24 요청). 쿨타임은 스킬마다 따로라
+	# 막지 않으면 연달아 눌러 앞 동작을 끊고, 판정도 동작 하나에 둘이 겹친다.
+	# 쿨타임을 돌리기 전에 거른다 — 거절된 스킬의 쿨타임이 돌면 안 된다
+	if now < int(player.get("cast_until", 0)):
+		return
 	var ready_at: Dictionary = player.skill_ready_at
 	if now < int(ready_at.get(skill_id, 0)):
 		return
@@ -1520,6 +1529,12 @@ func cast(player_id: String, skill_id: String) -> void:
 	var delay := int(skill.get("delayMs", 0))
 	root = maxi(root, delay)
 	player.rooted_until = now + root
+	# 시전 시간 — 동작 길이(`castMs`)까지. 없는 스킬(동작이 없는 직업)은 경직과 같다.
+	# 연타 강화로 대 수가 늘어 마지막 대가 동작보다 늦으면 그때까지 늘린다
+	var combo_ms := int(skill.get("hitGap", 80)) * (
+		int(skill.get("hits", 1)) - 1 + roundi(Skills.upgrade_sum(skill_id, upgrades, "extraHits"))
+	)
+	player.cast_until = now + maxi(maxi(root, int(skill.get("castMs", 0))), combo_ms)
 	# 붙은 강화도 싣는다 — 화면이 이펙트를 고른다 (기절이면 붉은 번개, 범위면 좌우 두 번 더).
 	# `delay_ms` 가 있으면 화면은 동작만 먼저 틀고 이펙트는 그만큼 뒤에 세운다
 	_events.append({

@@ -16,6 +16,7 @@ func _init() -> void:
 	_case_learn()
 	_case_bar()
 	_case_cast()
+	_case_lock()
 	_case_multi()
 	_case_combo()
 	_case_range()
@@ -157,6 +158,42 @@ func _case_cast() -> void:
 		_fail("마법사 스킬이 나갔다")
 
 
+## **시전 중에는 다른 스킬을 못 쓴다** (2026-09-24 요청). 시전 시간은 표의 `castMs`
+## (동작 길이)이고, 거절된 스킬은 쿨타임도 안 돈다
+func _case_lock() -> void:
+	var s := _setup()
+	var w: World = s[0]
+	var me: Dictionary = s[1]
+	w.learn_skill("me", "rising_kick")
+	w.learn_skill("me", "frost_pillar")
+	w.set_skill_bar("me", ["rising_kick", "frost_pillar"])
+	w.drain_events()
+
+	var before := Time.get_ticks_msec()
+	w.cast("me", "rising_kick")
+	if _first(w.drain_events(), "skill").is_empty():
+		_fail("첫 스킬이 안 나갔다")
+		return
+	var cast_ms := int(Skills.get_skill("fighter", "rising_kick").get("castMs", 0))
+	var left := int(me.cast_until) - before
+	if cast_ms <= 0 or left < cast_ms:
+		_fail("할퀴기 시전 시간이 %dms 여야 하는데 %dms" % [cast_ms, left])
+
+	w.cast("me", "frost_pillar")
+	if not _first(w.drain_events(), "skill").is_empty():
+		_fail("시전 중에 다른 스킬이 나갔다")
+	if int(me.skill_ready_at.get("frost_pillar", 0)) != 0:
+		_fail("막힌 스킬의 쿨타임이 돌았다")
+
+	# 시전이 끝나면 나간다
+	me.cast_until = 0
+	w.cast("me", "frost_pillar")
+	if _first(w.drain_events(), "skill").is_empty():
+		_fail("시전이 끝났는데 다음 스킬이 안 나갔다")
+	else:
+		print("  시전 잠금: 할퀴기 %dms 동안 빙주각 거절" % cast_ms)
+
+
 func _case_multi() -> void:
 	# 천붕각 maxTargets 10, 전방위(arc 2PI) — 앞에 셋을 놓으면 셋 다 맞아야 한다
 	var s := _setup(3)
@@ -274,6 +311,7 @@ func _case_range() -> void:
 	# 2) 전방위 근접 — 각이 한 바퀴면 부채꼴이 아니라 원이다
 	w.learn_skill("me", "sky_breaker")
 	w.set_skill_bar("me", ["sky_breaker"])
+	me.cast_until = 0
 	w.drain_events()
 	w.cast("me", "sky_breaker")
 	w._run_landings(Time.get_ticks_msec() + 100000)
@@ -303,6 +341,7 @@ func _case_range() -> void:
 	)
 	s[2].append(aside)
 	w.learn_skill("me", "rising_kick")
+	me.cast_until = 0
 	w.set_skill_bar("me", ["rising_kick"])
 	w.drain_events()
 	w.cast("me", "rising_kick")
@@ -337,6 +376,7 @@ func _case_range() -> void:
 	me["job"] = "archer"
 	w.learn_skill("me", "explosive_arrow")
 	w.set_skill_bar("me", ["explosive_arrow"])
+	me.cast_until = 0
 	w.drain_events()
 	# 앞선 시전에 쓰러진 놈이 있을 수 있다 — **살아 있는 것 중 가장 가까운 놈**이
 	# 겨눠진다 (`World.cast` 가 `_pick_targets` 로 하나만 고른다). **쏘기 전에** 고른다 —
@@ -456,6 +496,7 @@ func _case_upgrade() -> void:
 	# 떼면 기절도 없다
 	me.x = 0.0
 	w.debug_reset_upgrades("me")
+	me.cast_until = 0
 	w.drain_events()
 	w.cast("me", "thunder_fall")
 	if not _first(w.drain_events(), "skill").get("upgrades", []).is_empty() \
@@ -479,6 +520,7 @@ func _case_wide() -> void:
 		if wide:
 			w.debug_upgrade_all("me", 1)
 		me.skill_ready_at = {}
+		me.cast_until = 0
 		me.rot = PI / 2.0
 		w.drain_events()
 		w.cast("me", "thunder_fall")
@@ -506,6 +548,7 @@ func _case_claw_up() -> void:
 	for c in [[[], 120.0, 3], [["wide"], 160.0, 3], [["combo"], 120.0, 5], [["wide", "combo"], 160.0, 5]]:
 		me.skill_upgrades = {"rising_kick": c[0].duplicate()}
 		me.skill_ready_at = {}
+		me.cast_until = 0
 		w._combos.clear()
 		w.drain_events()
 		w.cast("me", "rising_kick")
@@ -533,6 +576,7 @@ func _case_quake_up() -> void:
 	w.set_skill_bar("me", ["sky_breaker"])
 	me.skill_upgrades = {"sky_breaker": ["wide"]}
 	me.skill_ready_at = {}
+	me.cast_until = 0
 	w.drain_events()
 	w.cast("me", "sky_breaker")
 	w._run_landings(Time.get_ticks_msec() + 100000)
@@ -544,6 +588,7 @@ func _case_quake_up() -> void:
 
 	me.skill_upgrades = {"sky_breaker": ["zone"]}
 	me.skill_ready_at = {}
+	me.cast_until = 0
 	w.drain_events()
 	var now := Time.get_ticks_msec()
 	w.cast("me", "sky_breaker")
@@ -575,6 +620,7 @@ func _case_quake_up() -> void:
 			break
 	# 지대 밖으로 나간 놈은 안 맞는다 — 틱마다 다시 고른다
 	me.skill_ready_at = {}
+	me.cast_until = 0
 	w.cast("me", "sky_breaker")
 	w._run_landings(Time.get_ticks_msec() + 100000)
 	w.drain_events()

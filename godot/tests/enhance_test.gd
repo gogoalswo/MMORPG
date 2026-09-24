@@ -21,6 +21,7 @@ func _init() -> void:
 	_case_reach()
 	_case_many()
 	_case_many_rounds()
+	_case_fill()
 	Save.clear()
 
 	if _failed == 0:
@@ -259,3 +260,24 @@ func _case_many_rounds() -> void:
 		func(x: Dictionary) -> bool: return str(x.id) == "g1_a" and int(x.enhance) == 0
 	).size(), 12)
 	print("  다중 +1→+3 을 %d바퀴: 22개 중 %d개 도달 (기댓값 약 12)" % [rounds, alive])
+
+
+## 테스트 단추 "가방 채우기" (2026-09-24 "테스트하기 위해서 아이템을 인벤토리에 채워") —
+## 빈칸을 장비로 꽉 채우고, 같은 아이템이 여럿이며 강화 단계가 섞여 있어야 다중 강화를 시험할 수 있다
+func _case_fill() -> void:
+	var s := _world()
+	var w: World = s[0]
+	var me: Dictionary = s[1]
+	me.bag.append({"id": Items.crystal_id(), "count": 2})
+	w.debug_fill_bag("me")
+	w.drain_events()
+	_eq("가방이 꽉 찬다", me.bag.size(), Items.bag_size())
+	var gear: Array = me.bag.filter(func(x: Dictionary) -> bool: return not Items.get_item(str(x.id)).is_empty())
+	_eq("크리스탈 말고 전부 장비", gear.size(), Items.bag_size() - 1)
+	var same: Array = gear.filter(func(x: Dictionary) -> bool: return str(x.id) == str(gear[0].id))
+	var levels := {}
+	for x in same:
+		levels[int(x.enhance)] = true
+	_eq("같은 아이템이 넷 이상", same.size() >= 4, true)
+	_eq("같은 아이템의 강화 단계가 섞였다", levels.size() >= 4, true)
+	_eq("일곱 등급이 다 있다", gear.map(func(x: Dictionary) -> int: return int(x.grade)).max(), 7)

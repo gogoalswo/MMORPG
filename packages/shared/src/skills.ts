@@ -557,11 +557,12 @@ export const SKILL_UPGRADES: SkillUpgradeDef[] = [
     id: 'zone',
     skill: 'sky_breaker',
     name: '균열 지대',
-    desc: '3초간 0.5초마다 40% 피해',
+    // 처음엔 40% 였다 — "너무 약해" 로 100% 로 올렸다 (2026-09-24)
+    desc: '3초간 0.5초마다 100% 피해',
     exp: 1000,
     zoneMs: 3000,
     zoneTickMs: 500,
-    zonePower: 0.4,
+    zonePower: 1.0,
   },
 ];
 

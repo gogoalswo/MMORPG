@@ -146,7 +146,13 @@ test('몬스터 경직은 공격 간격보다 짧다 — 때리는 사이에 쫓
 
 import { MONSTER_KINDS } from './monsters.ts';
 import { RUN_SPEED } from './constants.ts';
-import { killsPerLevel, monster as designMonster } from './balance.ts';
+import {
+  buildPlayer,
+  damage as designDamage,
+  killsPerLevel,
+  monster as designMonster,
+  refWorn,
+} from './balance.ts';
 
 // 레벨당 필요 마릿수는 더 이상 여기서 재구성하지 않는다 — 설계(balance.ts)가
 // 목표 시간(2,880시간)에서 역산한 값을 갖고 있으므로, 그것과 맞물리는지만 본다
@@ -288,10 +294,14 @@ test('범위 공격은 평타보다 아프지만 한 방에 죽이지는 않는�
     assert.ok(aoeAttack > kind.attack, `${kind.id}: 범위 공격이 평타보다 약하다`);
 
     // 그 보스를 잡으러 올 만한 레벨(보스 레벨 ±1)의 직업들로 본다.
+    // **기준 장비를 낀 채, 게임과 같은 K 공식으로** 잰다 (2026-09-24). 그 전엔 맨몸 +
+    // 옛 `computeDamage` 로 쟀는데, 몬스터 공격력을 "장비 낀 기준 플레이어" 에 맞춰
+    // 올리자 맨몸 마법사가 56% 를 맞는다고 깨졌다 — 실제 판정(`world.gd`)은 그 둘을 안 쓴다
     for (const job of JOB_IDS) {
-      const stats = statsFor(job, Math.max(1, kind.level));
-      const taken = computeDamage(aoeAttack, stats.defense);
-      const share = taken / stats.maxHp;
+      const level = Math.max(1, kind.level);
+      const p = buildPlayer(level, refWorn(level), job);
+      const taken = designDamage(aoeAttack, kind.level, p.df);
+      const share = taken / p.hp;
       assert.ok(
         share < 0.5,
         `${kind.id} → ${job}: 한 방에 최대 체력의 ${(share * 100).toFixed(0)}% 가 날아간다`

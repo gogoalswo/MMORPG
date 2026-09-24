@@ -78,12 +78,13 @@ func _monster_table() -> void:
 		# **2026-09-23 에 HP 를 되돌렸다** (지시: "몬스터 HP 30%를 다시 올려").
 		# 2026-09-21 에 장신구 배분을 고치면서 소리 없이 따라 내려갔던 값을
 		# 장신구 변경 직전 것으로 복원했다 — 공격력·방어력은 그때도 안 바뀌었다.
-		# **2026-09-24 에 HP 를 공격력 축 배수만큼 올렸다** ("등급간 배수를 키워")
+		# **2026-09-24 에 HP 를 공격력 축 배수만큼 올렸다** ("등급간 배수를 키워").
+		# 같은 날 방어·HP 축도 같은 배수가 되어 공격력·방어력 열도 설계 비율만큼 올렸다
 		{"level": 10, "grade": 1.0, "hp": 71, "atk": 2},
 		{"level": 50, "grade": 1.63, "hp": 235, "atk": 4},
-		{"level": 100, "grade": 3.3, "hp": 1894, "atk": 14},
-		{"level": 150, "grade": 4.97, "hp": 25446, "atk": 64},
-		{"level": 200, "grade": 6.63, "hp": 426182, "atk": 394},
+		{"level": 100, "grade": 3.3, "hp": 1894, "atk": 20},
+		{"level": 150, "grade": 4.97, "hp": 25446, "atk": 192},
+		{"level": 200, "grade": 6.63, "hp": 426182, "atk": 2547},
 	]
 	for row in rows:
 		var level := int(row["level"])
@@ -157,20 +158,20 @@ func _skill_stages() -> void:
 func _gear() -> void:
 	var table := [
 		{"grade": 1, "level": 1, "sum": 35},
-		{"grade": 2, "level": 31, "sum": 60},
-		{"grade": 3, "level": 61, "sum": 102},
-		{"grade": 4, "level": 91, "sum": 173},
-		{"grade": 5, "level": 121, "sum": 295},
-		{"grade": 6, "level": 151, "sum": 502},
-		{"grade": 7, "level": 181, "sum": 856},
+		# 2026-09-24 에 등급 배수 ×1.7037 → ×2.434 (영웅 무기 = 일반의 피해 3배, 전 축 공통)
+		{"grade": 2, "level": 31, "sum": 85},
+		{"grade": 3, "level": 61, "sum": 207},
+		{"grade": 4, "level": 91, "sum": 505},
+		{"grade": 5, "level": 121, "sum": 1229},
+		{"grade": 6, "level": 151, "sum": 2993},
+		{"grade": 7, "level": 181, "sum": 7286},
 	]
 	for row in table:
 		var g := int(row["grade"])
 		_eq("등급 %d 착용 레벨" % g, Stats.equip_level(g), int(row["level"]))
 		_eq("등급 %d 풀셋 합" % g, roundi(Stats.grade_sum(float(g))), int(row["sum"]))
-	_near("등급 간격", snappedf(Stats.grade_ratio(), 0.0001), 1.7037, 1e-9)
-	# 공격력 축만 따로 가파르다 — 영웅 무기 = 일반 무기의 피해 3배 (2026-09-24)
-	_near("공격력 등급 간격", snappedf(Stats.atk_grade_ratio(), 0.001), 2.434, 1e-9)
+	# 영웅 무기 = 일반 무기의 피해 3배에서 역산한 배수다 (2026-09-24)
+	_near("등급 간격", snappedf(Stats.grade_ratio(), 0.001), 2.434, 1e-9)
 	var common := 1.0 + float(Stats.slot_stats("weapon", 1.0, 1)["atk"]) / 100.0
 	var hero := 1.0 + float(Stats.slot_stats("weapon", 4.0, 1)["atk"]) / 100.0
 	_near("영웅/일반 무기 피해", hero / common, 3.0, 1e-6)
@@ -180,10 +181,10 @@ func _gear() -> void:
 	# 치확·공속은 장비 기본에서 걷었고(랜덤 옵션 전담) 풀세트 합은 그대로다
 	_eq("등급7 무기 무강", roundi(Stats.slot_stats("weapon", 7.0, 1)["atk"]), 3643)
 	_eq("등급7 무기 4단", roundi(Stats.slot_stats("weapon", 7.0, 4)["atk"]), 4749)
-	_eq("등급7 갑옷 방어", roundi(Stats.slot_stats("armor", 7.0, 1)["df"]), 171)
-	_eq("등급7 갑옷 HP", roundi(Stats.slot_stats("armor", 7.0, 1)["hp"]), 100)
+	_eq("등급7 갑옷 방어", roundi(Stats.slot_stats("armor", 7.0, 1)["df"]), 1457)
+	_eq("등급7 갑옷 HP", roundi(Stats.slot_stats("armor", 7.0, 1)["hp"]), 850)
 	_eq("등급7 목걸이 공격", roundi(Stats.slot_stats("necklace", 7.0, 1)["atk"]), 1822)
-	_eq("등급7 목걸이 방어", roundi(Stats.slot_stats("necklace", 7.0, 1)["df"]), 86)
+	_eq("등급7 목걸이 방어", roundi(Stats.slot_stats("necklace", 7.0, 1)["df"]), 729)
 	_eq("등급7 목걸이 치확", roundi(Stats.slot_stats("necklace", 7.0, 1)["crit"] * 100.0), 0)
 	_eq("등급7 반지 공속", roundi(Stats.slot_stats("ring", 7.0, 1)["aspd"] * 100.0), 0)
 	_eq("등급7 신발 이동", roundi(Stats.slot_stats("boots", 7.0, 1)["move"] * 100.0), 25)

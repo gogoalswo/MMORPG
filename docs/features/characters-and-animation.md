@@ -58,6 +58,9 @@ KayKit Adventurers 5종과 화살통은 2026-09-10 에 **파일째 뺐다** (`mo
 | `packages/client/src/scene/models.ts` | .glb 로딩, 클립 목록, 크기 측정. `SOLO_MODELS` 가 **제 클립을 들고 오는** 모델 |
 | `packages/client/src/game/rigFactory.ts` | **`MODEL_RIGS`** — 어느 모델을 모델 리그로 그릴지 |
 | `scripts/build-varco-character.mjs` | VARCO 결과물 6개를 .glb 하나로 합치고, **루프 클립을 한 주기로 잘라 닫고**(`closeLoop`), 텍스처를 줄인다 |
+| **`scripts/blender/fighter_moves.py`** | ★ **격투가 평타·스킬 동작을 블렌더에서 짓는다** → `public/assets/anim/fighter_moves.glb` (뼈대+클립만, 커밋). 아래 "블렌더 동작" |
+| **`scripts/add-clips.mjs`** | 그 클립을 뼈 이름으로 `varco_fighter.glb` 에 붙인다. 같은 이름은 갈아끼우고, 캐릭터 클립과 같은 채널만 남긴다 |
+| **`godot/game/game.gd`** `SWING_CLIPS` · `SKILL_CLIPS` · `_start_move` · `_play_player_clip` | 고도에서 평타·스킬마다 동작을 고르고 끝까지 튼다 |
 | `packages/client/src/game/modelRig.ts` | **모델 리그** — 클립 섞기, 크기 맞추기, 몬스터 색 입히기 |
 | `packages/shared/src/beasts.ts` | 짐승 키 표(`BEAST_HEIGHT`)와 클릭 상자 크기 — `hit-probe` 가 같이 쓴다 |
 | `scripts/trim-gltf.mjs` | 안 쓰는 애니메이션을 잘라 파일을 줄인다 (KayKit·Quaternius 를 빼서 지금 부르는 곳이 없다) |
@@ -215,6 +218,49 @@ Rig(humanoid) → Animate 로 나온 것을 합쳤다. 출처와 약관은
   `skill.png`(1024²)를 `public/assets/fx/fist.png`(256²)로 줄였다. 까만 바탕이라 가산
   혼합으로 바탕이 빠진다 → [skills.md](skills.md).
 - 절차적 폴백(`equipFighter`)은 붉은 머리띠·검은 띠·붕대 감은 주먹이다.
+
+### 블렌더 동작 (평타·스킬) ★ (2026-09-24)
+바르코 클립은 넷뿐이라 평타도 스킬 넷도 전부 같은 발차기(`Attack`)였다. 요청("현재 스킬에
+맞춰서 블렌더로 애니메이션 만들어서 적용해봐. 평타도")으로 **여섯 동작을 블렌더에서 지었다.**
+
+| 클립 | 언제 | 무엇 | 부딪히는 키 |
+|---|---|---|---|
+| `Jab` · `Cross` | 평타 (`swing`) — **번갈아** | 왼주먹 잽 / 몸을 돌린 오른 스트레이트, 싸움 자세로 돌아온다 | 0.09 · 0.10s |
+| `Claw` | 할퀴기 `rising_kick` | 오른손 → 왼손 → 오른손으로 앞을 가로질러 긁는다. 이펙트 첫 줄기가 오른쪽→왼쪽이고 번갈아 돈다(`SkillFx.local_point`) | 0.10 · 0.18 · 0.28s |
+| `Thunder` | 낙뢰 `thunder_fall` | 오른팔을 하늘로 뻗었다가 앞 땅으로 내리친다(번개가 뒤 위→앞으로 꽂히는 방향). 번개 셋에 맞춰 몸이 두 번 움찔한다 | 0.12s |
+| `SkyBreaker` | 천붕각 `sky_breaker` | 뛰어올라 오른발을 치켜든 채 내려와 짓찧고, 두 주먹으로 땅을 누르며 주저앉는다 | 0.12s |
+| `FrostStomp` | 빙주각 `frost_pillar` | 왼 무릎을 높이 들었다 짓밟으며 말 탄 자세로 내려앉고 두 손바닥을 땅으로 누른다 | 0.10s |
+
+- **부딪히는 순간을 0.1초 안에 둔다.** 이펙트·판정이 시전 그 순간(t=0)에 나가므로 준비 동작을
+  길게 두면 번개가 먼저 떨어지고 팔은 나중에 내려온다. 준비 자세는 고도가 섞어 넣는
+  0.06초(`MOVE_BLEND`)에 들어간다 — 첫 키가 곧 준비 자세다.
+- **동작은 끝까지 튼다** (1초 남짓). 경직(0.4초)에 맞춰 자르면 내리친 주먹이 땅에 닿자마자
+  대기로 튄다. 경직이 풀린 뒤 **움직이면** 그 자리에서 끊고 0.15초 섞어 달리기로 간다.
+  스킬 동작은 대기 클립의 첫 자세로 끝나고, 평타는 싸움 자세로 끝난다(700ms 마다 다시 치므로).
+- 새 클립이 없는 모델이면 옛 길(`Attack` 을 0.8초부터 1.6배)로 돌아간다.
+- **자세는 뼈 각도가 아니라 손발이 갈 자리로 적는다.** 이 뼈대는 뼈마다 축이 틀어져 있어
+  각도로 적으면 부호부터 헷갈린다. 몸통만 각도로 주고 팔다리는 손목·발목 자리 + 팔꿈치·무릎
+  방향을 주면 **2본 IK** 로 푼다. 좌표는 아마추어 공간 — `+X` 캐릭터 왼쪽 · `-Y` 앞 · `+Z` 위,
+  키 약 1.0 (게임에서 1.8배). 발목 높이 0.078 이 땅에 선 자리다.
+- **윗팔·허벅지를 굽는 쪽으로 비튼다.** 겨누기만 하면 비틀림이 제멋대로라 팔꿈치가 거꾸로
+  꺾인다. 굽는 쪽(팔은 T 자세에서 앞, 다리는 뒤)이 손목이 가는 쪽을 보게 윗마디를 제 축
+  둘레로 돌린다. 스크립트가 키마다 `굽힘맞음`(1 = 맞음, 음수 = 거꾸로)을 찍는다.
+  처음엔 두 번 틀렸다: `rotation_difference` 가 180° 에서 축을 제멋대로 골라 팔 방향까지
+  틀었고, 굽는 쪽을 팔꿈치 방향(pole)으로 추정하니 pole 이 윗팔과 나란할 때 뒤집혔다.
+- **몸 높이는 `Root` 로 옮긴다, `Hips` 가 아니다.** 바르코 클립은 뼈 20개 회전 + `Root` 이동만
+  키로 갖는다. `Hips` 를 내리면 달리기로 끊겼을 때 **아무도 되돌리지 않아 몸이 가라앉은 채
+  굳는다.** 같은 이유로 `add-clips.mjs` 가 캐릭터 클립에 없는 채널(발가락·크기·다른 뼈 이동)을
+  버리고, 버리는 채널이 기본 자세에서 벗어나 있으면 멈춘다. `model_test` 가 동작마다 트랙 수가
+  대기와 같은지 본다.
+- 블렌더로 들였다 내보낸 뼈의 기본 자세가 원본과 같다(최대 차이 0.0000036, `bone_heuristic="BLENDER"`).
+  그래서 채널 값을 이름으로 그대로 옮겨도 된다. `add-clips.mjs` 가 매번 대조하고 다르면 멈춘다.
+- 고치는 법: 자세 표(`GUARD`·`JAB`…)나 `CLIPS` 의 시각을 고치고 두 줄을 돌린다.
+  ```bash
+  npm run blender -- --python scripts/blender/fighter_moves.py
+  node scripts/add-clips.mjs public/assets/models/varco_fighter.glb public/assets/models/varco_fighter.glb public/assets/anim/fighter_moves.glb
+  ```
+  `fetch-assets.sh` 도 격투가를 다시 지은 뒤 두 번째 줄을 돌린다 (블렌더 없이).
+- **아직 화면으로 확인 전이다.** 손발 자리·굽는 방향은 숫자로 봤고, 생김새는 사용자 확인을 기다린다.
 
 ### VARCO 오우거 (`varco_ogre1` ~ `varco_ogre5`) — 전 사냥터·보스에 배치
 - 바르코 워크플로우 "오우거" 결과물 다섯 벌(Type1~5)이다. **생김새(메시·텍스처)만

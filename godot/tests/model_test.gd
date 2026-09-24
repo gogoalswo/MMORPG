@@ -44,6 +44,21 @@ func _case_fighter() -> void:
 	for clip in ["Idle", "Run", "Attack", "Death"]:
 		if not rig.has_clip(clip):
 			_fail("격투가에 %s 클립이 없다" % clip)
+	# 블렌더로 지은 평타·스킬 동작 (scripts/blender/fighter_moves.py → add-clips.mjs).
+	# 트랙 수가 대기와 같아야 한다 — 한 동작만 가진 트랙은 대기로 돌아가도 아무도
+	# 되돌리지 않아 그 자세로 굳는다
+	var idle_tracks: int = rig._anim.get_animation("Idle").get_track_count()
+	var moves: Array = load("res://game/game.gd").SWING_CLIPS.duplicate()
+	moves.append_array(load("res://game/game.gd").SKILL_CLIPS.values())
+	for clip in moves:
+		if not rig.has_clip(clip):
+			_fail("격투가에 %s 동작이 없다 — add-clips.mjs 를 돌렸나" % clip)
+			continue
+		var anim: Animation = rig._anim.get_animation(clip)
+		if anim.length < 0.4 or anim.length > 1.2:
+			_fail("%s 가 %.2f초 — 평타·스킬 동작은 1초 남짓이어야 한다" % [clip, anim.length])
+		if anim.get_track_count() != idle_tracks:
+			_fail("%s 트랙 %d 개, 대기는 %d 개" % [clip, anim.get_track_count(), idle_tracks])
 	var h := _height(rig)
 	if absf(h - 1.8) > 0.02:
 		_fail("격투가 키가 1.8 이어야 하는데 %.2f" % h)
@@ -117,6 +132,32 @@ func _case_every_kind() -> void:
 	print("  몬스터 %d종 → 모델 %s" % [kinds.size(), looks])
 
 
+## 이벤트가 오면 그 동작을 틀고, 끝나면 대기로 돌아가는지 본다
+func _check_moves(game: Node3D) -> void:
+	var rig: Rig = game._player
+	var me: String = game._transport.my_id()
+	var cases := [
+		[&"swing", {"id": me, "root_ms": 400}, "Cross"],
+		[&"swing", {"id": me, "root_ms": 400}, "Jab"],
+		[&"skill", {"id": me, "skill": "frost_pillar", "root_ms": 400}, "FrostStomp"],
+		[&"skill", {"id": me, "skill": "thunder_fall", "root_ms": 400}, "Thunder"],
+	]
+	for c in cases:
+		game._on_event(c[0], c[1])
+		await process_frame
+		await process_frame
+		if rig._playing != c[2]:
+			_fail("%s(%s) 뒤에 %s 가 아니라 %s 를 튼다" % [c[0], c[1].get("skill", ""), c[2], rig._playing])
+	# 끝나면 대기로 돌아간다
+	game._move_until = 0
+	await process_frame
+	await process_frame
+	if rig._playing != "Idle":
+		_fail("동작이 끝났는데 대기가 아니라 %s" % rig._playing)
+	else:
+		print("  동작: 평타 잽·스트레이트 번갈아, 스킬마다 제 동작, 끝나면 대기")
+
+
 ## 실제 화면에서 초원까지 걸어가 몬스터가 모델로 서 있는지 본다
 func _run_scene() -> void:
 	root.add_child(load("res://main.tscn").instantiate())
@@ -147,6 +188,8 @@ func _run_scene() -> void:
 			_fail("모델로 선 몬스터가 %d마리뿐이다" % rigs)
 		if posts > 0:
 			_fail("기둥으로 선 몬스터가 %d마리 있다 — 보스까지 모델이어야 한다" % posts)
+
+	await _check_moves(game)
 
 	if _failed == 0:
 		print("모델: 전부 통과")

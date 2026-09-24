@@ -279,6 +279,7 @@
       "job": "fighter",
       "cooldown": 55000,
       "range": 6,
+      "delayMs": 420,
       "arc": 6.283185307179586,
       "power": 5.5,
       "maxTargets": 10,

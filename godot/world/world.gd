@@ -33,6 +33,9 @@ var _combos: Array = []
 ## 남아 있는 피해 지대 (천붕각 "균열 지대" 강화). `{player, x, z, reach, cap, attack,
 ## skill, next_at, until, tick}` — `step` 이 `tick` 마다 범위 안에 피해를 넣는다
 var _zones: Array = []
+## 아직 안 떨어진 스킬 (`delayMs` 가 있는 스킬 — 천붕각이 뛰어올랐다 내려찍는다).
+## `{player, skill, upgrades, range, aim, at}` — `step` 이 때가 되면 `_land` 로 넣는다
+var _landings: Array = []
 
 ## 어느 직업으로 시작하나. 만드는 화면이 없어서 당분간 고정이다
 const DEFAULT_JOB := "fighter"
@@ -260,6 +263,7 @@ func input_move(player_id: String, seq: int, dx: float, dz: float, dt: float) ->
 func step(delta: float) -> void:
 	var now := Time.get_ticks_msec()
 	_respawn(now)
+	_run_landings(now)
 	_run_combos(now)
 	_run_zones(now)
 	_step_monsters(delta, now)
@@ -1405,11 +1409,15 @@ func cast(player_id: String, skill_id: String) -> void:
 	var root := Combat.attack_root_ms(
 		Combat.effective_cooldown(stats.attackCooldown, stats.attackSpeed)
 	)
+	# 늦게 떨어지는 스킬은 떨어질 때까지 묶는다 — 공중에서 걸어가면 착지 자리가 어긋난다
+	var delay := int(skill.get("delayMs", 0))
+	root = maxi(root, delay)
 	player.rooted_until = now + root
-	# 붙은 강화도 싣는다 — 화면이 이펙트를 고른다 (기절이면 붉은 번개, 범위면 좌우 두 번 더)
+	# 붙은 강화도 싣는다 — 화면이 이펙트를 고른다 (기절이면 붉은 번개, 범위면 좌우 두 번 더).
+	# `delay_ms` 가 있으면 화면은 동작만 먼저 틀고 이펙트는 그만큼 뒤에 세운다
 	_events.append({
 		"type": "skill", "id": player_id, "skill": skill_id, "root_ms": root,
-		"upgrades": upgrades.duplicate(),
+		"upgrades": upgrades.duplicate(), "delay_ms": delay,
 	})
 
 	# 회복형은 공격 판정을 하지 않는다
@@ -1430,6 +1438,40 @@ func cast(player_id: String, skill_id: String) -> void:
 		})
 		return
 
+	if delay > 0:
+		_landings.append({
+			"player": player_id, "skill": skill_id, "upgrades": upgrades.duplicate(),
+			"range": range_now, "aim": aim, "at": now + delay,
+		})
+		return
+	_land(player, skill, skill_id, upgrades, range_now, aim, now)
+
+
+## 때가 된 늦은 스킬을 떨어뜨린다. 그 사이 죽었거나 떠난 사람 것은 버린다
+func _run_landings(now: int) -> void:
+	if _landings.is_empty():
+		return
+	var left: Array = []
+	for landing in _landings:
+		if now < int(landing.at):
+			left.append(landing)
+			continue
+		var player: Dictionary = _players.get(str(landing.player), {})
+		if player.is_empty() or bool(player.dead):
+			continue
+		var skill := Skills.get_skill(str(player.job), str(landing.skill))
+		if skill.is_empty():
+			continue
+		_land(player, skill, str(landing.skill), landing.upgrades, float(landing.range), landing.aim, now)
+	_landings = left
+
+
+## 스킬이 **떨어지는 순간** — 대상을 고르고 때리고, 지대·연타를 건다.
+## 보통은 누르는 순간이고, `delayMs` 가 있으면 그만큼 뒤다 (대상도 그때 다시 고른다)
+func _land(player: Dictionary, skill: Dictionary, skill_id: String, upgrades: Array,
+		range_now: float, aim: Dictionary, now: int) -> void:
+	var player_id := str(player.id)
+	var stats: Dictionary = player.stats
 	# **겨눈 놈이 있으면 원거리 스킬은 그 자리에서 터진다.** 근접기는 내 몸이
 	# 중심이다 — 내 앞을 베는 동작인데 판정만 저쪽에서 나면 이펙트와 어긋난다
 	var origin: Dictionary = {}

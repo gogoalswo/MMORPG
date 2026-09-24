@@ -27,6 +27,9 @@ const GEAR_CELL := 64
 const DETAIL_ICON := 92
 ## 상세 창 폭
 const DETAIL_W := 300
+## 강화 창 왼쪽 장비 목록 — 5열, 이 높이를 넘으면 굴린다 (칸 다섯 줄 남짓)
+const ENHANCE_COLUMNS := 5
+const ENHANCE_LIST_H := 330
 ## 창이 화면 양 끝에서 떨어지는 폭과, 상세 창·인벤토리 사이
 const WINDOW_EDGE := 16
 const WINDOW_GAP := 8
@@ -263,6 +266,7 @@ var _enhance_icon: PanelContainer
 var _enhance_info: GridContainer
 var _enhance_result: Label
 var _enhance_go: Button
+var _enhance_grid: GridContainer  # 왼쪽 장비 목록 — 끼운 것 먼저, 그다음 가방
 ## 두드릴 것 — {where: "bag"|"equip", index: 가방 번호|슬롯 번호}. 칸 번호가 아니다
 var _enhance_target: Dictionary = {}
 ## 크리스탈 창 — 크리스탈을 고르고 "사용" 을 누르면 상세 창 자리에 뜬다.
@@ -1129,12 +1133,38 @@ func _build_enhance_popup() -> void:
 	_enhance_panel.visible = true
 	center.add_child(_enhance_panel)
 
+	var outer := VBoxContainer.new()
+	outer.add_theme_constant_override("separation", 8)
+	_enhance_panel.add_child(outer)
+	_window_title(outer, "장비 강화", 22)
+	var body := HBoxContainer.new()
+	body.add_theme_constant_override("separation", 18)
+	outer.add_child(body)
+
+	# 왼쪽 — 강화할 장비를 고르는 목록. HUD "강화" 단추로 열면 대상이 없어서 여기서 고른다
+	var pick_side := VBoxContainer.new()
+	pick_side.add_theme_constant_override("separation", 8)
+	body.add_child(pick_side)
+	pick_side.add_child(_inv_label("장비 고르기", 20, INV_GOLD))
+	var pick_rule := ColorRect.new()
+	pick_rule.color = INV_RULE
+	pick_rule.custom_minimum_size = Vector2(0, 1)
+	pick_side.add_child(pick_rule)
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.custom_minimum_size = Vector2(0, ENHANCE_LIST_H)
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	pick_side.add_child(scroll)
+	_enhance_grid = GridContainer.new()
+	_enhance_grid.columns = ENHANCE_COLUMNS
+	_enhance_grid.add_theme_constant_override("h_separation", 4)
+	_enhance_grid.add_theme_constant_override("v_separation", 4)
+	scroll.add_child(_enhance_grid)
+
 	var side := VBoxContainer.new()
 	side.custom_minimum_size = Vector2(DETAIL_W, 0)
 	side.add_theme_constant_override("separation", 8)
-	_enhance_panel.add_child(side)
-
-	_window_title(side, "장비 강화", 22)
+	body.add_child(side)
 
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 10)
@@ -2009,6 +2039,48 @@ func _open_enhance() -> void:
 	_redraw_enhance()
 
 
+## 오른쪽 위 "강화" — 대상 없이 강화 창을 연다. 장비는 창 왼쪽 목록에서 고른다
+func _toggle_enhance() -> void:
+	if _enhance_layer.visible:
+		_close_enhance()
+		return
+	_enhance_target = {}
+	_enhance_result.text = ""
+	_enhance_layer.visible = true
+	_redraw_enhance()
+
+
+## 목록 칸을 누르면 그것이 대상이 된다. 결과 줄은 비운다 (다른 물건의 결과다)
+func _pick_enhance(target: Dictionary) -> void:
+	_enhance_target = target
+	_enhance_result.text = ""
+	_redraw_enhance()
+
+
+## 왼쪽 목록을 다시 채운다 — **끼운 것 먼저**(슬롯 순서), 그다음 가방의 장비. 재료는 뺀다.
+## 대상 칸에 금테를 덮는다
+func _fill_enhance_list() -> void:
+	for child in _enhance_grid.get_children():
+		_enhance_grid.remove_child(child)
+		child.queue_free()
+	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
+	var targets: Array = []
+	var slots: Array = Items.slots()
+	for index in slots.size():
+		if not me.get("equipped", {}).get(str(slots[index]), {}).is_empty():
+			targets.append({"where": "equip", "index": index})
+	var bag: Array = me.get("bag", [])
+	for index in bag.size():
+		if not Items.get_item(str(bag[index].get("id", ""))).is_empty():
+			targets.append({"where": "bag", "index": index})
+	for target in targets:
+		var cell := _make_cell(func() -> void: _pick_enhance(target))
+		_enhance_grid.add_child(cell)
+		var stack := _stack_at(target)
+		_fill_cell(cell, stack, "", _item_icon(stack))
+		cell.get_node("pick").visible = target == _enhance_target
+
+
 ## 팝업 X — 상세 창은 그대로 둔다 (대상이 부서졌으면 이미 닫혀 있다)
 func _close_enhance() -> void:
 	_enhance_layer.visible = false
@@ -2019,8 +2091,19 @@ func _close_enhance() -> void:
 ## 팝업을 채운다 — 이름(등급 색) · `+N → +N+1` · 큰 칸 · 성공률 · 실패 시 파괴 ·
 ## 기본 능력치가 지금 → 성공하면 얼마. **대상이 부서졌으면** 이름만 남기고 단추를 끈다
 func _redraw_enhance() -> void:
+	_fill_enhance_list()
 	var stack := _stack_at(_enhance_target)
 	var item := Items.get_item(str(stack.get("id", "")))
+	if item.is_empty() and _enhance_result.text == "":
+		# 아직 안 골랐다 (오른쪽 위 "강화" 로 열었다)
+		_enhance_name.text = "장비를 고르세요"
+		_enhance_name.add_theme_color_override("font_color", INV_DIM)
+		_enhance_kind.text = "왼쪽 목록에서 누릅니다"
+		_enhance_kind.add_theme_color_override("font_color", INV_DIM)
+		_fill_cell(_enhance_icon, {}, "", "")
+		_fill_detail_rows([], _enhance_info)
+		_enhance_go.disabled = true
+		return
 	if item.is_empty():
 		_enhance_kind.text = "부서졌습니다"
 		_enhance_kind.add_theme_color_override("font_color", INV_WARN)
@@ -2051,6 +2134,7 @@ func _redraw_enhance() -> void:
 	var rows: Array = [
 		["성공률", "%d%%" % roundi(float(odds.success) * 100.0)],
 		["실패 시", "아이템 파괴", INV_WARN],
+		["위치", "착용 중" if str(_enhance_target.where) == "equip" else "가방"],
 	]
 	var now := Items.base_bonus(item, enhance)
 	var next := Items.base_bonus(item, enhance + 1)
@@ -2086,14 +2170,15 @@ func _on_enhance() -> void:
 		var before := _bag_count()
 		_transport.send(&"enhanceItem", {"where": "bag", "key": int(_enhance_target.index)})
 		var after := _bag_count()
+		# 가방 번호가 밀리거나 당겨졌으면 상세 창에서 고른 칸은 비운다 — 오른쪽 위로 열었으면
+		# 고른 칸이 대상과 다른 물건일 수 있어서, 어느 쪽으로 옮길지 따지지 않는다
+		if after != before:
+			_bag_pick = {}
 		if after < before:
 			_enhance_target = {}
-			_bag_pick = {}
 		elif after > before:
 			success = true
 			_enhance_target.index = int(_enhance_target.index) + 1
-			if not _bag_pick.is_empty():
-				_bag_pick.index = int(_bag_pick.index) + 1
 		else:
 			success = int(_stack_at(_enhance_target).get("enhance", 0)) > level
 	if success:
@@ -2221,6 +2306,9 @@ func _build_skill_bar() -> void:
 	# 무엇인지는 그림으로 알린다 — 그림이 없으면 글자가 대신 나온다
 	_menu_cells = [
 		_icon_button("ui_icon_skill", "스킬", _toggle_skills),
+		# 강화 — 가방 왼쪽 옆 (2026-09-24 요청 "가방 ui 옆에 강화 ui 버튼 만들어").
+		# 오른쪽 옆은 던전 자리다. 아직 그림이 없어 글자로 나온다
+		_icon_button("ui_icon_enhance", "강화", _toggle_enhance),
 		_icon_button("ui_icon_bag", "가방", _toggle_bag),
 		# 던전 — 가방 바로 옆 (2026-09-23 요청). 아직 그림이 없어 글자로 나온다
 		_icon_button("ui_icon_dungeon", "던전", _toggle_dungeon),

@@ -97,9 +97,40 @@ export type GearStat = 'atk' | 'df' | 'hp' | 'crit' | 'critDamage' | 'aspd' | 'm
 /** 커지면 총 배수 상한을 관리할 수 없다 */
 const ENHANCED: GearStat[] = ['atk', 'df', 'hp'];
 
-/** 등급 하나당 풀세트 합계가 몇 배가 되는가. (856/35)^(1/6) = 1.7037 */
+/** 등급 하나당 풀세트 합계가 몇 배가 되는가. (856/35)^(1/6) = 1.7037 — **방어·HP 축** */
 export function gradeRatio(): number {
   return (GRADE_SUM_END / GRADE_SUM_START) ** (1 / (GRADE_COUNT - 1));
+}
+
+/**
+ * 영웅 무기가 일반 무기의 몇 배 피해를 내는가 ★ (2026-09-24 지시: "등급간 배수를 키워.
+ * 일반이 100%라면 영웅은 3배 정도"). **맨몸 + 무기 하나(무강)** 로 잰다.
+ */
+export const HERO_OVER_COMMON = 3;
+/** 영웅 = 4등급 */
+export const HERO_GRADE = 4;
+
+/**
+ * **공격력 축의** 등급 배수 — `HERO_OVER_COMMON` 에서 역산한다 (×2.434).
+ *
+ * 1등급 무기 % 를 w₁ 이라 하면 영웅은 w₁·r³ 이고, 피해는 `1 + 장비%` 에 비례하므로
+ * `1 + w₁·r³ = 3 × (1 + w₁)` → `r = ∛((3(1 + w₁) − 1) / w₁)`. w₁ = 17.5% 다.
+ * 옛 배수(×1.7037)로는 영웅 무기가 1.59배밖에 안 됐고, 장신구의 공격력 % 와 더해지면
+ * 1.34배까지 묽어졌다.
+ *
+ * **방어·HP 는 옛 배수에 둔다.** K 가 기준 플레이어의 방어로 정해지고 몬스터 공격력은
+ * 고정 표라, 같이 키우면 후반 몬스터가 사실상 못 때린다. 몬스터는 **HP 만** 이 비율로
+ * 올렸다 (`monsterTable.ts` 머리말).
+ */
+export function atkGradeRatio(): number {
+  const w1 = (GRADE_SUM_START * GEAR_ATK_FACTOR * (SLOT_SHARE.weapon.atk ?? 0)) / 100;
+  return ((HERO_OVER_COMMON * (1 + w1) - 1) / w1) ** (1 / (HERO_GRADE - 1));
+}
+
+/** 등급 g 풀세트의 공격력 % 합계 — 공격력 축 배수로 오른다. 소수 등급이면 등비 보간 */
+export function atkGradeSum(grade: number): number {
+  if (grade <= 0) return 0;
+  return GRADE_SUM_START * atkGradeRatio() ** (Math.min(grade, GRADE_COUNT) - 1);
 }
 
 /**
@@ -140,7 +171,7 @@ export function statBudget(grade: number): Record<GearStat, number> {
   const s = gradeSum(grade);
   const r = gradeProgress(grade);
   return {
-    atk: s * GEAR_ATK_FACTOR,
+    atk: atkGradeSum(grade) * GEAR_ATK_FACTOR,
     df: s * GEAR_DEF_FACTOR,
     hp: s * GEAR_HP_FACTOR,
     crit: CRIT_RATE_MAX * r,

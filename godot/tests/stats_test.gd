@@ -77,12 +77,13 @@ func _monster_table() -> void:
 	var rows := [
 		# **2026-09-23 에 HP 를 되돌렸다** (지시: "몬스터 HP 30%를 다시 올려").
 		# 2026-09-21 에 장신구 배분을 고치면서 소리 없이 따라 내려갔던 값을
-		# 장신구 변경 직전 것으로 복원했다 — 공격력·방어력은 그때도 안 바뀌었다
+		# 장신구 변경 직전 것으로 복원했다 — 공격력·방어력은 그때도 안 바뀌었다.
+		# **2026-09-24 에 HP 를 공격력 축 배수만큼 올렸다** ("등급간 배수를 키워")
 		{"level": 10, "grade": 1.0, "hp": 71, "atk": 2},
-		{"level": 50, "grade": 1.63, "hp": 214, "atk": 4},
-		{"level": 100, "grade": 3.3, "hp": 1043, "atk": 14},
-		{"level": 150, "grade": 4.97, "hp": 7044, "atk": 64},
-		{"level": 200, "grade": 6.63, "hp": 60224, "atk": 394},
+		{"level": 50, "grade": 1.63, "hp": 235, "atk": 4},
+		{"level": 100, "grade": 3.3, "hp": 1894, "atk": 14},
+		{"level": 150, "grade": 4.97, "hp": 25446, "atk": 64},
+		{"level": 200, "grade": 6.63, "hp": 426182, "atk": 394},
 	]
 	for row in rows:
 		var level := int(row["level"])
@@ -168,15 +169,20 @@ func _gear() -> void:
 		_eq("등급 %d 착용 레벨" % g, Stats.equip_level(g), int(row["level"]))
 		_eq("등급 %d 풀셋 합" % g, roundi(Stats.grade_sum(float(g))), int(row["sum"]))
 	_near("등급 간격", snappedf(Stats.grade_ratio(), 0.0001), 1.7037, 1e-9)
+	# 공격력 축만 따로 가파르다 — 영웅 무기 = 일반 무기의 피해 3배 (2026-09-24)
+	_near("공격력 등급 간격", snappedf(Stats.atk_grade_ratio(), 0.001), 2.434, 1e-9)
+	var common := 1.0 + float(Stats.slot_stats("weapon", 1.0, 1)["atk"]) / 100.0
+	var hero := 1.0 + float(Stats.slot_stats("weapon", 4.0, 1)["atk"]) / 100.0
+	_near("영웅/일반 무기 피해", hero / common, 3.0, 1e-6)
 
 	# 등급7 실제 수치 (무강 → 강화 4단).
 	# **2026-09-21 에 배분을 바꿨다** — 무기 0.6→0.5, 갑옷 0.4→1/3, 장신구가 그 절반.
 	# 치확·공속은 장비 기본에서 걷었고(랜덤 옵션 전담) 풀세트 합은 그대로다
-	_eq("등급7 무기 무강", roundi(Stats.slot_stats("weapon", 7.0, 1)["atk"]), 428)
-	_eq("등급7 무기 4단", roundi(Stats.slot_stats("weapon", 7.0, 4)["atk"]), 558)
+	_eq("등급7 무기 무강", roundi(Stats.slot_stats("weapon", 7.0, 1)["atk"]), 3643)
+	_eq("등급7 무기 4단", roundi(Stats.slot_stats("weapon", 7.0, 4)["atk"]), 4749)
 	_eq("등급7 갑옷 방어", roundi(Stats.slot_stats("armor", 7.0, 1)["df"]), 171)
 	_eq("등급7 갑옷 HP", roundi(Stats.slot_stats("armor", 7.0, 1)["hp"]), 100)
-	_eq("등급7 목걸이 공격", roundi(Stats.slot_stats("necklace", 7.0, 1)["atk"]), 214)
+	_eq("등급7 목걸이 공격", roundi(Stats.slot_stats("necklace", 7.0, 1)["atk"]), 1822)
 	_eq("등급7 목걸이 방어", roundi(Stats.slot_stats("necklace", 7.0, 1)["df"]), 86)
 	_eq("등급7 목걸이 치확", roundi(Stats.slot_stats("necklace", 7.0, 1)["crit"] * 100.0), 0)
 	_eq("등급7 반지 공속", roundi(Stats.slot_stats("ring", 7.0, 1)["aspd"] * 100.0), 0)

@@ -117,13 +117,27 @@ static func grade_progress(grade: float) -> float:
 	return maxf(0.0, (minf(grade, float(grade_count())) - 1.0) / float(grade_count() - 1))
 
 
+## 공격력 축의 등급 배수 — 방어·HP(`grade_ratio`)보다 가파르다. 역산은 `gear.ts` 의
+## `atkGradeRatio` 한 곳에서 하고 값만 받아 온다 (영웅 무기 = 일반 무기의 피해 3배)
+static func atk_grade_ratio() -> float:
+	return float(_g().get("atkRatio", grade_ratio()))
+
+
+## 등급 g 풀세트의 공격력 % 합계
+static func atk_grade_sum(grade: float) -> float:
+	if grade <= 0.0:
+		return 0.0
+	var g := minf(grade, float(grade_count()))
+	return float(_g().get("sumStart", 35.0)) * pow(atk_grade_ratio(), g - 1.0)
+
+
 ## 등급 g 풀세트가 주는 스탯 총량. atk/df/hp 는 %, 나머지는 비율
 static func stat_budget(grade: float) -> Dictionary:
 	var g := _g()
 	var s := grade_sum(grade)
 	var r := grade_progress(grade)
 	return {
-		"atk": s * float(g.get("atkFactor", 1.0)),
+		"atk": atk_grade_sum(grade) * float(g.get("atkFactor", 1.0)),
 		"df": s * float(g.get("defFactor", 0.6)),
 		"hp": s * float(g.get("hpFactor", 0.35)),
 		"crit": float(g.get("critRateMax", 0.5)) * r,

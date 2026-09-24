@@ -361,9 +361,10 @@ test('창 안에서는 아래 등급이 더 흔하다 — 비는 설계가 정�
   assert.ok(Math.abs(ratio - want) < 0.05, `비가 ${want.toFixed(2)}:1 이어야 하는데 ${ratio.toFixed(2)}:1`);
 });
 
-test('등급이 곧 성능이다 — 등비 ×1.7037 로 오른다', () => {
-  // 2026-09-21 이전에는 등급이 옵션 범위만 넓혔다. 지금은 등급이 수치 그 자체다
-  const ratio = 1.7037;
+test('등급이 곧 성능이다 — 무기는 등비 ×2.434 로 오른다', () => {
+  // 2026-09-21 이전에는 등급이 옵션 범위만 넓혔다. 지금은 등급이 수치 그 자체다.
+  // 공격력 축은 2026-09-24 에 ×1.7037 → ×2.434 (영웅 무기 = 일반의 피해 3배, `atkGradeRatio`)
+  const ratio = 2.434;
   for (let g = 2; g <= GRADE_MAX; g++) {
     const now = baseBonus(getItem(itemId(g, 'weapon'))!).attack;
     const before = baseBonus(getItem(itemId(g - 1, 'weapon'))!).attack;

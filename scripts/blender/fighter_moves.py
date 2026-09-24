@@ -97,21 +97,24 @@ CLAW_R_LAST = pose(CLAW_BASE, hips=(0.0, -0.02, -0.08), hipsR=(0, 0, 28),
                    rh=(0.24, -0.34, 0.54), rhPole=(-0.3, 0, -1),
                    lh=(0.15, -0.02, 0.62), lhPole=(0.3, 1, -0.2))
 
-# 낙뢰 — 오른팔을 하늘로 뻗었다가(번개를 부른다) 앞 땅으로 내리친다.
-# 번개가 시전자 뒤 위에서 앞으로 꽂히는 방향과 같다 (`LightningFx`)
-THUNDER_CALL = pose(GUARD,
-                    hips=(0.0, 0.02, -0.02), hipsR=(0, 0, -8),
-                    spine=(-12, 0, -4), head=(-14, 0, 12),
-                    rh=(-0.10, 0.08, 1.14), rhPole=(-1, 0, 0),
-                    lh=(0.22, 0.06, 0.55), lhPole=(1, 0, 0),
-                    lf=(0.10, -0.08, 0.078), rf=(-0.10, 0.10, 0.078))
-THUNDER_STRIKE = pose(GUARD,
-                      hips=(0.0, -0.03, -0.07), hipsR=(0, 0, 12),
-                      spine=(18, 0, 10), head=(-10, 0, -20),
-                      rh=(-0.06, -0.40, 0.58), rhPole=(-1, 0.3, 0),
-                      lh=(0.15, -0.01, 0.60), lhPole=(0.3, 1, -0.2),
-                      lf=(0.11, -0.16, 0.078), rf=(-0.10, 0.15, 0.078), rfYaw=-30)
-THUNDER_JOLT = pose(THUNDER_STRIKE, hips=(0.0, -0.03, -0.085), spine=(22, 0, 10))
+# 낙뢰 — 오른주먹을 머리 위로 치켜들었다가 한쪽 무릎을 꿇으며 **발 앞 바닥에 꽂는다**
+# (2026-09-24 요청: "바닥을 주먹으로 꽂는 애니메이션으로"). 번개가 시전자 자리에
+# 세 번 떨어지므로(`LightningFx.AHEAD` 0 · `STRIKE_GAP` 0.18) 주먹을 꽂은 채 둘째·셋째에
+# 맞춰 몸이 움찔한다. 팔이 짧아(어깨~손목 0.29) 무릎을 꿇고 크게 숙여야 주먹이 땅에 닿는다
+THUNDER_RAISE = pose(GUARD,
+                     hips=(0.0, 0.02, 0.0), hipsR=(0, 0, -10),
+                     spine=(-10, 0, -6), head=(-12, 0, 14),
+                     rh=(-0.12, 0.10, 1.12), rhPole=(-1, 0, 0.3),
+                     lh=(0.20, -0.12, 0.70), lhPole=(1, 0, -1),
+                     lf=(0.11, -0.10, 0.078), rf=(-0.11, 0.12, 0.078))
+THUNDER_SLAM = pose(GUARD,
+                    hips=(0.0, -0.06, -0.28), hipsR=(45, 0, -10),
+                    spine=(42, 0, -6), head=(-55, 0, 12),
+                    rh=(-0.07, -0.24, 0.08), rhPole=(-0.6, 0.8, 0),
+                    lh=(0.24, 0.12, 0.42), lhPole=(0.5, 1, 0),
+                    lf=(0.12, -0.14, 0.078), lfPole=(0.3, -1, 0.3),
+                    rf=(-0.11, 0.22, 0.10), rfPole=(0, -0.3, -1), rfYaw=0, rfPitch=-25)
+THUNDER_JOLT = pose(THUNDER_SLAM, hips=(0.0, -0.06, -0.30), spine=(48, 0, -6))
 
 # 천붕각 — 뛰어올라 오른발을 치켜든 채로 내려와 내리찍는다.
 SKY_AIR = pose(GUARD,
@@ -157,10 +160,11 @@ CLIPS = {
     "Claw": [(0.0, CLAW_R_WIND, "LINEAR"), (0.10, CLAW_R_DONE, "LINEAR"),
              (0.18, CLAW_L_DONE, "LINEAR"), (0.28, CLAW_R_LAST, "BEZIER"),
              (0.46, CLAW_R_LAST, "BEZIER"), (0.75, GUARD, "BEZIER"), (1.0, "IDLE", "BEZIER")],
-    "Thunder": [(0.0, THUNDER_CALL, "LINEAR"), (0.12, THUNDER_STRIKE, "LINEAR"),
-                (0.20, THUNDER_JOLT, "LINEAR"), (0.28, THUNDER_STRIKE, "LINEAR"),
-                (0.38, THUNDER_JOLT, "BEZIER"), (0.62, THUNDER_STRIKE, "BEZIER"),
-                (1.0, "IDLE", "BEZIER")],
+    "Thunder": [(0.0, THUNDER_RAISE, "LINEAR"), (0.12, THUNDER_SLAM, "LINEAR"),
+                (0.20, THUNDER_JOLT, "LINEAR"), (0.28, THUNDER_SLAM, "LINEAR"),
+                (0.38, THUNDER_JOLT, "BEZIER"), (0.46, THUNDER_SLAM, "BEZIER"),
+                (0.70, THUNDER_SLAM, "BEZIER"),
+                (1.1, "IDLE", "BEZIER")],
     "SkyBreaker": [(0.0, SKY_AIR, "LINEAR"), (0.12, SKY_SLAM, "BEZIER"),
                    (0.22, SKY_SETTLE, "BEZIER"), (0.55, SKY_SETTLE, "BEZIER"),
                    (1.05, "IDLE", "BEZIER")],
@@ -380,7 +384,8 @@ def report(poser, name, keys):
             h = pb[bone].head
             parts.append(f"{bone}=({h.x:+.2f},{h.y:+.2f},{h.z:+.2f})")
         low = min(pb[b].tail.z for b in ("LeftToeBase", "RightToeBase"))
-        print(f"  {name:10s} {t:4.2f}s  " + " ".join(parts) + f"  발끝최저={low:+.3f}  굽힘맞음={bend_check(poser):+.2f}")
+        knee = min(pb[b].head.z for b in ("LeftLeg", "RightLeg"))
+        print(f"  {name:10s} {t:4.2f}s  " + " ".join(parts) + f"  발끝최저={low:+.3f}  무릎최저={knee:+.3f}  굽힘맞음={bend_check(poser):+.2f}")
 
 
 def bend_check(poser):

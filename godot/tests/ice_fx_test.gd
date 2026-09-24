@@ -33,7 +33,34 @@ func _run() -> void:
 	await _case_once(game)
 	await _case_other_skill(game)
 	await _case_gone(game)
+	await _case_upgrades(game)
 	_done()
+
+
+## **강화** — "파쇄" 면 기둥이 순식간에 빠지고(부서짐) 부서질 때 조각이 더 터지며, 그 시각이
+## 판정의 뒤따르는 한 대(`followMs`)와 같다. "빙결" 이면 기둥이 짙은 청색이다. 없으면 제자리
+func _case_upgrades(game: Node3D) -> void:
+	var follow := float(Skills.upgrade("frost_pillar", "shatter").get("followMs", 0)) / 1000.0
+	if absf(follow - IceFx.shatter_at()) > 0.05:
+		_fail("파쇄: 판정은 %.2f초에 한 대 더인데 기둥은 %.2f초에 부서진다" % [follow, IceFx.shatter_at()])
+	for c in [[true, false], [false, true], [false, false]]:
+		var fx := IceFx.burst(game._zone_node, Vector3.ZERO, 0.0, c[0], c[1])
+		var mat: ShaderMaterial = fx._pillars.material_override
+		var sink := float(mat.get_shader_parameter(&"sink"))
+		var deep: Color = mat.get_shader_parameter(&"deep")
+		# 막 만든 노드는 다음 프레임부터 돈다 — 몇 프레임 기다려 부서지는 순간을 넘긴다
+		await process_frame
+		fx._t = IceFx.shatter_at() - 0.01
+		for f in 3:
+			await process_frame
+		var breaking: bool = fx._break.emitting
+		var want_deep: Color = IceFx.COLOR_DEEP_FROZEN if c[1] else IceFx.COLOR_DEEP
+		if (sink < IceFx.SINK) != c[0] or breaking != c[0] or not deep.is_equal_approx(want_deep):
+			_fail("파쇄 %s · 빙결 %s: 빠짐 %.2f초 · 조각 터짐 %s · 기둥 색 %s" % [
+				c[0], c[1], sink, breaking, deep.to_html(false)])
+		fx.queue_free()
+	print("  강화: 파쇄는 %.2f초에 부서지며 조각이 터지고, 빙결은 기둥이 #%s" % [
+		IceFx.shatter_at(), IceFx.COLOR_DEEP_FROZEN.to_html(false)])
 
 
 ## 액션바의 빙주각을 누르면 이펙트가 서고 화면이 흔들린다 — **실제 경로로 쏜다.**

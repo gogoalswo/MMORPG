@@ -401,6 +401,24 @@
       "zoneMs": 3000,
       "zoneTickMs": 500,
       "zonePower": 1
+    },
+    {
+      "id": "shatter",
+      "skill": "frost_pillar",
+      "name": "파쇄",
+      "desc": "부서지며 80% 한 번 더",
+      "exp": 1000,
+      "followMs": 1100,
+      "followPower": 0.8
+    },
+    {
+      "id": "freeze",
+      "skill": "frost_pillar",
+      "name": "빙결",
+      "desc": "맞은 적 2초 빙결",
+      "exp": 1000,
+      "stunMs": 2000,
+      "stunLook": "ice"
     }
   ],
   "upgradeMax": 2,

@@ -3504,6 +3504,43 @@ func _tick_ring(snap: Dictionary) -> void:
 ## 세우고 치우는 자리는 여기 한 군데다 — 고리와 같은 이유로, 죽는 길이 여럿이라
 ## 각자 지우게 두면 반드시 한 곳이 빠지고 **막대가 시체에 남는다.**
 ## 몬스터마다 매 프레임 한 번 불린다 (`_draw_state` 의 몬스터 고리 안).
+## 얼음빛 덧칠 — 모두가 같이 쓴다 (맞을 때 붉히기와 같은 `material_overlay` 방식)
+var _ice_overlay: StandardMaterial3D
+
+
+## **빙결** — 판정이 `stun_look = "ice"` 로 세운 놈은 몸이 얼음빛으로 굳는다 (빙주각 빙결).
+## 덧칠(`material_overlay`)을 입히고 동작을 멈춘다(`Rig.freeze` — 히트스톱과 같은 멈춤).
+## **매 프레임 다시 본다** — 맞을 때 붉히기가 덧칠을 걷어 가면 다음 프레임에 도로 입힌다.
+## 풀리면 얼음 덧칠만 걷는다 (붉히기 중이면 그건 두다)
+func _tick_frozen(monster: Dictionary, node: Node3D) -> void:
+	var frozen: bool = str(monster.get("state", "")) == "stun" \
+		and str(monster.get("stun_look", "")) == "ice"
+	var was: bool = node.get_meta(&"frozen", false)
+	if not frozen and not was:
+		return
+	if _ice_overlay == null:
+		_ice_overlay = StandardMaterial3D.new()
+		_ice_overlay.albedo_color = Color(0.55, 0.85, 1.0, 0.7)
+		_ice_overlay.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_ice_overlay.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_ice_overlay.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	var meshes: Array = node.get_meta(&"meshes", [])
+	if meshes.is_empty():
+		meshes = HitFx.meshes_of(node)
+		node.set_meta(&"meshes", meshes)
+	for mesh in meshes:
+		if not is_instance_valid(mesh):
+			continue
+		if frozen and mesh.material_overlay == null:
+			mesh.material_overlay = _ice_overlay
+		elif not frozen and mesh.material_overlay == _ice_overlay:
+			mesh.material_overlay = null
+	if frozen and node is Rig:
+		# 한 프레임 조금 넘게만 세운다 — 풀리는 즉시 다시 움직인다
+		(node as Rig).freeze(0.1)
+	node.set_meta(&"frozen", frozen)
+
+
 func _tick_mob_bar(monster: Dictionary, node: Node3D) -> void:
 	var id := str(monster.id)
 	var hit_until := int(_mob_bar_until.get(id, 0))
@@ -3729,6 +3766,7 @@ func _draw_state() -> void:
 		node.position.x = monster.x
 		node.position.z = monster.z
 		HitFx.apply_react(node, _last_delta)
+		_tick_frozen(monster, node)
 		node.rotation.y = monster.get("rot", 0.0)
 		if node is Rig:
 			var state := str(monster.get("state", "idle"))
@@ -3895,7 +3933,9 @@ func _show_skill(payload: Dictionary) -> void:
 		QuakeFx.slam(_fx, here, float(me.rot), "wide" in quake_up, "zone" in quake_up)
 		_camera.shake(QuakeFx.SHAKE, QuakeFx.SHAKE_TIME)
 	elif skill == "frost_pillar":
-		IceFx.burst(_fx, here, float(me.rot))
+		# 강화 — "파쇄" 면 기둥이 부서지고, "빙결" 이면 짙은 청색 (따로 논다)
+		var ice_up: Array = payload.get("upgrades", [])
+		IceFx.burst(_fx, here, float(me.rot), "shatter" in ice_up, "freeze" in ice_up)
 		_camera.shake(IceFx.SHAKE, IceFx.SHAKE_TIME)
 	else:
 		# 강화 — "부채꼴" 이면 호가 40° 길고, "연타" 면 두 번 더 긁고 보라다 (따로 논다)

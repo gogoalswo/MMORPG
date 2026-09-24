@@ -413,8 +413,9 @@ const SKILL_LIST: SkillDef[] = [
     cooldown: 55000,
     range: 6.0,
     // 뛰어올랐다 내려찍는 동작의 착지 시각 (2026-09-24 요청: "점프해서 땅을 강하게 내려 찍는").
-    // 동작(`fighter_moves.py` 의 SkyBreaker)이 0.42초에 땅을 찍는다 — 둘은 같이 고친다
-    delayMs: 420,
+    // 동작(`fighter_moves.py` 의 SkyBreaker)이 0.72초에 땅을 찍는다 — 둘은 같이 고친다.
+    // 5.4m 까지 뛰어오르므로 체공이 길다 (처음 0.42 → "지금의 5배" 로 늘렸다)
+    delayMs: 720,
     arc: Math.PI * 2,
     power: 5.5,
     maxTargets: 10,

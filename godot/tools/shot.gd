@@ -433,7 +433,9 @@ func _enhance(game: Node3D) -> void:
 	for i in 4:
 		await process_frame
 	var box: Rect2 = pop.picked_grid.get_global_rect().grow(24)
-	Engine.time_scale = SLOW
+	# `enhance real` 이면 제 속도로 — 늦춰서만 찍으면 제 속도에서 안 보이는 것을 놓친다
+	if not (OS.get_cmdline_user_args().size() > 1 and str(OS.get_cmdline_user_args()[1]) == "real"):
+		Engine.time_scale = SLOW
 	pop.run_button.pressed.emit()
 	# 시계는 **연출 노드 자신의 시간**(`_t`)이다 — 소프트웨어 렌더는 프레임이 느려서 게임 시간이
 	# 벽시계 × SLOW 보다 다섯 배쯤 늦게 흐른다 (그렇게 찍었더니 "0.8초" 장이 실제로는 0.16초였다)

@@ -73,8 +73,8 @@ func _case_options() -> void:
 	for seed_value in 50:
 		rng.seed = seed_value
 		var rolled := Items.roll_options(item, 4, rng)
-		if rolled.size() != 2:
-			_fail("옵션은 2개 고정인데 %d개다" % rolled.size())
+		if rolled.size() != 1:
+			_fail("옵션은 1개 고정인데 %d개다" % rolled.size())
 			return
 		var seen: Array = []
 		for option in rolled:
@@ -86,10 +86,10 @@ func _case_options() -> void:
 			if option.value < span.min or option.value > span.max:
 				_fail("%s 값 %s 가 범위(%s~%s) 밖" % [option.kind, option.value, span.min, span.max])
 				return
-	# 개수는 등급을 안 탄다 — 2026-09-21 지시로 전 등급 2개 고정이다
+	# 개수는 등급을 안 탄다 — 2026-09-24 지시로 전 등급 1개 고정이다
 	rng.seed = 7
-	if Items.roll_options(item, 7, rng).size() != 2:
-		_fail("7등급도 옵션은 2개여야 한다")
+	if Items.roll_options(item, 7, rng).size() != 1:
+		_fail("7등급도 옵션은 1개여야 한다")
 	print("  옵션 50번 굴림: 개수·종류·범위 모두 규칙대로")
 
 

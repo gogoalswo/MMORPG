@@ -1639,6 +1639,21 @@ func _close_detail() -> void:
 	_show_bag_detail()
 
 
+## 오른쪽 위 "크리스탈" — 인벤토리·장비 창과 크리스탈 창을 같이 연다. 대상은 두 창의 장비
+## 칸을 눌러 고른다 (가방에서 크리스탈 "사용" 을 누른 것과 같은 상태). 다시 누르면 셋 다 닫는다
+func _toggle_crystal() -> void:
+	var open := not _crystal_panel.visible
+	_enhance.hide_now()
+	_bag_panel.visible = open
+	_gear_panel.visible = open
+	_bag_pick = {}
+	_detail_panel.visible = false
+	_crystal_panel.visible = open
+	_crystal_target = {}
+	if open:
+		_redraw_bag()
+
+
 ## 크리스탈 창 X — 상세 창으로 돌아가지 않고 둘 다 닫는다 (칸을 다시 누르면 상세가 뜬다)
 func _close_crystal() -> void:
 	_crystal_panel.visible = false
@@ -2192,6 +2207,10 @@ func _build_skill_bar() -> void:
 		# 강화 — 가방 왼쪽 옆 (2026-09-24 요청 "가방 ui 옆에 강화 ui 버튼 만들어").
 		# 오른쪽 옆은 던전 자리다. 아직 그림이 없어 글자로 나온다
 		_icon_button("ui_icon_enhance", "강화", _toggle_enhance),
+		# 크리스탈 강화 — 가방 바로 왼쪽 (2026-09-24 요청 "크리스탈 사용해서 강화하는 ui도 따로
+		# 버튼을 만들고 싶어. 가방 옆에"). 오른쪽 옆은 던전이라 강화를 한 칸 밀었다.
+		# UI 결 그림(`ui_icon_crystal`)이 아직 없어 가방 아이콘 `crystal.png` 를 쓴다
+		_icon_button("crystal", "크리스탈", _toggle_crystal),
 		_icon_button("ui_icon_bag", "가방", _toggle_bag),
 		# 던전 — 가방 바로 옆 (2026-09-23 요청). 아직 그림이 없어 글자로 나온다
 		_icon_button("ui_icon_dungeon", "던전", _toggle_dungeon),
@@ -3691,6 +3710,7 @@ func _draw_state() -> void:
 	HitFx.apply_react(_player, _last_delta)
 	_player.rotation.y = me.rot
 	_play_player_clip(me)
+	_wear_weapon(me)
 
 	# 뒤 위에서 내려다본다. 지금은 고정 각도다
 	# 존을 옮긴 프레임에는 보간 없이 곧바로 자리잡는다
@@ -3753,6 +3773,15 @@ func _draw_state() -> void:
 		Build.stamp(),
 		_last_event,
 	]
+
+
+## 낀 무기를 주먹 소켓에 보인다 — 무기를 바꾸면 모델이 바뀌고, 벗으면 맨주먹이다.
+## 등급이 곧 생김새다 (무기는 등급마다 하나). 같은 등급이면 Rig 가 다시 짓지 않는다
+func _wear_weapon(me: Dictionary) -> void:
+	if not _player is Rig:
+		return
+	var weapon: Dictionary = me.get("equipped", {}).get("weapon", {})
+	(_player as Rig).set_weapon(0 if weapon.is_empty() else int(weapon.get("grade", 1)))
 
 
 ## 맞았다. 맞은 자리에서 터뜨리고, 맞은 몸을 붉게 물들이고, 내가 맞았으면

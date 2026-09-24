@@ -175,6 +175,9 @@ npm run shot:godot -- rising_kick@225 # @각도(도, 0 = +Z) — 그 쪽을 보�
 npm run shot:godot -- portal         # 차원문 소용돌이 (스킬이 아니라 늘 켜진 이펙트)
 npm run shot:godot -- gate           # 차원문 창 (logs/gate_off.png · gate_on.png=줄 누른 채)
 npm run shot:godot -- range:sky_breaker  # 스킬 범위 표시 (logs/range_NN.png)
+npm run shot:godot -- enhance        # 강화 팝업 다중 강화 한 바퀴 — 슬라이드·반짝임·깨짐 (logs/shot_enhance.png)
+                                     # 시계는 연출 노드의 `_t` 다: 소프트웨어 렌더는 프레임이 느려 게임 시간이
+                                     # 벽시계 × 0.08 보다 다섯 배쯤 늦게 흐른다 ("0.8초" 장이 실제로 0.16초였다)
 ```
 
 - **`--headless` 로는 아무것도 안 그려진다.** 헤드리스는 더미 렌더러라 화면이

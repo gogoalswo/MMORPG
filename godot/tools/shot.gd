@@ -15,6 +15,7 @@ extends SceneTree
 ##   npm run shot:godot -- thunder_fall+stun+wide@45  스킬 강화를 붙여서 쓴다 (`+` 로 여럿, `@` 는 맨 뒤)
 ##   npm run shot:godot -- sky_breaker 2,9,20,45,90,150   찍을 프레임을 준다
 ##                                        (긴 이펙트는 기본 0.36초로 모자란다)
+##   npm run shot:godot -- enhance        강화 팝업 다중 강화 한 바퀴 (logs/shot_enhance.png)
 ##
 ## 여섯 장의 **가운데를 잘라 한 장으로 붙인 것**(`logs/shot_sheet.png`)도 뽑는다.
 ## 한 장씩 읽으면 여섯 배를 낸다 — 시간 순서를 보는 데는 이것 한 장이면 된다.
@@ -97,6 +98,11 @@ func _run() -> void:
 	# 치명타 한 대 — 자홍 숫자 · 몸 튕김 · 찌그러짐 · 흔들림 (잡지 않는다)
 	if skill == "crit":
 		await _kill(game, true)
+		return
+
+	# 강화 팝업의 다중 강화 한 바퀴 — 숫자 슬라이드 · 성공 반짝임 · 실패 X 와 깨짐
+	if skill == "enhance":
+		await _enhance(game)
 		return
 
 	# 창은 열어 놓고 한 장만 찍는다 — 움직이는 것이 없다
@@ -403,4 +409,53 @@ func _portal(game: Node3D) -> void:
 			img.save_png("res://../logs/shot_%02d.png" % frame)
 			taken += 1
 			print("logs/shot_%02d.png" % frame)
+	quit(0)
+
+
+## 다중 강화 한 바퀴를 늦춰서 찍는다 (`npm run shot:godot -- enhance`). +4(성공 50%) 장비 14개를
+## 담아 두 결과가 다 나오게 하고, **담은 칸 둘레만 잘라 1.5배로** 여섯 장을 붙인다 —
+## 화면 전체로 찍으면 칸이 작아 슬라이드·조각을 못 읽는다
+const ENHANCE_TIMES := [0.06, 0.16, 0.3, 0.45, 0.62, 0.85]
+
+
+func _enhance(game: Node3D) -> void:
+	var player: Dictionary = game._transport._world._players[game._transport.my_id()]
+	player.bag.clear()
+	for i in 14:
+		player.bag.append({"id": Items.item_id(5, "weapon"), "grade": 5, "enhance": 4, "options": []})
+	game._toggle_bag()
+	await process_frame
+	var pop: EnhancePopup = game._enhance
+	pop.open({"where": "bag", "index": 0})
+	pop.pick_mode("multi")
+	pop.set_goal(9)
+	pop.pick_all()
+	for i in 4:
+		await process_frame
+	var box: Rect2 = pop.picked_grid.get_global_rect().grow(24)
+	Engine.time_scale = SLOW
+	pop.run_button.pressed.emit()
+	# 시계는 **연출 노드 자신의 시간**(`_t`)이다 — 소프트웨어 렌더는 프레임이 느려서 게임 시간이
+	# 벽시계 × SLOW 보다 다섯 배쯤 늦게 흐른다 (그렇게 찍었더니 "0.8초" 장이 실제로는 0.16초였다)
+	var sheet: Image = null
+	var taken := 0
+	while taken < ENHANCE_TIMES.size():
+		await process_frame
+		var clocks: Array = pop.fx_layer.get_children().map(func(n: Node) -> float: return n._t)
+		if clocks.is_empty():
+			continue
+		var at: float = clocks.max()
+		if at < float(ENHANCE_TIMES[taken]):
+			continue
+		await RenderingServer.frame_post_draw
+		var img := root.get_texture().get_image().get_region(Rect2i(box))
+		img.resize(int(box.size.x * 1.5), int(box.size.y * 1.5), Image.INTERPOLATE_BILINEAR)
+		if sheet == null:
+			sheet = Image.create(img.get_width() * 2, img.get_height() * 3, false, img.get_format())
+		sheet.blit_rect(img, Rect2i(Vector2i.ZERO, img.get_size()),
+			Vector2i((taken % 2) * img.get_width(), (taken / 2) * img.get_height()))
+		print("  %d장 — 게임 시간 %.2f초" % [taken + 1, at])
+		taken += 1
+	sheet.save_png("res://../logs/shot_enhance.png")
+	print("logs/shot_enhance.png  (2열 × 3줄, 시간 순)")
 	quit(0)

@@ -192,13 +192,23 @@ func _case_many() -> void:
 	_eq("끼운 것 그대로", int(me.equipped.weapon.enhance), 1)
 	_eq("안 고른 것 그대로", me.bag.filter(func(x: Dictionary) -> bool: return str(x.id) == "g1_a").size(), 1)
 	_eq("재료 그대로", me.bag.filter(func(x: Dictionary) -> bool: return Items.is_material(str(x.id))).size(), 1)
-	# picked 는 남은 칸을 정확히 가리킨다 — 고른 것에서 남은 수와 같고, 가리키는 칸은 +1 / +4
+	# results 는 칸마다 새 번호를 정확히 가리킨다 — 두드린 칸은 +1 / +4, +9 는 두드리지 않고
+	# 번호만 따라간다 (팝업이 칸 자리를 지키며 칸별로 연출한다). 재료는 결과에 없다
+	_eq("결과 칸 수 (고름 0·2·4)", (event.results as Array).map(func(r: Dictionary) -> int: return int(r.at)), [4, 2, 0])
 	var alive := 0
-	for at in event.picked:
-		var stack: Dictionary = me.bag[int(at)]
-		_eq("picked 는 강화한 칸", int(stack.enhance) in [1, 4] and str(stack.id) == "g1_w", true)
-		alive += int(stack.get("count", 1))
-	_eq("picked 개수 = 성공 수", alive, int(event.success))
+	for r in event.results:
+		for at in r.to:
+			var stack: Dictionary = me.bag[int(at)]
+			_eq("to 는 같은 아이템", str(stack.id), "g1_w")
+			if int(r.from) == Items.max_enhance():
+				_eq("+9 는 그대로", int(stack.enhance), Items.max_enhance())
+			else:
+				_eq("두드린 칸은 한 단계 위", int(stack.enhance), int(r.from) + 1)
+				alive += int(stack.get("count", 1))
+		_eq("성공+파괴 = 개수", int(r.success) + int(r.destroyed), 0 if int(r.from) == 9 else (4 if int(r.at) == 0 else 1))
+	_eq("살아남은 수 = 성공 수", alive, int(event.success))
+	_eq("picked = results 의 to", (event.picked as Array).size(), (event.results as Array).reduce(
+		func(n: int, r: Dictionary) -> int: return n + (r.to as Array).size(), 0))
 	# 고른 것이 없으면 아무것도 안 한다
 	w.enhance_many("me", [1 + 99])
 	_eq("대상 없음 → 이벤트 없음", _batch_event(w).is_empty(), true)

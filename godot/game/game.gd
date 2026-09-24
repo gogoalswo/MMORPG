@@ -3724,7 +3724,7 @@ func _show_skill(payload: Dictionary) -> void:
 		var upgrades: Array = payload.get("upgrades", [])
 		LightningFx.bolt(_fx, here, float(me.rot), "stun" in upgrades, "wide" in upgrades)
 	elif skill == "sky_breaker":
-		# 강화 — "진폭" 이면 땅·먼지 1.5배, "균열 지대" 면 금이 3초 용암빛 (따로 논다)
+		# 강화 — "진폭" 이면 모래 토네이도, "균열 지대" 면 진흙 소용돌이 (따로 논다)
 		var quake_up: Array = payload.get("upgrades", [])
 		QuakeFx.slam(_fx, here, float(me.rot), "wide" in quake_up, "zone" in quake_up)
 		_camera.shake(QuakeFx.SHAKE, QuakeFx.SHAKE_TIME)

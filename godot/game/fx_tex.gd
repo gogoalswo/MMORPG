@@ -86,6 +86,37 @@ static func scorch(size := 128) -> ImageTexture:
 	return tex
 
 
+## **웅덩이.** 안쪽은 **고르게 불투명**하고 가장자리만 울퉁불퉁 부드럽게 끊긴다.
+## `scorch` 는 가운데로 갈수록 진해지는 얼룩이라(평균 알파 0.04) 웅덩이로 깔면
+## **발밑 한 점만 남아 안 보였다** (2026-09-24, 천붕각 균열 지대 진흙)
+static func pool(size := 128) -> ImageTexture:
+	var key := "pool_%d" % size
+	if _cache.has(key):
+		return _cache[key]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 20260924
+	var lobes := 12
+	var edge: Array[float] = []
+	for i in lobes:
+		# 판 모서리에 닿지 않게 0.9 에서 멈춘다 (scorch 와 같은 이유)
+		edge.append(rng.randf_range(0.72, 0.9))
+	var img := Image.create(size, size, false, Image.FORMAT_RGBA8)
+	var mid := float(size - 1) * 0.5
+	for y in size:
+		for x in size:
+			var away := Vector2(float(x) - mid, float(y) - mid)
+			var d := away.length() / mid
+			var turn := (atan2(away.y, away.x) + PI) / TAU * float(lobes)
+			var i0 := int(floor(turn)) % lobes
+			var i1 := (i0 + 1) % lobes
+			var reach: float = lerpf(edge[i0], edge[i1], smoothstep(0.0, 1.0, turn - floor(turn)))
+			var a := 1.0 - smoothstep(reach - 0.12, reach, d)
+			img.set_pixel(x, y, Color(1.0, 1.0, 1.0, a))
+	var tex := ImageTexture.create_from_image(img)
+	_cache[key] = tex
+	return tex
+
+
 ## **흙먼지 뭉치.** 가운데가 넓게 고르고 가장자리가 울퉁불퉁 흐려진다.
 ## `glow` 로 먼지를 띄웠더니 가운데만 진한 점이라 **물방울무늬**가 됐다
 ## (2026-09-23 천붕각 캡처) — 먼지는 겹쳐서 한 덩어리 구름이 되어야 한다.

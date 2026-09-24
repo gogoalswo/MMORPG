@@ -97,19 +97,13 @@ const SHAKE_TIME := 0.35
 ## **"진폭" 강화** — 판정 사거리가 1.5배(6 → 9m)라 땅에 남는 것(금·그을림)과 먼지
 ## 충격파가 멈추는 거리도 1.5배다. 먼지는 멈추는 거리가 v²/2d 라 속도에 √1.5 를 곱한다
 const WIDE := 1.5
-## **"균열 지대" 강화** — 금이 **붉은 용암빛**으로 이만큼 달아오른 채 남는다. 판정의
-## `zoneMs`(3초)와 같아야 "땅이 아직 뜨겁다" 가 곧 "아직 피해가 들어온다" 로 읽힌다
+## **"균열 지대" 강화** — 진흙 소용돌이(`QuakeParts.Mud`)가 이만큼 남는다. 판정의
+## `zoneMs`(3초)와 같아야 "아직 빨려 든다" 가 곧 "아직 피해가 들어온다" 로 읽힌다
 const ZONE_TIME := 3.0
-## 지대 피해 간격 — 판정의 `zoneTickMs`(0.5초). 틱마다 용암빛이 한 번 밝게 맥동한다
+## 지대 피해 간격 — 판정의 `zoneTickMs`(0.5초). 틱마다 소용돌이가 한 번 세게 조여든다
 const ZONE_TICK := 0.5
-## 지대가 끝나고 식는 시간
+## 지대가 끝나고 웅덩이가 마르는 시간 (`QuakeParts.Mud.DRY` 와 같다)
 const ZONE_FADE := 0.6
-## 맥동 뒤 잦아드는 시간 상수 — 짧아야 "쿵 · 쿵" 으로 끊겨 보인다
-const ZONE_PULSE := 0.12
-## 용암빛 — 평소 막 갈라진 속(주황 `#ffb13c`)보다 붉다. 알파 혼합이라 밝은 바닥에서도 보인다
-const COLOR_LAVA := Color("#ff4a18")
-## 지대 동안 남기는 용암빛 빛의 세기 (맥동 꼭대기). 번쩍임(5)보다 약하다
-const ZONE_LIGHT := 3.0
 const COLOR_GLOW := Color("#ffb13c")
 const COLOR_FLARE := Color("#ffd27a")
 const COLOR_CRACK := Color("#231910")
@@ -158,14 +152,14 @@ var _zone := false
 var _span := 0.0
 ## 금·그을림을 그리나 — 진폭만 붙으면 토네이도가 대신하므로 안 그린다
 var _ground := true
-## 강화 이펙트 — 진폭(모래 토네이도) · 균열 지대(틈에서 터지는 용암) → `quake_parts.gd`
+## 강화 이펙트 — 진폭(모래 토네이도) · 균열 지대(진흙 소용돌이) → `quake_parts.gd`
 var _tornado: QuakeParts.Tornado
-var _lava: QuakeParts.Lava
+var _mud: QuakeParts.Mud
 
 
 ## 천붕각을 띄운다. `at` 은 시전자 발밑(월드 좌표), `facing` 은 보는 쪽(rad).
 ## 풀(`FxPool`)에 쉬는 것이 있으면 되감아 쓴다 — 새로 만들지 않는다.
-## `wide` 면 땅·먼지가 1.5배("진폭"), `zone` 이면 금이 3초 동안 용암빛으로 남는다
+## `wide` 면 모래 토네이도("진폭"), `zone` 이면 진흙 소용돌이가 3초 남는다
 ## ("균열 지대"). 둘은 따로 논다
 static func slam(parent: Node3D, at: Vector3, facing: float, wide := false, zone := false) -> QuakeFx:
 	var fx := FxPool.take(parent, &"slam") as QuakeFx
@@ -178,7 +172,7 @@ static func slam(parent: Node3D, at: Vector3, facing: float, wide := false, zone
 	return fx
 
 
-## 끝나는 시각(초). 지대면 용암이 식을 때까지
+## 끝나는 시각(초). 지대면 진흙 웅덩이가 마를 때까지
 static func span(zone := false) -> float:
 	var ground := ZONE_TIME + ZONE_FADE if zone else CRACK_LIFE
 	return maxf(ground, maxf(PUFF_LIFE, CORE_LIFE)) + 0.1
@@ -219,9 +213,9 @@ func _build() -> void:
 	_tornado = QuakeParts.Tornado.new()
 	_tornado.build()
 	add_child(_tornado)
-	_lava = QuakeParts.Lava.new()
-	_lava.build()
-	add_child(_lava)
+	_mud = QuakeParts.Mud.new()
+	_mud.build()
+	add_child(_mud)
 
 	_emitters = [_front(), _puffs(), _core(), _chips()]
 	# **만든 다음 프레임에 켠다** — 같은 프레임에 켜면 방출이 안 나온 적이 있다 (3절)
@@ -243,10 +237,10 @@ func _start(at: Vector3, facing: float, wide := false, zone := false) -> void:
 		node.scale = Vector3(_mul, 1.0, _mul)
 	_stain.rotation.y = facing
 	# **진폭이면 먼지 충격파·금 대신 모래 토네이도**가 휘감는다 (2026-09-24 요청).
-	# 균열 지대가 같이 붙으면 용암이 솟을 틈이 있어야 하므로 금은 남긴다 (1.5배)
+	# 균열 지대가 같이 붙으면 금은 남긴다 (1.5배, 진흙 밑에 묻힌다)
 	_ground = zone or not wide
 	_tornado.start(wide)
-	_lava.start(zone, facing, _mul)
+	_mud.start(zone, _mul)
 	_t = 0.0
 	_started = false
 	_show_cracks()
@@ -257,13 +251,14 @@ func _process(delta: float) -> void:
 	if not _started:
 		_started = true
 		# 되감아 쓰는 방출기라 켜기(`emitting`)가 아니라 처음부터 다시(`restart`)
-		# 진폭이면 먼지 충격파(앞머리·덩이·기둥)는 토네이도가 대신한다 — 흙 알갱이만 튄다
+		# 진폭이면 먼지 충격파(앞머리·덩이·기둥)는 토네이도가 대신한다 — 흙 알갱이만 튄다.
+		# 균열 지대면 먼지가 진흙 소용돌이를 덮어서(캡처) 역시 끈다
 		for i in _emitters.size():
-			if not _tornado.active or i == 3:
+			if not (_tornado.active or _mud.active) or i == 3:
 				_emitters[i].restart()
 	_t += delta
 	_tornado.tick(delta)
-	_lava.tick(_t)
+	_mud.tick(delta)
 	_show_cracks()
 	_show_flash()
 	if _t >= _span:
@@ -277,9 +272,8 @@ func finish() -> void:
 
 ## 금은 **셰이더가 자라게** 하고, 여기서는 시각과 알파만 넣는다
 func _show_cracks() -> void:
-	# 마지막 0.8초에만 흐려진다 — 금은 남는 자국이다. 지대면 용암이 식을 때까지 남는다
-	var life := ZONE_TIME + ZONE_FADE if _zone else CRACK_LIFE
-	var fade := clampf((life - _t) / CRACK_FADE, 0.0, 1.0)
+	# 마지막 0.8초에만 흐려진다 — 금은 남는 자국이다 (지대면 진흙 웅덩이 밑에 묻힌다)
+	var fade := clampf((CRACK_LIFE - _t) / CRACK_FADE, 0.0, 1.0)
 	var heat := clampf(1.0 - _t / GLOW_LIFE, 0.0, 1.0)
 	var crack: ShaderMaterial = _crack.material_override
 	crack.set_shader_parameter(&"now", _t)
@@ -287,8 +281,6 @@ func _show_cracks() -> void:
 	var glow: ShaderMaterial = _glow.material_override
 	glow.set_shader_parameter(&"now", _t)
 	var tint := Color(COLOR_GLOW.r, COLOR_GLOW.g, COLOR_GLOW.b, sqrt(heat))
-	if _zone:
-		tint = _lava_tint()
 	glow.set_shader_parameter(&"tint", tint)
 	_glow.visible = _ground and tint.a > 0.0
 	_crack.visible = _ground and fade > 0.0
@@ -300,19 +292,6 @@ func _show_cracks() -> void:
 		COLOR_STAIN.r, COLOR_STAIN.g, COLOR_STAIN.b, fade * STAIN_ALPHA)
 
 
-## 균열 지대의 용암빛 — 처음엔 막 갈라진 주황에서 붉게 옮아가고, 지대 동안
-## 옅게(0.55) 깔려 있다가 **피해가 들어가는 틱마다 한 번 밝게** 맥동한다.
-## 지대가 끝나면 `ZONE_FADE` 동안 식는다
-func _lava_tint() -> Color:
-	var shift := clampf(_t / GLOW_LIFE, 0.0, 1.0)
-	var color := COLOR_GLOW.lerp(COLOR_LAVA, shift)
-	var since := fmod(_t, ZONE_TICK) if _t >= ZONE_TICK else 99.0
-	var pulse := exp(-since / ZONE_PULSE)
-	var cool := clampf((ZONE_TIME + ZONE_FADE - _t) / ZONE_FADE, 0.0, 1.0)
-	var alpha := maxf(sqrt(clampf(1.0 - _t / GLOW_LIFE, 0.0, 1.0)), 0.55 + 0.45 * pulse) * cool
-	return Color(color.r, color.g, color.b, alpha)
-
-
 ## 섬광과 번쩍임은 **세게 켜고 제자리에서 빠르게 죈다**
 func _show_flash() -> void:
 	var t := _t / FLARE_LIFE
@@ -322,16 +301,8 @@ func _show_flash() -> void:
 		_flare.material_override.albedo_color = Color(
 			COLOR_FLARE.r, COLOR_FLARE.g, COLOR_FLARE.b, pow(1.0 - t, 1.3))
 	_light.visible = _t < LIGHT_LIFE
-	_light.light_color = COLOR_GLOW
 	if _light.visible:
 		_light.light_energy = LIGHT_ENERGY * (1.0 - _t / LIGHT_LIFE)
-	elif _zone and _t < ZONE_TIME + ZONE_FADE:
-		# 균열 지대 — 금만으로는 가는 붉은 선이라 "달아오른 땅" 이 안 읽혔다 (찍어서 봤다).
-		# 번쩍임 빛을 용암빛으로 남겨 **바닥이 붉게 물들고**, 틱마다 같이 맥동한다
-		var lava := _lava_tint()
-		_light.visible = true
-		_light.light_color = COLOR_LAVA
-		_light.light_energy = ZONE_LIGHT * lava.a * lava.a
 
 
 ## 처음 빠르고 끝에서 느려진다 (`QuakeParts.Tornado` 가 퍼질 때 쓴다)

@@ -102,6 +102,14 @@ func _start(clip: String, speed: float, from: float, blend: float) -> void:
 		_anim.seek(from, true)
 
 
+## 그 클립이 지금 몇 초 자리에 있나. 그 클립이 안 돌고 있으면(끝났거나 바뀌었으면) -1.
+## **히트스톱으로 멈춘 동안은 안 간다** — 시계로 끝을 재면 멈춘 만큼 동작이 잘린다
+func position_in(clip: String) -> float:
+	if _anim == null or not _anim.is_playing() or _anim.current_animation != clip:
+		return -1.0
+	return _anim.current_animation_position
+
+
 ## 클립 길이(초). 없으면 0
 func clip_length(clip: String) -> float:
 	if _anim == null or not _clips.has(clip):

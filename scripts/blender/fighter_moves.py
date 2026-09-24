@@ -119,7 +119,8 @@ THUNDER_JOLT = pose(THUNDER_SLAM, hips=(0.0, -0.06, -0.30), spine=(48, 0, -6))
 # 천붕각 — **웅크렸다 뛰어올라** 정점에서 오른발을 치켜들고, 떨어지며 발뒤꿈치와 두
 # 주먹으로 땅을 강하게 찍는다 (2026-09-24 요청: "점프해서 땅을 강하게 내려 찍는").
 # 찍는 순간이 0.42초라 판정·이펙트도 그만큼 늦췄다 (`skills.ts` 의 `delayMs` 420 — 같이 고친다).
-# 몸은 정점에서 0.26 (게임에서 약 0.47m) 뜬다
+# 몸은 정점에서 0.60 (게임에서 약 1.1m) 뜬다 — 처음엔 0.26(0.47m)이었는데 "너무 낮게 뛴다"
+# 고 해서 올렸다. 착지 시각(0.42초)은 그대로라 더 빨리 내리꽂힌다
 SKY_CROUCH = pose(GUARD,
                   hips=(0.0, 0.0, -0.11), hipsR=(0, 0, 0),
                   spine=(22, 0, 0), head=(-14, 0, 0),
@@ -128,26 +129,26 @@ SKY_CROUCH = pose(GUARD,
                   lf=(0.10, -0.02, 0.078), lfPole=(0.2, -1, 0),
                   rf=(-0.10, 0.02, 0.078), rfPole=(-0.2, -1, 0), rfYaw=0)
 SKY_TAKEOFF = pose(GUARD,
-                   hips=(0.0, -0.01, 0.07), hipsR=(0, 0, 0),
+                   hips=(0.0, -0.01, 0.16), hipsR=(0, 0, 0),
                    spine=(-6, 0, 0), head=(-6, 0, 0),
-                   lh=(0.20, -0.16, 1.02), lhPole=(1, 0.3, -0.5),
-                   rh=(-0.20, -0.16, 1.02), rhPole=(-1, 0.3, -0.5),
-                   lf=(0.09, 0.0, 0.13), lfPole=(0.2, -1, 0), lfPitch=-35,
-                   rf=(-0.09, 0.02, 0.13), rfPole=(-0.2, -1, 0), rfYaw=0, rfPitch=-35)
+                   lh=(0.20, -0.16, 1.11), lhPole=(1, 0.3, -0.5),
+                   rh=(-0.20, -0.16, 1.11), rhPole=(-1, 0.3, -0.5),
+                   lf=(0.09, 0.0, 0.20), lfPole=(0.2, -1, 0), lfPitch=-35,
+                   rf=(-0.09, 0.02, 0.20), rfPole=(-0.2, -1, 0), rfYaw=0, rfPitch=-35)
 SKY_APEX = pose(GUARD,
-                hips=(0.0, 0.0, 0.26), hipsR=(0, 0, 0),
+                hips=(0.0, 0.0, 0.60), hipsR=(0, 0, 0),
                 spine=(-12, 0, 0), head=(-2, 0, 0),
-                lh=(0.30, 0.0, 1.30), lhPole=(1, 0, 0),
-                rh=(-0.30, 0.0, 1.30), rhPole=(-1, 0, 0),
-                rf=(-0.07, -0.30, 1.14), rfPole=(0, 0.5, 1), rfYaw=0, rfPitch=-40,
-                lf=(0.08, 0.10, 0.42), lfPole=(0, -1, 0))
+                lh=(0.30, 0.0, 1.64), lhPole=(1, 0, 0),
+                rh=(-0.30, 0.0, 1.64), rhPole=(-1, 0, 0),
+                rf=(-0.07, -0.30, 1.48), rfPole=(0, 0.5, 1), rfYaw=0, rfPitch=-40,
+                lf=(0.08, 0.10, 0.76), lfPole=(0, -1, 0))
 SKY_FALL = pose(GUARD,
-                hips=(0.0, -0.02, 0.12), hipsR=(8, 0, 0),
+                hips=(0.0, -0.02, 0.28), hipsR=(8, 0, 0),
                 spine=(10, 0, 0), head=(-10, 0, 0),
-                lh=(0.28, -0.14, 0.86), lhPole=(1, 0.4, 0),
-                rh=(-0.28, -0.14, 0.86), rhPole=(-1, 0.4, 0),
-                rf=(-0.08, -0.34, 0.52), rfPole=(0, -0.5, 1), rfYaw=0,
-                lf=(0.08, 0.14, 0.34), lfPole=(0, -1, 0))
+                lh=(0.28, -0.14, 1.02), lhPole=(1, 0.4, 0),
+                rh=(-0.28, -0.14, 1.02), rhPole=(-1, 0.4, 0),
+                rf=(-0.08, -0.34, 0.68), rfPole=(0, -0.5, 1), rfYaw=0,
+                lf=(0.08, 0.14, 0.50), lfPole=(0, -1, 0))
 SKY_SLAM = pose(GUARD,
                 hips=(0.0, -0.05, -0.20), hipsR=(12, 0, 0),
                 spine=(26, 0, 0), head=(-26, 0, 0),
@@ -191,8 +192,8 @@ CLIPS = {
                 (0.38, THUNDER_JOLT, "BEZIER"), (0.46, THUNDER_SLAM, "BEZIER"),
                 (0.70, THUNDER_SLAM, "BEZIER"),
                 (1.1, "IDLE", "BEZIER")],
-    "SkyBreaker": [(0.0, SKY_CROUCH, "BEZIER"), (0.12, SKY_TAKEOFF, "BEZIER"),
-                   (0.26, SKY_APEX, "LINEAR"), (0.36, SKY_FALL, "LINEAR"),
+    "SkyBreaker": [(0.0, SKY_CROUCH, "BEZIER"), (0.10, SKY_TAKEOFF, "BEZIER"),
+                   (0.24, SKY_APEX, "BEZIER"), (0.35, SKY_FALL, "LINEAR"),
                    (0.42, SKY_SLAM, "LINEAR"), (0.48, SKY_RECOIL, "BEZIER"),
                    (0.58, SKY_SETTLE, "BEZIER"), (0.82, SKY_SETTLE, "BEZIER"),
                    (1.17, "IDLE", "BEZIER")],

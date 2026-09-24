@@ -408,20 +408,20 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			_last_event = str(payload.get("text", ""))
 		&"enhanceResult":
 			# 강화 결과는 채팅창에 남긴다 — 부서진 것은 상세 창이 닫혀서 달리 알 길이 없다
+			# 자동 강화가 도는 중이면 단계마다 적지 않는다 — 끝날 때 팝업이 한 줄(`finished`)
 			var enhanced := "%s +%d" % [str(payload.get("name", "")), int(payload.get("level", 0))]
-			var head := "자동 강화" if payload.get("auto", false) else "강화"
-			if payload.get("auto", false):
-				enhanced += " (%d번)" % int(payload.get("tries", 1))
-			match str(payload.get("result", "")):
-				"success": _chat.add_line(head + " 성공", enhanced, INV_GOLD_HI)
-				"destroy": _chat.add_line(head + " 실패", enhanced + " 파괴", INV_WARN)
-				_: _chat.add_line(head + " 유지", enhanced, INV_TEXT)
+			if not _enhance.running:
+				match str(payload.get("result", "")):
+					"success": _chat.add_line("강화 성공", enhanced, INV_GOLD_HI)
+					"destroy": _chat.add_line("강화 실패", enhanced + " 파괴", INV_WARN)
+					_: _chat.add_line("강화 유지", enhanced, INV_TEXT)
 			_enhance.show_result(name, payload)
 		&"enhanceBatch":
 			# 일괄은 한 줄로 — 수십 개를 줄마다 적으면 채팅창이 강화로 덮인다
-			_chat.add_line("일괄 강화", "%d개 중 성공 %d · 파괴 %d" % [
-				int(payload.get("pieces", 0)), int(payload.get("success", 0)), int(payload.get("destroyed", 0))
-			], INV_GOLD_HI if int(payload.get("success", 0)) > 0 else INV_WARN)
+			if not _enhance.running:
+				_chat.add_line("일괄 강화", "%d개 중 성공 %d · 파괴 %d" % [
+					int(payload.get("pieces", 0)), int(payload.get("success", 0)), int(payload.get("destroyed", 0))
+				], INV_GOLD_HI if int(payload.get("success", 0)) > 0 else INV_WARN)
 			_enhance.show_result(name, payload)
 		&"gate":
 			# 차원문에 섰다. 어디로 갈지는 사람이 고른다
@@ -520,6 +520,10 @@ func _build_persistent() -> void:
 	_ui_root.add_child(_enhance)
 	_enhance.acted.connect(_on_enhance_acted)
 	_enhance.closed.connect(_redraw_bag)
+	_enhance.finished.connect(
+		func(head: String, text: String, good: bool) -> void:
+			_chat.add_line(head, text, INV_GOLD_HI if good else INV_WARN)
+	)
 
 	# **모든 창의 닫기는 오른쪽 위 X 하나로 통일한다** (2026-09-20 요청).
 	# 창이 다 지어진 뒤에 얹어야 자식 맨 뒤라 창 위에 그려진다
@@ -1527,8 +1531,7 @@ func _pick_bag(where: String, index: int) -> void:
 ## 가방 단추 — 인벤토리와 장비 창을 같이 열고 닫는다. 상세 창은 칸을 눌러야 뜬다
 func _toggle_bag() -> void:
 	var open := not _bag_panel.visible
-	_enhance.visible = false
-	_enhance.target = {}
+	_enhance.hide_now()
 	_bag_panel.visible = open
 	_gear_panel.visible = open
 	_bag_pick = {}

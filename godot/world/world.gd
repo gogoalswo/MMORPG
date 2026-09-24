@@ -1811,45 +1811,27 @@ func npc_enhance(player_id: String, index: int) -> void:
 ## 상세 창의 "강화" — **NPC 없이** 가방에 든 것과 끼고 있는 것 둘 다 두드린다.
 ## where 는 "bag"(가방 번호) · "equip"(슬롯 이름). 확률은 설계표(90% → 10%),
 ## 실패하면 무조건 파괴다 → docs/features/stat-balance.md 4장.
-## `goal` 을 주면 **자동 강화** — +goal 에 닿거나 부서질 때까지 이어서 두드린다 (-1 은 한 번)
-func enhance_item(player_id: String, where: String, key: Variant, goal: int = -1) -> void:
+## **한 요청 = 한 번.** 자동 강화는 팝업이 한 번씩 되풀이해 보낸다 — 한 단계씩 보여 주고
+## 중간에 멈출 수 있어야 해서다 (2026-09-24 "한 단계씩 연출 넣어")
+func enhance_item(player_id: String, where: String, key: Variant) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty():
 		return
-	_enhance(player, where, key, goal)
+	_enhance(player, where, key)
 
 
-## 자동 강화 한 개가 두드리는 횟수의 끝. 유지(keep)가 0 이라 닿을 일은 없지만,
-## 표가 바뀌어 유지가 생겨도 한 요청이 끝없이 돌지 않게 막는다
-const ENHANCE_TRY_CAP := 100
+## +level 에서 한 번 굴린다. 비용을 떼고 "success" · "keep" · "destroy", 모자라면 "short"
+func _roll_once(player: Dictionary, item: Dictionary, level: int) -> String:
+	var cost := Items.enhance_cost(item, level)
+	if int(player.gold) < cost:
+		return "short"
+	player.gold = int(player.gold) - cost
+	return Items.roll_enhance(level, _rng.randf())
 
 
-## +level 에서 +target 까지 굴린다. `once` 면 한 번만. 비용은 한 번 굴릴 때마다 뗀다.
-## → {level: 끝난 단계, destroyed, tries: 굴린 횟수, short: 골드가 모자라 멈췄나}
-func _roll_up(player: Dictionary, item: Dictionary, level: int, target: int, once: bool) -> Dictionary:
-	var out := {"level": level, "destroyed": false, "tries": 0, "short": false}
-	while int(out.level) < target and int(out.tries) < ENHANCE_TRY_CAP:
-		var cost := Items.enhance_cost(item, int(out.level))
-		if int(player.gold) < cost:
-			out.short = true
-			break
-		player.gold = int(player.gold) - cost
-		out.tries = int(out.tries) + 1
-		var result := Items.roll_enhance(int(out.level), _rng.randf())
-		if result == "success":
-			out.level = int(out.level) + 1
-		elif result == "destroy":
-			out.destroyed = true
-			break
-		if once:
-			break
-	return out
-
-
-## 두드린다 — 한 번, 또는 `goal` 까지 자동으로. **겹친 칸이면 한 개만 떼어서** 두드린다 —
-## 통째로 두드리면 파괴 한 번에 여러 개가 사라지고, 성공 한 번에 여러 개가 오른다.
-## 뗀 것은 오르면 원래 칸 바로 뒤에 선다
-func _enhance(player: Dictionary, where: String, key: Variant, goal: int = -1) -> void:
+## 한 번 두드린다. **겹친 칸이면 한 개만 떼어서** 두드린다 — 통째로 두드리면 파괴 한 번에
+## 여러 개가 사라지고, 성공 한 번에 여러 개가 오른다. 뗀 것은 성공하면 원래 칸 바로 뒤에 선다
+func _enhance(player: Dictionary, where: String, key: Variant) -> void:
 	var stack: Dictionary = {}
 	if where == "equip":
 		stack = player.equipped.get(str(key), {})
@@ -1863,28 +1845,23 @@ func _enhance(player: Dictionary, where: String, key: Variant, goal: int = -1) -
 	if not Items.can_enhance(level):
 		_notice("더 두드릴 수 없습니다")
 		return
-	var cost := Items.enhance_cost(item, level)
-	if int(player.gold) < cost:
-		_notice("골드가 %d 모자랍니다" % (cost - int(player.gold)))
+	var result := _roll_once(player, item, level)
+	if result == "short":
+		_notice("골드가 %d 모자랍니다" % (Items.enhance_cost(item, level) - int(player.gold)))
 		return
 
-	var auto := goal > level
-	var target := mini(goal, Items.max_enhance()) if auto else level + 1
 	var count := int(stack.get("count", 1)) if where == "bag" else 1  # 끼운 것은 늘 하나
-	var rolled := _roll_up(player, item, level, target, not auto)
-	var after := int(rolled.level)
-	var result := "destroy" if rolled.destroyed else ("success" if after > level else "keep")
 	match result:
 		"success":
 			if count > 1:
 				stack.count = count - 1
 				var one := stack.duplicate(true)
 				one.erase("count")
-				one.enhance = after
+				one.enhance = level + 1
 				player.bag.insert(int(key) + 1, one)
 			else:
-				stack.enhance = after
-			_notice("%s +%d 성공" % [item.name, after])
+				stack.enhance = level + 1
+			_notice("%s +%d 성공" % [item.name, level + 1])
 		"keep":
 			_notice("%s +%d 유지" % [item.name, level])
 		"destroy":
@@ -1897,44 +1874,46 @@ func _enhance(player: Dictionary, where: String, key: Variant, goal: int = -1) -
 			_notice("%s +%d 강화 실패 — 부서졌습니다" % [item.name, level])
 	if where == "equip":
 		_refresh_stats(player)
+	var after := level + 1 if result == "success" else level
 	_events.append({
-		"type": "enhanceResult", "result": result, "level": after, "name": str(item.name),
-		"from": level, "goal": target, "tries": int(rolled.tries), "auto": auto,
+		"type": "enhanceResult", "result": result, "level": after, "from": level, "name": str(item.name),
 	})
 	_inventory_changed(player)
 
 
 ## 일괄 강화 — 가방에서 **같은 아이템**(`mode` "item": id·등급) 또는 **같은 등급**("grade")
-## 장비를 전부 두드린다. 끼고 있는 것은 빠진다 — 한 번에 여럿을 부수는 요청이 몸에 걸친
-## 것까지 걸면 되돌릴 수 없다. `goal` 이 없으면(-1) 한 개씩 한 번, 있으면 +goal 까지 자동.
+## 장비를 **한 개씩 한 번** 두드린다. `cap` 을 주면 +cap 아래인 것만 든다 — 팝업의 자동 강화가
+## 목표를 cap 으로 넣어 한 바퀴씩 되풀이한다 (대상이 없어질 때까지).
+## 끼고 있는 것은 빠진다 — 한 번에 여럿을 부수는 요청이 몸에 걸친 것까지 걸면 되돌릴 수 없다.
 ## 겹친 칸은 한 개씩 따로 굴리고, 남은 것은 **끝난 단계끼리 다시 겹쳐** 원래 자리에 선다.
 ## 대상 규칙은 `Items.batch_match` — 팝업이 미리 세는 수와 같다
-func enhance_batch(player_id: String, mode: String, ref_id: String, grade: int, goal: int = -1) -> void:
+func enhance_batch(player_id: String, mode: String, ref_id: String, grade: int, cap: int = -1) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty() or not (mode in ["item", "grade"]):
 		return
-	var auto := goal > 0
-	var cap := clampi(goal, 1, Items.max_enhance()) if auto else Items.max_enhance()
-	var total := {"pieces": 0, "success": 0, "destroyed": 0, "tries": 0}
+	var limit := clampi(cap, 1, Items.max_enhance()) if cap > 0 else Items.max_enhance()
+	var total := {"pieces": 0, "success": 0, "destroyed": 0}
 	var reached := {}  # 끝난 단계 → 남은 개수
 	var i: int = player.bag.size() - 1
 	while i >= 0:  # 뒤에서부터 — 앞 칸 번호가 안 밀린다
 		var stack: Dictionary = player.bag[i]
-		if Items.batch_match(stack, mode, ref_id, grade, cap):
+		if Items.batch_match(stack, mode, ref_id, grade, limit):
 			var item := Items.get_item(str(stack.id))
 			var start := int(stack.get("enhance", 0))
-			var target := cap if auto else start + 1
 			var kept := {}
 			for n in int(stack.get("count", 1)):
-				var rolled := _roll_up(player, item, start, target, not auto)
+				var result := _roll_once(player, item, start)
+				if result == "short":
+					kept[start] = int(kept.get(start, 0)) + 1
+					continue
 				total.pieces += 1
-				total.tries += int(rolled.tries)
-				if rolled.destroyed:
+				if result == "destroy":
 					total.destroyed += 1
 					continue
-				if int(rolled.level) >= target:
+				var at := start + 1 if result == "success" else start
+				if result == "success":
 					total.success += 1
-				kept[int(rolled.level)] = int(kept.get(int(rolled.level), 0)) + 1
+				kept[at] = int(kept.get(at, 0)) + 1
 			player.bag.remove_at(i)
 			var levels := kept.keys()
 			levels.sort()
@@ -1953,8 +1932,8 @@ func enhance_batch(player_id: String, mode: String, ref_id: String, grade: int, 
 		return
 	_notice("일괄 강화 %d개 — 성공 %d · 파괴 %d" % [total.pieces, total.success, total.destroyed])
 	_events.append({
-		"type": "enhanceBatch", "mode": mode, "auto": auto, "goal": cap if auto else -1,
+		"type": "enhanceBatch", "mode": mode, "cap": limit,
 		"pieces": total.pieces, "success": total.success, "destroyed": total.destroyed,
-		"tries": total.tries, "reached": reached,
+		"reached": reached,
 	})
 	_inventory_changed(player)

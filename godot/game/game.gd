@@ -141,13 +141,12 @@ const SKILL_CLIPS := {
 const MOVE_BLEND := 0.06
 ## 동작이 끝나거나 끊겨 대기·달리기로 돌아갈 때 섞는 시간
 const MOVE_OUT_BLEND := 0.15
-## 맞았을 때 — 뒤로 젖히며 팔로 얼굴을 막는다 (0.45초). **스킬 동작은 끊지 않고**,
-## 평타는 주먹이 닿은 뒤(이 시간이 지난 뒤)면 끊는다. 자동 사냥은 0.7초마다 평타를
-## 치므로 평타를 못 끊게 하면 싸우는 동안 맞는 동작이 거의 안 보인다.
+## 맞았을 때 — 뒤로 젖히며 팔로 얼굴을 막는다 (0.45초).
+## **공격 동작(평타·스킬) 중에는 안 튼다** — 공격이 늘 먼저다. 거꾸로 맞는 동작 중에
+## 공격하면 공격 동작이 곧바로 이긴다 (`_start_move` 가 무엇이 돌든 갈아끼운다)
+## (2026-09-24 요청. 그 전엔 평타는 주먹이 닿은 뒤면 끊었다).
 ## 달리는 중에도 안 튼다 — 다리가 멈춰 미끄러진다
 const HIT_CLIP := "Hit"
-const HIT_OVER_SWING_MS := 250
-var _move_started := 0
 ## 지금 트는 동작과 언제 끝나나. `_move_fresh` 면 다음 그리기에서 처음부터 튼다
 var _move_clip := ""
 var _move_until := 0
@@ -3504,7 +3503,6 @@ func _start_move(clip: String) -> void:
 		return
 	_move_clip = clip
 	_move_fresh = true
-	_move_started = Time.get_ticks_msec()
 	_move_until = Time.get_ticks_msec() + int(rig.clip_length(clip) * 1000.0)
 
 
@@ -3513,9 +3511,7 @@ func _start_hit() -> void:
 	if _moving:
 		return
 	if _move_clip != "" and _move_clip != HIT_CLIP:
-		var into := Time.get_ticks_msec() - _move_started
-		if not (_move_clip in SWING_CLIPS and into >= HIT_OVER_SWING_MS):
-			return
+		return
 	_start_move(HIT_CLIP)
 
 

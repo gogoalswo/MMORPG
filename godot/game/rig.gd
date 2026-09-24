@@ -72,19 +72,41 @@ func _measure(model: Node) -> float:
 
 ## 클립이 없으면 아무것도 하지 않는다 (모델마다 가진 클립이 다르다).
 ## 같은 클립이 돌고 있으면 그대로 둔다 — `restart` 면 `from` 부터 다시 감는다
-## (몬스터가 한 번 더 휘두른 순간. 앞 휘두르기가 아직 돌고 있어도 새로 시작한다)
-func play(clip: String, speed: float = 1.0, from: float = 0.0, restart := false) -> void:
+## (몬스터가 한 번 더 휘두른 순간. 앞 휘두르기가 아직 돌고 있어도 새로 시작한다).
+## `blend` 는 앞 자세에서 섞어 넘어가는 시간(초) — 음수면 뚝 바꾼다
+func play(clip: String, speed: float = 1.0, from: float = 0.0, restart := false, blend: float = -1.0) -> void:
 	if _anim == null or not _clips.has(clip):
 		return
 	if not restart and _playing == clip and _anim.is_playing() and is_equal_approx(_speed, speed):
 		return
+	_start(clip, speed, from, blend)
+
+
+## 같은 클립이 돌고 있어도 처음부터 다시 튼다 — 평타는 칠 때마다 주먹이 다시 나가야 한다
+func replay(clip: String, speed: float = 1.0, blend: float = -1.0) -> void:
+	if _anim == null or not _clips.has(clip):
+		return
+	_start(clip, speed, 0.0, blend)
+
+
+func _start(clip: String, speed: float, from: float, blend: float) -> void:
 	_playing = clip
 	_speed = speed
 	# 멈춰 있는 동안 클립이 바뀌어도 멈춘 채로 둔다 — 풀 때 `_speed` 로 돌아간다
 	_anim.speed_scale = 0.0 if _freeze > 0.0 else speed
-	_anim.play(clip)
+	# 같은 클립을 되감을 때는 섞을 앞 자세가 자기 자신이라 멈춰야 되감긴다
+	if _anim.current_animation == clip:
+		_anim.stop(true)
+	_anim.play(clip, blend)
 	if from > 0.0:
 		_anim.seek(from, true)
+
+
+## 클립 길이(초). 없으면 0
+func clip_length(clip: String) -> float:
+	if _anim == null or not _clips.has(clip):
+		return 0.0
+	return _anim.get_animation(clip).length
 
 
 ## 히트스톱 — 맞는 순간 동작을 잠깐 세운다. **애니메이션만 멈춘다.**

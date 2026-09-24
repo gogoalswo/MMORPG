@@ -129,6 +129,23 @@ const RUN_SPEED_EPS := 0.5
 var _last_delta := 0.0
 ## 공격 동작을 언제까지 트나 (서버가 준 경직 시간)
 var _swing_until := 0
+## 블렌더로 지은 동작 (`scripts/blender/fighter_moves.py`). 평타는 잽·스트레이트를
+## 번갈아 내고, 스킬은 스킬마다 하나다. 모델에 클립이 없으면 옛 `Attack` 으로 돌아간다
+const SWING_CLIPS := ["Jab", "Cross"]
+const SKILL_CLIPS := {
+	"rising_kick": "Claw", "thunder_fall": "Thunder",
+	"sky_breaker": "SkyBreaker", "frost_pillar": "FrostStomp",
+}
+## 앞 자세에서 동작으로 섞어 넘어가는 시간. 부딪히는 순간이 클립 0.1초 자리라
+## 길게 섞으면 이펙트보다 주먹이 늦는다
+const MOVE_BLEND := 0.06
+## 동작이 끝나거나 끊겨 대기·달리기로 돌아갈 때 섞는 시간
+const MOVE_OUT_BLEND := 0.15
+## 지금 트는 동작과 언제 끝나나. `_move_fresh` 면 다음 그리기에서 처음부터 튼다
+var _move_clip := ""
+var _move_until := 0
+var _move_fresh := false
+var _swings := 0
 var _camera: CameraRig
 ## 존 이름·골드·fps·빌드가 적히는 줄. 상태판 아래에 깔린다
 var _label: Label
@@ -338,6 +355,9 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 		&"swing":
 			# 휘두르는 동안 발이 묶인다는 통보. 그 시간만큼 공격 동작을 튼다
 			_swing_until = Time.get_ticks_msec() + int(payload.get("root_ms", 400))
+			if str(payload.get("id", "")) == _transport.my_id():
+				_swings += 1
+				_start_move(SWING_CLIPS[_swings % SWING_CLIPS.size()])
 		&"died":
 			_last_event = "쓰러졌습니다 — 아무 데나 눌러 마을에서 되살아나기"
 			_target = Vector3.INF
@@ -356,8 +376,10 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 		&"npc":
 			_show_npc(payload)
 		&"skill":
-			# 스킬도 같은 공격 동작을 쓴다
+			# 스킬마다 제 동작이 있다. 없는 스킬(마법사·궁수)은 평타 동작으로 친다
 			_swing_until = Time.get_ticks_msec() + int(payload.get("root_ms", 400))
+			if str(payload.get("id", "")) == _transport.my_id():
+				_start_move(SKILL_CLIPS.get(str(payload.get("skill", "")), SWING_CLIPS[0]))
 			_show_skill(payload)
 		&"skills":
 			_last_event = "스킬을 배웠습니다"
@@ -3441,8 +3463,26 @@ func _move(dir: Vector2, delta: float) -> void:
 	_transport.send(&"input", {"seq": _seq, "dx": dir.x, "dz": dir.y, "dt": delta})
 
 
-## 죽음 > 공격 > 달리기 > 대기 순으로 고른다.
+## 동작을 건다. 실제로 트는 건 다음 `_play_player_clip` 이다 — 이벤트는 그리기 전에 온다
+func _start_move(clip: String) -> void:
+	if not _player is Rig:
+		return
+	var rig: Rig = _player
+	if not rig.has_clip(clip):
+		return
+	_move_clip = clip
+	_move_fresh = true
+	_move_until = Time.get_ticks_msec() + int(rig.clip_length(clip) * 1000.0)
+
+
+## 죽음 > 동작(평타·스킬) > 옛 공격 > 달리기 > 대기 순으로 고른다.
 ##
+## **동작은 끝까지 튼다.** 경직(0.4초)이 풀려도 서 있으면 마저 튼다 — 스킬 동작은
+## 1초 남짓이라 경직에 맞춰 자르면 내리친 주먹이 땅에 닿자마자 대기 자세로 튄다.
+## 경직이 풀린 뒤 **움직이면 그 자리에서 끊고** 달리기로 섞어 넘어간다
+## (웹 클라이언트의 `ATTACK_CUT_SPEED` 와 같은 생각이다).
+##
+## 아래는 새 동작이 없는 모델에서 쓰는 옛 길이다.
 ## 격투가 공격 클립은 3.23초짜리라 통째로 틀면 한 번 차는 데 3초가 걸린다.
 ## 앞 0.8초는 자세를 잡는 준비라, 공격 간격(700ms)마다 처음으로 되감으면 발이
 ## 한 번도 안 나간다. 웹 클라이언트는 0.8~1.60초 구간만 1.6배로 트는데
@@ -3453,9 +3493,24 @@ func _play_player_clip(me: Dictionary) -> void:
 		return
 	var rig: Rig = _player
 	if bool(me.get("dead", false)):
+		_move_clip = ""
 		rig.play("Death")
 		return
-	if Time.get_ticks_msec() < _swing_until:
+	var now := Time.get_ticks_msec()
+	if _move_clip != "":
+		if _move_fresh:
+			_move_fresh = false
+			rig.replay(_move_clip, 1.0, MOVE_BLEND)
+			return
+		var cut := _moving and now >= _swing_until
+		if now < _move_until and not cut:
+			return
+		_move_clip = ""
+		# 옛 `Attack` 길로 떨어지지 않게 — 동작이 경직을 이미 다 덮었다
+		_swing_until = mini(_swing_until, now)
+		rig.play("Run" if _moving else "Idle", 1.0, 0.0, false, MOVE_OUT_BLEND)
+		return
+	if now < _swing_until:
 		rig.play("Attack", 1.6, 0.8)
 		return
 	rig.play("Run" if _moving else "Idle")

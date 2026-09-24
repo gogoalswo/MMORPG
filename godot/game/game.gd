@@ -162,6 +162,13 @@ var _mob_bar_until: Dictionary = {}
 ## 때린 뒤 막대가 남아 있는 시간. 다음 한 대를 칠 때까지는 넉넉히 남아야 하고
 ## (제일 느린 무기가 1.2초), 지나간 놈 것이 화면에 쌓이면 안 된다
 const MOB_BAR_MS := 5000
+## 몬스터 id -> 휘두르는 동작을 언제까지 트나(ms). **서버가 때린 순간(`hit`)에
+## 켠다** — 상태(`attack`)로 틀면 사거리 안에 서 있는 내내 3.73초짜리 클립이
+## 준비 자세부터 감겨, 맞고 있는 동안 한 번도 안 휘두르는 것으로 보인다 (2026-09-24)
+var _mob_swing_until: Dictionary = {}
+## 오우거 `Attack` 에서 첫 할퀴기가 시작되는 자리(초). 길이는 서버 경직
+## (`monsterSwingMs` 0.65초)과 같다 → docs/features/characters-and-animation.md
+const MOB_SWING_FROM := 0.8
 ## 마지막으로 일어난 일 한 줄 (맞았다·레벨 올랐다)
 var _last_event := ""
 ## 왼쪽 아래 채팅창 — 경험치·장비 획득을 적는다 (`ChatLog`)
@@ -3308,6 +3315,7 @@ func _build_zone(zone_id: String) -> void:
 	# 때린 기록도 같이 버린다 — 안 버리면 새 존의 같은 id 에 막대가 붙는다
 	_mob_bars.clear()
 	_mob_bar_until.clear()
+	_mob_swing_until.clear()
 
 	var world_env := WorldEnvironment.new()
 	world_env.environment = environment_for(env)
@@ -3679,14 +3687,17 @@ func _draw_state() -> void:
 		node.rotation.y = monster.get("rot", 0.0)
 		if node is Rig:
 			var state := str(monster.get("state", "idle"))
-			if state == "chase":
+			# 휘두르기는 **창 끝까지 무조건** 튼다 — 사람이 한 발 물러난 것 때문에
+			# 끊으면 휘두르다 만 채로 동작이 사라진 것으로만 보인다
+			if Time.get_ticks_msec() < int(_mob_swing_until.get(monster.id, 0)):
+				node.play("Attack", 1.0, MOB_SWING_FROM)
+			elif state == "chase":
 				node.play("Run")
 			elif state == "patrol":
 				# 순찰은 걷는 것이다. 걷기 클립이 없으니 달리기를 반 배속으로 돌린다
 				node.play("Run", 0.5)
-			elif state == "attack":
-				node.play("Attack")
 			else:
+				# 사거리 안에서 다음 한 대를 기다리는 동안(`attack`)도 선다
 				node.play("Idle")
 
 	_tick_ring(snap)
@@ -3729,6 +3740,8 @@ func _show_hit(payload: Dictionary) -> void:
 	# 나뿐이므로 때린 사람을 따로 가리지 않는다 (서버가 붙으면 source 를 본다)
 	if not on_me:
 		_mob_bar_until[str(payload.get("target", ""))] = Time.get_ticks_msec() + MOB_BAR_MS
+	else:
+		_swing_mob(str(payload.get("source", "")))
 	var body: Node3D = null
 	if on_me:
 		body = _player
@@ -3752,6 +3765,17 @@ func _show_hit(payload: Dictionary) -> void:
 		_hurt.hit(float(payload.get("amount", 0)) / maxf(1.0, max_hp * 0.25))
 
 	_feel_hit(payload, on_me, body)
+
+
+## 몬스터가 나를 때렸다. 첫 할퀴기 구간을 **처음부터 다시** 튼다 — 서버가 세워 두는
+## 시간(`monsterSwingMs`)만큼만. 범위 공격이 터진 것도 여기로 온다 (보스는 그 뒤 선다)
+func _swing_mob(id: String) -> void:
+	var node: Node3D = _mob_nodes.get(id, null)
+	if id == "" or not node is Rig:
+		return
+	var swing_ms := int(GameData.combat().get("monsterSwingMs", 650))
+	_mob_swing_until[id] = Time.get_ticks_msec() + swing_ms
+	(node as Rig).play("Attack", 1.0, MOB_SWING_FROM, true)
 
 
 ## 타격감 — 히트스톱·흔들림·몸 튕김·찌그러짐. 세기는 `HitFx.TIERS` 네 단계다

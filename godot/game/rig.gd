@@ -70,11 +70,13 @@ func _measure(model: Node) -> float:
 	return box.size.y
 
 
-## 클립이 없으면 아무것도 하지 않는다 (모델마다 가진 클립이 다르다)
-func play(clip: String, speed: float = 1.0, from: float = 0.0) -> void:
+## 클립이 없으면 아무것도 하지 않는다 (모델마다 가진 클립이 다르다).
+## 같은 클립이 돌고 있으면 그대로 둔다 — `restart` 면 `from` 부터 다시 감는다
+## (몬스터가 한 번 더 휘두른 순간. 앞 휘두르기가 아직 돌고 있어도 새로 시작한다)
+func play(clip: String, speed: float = 1.0, from: float = 0.0, restart := false) -> void:
 	if _anim == null or not _clips.has(clip):
 		return
-	if _playing == clip and _anim.is_playing() and is_equal_approx(_speed, speed):
+	if not restart and _playing == clip and _anim.is_playing() and is_equal_approx(_speed, speed):
 		return
 	_playing = clip
 	_speed = speed

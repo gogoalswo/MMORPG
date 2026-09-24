@@ -327,6 +327,32 @@ export const OPTION_MIN = 1;
 export const OPTION_MAX = 1;
 
 /**
+ * **옵션 수치의 단계별 확률(%)** ★ — 1단계(낮음) → 5단계(높음) (2026-09-24 지시:
+ * "단계를 5단계로 나누고 낮은 수치가 제일 많이 나오고 높은 수치는 잘 안 나오도록.
+ * 크리스탈로 2번 효과 붙일때도 마찬가지").
+ *
+ * 범위(`optionRange` 의 최소~최대)를 **똑같이 5등분**해 구간을 이 확률로 고르고,
+ * 구간 안에서는 고르게 굴린다. 1차(드랍)·2차(크리스탈)가 `rollOptionValue` 하나를 쓴다.
+ * 합은 100 이다
+ */
+export const OPTION_STEP_WEIGHTS = [40, 30, 20, 8, 2];
+
+/** 단계 확률로 구간을 고르고 그 안에서 값을 굴린다 — 소수 한 자리 */
+export function rollOptionValue(min: number, max: number, rng: () => number = Math.random): number {
+  const total = OPTION_STEP_WEIGHTS.reduce((a, b) => a + b, 0);
+  let pick = rng() * total;
+  let step = 0;
+  while (step < OPTION_STEP_WEIGHTS.length - 1 && pick >= OPTION_STEP_WEIGHTS[step]!) {
+    pick -= OPTION_STEP_WEIGHTS[step]!;
+    step++;
+  }
+  const width = (max - min) / OPTION_STEP_WEIGHTS.length;
+  const value = min + width * (step + rng());
+  // 소수 한 자리로 저장한다 — 정수로 자르면 낮은 등급에서 0 이 되어 버린다
+  return Math.min(max, Math.max(min, Math.round(value * 10) / 10));
+}
+
+/**
  * **여섯 종이 전부 퍼센트다.** 공격력·방어력을 빼면서 수치로 주는 옵션이 없어졌다 —
  * 표시에도 판정에도 100 으로 나눠 쓴다
  */
@@ -409,8 +435,7 @@ export function rollOptions(
   for (let i = 0; i < Math.min(count, pool.length); i++) {
     const kind = pool.splice(Math.floor(rng() * pool.length), 1)[0]!;
     const { min, max } = optionRange(kind, grade);
-    // 소수 한 자리로 저장한다 — 정수로 자르면 낮은 등급에서 0 이 되어 버린다
-    out.push({ kind, value: Math.round((min + rng() * (max - min)) * 10) / 10 });
+    out.push({ kind, value: rollOptionValue(min, max, rng) });
   }
   return out;
 }
@@ -466,7 +491,7 @@ export function rollTierOptions(
   for (let i = 0; i < Math.min(count, pool.length); i++) {
     const kind = pool.splice(Math.floor(rng() * pool.length), 1)[0]!;
     const { min, max } = optionRange(kind, grade);
-    out.push({ kind, value: Math.round((min + rng() * (max - min)) * 10) / 10 });
+    out.push({ kind, value: rollOptionValue(min, max, rng) });
   }
   return out;
 }

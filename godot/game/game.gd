@@ -141,6 +141,9 @@ const SKILL_CLIPS := {
 const MOVE_BLEND := 0.06
 ## 동작이 끝나거나 끊겨 대기·달리기로 돌아갈 때 섞는 시간
 const MOVE_OUT_BLEND := 0.15
+## 동작이 클립 길이의 몇 배까지 걸려도 기다리나. 끝은 클립 자리로 보고(`_play_player_clip`),
+## 이건 멎지 않는 클립에 붙잡히지 않게 하는 상한이다 — 히트스톱이 겹쳐도 이만큼은 안 된다
+const MOVE_CEILING := 2.0
 ## 맞았을 때 — 뒤로 젖히며 팔로 얼굴을 막는다 (0.45초).
 ## **공격 동작(평타·스킬) 중에는 안 튼다** — 공격이 늘 먼저다. 거꾸로 맞는 동작 중에
 ## 공격하면 공격 동작이 곧바로 이긴다 (`_start_move` 가 무엇이 돌든 갈아끼운다)
@@ -3503,7 +3506,7 @@ func _start_move(clip: String) -> void:
 		return
 	_move_clip = clip
 	_move_fresh = true
-	_move_until = Time.get_ticks_msec() + int(rig.clip_length(clip) * 1000.0)
+	_move_until = Time.get_ticks_msec() + int(rig.clip_length(clip) * 1000.0 * MOVE_CEILING)
 
 
 ## 맞은 동작을 건다 — 틀어도 되는 때만 (`HIT_CLIP` 위 설명)
@@ -3543,7 +3546,12 @@ func _play_player_clip(me: Dictionary) -> void:
 			rig.replay(_move_clip, 1.0, MOVE_BLEND)
 			return
 		var cut := _moving and now >= _swing_until
-		if now < _move_until and not cut:
+		# 끝은 **클립이 실제로 다 돌았는지**로 본다. 시계(`_move_until`)로 재면 히트스톱이
+		# 멈춘 만큼 덜 돈 채 잘린다 — 여러 마리에게 맞으며 스킬을 쓰면 1초 동작이 0.7초에서
+		# 끊겼다 (2026-09-24). 시계는 클립이 멎지 않을 때를 막는 넉넉한 상한으로만 쓴다
+		var at := rig.position_in(_move_clip)
+		var playing := at >= 0.0 and at < rig.clip_length(_move_clip) - 0.01
+		if playing and now < _move_until and not cut:
 			return
 		_move_clip = ""
 		# 옛 `Attack` 길로 떨어지지 않게 — 동작이 경직을 이미 다 덮었다
@@ -3726,7 +3734,12 @@ func _feel_hit(payload: Dictionary, on_me: bool, body: Node3D) -> void:
 
 	# 때린 쪽도 같이 멈춰야 "걸렸다" 가 된다
 	var attacker: Node3D = _mob_nodes.get(mob_id, null) if on_me else _player
-	HitFx.hitstop(body, feel.stop)
+	# **공격·스킬 동작 중에 맞으면 내 몸은 안 세운다.** 여러 마리에게 맞으면 0.07초씩
+	# 연달아 걸려 동작이 뚝뚝 끊긴다 (2026-09-24). 맞은 건 붉어짐·흔들림·퍼짐으로 안다.
+	# 맞음 동작(`Hit`)과 공격이 이기는 규칙(`HIT_CLIP` 위)과 같은 생각이다
+	var busy := on_me and _move_clip != "" and _move_clip != HIT_CLIP
+	if not busy:
+		HitFx.hitstop(body, feel.stop)
 	HitFx.hitstop(attacker, feel.stop)
 	if body != null:
 		# **내 캐릭터는 밀지 않는다** — 카메라가 쫓아가 화면째 흔들리고, 걷는지 보는

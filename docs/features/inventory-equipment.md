@@ -60,15 +60,19 @@
 
 - 한 벌만 둔다 — `DragScroll.attach(목록, 격자, 칸 사이)` 를 붙이면 된다. 지금
   **가방(`_bag_drag`)·스킬 목록(`_skill_drag`)·강화 목록(`EnhancePopup.list_drag`)**.
-- 격자에 들어오는 칸의 `hit` 는 입력을 흘려보낸다 (`child_entered_tree` 에서
-  `MOUSE_FILTER_IGNORE` — 칸을 나중에 채워도 자동이다).
+- 격자에 들어오는 **칸은 흘려보내고(PASS) 칸 안의 것은 전부 비킨다(IGNORE)**
+  (`_let_through`, `child_entered_tree` 에서 — 칸을 나중에 채워도 자동이다).
+  처음에는 `hit` 만 비켰는데, **칸 자체(`PanelContainer`, 기본 STOP)가 입력을
+  멈춰서** 목록에 안 닿았다 — 화면에서는 선택까지 죽었다 (2026-09-24). 테스트가
+  `on_input` 을 직접 불러서 이 길을 못 봤다 → 지금은 창에 입력을 넣는다
+  ([verification.md](verification.md) "손댈 때").
 - 목록이 직접 받는다(`on_input`). **데드존(`GatePanel.DEADZONE`, 14px)을 넘겨 끌면
   스크롤, 그 자리에서 떼면** 그 칸(`cell_at`, 감춘 칸은 건너뜀)의 `hit.pressed` 를
   낸다 — 누른 칸과 뗀 칸이 달라도 취소다. 휠은 `ScrollContainer` 에 넘기고
   손가락 이벤트는 삼킨다. 창을 닫을 때 `forget()` 으로 누르던 것을 잊는다.
 - 장비 칸·담은 칸(강화)은 스크롤이 없어 단추가 그대로 받는다.
 - 스킬 목록은 지금 직업 스킬이 두 줄 안에 다 들어가 끌 거리가 없다 — 늘면 그대로 된다.
-- 확인: `tests/ui_test.gd` 의 `_case_bag_drag` (`_drag_list` · `_tap_cell`).
+- 확인: `tests/ui_test.gd` 의 `_case_bag_drag` (`_drag_list` · `_tap_cell` — `push_input` 으로 창에 넣는다).
 
 ### 창 레이아웃 ★
 2026-09-23 요청 — 사용자가 인벤토리 그림 한 장을 주며 **"이런 느낌으로. 아이템을

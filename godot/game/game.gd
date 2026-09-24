@@ -1975,10 +1975,12 @@ const DETAIL_BONUS := {
 }
 
 
+## 장비 기본 능력치는 **전부 %** 다 — 공격력·방어력·체력도 맨몸 수치에 곱한다
+## (`world.gd` `_refresh_stats`). 소수점은 **올림** (2026-09-24 지시). 치명타·공속만
+## 비율(0.05)로 들고 있어 ×100 한다. 부동소수 찌꺼기(30.0000001)가 31 로 올라가지 않게 조금 뺀다
 func _bonus_text(key: String, value: float) -> String:
-	if key in ["crit", "attackSpeed"]:
-		return "+%.0f%%" % (value * 100.0)
-	return "+%d" % roundi(value)
+	var percent := value * 100.0 if key in ["crit", "attackSpeed"] else value
+	return "+%d%%" % ceili(percent - 0.0001)
 
 
 func _is_picked(where: String, index: int) -> bool:

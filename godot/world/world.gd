@@ -353,6 +353,10 @@ func attack(player_id: String) -> void:
 	var now := Time.get_ticks_msec()
 	if now < int(player.next_attack_at):
 		return
+	# **스킬 시전 중에는 기본 공격도 못 한다** (2026-09-24 요청). 경직(0.4초)이 풀려도
+	# 스킬 동작은 1초 넘게 남는데, 그 틈에 휘두르면 동작이 끊긴다 (`cast` 의 `cast_until`)
+	if now < int(player.get("cast_until", 0)):
+		return
 
 	var stats: Dictionary = player.stats
 	var cooldown := Combat.effective_cooldown(stats.attackCooldown, stats.attackSpeed)

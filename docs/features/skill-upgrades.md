@@ -43,7 +43,7 @@
 | `godot/world/items.gd` `book_exp` | 경험치북이면 넣는 경험치 |
 | `godot/world/world.gd` `feed_upgrade` | ★ 스킬창의 경험치북 단추 (`feedUpgrade`) — **판정은 여기서** (직업·번호·이미 붙었나·책이 있나 → 한 권 빼고 쌓고, 닿으면 붙인다) |
 | `godot/world/world.gd` `_add_upgrade` | 강화를 붙이고 그 강화에 쌓이던 경험치를 지운다 — 붙는 길은 전부 여기를 지난다 |
-| `godot/world/world.gd` `cast` | 붙은 강화를 `skill` 이벤트에 싣고(`upgrades`), 사거리에 배율을 곱하고, 각·대 수·대상 수를 더하고, 기절·지대를 건다 |
+| `godot/world/world.gd` `cast` | 붙은 강화를 `skill` 이벤트에 싣고(`upgrades`), 사거리에 배율을 곱하고, 각·대 수를 더하고, 기절·지대를 건다 |
 | `godot/world/world.gd` `_open_zone` · `_run_zones` · `_zones` | ★ **남는 피해 지대** (균열 지대) — 거는 곳과 틱마다 넣는 곳 |
 | `godot/world/world.gd` `_step_monsters` | `stunned_until` 까지 `state = "stun"` 으로 서 있는다 |
 | `godot/world/world.gd` `debug_books` · `debug_upgrade_all` · `debug_reset_upgrades` | 테스트 단추 넷 |
@@ -208,10 +208,12 @@
 "천붕각 스킬은 어떤식으로 강화하는게 좋을까?" 에 여진·진폭 등을 제안했고, 사용자가
 **"균열지대만들고 진폭도 만들어. 균열지대는 0.5초마다 40% 데미지"** 로 정했다.
 
-- **1번 진폭** (`rangeMul` 1.5 · `targetsAdd` 5) — 범위 6 → **9m**, 최대 대상 10 → **15**.
+- **1번 진폭** (`rangeMul` 1.5) — 범위 6 → **9m**. 처음엔 `targetsAdd` 5 로 최대 대상
+  10 → 15 도 있었는데, 2026-09-24 에 스킬 명수 상한 자체를 없애면서 `targetsAdd` 를 뺐다
+  (범위에 든 놈은 전부 맞는다 → [skills.md](skills.md)).
   판정·알리는 모양이 같은 값을 쓴다. 이펙트는 아래 "진폭 이펙트 — 모래 토네이도".
 - **2번 균열 지대** (`zoneMs` 3000 · `zoneTickMs` 500 · `zonePower` **1.0** — 처음 0.4 였다가 2026-09-24 "도트 데미지 100%로 바꾸자. 너무 약해" 로 올렸다) — 내리찍은 자리에
-  **판정 모양 그대로(같은 중심·반경·대상 수)** 땅이 남아, 0.5 · 1.0 · … · 3.0초에 **여섯 번**
+  **판정 모양 그대로(같은 중심·반경)** 땅이 남아, 0.5 · 1.0 · … · 3.0초에 **여섯 번**
   `공격력 × 1.0` 를 넣는다 (`World._open_zone` → `_zones` → `step` 의 `_run_zones`).
   - **틱마다 대상을 다시 고른다** — 땅에 남은 것이라 걸어 들어온 놈은 맞고 나간 놈은
     안 맞는다 (연타는 첫 대에서 한 번 고른다 — 거기와 갈리는 자리다).
@@ -277,7 +279,7 @@
 
 ## 손댈 때
 
-- **강화를 더할 때** — `SKILL_UPGRADES` 에 한 줄(`exp` 필수, 효과는 `stunMs` · `rangeMul` · `arcAdd` · `extraHits` · `targetsAdd` · `zoneMs`·`zoneTickMs`·`zonePower` 중에서) → `npm run export:godot`.
+- **강화를 더할 때** — `SKILL_UPGRADES` 에 한 줄(`exp` 필수, 효과는 `stunMs` · `rangeMul` · `arcAdd` · `extraHits` · `zoneMs`·`zoneTickMs`·`zonePower` 중에서) → `npm run export:godot`.
   효과가 새 종류면 `cast` 에 판정을, `_show_skill` 에 이펙트 분기를 더한다.
   효과 문구(`desc`)는 **카드(280px) 한 줄**에 들어가야 한다.
 - **경험치북 수치를 바꿀 때** — `SKILL_EXP_BOOKS` 한 줄. 종류를 넷 이상으로 늘리면

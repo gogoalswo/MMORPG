@@ -43,7 +43,12 @@ export interface SkillDef {
   arc: number;
   /** 공격력 배율 */
   power: number;
-  /** 최대 대상 수 */
+  /**
+   * 때리느냐와 단일기냐만 가른다 — **명수 상한이 아니다.** 범위에 들어온 놈은
+   * 전부 맞는다 (2026-09-24 지시: "스킬 범위에 들어오면 모두 피격되게. 명수 제한 없애").
+   * `0` 은 회복기(안 때림), `1` 은 단일기(착탄 반경 `SKILL_BLAST_MIN`),
+   * `2` 이상은 범위기다. 2 이상의 숫자 크기는 판정에 쓰이지 않는다
+   */
   maxTargets: number;
   /**
    * 한 번 쓰면 몇 번 때리나 (없으면 1). `power` 는 **한 대의** 배율이다.
@@ -503,8 +508,6 @@ export interface SkillUpgradeDef {
   arcAdd?: number;
   /** 다단 히트를 이만큼 늘린다 (`hits` 에 더한다). 여럿이면 더한다 */
   extraHits?: number;
-  /** 최대 대상 수를 이만큼 늘린다. 여럿이면 더한다 */
-  targetsAdd?: number;
   /**
    * **남는 피해 지대** — 시전한 자리에 `zoneMs` 동안 남아 `zoneTickMs` 마다 범위 안
    * 몬스터에게 `공격력 × zonePower` 를 준다. 첫 틱은 시전 뒤 `zoneTickMs` 에 온다
@@ -559,10 +562,10 @@ export const SKILL_UPGRADES: SkillUpgradeDef[] = [
     id: 'wide',
     skill: 'sky_breaker',
     name: '진폭',
-    desc: '범위 50% · 대상 +5',
+    // "대상 +5" 도 있었는데 명수 상한을 없애면서 뺐다 (2026-09-24)
+    desc: '범위 50% 증가',
     exp: 1000,
     rangeMul: 1.5,
-    targetsAdd: 5,
   },
   {
     // 이펙트는 금이 붉은 용암빛으로 3초 남고 틱마다 맥동한다 (QuakeFx.ZONE_*)

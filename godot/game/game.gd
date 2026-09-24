@@ -2887,12 +2887,14 @@ func _redraw_skills() -> void:
 	var skill: Dictionary = Skills.all().get(_skill_pick, {})
 	_fill_skill_cell(_skill_big, _skill_pick, "")
 	_skill_name.text = str(skill.get("name", ""))
+	# 범위기는 범위에 든 놈을 **전부** 친다 — 명수 상한이 없어서 숫자를 적지 않는다
 	var targets := int(skill.get("maxTargets", 1))
+	var whole := float(skill.get("arc", 0)) >= TAU - 0.01
 	_skill_info.text = "요구 레벨 %d\n재사용 %s초\n사거리 %s, %s" % [
 		int(skill.get("reqLevel", 1)),
 		str(snappedf(float(skill.get("cooldown", 0)) / 1000.0, 0.1)),
 		str(skill.get("range", 0)),
-		"주위 %d명" % targets if float(skill.get("arc", 0)) >= TAU - 0.01 else "대상 %d명" % targets,
+		"대상 %d명" % targets if targets <= 1 else ("주위 전부" if whole else "범위 안 전부"),
 	]
 	_skill_desc.text = str(skill.get("description", ""))
 	var damage := Skills.damage_text(skill)
@@ -3965,15 +3967,14 @@ func _tick_range(delta: float) -> void:
 
 
 ## 판정이 보낸 모양 그대로 땅에 그리고, 몇 마리가 걸렸는지는 글로 적는다 —
-## 반경만 보면 "왜 저기 있는 놈이 안 맞지" 가 `maxTargets` 때문인지 모른다
+## 반경만 보면 몇 마리가 걸렸는지 모른다 (명수 상한은 없다 — 안에 들면 다 맞는다)
 func _show_skill_range(payload: Dictionary) -> void:
 	if _zone_node == null:
 		return
 	_range_marks.append(SkillRange.show_cast(_zone_node, payload))
-	_range_label.text = "%s  %.1fm · %d° · %d/%d 마리" % [
+	_range_label.text = "%s  %.1fm · %d° · %d 마리" % [
 		Skills.all().get(str(payload.get("skill", "")), {}).get("name", "스킬"),
 		float(payload.get("reach", 0.0)),
 		roundi(rad_to_deg(float(payload.get("arc", 0.0)))),
 		int(payload.get("hits", 0)),
-		int(payload.get("max_targets", 0)),
 	]

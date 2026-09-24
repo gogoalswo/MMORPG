@@ -185,6 +185,12 @@ func _case_lock() -> void:
 		_fail("시전 중에 다른 스킬이 나갔다")
 	if int(me.skill_ready_at.get("frost_pillar", 0)) != 0:
 		_fail("막힌 스킬의 쿨타임이 돌았다")
+	# 기본 공격도 막힌다 — 경직이 풀린 뒤라도 시전이 안 끝났으면 안 휘두른다
+	me.rooted_until = 0
+	me.next_attack_at = 0
+	w.attack("me")
+	if not _first(w.drain_events(), "swing").is_empty():
+		_fail("시전 중에 기본 공격이 나갔다")
 
 	# 시전이 끝나면 나간다
 	me.cast_until = 0

@@ -285,6 +285,13 @@ var _bag_head: Label
 var _bag_gold: Label
 var _bag_sum: Label
 var _bag_grid: GridContainer
+var _bag_scroll: ScrollContainer
+## 가방 끌기 — 누른 자리(목록 기준 세로), 누를 때의 스크롤, 데드존을 넘겼나, 누른 칸
+var _bag_hold := false
+var _bag_hold_y := 0.0
+var _bag_hold_scroll := 0
+var _bag_dragging := false
+var _bag_held := -1
 var _bag_action: Button
 var _enhance_button: Button  # 상세 창 "강화" — 장비를 고르면 뜨고, 누르면 강화 팝업을 연다
 ## 강화 팝업 — 화면 가운데, 뒤를 어둡게 덮는다. 한 개 · 같은 아이템 · 같은 등급, 자동 강화
@@ -1184,7 +1191,10 @@ func _build_bag_window(panel: PanelContainer) -> void:
 		cell_box * BAG_ROWS + BAG_GRID_GAP * (BAG_ROWS - 1)
 	)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	# **끌어서 내린다** — 입력은 `_on_bag_input` 이 받는다 (칸 단추가 끌기를 먹었다)
+	scroll.gui_input.connect(_on_bag_input)
 	body.add_child(scroll)
+	_bag_scroll = scroll
 	_bag_grid = GridContainer.new()
 	_bag_grid.columns = BAG_COLUMNS
 	_bag_grid.add_theme_constant_override("h_separation", BAG_GRID_GAP)
@@ -1501,7 +1511,62 @@ func _fit_cells(grid: GridContainer, want: int, where: String) -> void:
 		grid.remove_child(last)
 		last.queue_free()
 	while grid.get_child_count() < want:
-		grid.add_child(_make_cell(_pick_bag.bind(where, grid.get_child_count())))
+		var cell := _make_cell(_pick_bag.bind(where, grid.get_child_count()))
+		# 가방 칸의 단추는 입력을 흘려보낸다 — 누르기·끌기는 `_on_bag_input` 이 받는다
+		cell.get_node("hit").mouse_filter = Control.MOUSE_FILTER_IGNORE
+		grid.add_child(cell)
+
+
+## 가방 격자에 온 입력. **누르고 끌면 스크롤, 누르고 그 자리에서 떼면 그 칸을 누른 것**이다.
+##
+## 칸마다 `hit` 단추가 칸 전체를 덮고 있어서 끌기를 단추가 다 먹었다 — 휠로만
+## 내려가고 끌어서는 안 내려갔다 (2026-09-24 지적: "인벤토리 ui 스크롤이 안돼").
+## 그래서 가방 칸 단추는 입력을 흘려보내고(`_fit_cells`) 여기서 받는다.
+## 방식은 차원문 목록(`GatePanel._on_list_input`)과 같다: 휠은 `ScrollContainer` 에
+## 넘기고, 손가락 이벤트는 삼킨다 — 고도가 같은 손짓을 마우스로 흉내 내 한 번 더
+## 보내므로(`emulate_mouse_from_touch`) 둘 다 받으면 두 배로 내려간다
+func _on_bag_input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch or event is InputEventScreenDrag:
+		_bag_scroll.accept_event()
+		return
+	var click := event as InputEventMouseButton
+	if click != null and click.button_index == MOUSE_BUTTON_LEFT:
+		if click.pressed:
+			_bag_hold = true
+			_bag_dragging = false
+			_bag_hold_y = click.position.y
+			_bag_hold_scroll = _bag_scroll.scroll_vertical
+			_bag_held = _bag_cell_at(click.position)
+		elif _bag_hold:
+			_bag_hold = false
+			# 누른 칸에서 뗐을 때만 누른 것이다 — 끌었거나 다른 칸으로 미끄러졌으면 취소
+			var held := _bag_held
+			_bag_held = -1
+			if not _bag_dragging and held >= 0 and held == _bag_cell_at(click.position):
+				_bag_grid.get_child(held).get_node("hit").pressed.emit()
+		_bag_scroll.accept_event()
+		return
+	var move := event as InputEventMouseMotion
+	if move != null and _bag_hold:
+		var moved := move.position.y - _bag_hold_y
+		if not _bag_dragging and absf(moved) > GatePanel.DEADZONE:
+			_bag_dragging = true
+		if _bag_dragging:
+			# 손을 따라간다 — 위로 끌면 목록이 올라온다. 범위는 고도가 죈다
+			_bag_scroll.scroll_vertical = _bag_hold_scroll - int(moved)
+			_bag_scroll.accept_event()
+
+
+## 그 자리의 가방 칸 번호 (없으면 -1). `at` 은 목록 기준이라 화면 기준으로 옮겨서
+## 견준다 (칸은 스크롤만큼 밀려 있다). 칸 사이 틈도 가까운 칸에 붙여 준다
+func _bag_cell_at(at: Vector2) -> int:
+	var point := _bag_scroll.global_position + at
+	var half := BAG_GRID_GAP * 0.5
+	for index in _bag_grid.get_child_count():
+		var box: Rect2 = _bag_grid.get_child(index).get_global_rect().grow(half)
+		if box.has_point(point):
+			return index
+	return -1
 
 
 ## 탭 — 무엇을 보여줄지 거른다. **거르면 칸 번호와 가방 번호가 어긋나므로**
@@ -1556,6 +1621,8 @@ func _toggle_bag() -> void:
 	_detail_panel.visible = false
 	_crystal_panel.visible = false
 	_crystal_target = {}
+	_bag_hold = false
+	_bag_held = -1
 	if open:
 		_redraw_bag()
 

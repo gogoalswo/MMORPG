@@ -7,6 +7,8 @@ extends SceneTree
 ##   godot --headless --path godot --script tests/ui_test.gd
 
 const FONT := "res://assets/fonts/NotoSansKR-subset.ttf"
+## 가방을 끈 뒤에 누를 칸 — 넷째 줄 셋째 칸. 끈 만큼(두 줄 남짓) 올라와도 보인다
+const BAG_TAP_CELL := 17
 
 var _failed := 0
 
@@ -267,6 +269,7 @@ func _run_scene() -> void:
 
 	await _case_status(game)
 	await _case_bag(game)
+	await _case_bag_drag(game)
 	await _case_skills(game)
 	await _case_design_panel(game)
 	# 존을 옮기므로 맨 끝에 둔다
@@ -923,6 +926,55 @@ func _case_bag(game: Node3D) -> void:
 		if panel.visible:
 			_fail("%s 의 X 를 눌렀는데 안 닫혔다" % panel_name)
 	print("  닫기는 창 오른쪽 위 X 하나다")
+
+
+## 가방은 **끌어서 내린다** — 칸 단추가 끌기를 먹어 휠로만 내려갔다
+## (2026-09-24 지적: "인벤토리 ui 스크롤이 안돼"). 끌기만 하면 칸을 고르지 않고,
+## 그 자리에서 떼면 그 칸을 고른 것이다
+func _case_bag_drag(game: Node3D) -> void:
+	var me: Dictionary = game._transport.snapshot().players[game._transport.my_id()]
+	var kept: Array = me.bag.duplicate(true)
+	# 한 화면(5×8)을 넘치게 채운다
+	me.bag.clear()
+	for i in 60:
+		me.bag.append({"id": "g1_w", "grade": 1, "enhance": 0, "options": []})
+	if not game._bag_panel.visible:
+		game._toggle_bag()
+	await process_frame
+	await process_frame
+	var list: ScrollContainer = game._bag_scroll
+	list.scroll_vertical = 0
+	var grab := list.size * 0.5
+	game._on_bag_input(_mouse(grab, true))
+	for i in 6:
+		grab.y -= 20
+		game._on_bag_input(_move(grab))
+		await process_frame
+	var dragged := list.scroll_vertical
+	game._on_bag_input(_mouse(grab, false))
+	await process_frame
+	if dragged <= 0:
+		_fail("가방을 끌었는데 안 내려갔다 (스크롤 %d)" % dragged)
+	elif game._detail_panel.visible:
+		_fail("가방을 끌기만 했는데 칸이 골라졌다 (상세 창이 떴다)")
+	else:
+		print("  가방 끌기: %dpx 내려감" % dragged)
+
+	# 끌지 않고 그 자리에서 떼면 그 칸을 고른 것이다 — 스크롤된 채로 누른 칸이어야 한다
+	var cell: Control = game._bag_grid.get_child(BAG_TAP_CELL)
+	var at: Vector2 = cell.get_global_rect().get_center() - list.global_position
+	game._on_bag_input(_mouse(at, true))
+	game._on_bag_input(_mouse(at, false))
+	await process_frame
+	if not game._detail_panel.visible:
+		_fail("가방 칸을 눌렀는데 상세 창이 안 떴다")
+	elif int(game._bag_pick.get("index", -1)) != BAG_TAP_CELL:
+		_fail("%d 번 칸을 눌렀는데 %s 가 골라졌다" % [BAG_TAP_CELL, game._bag_pick])
+
+	me.bag.clear()
+	me.bag.append_array(kept)
+	game._toggle_bag()
+	await process_frame
 
 ## 퀵슬롯과 스킬창 — 자리, 크기, 그림, 장착·해제·바꾸기.
 ## 창은 **왼쪽이 설명, 오른쪽이 고르기** 다 (2026-09-19 요청)

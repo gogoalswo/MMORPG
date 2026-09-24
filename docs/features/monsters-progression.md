@@ -16,6 +16,7 @@
 | `packages/server/src/combat.ts` | 옛 몬스터 AI (idle → chase → attack → 복귀). 이식 원본 |
 | `godot/world/world.gd` | **지금 도는 몬스터 AI** — `_step_monsters`(상태 기계) · `_patrol`(순찰) |
 | `godot/tests/aggro_test.gd` | 어그로·추적·반격·사망 확인 |
+| `godot/tests/mob_swing_test.gd` | 때린 만큼 화면에서도 휘두르는지 (연속으로 맞는 중에도) |
 | `godot/tests/patrol_test.gd` | 순찰 확인 (목적지·반경·쉬는 시각·어그로 우선) |
 
 ## 규칙

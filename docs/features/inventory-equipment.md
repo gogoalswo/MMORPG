@@ -10,6 +10,7 @@
 | 파일 | 역할 |
 |---|---|
 | `godot/game/game.gd` | **고도 창 전부** — `_build_bag_panel` 이 틀을 짓고 `_redraw_bag` 이 채운다 |
+| `godot/game/drag_scroll.gd` | `DragScroll` — 칸 목록을 끌어서 내린다 (가방·스킬 목록·강화 목록) |
 | `godot/world/items.gd` | `slot_label(slot, job)` — 칸 이름 · `grade_name` / `grade_color` — 등급 이름·색 (표: `items.json` 의 `gradeNames`·`gradeColors`) |
 | `godot/world/world.gd` | `sort_bag` — 정렬 (등급 높은 것 → 슬롯 순서 → 강화 높은 것). 요청은 `sortBag` |
 | `scripts/build-item-icons.mjs` | 바르코 아이콘 원본 → `public/assets/icons` (배경 걷기 + 128px) |
@@ -50,21 +51,24 @@
 여백을 또 더했더니 격자 아래가 한 줄 가까이 비었다. 둘 다 찍어서 알았다.
 지금 `CELL = 58`, 8줄이라 인벤토리 창이 670 높이다.
 
-### 가방은 끌어서 내린다 ★
+### 칸 목록은 끌어서 내린다 ★
 
 칸마다 칸 전체를 덮는 `hit` 단추가 있어서 **끌기를 단추가 다 먹었다** — 휠로만
 내려가고 끌어서는(폰에서는 손가락으로) 안 내려갔다 (2026-09-24 지적). 엔진의
 `ScrollContainer` 끌기는 터치 화면일 때만 켜지고, 켜면 흉내 낸 마우스와 겹쳐
 두 배로 내려간다. 그래서 차원문 목록(`GatePanel._on_list_input`)과 같은 방식이다:
 
-- 가방 칸의 `hit` 는 입력을 흘려보낸다 (`_fit_cells` 에서 `MOUSE_FILTER_IGNORE`).
-- 목록이 직접 받는다(`game.gd` 의 `_on_bag_input`). **데드존(`GatePanel.DEADZONE`,
-  14px)을 넘겨 끌면 스크롤, 그 자리에서 떼면** 그 칸(`_bag_cell_at`)의 `hit.pressed`
-  를 낸다 — 누른 칸과 뗀 칸이 달라도 취소다. 휠은 `ScrollContainer` 에 넘기고
-  손가락 이벤트는 삼킨다.
-- 장비 칸은 스크롤이 없어 단추가 그대로 받는다. 스킬 목록·강화 목록도
-  `ScrollContainer` 안에 단추 칸이라 같은 증상이 날 수 있다 — 아직 안 고쳤다.
-- 확인: `tests/ui_test.gd` 의 `_case_bag_drag`.
+- 한 벌만 둔다 — `DragScroll.attach(목록, 격자, 칸 사이)` 를 붙이면 된다. 지금
+  **가방(`_bag_drag`)·스킬 목록(`_skill_drag`)·강화 목록(`EnhancePopup.list_drag`)**.
+- 격자에 들어오는 칸의 `hit` 는 입력을 흘려보낸다 (`child_entered_tree` 에서
+  `MOUSE_FILTER_IGNORE` — 칸을 나중에 채워도 자동이다).
+- 목록이 직접 받는다(`on_input`). **데드존(`GatePanel.DEADZONE`, 14px)을 넘겨 끌면
+  스크롤, 그 자리에서 떼면** 그 칸(`cell_at`, 감춘 칸은 건너뜀)의 `hit.pressed` 를
+  낸다 — 누른 칸과 뗀 칸이 달라도 취소다. 휠은 `ScrollContainer` 에 넘기고
+  손가락 이벤트는 삼킨다. 창을 닫을 때 `forget()` 으로 누르던 것을 잊는다.
+- 장비 칸·담은 칸(강화)은 스크롤이 없어 단추가 그대로 받는다.
+- 스킬 목록은 지금 직업 스킬이 두 줄 안에 다 들어가 끌 거리가 없다 — 늘면 그대로 된다.
+- 확인: `tests/ui_test.gd` 의 `_case_bag_drag` (`_drag_list` · `_tap_cell`).
 
 ### 창 레이아웃 ★
 2026-09-23 요청 — 사용자가 인벤토리 그림 한 장을 주며 **"이런 느낌으로. 아이템을
@@ -228,7 +232,7 @@
   (`_close_button` → [ui-art-style.md](ui-art-style.md)).
 - **아직 기능은 안 붙였다.** 창·칸·아이콘·고르기·장착/해제까지다. 겹치기(`stackKey`),
   옵션 칩의 등급 범위 안내는 웹 클라에 있던 것이고 고도에는 아직 없다.
-  (200칸 스크롤은 된다 — 위 "가방은 끌어서 내린다")
+  (200칸 스크롤은 된다 — 위 "칸 목록은 끌어서 내린다")
 
 ## 관련
 

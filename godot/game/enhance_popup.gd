@@ -71,6 +71,7 @@ var go: Button
 var run_button: Button
 var picked_grid: GridContainer
 var list_grid: GridContainer
+var list_drag: DragScroll
 var list_head: Label
 
 var mode := "one"
@@ -324,6 +325,8 @@ func _build_list() -> void:
 	list_grid.add_theme_constant_override("h_separation", 6)
 	list_grid.add_theme_constant_override("v_separation", 6)
 	scroll.add_child(list_grid)
+	# **끌어서 내린다** — 칸 단추가 끌기를 먹었다 (`DragScroll`, 가방과 같다)
+	list_drag = DragScroll.attach(scroll, list_grid, 6)
 
 	var foot := HBoxContainer.new()
 	foot.add_theme_constant_override("separation", 6)
@@ -363,6 +366,7 @@ func hide_now() -> void:
 	_halt()
 	visible = false
 	target = {}
+	list_drag.forget()
 	for fx in fx_layer.get_children():
 		fx.queue_free()
 

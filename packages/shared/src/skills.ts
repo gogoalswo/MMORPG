@@ -52,6 +52,12 @@ export interface SkillDef {
   hits?: number;
   /** 연타 간격 (ms). `hits` 가 2 이상일 때만 쓴다 */
   hitGap?: number;
+  /**
+   * 누른 뒤 **이만큼 지나서** 대상을 고르고 때린다 (ms, 없으면 0 = 누르는 순간).
+   * 뛰어올랐다 내려찍는 동작처럼 부딪히는 순간이 늦은 스킬에 쓴다 — 이펙트도 같은
+   * 시각에 선다. 그동안 발이 묶인다(경직이 이 값보다 짧으면 이 값까지 늘린다)
+   */
+  delayMs?: number;
   /** 자기 회복량 (최대 체력 대비 비율). 있으면 공격 대신 회복만 한다 */
   selfHeal?: number;
   /** 날아가는 무언가가 보여야 하는 스킬 */
@@ -389,15 +395,16 @@ const SKILL_LIST: SkillDef[] = [
     job: 'fighter',
     cooldown: 6500,
     range: 3.0,
-    // 앞 120° 를 다섯 번 긁는다 (2026-09-23 요청). 한 대 0.56 × 5 = 2.8 —
-    // 한 방이던 때와 합계가 같다 (피해가 공격력에 비례하므로 나눠도 합이 같다)
+    // 앞 120° 를 **세 번** 긁는다. 처음엔 다섯 번이었다가 강화(연타 +2)가 생기며
+    // 기본을 셋으로 줄였다 (2026-09-23 요청). 한 대는 0.56 그대로다 (사용자 선택) —
+    // 합계 1.68, 연타 강화를 붙이면 예전 다섯 번(2.8)과 같다
     arc: (Math.PI * 2) / 3,
     power: 0.56,
-    hits: 5,
+    hits: 3,
     hitGap: 80,
     maxTargets: 4,
     reqLevel: 1,
-    description: '손톱을 세워 앞 부채꼴을 다섯 번 긁어낸다.',
+    description: '손톱을 세워 앞 부채꼴을 세 번 긁어낸다.',
   },
   {
     id: 'sky_breaker',
@@ -405,6 +412,10 @@ const SKILL_LIST: SkillDef[] = [
     job: 'fighter',
     cooldown: 55000,
     range: 6.0,
+    // 뛰어올랐다 내려찍는 동작의 착지 시각 (2026-09-24 요청: "점프해서 땅을 강하게 내려 찍는").
+    // 동작(`fighter_moves.py` 의 SkyBreaker)이 0.72초에 땅을 찍는다 — 둘은 같이 고친다.
+    // 5.4m 까지 뛰어오르므로 체공이 길다 (처음 0.42 → "지금의 5배" 로 늘렸다)
+    delayMs: 720,
     arc: Math.PI * 2,
     power: 5.5,
     maxTargets: 10,
@@ -421,7 +432,7 @@ const SKILL_LIST: SkillDef[] = [
      * 그래서 **손이 닿는 사거리(4m)** 로 둔다: 그보다 길면 `skills.test.ts` 의
      * "한 방향으로 쏘는 스킬에는 투사체가 붙어 있다" 에 걸리고, 실제로도 아무것도
      * 안 날아가는데 멀리서 맞는 것이 된다. 번개는 **시전자가 선 자리**에 떨어지므로
-     * (`LightningFx.AHEAD` 0) 판정 부채꼴의 한가운데다 — 2026-09-18 에 앞 2.8m 에서
+     * (`LightningFx.AHEAD` 0) 판정 원의 한가운데다 — 2026-09-18 에 앞 2.8m 에서
      * 옮겼다.
      */
     id: 'thunder_fall',
@@ -429,7 +440,9 @@ const SKILL_LIST: SkillDef[] = [
     job: 'fighter',
     cooldown: 12000,
     range: 4.0,
-    arc: Math.PI * 0.6,
+    // **내 주위 원**이다 (2026-09-24 요청: "낙뢰 범위가 부채꼴인데 원 범위로 바꿔").
+    // 처음엔 108° 부채꼴이었다 — 번개가 발밑에 떨어지는데 뒤에 선 놈이 안 맞았다
+    arc: Math.PI * 2,
     power: 4.2,
     maxTargets: 4,
     reqLevel: 30,
@@ -486,6 +499,19 @@ export interface SkillUpgradeDef {
   stunMs?: number;
   /** 판정 사거리 배율 (1.5 = 50% 증가). 여럿이면 곱한다 */
   rangeMul?: number;
+  /** 판정 부채꼴 각을 이만큼(rad) 넓힌다. 여럿이면 더한다 */
+  arcAdd?: number;
+  /** 다단 히트를 이만큼 늘린다 (`hits` 에 더한다). 여럿이면 더한다 */
+  extraHits?: number;
+  /** 최대 대상 수를 이만큼 늘린다. 여럿이면 더한다 */
+  targetsAdd?: number;
+  /**
+   * **남는 피해 지대** — 시전한 자리에 `zoneMs` 동안 남아 `zoneTickMs` 마다 범위 안
+   * 몬스터에게 `공격력 × zonePower` 를 준다. 첫 틱은 시전 뒤 `zoneTickMs` 에 온다
+   */
+  zoneMs?: number;
+  zoneTickMs?: number;
+  zonePower?: number;
 }
 
 /** 스킬 하나에 붙는 강화 수 */
@@ -509,6 +535,46 @@ export const SKILL_UPGRADES: SkillUpgradeDef[] = [
     desc: '범위 50% 증가',
     exp: 1000,
     rangeMul: 1.5,
+  },
+  {
+    // 이펙트는 쓸고 가는 호가 같은 각만큼 길어진다 (SkillFx.SWEEP_ARC 140 → 180°)
+    id: 'wide',
+    skill: 'rising_kick',
+    name: '부채꼴',
+    desc: '부채꼴 각도 40° 증가',
+    exp: 1000,
+    arcAdd: (Math.PI * 40) / 180,
+  },
+  {
+    // 이펙트는 긁기가 두 번 늘고 빛이 보라로 바뀐다 (SkillFx.PALETTE_PURPLE)
+    id: 'combo',
+    skill: 'rising_kick',
+    name: '연타',
+    desc: '다단 히트 2회 증가',
+    exp: 1000,
+    extraHits: 2,
+  },
+  {
+    // 이펙트는 금·그을림·먼지 충격파가 1.5배 (QuakeFx.WIDE)
+    id: 'wide',
+    skill: 'sky_breaker',
+    name: '진폭',
+    desc: '범위 50% · 대상 +5',
+    exp: 1000,
+    rangeMul: 1.5,
+    targetsAdd: 5,
+  },
+  {
+    // 이펙트는 금이 붉은 용암빛으로 3초 남고 틱마다 맥동한다 (QuakeFx.ZONE_*)
+    id: 'zone',
+    skill: 'sky_breaker',
+    name: '균열 지대',
+    // 처음엔 40% 였다 — "너무 약해" 로 100% 로 올렸다 (2026-09-24)
+    desc: '3초간 0.5초마다 100% 피해',
+    exp: 1000,
+    zoneMs: 3000,
+    zoneTickMs: 500,
+    zonePower: 1.0,
   },
 ];
 

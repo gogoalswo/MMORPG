@@ -37,6 +37,7 @@ func _run() -> void:
 	await _case_once(game)
 	await _case_other_skill(game)
 	await _case_gone(game)
+	await _case_upgrades(game)
 	_done()
 
 
@@ -56,8 +57,13 @@ func _case_cast(game: Node3D) -> void:
 	game._transport.send(&"skill", {"skill": "sky_breaker"})
 	for i in 4:
 		await process_frame
+	# 뛰어올랐다 내려찍는다 — 이펙트는 착지(`delayMs`)에 선다. 그 전에는 없어야 한다
+	var delay := float(Skills.get_skill("fighter", "sky_breaker").get("delayMs", 0)) / 1000.0
+	if delay > 0.0 and _newest(game) != null:
+		_fail("천붕각 이펙트가 착지(%.2f초) 전에 섰다" % delay)
+	await create_timer(delay + 0.1).timeout
 	if _newest(game) == null:
-		_fail("천붕각을 썼는데 이펙트가 안 섰다")
+		_fail("천붕각을 썼는데 착지 뒤에도 이펙트가 안 섰다")
 
 
 ## 화면이 **살짝** 흔들린다 — 몇 px 인지 재고, 끝나면 멈추고, 다른 스킬은 안 흔든다.
@@ -205,6 +211,74 @@ func _case_gone(game: Node3D) -> void:
 		_fail("이펙트가 안 사라졌다")
 	else:
 		print("  %d프레임 뒤 치워졌다" % waited)
+
+
+## **강화** — "진폭" 이면 먼지 충격파·금 대신 **모래 토네이도**가 휘감아 판정 반경(9m)
+## 까지 퍼진다. "균열 지대" 면 **진흙 소용돌이가 빨려 들고** 틱마다 여섯 번
+## 조여든다. 시계를 직접 넣어 본다 — 3초를 기다리지 않는다
+func _case_upgrades(game: Node3D) -> void:
+	var wide := QuakeFx.slam(game._zone_node, Vector3.ZERO, 0.0, true, false)
+	var reach := float(Skills.get_skill("fighter", "sky_breaker").get("range", 0.0)) \
+		* float(Skills.upgrade("sky_breaker", "wide").get("rangeMul", 1.0))
+	await process_frame
+	var tornado: QuakeParts.Tornado = wide._tornado
+	for i in 60:
+		tornado.tick(1.0 / 60.0)
+	wide._show_cracks()
+	var front: CPUParticles3D = wide._emitters[0]
+	if not tornado.active or not tornado.visible:
+		_fail("진폭인데 토네이도가 안 섰다")
+	elif absf(tornado.radius() - reach) > 0.3:
+		_fail("토네이도가 %.1fm 까지 퍼진다 (판정 반경 %.0fm)" % [tornado.radius(), reach])
+	elif front.emitting or wide._crack.visible:
+		_fail("진폭만 붙었는데 먼지 충격파나 금이 나왔다 — 토네이도가 대신해야 한다")
+	else:
+		print("  진폭: 모래 토네이도 띠 %d줄이 %.1fm 까지 휘감는다 (먼지 충격파·금 없음)" % [
+			QuakeParts.Tornado.BANDS, tornado.radius()])
+	var plain_wide := QuakeFx.slam(game._zone_node, Vector3.ZERO, 0.0, false, false)
+	if plain_wide._tornado.active:
+		_fail("진폭이 없는데 토네이도가 섰다")
+	wide.queue_free()
+	plain_wide.queue_free()
+
+	var zone_ms := float(Skills.upgrade("sky_breaker", "zone").get("zoneMs", 0)) / 1000.0
+	var tick_ms := float(Skills.upgrade("sky_breaker", "zone").get("zoneTickMs", 0)) / 1000.0
+	if absf(zone_ms - QuakeFx.ZONE_TIME) > 1e-3 or absf(tick_ms - QuakeFx.ZONE_TICK) > 1e-3:
+		_fail("균열 지대: 판정은 %.1f초·%.1f초 간격인데 이펙트는 %.1f·%.1f" % [
+			zone_ms, tick_ms, QuakeFx.ZONE_TIME, QuakeFx.ZONE_TICK])
+	var zone := QuakeFx.slam(game._zone_node, Vector3.ZERO, 0.0, false, true)
+	var plain := QuakeFx.slam(game._zone_node, Vector3.ZERO, 0.0, false, false)
+	await process_frame
+	# 먼지 충격파가 진흙을 덮어서 끈다 — 흙 알갱이만 튄다
+	if zone._emitters[0].emitting or zone._emitters[1].emitting:
+		_fail("균열 지대인데 먼지 충격파가 나왔다 — 진흙 소용돌이를 덮는다")
+	# 진흙 소용돌이 — 판정 반경(6m · 진폭이면 9m)만큼 돌고, 0.5 · … · 3.0초에
+	# 여섯 번 조여들고(도는 속도가 빨라진다), 지대가 끝나면 마른다
+	var mud: QuakeParts.Mud = zone._mud
+	var zone_reach := float(Skills.get_skill("fighter", "sky_breaker").get("range", 0.0))
+	mud.start(true, 1.0)
+	var spins: Array = []
+	for step in range(1, 81):
+		var before := mud._spin
+		mud.tick(0.05)
+		spins.append(mud._spin - before)
+	var full := mud._radius
+	# 틱 직후(0.55초)가 틱 사이(0.95초)보다 빨리 돈다
+	var fast: float = spins[10]
+	var slow: float = spins[18]
+	if mud.squeezes != 6 or absf(full - zone_reach) > 1e-3 or fast <= slow * 1.5 or mud.alpha() > 0.0:
+		_fail("진흙: 조여듦 %d번 · 반경 %.1fm · 틱 직후 %.3f / 사이 %.3f · 끝 알파 %.2f" % [
+			mud.squeezes, full, fast, slow, mud.alpha()])
+	else:
+		print("  균열 지대: 진흙 띠 %.0fm · %d줄이 빨려 들고, 틱마다 조여든다 (%.3f → %.3f)" % [
+			full, QuakeParts.Mud.ARMS, fast, slow])
+	mud.start(true, QuakeFx.WIDE)
+	if absf(mud._radius - zone_reach * QuakeFx.WIDE) > 1e-3:
+		_fail("진폭과 같이 붙었는데 소용돌이가 %.1fm 다" % mud._radius)
+	if plain._mud.active:
+		_fail("균열 지대가 없는데 진흙 소용돌이가 섰다")
+	zone.queue_free()
+	plain.queue_free()
 
 
 func _newest(game: Node3D) -> QuakeFx:

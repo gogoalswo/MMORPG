@@ -13,6 +13,8 @@ var _failed := 0
 func _init() -> void:
 	_case_idle()
 	_case_chase()
+	_case_detour(1)
+	_case_detour(3)
 	_case_attack()
 	_case_leash()
 	_case_leash_goes_home()
@@ -76,6 +78,40 @@ func _case_chase() -> void:
 		_fail("어그로 안인데 안 다가왔다 (%.2f -> %.2f)" % [before, after])
 	else:
 		print("  1초 쫓아와서 %.2f m -> %.2f m (속도 3.6)" % [before, after])
+
+
+func _case_detour(wall: int) -> void:
+	# 사람과 몬스터 사이를 **기절한 놈**이 막고 있다. 곧장 가면 정면으로 밀려 굳는데
+	# 옆으로 한 칸씩 돌아 사거리까지 와야 한다. wall 이 3 이면 1m 간격으로 세 마리가
+	# 벽처럼 서 있어서 한 칸으로는 안 되고 **같은 쪽으로 여러 칸** 돌아야 한다
+	var s := _setup(-20.0, 0.0, -20.0, 7.0)
+	var w: World = s[0]
+	var mob: Dictionary = s[2]
+	var mobs: Array = w.snapshot().monsters
+	var blockers: Array = []
+	for i in wall:
+		var b := World.make_monster(
+			"wall%d" % i, GameData.monster_kind("mob003"),
+			-20.0 + (i - (wall - 1) / 2.0), 2.5, 10000.0, 0.0
+		)
+		b.stunned_until = 1 << 40
+		mobs.append(b)
+		blockers.append(b)
+	var worst := INF
+	var reached := -1
+	for i in 600:
+		w.step(1.0 / 60.0)
+		for b in blockers:
+			worst = minf(worst, Vector2(mob.x - b.x, mob.z - b.z).length() - (mob.r + b.r))
+		if mob.state == "attack":
+			reached = i
+			break
+	if reached < 0:
+		_fail("벽 %d마리 — 10초 안에 못 돌아왔다 (%.2f, %.2f 에 %s)" % [wall, mob.x, mob.z, mob.state])
+	elif worst < -0.01:
+		_fail("벽 %d마리 — 돌다가 %.3f m 파고들었다" % [wall, worst])
+	else:
+		print("  벽 %d마리 돌아서 %.2f초 만에 사거리" % [wall, reached / 60.0])
 
 
 func _case_attack() -> void:

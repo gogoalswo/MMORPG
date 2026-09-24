@@ -169,12 +169,27 @@ static func roll_options(item: Dictionary, grade: int, rng: RandomNumberGenerato
 	for i in mini(count, pool.size()):
 		var kind := str(pool.pop_at(int(rng.randf() * pool.size())))
 		var span := option_range(kind, grade)
-		# 소수 한 자리로 저장한다 — 정수로 자르면 낮은 등급에서 0 이 되어 버린다
-		out.append({
-			"kind": kind,
-			"value": snappedf(span.min + rng.randf() * (span.max - span.min), 0.1),
-		})
+		out.append({"kind": kind, "value": roll_option_value(span, rng)})
 	return out
+
+
+## 옵션 수치를 **5단계 확률**로 굴린다 (2026-09-24 지시) — 범위를 5등분해 구간을
+## `optionStepWeights`(40·30·20·8·2%) 로 고르고 그 안에서 고르게 굴린다.
+## 1차(드랍)·2차(크리스탈)가 같이 쓴다. 원본은 `items.ts` 의 `rollOptionValue`
+static func roll_option_value(span: Dictionary, rng: RandomNumberGenerator) -> float:
+	var weights: Array = _t().get("optionStepWeights", [1])
+	var total := 0.0
+	for w in weights:
+		total += float(w)
+	var pick := rng.randf() * total
+	var step := 0
+	while step < weights.size() - 1 and pick >= float(weights[step]):
+		pick -= float(weights[step])
+		step += 1
+	var width := (float(span.max) - float(span.min)) / weights.size()
+	var value := float(span.min) + width * (step + rng.randf())
+	# 소수 한 자리로 저장한다 — 정수로 자르면 낮은 등급에서 0 이 되어 버린다
+	return clampf(snappedf(value, 0.1), float(span.min), float(span.max))
 
 
 ## --- 옵션 차수 ---
@@ -201,10 +216,7 @@ static func roll_tier_options(tier: int, grade: int, rng: RandomNumberGenerator)
 	for i in mini(count, pool.size()):
 		var kind := str(pool.pop_at(int(rng.randf() * pool.size())))
 		var span := option_range(kind, grade)
-		out.append({
-			"kind": kind,
-			"value": snappedf(span.min + rng.randf() * (span.max - span.min), 0.1),
-		})
+		out.append({"kind": kind, "value": roll_option_value(span, rng)})
 	return out
 
 
@@ -247,6 +259,30 @@ static func enhance_cost(_item: Dictionary, _level: int) -> int:
 
 static func can_enhance(level: int) -> bool:
 	return level < max_enhance()
+
+
+## +from 에서 +goal 까지 **한 번도 안 부서지고** 오를 확률 — 단계 확률의 곱.
+## 자동 강화 팝업이 "목표 도달" 로 적는다
+static func enhance_reach_odds(from: int, goal: int) -> float:
+	var odds := 1.0
+	for level in range(maxi(from, 0), mini(goal, max_enhance())):
+		odds *= float(enhance_odds(level).success)
+	return odds
+
+
+## 다중 강화 목록에 드는 칸인가 — 장비이고 강화가 `cap` 아래인 것 중에서
+## `mode` 가 "all" 이면 전부, "item" 이면 같은 아이템(id·등급), "grade" 면 같은 등급.
+## 재료·+cap 이상은 빠진다. 팝업의 오른쪽 목록 탭과 "모두 담기" 가 쓴다
+static func batch_match(stack: Dictionary, mode: String, ref_id: String, grade: int, cap: int) -> bool:
+	if get_item(str(stack.get("id", ""))).is_empty():
+		return false
+	if int(stack.get("enhance", 0)) >= mini(cap, max_enhance()):
+		return false
+	match mode:
+		"all": return true
+		"item": return str(stack.get("id", "")) == ref_id and int(stack.get("grade", 1)) == grade
+		"grade": return int(stack.get("grade", 1)) == grade
+	return false
 
 
 ## 굴림값(0~1)에서 결과 하나 — "success" · "keep" · "destroy"

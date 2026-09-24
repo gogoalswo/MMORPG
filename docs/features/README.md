@@ -40,7 +40,7 @@ ZoneRoom 돌리기) · `DEPLOY.md`(터널로 친구에게 열어주기). 셋 다
 | [monsters-progression.md](monsters-progression.md) | 몬스터 60종, **능력치 고정 표**(역산 아님), 레벨 곡선, 경험치, **순찰**(쫓을 사람이 없으면 집 주변을 서성인다) |
 | [combat.md](combat.md) | **직업 스탯 표(`combat.ts` 의 `JOB_STATS`)**, 피해 공식, 정면 판정, 치명타·공격 속도, **공격 경직(휘두르는 동안 이동 금지)**, 투사체, 사망·부활 |
 | [stat-balance.md](stat-balance.md) | ★ **스탯 밸런스 설계(2026-09-18)** — 레벨 1~200, 사냥터 20개, 등급 7개, 데미지 공식·강화·드랍률·성장 곡선. 검증은 `python tools/balance_sim.py`. **아직 설계 문서이고 코드에는 안 들어갔다** |
-| [items.md](items.md) | 아이템 42종(등급 7 × 슬롯 6), 등급, **랜덤 옵션(1차 드랍 · 2차 크리스탈 · 3차 비움)**, 강화, 드롭 |
+| [items.md](items.md) | 아이템 42종(등급 7 × 슬롯 6), 등급, **랜덤 옵션(1차 드랍 · 2차 크리스탈 · 3차 비움)**, **강화 팝업(단일 · 다중 강화 — 리니지M 식, 목표까지 한 단계씩)**, 드롭 |
 | [inventory-equipment.md](inventory-equipment.md) | 가방 200칸, 장비 6슬롯, **창 셋**(장비 왼쪽 끝 · 칸을 누르면 뜨는 상세 · 인벤토리 오른쪽 끝), 정렬 |
 | [ui-art-style.md](ui-art-style.md) | ★★ **UI 아트풍 (굳힌 것)** — 어두운 판 + 얇은 금테 + 상아빛 아이콘. 색·프롬프트 틀·참고 그림 주소·굽는 설정. **UI 를 만들기 전에 읽는다** |
 | [hud.md](hud.md) | ★ **메인 HUD** — 퀵슬롯 위 묶음(레벨 배지·경험치 %·체력 막대), 오른쪽 위 스킬·가방 아이콘, **자동사냥 칸과 도는 고리**, **왼쪽 아래 채팅창**(경험치·장비 획득), 조각 아트(얇은 금선 · 테 없는 선화 아이콘) |
@@ -53,10 +53,10 @@ ZoneRoom 돌리기) · `DEPLOY.md`(터널로 친구에게 열어주기). 셋 다
 | [npc-town.md](npc-town.md) | 마을 NPC, 상점, 대장간(강화) |
 | [networking-state.md](networking-state.md) | Colyseus 스키마, 관심영역, 예측·보정, 메시지 목록 |
 | [persistence.md](persistence.md) | SQLite 스키마, 마이그레이션, 계정·토큰 |
-| [characters-and-animation.md](characters-and-animation.md) | 캐릭터·몬스터·NPC 외형, 본 구조, 걷기·대기·공격 동작 |
+| [characters-and-animation.md](characters-and-animation.md) | 캐릭터·몬스터·NPC 외형, 본 구조, 걷기·대기·공격 동작, ★ **격투가 평타·스킬 동작(블렌더로 지음)** |
 | [verification.md](verification.md) | **확인하는 방법** — 헤드리스 클라이언트, DOM 읽기, 로그 |
 | [godot-migration.md](godot-migration.md) | ★ **지금 만드는 것.** 고도 엔진 이관(모바일 앱) — 어디에 무엇이 있는지, `World`·`Transport` 규칙, 옮긴 것과 안 옮긴 것, 빌드·배포·확인 |
-| [blender.md](blender.md) | 블렌더를 **설치 없이** 화면 없이 돌리기 — `npm run blender`, 자동으로 받는 곳, Setup script 줄 |
+| [blender.md](blender.md) | 블렌더를 **설치 없이** 화면 없이 돌리기 — `npm run blender`, 자동으로 받는 곳, Setup script 줄, 바르코 캐릭터에 동작 더하기 |
 
 ## 전체를 관통하는 규칙
 

@@ -20,6 +20,8 @@ import {
   OPTION_KINDS,
   OPTION_MIN,
   OPTION_MAX,
+  OPTION_STEP_WEIGHTS,
+  rollOptionValue,
   isPercentOption,
   describeOption,
   canEnhance,
@@ -526,7 +528,7 @@ test('옵션은 여섯 종이고 전부 퍼센트다', () => {
   }
 });
 
-test('등급이 오르면 옵션 수치가 커진다 — 개수는 2개 고정이다', () => {
+test('등급이 오르면 옵션 수치가 커진다 — 개수는 1개 고정이다', () => {
   for (const kind of OPTION_KINDS) {
     const lowest = optionRange(kind, GRADE_MIN);
     const highest = optionRange(kind, GRADE_MAX);
@@ -539,9 +541,9 @@ test('등급이 오르면 옵션 수치가 커진다 — 개수는 2개 고정�
       previous = max;
     }
   }
-  // 2026-09-21 지시: "갯수를 항상 2개로 고정". 등급은 수치만 키운다
+  // 2026-09-24 지시: "1차 랜덤 옵션 무조건 1개로". 등급은 수치만 키운다
   for (let grade = GRADE_MIN; grade <= GRADE_MAX; grade++) {
-    assert.deepEqual(optionCount(grade), [2, 2], `${grade}등급 개수`);
+    assert.deepEqual(optionCount(grade), [1, 1], `${grade}등급 개수`);
   }
   assert.equal(optionGradeScale(0), optionGradeScale(GRADE_MIN), '범위를 벗어나도 안전해야 한다');
   assert.equal(optionGradeScale(999), optionGradeScale(GRADE_MAX));
@@ -679,12 +681,12 @@ test('옵션 글은 새 이름으로 나온다', () => {
   assert.equal(describeOption({ kind: 'penetration', value: 3.3 }), '방어력 관통 +3.3%');
 });
 
-test('옵션 차수 — 1차 2줄(드랍) · 2차 1줄(크리스탈) · 3차 비움', () => {
+test('옵션 차수 — 1차 1줄(드랍) · 2차 1줄(크리스탈) · 3차 비움', () => {
   // 2026-09-23 지시: "1차만 드랍으로 나오게 하고 2차는 크리스탈로 붙이는 시스템. 3차는 비어둬"
   assert.deepEqual(
     OPTION_TIERS.map((t) => [t.tier, t.key, t.count, t.source]),
     [
-      [1, 'options', 2, 'drop'],
+      [1, 'options', 1, 'drop'],
       [2, 'options2', 1, 'crystal'],
       [3, 'options3', 0, null],
     ]
@@ -700,7 +702,7 @@ test('옵션 차수 — 1차 2줄(드랍) · 2차 1줄(크리스탈) · 3차 비
 
 test('드랍은 1차만 붙이고, 크리스탈은 장비와 따로 굴린다', () => {
   const withItem = rollDrop(20, 'archer', fixed(0.5, dropChanceFor(20) - 1e-6, 0, 0));
-  assert.equal(withItem.item!.options!.length, 2);
+  assert.equal(withItem.item!.options!.length, 1);
   assert.equal(withItem.item!.options2, undefined, '드랍에는 2차가 없다');
 
   // 골드 → 장비(안 나옴) → 크리스탈(나옴)
@@ -717,4 +719,37 @@ test('2차 옵션도 능력치에 더한다', () => {
   const one = stackStats({ id, grade: 3, options: [] });
   const two = stackStats({ id, grade: 3, options: [], options2: [{ kind: 'crit', value: 10 }] });
   assert.ok(Math.abs(two.crit - one.crit - 0.1) < 1e-9);
+});
+
+test('옵션 수치는 5단계 확률(40·30·20·8·2%)로 나온다 — 1차·2차 같이', () => {
+  // 2026-09-24 지시: "낮은 수치가 제일 많이 나오고 높은 수치는 잘 안 나오도록"
+  assert.deepEqual(OPTION_STEP_WEIGHTS, [40, 30, 20, 8, 2]);
+  // mulberry32 — 단순 LCG 는 연속 두 값이 엮여서 구간 고르기와 구간 안 굴림이 따로 놀지 않는다
+  let seed = 12345;
+  const rng = () => {
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const [min, max] = [0, 1000];
+  const counts = [0, 0, 0, 0, 0];
+  const rolls = 100_000;
+  for (let i = 0; i < rolls; i++) {
+    const value = rollOptionValue(min, max, rng);
+    assert.ok(value >= min && value <= max);
+    counts[Math.min(4, Math.floor(((value - min) / (max - min)) * 5))]!++;
+  }
+  counts.forEach((n, step) => {
+    const got = (n / rolls) * 100;
+    assert.ok(Math.abs(got - OPTION_STEP_WEIGHTS[step]!) < 1, `${step + 1}단계 ${got.toFixed(1)}%`);
+  });
+  // 2차(크리스탈)도 같은 함수를 탄다 — 7등급 치명타를 많이 굴려 하위 구간이 더 많은지
+  const { min: lo, max: hi } = optionRange('crit', 7);
+  const values = Array.from({ length: 5000 }, () => rollTierOptions(2, 7, rng)[0]!)
+    .filter((o) => o.kind === 'crit')
+    .map((o) => o.value);
+  const low = values.filter((v) => v < lo + (hi - lo) * 0.2).length;
+  const top = values.filter((v) => v >= lo + (hi - lo) * 0.8).length;
+  assert.ok(low > top * 5, `2차 하위 ${low} · 상위 ${top}`);
 });

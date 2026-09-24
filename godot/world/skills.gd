@@ -59,6 +59,14 @@ static func range_mul(skill_id: String, upgrade_ids: Array) -> float:
 	return out
 
 
+## 붙은 강화들의 **더하는** 값 합 — `arcAdd`(부채꼴 각, rad) · `extraHits`(다단 히트)
+static func upgrade_sum(skill_id: String, upgrade_ids: Array, key: String) -> float:
+	var out := 0.0
+	for id in upgrade_ids:
+		out += float(upgrade(skill_id, str(id)).get(key, 0.0))
+	return out
+
+
 ## 붙은 강화들이 맞은 몬스터를 세우는 시간(ms). 여럿이면 긴 쪽이다
 static func stun_ms(skill_id: String, upgrade_ids: Array) -> int:
 	var out := 0

@@ -22,6 +22,8 @@ func _init() -> void:
 	_case_dead()
 	_case_upgrade()
 	_case_wide()
+	_case_claw_up()
+	_case_quake_up()
 	Save.clear()
 
 	if _failed == 0:
@@ -164,10 +166,20 @@ func _case_multi() -> void:
 	w.drain_events()
 
 	w.cast("me", "sky_breaker")
+	# 뛰어올랐다 내려찍는다 — **누르는 순간에는 아무도 안 맞고**, 착지(`delayMs`)에 맞는다
+	var landing := int(w._landings[0].at) if not w._landings.is_empty() else 0
+	if not _hits(w.drain_events()).is_empty():
+		_fail("천붕각이 착지 전에 맞았다")
+	w._run_landings(landing - 1)
+	if not _hits(w.drain_events()).is_empty():
+		_fail("천붕각이 착지 1ms 전에 맞았다")
+	w._run_landings(landing)
 	var hits := 0
 	for e in w.drain_events():
 		if e.get("type", "") == "hit":
 			hits += 1
+	if not w._landings.is_empty():
+		_fail("떨어졌는데 대기열에 %d개 남았다" % w._landings.size())
 	if hits != 3:
 		_fail("천붕각이 3마리를 쳐야 하는데 %d마리" % hits)
 	else:
@@ -264,6 +276,7 @@ func _case_range() -> void:
 	w.set_skill_bar("me", ["sky_breaker"])
 	w.drain_events()
 	w.cast("me", "sky_breaker")
+	w._run_landings(Time.get_ticks_msec() + 100000)
 	var events := w.drain_events()
 	var round_shape := _first(events, "skillRange")
 	var hits := 0
@@ -281,17 +294,19 @@ func _case_range() -> void:
 
 	# **그려질 모양과 맞은 놈이 같은가** — 이 도구의 값어치가 전부 여기 있다.
 	# 각을 반대로 재거나 좌우가 뒤집히면 "표시는 맞는데 안 맞는" 게 되고,
-	# 그건 디버그 도구로서 없느니만 못하다. 좁은 부채꼴(낙뢰 108°)로 보되
-	# **반경 안이지만 옆에 선 놈**을 하나 두어 양쪽을 다 건다
-	# 정면(+x)에서 90도 꺾인 자리 — 반경 4m 안이지만 108도 부채꼴 밖이다
+	# 그건 디버그 도구로서 없느니만 못하다. 좁은 부채꼴(할퀴기 120°)로 보되
+	# **반경 안이지만 옆에 선 놈**을 하나 두어 양쪽을 다 건다. (낙뢰 108° 로 보다가
+	# 2026-09-24 에 낙뢰가 원이 되어 할퀴기로 옮겼다)
+	# 정면(+x)에서 90도 꺾인 자리 — 반경 3m 안이지만 120도 부채꼴 밖이다
 	var aside := World.make_monster(
 		"aside", GameData.monster_kind("mob003"), 0.0, 2.0, 10000.0, 0.0
 	)
 	s[2].append(aside)
-	w.learn_skill("me", "thunder_fall")
-	w.set_skill_bar("me", ["thunder_fall"])
+	w.learn_skill("me", "rising_kick")
+	w.set_skill_bar("me", ["rising_kick"])
 	w.drain_events()
-	w.cast("me", "thunder_fall")
+	w.cast("me", "rising_kick")
+	w._combos.clear()
 	var fan_events := w.drain_events()
 	var fan := _first(fan_events, "skillRange")
 	var struck: Array = []
@@ -299,7 +314,7 @@ func _case_range() -> void:
 		if e.get("type", "") == "hit":
 			struck.append(str(e.target))
 	if float(fan.arc) >= TAU:
-		_fail("낙뢰는 좁은 부채꼴이어야 한다 (%.2f)" % fan.arc)
+		_fail("할퀴기는 좁은 부채꼴이어야 한다 (%.2f)" % fan.arc)
 	for mob in s[2]:
 		var dx: float = float(mob.x) - float(fan.x)
 		var dz: float = float(mob.z) - float(fan.z)
@@ -323,14 +338,9 @@ func _case_range() -> void:
 	w.learn_skill("me", "explosive_arrow")
 	w.set_skill_bar("me", ["explosive_arrow"])
 	w.drain_events()
-	w.cast("me", "explosive_arrow")
-	var far := _first(w.drain_events(), "skillRange")
-	var arrow := Skills.get_skill("archer", "explosive_arrow")
-	if far.is_empty():
-		_fail("원거리 범위가 안 실려 왔다")
-		return
 	# 앞선 시전에 쓰러진 놈이 있을 수 있다 — **살아 있는 것 중 가장 가까운 놈**이
-	# 겨눠진다 (`World.cast` 가 `_pick_targets` 로 하나만 고른다)
+	# 겨눠진다 (`World.cast` 가 `_pick_targets` 로 하나만 고른다). **쏘기 전에** 고른다 —
+	# 쏘고 나서 고르면 화살이 그놈을 죽여 다음 놈을 기대하게 된다
 	var mob: Dictionary = {}
 	var best := INF
 	for m in s[2]:
@@ -340,6 +350,12 @@ func _case_range() -> void:
 		if gap < best:
 			best = gap
 			mob = m
+	w.cast("me", "explosive_arrow")
+	var far := _first(w.drain_events(), "skillRange")
+	var arrow := Skills.get_skill("archer", "explosive_arrow")
+	if far.is_empty():
+		_fail("원거리 범위가 안 실려 왔다")
+		return
 	if not (is_equal_approx(far.x, float(mob.x)) and is_equal_approx(far.z, float(mob.z))):
 		_fail("착탄점이 겨눈 놈(%s) 자리가 아니다 (%.1f, %.1f)" % [mob.id, far.x, far.z])
 	if not is_equal_approx(float(far.reach), Skills.blast_radius(arrow)):
@@ -474,3 +490,100 @@ func _case_wide() -> void:
 			_fail("범위 %s: 반경 %.1f · 5m 앞이 %s (반경 %.1f · %s 여야 한다)" % [
 				wide, float(shape.get("reach", 0.0)), hit, want, wide])
 	print("  낙뢰 범위: 4m → 6m, 5m 앞의 놈이 강화 뒤에만 맞는다")
+
+
+## 할퀴기 강화 — "부채꼴" 은 판정 각 120 → 160°, "연타" 는 3 → 5타 (2026-09-23).
+## 둘은 따로 논다. 각은 판정이 알리는 모양(`skillRange`)으로, 대 수는 예약으로 본다
+func _case_claw_up() -> void:
+	var s := _setup(1)
+	var w: World = s[0]
+	var me: Dictionary = s[1]
+	var mob: Dictionary = s[2][0]
+	mob.max_hp = 999999
+	mob.hp = 999999
+	w.learn_skill("me", "rising_kick")
+	w.set_skill_bar("me", ["rising_kick"])
+	for c in [[[], 120.0, 3], [["wide"], 160.0, 3], [["combo"], 120.0, 5], [["wide", "combo"], 160.0, 5]]:
+		me.skill_upgrades = {"rising_kick": c[0].duplicate()}
+		me.skill_ready_at = {}
+		w._combos.clear()
+		w.drain_events()
+		w.cast("me", "rising_kick")
+		var shape := _first(w.drain_events(), "skillRange")
+		var arc := rad_to_deg(float(shape.get("arc", 0.0)))
+		var hits := 1 + w._combos.size()
+		if absf(arc - float(c[1])) > 0.5 or hits != int(c[2]):
+			_fail("할퀴기 %s: %.0f° · %d타 (%.0f° · %d타 여야 한다)" % [str(c[0]), arc, hits, c[1], c[2]])
+	w._combos.clear()
+	me.skill_upgrades = {}
+	print("  할퀴기 강화: 기본 120°·3타, 부채꼴 160°, 연타 5타, 둘 다 160°·5타")
+
+
+## 천붕각 강화 — "진폭" 은 반경 6 → 9m · 대상 10 → 15, "균열 지대" 는 시전한 자리에
+## 3초 동안 0.5초마다 공격력 × `zonePower`(표에서 읽는다) 여섯 번. 지대는 **틱마다 대상을 다시 고른다** (2026-09-23)
+func _case_quake_up() -> void:
+	var s := _setup(1)
+	var w: World = s[0]
+	var me: Dictionary = s[1]
+	var mob: Dictionary = s[2][0]
+	mob.max_hp = 999999
+	mob.hp = 999999
+	mob.defense = 0.0
+	w.learn_skill("me", "sky_breaker")
+	w.set_skill_bar("me", ["sky_breaker"])
+	me.skill_upgrades = {"sky_breaker": ["wide"]}
+	me.skill_ready_at = {}
+	w.drain_events()
+	w.cast("me", "sky_breaker")
+	w._run_landings(Time.get_ticks_msec() + 100000)
+	var shape := _first(w.drain_events(), "skillRange")
+	if absf(float(shape.get("reach", 0.0)) - 9.0) > 1e-3 or int(shape.get("max_targets", 0)) != 15:
+		_fail("진폭: 반경 %.1f · 대상 %d (9 · 15 여야 한다)" % [float(shape.reach), int(shape.max_targets)])
+	if not w._zones.is_empty():
+		_fail("균열 지대가 안 붙었는데 지대가 생겼다")
+
+	me.skill_upgrades = {"sky_breaker": ["zone"]}
+	me.skill_ready_at = {}
+	w.drain_events()
+	var now := Time.get_ticks_msec()
+	w.cast("me", "sky_breaker")
+	w._run_landings(Time.get_ticks_msec() + 100000)
+	w.drain_events()
+	if w._zones.size() != 1:
+		_fail("균열 지대가 %d개 생겼다" % w._zones.size())
+		return
+	var start := int(w._zones[0].until) - 3000
+	var ticks: Array = []
+	var amounts: Array = []
+	for step in range(1, 8):
+		w._run_zones(start + step * 500)
+		var events := w.drain_events()
+		ticks.append(_hits(events).size())
+		for e in events:
+			if e.get("type", "") == "hit" and not bool(e.get("crit", false)):
+				amounts.append(int(e.amount))
+	# 0.5 · 1.0 · … · 3.0 초 — 여섯 번, 3.5초에는 없다
+	if ticks != [1, 1, 1, 1, 1, 1, 0] or not w._zones.is_empty():
+		_fail("균열 지대 틱이 %s 이다 ([1×6, 0] 이어야 한다)" % str(ticks))
+	# 한 틱 = 공격력 × zonePower 로 친 피해 (방어 0 · 치명타가 아닌 대만 본다).
+	# 배율은 표에서 읽는다 — 40% → 100% 처럼 수치만 바뀌어도 테스트를 안 고치게
+	var power := float(Skills.upgrade("sky_breaker", "zone").get("zonePower", 0.0))
+	var want := roundi(Stats.damage(float(me.stats.attack) * power, int(me.level), 0.0))
+	for amount in amounts:
+		if int(amount) != want:
+			_fail("균열 지대 한 틱이 %d 다 (공격력 %.0f%% = %d 여야 한다)" % [amount, power * 100.0, want])
+			break
+	# 지대 밖으로 나간 놈은 안 맞는다 — 틱마다 다시 고른다
+	me.skill_ready_at = {}
+	w.cast("me", "sky_breaker")
+	w._run_landings(Time.get_ticks_msec() + 100000)
+	w.drain_events()
+	start = int(w._zones[0].until) - 3000
+	mob.x = 30.0
+	w._run_zones(start + 500)
+	if not _hits(w.drain_events()).is_empty():
+		_fail("지대 밖으로 나간 놈이 맞았다")
+	w._zones.clear()
+	me.skill_upgrades = {}
+	print("  천붕각 강화: 진폭 9m·15마리, 균열 지대 0.5초마다 여섯 번 (%.0f 공격력의 %.0f%%)" % [
+		float(me.stats.attack), float(Skills.upgrade("sky_breaker", "zone").get("zonePower", 0.0)) * 100.0])

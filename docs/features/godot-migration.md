@@ -34,6 +34,7 @@ three.js 웹 클라이언트를 **고도 엔진으로 갈아타는 중**이다. 
 | `godot/game/skill_fx.gd` | **스킬 이펙트.** 지금은 할퀴기 하나 — `CPUParticles3D` 여섯으로 짓는다 (판 메시 금지) |
 | `godot/game/portal.gd` · `gate_panel.gd` | **차원문 아치와 창.** 창은 조각을 앵커로 조립한다 → [portal-ui.md](portal-ui.md) |
 | `godot/game/dungeon_panel.gd` | **던전 창.** `GatePanel` 을 물려받아 종류 → 단계 두 겹으로 줄을 단다 → [dungeons.md](dungeons.md) |
+| `godot/game/enhance_popup.gd` | **강화 팝업.** 단일 강화 · 다중 강화(목록에서 담기 · 목표 화살표 띠), 목표까지 한 단계씩. 조각은 game.gd 것을 빌린다 → [items.md](items.md) "강화" |
 | `godot/game/select_ring.gd` | **골라 둔 몬스터 발밑의 고리.** 반지름·두께·도는 속도가 상수다 |
 | `godot/game/hp_bar_3d.gd` | **머리 위 체력 막대.** 내 것은 늘, 몬스터는 고른 놈과 때린 놈만 |
 | `godot/game/hurt_flash.gd` | 내가 맞았을 때 화면 가장자리 비네트 |
@@ -202,6 +203,10 @@ Q/E 회전과 줌은 아직 안 옮겼다. 웹 쪽에는 있다.
 초원 들늑대 2.2 × 1.01 = **2.22m**.
 
 ### 공격 클립 구간은 **시작만** 맞췄다
+
+**2026-09-24 부터 격투가는 이 길을 안 탄다** — 평타는 `Jab`·`Cross`, 스킬은 스킬마다 블렌더로
+지은 동작을 튼다 → [characters-and-animation.md](characters-and-animation.md) 의 "블렌더 동작".
+아래는 그 클립이 없는 모델에서만 쓰는 옛 길이다.
 
 격투가 `Attack` 은 3.23초짜리다. 앞 0.8초는 자세를 잡는 준비라 공격 간격(700ms)
 마다 되감으면 발이 한 번도 안 나간다. 웹 클라이언트는 0.8~**1.60**초만 1.6배로

@@ -30,6 +30,12 @@ var _events: Array = []
 ## 아직 안 들어간 연타 (`hits` 가 2 이상인 스킬의 둘째 대부터).
 ## `{player, target, attack, skill, at}` — `step` 이 때가 된 것부터 넣는다
 var _combos: Array = []
+## 남아 있는 피해 지대 (천붕각 "균열 지대" 강화). `{player, x, z, reach, cap, attack,
+## skill, next_at, until, tick}` — `step` 이 `tick` 마다 범위 안에 피해를 넣는다
+var _zones: Array = []
+## 아직 안 떨어진 스킬 (`delayMs` 가 있는 스킬 — 천붕각이 뛰어올랐다 내려찍는다).
+## `{player, skill, upgrades, range, aim, at}` — `step` 이 때가 되면 `_land` 로 넣는다
+var _landings: Array = []
 
 ## 어느 직업으로 시작하나. 만드는 화면이 없어서 당분간 고정이다
 const DEFAULT_JOB := "fighter"
@@ -54,6 +60,19 @@ const PATROL_ARRIVE := 0.3
 ## 쉬는 동안은 idle 이라 **매 프레임 미는 것도 쉬어 간다** (폰 부담)
 const PATROL_REST_MIN_MS := 2000
 const PATROL_REST_MAX_MS := 6000
+
+## --- 우회 (쫓는 길이 막혔을 때) ---
+## 앞 놈 바로 뒤에 선 놈은 곧장 가려다 밀려 제자리에 굳는다 — 몬스터를 막는 건
+## 다른 몬스터뿐이고, 정면으로 밀리면 옆으로 미끄러질 방향이 없어서다.
+## 한 걸음이 이 비율만큼도 못 나아가면 막힌 것으로 보고 옆으로 돈다.
+## 비스듬히 닿으면 밀려서 미끄러지며 저절로 돌아가므로(약 33° 까지) 그건 건드리지 않는다
+const DETOUR_BLOCKED := 0.3
+## 옆으로 도는 "한 칸". 몬스터 한 몸(지름 0.76 + 틈 0.2)쯤이다.
+## 한 칸을 다 가기 전에는 곧장 가기를 다시 시도하지 않는다 — 매 프레임 다시 고르면
+## 막힌 자리와 옆 자리 사이를 오가며 떤다
+const DETOUR_STEP := 1.0
+## 돌아가는 각도. 목표 쪽에 가까운 것부터 대 본다
+const DETOUR_TURNS := [PI * 0.25, PI * 0.5, PI * 0.75]
 
 ## --- 자동 사냥 ---
 ## 켠 자리(앵커)에서 이만큼 안의 몬스터만 잡는다.
@@ -112,8 +131,9 @@ func open(id: String) -> void:
 	zone = GameData.zone(id)
 	half_size = Movement.zone_half_size(float(zone.get("size", 66)))
 	_run_speed = float(GameData.constants().get("runSpeed", 4.6))
-	# 떠난 존의 몬스터를 붙잡은 연타가 새 존에서 들어가면 안 된다
+	# 떠난 존의 몬스터를 붙잡은 연타가 새 존에서 들어가면 안 된다 (지대도 같다)
 	_combos.clear()
+	_zones.clear()
 	_spawn_monsters()
 
 
@@ -256,7 +276,9 @@ func input_move(player_id: String, seq: int, dx: float, dz: float, dt: float) ->
 func step(delta: float) -> void:
 	var now := Time.get_ticks_msec()
 	_respawn(now)
+	_run_landings(now)
 	_run_combos(now)
+	_run_zones(now)
 	_step_monsters(delta, now)
 	_drive_auto(delta, now)
 	_check_gate()
@@ -726,7 +748,7 @@ func _step_monsters(delta: float, now: int) -> void:
 
 		if dist > float(monster.attack_range):
 			monster.state = "chase"
-			_move_monster(monster, target.x, target.z, float(monster.speed), delta)
+			_chase_monster(monster, target.x, target.z, delta)
 			continue
 
 		monster.state = "attack"
@@ -786,6 +808,68 @@ func _nearest_player(x: float, z: float, reach: float) -> Dictionary:
 			best = player
 			best["id"] = id
 	return best
+
+
+## 사람을 쫓는 한 걸음. 길이 막혔으면 **옆으로 한 칸씩** 돌아간다.
+##
+## 1. 우회 중이면 정해 둔 방향으로 한 칸(`DETOUR_STEP`)을 마저 간다.
+## 2. 아니면 곧장 한 걸음. 밀려서 거의 못 나갔으면 막힌 것이다.
+## 3. 막혔으면 45° → 90° → 135° 순으로 옆 방향을 대 보고, 처음 뚫린 쪽으로
+##    한 칸 우회를 시작한다. **돌던 쪽(`detour_side`)을 먼저 본다** — 줄지어 선 무리를
+##    돌 때 왼쪽·오른쪽을 번갈아 고르면 그 앞에서 지그재그만 한다.
+## 4. 사방이 다 막혔으면 예전처럼 사람 쪽으로 밀어 본다 (둘러싸였을 때).
+##
+## 순찰·귀환에는 안 쓴다 — 거기서는 좀 밀려 늦게 도착해도 티가 나지 않는다
+func _chase_monster(monster: Dictionary, tx: float, tz: float, delta: float) -> void:
+	var ahead := Vector2(tx - monster.x, tz - monster.z)
+	if ahead.length() < 1e-3:
+		return
+	ahead = ahead.normalized()
+	var step_len := float(monster.speed) * delta
+
+	if float(monster.get("detour_left", 0.0)) > 0.0:
+		var way := Vector2(float(monster.detour_x), float(monster.detour_z))
+		if _try_step(monster, way, delta):
+			monster.detour_left = float(monster.detour_left) - step_len
+			return
+		# 돌던 길도 막혔다 — 아래에서 다시 고른다
+		monster.detour_left = 0.0
+	elif _try_step(monster, ahead, delta):
+		return
+
+	# 처음 막혔으면 놈마다 다른 쪽을 먼저 본다. 한 사람에게 몰린 무리가
+	# 전부 같은 쪽으로 돌면 그쪽에서 또 막힌다
+	var side := int(monster.get("detour_side", 0))
+	if side == 0:
+		side = 1 if sin(float(monster.push_angle)) >= 0.0 else -1
+	for s in [side, -side]:
+		for turn in DETOUR_TURNS:
+			var way := ahead.rotated(s * float(turn))
+			if _try_step(monster, way, delta):
+				monster.detour_side = s
+				monster.detour_x = way.x
+				monster.detour_z = way.y
+				monster.detour_left = DETOUR_STEP - step_len
+				return
+
+	_move_monster(monster, tx, tz, float(monster.speed), delta)
+
+
+## `way` 쪽으로 한 걸음 가 본다. 밀려서 `DETOUR_BLOCKED` 만큼도 못 나갔으면
+## **제자리로 되돌리고** false. 미는 것은 이 놈 자신뿐이라 되돌리기가 깨끗하다
+func _try_step(monster: Dictionary, way: Vector2, delta: float) -> bool:
+	var x0: float = monster.x
+	var z0: float = monster.z
+	var rot0: float = monster.rot
+	var step_len := float(monster.speed) * delta
+	_move_monster(monster, x0 + way.x * DETOUR_STEP, z0 + way.y * DETOUR_STEP, float(monster.speed), delta)
+	var moved := Vector2(float(monster.x) - x0, float(monster.z) - z0)
+	if moved.dot(way) >= step_len * DETOUR_BLOCKED:
+		return true
+	monster.x = x0
+	monster.z = z0
+	monster.rot = rot0
+	return false
 
 
 ## 몬스터끼리도 통과하지 않는다. **미는 쪽은 지금 움직인 이 놈**이다 —
@@ -952,6 +1036,12 @@ static func make_monster(
 		"stunned_until": 0,
 		# 정확히 겹쳤을 때 밀려날 방향. **서로 달라야 풀린다**
 		"push_angle": push_angle,
+		# --- 우회 --- 쫓는 길이 막혔을 때 옆으로 도는 방향과 남은 거리,
+		# 돌던 쪽(+1/-1, 0 은 아직 안 막혀 봤다). `_chase_monster` 가 쓴다
+		"detour_x": 0.0,
+		"detour_z": 0.0,
+		"detour_left": 0.0,
+		"detour_side": 0,
 		# --- 보스 범위 공격 (없는 몬스터는 aoe 가 비어 있다) ---
 		"aoe": kind.get("aoe", {}),
 		"next_aoe_at": 0,
@@ -1179,6 +1269,32 @@ func debug_gauntlets(player_id: String) -> void:
 	_events.append({"type": "notice", "text": "테스트: 건틀릿 %d개를 넣었다" % added})
 
 
+## **테스트 — 가방의 빈칸을 장비로 꽉 채운다** (2026-09-24 요청: "테스트하기 위해서 아이템을
+## 인벤토리에 채워"). 강화 팝업의 다중 강화를 시험하려는 것이라 **같은 아이템이 여러 개**,
+## 같은 등급에 부위가 여럿, **강화 단계가 섞여** 있어야 한다 — 42종(등급 7 × 부위 6)을
+## 돌아가며 넣고, 한 바퀴 돌 때마다 강화를 한 단계씩(+0 ~ +4) 올린다. 옵션은 그 등급대로 굴린다
+func debug_fill_bag(player_id: String) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	var slots: Array = Items.slots()
+	var kinds := Stats.grade_count() * slots.size()
+	var added := 0
+	while player.bag.size() < Items.bag_size():
+		var grade := 1 + (added / slots.size()) % Stats.grade_count()
+		var item := Items.get_item(Items.item_id(grade, str(slots[added % slots.size()])))
+		if not item.is_empty():
+			player.bag.append({
+				"id": str(item.id), "grade": grade, "enhance": (added / kinds) % 5,
+				"options": Items.roll_options(item, grade, _rng),
+			})
+		added += 1
+		if added > Items.bag_size() * 2:
+			break  # 표가 비어도 끝없이 돌지 않게
+	_events.append({"type": "inventory", "bag": player.bag, "equipped": player.equipped})
+	_events.append({"type": "notice", "text": "테스트: 가방을 채웠다 (%d칸)" % player.bag.size()})
+
+
 ## 한 번만 준다 — 받았으면 `granted` 에 `key` 가 남아 다음 접속에는 안 준다.
 ## 2026-09-23 요청 "가방에 30개 넣어" 로 크리스탈 30개를 이걸로 준다 (`LocalTransport.open`)
 func grant_once(player_id: String, key: String, stack: Dictionary) -> void:
@@ -1400,11 +1516,15 @@ func cast(player_id: String, skill_id: String) -> void:
 	var root := Combat.attack_root_ms(
 		Combat.effective_cooldown(stats.attackCooldown, stats.attackSpeed)
 	)
+	# 늦게 떨어지는 스킬은 떨어질 때까지 묶는다 — 공중에서 걸어가면 착지 자리가 어긋난다
+	var delay := int(skill.get("delayMs", 0))
+	root = maxi(root, delay)
 	player.rooted_until = now + root
-	# 붙은 강화도 싣는다 — 화면이 이펙트를 고른다 (기절이면 붉은 번개, 범위면 좌우 두 번 더)
+	# 붙은 강화도 싣는다 — 화면이 이펙트를 고른다 (기절이면 붉은 번개, 범위면 좌우 두 번 더).
+	# `delay_ms` 가 있으면 화면은 동작만 먼저 틀고 이펙트는 그만큼 뒤에 세운다
 	_events.append({
 		"type": "skill", "id": player_id, "skill": skill_id, "root_ms": root,
-		"upgrades": upgrades.duplicate(),
+		"upgrades": upgrades.duplicate(), "delay_ms": delay,
 	})
 
 	# 회복형은 공격 판정을 하지 않는다
@@ -1425,6 +1545,40 @@ func cast(player_id: String, skill_id: String) -> void:
 		})
 		return
 
+	if delay > 0:
+		_landings.append({
+			"player": player_id, "skill": skill_id, "upgrades": upgrades.duplicate(),
+			"range": range_now, "aim": aim, "at": now + delay,
+		})
+		return
+	_land(player, skill, skill_id, upgrades, range_now, aim, now)
+
+
+## 때가 된 늦은 스킬을 떨어뜨린다. 그 사이 죽었거나 떠난 사람 것은 버린다
+func _run_landings(now: int) -> void:
+	if _landings.is_empty():
+		return
+	var left: Array = []
+	for landing in _landings:
+		if now < int(landing.at):
+			left.append(landing)
+			continue
+		var player: Dictionary = _players.get(str(landing.player), {})
+		if player.is_empty() or bool(player.dead):
+			continue
+		var skill := Skills.get_skill(str(player.job), str(landing.skill))
+		if skill.is_empty():
+			continue
+		_land(player, skill, str(landing.skill), landing.upgrades, float(landing.range), landing.aim, now)
+	_landings = left
+
+
+## 스킬이 **떨어지는 순간** — 대상을 고르고 때리고, 지대·연타를 건다.
+## 보통은 누르는 순간이고, `delayMs` 가 있으면 그만큼 뒤다 (대상도 그때 다시 고른다)
+func _land(player: Dictionary, skill: Dictionary, skill_id: String, upgrades: Array,
+		range_now: float, aim: Dictionary, now: int) -> void:
+	var player_id := str(player.id)
+	var stats: Dictionary = player.stats
 	# **겨눈 놈이 있으면 원거리 스킬은 그 자리에서 터진다.** 근접기는 내 몸이
 	# 중심이다 — 내 앞을 베는 동작인데 판정만 저쪽에서 나면 이펙트와 어긋난다
 	var origin: Dictionary = {}
@@ -1434,8 +1588,10 @@ func cast(player_id: String, skill_id: String) -> void:
 		reach = Skills.blast_radius(skill)
 
 	var attack := float(stats.attack) * float(skill.get("power", 1.0))
-	var arc := float(skill.arc)
-	var cap := int(skill.get("maxTargets", 1))
+	# 부채꼴 강화는 각을 넓힌다 — 한 바퀴를 넘지는 않는다
+	var arc := minf(TAU, float(skill.arc) + Skills.upgrade_sum(skill_id, upgrades, "arcAdd"))
+	# 진폭 강화는 최대 대상 수를 늘린다
+	var cap := int(skill.get("maxTargets", 1)) + roundi(Skills.upgrade_sum(skill_id, upgrades, "targetsAdd"))
 	var picked := _pick_targets(player, reach, arc, cap, origin)
 
 	# **판정이 쓴 모양을 그대로 알린다** — 화면이 다시 계산하면 두 값이 갈라져서
@@ -1463,17 +1619,64 @@ func cast(player_id: String, skill_id: String) -> void:
 			target.stunned_until = now + stun
 			target.state = "stun"
 
+	# 균열 지대 — 판정 모양 그대로 땅에 남는다
+	_open_zone(player, skill_id, upgrades,
+		float(origin.get("x", player.x)), float(origin.get("z", player.z)), reach, cap, now)
+
 	# **연타는 첫 대에서 고른 대상에게 간격을 두고 들어간다.** 한꺼번에 넣으면
 	# 피해 숫자가 한 자리에 겹쳐 한 대로 보이고, 이펙트의 다섯 줄기와 박자가 안 맞는다.
 	# 대마다 다시 고르지 않는 이유 — 첫 대에 죽은 놈 자리를 옆 놈이 채우면 "다섯 번"
 	# 이 대상마다 제각각이 된다
 	var gap := int(skill.get("hitGap", 80))
-	for n in range(1, int(skill.get("hits", 1))):
+	# 연타 강화는 대 수를 늘린다
+	var hits := int(skill.get("hits", 1)) + roundi(Skills.upgrade_sum(skill_id, upgrades, "extraHits"))
+	for n in range(1, hits):
 		for target in picked:
 			_combos.append({
 				"player": player_id, "target": target, "attack": attack,
 				"skill": skill_id, "at": now + gap * n,
 			})
+
+
+## 피해 지대를 건다 — 붙은 강화 중 `zoneMs` 가 있는 것 (천붕각 "균열 지대").
+## **판정 모양과 같은 자리·반경·대상 수**를 쓴다 — 진폭이 같이 붙으면 9m 다.
+## 공격력은 **건 순간의 값**이다 (지대가 남아 있는 동안 장비를 바꿔도 안 변한다)
+func _open_zone(player: Dictionary, skill_id: String, upgrades: Array,
+		x: float, z: float, reach: float, cap: int, now: int) -> void:
+	for id in upgrades:
+		var upgrade := Skills.upgrade(skill_id, str(id))
+		var span := int(upgrade.get("zoneMs", 0))
+		if span <= 0:
+			continue
+		var tick := maxi(100, int(upgrade.get("zoneTickMs", 500)))
+		_zones.append({
+			"player": str(player.id), "x": x, "z": z, "reach": reach, "cap": cap,
+			"attack": float(player.stats.attack) * float(upgrade.get("zonePower", 0.0)),
+			"skill": skill_id, "next_at": now + tick, "until": now + span, "tick": tick,
+		})
+
+
+## 때가 된 지대 틱을 넣는다. **틱마다 대상을 다시 고른다** — 땅에 남은 것이라 걸어
+## 들어온 놈도 맞고 나간 놈은 안 맞는다. 쓴 사람이 죽거나 떠나면 지대도 사라진다.
+## 틱이 밀려 있으면(탭을 내렸다 올림) 밀린 만큼 한꺼번에 넣지 않고 한 번만 넣는다 —
+## 한 틱에 여섯 대가 겹쳐 뜨면 피해 숫자가 한 자리에 쌓인다
+func _run_zones(now: int) -> void:
+	if _zones.is_empty():
+		return
+	var left: Array = []
+	for zone_hit in _zones:
+		var player: Dictionary = _players.get(str(zone_hit.player), {})
+		if player.is_empty() or bool(player.dead):
+			continue
+		if now >= int(zone_hit.next_at) and int(zone_hit.next_at) <= int(zone_hit.until):
+			var origin := {"x": float(zone_hit.x), "z": float(zone_hit.z)}
+			for target in _pick_targets(player, float(zone_hit.reach), TAU, int(zone_hit.cap), origin):
+				_hit_monster(player, target, float(zone_hit.attack), str(zone_hit.skill))
+			while int(zone_hit.next_at) <= now:
+				zone_hit.next_at = int(zone_hit.next_at) + int(zone_hit.tick)
+		if int(zone_hit.next_at) <= int(zone_hit.until):
+			left.append(zone_hit)
+	_zones = left
 
 
 ## 때가 된 연타를 넣는다. 그 사이 죽은 쪽(때린 쪽이든 맞는 쪽이든)은 건너뛴다
@@ -1756,12 +1959,23 @@ func npc_enhance(player_id: String, index: int) -> void:
 
 ## 상세 창의 "강화" — **NPC 없이** 가방에 든 것과 끼고 있는 것 둘 다 두드린다.
 ## where 는 "bag"(가방 번호) · "equip"(슬롯 이름). 확률은 설계표(90% → 10%),
-## 실패하면 무조건 파괴다 → docs/features/stat-balance.md 4장
+## 실패하면 무조건 파괴다 → docs/features/stat-balance.md 4장.
+## **한 요청 = 한 번.** 자동 강화는 팝업이 한 번씩 되풀이해 보낸다 — 한 단계씩 보여 주고
+## 중간에 멈출 수 있어야 해서다 (2026-09-24 "한 단계씩 연출 넣어")
 func enhance_item(player_id: String, where: String, key: Variant) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty():
 		return
 	_enhance(player, where, key)
+
+
+## +level 에서 한 번 굴린다. 비용을 떼고 "success" · "keep" · "destroy", 모자라면 "short"
+func _roll_once(player: Dictionary, item: Dictionary, level: int) -> String:
+	var cost := Items.enhance_cost(item, level)
+	if int(player.gold) < cost:
+		return "short"
+	player.gold = int(player.gold) - cost
+	return Items.roll_enhance(level, _rng.randf())
 
 
 ## 한 번 두드린다. **겹친 칸이면 한 개만 떼어서** 두드린다 — 통째로 두드리면 파괴 한 번에
@@ -1780,14 +1994,12 @@ func _enhance(player: Dictionary, where: String, key: Variant) -> void:
 	if not Items.can_enhance(level):
 		_notice("더 두드릴 수 없습니다")
 		return
-	var cost := Items.enhance_cost(item, level)
-	if int(player.gold) < cost:
-		_notice("골드가 %d 모자랍니다" % (cost - int(player.gold)))
+	var result := _roll_once(player, item, level)
+	if result == "short":
+		_notice("골드가 %d 모자랍니다" % (Items.enhance_cost(item, level) - int(player.gold)))
 		return
 
-	player.gold = int(player.gold) - cost
 	var count := int(stack.get("count", 1)) if where == "bag" else 1  # 끼운 것은 늘 하나
-	var result := Items.roll_enhance(level, _rng.randf())
 	match result:
 		"success":
 			if count > 1:
@@ -1812,5 +2024,97 @@ func _enhance(player: Dictionary, where: String, key: Variant) -> void:
 	if where == "equip":
 		_refresh_stats(player)
 	var after := level + 1 if result == "success" else level
-	_events.append({"type": "enhanceResult", "result": result, "level": after, "name": str(item.name)})
+	_events.append({
+		"type": "enhanceResult", "result": result, "level": after, "from": level, "name": str(item.name),
+	})
+	_inventory_changed(player)
+
+
+## 다중 강화 — 가방에서 **고른 칸들**(`indices`, 가방 번호)을 **한 개씩 한 번** 두드린다
+## (2026-09-24 요청: 리니지M "다중 강화" 그림 — 오른쪽 목록에서 골라 왼쪽 칸에 담는다).
+## `cap` 을 주면 +cap 아래인 칸만 든다 — 팝업은 목표를 cap 으로 넣어 한 바퀴씩 되풀이한다.
+## 끼고 있는 것은 고를 수 없다 (가방 번호만 받는다) — 한 번에 여럿을 부수는 요청이 몸에 걸친
+## 것까지 걸면 되돌릴 수 없다. 겹친 칸은 한 개씩 따로 굴리고, 남은 것은 **끝난 단계끼리 다시
+## 겹쳐** 원래 자리에 선다. 가방 번호가 흔들리므로 **남은 칸의 새 번호(`picked`)** 를 돌려준다 —
+## 팝업은 그것으로 담은 칸을 이어 간다
+func enhance_many(player_id: String, indices: Array, cap: int = -1) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	var limit := clampi(cap, 1, Items.max_enhance()) if cap > 0 else Items.max_enhance()
+	# 목표에 이미 닿은 칸도 받는다 — 두드리지는 않고 **새 번호만 따라가게** 한다
+	# (팝업은 칸 자리를 그대로 두고 칸마다 연출한다)
+	var chosen: Array = []
+	var live := 0
+	for value in indices:
+		var at := int(value)
+		if at < 0 or at >= player.bag.size() or chosen.has(at):
+			continue
+		var stack: Dictionary = player.bag[at]
+		if Items.get_item(str(stack.get("id", ""))).is_empty():
+			continue
+		chosen.append(at)
+		if int(stack.get("enhance", 0)) < limit:
+			live += 1
+	if live == 0:
+		_notice("강화할 장비가 없습니다")
+		return
+	chosen.sort()
+	chosen.reverse()  # 뒤에서부터 — 앞 칸 번호가 안 밀린다
+	var total := {"pieces": 0, "success": 0, "destroyed": 0}
+	var reached := {}  # 끝난 단계 → 남은 개수
+	# 칸마다 {at: 원래 번호, from, to: [새 번호], success, destroyed} — 팝업이 칸별로 연출한다
+	var results: Array = []
+	for i in chosen:
+		var stack: Dictionary = player.bag[i]
+		var item := Items.get_item(str(stack.id))
+		var start := int(stack.get("enhance", 0))
+		var entry := {"at": i, "from": start, "to": [i], "success": 0, "destroyed": 0}
+		if start >= limit:
+			results.append(entry)
+			continue
+		var kept := {}
+		for n in int(stack.get("count", 1)):
+			var result := _roll_once(player, item, start)
+			if result == "short":
+				kept[start] = int(kept.get(start, 0)) + 1
+				continue
+			total.pieces += 1
+			if result == "destroy":
+				total.destroyed += 1
+				entry.destroyed += 1
+				continue
+			var at := start + 1 if result == "success" else start
+			if result == "success":
+				total.success += 1
+				entry.success += 1
+			kept[at] = int(kept.get(at, 0)) + 1
+		player.bag.remove_at(i)
+		var levels := kept.keys()
+		levels.sort()
+		levels.reverse()  # 같은 자리에 높은 것부터 끼우면 낮은 것이 앞에 선다
+		for at in levels:
+			var one := stack.duplicate(true)
+			one.enhance = int(at)
+			one.erase("count")
+			if int(kept[at]) > 1:
+				one.count = int(kept[at])
+			player.bag.insert(i, one)
+			reached[int(at)] = int(reached.get(int(at), 0)) + int(kept[at])
+		# 먼저 적은 번호(i 뒤)는 한 칸이 levels.size() 칸이 된 만큼 밀린다
+		var grow := levels.size() - 1
+		for done in results:
+			done.to = (done.to as Array).map(func(v: int) -> int: return v + grow)
+		entry.to = range(i, i + levels.size())
+		results.append(entry)
+	var picked: Array = []  # 남은 칸의 새 가방 번호
+	for done in results:
+		picked.append_array(done.to)
+	picked.sort()
+	_notice("다중 강화 %d개 — 성공 %d · 파괴 %d" % [total.pieces, total.success, total.destroyed])
+	_events.append({
+		"type": "enhanceBatch", "cap": limit, "picked": picked, "results": results,
+		"pieces": total.pieces, "success": total.success, "destroyed": total.destroyed,
+		"reached": reached,
+	})
 	_inventory_changed(player)

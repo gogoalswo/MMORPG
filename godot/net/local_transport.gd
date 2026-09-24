@@ -54,6 +54,8 @@ func send(message: StringName, payload: Dictionary) -> void:
 			_world.set_invincible(MY_ID, bool(payload.get("on", false)))
 		&"debugGauntlets":
 			_world.debug_gauntlets(MY_ID)
+		&"debugFillBag":
+			_world.debug_fill_bag(MY_ID)
 		&"debugCrystals":
 			_world.debug_crystals(MY_ID, int(payload.get("count", 30)))
 		&"debugGear":
@@ -94,6 +96,8 @@ func send(message: StringName, payload: Dictionary) -> void:
 			_world.npc_sell(MY_ID, int(payload.get("index", -1)))
 		&"enhanceItem":
 			_world.enhance_item(MY_ID, str(payload.get("where", "")), payload.get("key", -1))
+		&"enhanceMany":
+			_world.enhance_many(MY_ID, payload.get("indices", []), int(payload.get("cap", -1)))
 		&"npcEnhance":
 			_world.npc_enhance(MY_ID, int(payload.get("index", -1)))
 		&"save":

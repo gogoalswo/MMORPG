@@ -13,6 +13,7 @@ GLB 정리·아이콘 렌더처럼 블렌더로 될 것 같은 일이라도 먼�
 | `scripts/blender.sh` | 블렌더를 찾고, 없으면 받아 두고, 가상 디스플레이 위에서 돌린다 |
 | `package.json` 의 `blender` | `npm run blender -- <블렌더 인자>` |
 | `~/blender-bin/` | 받은 휴대용 블렌더 (저장소 밖, 1.2GB) |
+| `scripts/blender/fighter_moves.py` | **격투가 평타·스킬 동작 6개** — 손발 목표점 + 2본 IK 로 키를 짓는다 → [characters-and-animation.md](characters-and-animation.md) 의 "블렌더 동작" |
 
 ## 쓰는 법
 
@@ -31,6 +32,14 @@ npm run blender -- --python-expr "import bpy; print(bpy.app.version_string)"
 - Cycles(CPU) 렌더 — 화면 없이 된다
 - EEVEE 렌더 — **가상 디스플레이(`xvfb-run`)에서만** 된다. 없으면 에러 없이 죽는다.
   그래서 `xvfb-run` 이 있으면 늘 그 위에서 돌린다.
+
+### 바르코 캐릭터에 동작 더하기 (2026-09-24)
+- GLB 는 `bone_heuristic="BLENDER"` 로 들인다 — 뼈 축이 glTF 노드 축 그대로라 내보내도
+  기본 자세가 원본과 같다. 그래서 **뼈대+클립만** 내보내고(`use_selection` 으로 아마추어만,
+  `export_skins=False`) `scripts/add-clips.mjs` 가 뼈 이름으로 캐릭터 GLB 에 붙인다.
+  메시·텍스처를 블렌더로 다시 쓰지 않는다.
+- 키마다 보간이 섞여 있으면 내보낼 때 "Baking animation" 경고가 뼈마다 뜬다. 일부러 섞은
+  것(부딪히기 전 LINEAR · 뒤 BEZIER)이라 무시한다.
 
 ## 설치는 어떻게 되나
 

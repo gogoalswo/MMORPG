@@ -267,11 +267,11 @@
       "range": 3,
       "arc": 2.0943951023931953,
       "power": 0.56,
-      "hits": 5,
+      "hits": 3,
       "hitGap": 80,
       "maxTargets": 4,
       "reqLevel": 1,
-      "description": "손톱을 세워 앞 부채꼴을 다섯 번 긁어낸다."
+      "description": "손톱을 세워 앞 부채꼴을 세 번 긁어낸다."
     },
     "sky_breaker": {
       "id": "sky_breaker",
@@ -279,6 +279,7 @@
       "job": "fighter",
       "cooldown": 55000,
       "range": 6,
+      "delayMs": 720,
       "arc": 6.283185307179586,
       "power": 5.5,
       "maxTargets": 10,
@@ -291,7 +292,7 @@
       "job": "fighter",
       "cooldown": 12000,
       "range": 4,
-      "arc": 1.8849555921538759,
+      "arc": 6.283185307179586,
       "power": 4.2,
       "maxTargets": 4,
       "reqLevel": 30,
@@ -366,6 +367,41 @@
       "desc": "범위 50% 증가",
       "exp": 1000,
       "rangeMul": 1.5
+    },
+    {
+      "id": "wide",
+      "skill": "rising_kick",
+      "name": "부채꼴",
+      "desc": "부채꼴 각도 40° 증가",
+      "exp": 1000,
+      "arcAdd": 0.6981317007977318
+    },
+    {
+      "id": "combo",
+      "skill": "rising_kick",
+      "name": "연타",
+      "desc": "다단 히트 2회 증가",
+      "exp": 1000,
+      "extraHits": 2
+    },
+    {
+      "id": "wide",
+      "skill": "sky_breaker",
+      "name": "진폭",
+      "desc": "범위 50% · 대상 +5",
+      "exp": 1000,
+      "rangeMul": 1.5,
+      "targetsAdd": 5
+    },
+    {
+      "id": "zone",
+      "skill": "sky_breaker",
+      "name": "균열 지대",
+      "desc": "3초간 0.5초마다 100% 피해",
+      "exp": 1000,
+      "zoneMs": 3000,
+      "zoneTickMs": 500,
+      "zonePower": 1
     }
   ],
   "upgradeMax": 2,

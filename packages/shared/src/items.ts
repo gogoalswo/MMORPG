@@ -281,7 +281,7 @@ export interface ItemStack {
   /** 강화 수치 (+0 ~ +10). 없으면 0 */
   enhance?: number;
   /**
-   * **1차 옵션** — 만들어질 때(드랍·상점) 굴린 2개.
+   * **1차 옵션** — 만들어질 때(드랍·상점) 굴린 1개.
    *
    * **물건마다 다르다.** 같은 이름·등급이라도 이게 다르면 다른 물건이라
    * 가방에서도 한 칸에 겹치지 않는다.
@@ -319,12 +319,38 @@ export interface ItemOption {
 }
 
 /**
- * 한 물건에 붙는 옵션 수 — **전 등급 2개 고정** (2026-09-21 지시).
+ * 한 물건에 붙는 옵션 수 — **전 등급 1개 고정** (2026-09-24 지시. 그 전엔 2개).
  * 표는 `gear.ts` 의 `OPTION_COUNT` 이고, 여기 둘은 그 표를 통틀어 본 최소·최대라
  * 창의 안내 문구와 저장값 자르기(`sanitizeOptions`)에 쓴다
  */
-export const OPTION_MIN = 2;
-export const OPTION_MAX = 2;
+export const OPTION_MIN = 1;
+export const OPTION_MAX = 1;
+
+/**
+ * **옵션 수치의 단계별 확률(%)** ★ — 1단계(낮음) → 5단계(높음) (2026-09-24 지시:
+ * "단계를 5단계로 나누고 낮은 수치가 제일 많이 나오고 높은 수치는 잘 안 나오도록.
+ * 크리스탈로 2번 효과 붙일때도 마찬가지").
+ *
+ * 범위(`optionRange` 의 최소~최대)를 **똑같이 5등분**해 구간을 이 확률로 고르고,
+ * 구간 안에서는 고르게 굴린다. 1차(드랍)·2차(크리스탈)가 `rollOptionValue` 하나를 쓴다.
+ * 합은 100 이다
+ */
+export const OPTION_STEP_WEIGHTS = [40, 30, 20, 8, 2];
+
+/** 단계 확률로 구간을 고르고 그 안에서 값을 굴린다 — 소수 한 자리 */
+export function rollOptionValue(min: number, max: number, rng: () => number = Math.random): number {
+  const total = OPTION_STEP_WEIGHTS.reduce((a, b) => a + b, 0);
+  let pick = rng() * total;
+  let step = 0;
+  while (step < OPTION_STEP_WEIGHTS.length - 1 && pick >= OPTION_STEP_WEIGHTS[step]!) {
+    pick -= OPTION_STEP_WEIGHTS[step]!;
+    step++;
+  }
+  const width = (max - min) / OPTION_STEP_WEIGHTS.length;
+  const value = min + width * (step + rng());
+  // 소수 한 자리로 저장한다 — 정수로 자르면 낮은 등급에서 0 이 되어 버린다
+  return Math.min(max, Math.max(min, Math.round(value * 10) / 10));
+}
 
 /**
  * **여섯 종이 전부 퍼센트다.** 공격력·방어력을 빼면서 수치로 주는 옵션이 없어졌다 —
@@ -409,8 +435,7 @@ export function rollOptions(
   for (let i = 0; i < Math.min(count, pool.length); i++) {
     const kind = pool.splice(Math.floor(rng() * pool.length), 1)[0]!;
     const { min, max } = optionRange(kind, grade);
-    // 소수 한 자리로 저장한다 — 정수로 자르면 낮은 등급에서 0 이 되어 버린다
-    out.push({ kind, value: Math.round((min + rng() * (max - min)) * 10) / 10 });
+    out.push({ kind, value: rollOptionValue(min, max, rng) });
   }
   return out;
 }
@@ -421,7 +446,7 @@ export function rollOptions(
  * **옵션을 1차·2차·3차로 나눈다** (2026-09-23 지시: "1차만 드랍으로 나오게 하고
  * 2차는 크리스탈이라는 아이템 만들어서 해당 아이템으로 붙이는 시스템. 3차는 비어둬").
  *
- * - 1차 — 드랍·상점에서 물건이 생길 때 굴린다 (지금까지의 `options`, 2줄)
+ * - 1차 — 드랍·상점에서 물건이 생길 때 굴린다 (지금까지의 `options`, 1줄)
  * - 2차 — 크리스탈을 쓰면 **2차 칸을 통째로 다시 굴린다** (1줄). 처음 쓰면 붙고,
  *   다시 쓰면 바뀐다
  * - 3차 — 자리만 있다 (`count: 0`, 붙이는 곳 없음)
@@ -466,7 +491,7 @@ export function rollTierOptions(
   for (let i = 0; i < Math.min(count, pool.length); i++) {
     const kind = pool.splice(Math.floor(rng() * pool.length), 1)[0]!;
     const { min, max } = optionRange(kind, grade);
-    out.push({ kind, value: Math.round((min + rng() * (max - min)) * 10) / 10 });
+    out.push({ kind, value: rollOptionValue(min, max, rng) });
   }
   return out;
 }

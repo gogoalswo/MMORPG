@@ -67,6 +67,8 @@ func _spawn(font: Font) -> void:
 	SkillFx.claw(_stage, Vector3.ZERO, 0.0)
 	LightningFx.bolt(_stage, Vector3.ZERO, 0.0)
 	QuakeFx.slam(_stage, Vector3.ZERO, 0.0)
+	# 강화 이펙트(토네이도·진흙 셰이더와 방출기)도 한 번 띄워 굽는다
+	QuakeFx.slam(_stage, Vector3.ZERO, 0.0, true, true)
 	IceFx.burst(_stage, Vector3.ZERO, 0.0)
 	for crit in [false, true]:
 		HitFx.spawn(_stage, Vector3.UP, {

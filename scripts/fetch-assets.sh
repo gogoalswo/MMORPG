@@ -129,6 +129,9 @@ FIGHTER_CLIPS+=("Attack=assets-src/models/varco/fighter_attack.glb")
 FIGHTER_CLIPS+=("Death=assets-src/models/varco/fighter_death.glb")
 if [ -f assets-src/models/varco/fighter_idle.glb ] && [ -f assets-src/models/varco/fighter_run.glb ] && [ -f assets-src/models/varco/fighter_attack.glb ] && [ -f assets-src/models/varco/fighter_death.glb ]; then
   node scripts/build-varco-character.mjs public/assets/models/varco_fighter.glb assets-src/models/varco/fighter_idle.glb "${FIGHTER_CLIPS[@]}"
+  # 블렌더로 지은 평타·스킬 동작을 붙인다 (커밋된 결과물이라 블렌더는 필요 없다).
+  # 동작을 고치려면 scripts/blender/fighter_moves.py → characters-and-animation.md 의 "블렌더 동작"
+  node scripts/add-clips.mjs public/assets/models/varco_fighter.glb public/assets/models/varco_fighter.glb public/assets/anim/fighter_moves.glb
 else
   echo "건너뜀: varco_fighter — 원본이 없다 (격투가는 절차적 리그로 나온다)"
 fi

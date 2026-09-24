@@ -18,6 +18,10 @@ func _init() -> void:
 	_case_stack()
 	_case_worn()
 	_case_max()
+	_case_reach()
+	_case_many()
+	_case_many_rounds()
+	_case_fill()
 	Save.clear()
 
 	if _failed == 0:
@@ -159,3 +163,121 @@ func _case_max() -> void:
 	me.bag.append({"id": Items.crystal_id(), "count": 2})
 	w.enhance_item("me", "bag", 0)
 	_eq("크리스탈은 그대로", int(me.bag[0].count), 2)
+
+
+## 목표 도달 확률 = 단계 확률의 곱 (+0→+3 = 0.9 × 0.8 × 0.7)
+func _case_reach() -> void:
+	_eq("+0→+3 도달", snappedf(Items.enhance_reach_odds(0, 3), 0.0001), 0.504)
+	_eq("+5→+5 는 1", Items.enhance_reach_odds(5, 5), 1.0)
+
+
+## 다중 강화 (리니지M "다중 강화" 그림) — 고른 가방 번호만, 겹친 칸은 한 개씩,
+## 끼운 것·안 고른 것·재료·+cap 이상은 그대로. 남은 칸의 새 번호(`picked`)를 돌려준다
+func _case_many() -> void:
+	var s := _world()
+	var w: World = s[0]
+	var me: Dictionary = s[1]
+	w._rng.seed = 5
+	var pile := _gear(0)
+	pile.count = 4
+	me.bag.append(pile)                                                     # 0 고름 — 4개
+	me.bag.append({"id": "g1_a", "grade": 1, "enhance": 0, "options": []})  # 1 안 고름
+	me.bag.append(_gear(3))                                                 # 2 고름
+	me.bag.append({"id": Items.crystal_id(), "count": 2})                   # 3 재료(고려도 빠진다)
+	me.bag.append(_gear(Items.max_enhance()))                               # 4 +9 는 빠진다
+	me.equipped.weapon = _gear(1)
+	w.enhance_many("me", [0, 2, 3, 4, 2, 99])
+	var event := _batch_event(w)
+	_eq("대상 개수", int(event.get("pieces", 0)), 5)
+	_eq("성공+파괴 = 대상", int(event.success) + int(event.destroyed), 5)
+	_eq("끼운 것 그대로", int(me.equipped.weapon.enhance), 1)
+	_eq("안 고른 것 그대로", me.bag.filter(func(x: Dictionary) -> bool: return str(x.id) == "g1_a").size(), 1)
+	_eq("재료 그대로", me.bag.filter(func(x: Dictionary) -> bool: return Items.is_material(str(x.id))).size(), 1)
+	# results 는 칸마다 새 번호를 정확히 가리킨다 — 두드린 칸은 +1 / +4, +9 는 두드리지 않고
+	# 번호만 따라간다 (팝업이 칸 자리를 지키며 칸별로 연출한다). 재료는 결과에 없다
+	_eq("결과 칸 수 (고름 0·2·4)", (event.results as Array).map(func(r: Dictionary) -> int: return int(r.at)), [4, 2, 0])
+	var alive := 0
+	for r in event.results:
+		for at in r.to:
+			var stack: Dictionary = me.bag[int(at)]
+			_eq("to 는 같은 아이템", str(stack.id), "g1_w")
+			if int(r.from) == Items.max_enhance():
+				_eq("+9 는 그대로", int(stack.enhance), Items.max_enhance())
+			else:
+				_eq("두드린 칸은 한 단계 위", int(stack.enhance), int(r.from) + 1)
+				alive += int(stack.get("count", 1))
+		_eq("성공+파괴 = 개수", int(r.success) + int(r.destroyed), 0 if int(r.from) == 9 else (4 if int(r.at) == 0 else 1))
+	_eq("살아남은 수 = 성공 수", alive, int(event.success))
+	_eq("picked = results 의 to", (event.picked as Array).size(), (event.results as Array).reduce(
+		func(n: int, r: Dictionary) -> int: return n + (r.to as Array).size(), 0))
+	# 고른 것이 없으면 아무것도 안 한다
+	w.enhance_many("me", [1 + 99])
+	_eq("대상 없음 → 이벤트 없음", _batch_event(w).is_empty(), true)
+
+
+func _batch_event(w: World) -> Dictionary:
+	var event: Dictionary = {}
+	for e in w.drain_events():
+		if str(e.get("type", "")) == "enhanceBatch":
+			event = e
+	return event
+
+
+## 목표(cap) 바퀴 되풀이 — +cap 아래만 한 번씩 두드리고, `picked` 로 이어 가면 끝에 남은 것은
+## 전부 +cap 이다 (팝업의 다중 강화가 이렇게 돈다). 사이에 안 고른 칸이 있어도 번호가 맞는다
+func _case_many_rounds() -> void:
+	var s := _world()
+	var w: World = s[0]
+	var me: Dictionary = s[1]
+	w._rng.seed = 7
+	var chosen: Array = []
+	for i in 12:
+		me.bag.append({"id": "g1_a", "grade": 1, "enhance": 0, "options": []})  # 안 고름
+		me.bag.append(_gear(1))
+		chosen.append(i * 2 + 1)
+	var pile := _gear(1)
+	pile.count = 10
+	me.bag.append(pile)
+	chosen.append(me.bag.size() - 1)
+	var rounds := 0
+	var destroyed := 0
+	while rounds < 20:
+		var below := chosen.filter(func(at: int) -> bool: return int(me.bag[at].enhance) < 3)
+		if below.is_empty():
+			break
+		w.enhance_many("me", chosen, 3)
+		var event := _batch_event(w)
+		destroyed += int(event.destroyed)
+		chosen = event.picked
+		rounds += 1
+	var alive := 0
+	for at in chosen:
+		_eq("다 돌면 +3 뿐", int(me.bag[at].enhance), 3)
+		_eq("고른 것만", str(me.bag[at].id), "g1_w")
+		alive += int(me.bag[at].get("count", 1))
+	_eq("남은 수 + 파괴 = 22", alive + destroyed, 22)
+	_eq("안 고른 12개 그대로", me.bag.filter(
+		func(x: Dictionary) -> bool: return str(x.id) == "g1_a" and int(x.enhance) == 0
+	).size(), 12)
+	print("  다중 +1→+3 을 %d바퀴: 22개 중 %d개 도달 (기댓값 약 12)" % [rounds, alive])
+
+
+## 테스트 단추 "가방 채우기" (2026-09-24 "테스트하기 위해서 아이템을 인벤토리에 채워") —
+## 빈칸을 장비로 꽉 채우고, 같은 아이템이 여럿이며 강화 단계가 섞여 있어야 다중 강화를 시험할 수 있다
+func _case_fill() -> void:
+	var s := _world()
+	var w: World = s[0]
+	var me: Dictionary = s[1]
+	me.bag.append({"id": Items.crystal_id(), "count": 2})
+	w.debug_fill_bag("me")
+	w.drain_events()
+	_eq("가방이 꽉 찬다", me.bag.size(), Items.bag_size())
+	var gear: Array = me.bag.filter(func(x: Dictionary) -> bool: return not Items.get_item(str(x.id)).is_empty())
+	_eq("크리스탈 말고 전부 장비", gear.size(), Items.bag_size() - 1)
+	var same: Array = gear.filter(func(x: Dictionary) -> bool: return str(x.id) == str(gear[0].id))
+	var levels := {}
+	for x in same:
+		levels[int(x.enhance)] = true
+	_eq("같은 아이템이 넷 이상", same.size() >= 4, true)
+	_eq("같은 아이템의 강화 단계가 섞였다", levels.size() >= 4, true)
+	_eq("일곱 등급이 다 있다", gear.map(func(x: Dictionary) -> int: return int(x.grade)).max(), 7)

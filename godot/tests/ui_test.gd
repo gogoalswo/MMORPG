@@ -808,23 +808,23 @@ func _case_bag(game: Node3D) -> void:
 		game._enhance_button.pressed.emit()
 		await process_frame
 		await process_frame
-		if not game._enhance_layer.visible:
+		if not game._enhance.visible:
 			_fail("강화 단추를 눌렀는데 팝업이 안 떴다")
-		var pop_box: Rect2 = game._enhance_panel.get_global_rect()
+		var pop_box: Rect2 = game._enhance.panel.get_global_rect()
 		var screen := Rect2(Vector2.ZERO, Vector2(1280, 720))
 		if not screen.encloses(pop_box) or absf(pop_box.get_center().x - 640.0) > 2.0:
 			_fail("강화 팝업이 화면 가운데가 아니다: %s" % pop_box)
-		var odds_rows: Array = game._enhance_info.get_children().map(func(l: Label) -> String: return l.text)
+		var odds_rows: Array = game._enhance.info.get_children().map(func(l: Label) -> String: return l.text)
 		var odds_at := odds_rows.find("성공률")
 		if odds_at < 0 or odds_rows[odds_at + 1] != "90%" or not odds_rows.has("아이템 파괴"):
 			_fail("팝업 표에 성공률 90%%·파괴가 없다: %s" % str(odds_rows))
-		if game._enhance_kind.text != "+0  →  +1":
-			_fail("팝업 단계 줄이 '%s'" % game._enhance_kind.text)
+		if game._enhance.kind.text != "+0  →  +1":
+			_fail("팝업 단계 줄이 '%s'" % game._enhance.kind.text)
 		print("  강화 팝업: %s · %s" % [pop_box, str(odds_rows)])
-		game._enhance_go.pressed.emit()
+		game._enhance.go.pressed.emit()
 		for i in 3:
 			await process_frame
-		if game._enhance_result.text == "":
+		if game._enhance.result.text == "":
 			_fail("팝업에서 강화했는데 결과 줄이 비었다")
 		var last_line: Array = game._chat.lines().back() if not game._chat.lines().is_empty() else ["", ""]
 		if not str(last_line[0]).begins_with("강화"):
@@ -836,15 +836,16 @@ func _case_bag(game: Node3D) -> void:
 		elif me.bag.size() == 6:
 			if not game._bag_pick.is_empty() or game._detail_panel.visible:
 				_fail("부서졌는데 고른 것이 남았다 (%s)" % game._bag_pick)
-			if not game._enhance_go.disabled:
+			if not game._enhance.go.disabled:
 				_fail("부서졌는데 팝업의 강화 단추가 켜져 있다")
-			print("  강화: 파괴 → 상세 창 닫힘, 팝업 '%s'" % game._enhance_result.text)
+			print("  강화: 파괴 → 상세 창 닫힘, 팝업 '%s'" % game._enhance.result.text)
 		else:
 			_fail("강화 뒤 가방이 %d칸" % me.bag.size())
+		await _case_enhance_batch(game, me)
 		# 팝업 X — 팝업만 닫힌다
-		game._enhance_panel.find_child("close", true, false).find_child("hit", true, false).pressed.emit()
+		game._enhance.panel.find_child("close", true, false).find_child("hit", true, false).pressed.emit()
 		await process_frame
-		if game._enhance_layer.visible:
+		if game._enhance.visible:
 			_fail("강화 팝업 X 를 눌렀는데 그대로다")
 
 	# 장비 창은 따로 닫고 다시 연다 (자기 X · 인벤토리의 "장비" 단추)
@@ -1062,7 +1063,7 @@ func _case_skills(game: Node3D) -> void:
 	# 설명 끝에 피해 배율. 연타는 "* N연타" 를 붙인다
 	if not game._skill_desc.text.ends_with(Skills.damage_text(Skills.all()[last_id])):
 		_fail("설명에 데미지 줄이 없다: '%s'" % game._skill_desc.text)
-	for want in [["fireball", "데미지 : 260%"], ["rising_kick", "데미지 : 56% * 5연타"]]:
+	for want in [["fireball", "데미지 : 260%"], ["rising_kick", "데미지 : 56% * 3연타"]]:
 		if Skills.all().has(want[0]) and Skills.damage_text(Skills.all()[want[0]]) != want[1]:
 			_fail("%s 데미지 줄이 '%s' 여야 하는데 '%s'" % [want[0], want[1], Skills.damage_text(Skills.all()[want[0]])])
 	if not game._skill_cells[ids.size() - 1].get_node("pick").visible:
@@ -1198,3 +1199,160 @@ func _move(at: Vector2) -> InputEventMouseMotion:
 	event.position = at
 	event.button_mask = MOUSE_BUTTON_MASK_LEFT
 	return event
+
+
+## 강화 팝업의 다중 강화 (2026-09-24 요청: 리니지M "다중 강화" 그림 + "다중강화 ui를 이런식으로") —
+## 탭 둘, 오른쪽 목록에서 눌러 담고, 화살표 띠로 목표를 고르면 한 바퀴씩 돈다("중지").
+## 채팅은 끝날 때 한 줄, 담은 칸은 판정이 돌려준 번호로 이어 간다
+func _case_enhance_batch(game: Node, me: Dictionary) -> void:
+	var pop: EnhancePopup = game._enhance
+	var ref_id := str(pop.ref.id)
+	for i in 3:
+		me.bag.append({"id": ref_id, "grade": 1, "enhance": 0, "options": []})
+	me.bag.append({"id": "g1_a", "grade": 1, "enhance": 0, "options": []})  # 같은 등급·다른 아이템
+	pop.tabs["multi"].pressed.emit()
+	await process_frame
+	if not pop.list_panel.visible or not pop.multi_box.visible or pop.one_box.visible:
+		_fail("다중 강화 탭인데 목록 %s · 담는 칸 %s" % [pop.list_panel.visible, pop.multi_box.visible])
+	var pair := pop.panel.get_global_rect().merge(pop.list_panel.get_global_rect())
+	if not Rect2(Vector2.ZERO, Vector2(1280, 720)).encloses(pair):
+		_fail("다중 강화 두 창이 화면을 벗어난다: %s" % pair)
+	print("  다중 강화 창: 왼쪽 %s · 오른쪽 %s" % [pop.panel.size, pop.list_panel.size])
+	# 목표 +3 (화살표 셋째)
+	pop.chevrons[2].chosen.emit(3)
+	await process_frame
+	if pop.goal != 3 or not pop.chevrons[2].lit or pop.chevrons[3].lit:
+		_fail("화살표 +3 을 눌렀는데 목표 %d" % pop.goal)
+	# 같은 아이템 탭 — 목록에 같은 id 만. 모두 담기로 담는다
+	var same := 0
+	for stack in me.bag:
+		if Items.batch_match(stack, "item", ref_id, 1, 3):
+			same += 1
+	pop.pick_filter("item")
+	await process_frame
+	if pop._list_view.size() != same:
+		_fail("같은 아이템 목록이 %d칸 (%d 이어야 한다)" % [pop._list_view.size(), same])
+	pop.clear_picked()
+	var first: PanelContainer = pop._list_cells[0]
+	first.get_node("hit").pressed.emit()
+	await process_frame
+	if pop.picked.size() != 1 or not first.get_node("pick").visible:
+		_fail("목록 칸을 눌렀는데 담기지 않았다 (%s)" % str(pop.picked))
+	pop.picked_grid.get_child(0).get_node("hit").pressed.emit()
+	await process_frame
+	if not pop.picked.is_empty():
+		_fail("담은 칸을 눌렀는데 빠지지 않았다 (%s)" % str(pop.picked))
+	# 같은 등급 탭 — 다른 아이템도 나온다
+	pop.pick_filter("grade")
+	await process_frame
+	if pop._list_view.size() <= same:
+		_fail("같은 등급 목록이 같은 아이템보다 많지 않다 (%d)" % pop._list_view.size())
+	pop.pick_filter("item")
+	pop.pick_all()
+	await process_frame
+	var pieces: int = pop._picked_pieces(true)
+	if pop.run_button.text != "%d개 강화  →  +3" % pieces or pieces != same:
+		_fail("모두 담기 뒤 단추가 '%s' (같은 아이템 %d)" % [pop.run_button.text, same])
+	var rows: Array = pop.info.get_children().map(func(l: Label) -> String: return l.text)
+	if not rows.has("+3 예상 도달"):
+		_fail("다중 표에 예상 도달이 없다: %s" % str(rows))
+	var chat_before: int = game._chat.lines().size()
+	pop.step_time = 0.05
+	pop.run_button.pressed.emit()
+	await process_frame
+	if not pop.running or pop.run_button.text != "중지" or not pop.tabs["one"].disabled:
+		_fail("다중 강화를 눌렀는데 도는 중이 아니다 (%s · '%s')" % [pop.running, pop.run_button.text])
+	var waited := 0
+	while pop.running and waited < 600:
+		await process_frame
+		waited += 1
+	if pop.running:
+		_fail("다중 강화가 %d프레임이 지나도 안 끝난다" % waited)
+	if not pop.result.text.contains("도달"):
+		_fail("다중 강화 결과 줄이 '%s'" % pop.result.text)
+	var line: Array = game._chat.lines().back()
+	if str(line[0]) != "다중 강화" or game._chat.lines().size() != chat_before + 1:
+		_fail("다중 강화 뒤 채팅이 %d줄 늘고 마지막이 %s (한 줄이어야 한다)" % [
+			game._chat.lines().size() - chat_before, str(line)
+		])
+	# 깨진 칸은 터지는 한 박자 동안만 자리를 지키고, 끝나면 남은 장비가 앞으로 당겨진다
+	# (2026-09-24 "깨져서 터지면 남은 아이템 정렬을 맨 앞으로 땡겨")
+	if pop.picked.has(-1):
+		_fail("다 돈 뒤에 깨진 빈칸이 남았다: %s" % str(pop.picked))
+	for k in pop.picked.size():
+		var at: int = pop.picked[k]
+		var mark: Control = pop.picked_grid.get_child(k).get_node("broken")
+		if at < 0:
+			if not mark.visible:
+				_fail("깨진 칸 %d 에 X 가 없다" % k)
+			continue
+		if mark.visible:
+			_fail("살아 있는 칸 %d 에 X 가 떠 있다" % k)
+		if int(me.bag[at].enhance) != 3 or str(me.bag[at].id) != ref_id:
+			_fail("다 돈 뒤 담은 칸 %d 이 %s +%d" % [at, me.bag[at].id, int(me.bag[at].enhance)])
+	if not game._bag_pick.is_empty():
+		_fail("다중 강화 뒤에 고른 칸이 남았다 (%s)" % game._bag_pick)
+	print("  다중 강화 +3: '%s' · 채팅 %s" % [pop.result.text, str(line)])
+	# 중지 — 목표를 +9 로 올려 돌리고 바로 누르면 그 자리에서 멈춘다
+	pop.chevrons[8].chosen.emit(9)
+	pop.pick_all()
+	if pop._picked_pieces(true) > 0:
+		pop.step_time = 5.0
+		pop.run_button.pressed.emit()
+		await process_frame
+		pop.run_button.pressed.emit()
+		await process_frame
+		if pop.running or str(game._chat.lines().back()[0]) != "다중 강화 중지":
+			_fail("중지를 눌렀는데 %s · 채팅 %s" % [pop.running, str(game._chat.lines().back())])
+	# 단일 탭으로 돌아오면 대상(가방)은 다중으로 흔들려서 비었다
+	pop.tabs["one"].pressed.emit()
+	await process_frame
+	if not pop.go.disabled or pop.list_panel.visible:
+		_fail("다중 뒤 단일 탭인데 강화 단추 %s · 목록 %s" % [pop.go.disabled, pop.list_panel.visible])
+	# 단일 자동 — +0 하나를 +2 까지. 닿으면 "완료", 부서지면 "부서졌습니다"
+	me.bag.append({"id": ref_id, "grade": 1, "enhance": 0, "options": []})
+	pop.open({"where": "bag", "index": me.bag.size() - 1})
+	if not pop.chevrons[0].lit or pop.chevrons[1].lit:
+		_fail("+0 을 열었는데 목표 띠가 +1 까지가 아니다")
+	pop.chevrons[1].chosen.emit(2)
+	pop.step_time = 0.05
+	pop.run_button.pressed.emit()
+	var ticks := 0
+	while pop.running and ticks < 600:
+		await process_frame
+		ticks += 1
+	if pop.running or not (pop.result.text.contains("완료") or pop.result.text.contains("부서졌")):
+		_fail("단일 자동 +2 결과가 '%s' (도는 중 %s)" % [pop.result.text, pop.running])
+	var left: Dictionary = game._stack_at(pop.target) if not pop.target.is_empty() else {}
+	if not left.is_empty() and int(left.get("enhance", 0)) != 2:
+		_fail("목표 +2 인데 +%d 에서 멈췄다" % int(left.get("enhance", 0)))
+	print("  단일 자동 +2: '%s'" % pop.result.text)
+	# 낮은 강화부터 한 단계씩 (2026-09-24 "강화 수치가 다른게 있으면 낮은 강화부터 천천히 한 단계씩") —
+	# +0 셋과 +2 둘을 +3 목표로 돌리면 첫 바퀴는 +0 만 두드리고 +2 는 그대로다
+	var low: Array = []
+	var high: Array = []
+	for level in [0, 2, 0, 2, 0]:
+		me.bag.append({"id": ref_id, "grade": 1, "enhance": level, "options": []})
+		(low if level == 0 else high).append(me.bag.size() - 1)
+	pop.open({"where": "bag", "index": low[0]})
+	pop.pick_mode("multi")
+	pop.set_goal(3)
+	pop.picked = low + high
+	pop.picked.sort()
+	pop.step_time = 5.0
+	var chat_mark: int = game._chat.lines().size()
+	pop.run_button.pressed.emit()
+	for i in 3:
+		await process_frame
+	var twos := 0
+	for at in high:  # +0 칸은 한 칸씩이라 갈라지지 않는다 — +2 칸 번호는 그대로다
+		if int(me.bag[at].enhance) == 2:
+			twos += 1
+	var ones: Array = me.bag.slice(me.bag.size() - 8).filter(func(s: Dictionary) -> bool: return int(s.enhance) == 1)
+	if twos != 2 or not pop.result.text.begins_with("+0 → +1"):
+		_fail("섞인 단계 첫 바퀴에 +2 가 %d개 남음 (2 여야) · 결과 '%s'" % [twos, pop.result.text])
+	print("  낮은 것부터: 첫 바퀴 +0 → +1 에서 %d칸 성공, +2 둘은 그대로 · '%s'" % [
+		ones.size(), pop.result.text.replace("\n", " / ")])
+	pop.run_button.pressed.emit()  # 중지
+	if game._chat.lines().size() != chat_mark + 1:
+		_fail("중지했는데 채팅이 한 줄이 아니다")

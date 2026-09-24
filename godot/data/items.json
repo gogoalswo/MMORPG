@@ -747,13 +747,20 @@
     "cooldown",
     "penetration"
   ],
-  "optionMin": 2,
-  "optionMax": 2,
+  "optionMin": 1,
+  "optionMax": 1,
+  "optionStepWeights": [
+    40,
+    30,
+    20,
+    8,
+    2
+  ],
   "optionTiers": [
     {
       "tier": 1,
       "key": "options",
-      "count": 2,
+      "count": 1,
       "source": "drop"
     },
     {

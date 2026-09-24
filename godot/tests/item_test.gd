@@ -14,6 +14,7 @@ func _init() -> void:
 	Save.clear()
 	_case_grade()
 	_case_options()
+	_case_option_steps()
 	_case_enhance()
 	_case_stats()
 	_case_drop()
@@ -73,8 +74,8 @@ func _case_options() -> void:
 	for seed_value in 50:
 		rng.seed = seed_value
 		var rolled := Items.roll_options(item, 4, rng)
-		if rolled.size() != 2:
-			_fail("옵션은 2개 고정인데 %d개다" % rolled.size())
+		if rolled.size() != 1:
+			_fail("옵션은 1개 고정인데 %d개다" % rolled.size())
 			return
 		var seen: Array = []
 		for option in rolled:
@@ -86,11 +87,29 @@ func _case_options() -> void:
 			if option.value < span.min or option.value > span.max:
 				_fail("%s 값 %s 가 범위(%s~%s) 밖" % [option.kind, option.value, span.min, span.max])
 				return
-	# 개수는 등급을 안 탄다 — 2026-09-21 지시로 전 등급 2개 고정이다
+	# 개수는 등급을 안 탄다 — 2026-09-24 지시로 전 등급 1개 고정이다
 	rng.seed = 7
-	if Items.roll_options(item, 7, rng).size() != 2:
-		_fail("7등급도 옵션은 2개여야 한다")
+	if Items.roll_options(item, 7, rng).size() != 1:
+		_fail("7등급도 옵션은 1개여야 한다")
 	print("  옵션 50번 굴림: 개수·종류·범위 모두 규칙대로")
+
+
+## 옵션 수치는 5단계 확률(40·30·20·8·2%)이다 — 2026-09-24 지시. 1차·2차가 같은 함수를 탄다
+func _case_option_steps() -> void:
+	var weights: Array = Items._t().get("optionStepWeights", [])
+	_eq("단계 확률", weights, [40.0, 30.0, 20.0, 8.0, 2.0])
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 42
+	var counts := [0, 0, 0, 0, 0]
+	var rolls := 50000
+	for i in rolls:
+		var value := Items.roll_option_value({"min": 0.0, "max": 1000.0}, rng)
+		counts[mini(4, int(value / 200.0))] += 1
+	for step in 5:
+		var got: float = 100.0 * counts[step] / rolls
+		if absf(got - float(weights[step])) > 1.0:
+			_fail("%d단계가 %.1f%% 나왔다 (설계 %d%%)" % [step + 1, got, int(weights[step])])
+	print("  옵션 수치 5단계: %s / %d번" % [str(counts), rolls])
 
 
 ## 강화는 설계표(stat-balance.md 4장)를 그대로 쓴다 — 총 ×6, **실패하면 무조건 파괴**

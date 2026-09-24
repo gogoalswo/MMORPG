@@ -129,6 +129,29 @@ const RUN_SPEED_EPS := 0.5
 var _last_delta := 0.0
 ## 공격 동작을 언제까지 트나 (서버가 준 경직 시간)
 var _swing_until := 0
+## 블렌더로 지은 동작 (`scripts/blender/fighter_moves.py`). 평타는 잽·스트레이트를
+## 번갈아 내고, 스킬은 스킬마다 하나다. 모델에 클립이 없으면 옛 `Attack` 으로 돌아간다
+const SWING_CLIPS := ["Jab", "Cross"]
+const SKILL_CLIPS := {
+	"rising_kick": "Claw", "thunder_fall": "Thunder",
+	"sky_breaker": "SkyBreaker", "frost_pillar": "FrostStomp",
+}
+## 앞 자세에서 동작으로 섞어 넘어가는 시간. 부딪히는 순간이 클립 0.1초 자리라
+## 길게 섞으면 이펙트보다 주먹이 늦는다
+const MOVE_BLEND := 0.06
+## 동작이 끝나거나 끊겨 대기·달리기로 돌아갈 때 섞는 시간
+const MOVE_OUT_BLEND := 0.15
+## 맞았을 때 — 뒤로 젖히며 팔로 얼굴을 막는다 (0.45초).
+## **공격 동작(평타·스킬) 중에는 안 튼다** — 공격이 늘 먼저다. 거꾸로 맞는 동작 중에
+## 공격하면 공격 동작이 곧바로 이긴다 (`_start_move` 가 무엇이 돌든 갈아끼운다)
+## (2026-09-24 요청. 그 전엔 평타는 주먹이 닿은 뒤면 끊었다).
+## 달리는 중에도 안 튼다 — 다리가 멈춰 미끄러진다
+const HIT_CLIP := "Hit"
+## 지금 트는 동작과 언제 끝나나. `_move_fresh` 면 다음 그리기에서 처음부터 튼다
+var _move_clip := ""
+var _move_until := 0
+var _move_fresh := false
+var _swings := 0
 var _camera: CameraRig
 ## 존 이름·골드·fps·빌드가 적히는 줄. 상태판 아래에 깔린다
 var _label: Label
@@ -162,6 +185,13 @@ var _mob_bar_until: Dictionary = {}
 ## 때린 뒤 막대가 남아 있는 시간. 다음 한 대를 칠 때까지는 넉넉히 남아야 하고
 ## (제일 느린 무기가 1.2초), 지나간 놈 것이 화면에 쌓이면 안 된다
 const MOB_BAR_MS := 5000
+## 몬스터 id -> 휘두르는 동작을 언제까지 트나(ms). **서버가 때린 순간(`hit`)에
+## 켠다** — 상태(`attack`)로 틀면 사거리 안에 서 있는 내내 3.73초짜리 클립이
+## 준비 자세부터 감겨, 맞고 있는 동안 한 번도 안 휘두르는 것으로 보인다 (2026-09-24)
+var _mob_swing_until: Dictionary = {}
+## 오우거 `Attack` 에서 첫 할퀴기가 시작되는 자리(초). 길이는 서버 경직
+## (`monsterSwingMs` 0.65초)과 같다 → docs/features/characters-and-animation.md
+const MOB_SWING_FROM := 0.8
 ## 마지막으로 일어난 일 한 줄 (맞았다·레벨 올랐다)
 var _last_event := ""
 ## 왼쪽 아래 채팅창 — 경험치·장비 획득을 적는다 (`ChatLog`)
@@ -254,17 +284,9 @@ var _bag_sum: Label
 var _bag_grid: GridContainer
 var _bag_action: Button
 var _enhance_button: Button  # 상세 창 "강화" — 장비를 고르면 뜨고, 누르면 강화 팝업을 연다
-## 강화 팝업 — 화면 가운데, 뒤를 어둡게 덮는다
-var _enhance_layer: Control
-var _enhance_panel: PanelContainer
-var _enhance_name: Label
-var _enhance_kind: Label
-var _enhance_icon: PanelContainer
-var _enhance_info: GridContainer
-var _enhance_result: Label
-var _enhance_go: Button
-## 두드릴 것 — {where: "bag"|"equip", index: 가방 번호|슬롯 번호}. 칸 번호가 아니다
-var _enhance_target: Dictionary = {}
+## 강화 팝업 — 화면 가운데, 뒤를 어둡게 덮는다. 한 개 · 같은 아이템 · 같은 등급, 자동 강화
+## → `enhance_popup.gd`
+var _enhance: EnhancePopup
 ## 크리스탈 창 — 크리스탈을 고르고 "사용" 을 누르면 상세 창 자리에 뜬다.
 ## 떠 있는 동안 장비 칸을 누르면 그 장비가 대상이 된다 (`_crystal_target`)
 var _crystal_panel: PanelContainer
@@ -325,6 +347,10 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 	match name:
 		&"hit":
 			_show_hit(payload)
+			if str(payload.get("target_kind", "")) == "player" \
+					and str(payload.get("target", "")) == _transport.my_id() \
+					and int(payload.get("amount", 0)) > 0 and not bool(payload.get("killed", false)):
+				_start_hit()
 			var who := "맞음" if payload.get("target_kind", "") == "player" else "피해"
 			_last_event = "%s %d%s%s" % [
 				who,
@@ -339,6 +365,9 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 		&"swing":
 			# 휘두르는 동안 발이 묶인다는 통보. 그 시간만큼 공격 동작을 튼다
 			_swing_until = Time.get_ticks_msec() + int(payload.get("root_ms", 400))
+			if str(payload.get("id", "")) == _transport.my_id():
+				_swings += 1
+				_start_move(SWING_CLIPS[_swings % SWING_CLIPS.size()])
 		&"died":
 			_last_event = "쓰러졌습니다 — 아무 데나 눌러 마을에서 되살아나기"
 			_target = Vector3.INF
@@ -357,9 +386,16 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 		&"npc":
 			_show_npc(payload)
 		&"skill":
-			# 스킬도 같은 공격 동작을 쓴다
+			# 스킬마다 제 동작이 있다. 없는 스킬(마법사·궁수)은 평타 동작으로 친다
 			_swing_until = Time.get_ticks_msec() + int(payload.get("root_ms", 400))
-			_show_skill(payload)
+			if str(payload.get("id", "")) == _transport.my_id():
+				_start_move(SKILL_CLIPS.get(str(payload.get("skill", "")), SWING_CLIPS[0]))
+			# 늦게 떨어지는 스킬(천붕각)은 동작만 먼저 틀고, 이펙트는 판정이 떨어지는 때에 세운다
+			var delay := int(payload.get("delay_ms", 0))
+			if delay > 0:
+				get_tree().create_timer(delay / 1000.0).timeout.connect(_show_skill.bind(payload))
+			else:
+				_show_skill(payload)
 		&"skills":
 			_last_event = "스킬을 배웠습니다"
 			if _skill_panel.visible:
@@ -387,11 +423,21 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			_last_event = str(payload.get("text", ""))
 		&"enhanceResult":
 			# 강화 결과는 채팅창에 남긴다 — 부서진 것은 상세 창이 닫혀서 달리 알 길이 없다
+			# 자동 강화가 도는 중이면 단계마다 적지 않는다 — 끝날 때 팝업이 한 줄(`finished`)
 			var enhanced := "%s +%d" % [str(payload.get("name", "")), int(payload.get("level", 0))]
-			match str(payload.get("result", "")):
-				"success": _chat.add_line("강화 성공", enhanced, INV_GOLD_HI)
-				"destroy": _chat.add_line("강화 실패", enhanced + " 파괴", INV_WARN)
-				_: _chat.add_line("강화 유지", enhanced, INV_TEXT)
+			if not _enhance.running:
+				match str(payload.get("result", "")):
+					"success": _chat.add_line("강화 성공", enhanced, INV_GOLD_HI)
+					"destroy": _chat.add_line("강화 실패", enhanced + " 파괴", INV_WARN)
+					_: _chat.add_line("강화 유지", enhanced, INV_TEXT)
+			_enhance.show_result(name, payload)
+		&"enhanceBatch":
+			# 일괄은 한 줄로 — 수십 개를 줄마다 적으면 채팅창이 강화로 덮인다
+			if not _enhance.running:
+				_chat.add_line("다중 강화", "%d개 중 성공 %d · 파괴 %d" % [
+					int(payload.get("pieces", 0)), int(payload.get("success", 0)), int(payload.get("destroyed", 0))
+				], INV_GOLD_HI if int(payload.get("success", 0)) > 0 else INV_WARN)
+			_enhance.show_result(name, payload)
 		&"gate":
 			# 차원문에 섰다. 어디로 갈지는 사람이 고른다
 			_open_gate()
@@ -485,7 +531,14 @@ func _build_persistent() -> void:
 	_build_test_switches()
 	_build_bag_panel()
 	_build_debug_panel()
-	_build_enhance_popup()
+	_enhance = EnhancePopup.make(self)
+	_ui_root.add_child(_enhance)
+	_enhance.acted.connect(_on_enhance_acted)
+	_enhance.closed.connect(_redraw_bag)
+	_enhance.finished.connect(
+		func(head: String, text: String, good: bool) -> void:
+			_chat.add_line(head, text, INV_GOLD_HI if good else INV_WARN)
+	)
 
 	# **모든 창의 닫기는 오른쪽 위 X 하나로 통일한다** (2026-09-20 요청).
 	# 창이 다 지어진 뒤에 얹어야 자식 맨 뒤라 창 위에 그려진다
@@ -493,7 +546,6 @@ func _build_persistent() -> void:
 	_close_button(_gear_panel, _toggle_gear, 0)
 	_close_button(_detail_panel, _close_detail, 0)
 	_close_button(_crystal_panel, _close_crystal, 0)
-	_close_button(_enhance_panel, _close_enhance, 0)
 	_close_button(_skill_panel, _toggle_skills)
 	_close_button(_npc_panel, func() -> void: _npc_panel.visible = false)
 
@@ -1107,78 +1159,6 @@ func _build_crystal_window(panel: PanelContainer) -> void:
 	foot.add_child(_crystal_roll)
 
 
-## 강화 팝업 (2026-09-23 요청: "강화 ui창을 따로 만들어. 강화 버튼 누르면 팝업이 나오게").
-## 상세 창의 "강화" 로 연다. **화면 가운데에 뜨고 뒤를 어둡게 덮는다** — 덮은 막이 뒤 창을
-## 못 누르게 막아서, 떠 있는 동안 대상이 바뀔 일이 없다. 틀·조각은 상세 창과 같다.
-## 머리 줄 · 대상 이름과 큰 칸 · 강화 정보 표 · 결과 한 줄 · "강화" 단추
-func _build_enhance_popup() -> void:
-	_enhance_layer = Control.new()
-	_enhance_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_enhance_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_enhance_layer.visible = false
-	_ui_root.add_child(_enhance_layer)
-	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.55)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_enhance_layer.add_child(dim)
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_enhance_layer.add_child(center)
-	_enhance_panel = _window_panel()
-	_enhance_panel.visible = true
-	center.add_child(_enhance_panel)
-
-	var side := VBoxContainer.new()
-	side.custom_minimum_size = Vector2(DETAIL_W, 0)
-	side.add_theme_constant_override("separation", 8)
-	_enhance_panel.add_child(side)
-
-	_window_title(side, "장비 강화", 22)
-
-	var head := HBoxContainer.new()
-	head.add_theme_constant_override("separation", 10)
-	side.add_child(head)
-	var lines := VBoxContainer.new()
-	lines.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	lines.add_theme_constant_override("separation", 4)
-	head.add_child(lines)
-	_enhance_name = _inv_label("", 22, INV_GOLD)
-	_enhance_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	lines.add_child(_enhance_name)
-	_enhance_kind = _inv_label("", 20, INV_GOLD_HI)
-	lines.add_child(_enhance_kind)
-	_enhance_icon = _make_cell(func() -> void: pass, DETAIL_ICON)
-	_enhance_icon.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	_enhance_icon.get_node("badge").add_theme_font_size_override("font_size", 22)
-	head.add_child(_enhance_icon)
-
-	side.add_child(_inv_label("강화 정보", 20, INV_GOLD))
-	var rule := ColorRect.new()
-	rule.color = INV_RULE
-	rule.custom_minimum_size = Vector2(0, 1)
-	side.add_child(rule)
-
-	_enhance_info = GridContainer.new()
-	_enhance_info.columns = 2
-	_enhance_info.add_theme_constant_override("h_separation", 12)
-	_enhance_info.add_theme_constant_override("v_separation", 6)
-	side.add_child(_enhance_info)
-
-	# 방금 두드린 결과 — 성공은 금빛, 파괴는 붉게. 새로 열면 비운다
-	_enhance_result = _inv_label("", 22, INV_GOLD_HI)
-	_enhance_result.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_enhance_result.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_enhance_result.custom_minimum_size = Vector2(0, 34)
-	side.add_child(_enhance_result)
-
-	var foot := HBoxContainer.new()
-	foot.alignment = BoxContainer.ALIGNMENT_END
-	side.add_child(foot)
-	_enhance_go = _inv_button("강화", _on_enhance)
-	foot.add_child(_enhance_go)
-
-
 ## 인벤토리 창 — 머리 줄 · 격자와 오른쪽 세로 탭 · 소지품 수와 정렬 · 동전
 func _build_bag_window(panel: PanelContainer) -> void:
 	var side := VBoxContainer.new()
@@ -1566,8 +1546,7 @@ func _pick_bag(where: String, index: int) -> void:
 ## 가방 단추 — 인벤토리와 장비 창을 같이 열고 닫는다. 상세 창은 칸을 눌러야 뜬다
 func _toggle_bag() -> void:
 	var open := not _bag_panel.visible
-	_enhance_layer.visible = false
-	_enhance_target = {}
+	_enhance.hide_now()
 	_bag_panel.visible = open
 	_gear_panel.visible = open
 	_bag_pick = {}
@@ -2000,115 +1979,21 @@ func _open_enhance() -> void:
 	if Items.get_item(str(_picked_stack().get("id", ""))).is_empty():
 		return
 	var worn := str(_bag_pick.get("where", "")) == "equip"
-	_enhance_target = {
+	_enhance.open({
 		"where": "equip" if worn else "bag",
 		"index": int(_bag_pick.index) if worn else _picked_bag_index(),
-	}
-	_enhance_result.text = ""
-	_enhance_layer.visible = true
-	_redraw_enhance()
+	})
 
 
-## 팝업 X — 상세 창은 그대로 둔다 (대상이 부서졌으면 이미 닫혀 있다)
-func _close_enhance() -> void:
-	_enhance_layer.visible = false
-	_enhance_target = {}
+## 강화 팝업이 한 개를 두드린 뒤 — **고른 칸은 결과를 따라간다.** 부서졌거나 일괄로 가방이
+## 흔들렸으면 비우고(안 비우면 다음 물건을 가리킨다), 겹친 칸에서 뗀 것이 오르면 한 칸 뒤로
+func _on_enhance_acted(kept: bool, shift: int) -> void:
+	if not kept:
+		_bag_pick = {}
+	elif shift != 0 and not _bag_pick.is_empty():
+		_bag_pick.index = int(_bag_pick.index) + shift
 	_redraw_bag()
 
-
-## 팝업을 채운다 — 이름(등급 색) · `+N → +N+1` · 큰 칸 · 성공률 · 실패 시 파괴 ·
-## 기본 능력치가 지금 → 성공하면 얼마. **대상이 부서졌으면** 이름만 남기고 단추를 끈다
-func _redraw_enhance() -> void:
-	var stack := _stack_at(_enhance_target)
-	var item := Items.get_item(str(stack.get("id", "")))
-	if item.is_empty():
-		_enhance_kind.text = "부서졌습니다"
-		_enhance_kind.add_theme_color_override("font_color", INV_WARN)
-		_fill_cell(_enhance_icon, {}, "", "")
-		_fill_detail_rows([], _enhance_info)
-		_enhance_go.disabled = true
-		return
-
-	var grade := int(stack.get("grade", 1))
-	var enhance := int(stack.get("enhance", 0))
-	_enhance_name.text = str(item.get("name", "?"))
-	if enhance > 0:
-		_enhance_name.text += " +%d" % enhance
-	_enhance_name.add_theme_color_override("font_color", _grade_tint(grade))
-	_fill_cell(_enhance_icon, stack, "", _item_icon(stack))
-
-	var can := Items.can_enhance(enhance)
-	_enhance_go.disabled = not can
-	_enhance_kind.add_theme_color_override("font_color", INV_GOLD_HI)
-	if not can:
-		_enhance_kind.text = "최대 강화"
-		_fill_detail_rows([["강화", "+%d (끝)" % enhance]], _enhance_info)
-		return
-
-	# 확률은 설계 4장 그대로(90% → 10%). **유지가 없다** — 실패하면 무조건 파괴
-	_enhance_kind.text = "+%d  →  +%d" % [enhance, enhance + 1]
-	var odds := Items.enhance_odds(enhance)
-	var rows: Array = [
-		["성공률", "%d%%" % roundi(float(odds.success) * 100.0)],
-		["실패 시", "아이템 파괴", INV_WARN],
-	]
-	var now := Items.base_bonus(item, enhance)
-	var next := Items.base_bonus(item, enhance + 1)
-	for key in DETAIL_BONUS:
-		if float(now.get(key, 0.0)) > 0.0:
-			rows.append([
-				DETAIL_BONUS[key],
-				"%s → %s" % [_bonus_text(key, float(now[key])), _bonus_text(key, float(next.get(key, 0.0)))],
-			])
-	if int(stack.get("count", 1)) > 1:
-		rows.append(["겹친 칸", "한 개만 강화"])
-	_fill_detail_rows(rows, _enhance_info)
-
-
-## 팝업 "강화" — 한 번 두드린다. 결과는 팝업 한 줄과 채팅창에 남는다.
-## **대상과 고른 칸은 결과를 따라간다** — 부서져 가방이 줄면 둘 다 비우고(안 비우면 다음
-## 물건을 가리킨다), 겹친 칸에서 뗀 것이 성공하면 바로 뒤 칸(뗀 것)으로 옮긴다
-func _on_enhance() -> void:
-	var stack := _stack_at(_enhance_target)
-	var item := Items.get_item(str(stack.get("id", "")))
-	if item.is_empty():
-		return
-	var level := int(stack.get("enhance", 0))
-	var count := int(stack.get("count", 1))
-	var success := false
-	if str(_enhance_target.where) == "equip":
-		var slot := str(Items.slots()[int(_enhance_target.index)])
-		_transport.send(&"enhanceItem", {"where": "equip", "key": slot})
-		success = not _stack_at(_enhance_target).is_empty()
-		if not success:
-			_bag_pick = {}
-	else:
-		var before := _bag_count()
-		_transport.send(&"enhanceItem", {"where": "bag", "key": int(_enhance_target.index)})
-		var after := _bag_count()
-		if after < before:
-			_enhance_target = {}
-			_bag_pick = {}
-		elif after > before:
-			success = true
-			_enhance_target.index = int(_enhance_target.index) + 1
-			if not _bag_pick.is_empty():
-				_bag_pick.index = int(_bag_pick.index) + 1
-		else:
-			success = int(_stack_at(_enhance_target).get("enhance", 0)) > level
-	if success:
-		_enhance_result.text = "강화 성공!  +%d" % (level + 1)
-		_enhance_result.add_theme_color_override("font_color", INV_GOLD_HI)
-	else:
-		_enhance_result.text = "강화 실패 — %s" % ("하나가 부서졌습니다" if count > 1 else "부서졌습니다")
-		_enhance_result.add_theme_color_override("font_color", INV_WARN)
-	_redraw_bag()
-	_redraw_enhance()
-
-
-func _bag_count() -> int:
-	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
-	return (me.get("bag", []) as Array).size()
 
 
 ## "낡은 장검 +3 (5등급) 공격 +7, 치명타 +2%"
@@ -2777,6 +2662,19 @@ func _build_test_switches() -> void:
 	)
 	column.add_child(gauntlets)
 	column.move_child(gauntlets, 0)  # 쿨타임 단추가 맨 아래 구석에 남아야 한다 (ui_test 가 본다)
+	# 가방 빈칸을 장비로 꽉 채운다 (2026-09-24 요청 — "테스트하기 위해서 아이템을 인벤토리에 채워".
+	# 다중 강화를 시험하려면 같은 아이템 여럿 · 섞인 강화 단계가 필요하다)
+	var fill := Button.new()
+	fill.custom_minimum_size = Vector2(230, 52)
+	fill.add_theme_font_size_override("font_size", 18)
+	fill.text = "테스트: 가방 채우기"
+	fill.pressed.connect(func() -> void:
+		_transport.send(&"debugFillBag", {})
+		if _bag_panel.visible:
+			_redraw_bag()
+	)
+	column.add_child(fill)
+	column.move_child(fill, 0)
 	# 크리스탈 30개를 가방에 넣는다 (2026-09-23 요청 — "가방에 30개 넣어". 드랍이 0.01% 라
 	# 주워서는 시험해 볼 수 없다)
 	var crystals := Button.new()
@@ -3308,6 +3206,7 @@ func _build_zone(zone_id: String) -> void:
 	# 때린 기록도 같이 버린다 — 안 버리면 새 존의 같은 id 에 막대가 붙는다
 	_mob_bars.clear()
 	_mob_bar_until.clear()
+	_mob_swing_until.clear()
 
 	var world_env := WorldEnvironment.new()
 	world_env.environment = environment_for(env)
@@ -3595,8 +3494,35 @@ func _move(dir: Vector2, delta: float) -> void:
 	_transport.send(&"input", {"seq": _seq, "dx": dir.x, "dz": dir.y, "dt": delta})
 
 
-## 죽음 > 공격 > 달리기 > 대기 순으로 고른다.
+## 동작을 건다. 실제로 트는 건 다음 `_play_player_clip` 이다 — 이벤트는 그리기 전에 온다
+func _start_move(clip: String) -> void:
+	if not _player is Rig:
+		return
+	var rig: Rig = _player
+	if not rig.has_clip(clip):
+		return
+	_move_clip = clip
+	_move_fresh = true
+	_move_until = Time.get_ticks_msec() + int(rig.clip_length(clip) * 1000.0)
+
+
+## 맞은 동작을 건다 — 틀어도 되는 때만 (`HIT_CLIP` 위 설명)
+func _start_hit() -> void:
+	if _moving:
+		return
+	if _move_clip != "" and _move_clip != HIT_CLIP:
+		return
+	_start_move(HIT_CLIP)
+
+
+## 죽음 > 동작(평타·스킬·맞음) > 옛 공격 > 달리기 > 대기 순으로 고른다.
 ##
+## **동작은 끝까지 튼다.** 경직(0.4초)이 풀려도 서 있으면 마저 튼다 — 스킬 동작은
+## 1초 남짓이라 경직에 맞춰 자르면 내리친 주먹이 땅에 닿자마자 대기 자세로 튄다.
+## 경직이 풀린 뒤 **움직이면 그 자리에서 끊고** 달리기로 섞어 넘어간다
+## (웹 클라이언트의 `ATTACK_CUT_SPEED` 와 같은 생각이다).
+##
+## 아래는 새 동작이 없는 모델에서 쓰는 옛 길이다.
 ## 격투가 공격 클립은 3.23초짜리라 통째로 틀면 한 번 차는 데 3초가 걸린다.
 ## 앞 0.8초는 자세를 잡는 준비라, 공격 간격(700ms)마다 처음으로 되감으면 발이
 ## 한 번도 안 나간다. 웹 클라이언트는 0.8~1.60초 구간만 1.6배로 트는데
@@ -3607,9 +3533,24 @@ func _play_player_clip(me: Dictionary) -> void:
 		return
 	var rig: Rig = _player
 	if bool(me.get("dead", false)):
+		_move_clip = ""
 		rig.play("Death")
 		return
-	if Time.get_ticks_msec() < _swing_until:
+	var now := Time.get_ticks_msec()
+	if _move_clip != "":
+		if _move_fresh:
+			_move_fresh = false
+			rig.replay(_move_clip, 1.0, MOVE_BLEND)
+			return
+		var cut := _moving and now >= _swing_until
+		if now < _move_until and not cut:
+			return
+		_move_clip = ""
+		# 옛 `Attack` 길로 떨어지지 않게 — 동작이 경직을 이미 다 덮었다
+		_swing_until = mini(_swing_until, now)
+		rig.play("Run" if _moving else "Idle", 1.0, 0.0, false, MOVE_OUT_BLEND)
+		return
+	if now < _swing_until:
 		rig.play("Attack", 1.6, 0.8)
 		return
 	rig.play("Run" if _moving else "Idle")
@@ -3679,14 +3620,17 @@ func _draw_state() -> void:
 		node.rotation.y = monster.get("rot", 0.0)
 		if node is Rig:
 			var state := str(monster.get("state", "idle"))
-			if state == "chase":
+			# 휘두르기는 **창 끝까지 무조건** 튼다 — 사람이 한 발 물러난 것 때문에
+			# 끊으면 휘두르다 만 채로 동작이 사라진 것으로만 보인다
+			if Time.get_ticks_msec() < int(_mob_swing_until.get(monster.id, 0)):
+				node.play("Attack", 1.0, MOB_SWING_FROM)
+			elif state == "chase":
 				node.play("Run")
 			elif state == "patrol":
 				# 순찰은 걷는 것이다. 걷기 클립이 없으니 달리기를 반 배속으로 돌린다
 				node.play("Run", 0.5)
-			elif state == "attack":
-				node.play("Attack")
 			else:
+				# 사거리 안에서 다음 한 대를 기다리는 동안(`attack`)도 선다
 				node.play("Idle")
 
 	_tick_ring(snap)
@@ -3729,6 +3673,8 @@ func _show_hit(payload: Dictionary) -> void:
 	# 나뿐이므로 때린 사람을 따로 가리지 않는다 (서버가 붙으면 source 를 본다)
 	if not on_me:
 		_mob_bar_until[str(payload.get("target", ""))] = Time.get_ticks_msec() + MOB_BAR_MS
+	else:
+		_swing_mob(str(payload.get("source", "")))
 	var body: Node3D = null
 	if on_me:
 		body = _player
@@ -3752,6 +3698,17 @@ func _show_hit(payload: Dictionary) -> void:
 		_hurt.hit(float(payload.get("amount", 0)) / maxf(1.0, max_hp * 0.25))
 
 	_feel_hit(payload, on_me, body)
+
+
+## 몬스터가 나를 때렸다. 첫 할퀴기 구간을 **처음부터 다시** 튼다 — 서버가 세워 두는
+## 시간(`monsterSwingMs`)만큼만. 범위 공격이 터진 것도 여기로 온다 (보스는 그 뒤 선다)
+func _swing_mob(id: String) -> void:
+	var node: Node3D = _mob_nodes.get(id, null)
+	if id == "" or not node is Rig:
+		return
+	var swing_ms := int(GameData.combat().get("monsterSwingMs", 650))
+	_mob_swing_until[id] = Time.get_ticks_msec() + swing_ms
+	(node as Rig).play("Attack", 1.0, MOB_SWING_FROM, true)
 
 
 ## 타격감 — 히트스톱·흔들림·몸 튕김·찌그러짐. 세기는 `HitFx.TIERS` 네 단계다
@@ -3807,13 +3764,17 @@ func _show_skill(payload: Dictionary) -> void:
 		var upgrades: Array = payload.get("upgrades", [])
 		LightningFx.bolt(_fx, here, float(me.rot), "stun" in upgrades, "wide" in upgrades)
 	elif skill == "sky_breaker":
-		QuakeFx.slam(_fx, here, float(me.rot))
+		# 강화 — "진폭" 이면 모래 토네이도, "균열 지대" 면 진흙 소용돌이 (따로 논다)
+		var quake_up: Array = payload.get("upgrades", [])
+		QuakeFx.slam(_fx, here, float(me.rot), "wide" in quake_up, "zone" in quake_up)
 		_camera.shake(QuakeFx.SHAKE, QuakeFx.SHAKE_TIME)
 	elif skill == "frost_pillar":
 		IceFx.burst(_fx, here, float(me.rot))
 		_camera.shake(IceFx.SHAKE, IceFx.SHAKE_TIME)
 	else:
-		SkillFx.claw(_fx, here, float(me.rot))
+		# 강화 — "부채꼴" 이면 호가 40° 길고, "연타" 면 두 번 더 긁고 보라다 (따로 논다)
+		var claw_up: Array = payload.get("upgrades", [])
+		SkillFx.claw(_fx, here, float(me.rot), "wide" in claw_up, "combo" in claw_up)
 
 
 ## 보스 범위 공격 예고 원.

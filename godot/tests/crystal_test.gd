@@ -59,7 +59,7 @@ func _case_tiers() -> void:
 	var counts: Array = []
 	for row in Items.option_tiers():
 		counts.append([int(row.tier), str(row.key), int(row.count)])
-	_eq("차수 표", counts, [[1, "options", 2], [2, "options2", 1], [3, "options3", 0]])
+	_eq("차수 표", counts, [[1, "options", 1], [2, "options2", 1], [3, "options3", 0]])
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7
 	for grade in range(1, 8):

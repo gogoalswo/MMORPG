@@ -166,10 +166,20 @@ func _case_multi() -> void:
 	w.drain_events()
 
 	w.cast("me", "sky_breaker")
+	# 뛰어올랐다 내려찍는다 — **누르는 순간에는 아무도 안 맞고**, 착지(`delayMs`)에 맞는다
+	var landing := int(w._landings[0].at) if not w._landings.is_empty() else 0
+	if not _hits(w.drain_events()).is_empty():
+		_fail("천붕각이 착지 전에 맞았다")
+	w._run_landings(landing - 1)
+	if not _hits(w.drain_events()).is_empty():
+		_fail("천붕각이 착지 1ms 전에 맞았다")
+	w._run_landings(landing)
 	var hits := 0
 	for e in w.drain_events():
 		if e.get("type", "") == "hit":
 			hits += 1
+	if not w._landings.is_empty():
+		_fail("떨어졌는데 대기열에 %d개 남았다" % w._landings.size())
 	if hits != 3:
 		_fail("천붕각이 3마리를 쳐야 하는데 %d마리" % hits)
 	else:
@@ -266,6 +276,7 @@ func _case_range() -> void:
 	w.set_skill_bar("me", ["sky_breaker"])
 	w.drain_events()
 	w.cast("me", "sky_breaker")
+	w._run_landings(Time.get_ticks_msec() + 100000)
 	var events := w.drain_events()
 	var round_shape := _first(events, "skillRange")
 	var hits := 0
@@ -521,6 +532,7 @@ func _case_quake_up() -> void:
 	me.skill_ready_at = {}
 	w.drain_events()
 	w.cast("me", "sky_breaker")
+	w._run_landings(Time.get_ticks_msec() + 100000)
 	var shape := _first(w.drain_events(), "skillRange")
 	if absf(float(shape.get("reach", 0.0)) - 9.0) > 1e-3 or int(shape.get("max_targets", 0)) != 15:
 		_fail("진폭: 반경 %.1f · 대상 %d (9 · 15 여야 한다)" % [float(shape.reach), int(shape.max_targets)])
@@ -532,6 +544,7 @@ func _case_quake_up() -> void:
 	w.drain_events()
 	var now := Time.get_ticks_msec()
 	w.cast("me", "sky_breaker")
+	w._run_landings(Time.get_ticks_msec() + 100000)
 	w.drain_events()
 	if w._zones.size() != 1:
 		_fail("균열 지대가 %d개 생겼다" % w._zones.size())
@@ -558,6 +571,7 @@ func _case_quake_up() -> void:
 	# 지대 밖으로 나간 놈은 안 맞는다 — 틱마다 다시 고른다
 	me.skill_ready_at = {}
 	w.cast("me", "sky_breaker")
+	w._run_landings(Time.get_ticks_msec() + 100000)
 	w.drain_events()
 	start = int(w._zones[0].until) - 3000
 	mob.x = 30.0

@@ -380,7 +380,12 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			_swing_until = Time.get_ticks_msec() + int(payload.get("root_ms", 400))
 			if str(payload.get("id", "")) == _transport.my_id():
 				_start_move(SKILL_CLIPS.get(str(payload.get("skill", "")), SWING_CLIPS[0]))
-			_show_skill(payload)
+			# 늦게 떨어지는 스킬(천붕각)은 동작만 먼저 틀고, 이펙트는 판정이 떨어지는 때에 세운다
+			var delay := int(payload.get("delay_ms", 0))
+			if delay > 0:
+				get_tree().create_timer(delay / 1000.0).timeout.connect(_show_skill.bind(payload))
+			else:
+				_show_skill(payload)
 		&"skills":
 			_last_event = "스킬을 배웠습니다"
 			if _skill_panel.visible:

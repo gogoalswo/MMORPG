@@ -57,8 +57,13 @@ func _case_cast(game: Node3D) -> void:
 	game._transport.send(&"skill", {"skill": "sky_breaker"})
 	for i in 4:
 		await process_frame
+	# 뛰어올랐다 내려찍는다 — 이펙트는 착지(`delayMs`)에 선다. 그 전에는 없어야 한다
+	var delay := float(Skills.get_skill("fighter", "sky_breaker").get("delayMs", 0)) / 1000.0
+	if delay > 0.0 and _newest(game) != null:
+		_fail("천붕각 이펙트가 착지(%.2f초) 전에 섰다" % delay)
+	await create_timer(delay + 0.1).timeout
 	if _newest(game) == null:
-		_fail("천붕각을 썼는데 이펙트가 안 섰다")
+		_fail("천붕각을 썼는데 착지 뒤에도 이펙트가 안 섰다")
 
 
 ## 화면이 **살짝** 흔들린다 — 몇 px 인지 재고, 끝나면 멈추고, 다른 스킬은 안 흔든다.

@@ -116,22 +116,48 @@ THUNDER_SLAM = pose(GUARD,
                     rf=(-0.11, 0.22, 0.10), rfPole=(0, -0.3, -1), rfYaw=0, rfPitch=-25)
 THUNDER_JOLT = pose(THUNDER_SLAM, hips=(0.0, -0.06, -0.30), spine=(48, 0, -6))
 
-# 천붕각 — 뛰어올라 오른발을 치켜든 채로 내려와 내리찍는다.
-SKY_AIR = pose(GUARD,
-               hips=(0.0, 0.02, 0.10), hipsR=(0, 0, 0),
-               spine=(-10, 0, 0), head=(-4, 0, 0),
-               lh=(0.26, -0.04, 1.06), lhPole=(1, 0, 0),
-               rh=(-0.26, -0.04, 1.06), rhPole=(-1, 0, 0),
-               rf=(-0.07, -0.42, 0.82), rfPole=(0, 0, 1), rfYaw=0, rfPitch=-40,
-               lf=(0.08, 0.10, 0.32), lfPole=(0, -1, 0))
+# 천붕각 — **웅크렸다 뛰어올라** 정점에서 오른발을 치켜들고, 떨어지며 발뒤꿈치와 두
+# 주먹으로 땅을 강하게 찍는다 (2026-09-24 요청: "점프해서 땅을 강하게 내려 찍는").
+# 찍는 순간이 0.42초라 판정·이펙트도 그만큼 늦췄다 (`skills.ts` 의 `delayMs` 420 — 같이 고친다).
+# 몸은 정점에서 0.26 (게임에서 약 0.47m) 뜬다
+SKY_CROUCH = pose(GUARD,
+                  hips=(0.0, 0.0, -0.11), hipsR=(0, 0, 0),
+                  spine=(22, 0, 0), head=(-14, 0, 0),
+                  lh=(0.20, 0.16, 0.50), lhPole=(0.5, -1, 0),
+                  rh=(-0.20, 0.16, 0.50), rhPole=(-0.5, -1, 0),
+                  lf=(0.10, -0.02, 0.078), lfPole=(0.2, -1, 0),
+                  rf=(-0.10, 0.02, 0.078), rfPole=(-0.2, -1, 0), rfYaw=0)
+SKY_TAKEOFF = pose(GUARD,
+                   hips=(0.0, -0.01, 0.07), hipsR=(0, 0, 0),
+                   spine=(-6, 0, 0), head=(-6, 0, 0),
+                   lh=(0.20, -0.16, 1.02), lhPole=(1, 0.3, -0.5),
+                   rh=(-0.20, -0.16, 1.02), rhPole=(-1, 0.3, -0.5),
+                   lf=(0.09, 0.0, 0.13), lfPole=(0.2, -1, 0), lfPitch=-35,
+                   rf=(-0.09, 0.02, 0.13), rfPole=(-0.2, -1, 0), rfYaw=0, rfPitch=-35)
+SKY_APEX = pose(GUARD,
+                hips=(0.0, 0.0, 0.26), hipsR=(0, 0, 0),
+                spine=(-12, 0, 0), head=(-2, 0, 0),
+                lh=(0.30, 0.0, 1.30), lhPole=(1, 0, 0),
+                rh=(-0.30, 0.0, 1.30), rhPole=(-1, 0, 0),
+                rf=(-0.07, -0.30, 1.14), rfPole=(0, 0.5, 1), rfYaw=0, rfPitch=-40,
+                lf=(0.08, 0.10, 0.42), lfPole=(0, -1, 0))
+SKY_FALL = pose(GUARD,
+                hips=(0.0, -0.02, 0.12), hipsR=(8, 0, 0),
+                spine=(10, 0, 0), head=(-10, 0, 0),
+                lh=(0.28, -0.14, 0.86), lhPole=(1, 0.4, 0),
+                rh=(-0.28, -0.14, 0.86), rhPole=(-1, 0.4, 0),
+                rf=(-0.08, -0.34, 0.52), rfPole=(0, -0.5, 1), rfYaw=0,
+                lf=(0.08, 0.14, 0.34), lfPole=(0, -1, 0))
 SKY_SLAM = pose(GUARD,
-                hips=(0.0, -0.05, -0.17), hipsR=(0, 0, 0),
-                spine=(26, 0, 0), head=(-18, 0, 0),
-                lh=(0.24, -0.26, 0.30), lhPole=(0.6, 1, 0),
-                rh=(-0.24, -0.26, 0.30), rhPole=(-0.6, 1, 0),
+                hips=(0.0, -0.05, -0.20), hipsR=(12, 0, 0),
+                spine=(26, 0, 0), head=(-26, 0, 0),
+                lh=(0.24, -0.26, 0.22), lhPole=(0.6, 1, 0),
+                rh=(-0.24, -0.26, 0.22), rhPole=(-0.6, 1, 0),
                 rf=(-0.08, -0.30, 0.078), rfPole=(-0.1, -1, 0.2), rfYaw=0,
-                lf=(0.09, 0.28, 0.11), lfPole=(0.1, -1, -0.6), lfPitch=35)
-SKY_SETTLE = pose(SKY_SLAM, hips=(0.0, -0.05, -0.19), spine=(30, 0, 0))
+                lf=(0.09, 0.26, 0.11), lfPole=(0.1, -1, -0.6), lfPitch=35)
+# 찍은 반동으로 한 번 더 눌렸다가(0.48) 버틴다
+SKY_RECOIL = pose(SKY_SLAM, hips=(0.0, -0.05, -0.235), spine=(32, 0, 0))
+SKY_SETTLE = pose(SKY_SLAM, hips=(0.0, -0.05, -0.21), spine=(28, 0, 0))
 
 # 빙주각 — 왼 무릎을 높이 들었다가 짓밟으며 말 탄 자세로 내려앉고 두 손바닥을 땅으로 누른다.
 FROST_LIFT = pose(GUARD,
@@ -165,9 +191,11 @@ CLIPS = {
                 (0.38, THUNDER_JOLT, "BEZIER"), (0.46, THUNDER_SLAM, "BEZIER"),
                 (0.70, THUNDER_SLAM, "BEZIER"),
                 (1.1, "IDLE", "BEZIER")],
-    "SkyBreaker": [(0.0, SKY_AIR, "LINEAR"), (0.12, SKY_SLAM, "BEZIER"),
-                   (0.22, SKY_SETTLE, "BEZIER"), (0.55, SKY_SETTLE, "BEZIER"),
-                   (1.05, "IDLE", "BEZIER")],
+    "SkyBreaker": [(0.0, SKY_CROUCH, "BEZIER"), (0.12, SKY_TAKEOFF, "BEZIER"),
+                   (0.26, SKY_APEX, "LINEAR"), (0.36, SKY_FALL, "LINEAR"),
+                   (0.42, SKY_SLAM, "LINEAR"), (0.48, SKY_RECOIL, "BEZIER"),
+                   (0.58, SKY_SETTLE, "BEZIER"), (0.82, SKY_SETTLE, "BEZIER"),
+                   (1.17, "IDLE", "BEZIER")],
     "FrostStomp": [(0.0, FROST_LIFT, "LINEAR"), (0.10, FROST_STOMP, "BEZIER"),
                    (0.22, FROST_HOLD, "BEZIER"), (0.55, FROST_HOLD, "BEZIER"),
                    (1.0, "IDLE", "BEZIER")],

@@ -55,7 +55,8 @@ func _case_fighter() -> void:
 			_fail("격투가에 %s 동작이 없다 — add-clips.mjs 를 돌렸나" % clip)
 			continue
 		var anim: Animation = rig._anim.get_animation(clip)
-		if anim.length < 0.4 or anim.length > 1.2:
+		# 천붕각은 5.4m 를 뛰어올라 1.45초다
+		if anim.length < 0.4 or anim.length > 1.6:
 			_fail("%s 가 %.2f초 — 평타·스킬 동작은 1초 남짓이어야 한다" % [clip, anim.length])
 		if anim.get_track_count() != idle_tracks:
 			_fail("%s 트랙 %d 개, 대기는 %d 개" % [clip, anim.get_track_count(), idle_tracks])

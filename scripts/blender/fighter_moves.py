@@ -118,9 +118,10 @@ THUNDER_JOLT = pose(THUNDER_SLAM, hips=(0.0, -0.06, -0.30), spine=(48, 0, -6))
 
 # 천붕각 — **웅크렸다 뛰어올라** 정점에서 오른발을 치켜들고, 떨어지며 발뒤꿈치와 두
 # 주먹으로 땅을 강하게 찍는다 (2026-09-24 요청: "점프해서 땅을 강하게 내려 찍는").
-# 찍는 순간이 0.42초라 판정·이펙트도 그만큼 늦췄다 (`skills.ts` 의 `delayMs` 420 — 같이 고친다).
-# 몸은 정점에서 0.60 (게임에서 약 1.1m) 뜬다 — 처음엔 0.26(0.47m)이었는데 "너무 낮게 뛴다"
-# 고 해서 올렸다. 착지 시각(0.42초)은 그대로라 더 빨리 내리꽂힌다
+# 찍는 순간이 0.72초라 판정·이펙트도 그만큼 늦췄다 (`skills.ts` 의 `delayMs` 720 — 같이 고친다).
+# 몸은 정점에서 3.0 (게임에서 약 5.4m) 뜬다. 0.26(0.47m) → "너무 낮게 뛴다" 로 0.60(1.1m) →
+# "지금의 5배" 로 3.0. 5.4m 를 0.42초에 오르내리면 순간이동이라 착지를 0.72초로 늦췄다.
+# 카메라(화각 30° · 26.7m · 42°)에서 정점의 머리끝은 화면 중심 위 11.6° — 가장자리(15°) 안이다
 SKY_CROUCH = pose(GUARD,
                   hips=(0.0, 0.0, -0.11), hipsR=(0, 0, 0),
                   spine=(22, 0, 0), head=(-14, 0, 0),
@@ -156,7 +157,20 @@ SKY_SLAM = pose(GUARD,
                 rh=(-0.24, -0.26, 0.22), rhPole=(-0.6, 1, 0),
                 rf=(-0.08, -0.30, 0.078), rfPole=(-0.1, -1, 0.2), rfYaw=0,
                 lf=(0.09, 0.26, 0.11), lfPole=(0.1, -1, -0.6), lfPitch=35)
-# 찍은 반동으로 한 번 더 눌렸다가(0.48) 버틴다
+
+
+def lift(base, dz):
+    """공중 자세를 통째로 dz 만큼 올린다 — 몸(Root)과 손발 목표점을 같이 올려 팔다리 모양은 그대로다"""
+    up = lambda v: (v[0], v[1], v[2] + dz)
+    return pose(base, hips=up(base["hips"]), lh=up(base["lh"]), rh=up(base["rh"]),
+                lf=up(base["lf"]), rf=up(base["rf"]))
+
+
+# 5배 높이 — 정점 0.60 → 3.0. 오르는 중(RISE)은 발을 곧게 늘어뜨린 도약 자세 그대로다
+SKY_RISE = lift(SKY_TAKEOFF, 1.94)
+SKY_APEX_HIGH = lift(SKY_APEX, 2.40)
+SKY_FALL_HIGH = lift(SKY_FALL, 0.92)
+# 찍은 반동으로 한 번 더 눌렸다가(0.78) 버틴다
 SKY_RECOIL = pose(SKY_SLAM, hips=(0.0, -0.05, -0.235), spine=(32, 0, 0))
 SKY_SETTLE = pose(SKY_SLAM, hips=(0.0, -0.05, -0.21), spine=(28, 0, 0))
 
@@ -192,11 +206,11 @@ CLIPS = {
                 (0.38, THUNDER_JOLT, "BEZIER"), (0.46, THUNDER_SLAM, "BEZIER"),
                 (0.70, THUNDER_SLAM, "BEZIER"),
                 (1.1, "IDLE", "BEZIER")],
-    "SkyBreaker": [(0.0, SKY_CROUCH, "BEZIER"), (0.10, SKY_TAKEOFF, "BEZIER"),
-                   (0.24, SKY_APEX, "BEZIER"), (0.35, SKY_FALL, "LINEAR"),
-                   (0.42, SKY_SLAM, "LINEAR"), (0.48, SKY_RECOIL, "BEZIER"),
-                   (0.58, SKY_SETTLE, "BEZIER"), (0.82, SKY_SETTLE, "BEZIER"),
-                   (1.17, "IDLE", "BEZIER")],
+    "SkyBreaker": [(0.0, SKY_CROUCH, "BEZIER"), (0.10, SKY_TAKEOFF, "LINEAR"),
+                   (0.24, SKY_RISE, "BEZIER"), (0.42, SKY_APEX_HIGH, "BEZIER"),
+                   (0.62, SKY_FALL_HIGH, "LINEAR"), (0.72, SKY_SLAM, "LINEAR"),
+                   (0.78, SKY_RECOIL, "BEZIER"), (0.88, SKY_SETTLE, "BEZIER"),
+                   (1.10, SKY_SETTLE, "BEZIER"), (1.45, "IDLE", "BEZIER")],
     "FrostStomp": [(0.0, FROST_LIFT, "LINEAR"), (0.10, FROST_STOMP, "BEZIER"),
                    (0.22, FROST_HOLD, "BEZIER"), (0.55, FROST_HOLD, "BEZIER"),
                    (1.0, "IDLE", "BEZIER")],

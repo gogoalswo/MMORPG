@@ -367,7 +367,8 @@ func hide_now() -> void:
 		fx.queue_free()
 
 
-## 깨진 칸 자리(-1)를 걷는다 — 도는 동안은 자리를 지키고, 다음에 손댈 때 당겨 붙인다
+## 깨진 칸 자리(-1)를 걷는다 — 터지는 연출 동안(한 박자)만 자리를 지키고, 다음 박자·끝·다음 조작에서
+## 남은 장비를 앞으로 당겨 붙인다
 func _compact() -> void:
 	picked = picked.filter(func(at: int) -> bool: return at >= 0)
 
@@ -716,6 +717,9 @@ func _on_tick() -> void:
 		return
 	if _waiting:
 		return  # 판정의 답을 아직 못 받았다 — 다음 박자에
+	# 깨진 칸은 터지는 연출(0.96초)이 이 박자 전에 끝났다 — 남은 장비를 앞으로 당긴다
+	# (2026-09-24 "깨져서 터지면 남은 아이템 정렬을 맨 앞으로 땡겨")
+	_compact()
 	var more := false
 	if mode == "one":
 		var stack := _stack()
@@ -738,6 +742,7 @@ func _halt() -> void:
 ## 자동 강화 한 판을 맺는다 — 결과 줄에 요약, 채팅에 한 줄(`finished`)
 func _finish(stopped: bool) -> void:
 	_halt()
+	_compact()  # 끝난 모습에 깨진 빈칸이 안 남게
 	var head := ("다중 강화" if mode == "multi" else "자동 강화") + (" 중지" if stopped else "")
 	var text := ""
 	var good := true

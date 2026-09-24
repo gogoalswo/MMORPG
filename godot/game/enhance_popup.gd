@@ -91,8 +91,14 @@ var _game  # game.gd — class_name 이 없어서 이름 없이 든다
 var _pressed_count := 1
 ## 자동 강화가 도는 중인가 — 단추가 "중지" 가 되고, 탭·목표·목록은 잠긴다
 var running := false
-## 한 단계 사이(초). 결과를 읽고 번쩍임이 가라앉을 만큼. 테스트가 줄인다
-var step_time := 0.4
+## 한 단계 사이(초) — 2026-09-24 "1초마다". 슬라이드·반짝임·깨짐이 한 박자 안에 끝난다.
+## 테스트가 줄인다
+var step_time := 1.0
+## 칸 연출(`EnhanceFx`)을 얹는 층 — 팝업 맨 위, 누르기를 안 막는다
+var fx_layer: Control
+## 한 단계를 보내기 직전의 아이콘 — 깨지는 조각이 이 그림을 자른다. 칸 k → [그림, 화면 자리]
+var _slot_tex: Dictionary = {}
+var _one_tex: Array = []
 var _timer: Timer
 ## 도는 한 판의 셈 — {steps, from, last, pieces, destroyed}
 var _run: Dictionary = {}
@@ -183,6 +189,12 @@ func _build() -> void:
 	_build_list()
 	_game._close_button(panel, close, 0)
 
+	fx_layer = Control.new()
+	fx_layer.name = "FxLayer"
+	fx_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	fx_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(fx_layer)
+
 	_timer = Timer.new()
 	_timer.name = "StepTimer"
 	_timer.timeout.connect(_on_tick)
@@ -242,7 +254,9 @@ func _build_left() -> void:
 	picked_grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	multi.add_child(picked_grid)
 	for k in MULTI_MAX:
-		picked_grid.add_child(_game._make_cell(unpick_slot.bind(k), MULTI_CELL))
+		var slot: PanelContainer = _game._make_cell(unpick_slot.bind(k), MULTI_CELL)
+		picked_grid.add_child(slot)
+		EnhanceFx.cross(slot).visible = false  # 도는 동안 깨진 칸 자리
 
 	side.add_child(_game._inv_label("강화 정보", 20, _game.INV_GOLD))
 	var rule := ColorRect.new()
@@ -349,9 +363,17 @@ func hide_now() -> void:
 	_halt()
 	visible = false
 	target = {}
+	for fx in fx_layer.get_children():
+		fx.queue_free()
+
+
+## 깨진 칸 자리(-1)를 걷는다 — 도는 동안은 자리를 지키고, 다음에 손댈 때 당겨 붙인다
+func _compact() -> void:
+	picked = picked.filter(func(at: int) -> bool: return at >= 0)
 
 
 func pick_mode(key: String) -> void:
+	_compact()
 	mode = key
 	result.text = ""
 	# 다중으로 처음 넘어오면 연 장비(가방에 든 것)를 먼저 담아 둔다
@@ -369,6 +391,7 @@ func pick_filter(key: String) -> void:
 func set_goal(level: int) -> void:
 	if running:
 		return
+	_compact()
 	goal = clampi(level, _goal_floor(), Items.max_enhance())
 	# 목표 이상인 것은 더 두드릴 것이 없다 — 담은 칸에서 뺀다
 	picked = picked.filter(func(at: int) -> bool: return _pickable(at))
@@ -379,6 +402,7 @@ func set_goal(level: int) -> void:
 func toggle_list(k: int) -> void:
 	if running or k >= _list_view.size():
 		return
+	_compact()
 	var at: int = _list_view[k]
 	if picked.has(at):
 		picked.erase(at)
@@ -393,6 +417,7 @@ func unpick_slot(k: int) -> void:
 	if running or k >= picked.size():
 		return
 	picked.remove_at(k)
+	_compact()
 	redraw()
 
 
@@ -400,6 +425,7 @@ func unpick_slot(k: int) -> void:
 func pick_all() -> void:
 	if running:
 		return
+	_compact()
 	for at in _list_view:
 		if picked.size() >= MULTI_MAX:
 			break
@@ -443,7 +469,7 @@ func _picked_pieces(below: bool = false) -> int:
 	var bag := _bag()
 	var pieces := 0
 	for at in picked:
-		if at >= bag.size():
+		if at < 0 or at >= bag.size():
 			continue
 		if below and int(bag[at].get("enhance", 0)) >= goal:
 			continue
@@ -546,19 +572,21 @@ func _redraw_multi() -> void:
 	if not _waiting:
 		var alive: Array = []
 		for at in picked:
-			if at < bag.size() and not Items.get_item(str(bag[at].get("id", ""))).is_empty():
+			if at < 0 or (at < bag.size() and not Items.get_item(str(bag[at].get("id", ""))).is_empty()):
 				alive.append(at)
 		picked = alive
 		for k in MULTI_MAX:
 			var cell: PanelContainer = picked_grid.get_child(k)
-			var stack: Dictionary = bag[picked[k]] if k < picked.size() else {}
+			var at: int = picked[k] if k < picked.size() else -2
+			var stack: Dictionary = bag[at] if at >= 0 else {}
 			_game._fill_cell(cell, stack, "", _game._item_icon(stack) if not stack.is_empty() else "")
+			cell.get_node("broken").visible = at == -1
 		_redraw_list(bag)
 
 	var pieces := _picked_pieces(true)
 	var hope := 0.0
 	for at in picked:
-		if at < bag.size() and int(bag[at].get("enhance", 0)) < goal:
+		if at >= 0 and at < bag.size() and int(bag[at].get("enhance", 0)) < goal:
 			hope += int(bag[at].get("count", 1)) * Items.enhance_reach_odds(int(bag[at].enhance), goal)
 	if not running:
 		run_button.text = "%d개 강화  →  +%d" % [pieces, goal]
@@ -613,6 +641,7 @@ func press_run() -> void:
 		_finish(true)
 		return
 	result.text = ""
+	_compact()
 	if mode == "one":
 		if _stack().is_empty() or int(_stack().get("enhance", 0)) >= goal:
 			return
@@ -634,7 +663,14 @@ func press_run() -> void:
 ## 번호(`show_result`)로 이어 간다
 func _step() -> void:
 	if mode == "multi":
-		_game._transport.send(&"enhanceMany", {"indices": picked.duplicate(), "cap": goal})
+		_slot_tex = {}
+		for k in picked.size():
+			if picked[k] >= 0:
+				var art: TextureRect = picked_grid.get_child(k).get_node("icon")
+				_slot_tex[k] = [art.texture, _icon_box(art)]
+		_game._transport.send(&"enhanceMany", {
+			"indices": picked.filter(func(at: int) -> bool: return at >= 0), "cap": goal,
+		})
 		_waiting = true
 		if str(target.get("where", "")) != "equip":
 			target = {}
@@ -646,6 +682,8 @@ func _step() -> void:
 		return
 	var level := int(stack.get("enhance", 0))
 	_pressed_count = int(stack.get("count", 1))
+	var art: TextureRect = icon.get_node("icon")
+	_one_tex = [art.texture, _icon_box(art)]
 	if str(target.where) == "equip":
 		var slot := str(Items.slots()[int(target.index)])
 		_game._transport.send(&"enhanceItem", {"where": "equip", "key": slot})
@@ -722,14 +760,30 @@ func _finish(stopped: bool) -> void:
 	redraw()
 
 
-## 번쩍 — 성공은 금빛, 파괴는 붉게. 단일은 큰 칸, 다중은 담은 칸 묶음이 밝아졌다가 0.3초에 돌아온다
-func _flash(good: bool) -> void:
-	var what: CanvasItem = icon if mode == "one" else picked_grid
-	what.modulate = Color(1.7, 1.45, 0.8) if good else Color(1.8, 0.55, 0.45)
-	create_tween().tween_property(what, "modulate", Color.WHITE, 0.3)
+## TextureRect 가 그림을 실제로 그린 자리 — 가운데에 비율을 지켜 앉힌다 (KEEP_ASPECT_CENTERED)
+func _icon_box(art: TextureRect) -> Rect2:
+	var box := art.get_global_rect()
+	if art.texture == null:
+		return box
+	var tex := art.texture.get_size()
+	var scale := minf(box.size.x / tex.x, box.size.y / tex.y)
+	var drawn := tex * scale
+	return Rect2(box.position + (box.size - drawn) * 0.5, drawn)
 
 
-## 판정의 결과 이벤트(enhanceResult · enhanceBatch)를 결과 한 줄로. 자동 중이면 단계를 센다
+## 칸 하나의 연출 — 성공은 숫자가 밀려 올라가고 반짝, 파괴는 붉은 X 뒤에 조각으로 깨진다.
+## `shot` 은 보내기 직전의 [그림, 자리] (칸은 이미 새 상태로 채워졌다)
+func _cell_fx(cell: PanelContainer, from: int, to: int, broke: bool, shot: Array) -> void:
+	if broke:
+		EnhanceFx.shatter(fx_layer, cell, shot[0] if shot.size() > 0 else null,
+			shot[1] if shot.size() > 1 else cell.get_global_rect())
+		return
+	if to > from:
+		EnhanceFx.slide(fx_layer, cell.get_node("badge"), "+%d" % from if from > 0 else "", "+%d" % to)
+		EnhanceFx.sparkle(fx_layer, cell)
+
+
+## 판정의 결과 이벤트(enhanceResult · enhanceBatch)를 결과 한 줄과 칸 연출로. 자동 중이면 단계를 센다
 func show_result(type: StringName, payload: Dictionary) -> void:
 	if not visible:
 		return
@@ -737,8 +791,27 @@ func show_result(type: StringName, payload: Dictionary) -> void:
 	if running:
 		_run.steps = int(_run.steps) + 1
 	if type == &"enhanceBatch":
-		# 담은 칸은 판정이 돌려준 새 번호로 이어 간다 (부서진 것은 빠져 있다)
-		picked = (payload.get("picked", []) as Array).duplicate()
+		# 담은 칸은 **자리를 지킨 채** 판정이 돌려준 새 번호로 잇는다. 부서진 칸은 -1(흐린 X)
+		var cap := int(payload.get("cap", goal))
+		var by_at := {}
+		for entry in payload.get("results", []):
+			by_at[int(entry.at)] = entry
+		var shows: Array = []  # [칸, 원래 단계, 새 단계, 깨졌나]
+		var extra: Array = []
+		for k in picked.size():
+			var at: int = picked[k]
+			if at < 0:
+				continue
+			var entry: Dictionary = by_at.get(at, {})
+			var to: Array = entry.get("to", [])
+			picked[k] = int(to[0]) if not to.is_empty() else -1
+			extra.append_array(to.slice(1))
+			var from := int(entry.get("from", 0))
+			if from < cap and not entry.is_empty():
+				shows.append([k, from, from + 1 if int(entry.success) > 0 else from, to.is_empty()])
+		for at in extra:
+			if picked.size() < MULTI_MAX:
+				picked.append(int(at))
 		_waiting = false
 		result.text = "%d개 중 %d개 성공 · %d개 파괴" % [
 			int(payload.pieces), int(payload.success), int(payload.destroyed)
@@ -747,22 +820,29 @@ func show_result(type: StringName, payload: Dictionary) -> void:
 			_run.destroyed = int(_run.destroyed) + int(payload.destroyed)
 			result.text = "%d바퀴  ·  " % int(_run.steps) + result.text
 		good = int(payload.destroyed) == 0 or int(payload.success) > 0
-	else:
-		var level := int(payload.get("level", 0))
-		var from := int(payload.get("from", level))
-		if running:
-			_run.last = from
-		match str(payload.get("result", "")):
-			"success":
-				result.text = ("+%d → +%d 성공" % [from, level]) if running else "강화 성공!  +%d" % level
-				good = true
-			"destroy":
-				var what := "하나가 부서졌습니다" if _pressed_count > 1 else "부서졌습니다"
-				result.text = ("+%d 에서 %s" % [from, what]) if running else "강화 실패 — %s" % what
-				good = false
-			_:
-				result.text = "유지  +%d" % level
-				good = true
+		result.add_theme_color_override("font_color", _game.INV_GOLD_HI if good else _game.INV_WARN)
+		redraw()
+		for show in shows:
+			_cell_fx(picked_grid.get_child(show[0]), show[1], show[2], show[3], _slot_tex.get(show[0], []))
+		return
+
+	var level := int(payload.get("level", 0))
+	var from := int(payload.get("from", level))
+	if running:
+		_run.last = from
+	var broke := false
+	match str(payload.get("result", "")):
+		"success":
+			result.text = ("+%d → +%d 성공" % [from, level]) if running else "강화 성공!  +%d" % level
+			good = true
+		"destroy":
+			var what := "하나가 부서졌습니다" if _pressed_count > 1 else "부서졌습니다"
+			result.text = ("+%d 에서 %s" % [from, what]) if running else "강화 실패 — %s" % what
+			good = false
+			broke = true
+		_:
+			result.text = "유지  +%d" % level
+			good = true
 	result.add_theme_color_override("font_color", _game.INV_GOLD_HI if good else _game.INV_WARN)
-	_flash(good)
 	redraw()
+	_cell_fx(icon, from, level, broke, _one_tex)

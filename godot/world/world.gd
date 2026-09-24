@@ -1893,27 +1893,37 @@ func enhance_many(player_id: String, indices: Array, cap: int = -1) -> void:
 	if player.is_empty():
 		return
 	var limit := clampi(cap, 1, Items.max_enhance()) if cap > 0 else Items.max_enhance()
+	# 목표에 이미 닿은 칸도 받는다 — 두드리지는 않고 **새 번호만 따라가게** 한다
+	# (팝업은 칸 자리를 그대로 두고 칸마다 연출한다)
 	var chosen: Array = []
+	var live := 0
 	for value in indices:
 		var at := int(value)
 		if at < 0 or at >= player.bag.size() or chosen.has(at):
 			continue
 		var stack: Dictionary = player.bag[at]
-		if Items.get_item(str(stack.get("id", ""))).is_empty() or int(stack.get("enhance", 0)) >= limit:
+		if Items.get_item(str(stack.get("id", ""))).is_empty():
 			continue
 		chosen.append(at)
-	if chosen.is_empty():
+		if int(stack.get("enhance", 0)) < limit:
+			live += 1
+	if live == 0:
 		_notice("강화할 장비가 없습니다")
 		return
 	chosen.sort()
 	chosen.reverse()  # 뒤에서부터 — 앞 칸 번호가 안 밀린다
 	var total := {"pieces": 0, "success": 0, "destroyed": 0}
 	var reached := {}  # 끝난 단계 → 남은 개수
-	var picked: Array = []  # 남은 칸의 새 가방 번호
+	# 칸마다 {at: 원래 번호, from, to: [새 번호], success, destroyed} — 팝업이 칸별로 연출한다
+	var results: Array = []
 	for i in chosen:
 		var stack: Dictionary = player.bag[i]
 		var item := Items.get_item(str(stack.id))
 		var start := int(stack.get("enhance", 0))
+		var entry := {"at": i, "from": start, "to": [i], "success": 0, "destroyed": 0}
+		if start >= limit:
+			results.append(entry)
+			continue
 		var kept := {}
 		for n in int(stack.get("count", 1)):
 			var result := _roll_once(player, item, start)
@@ -1923,10 +1933,12 @@ func enhance_many(player_id: String, indices: Array, cap: int = -1) -> void:
 			total.pieces += 1
 			if result == "destroy":
 				total.destroyed += 1
+				entry.destroyed += 1
 				continue
 			var at := start + 1 if result == "success" else start
 			if result == "success":
 				total.success += 1
+				entry.success += 1
 			kept[at] = int(kept.get(at, 0)) + 1
 		player.bag.remove_at(i)
 		var levels := kept.keys()
@@ -1941,14 +1953,18 @@ func enhance_many(player_id: String, indices: Array, cap: int = -1) -> void:
 			player.bag.insert(i, one)
 			reached[int(at)] = int(reached.get(int(at), 0)) + int(kept[at])
 		# 먼저 적은 번호(i 뒤)는 한 칸이 levels.size() 칸이 된 만큼 밀린다
-		for j in picked.size():
-			picked[j] = int(picked[j]) + levels.size() - 1
-		for n in levels.size():
-			picked.append(i + n)
+		var grow := levels.size() - 1
+		for done in results:
+			done.to = (done.to as Array).map(func(v: int) -> int: return v + grow)
+		entry.to = range(i, i + levels.size())
+		results.append(entry)
+	var picked: Array = []  # 남은 칸의 새 가방 번호
+	for done in results:
+		picked.append_array(done.to)
 	picked.sort()
 	_notice("다중 강화 %d개 — 성공 %d · 파괴 %d" % [total.pieces, total.success, total.destroyed])
 	_events.append({
-		"type": "enhanceBatch", "cap": limit, "picked": picked,
+		"type": "enhanceBatch", "cap": limit, "picked": picked, "results": results,
 		"pieces": total.pieces, "success": total.success, "destroyed": total.destroyed,
 		"reached": reached,
 	})

@@ -658,6 +658,7 @@ func _case_ice_up() -> void:
 	# 파쇄 — 예약 하나가 followMs 뒤, 공격 × power × followPower 로
 	me.skill_upgrades = {"frost_pillar": ["shatter"]}
 	me.skill_ready_at = {}
+	me.cast_until = 0
 	w._combos.clear()
 	var now := Time.get_ticks_msec()
 	w.cast("me", "frost_pillar")
@@ -674,6 +675,7 @@ func _case_ice_up() -> void:
 	# 빙결 — 2초, 얼음 모양
 	me.skill_upgrades = {"frost_pillar": ["freeze"]}
 	me.skill_ready_at = {}
+	me.cast_until = 0
 	now = Time.get_ticks_msec()
 	w.cast("me", "frost_pillar")
 	var left := int(mob.stunned_until) - now

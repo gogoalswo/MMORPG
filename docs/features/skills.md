@@ -101,7 +101,7 @@
   켜면 `_hit_player` 가 피해만 0 으로 만들고 맞는 이벤트는 그대로 낸다.
   존을 옮겨도 유지되고(`join` 이 넘겨받는다), 저장에는 안 들어간다.
 - 스킬 필드: `power`(공격 배율) / `range` / `arc` / `maxTargets` /
-  `cooldown` / `projectile?` / `selfHeal?` / `hits?` / `hitGap?`.
+  `cooldown` / `projectile?` / `selfHeal?` / `hits?` / `hitGap?` / `delayMs?` / `castMs?`.
 - **연타(`hits`·`hitGap`)** (2026-09-23, 할퀴기) — 한 번 쓰면 `hits` 번 때린다.
   `power` 는 **한 대의** 배율이다. 첫 대는 누르는 순간, 나머지는 `hitGap`(ms)
   간격으로 `World.step` → `_run_combos` 가 넣는다.
@@ -113,6 +113,22 @@
     `hitGap` 과 같아야 한다 — `skill_fx_test.gd` 가 표와 맞춰 본다.
   - **옛 Colyseus 서버(`ZoneRoom`)는 `hits` 를 모른다** — 거기서는 한 대만 들어간다.
     고도 서버를 붙일 때 `World._run_combos` 를 옮긴다.
+- **시전 중에는 다른 스킬을 못 쓴다** (2026-09-24 요청: "스킬을 시전중에 다른 스킬
+  사용 못 하도록 막아"). 쿨타임은 스킬마다 따로라, 막지 않으면 연달아 눌러 앞 동작을
+  끊고 동작 하나에 판정 둘이 겹친다.
+  - 시전 시간은 표의 **`castMs`** = 스킬 **동작 클립 길이**다 (할퀴기 1000 · 낙뢰 1100 ·
+    천붕각 1450 · 빙주각 1000). 클립은 `scripts/blender/fighter_moves.py` 의 `CLIPS` —
+    **둘은 같이 고친다.** 짧으면 다음 스킬이 동작을 끊고, 길면 서 있는데도 안 나간다.
+  - `World.cast` 가 `player.cast_until = now + max(경직, castMs, 연타 마지막 대)` 를 걸고,
+    그 전에 오는 `cast` 는 **쿨타임을 돌리기 전에** 거른다 (거절된 스킬의 쿨타임이 안 돈다.
+    화면의 쿨타임 표시는 판정의 `skill_ready_at` 을 읽으므로 따로 고칠 게 없다).
+  - `castMs` 가 없는 스킬(동작이 없는 직업)은 경직과 같다. 연타 강화로 대 수가 늘어
+    마지막 대가 동작보다 늦으면 그때까지 늘린다.
+  - **평타는 막지 않는다** (요청 범위 밖). 자동 사냥은 시전이 끝날 때까지 평타도 안 넣는다
+    → [auto-hunt-and-targeting.md](auto-hunt-and-targeting.md).
+  - 옛 Colyseus 서버(`handleSkill`)에는 없다 — 고도 서버를 붙일 때 옮긴다.
+  - 테스트: `skill_test.gd` 의 `_case_lock`. 한 세계에서 여러 번 쏘는 케이스는
+    `me.skill_ready_at = {}` 와 함께 `me.cast_until = 0` 으로 시간이 지난 것을 흉내 낸다.
 - **회복기는 때리지 않는다** — `power: 0`, `maxTargets: 0`. 둘 다 하면 판정 경로가 갈린다.
 - **범위에 들어온 놈은 전부 맞는다 — 명수 상한이 없다** (2026-09-24 지시: "스킬 범위에
   들어오면 모두 피격되게 처리해. 명수 제한 없애"). `World._land` 가 `_pick_targets` 에

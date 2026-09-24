@@ -47,6 +47,14 @@ func _run() -> void:
 
 
 ## 액션바의 낙뢰를 누르면(= `World` 가 `skill` 이벤트를 낸다) 이펙트가 선다.
+## 낙뢰를 쏜다. **쿨타임(10초)을 비우고 쏜다** — 같은 스킬을 연달아 쏘는 테스트라
+## 쿨타임 끄기 스위치에 기대면 스위치를 끄는 날 같이 깨진다 (2026-09-24 에 실제로 깨졌다)
+func _cast(game: Node3D) -> void:
+	var player: Dictionary = game._transport._world._players[game._transport.my_id()]
+	player["skill_ready_at"] = {}
+	game._transport.send(&"skill", {"skill": "thunder_fall"})
+
+
 ## **실제 경로로 쏜다** — 이벤트만 흉내 내면 액션바·전송이 끊겨도 통과한다.
 ##
 ## 낙뢰는 Lv.30 스킬이라 **레벨과 포인트를 직접 올려 둔다.** 테스트 스위치
@@ -64,7 +72,7 @@ func _case_cast(game: Node3D) -> void:
 	if not ("thunder_fall" in bar):
 		_fail("액션바에 낙뢰가 없다 (%s) — 기본 직업이 격투가가 아니다" % str(bar))
 		return
-	game._transport.send(&"skill", {"skill": "thunder_fall"})
+	_cast(game)
 	for i in 4:
 		await process_frame
 	if _newest(game) == null:
@@ -355,7 +363,7 @@ func _case_red(game: Node3D) -> void:
 	for pair in [[true, "붉은"], [false, "푸른"]]:
 		if not pair[0]:
 			game._transport.send(&"debugResetUpgrades", {})
-		game._transport.send(&"skill", {"skill": "thunder_fall"})
+		_cast(game)
 		for i in 4:
 			await process_frame
 		var fx := _newest(game)
@@ -380,7 +388,7 @@ func _case_red(game: Node3D) -> void:
 func _case_wide(game: Node3D) -> void:
 	game._transport.send(&"debugResetUpgrades", {})
 	game._transport.send(&"debugUpgradeAll", {"slot": 1})
-	game._transport.send(&"skill", {"skill": "thunder_fall"})
+	_cast(game)
 	for i in 4:
 		await process_frame
 	var fx := _newest(game)
@@ -412,7 +420,7 @@ func _case_wide(game: Node3D) -> void:
 	while _newest(game) != null:
 		await process_frame
 	game._transport.send(&"debugResetUpgrades", {})
-	game._transport.send(&"skill", {"skill": "thunder_fall"})
+	_cast(game)
 	for i in 4:
 		await process_frame
 	fx = _newest(game)

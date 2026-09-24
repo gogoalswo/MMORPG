@@ -11,10 +11,11 @@ extends Control
 ##    아이템을 여러 개 한 번에 강화할 수 있게 … 강화 목표치를 설정해서 자동 강화" → 이 파일
 ##
 ## 위 탭 셋이 **무엇을** 두드릴지 고른다:
-##   한 개      — 연 장비 하나 (겹친 칸이면 한 개만 뗀다)   → enhanceItem {where, key, goal}
+##   한 개      — 연 장비 하나 (겹친 칸이면 한 개만 뗀다)   → enhanceItem {where, key}
 ##   같은 아이템 — 가방의 같은 id·등급 장비 전부            → enhanceBatch {mode: "item", …}
 ##   같은 등급   — 가방의 같은 등급 장비 전부               → enhanceBatch {mode: "grade", …}
-## 아래 **"자동"** 을 켜면 목표 단계(−/+)까지 부서지거나 닿을 때까지 이어서 두드린다.
+## 아래 **"자동"** 을 켜면 목표 단계(−/+)까지 부서지거나 닿을 때까지 **한 단계씩** 두드린다 —
+## 타이머가 박자마다 요청 하나를 보내고, 단추는 "중지" 가 된다 (`press` · `_on_tick`).
 ## 끄면 한 개씩 한 단계만. 일괄은 **끼고 있는 것을 뺀다** (판정 `World.enhance_batch`).
 ## 대상 규칙은 `Items.batch_match` 하나 — 팝업이 세는 수와 판정이 두드리는 수가 같다.
 ##
@@ -33,6 +34,8 @@ const GO_WIDTH := 170
 ## 일괄 뒤에는 가방 번호가 통째로 흔들려서 kept=false 로 알린다 (고른 칸을 비워야 한다)
 signal acted(kept: bool, shift: int)
 signal closed
+## 자동 강화 한 판이 끝났다 — game 이 채팅창에 한 줄 적는다 (단계마다 적으면 채팅이 덮인다)
+signal finished(head: String, text: String, good: bool)
 
 var panel: PanelContainer
 var title_line: Label
@@ -58,6 +61,13 @@ var ref: Dictionary = {}
 var _game  # game.gd — class_name 이 없어서 이름 없이 든다
 ## 누른 순간 대상 칸의 개수 — 결과 글자 "하나가 부서졌습니다" 에 쓴다
 var _pressed_count := 1
+## 자동 강화가 도는 중인가 — 단추가 "중지" 가 되고, 탭·자동·목표는 잠긴다
+var running := false
+## 한 단계 사이(초). 결과를 읽고 번쩍임이 가라앉을 만큼. 테스트가 줄인다
+var step_time := 0.4
+var _timer: Timer
+## 도는 한 판의 셈 — {steps, from, last, pieces, destroyed}
+var _run: Dictionary = {}
 
 
 static func make(game: Node) -> EnhancePopup:
@@ -169,6 +179,11 @@ func _build() -> void:
 
 	_game._close_button(panel, close, 0)
 
+	_timer = Timer.new()
+	_timer.name = "StepTimer"
+	_timer.timeout.connect(_on_tick)
+	add_child(_timer)
+
 
 ## 연다 — `where_index` 는 {where, index}. 탭은 "한 개", 자동은 끈 채로, 목표는 한 단계 위
 func open(where_index: Dictionary) -> void:
@@ -184,9 +199,15 @@ func open(where_index: Dictionary) -> void:
 
 
 func close() -> void:
+	hide_now()
+	closed.emit()
+
+
+## 닫는다 — 도는 자동 강화도 그 자리에서 멈춘다 (가방 단추로 한꺼번에 닫을 때도)
+func hide_now() -> void:
+	_halt()
 	visible = false
 	target = {}
-	closed.emit()
 
 
 func pick_mode(key: String) -> void:
@@ -239,7 +260,10 @@ func redraw() -> void:
 		var tab: Button = tabs[key]
 		tab.add_theme_color_override("font_color", _game.INV_GOLD_HI if on else _game.INV_DIM)
 		tab.add_theme_color_override("font_hover_color", _game.INV_GOLD_HI if on else _game.INV_TEXT)
-	goal = clampi(goal, _goal_floor(), Items.max_enhance())
+	# 도는 동안은 목표를 건드리지 않는다 — 한 개는 바닥이 "지금 + 1" 이라 오를 때마다
+	# 목표가 따라 올라가 끝나지 않았다 (+2 목표가 +6 에서 부서졌다)
+	if not running:
+		goal = clampi(goal, _goal_floor(), Items.max_enhance())
 	auto_button.text = "자동 켬" if auto else "자동 끔"
 	auto_button.add_theme_color_override("font_color", _game.INV_GOLD_HI if auto else _game.INV_TEXT)
 	goal_label.text = "+%d" % goal
@@ -251,6 +275,16 @@ func redraw() -> void:
 		_redraw_one()
 	else:
 		_redraw_batch()
+	# 도는 동안은 "중지" 하나만 산다
+	for key in tabs:
+		tabs[key].disabled = running
+	auto_button.disabled = running
+	if running:
+		goal_down.disabled = true
+		goal_up.disabled = true
+		go.text = "중지"
+		go.disabled = false
+		kind.text = ("자동 강화 중  →  +%d" % goal) if mode == "one" else ("%d바퀴째  →  +%d" % [int(_run.steps) + 1, goal])
 
 
 ## 한 개 — 이름(등급 색) · `+N → +N+1`(자동이면 목표) · 성공률 · 실패 시 파괴 ·
@@ -354,22 +388,46 @@ func _percent(odds: float) -> String:
 	return "%.1f%%" % (odds * 100.0)
 
 
-## "강화" — 한 개는 enhanceItem, 일괄은 enhanceBatch. 결과 글자는 판정이 낸 이벤트로 채운다
-## (`show_result`). **대상은 결과를 따라간다** — 부서지면 비우고, 겹친 칸에서 뗀 것이 오르면
-## 바로 뒤 칸(뗀 것)으로 옮긴다. 일괄 뒤에는 가방 번호가 흔들려서 한 개 대상도 비운다
+## "강화" — 자동이 꺼져 있으면 한 번, 켜져 있으면 **한 단계씩 되풀이**를 시작한다
+## (2026-09-24 "한 단계씩 연출 넣어"). 도는 동안 단추는 "중지" 이고, 다시 누르면 멈춘다.
+## 판정은 매 단계 서버가 한다 — 요청 하나가 한 번이라, 멈추면 그 자리에서 정말 멈춘다
 func press() -> void:
+	if running:
+		_finish(true)
+		return
 	result.text = ""
+	if not auto:
+		_step()
+		redraw()
+		return
+	if mode == "one":
+		if _stack().is_empty():
+			return
+		_run = {"steps": 0, "from": int(_stack().get("enhance", 0)), "pieces": 0, "destroyed": 0}
+	else:
+		var pieces := _batch_pieces()
+		if pieces == 0:
+			return
+		_run = {"steps": 0, "from": 0, "pieces": pieces, "destroyed": 0}
+	running = true
+	_step()
+	_timer.start(step_time)
+	redraw()
+
+
+## 한 단계 — 한 개는 enhanceItem, 일괄은 enhanceBatch 한 바퀴(대상마다 한 번씩).
+## **대상은 결과를 따라간다** — 부서지면 비우고, 겹친 칸에서 뗀 것이 오르면 바로 뒤 칸(뗀 것)으로
+## 옮긴다. 일괄 뒤에는 가방 번호가 흔들려서 한 개 대상(가방)도 비운다
+func _step() -> void:
 	if mode != "one":
-		var targets := batch_targets()
-		if targets.is_empty():
+		if _batch_pieces() == 0:
 			return
 		_game._transport.send(&"enhanceBatch", {
-			"mode": mode, "id": str(ref.id), "grade": int(ref.grade), "goal": goal if auto else -1,
+			"mode": mode, "id": str(ref.id), "grade": int(ref.grade), "cap": goal if auto else -1,
 		})
 		if str(target.get("where", "")) != "equip":
 			target = {}
 		acted.emit(false, 0)
-		redraw()
 		return
 
 	var stack := _stack()
@@ -377,14 +435,13 @@ func press() -> void:
 		return
 	var level := int(stack.get("enhance", 0))
 	_pressed_count = int(stack.get("count", 1))
-	var goal_sent := goal if auto else -1
 	if str(target.where) == "equip":
 		var slot := str(Items.slots()[int(target.index)])
-		_game._transport.send(&"enhanceItem", {"where": "equip", "key": slot, "goal": goal_sent})
+		_game._transport.send(&"enhanceItem", {"where": "equip", "key": slot})
 		acted.emit(not _stack().is_empty(), 0)
 	else:
 		var before := _bag().size()
-		_game._transport.send(&"enhanceItem", {"where": "bag", "key": int(target.index), "goal": goal_sent})
+		_game._transport.send(&"enhanceItem", {"where": "bag", "key": int(target.index)})
 		var after := _bag().size()
 		if after < before:
 			target = {}
@@ -394,14 +451,85 @@ func press() -> void:
 			acted.emit(true, 1)
 		else:
 			acted.emit(int(_stack().get("enhance", 0)) > level, 0)
+
+
+## 일괄 대상 개수(겹친 칸은 개수대로)
+func _batch_pieces() -> int:
+	var pieces := 0
+	for pair in batch_targets():
+		pieces += int(pair[1].get("count", 1))
+	return pieces
+
+
+## 타이머 한 박자 — 더 갈 수 있으면 한 단계, 아니면 끝(목표에 닿았거나 부서졌거나 대상이 없다)
+func _on_tick() -> void:
+	if not running:
+		return
+	if not visible:
+		_halt()
+		return
+	var more := false
+	if mode == "one":
+		var stack := _stack()
+		more = not stack.is_empty() and int(stack.get("enhance", 0)) < goal
+	else:
+		more = _batch_pieces() > 0
+	if more:
+		_step()
+		redraw()
+	else:
+		_finish(false)
+
+
+func _halt() -> void:
+	running = false
+	if _timer != null:
+		_timer.stop()
+
+
+## 자동 강화 한 판을 맺는다 — 결과 줄에 요약, 채팅에 한 줄(`finished`)
+func _finish(stopped: bool) -> void:
+	_halt()
+	var head := "자동 강화 중지" if stopped else "자동 강화"
+	var text := ""
+	var good := true
+	var steps := int(_run.get("steps", 0))
+	if mode == "one":
+		var stack := _stack()
+		if stack.is_empty():
+			text = "+%d 에서 부서졌습니다  (%d번)" % [int(_run.get("last", _run.from)), steps]
+			good = false
+		elif int(stack.get("enhance", 0)) >= goal:
+			text = "완료!  +%d → +%d  (%d번)" % [int(_run.from), int(stack.enhance), steps]
+		else:
+			text = "+%d → +%d 에서 멈췄습니다  (%d번)" % [int(_run.from), int(stack.enhance), steps]
+	else:
+		var left := _batch_pieces()
+		var lost := int(_run.destroyed)
+		var reach := int(_run.pieces) - lost - left
+		text = "%d개 중 +%d 도달 %d개 · 파괴 %d개" % [int(_run.pieces), goal, reach, lost]
+		if left > 0:
+			text += " · 남은 것 %d개" % left
+		good = reach > 0
+	result.text = text
+	result.add_theme_color_override("font_color", _game.INV_GOLD_HI if good else _game.INV_WARN)
+	finished.emit(head, text, good)
 	redraw()
 
 
-## 판정의 결과 이벤트(enhanceResult · enhanceBatch)를 결과 한 줄로
+## 번쩍 — 성공은 금빛, 파괴는 붉게. 큰 칸이 밝아졌다가 0.3초에 걸쳐 돌아온다
+func _flash(good: bool) -> void:
+	icon.modulate = Color(1.7, 1.45, 0.8) if good else Color(1.8, 0.55, 0.45)
+	create_tween().tween_property(icon, "modulate", Color.WHITE, 0.3)
+
+
+## 판정의 결과 이벤트(enhanceResult · enhanceBatch)를 결과 한 줄로. 자동 중이면 단계를 센다
 func show_result(type: StringName, payload: Dictionary) -> void:
 	if not visible:
 		return
 	var good: bool
+	if running:
+		_run.steps = int(_run.steps) + 1
 	if type == &"enhanceBatch":
 		var reached: Dictionary = payload.get("reached", {})
 		var keys := reached.keys()
@@ -412,24 +540,28 @@ func show_result(type: StringName, payload: Dictionary) -> void:
 		result.text = "%d개 중 %d개 성공 · %d개 파괴" % [
 			int(payload.pieces), int(payload.success), int(payload.destroyed)
 		]
+		if running:
+			_run.destroyed = int(_run.destroyed) + int(payload.destroyed)
+			result.text = "%d바퀴  ·  " % int(_run.steps) + result.text
 		if not kept.is_empty():
 			result.text += "\n남은 것 " + " · ".join(kept)
 		good = int(payload.success) > 0
 	else:
 		var level := int(payload.get("level", 0))
-		var tries := int(payload.get("tries", 1))
+		var from := int(payload.get("from", level))
+		if running:
+			_run.last = from
 		match str(payload.get("result", "")):
 			"success":
-				result.text = ("자동 강화 성공!  +%d  (%d번)" % [level, tries]) if payload.get("auto", false) \
-					else "강화 성공!  +%d" % level
+				result.text = ("+%d → +%d 성공" % [from, level]) if running else "강화 성공!  +%d" % level
 				good = true
 			"destroy":
 				var what := "하나가 부서졌습니다" if _pressed_count > 1 else "부서졌습니다"
-				result.text = ("+%d 에서 %s  (%d번)" % [level, what, tries]) if payload.get("auto", false) \
-					else "강화 실패 — %s" % what
+				result.text = ("+%d 에서 %s" % [from, what]) if running else "강화 실패 — %s" % what
 				good = false
 			_:
 				result.text = "유지  +%d" % level
 				good = true
 	result.add_theme_color_override("font_color", _game.INV_GOLD_HI if good else _game.INV_WARN)
+	_flash(good)
 	redraw()

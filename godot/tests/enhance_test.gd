@@ -19,7 +19,6 @@ func _init() -> void:
 	_case_worn()
 	_case_max()
 	_case_reach()
-	_case_auto()
 	_case_batch_item()
 	_case_batch_grade()
 	_case_batch_auto()
@@ -172,46 +171,6 @@ func _case_reach() -> void:
 	_eq("+5→+5 는 1", Items.enhance_reach_odds(5, 5), 1.0)
 
 
-## 자동 강화 (2026-09-24 요청: "강화 목표치를 설정해서 자동 강화") — +goal 에 닿거나
-## 부서질 때까지 이어서 두드린다. 중간에서 멈추지 않는다
-func _case_auto() -> void:
-	var s := _world()
-	var w: World = s[0]
-	var me: Dictionary = s[1]
-	w._rng.seed = 11
-	var seen := {"success": false, "destroy": false}
-	for i in 300:
-		me.bag.clear()
-		me.bag.append(_gear(2))
-		w.enhance_item("me", "bag", 0, 5)
-		var event: Dictionary = {}
-		for e in w.drain_events():
-			if str(e.get("type", "")) == "enhanceResult":
-				event = e
-		_eq("자동 표시", event.get("auto", false), true)
-		if me.bag.is_empty():
-			_eq("부서진 이벤트", str(event.result), "destroy")
-			seen.destroy = true
-		else:
-			_eq("살아남으면 목표에", int(me.bag[0].enhance), 5)
-			_eq("성공 이벤트 단계", int(event.level), 5)
-			_eq("+2→+5 는 세 번", int(event.tries), 3)
-			seen.success = true
-		if seen.success and seen.destroy:
-			break
-	if not (seen.success and seen.destroy):
-		print("  실패 자동 강화에서 성공·파괴를 다 못 봤다: %s" % seen)
-		_failed += 1
-	# 목표가 지금 단계 이하면 한 번만 두드린다 (자동이 아니다)
-	me.bag.clear()
-	me.bag.append(_gear(4))
-	w.enhance_item("me", "bag", 0, 4)
-	for e in w.drain_events():
-		if str(e.get("type", "")) == "enhanceResult":
-			_eq("목표 ≤ 지금이면 자동 아님", e.auto, false)
-			_eq("한 번", int(e.tries), 1)
-
-
 ## 같은 아이템 일괄 — 같은 id·등급만, 겹친 칸은 한 개씩, 끼운 것·다른 것·재료는 그대로
 func _case_batch_item() -> void:
 	var s := _world()
@@ -232,7 +191,6 @@ func _case_batch_item() -> void:
 		if str(e.get("type", "")) == "enhanceBatch":
 			event = e
 	_eq("대상 개수", int(event.get("pieces", 0)), 5)
-	_eq("한 번씩", int(event.get("tries", 0)), 5)
 	_eq("성공+파괴 = 대상", int(event.success) + int(event.destroyed), 5)
 	_eq("끼운 것 그대로", int(me.equipped.weapon.enhance), 1)
 	var left := 0
@@ -278,28 +236,39 @@ func _batch_pieces(w: World, who: String, mode: String) -> int:
 	return 0
 
 
-## 일괄 자동 — 살아남은 것은 전부 목표 단계이고, 끝난 단계끼리 다시 겹친다
+## 일괄 한 바퀴에 목표(cap) — +cap 아래만 한 번씩 두드린다. 팝업의 자동 강화는 이 바퀴를
+## 대상이 없어질 때까지 되풀이한다 (2026-09-24 "한 단계씩 연출") → 끝나면 남은 것은 전부 +cap
 func _case_batch_auto() -> void:
 	var s := _world()
 	var w: World = s[0]
 	var me: Dictionary = s[1]
 	w._rng.seed = 7
-	var pile := _gear(0)
+	var pile := _gear(1)
 	pile.count = 30
 	me.bag.append(pile)
-	me.bag.append(_gear(4))  # 목표(+3) 이상은 빠진다
+	me.bag.append(_gear(3))  # 목표(+3) 이상은 빠진다
 	w.enhance_batch("me", "item", "g1_w", 1, 3)
-	var event: Dictionary = {}
+	var first := 0
 	for e in w.drain_events():
 		if str(e.get("type", "")) == "enhanceBatch":
-			event = e
-	_eq("대상 30", int(event.get("pieces", 0)), 30)
-	_eq("자동", event.get("auto", false), true)
-	var reached: Dictionary = event.get("reached", {})
-	_eq("남은 것은 +3 뿐", reached.keys(), [3] if int(event.success) > 0 else [])
+			first = int(e.pieces)
+	_eq("첫 바퀴는 +3 아래 30개만", first, 30)
+	var rounds := 1
+	while rounds < 20:
+		var pieces := 0
+		w.enhance_batch("me", "item", "g1_w", 1, 3)
+		for e in w.drain_events():
+			if str(e.get("type", "")) == "enhanceBatch":
+				pieces = int(e.pieces)
+		if pieces == 0:
+			break
+		rounds += 1
+	var levels: Array = me.bag.map(func(x: Dictionary) -> int: return int(x.enhance))
+	_eq("다 돌면 +3 뿐", levels.filter(func(v: int) -> bool: return v != 3).size(), 0)
 	var at3: Array = me.bag.filter(func(x: Dictionary) -> bool: return int(x.enhance) == 3)
-	if int(event.success) > 1:
-		_eq("+3 은 한 칸에 겹친다", at3.size(), 1)
-		_eq("겹친 수", int(at3[0].get("count", 1)), int(event.success))
-	_eq("+4 는 그대로", me.bag.filter(func(x: Dictionary) -> bool: return int(x.enhance) == 4).size(), 1)
-	print("  일괄 자동 +0→+3: 30개 중 %d개 성공 (기댓값 약 15)" % int(event.success))
+	var alive := 0
+	for stack in at3:
+		alive += int(stack.get("count", 1))
+	print("  일괄 +1→+3 을 %d바퀴: 30개 중 %d개 도달 (기댓값 약 17), 원래 +3 하나 포함 %d칸" % [
+		rounds, alive - 1, at3.size()
+	])

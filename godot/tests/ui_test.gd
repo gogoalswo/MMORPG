@@ -1236,19 +1236,43 @@ func _case_enhance_batch(game: Node, me: Dictionary) -> void:
 	var rows: Array = pop.info.get_children().map(func(l: Label) -> String: return l.text)
 	if not rows.has("예상 성공") or not rows.has("끼고 있는 것"):
 		_fail("일괄 표에 예상 성공·끼고 있는 것이 없다: %s" % str(rows))
+	# 자동은 **한 단계씩** 돈다 (2026-09-24 "한 단계씩 연출 넣어") — 도는 동안 단추는 "중지",
+	# 탭·자동은 잠기고, 채팅은 단계마다가 아니라 끝날 때 한 줄
+	var chat_before: int = game._chat.lines().size()
+	pop.step_time = 0.05
 	pop.go.pressed.emit()
-	for i in 3:
+	await process_frame
+	if not pop.running or pop.go.text != "중지" or not pop.tabs["one"].disabled:
+		_fail("자동을 눌렀는데 도는 중이 아니다 (%s · '%s')" % [pop.running, pop.go.text])
+	var waited := 0
+	while pop.running and waited < 600:
 		await process_frame
-	if not pop.result.text.contains("개 중"):
-		_fail("일괄 강화 결과 줄이 '%s'" % pop.result.text)
+		waited += 1
+	if pop.running:
+		_fail("자동 강화가 %d프레임이 지나도 안 끝난다" % waited)
+	if not pop.result.text.contains("도달"):
+		_fail("자동 일괄 결과 줄이 '%s'" % pop.result.text)
 	var line: Array = game._chat.lines().back()
-	if str(line[0]) != "일괄 강화":
-		_fail("일괄 강화 뒤 채팅 마지막 줄이 %s" % str(line))
+	if str(line[0]) != "자동 강화" or game._chat.lines().size() != chat_before + 1:
+		_fail("자동 뒤 채팅이 %d줄 늘고 마지막이 %s (한 줄이어야 한다)" % [
+			game._chat.lines().size() - chat_before, str(line)
+		])
 	if not game._bag_pick.is_empty():
 		_fail("일괄 뒤에 고른 칸이 남았다 (%s)" % game._bag_pick)
 	if count.call(3) != 0:
 		_fail("+3 자동 뒤에 +3 아래 같은 아이템이 %d개 남았다" % count.call(3))
-	print("  일괄 자동 +3: '%s' · 채팅 %s" % [pop.result.text.replace("\n", " / "), str(line)])
+	print("  일괄 자동 +3: '%s' · 채팅 %s" % [pop.result.text, str(line)])
+	# 중지 — 목표를 +9 로 올려 돌리고 바로 누르면 그 자리에서 멈춘다
+	for i in 9:
+		pop.goal_up.pressed.emit()
+	if count.call(Items.max_enhance()) > 0:
+		pop.step_time = 5.0
+		pop.go.pressed.emit()
+		await process_frame
+		pop.go.pressed.emit()
+		await process_frame
+		if pop.running or str(game._chat.lines().back()[0]) != "자동 강화 중지":
+			_fail("중지를 눌렀는데 %s · 채팅 %s" % [pop.running, str(game._chat.lines().back())])
 	# 같은 등급 탭 — 등급이 같으면 다른 아이템도 센다
 	pop.tabs["grade"].pressed.emit()
 	await process_frame
@@ -1259,3 +1283,20 @@ func _case_enhance_batch(game: Node, me: Dictionary) -> void:
 	await process_frame
 	if not pop.go.disabled:
 		_fail("일괄 뒤 한 개 탭인데 강화 단추가 켜져 있다")
+	# 한 개 자동 — +0 하나를 +2 까지. 닿으면 "완료", 부서지면 "부서졌습니다"
+	me.bag.append({"id": ref_id, "grade": 1, "enhance": 0, "options": []})
+	pop.open({"where": "bag", "index": me.bag.size() - 1})
+	pop.auto_button.pressed.emit()
+	pop.goal_up.pressed.emit()
+	pop.step_time = 0.05
+	pop.go.pressed.emit()
+	var ticks := 0
+	while pop.running and ticks < 600:
+		await process_frame
+		ticks += 1
+	if pop.running or not (pop.result.text.contains("완료") or pop.result.text.contains("부서졌")):
+		_fail("한 개 자동 +2 결과가 '%s' (도는 중 %s)" % [pop.result.text, pop.running])
+	var left: Dictionary = game._stack_at(pop.target) if not pop.target.is_empty() else {}
+	if not left.is_empty() and int(left.get("enhance", 0)) != 2:
+		_fail("목표 +2 인데 +%d 에서 멈췄다" % int(left.get("enhance", 0)))
+	print("  한 개 자동 +2: '%s'" % pop.result.text)

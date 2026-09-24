@@ -50,6 +50,7 @@ func _case_fighter() -> void:
 	var idle_tracks: int = rig._anim.get_animation("Idle").get_track_count()
 	var moves: Array = load("res://game/game.gd").SWING_CLIPS.duplicate()
 	moves.append_array(load("res://game/game.gd").SKILL_CLIPS.values())
+	moves.append(load("res://game/game.gd").HIT_CLIP)
 	for clip in moves:
 		if not rig.has_clip(clip):
 			_fail("격투가에 %s 동작이 없다 — add-clips.mjs 를 돌렸나" % clip)
@@ -157,6 +158,38 @@ func _check_moves(game: Node3D) -> void:
 		_fail("동작이 끝났는데 대기가 아니라 %s" % rig._playing)
 	else:
 		print("  동작: 평타 잽·스트레이트 번갈아, 스킬마다 제 동작, 끝나면 대기")
+
+	# 맞으면 움찔한다 — 서 있을 때는 튼다
+	var hit := {"target": me, "target_kind": "player", "amount": 5, "killed": false}
+	game._on_event(&"hit", hit)
+	await process_frame
+	await process_frame
+	if rig._playing != "Hit":
+		_fail("서 있다 맞았는데 %s 를 튼다 (Hit 이어야 한다)" % rig._playing)
+	# 스킬 동작은 맞아도 끊지 않는다
+	game._on_event(&"skill", {"id": me, "skill": "frost_pillar", "root_ms": 400})
+	await process_frame
+	game._on_event(&"hit", hit)
+	await process_frame
+	await process_frame
+	if rig._playing != "FrostStomp":
+		_fail("스킬 동작 중에 맞았더니 %s 로 끊겼다" % rig._playing)
+	# 평타는 주먹이 닿기 전이면 안 끊고, 닿은 뒤면 끊는다
+	game._on_event(&"swing", {"id": me, "root_ms": 400})
+	await process_frame
+	game._on_event(&"hit", hit)
+	await process_frame
+	var swing_clip: String = rig._playing
+	if swing_clip == "Hit":
+		_fail("평타를 막 냈는데 맞자마자 끊겼다")
+	game._move_started -= game.HIT_OVER_SWING_MS
+	game._on_event(&"hit", hit)
+	await process_frame
+	await process_frame
+	if rig._playing != "Hit":
+		_fail("주먹이 닿은 뒤 맞았는데 %s 그대로다" % rig._playing)
+	else:
+		print("  맞음: 서 있으면 움찔 · 스킬 중엔 안 끊음 · 평타는 닿은 뒤면 끊음")
 
 
 ## 실제 화면에서 초원까지 걸어가 몬스터가 모델로 서 있는지 본다

@@ -34,6 +34,7 @@ three.js 웹 클라이언트를 **고도 엔진으로 갈아타는 중**이다. 
 | `godot/game/skill_fx.gd` | **스킬 이펙트.** 지금은 할퀴기 하나 — `CPUParticles3D` 여섯으로 짓는다 (판 메시 금지) |
 | `godot/game/portal.gd` · `gate_panel.gd` | **차원문 아치와 창.** 창은 조각을 앵커로 조립한다 → [portal-ui.md](portal-ui.md) |
 | `godot/game/dungeon_panel.gd` | **던전 창.** `GatePanel` 을 물려받아 종류 → 단계 두 겹으로 줄을 단다 → [dungeons.md](dungeons.md) |
+| `godot/game/enhance_popup.gd` | **강화 팝업.** 한 개 · 같은 아이템 · 같은 등급 탭과 목표 자동 강화. 조각은 game.gd 것을 빌린다 → [items.md](items.md) "강화" |
 | `godot/game/select_ring.gd` | **골라 둔 몬스터 발밑의 고리.** 반지름·두께·도는 속도가 상수다 |
 | `godot/game/hp_bar_3d.gd` | **머리 위 체력 막대.** 내 것은 늘, 몬스터는 고른 놈과 때린 놈만 |
 | `godot/game/hurt_flash.gd` | 내가 맞았을 때 화면 가장자리 비네트 |

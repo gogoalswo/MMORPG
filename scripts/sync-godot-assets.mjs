@@ -12,6 +12,7 @@
  */
 import { copyFileSync, mkdirSync, statSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { shrinkGlb } from './shrink-glb-textures.mjs';
+import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -118,7 +119,9 @@ console.log(`${copied}개 새로 복사했다 -> godot/assets/`);
 async function run({ names, from, to, shrink }) {
   mkdirSync(to, { recursive: true });
   // 원본이 안 바뀌었으면 다시 쓰지 않는다. 고도가 매번 다시 임포트하지 않게.
-  // 줄인 파일은 크기가 원본과 다르므로 무엇으로 만들었는지를 따로 적어 둔다
+  // 줄인 파일은 크기가 원본과 다르므로 무엇으로 만들었는지를 따로 적어 둔다.
+  // **크기가 아니라 내용 해시로 본다** — 블렌더 동작을 다시 붙이면 키 값만 바뀌어
+  // 크기가 같은데, 크기로 보면 옛 모델이 남아 테스트가 옛것으로 돈다 (2026-09-24)
   const stampPath = join(to, '.source.json');
   const stamp = existsSync(stampPath) ? JSON.parse(readFileSync(stampPath, 'utf8')) : {};
   let n = 0;
@@ -130,7 +133,8 @@ async function run({ names, from, to, shrink }) {
       continue;
     }
     const dst = join(to, name);
-    const key = `${statSync(src).size}:${shrink ? MAX_TEXTURE : 0}`;
+    const hash = createHash('sha1').update(readFileSync(src)).digest('hex');
+    const key = `${hash}:${shrink ? MAX_TEXTURE : 0}`;
     if (existsSync(dst) && stamp[name] === key) {
       console.log(`${name.padEnd(24)} 그대로`);
       continue;

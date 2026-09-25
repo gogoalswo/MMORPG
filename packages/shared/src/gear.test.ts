@@ -22,6 +22,7 @@ import {
   fullSet,
   gradeOf,
   gradeRatio,
+  GEAR_ATK_FACTOR,
   HERO_GRADE,
   HERO_OVER_COMMON,
   gradeSum,
@@ -71,10 +72,11 @@ test('레벨에서 낄 수 있는 최고 등급 — 경계가 착용 레벨과 �
 });
 
 test('스탯 예산 — 등급7 풀세트가 문서의 값과 같다', () => {
-  // 문서: "공격력 7286% / 방어력 4372% / HP 2550% / 치확 50% / 치피 +100% / 공속 +20% / 이동 +25%"
-  // 2026-09-24 에 등급 배수가 커졌다 (공 856 · 방 514 · HP 300 → 위 값)
+  // 문서: "공격력 3643% / 방어력 4372% / HP 2550% / 치확 50% / 치피 +100% / 공속 +20% / 이동 +25%"
+  // 2026-09-24 에 등급 배수가 커졌다 (공 856 · 방 514 · HP 300 → 7286 · 4372 · 2550),
+  // 2026-09-25 에 공격력만 계수 0.5 로 반을 냈다 (7286 → 3643)
   const b = statBudget(7);
-  assert.equal(Math.round(b.atk), 7286);
+  assert.equal(Math.round(b.atk), 3643);
   assert.equal(Math.round(b.df), 4372);
   assert.equal(Math.round(b.hp), 2550);
   assert.equal(b.crit, 0.5);
@@ -130,8 +132,8 @@ test('등급7 슬롯 수치 (무강 → 강화 4단)', () => {
   const at = (slot: Parameters<typeof slotStats>[0], step: number) => slotStats(slot, 7, step);
   const r = (v: number) => Math.round(v);
 
-  assert.equal(r(at('weapon', 1).atk), 3643);
-  assert.equal(r(at('weapon', 4).atk), 4749);
+  assert.equal(r(at('weapon', 1).atk), 1822);
+  assert.equal(r(at('weapon', 4).atk), 2375);
 
   assert.equal(r(at('armor', 1).df), 1457);
   assert.equal(r(at('armor', 4).df), 1900);
@@ -148,8 +150,8 @@ test('등급7 슬롯 수치 (무강 → 강화 4단)', () => {
   assert.equal(r(at('boots', 1).move * 100), 25);
 
   for (const slot of ['necklace', 'ring'] as const) {
-    assert.equal(r(at(slot, 1).atk), 1822, `${slot} 공격력`);
-    assert.equal(r(at(slot, 4).atk), 2375, `${slot} 공격력(4단)`);
+    assert.equal(r(at(slot, 1).atk), 911, `${slot} 공격력`);
+    assert.equal(r(at(slot, 4).atk), 1187, `${slot} 공격력(4단)`);
     assert.equal(r(at(slot, 1).df), 729, `${slot} 방어력`);
     assert.equal(r(at(slot, 4).df), 950, `${slot} 방어력(4단)`);
     assert.equal(r(at(slot, 1).hp), 425, `${slot} HP`);
@@ -222,17 +224,20 @@ test('풀세트 6칸이 등급 예산을 정확히 나눠 갖는다', () => {
     const set = fullSet(g);
     assert.equal(set.length, EQUIP_SLOTS.length);
     const sum = set.reduce((t, item) => t + item.stats.atk, 0);
-    assert.ok(Math.abs(sum - gradeSum(g)) < 1e-9, `등급 ${g} 공격력 합이 ${sum}`);
+    assert.ok(Math.abs(sum - gradeSum(g) * GEAR_ATK_FACTOR) < 1e-9, `등급 ${g} 공격력 합이 ${sum}`);
   }
 });
 
-test('영웅 무기는 일반 무기의 피해 3배다 — 맨몸 + 무기 하나, 무강', () => {
-  // 2026-09-24 지시: "등급간 배수를 키워. 일반이 100%라면 영웅은 3배 정도".
-  // 피해는 `1 + 장비%` 에 비례한다 (공격력에 곱하고, 피해는 공격력에 정비례)
+test('등급 배수는 ×2.434 에 묶여 있다 — 공격력 계수를 내려도 안 가팔라진다', () => {
+  // 2026-09-24 지시: "등급간 배수를 키워. 일반이 100%라면 영웅은 3배 정도" 로 역산한 배수다.
+  // 2026-09-25 에 장비 공격력 % 를 반으로 내렸다("반으로 줄여") — 배수는 그대로 두고, 영웅/일반
+  // 무기 피해는 3배에서 약 2.1배가 됐다. 피해는 `1 + 장비%` 에 비례한다
+  assert.equal(Math.round(gradeRatio() * 1000) / 1000, 2.434);
+  assert.equal(GEAR_ATK_FACTOR, 0.5);
   const common = 1 + slotStats('weapon', 1).atk / 100;
   const hero = 1 + slotStats('weapon', HERO_GRADE).atk / 100;
-  assert.ok(Math.abs(hero / common - HERO_OVER_COMMON) < 1e-9, `영웅/일반 = ${hero / common}`);
-  assert.equal(Math.round(gradeRatio() * 1000) / 1000, 2.434);
+  assert.equal(Math.round((hero / common) * 100) / 100, 2.08, `영웅/일반 = ${hero / common}`);
+  assert.ok(HERO_OVER_COMMON === 3, '배수를 역산한 목표는 계수 1.0 시절 기준 3배다');
 });
 
 test('등급이 오르면 모든 슬롯이 모든 축에서 세진다', () => {

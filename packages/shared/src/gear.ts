@@ -38,8 +38,14 @@ export const GRADE_SUM_START = 35;
  * 저레벨 캐릭이 고등급 장비를 껴도 상위 사냥터에서 두 대 맞고 죽어야 게이팅이
  * 자동으로 걸린다. 반대로 공격력을 장비 쪽에 몰면 파밍이 **사냥 속도**를 올려 줄
  * 뿐 게이팅을 부수지 않는다.
+ *
+ * **공격력은 2026-09-25 에 1.0 → 0.5 로 반을 냈다** ★ (지시: "공격력이 과하게 강하다.
+ * 반으로 줄여" — 고른 안: "장비 공격력 % 만 절반"). 맨몸 공격력은 그대로라 초반은 거의
+ * 안 바뀌고, 장비가 큰 후반만 절반에 가까워진다. 몬스터 HP 는 그대로 뒀다(지시: "냅둬")
+ * — 그래서 잡는 데 드는 타수가 후반일수록 늘어난다. 등급 배수는 이 계수와 무관하게
+ * ×2.434 에 묶어 뒀다 (`gradeRatio`).
  */
-export const GEAR_ATK_FACTOR = 1.0;
+export const GEAR_ATK_FACTOR = 0.5;
 export const GEAR_DEF_FACTOR = 0.6;
 export const GEAR_HP_FACTOR = 0.35;
 
@@ -121,7 +127,10 @@ export const HERO_GRADE = 4;
  * 몬스터는 세 열 모두 설계 비율만큼 다시 구웠다 (`monsterTable.ts` 머리말).
  */
 export function gradeRatio(): number {
-  const w1 = (GRADE_SUM_START * GEAR_ATK_FACTOR * (SLOT_SHARE.weapon.atk ?? 0)) / 100;
+  // w₁ 은 **계수 1.0 시절의 무기 %(17.5%)** 로 고정한다. 2026-09-25 에 공격력 계수를 0.5 로
+  // 내렸는데 여기에 그 계수를 쓰면 w₁ 이 8.75% 가 되어 배수가 ×2.96 으로 도리어 가팔라진다.
+  // 그래서 지금 영웅/일반 무기 피해는 3배가 아니라 (1 + 126.2%) / (1 + 8.75%) = 약 2.1배다
+  const w1 = (GRADE_SUM_START * (SLOT_SHARE.weapon.atk ?? 0)) / 100;
   return ((HERO_OVER_COMMON * (1 + w1) - 1) / w1) ** (1 / (HERO_GRADE - 1));
 }
 

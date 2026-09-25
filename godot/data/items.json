@@ -7,7 +7,7 @@
       "grade": 1,
       "level": 1,
       "bonus": {
-        "attack": 17.5,
+        "attack": 8.8,
         "defense": 0,
         "maxHp": 0,
         "crit": 0,
@@ -67,7 +67,7 @@
       "grade": 1,
       "level": 1,
       "bonus": {
-        "attack": 8.8,
+        "attack": 4.4,
         "defense": 3.5,
         "maxHp": 2,
         "crit": 0,
@@ -82,7 +82,7 @@
       "grade": 1,
       "level": 1,
       "bonus": {
-        "attack": 8.8,
+        "attack": 4.4,
         "defense": 3.5,
         "maxHp": 2,
         "crit": 0,
@@ -97,7 +97,7 @@
       "grade": 2,
       "level": 31,
       "bonus": {
-        "attack": 42.6,
+        "attack": 21.3,
         "defense": 0,
         "maxHp": 0,
         "crit": 0,
@@ -157,7 +157,7 @@
       "grade": 2,
       "level": 31,
       "bonus": {
-        "attack": 21.3,
+        "attack": 10.7,
         "defense": 8.5,
         "maxHp": 5,
         "crit": 0,
@@ -172,7 +172,7 @@
       "grade": 2,
       "level": 31,
       "bonus": {
-        "attack": 21.3,
+        "attack": 10.7,
         "defense": 8.5,
         "maxHp": 5,
         "crit": 0,
@@ -187,7 +187,7 @@
       "grade": 3,
       "level": 61,
       "bonus": {
-        "attack": 103.7,
+        "attack": 51.9,
         "defense": 0,
         "maxHp": 0,
         "crit": 0,
@@ -247,7 +247,7 @@
       "grade": 3,
       "level": 61,
       "bonus": {
-        "attack": 51.9,
+        "attack": 25.9,
         "defense": 20.7,
         "maxHp": 12.1,
         "crit": 0,
@@ -262,7 +262,7 @@
       "grade": 3,
       "level": 61,
       "bonus": {
-        "attack": 51.9,
+        "attack": 25.9,
         "defense": 20.7,
         "maxHp": 12.1,
         "crit": 0,
@@ -277,7 +277,7 @@
       "grade": 4,
       "level": 91,
       "bonus": {
-        "attack": 252.5,
+        "attack": 126.2,
         "defense": 0,
         "maxHp": 0,
         "crit": 0,
@@ -337,7 +337,7 @@
       "grade": 4,
       "level": 91,
       "bonus": {
-        "attack": 126.2,
+        "attack": 63.1,
         "defense": 50.5,
         "maxHp": 29.5,
         "crit": 0,
@@ -352,7 +352,7 @@
       "grade": 4,
       "level": 91,
       "bonus": {
-        "attack": 126.2,
+        "attack": 63.1,
         "defense": 50.5,
         "maxHp": 29.5,
         "crit": 0,
@@ -367,7 +367,7 @@
       "grade": 5,
       "level": 121,
       "bonus": {
-        "attack": 614.7,
+        "attack": 307.4,
         "defense": 0,
         "maxHp": 0,
         "crit": 0,
@@ -427,7 +427,7 @@
       "grade": 5,
       "level": 121,
       "bonus": {
-        "attack": 307.4,
+        "attack": 153.7,
         "defense": 122.9,
         "maxHp": 71.7,
         "crit": 0,
@@ -442,7 +442,7 @@
       "grade": 5,
       "level": 121,
       "bonus": {
-        "attack": 307.4,
+        "attack": 153.7,
         "defense": 122.9,
         "maxHp": 71.7,
         "crit": 0,
@@ -457,7 +457,7 @@
       "grade": 6,
       "level": 151,
       "bonus": {
-        "attack": 1496.5,
+        "attack": 748.3,
         "defense": 0,
         "maxHp": 0,
         "crit": 0,
@@ -517,7 +517,7 @@
       "grade": 6,
       "level": 151,
       "bonus": {
-        "attack": 748.3,
+        "attack": 374.1,
         "defense": 299.3,
         "maxHp": 174.6,
         "crit": 0,
@@ -532,7 +532,7 @@
       "grade": 6,
       "level": 151,
       "bonus": {
-        "attack": 748.3,
+        "attack": 374.1,
         "defense": 299.3,
         "maxHp": 174.6,
         "crit": 0,
@@ -547,7 +547,7 @@
       "grade": 7,
       "level": 181,
       "bonus": {
-        "attack": 3643.2,
+        "attack": 1821.6,
         "defense": 0,
         "maxHp": 0,
         "crit": 0,
@@ -607,7 +607,7 @@
       "grade": 7,
       "level": 181,
       "bonus": {
-        "attack": 1821.6,
+        "attack": 910.8,
         "defense": 728.6,
         "maxHp": 425,
         "crit": 0,
@@ -622,7 +622,7 @@
       "grade": 7,
       "level": 181,
       "bonus": {
-        "attack": 1821.6,
+        "attack": 910.8,
         "defense": 728.6,
         "maxHp": 425,
         "crit": 0,

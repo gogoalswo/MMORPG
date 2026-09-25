@@ -849,7 +849,8 @@ func _case_bag(game: Node3D) -> void:
 		await process_frame
 		if not game._enhance.visible:
 			_fail("강화 단추를 눌렀는데 팝업이 안 떴다")
-		var pop_box: Rect2 = game._enhance.panel.get_global_rect()
+		# 단일도 오른쪽 목록(대상 고르기)이 붙는다 — 두 창을 합친 것이 가운데다
+		var pop_box: Rect2 = game._enhance.panel.get_global_rect().merge(game._enhance.list_panel.get_global_rect())
 		var screen := Rect2(Vector2.ZERO, Vector2(1280, 720))
 		if not screen.encloses(pop_box) or absf(pop_box.get_center().x - 640.0) > 2.0:
 			_fail("강화 팝업이 화면 가운데가 아니다: %s" % pop_box)
@@ -1609,11 +1610,48 @@ func _case_enhance_batch(game: Node, me: Dictionary) -> void:
 		await process_frame
 		if pop.running or str(game._chat.lines().back()[0]) != "다중 강화 중지":
 			_fail("중지를 눌렀는데 %s · 채팅 %s" % [pop.running, str(game._chat.lines().back())])
-	# 단일 탭으로 돌아오면 대상(가방)은 다중으로 흔들려서 비었다
+	# 단일 탭으로 돌아오면 대상(가방)은 다중으로 흔들려서 비었다 — **목록에서 골라 대상으로 삼는다**
+	# (2026-09-25 "단일 강화하면 장비 선택하는 ui가 없고")
 	pop.tabs["one"].pressed.emit()
 	await process_frame
-	if not pop.go.disabled or pop.list_panel.visible:
-		_fail("다중 뒤 단일 탭인데 강화 단추 %s · 목록 %s" % [pop.go.disabled, pop.list_panel.visible])
+	if not pop.go.disabled or not pop.list_panel.visible or pop._list_view.is_empty():
+		_fail("다중 뒤 단일 탭인데 강화 단추 %s · 목록 %s (%d칸)" % [pop.go.disabled, pop.list_panel.visible, pop._list_view.size()])
+	else:
+		var chosen: int = pop._list_view[0]
+		pop.toggle_list(0)
+		await process_frame
+		if int(pop.target.get("index", -1)) != chosen or pop.go.disabled or not pop._list_cells[0].get_node("pick").visible:
+			_fail("단일 목록 첫 칸을 골랐는데 대상 %s · 강화 단추 꺼짐 %s" % [pop.target, pop.go.disabled])
+		else:
+			print("  단일 목록: 가방 %d 번을 골라 '%s'" % [chosen, pop.kind.text])
+	# 다중 — **처음 담은 장비가 목록 기준**이다. 대상 없이 열면(오른쪽 위 메뉴) 아직 거를 기준이 없어 전부 보이고,
+	# 하나 담으면 "같은 아이템" · "같은 등급" 이 그것으로 거른다 (2026-09-25 "선택한 장비에 따라서 … 필터링")
+	for i in 2:
+		me.bag.append({"id": ref_id, "grade": 1, "enhance": 0, "options": []})
+	pop.open({})
+	pop.pick_mode("multi")
+	pop.pick_filter("item")
+	await process_frame
+	var every := pop._list_view.size()
+	var odd := -1
+	for k in pop._list_view.size():
+		if str(me.bag[pop._list_view[k]].id) == "g1_a":
+			odd = k
+	if odd < 0:
+		_fail("대상 없이 연 다중 목록(%d칸)에 g1_a 가 없다" % every)
+	else:
+		pop.toggle_list(odd)
+		await process_frame
+		var others: Array = pop._list_view.filter(func(at: int) -> bool: return str(me.bag[at].id) != "g1_a")
+		if pop._list_view.is_empty() or not others.is_empty() or pop._list_view.size() >= every:
+			_fail("g1_a 를 담았는데 같은 아이템 목록이 %d칸 (다른 것 %d칸, 전부 %d칸)" % [pop._list_view.size(), others.size(), every])
+		pop.pick_filter("grade")
+		await process_frame
+		var off_grade: Array = pop._list_view.filter(func(at: int) -> bool: return int(me.bag[at].get("grade", 1)) != 1)
+		if not off_grade.is_empty() or not pop._list_view.has(pop.picked[0]):
+			_fail("1등급을 담았는데 같은 등급 목록에 다른 등급 %d칸" % off_grade.size())
+		print("  다중 목록 기준: 전부 %d칸 → g1_a 담으니 같은 아이템만, 같은 등급 %d칸" % [every, pop._list_view.size()])
+		pop.clear_picked()
 	# 단일 자동 — +0 하나를 +2 까지. 닿으면 "완료", 부서지면 "부서졌습니다"
 	me.bag.append({"id": ref_id, "grade": 1, "enhance": 0, "options": []})
 	pop.open({"where": "bag", "index": me.bag.size() - 1})

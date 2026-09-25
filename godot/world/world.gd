@@ -1648,19 +1648,22 @@ func _land(player: Dictionary, skill: Dictionary, skill_id: String, upgrades: Ar
 			target.stun_look = look
 			target.state = "stun"
 
-	# **뒤따르는 한 대** (빙주각 파쇄) — 첫 대로 맞은 놈에게 정해 둔 때에 한 번 더.
-	# 연타 예약(`_combos`)을 그대로 쓴다 — 그 사이 죽은 쪽은 건너뛴다
+	# **뒤따르는 한 대** (빙주각 파쇄) — 정해 둔 때에 **그 순간 범위 안에 있는 놈 전부**에게
+	# 한 번 더. 처음엔 첫 대로 맞은 놈에게만 예약했는데 "처음 맞은 몬스터가 아니면 데미지가
+	# 안 들어가" 는 지적을 받았다 (2026-09-25) — 부서지는 기둥에 새로 걸어 들어온 놈도 맞아야
+	# 한다. 그래서 **한 번만 터지는 지대**(`_zones`)로 건다: 같은 중심·반경, 그때 다시 고른다
 	for id in upgrades:
 		var up := Skills.upgrade(skill_id, str(id))
 		var follow := int(up.get("followMs", 0))
 		if follow <= 0:
 			continue
-		for target in picked:
-			_combos.append({
-				"player": player_id, "target": target,
-				"attack": attack * float(up.get("followPower", 1.0)),
-				"skill": skill_id, "at": now + follow,
-			})
+		_zones.append({
+			"player": player_id,
+			"x": float(origin.get("x", player.x)), "z": float(origin.get("z", player.z)),
+			"reach": reach, "cap": cap,
+			"attack": attack * float(up.get("followPower", 1.0)),
+			"skill": skill_id, "next_at": now + follow, "until": now + follow, "tick": follow,
+		})
 
 	# 균열 지대 — 판정 모양 그대로 땅에 남는다
 	_open_zone(player, skill_id, upgrades,

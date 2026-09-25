@@ -648,7 +648,8 @@ func _case_quake_up() -> void:
 		float(me.stats.attack), float(Skills.upgrade("sky_breaker", "zone").get("zonePower", 0.0)) * 100.0])
 
 
-## 빙주각 강화 — "파쇄" 는 첫 대로 맞은 놈에게 1.1초 뒤 **한 대의 80%** 를 한 번 더,
+## 빙주각 강화 — "파쇄" 는 1.1초 뒤 **그때 범위 안에 있는 놈 전부**에게 한 대의 80% 를 한 번 더
+## (첫 대로 맞은 놈만이 아니다 — 2026-09-25 지적),
 ## "빙결" 은 맞은 놈을 2초 세우고 **얼음 모양**(`stun_look = "ice"`)을 단다 (2026-09-24)
 func _case_ice_up() -> void:
 	var s := _setup(1)
@@ -661,23 +662,34 @@ func _case_ice_up() -> void:
 	w.set_skill_bar("me", ["frost_pillar"])
 	var skill := Skills.get_skill("fighter", "frost_pillar")
 	var shatter := Skills.upgrade("frost_pillar", "shatter")
-	# 파쇄 — 예약 하나가 followMs 뒤, 공격 × power × followPower 로
+	# 파쇄 — 한 번만 터지는 지대 하나가 followMs 뒤, 공격 × power × followPower 로
 	me.skill_upgrades = {"frost_pillar": ["shatter"]}
 	me.skill_ready_at = {}
 	me.cast_until = 0
 	w._combos.clear()
+	w._zones.clear()
 	var now := Time.get_ticks_msec()
 	w.cast("me", "frost_pillar")
 	var want_attack := float(me.stats.attack) * float(skill.power) * float(shatter.followPower)
-	if w._combos.size() != 1:
-		_fail("파쇄: 뒤따르는 한 대 예약이 %d개다 (하나여야 한다)" % w._combos.size())
+	if w._zones.size() != 1:
+		_fail("파쇄: 부서질 때 터지는 지대가 %d개다 (하나여야 한다)" % w._zones.size())
 	else:
-		var combo: Dictionary = w._combos[0]
-		var late := int(combo.at) - now
-		if absf(float(combo.attack) - want_attack) > 1e-3 or late < int(shatter.followMs) - 20 or late > int(shatter.followMs) + 50:
+		var burst: Dictionary = w._zones[0]
+		var late := int(burst.next_at) - now
+		if absf(float(burst.attack) - want_attack) > 1e-3 or late < int(shatter.followMs) - 20 or late > int(shatter.followMs) + 50:
 			_fail("파쇄: %dms 뒤 공격 %.2f (%dms 뒤 %.2f 여야 한다)" % [
-				late, float(combo.attack), int(shatter.followMs), want_attack])
-	w._combos.clear()
+				late, float(burst.attack), int(shatter.followMs), want_attack])
+		# 첫 대 뒤에 **범위 안으로 들어온 놈**도 부서질 때 맞는다
+		var late_mob := World.make_monster("late", GameData.monster_kind("mob003"), -2.0, 1.0, 10000.0, 0.0)
+		late_mob.max_hp = 999999
+		late_mob.hp = 999999
+		s[2].append(late_mob)
+		w.drain_events()
+		w._run_zones(int(burst.next_at))
+		var struck := _hits(w.drain_events())
+		if not ("late" in struck) or not (str(mob.id) in struck) or not w._zones.is_empty():
+			_fail("파쇄: 부서질 때 맞은 놈 %s (처음 맞은 놈과 나중에 들어온 late 둘 다여야 한다)" % str(struck))
+	w._zones.clear()
 	# 빙결 — 2초, 얼음 모양
 	me.skill_upgrades = {"frost_pillar": ["freeze"]}
 	me.skill_ready_at = {}
@@ -688,5 +700,5 @@ func _case_ice_up() -> void:
 	if str(mob.stun_look) != "ice" or left < 1900 or left > 2200 or str(mob.state) != "stun":
 		_fail("빙결: %dms · 모양 '%s' · 상태 %s (2000ms · ice · stun 여야 한다)" % [left, mob.stun_look, mob.state])
 	else:
-		print("  빙주각 강화: 파쇄 %dms 뒤 80%%, 빙결 %dms 얼음" % [int(shatter.followMs), left])
+		print("  빙주각 강화: 파쇄 %dms 뒤 범위 안 전부 80%% (나중에 들어온 놈 포함), 빙결 %dms 얼음" % [int(shatter.followMs), left])
 	me.skill_upgrades = {}

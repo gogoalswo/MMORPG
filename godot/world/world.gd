@@ -1167,6 +1167,7 @@ func _restore_stack(raw: Variant) -> Dictionary:
 		return {}
 	stack.id = id
 	stack.grade = int(Items.get_item(id).get("grade", 1))
+	Items.clamp_options(stack)
 	return stack
 
 

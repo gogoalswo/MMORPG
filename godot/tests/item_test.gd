@@ -19,6 +19,7 @@ func _init() -> void:
 	_case_stats()
 	_case_drop()
 	_case_equip()
+	_case_clamp()
 	Save.clear()
 
 	if _failed == 0:
@@ -65,7 +66,7 @@ func _case_options() -> void:
 	_eq("치명타 옵션 7등급 최소", snappedf(crit.min, 0.1), 38.0)
 	_eq("치명타 옵션 7등급 최대", snappedf(crit.max, 0.1), 75.0)
 	_eq("치명타는 레벨 무관", Items.option_range("crit", 7, 200).max, crit.max)
-	_eq("관통 옵션 7등급 최대", snappedf(Items.option_range("penetration", 7).max, 0.1), 165.0)
+	_eq("관통 옵션 7등급 최대", snappedf(Items.option_range("penetration", 7).max, 0.1), 15.0)  # 2026-09-25 에 165 → 15 ("옵션 하나당 최대 15퍼센트")
 	_eq("쿨감 옵션 7등급 최대", snappedf(Items.option_range("cooldown", 7).max, 0.1), 50.0)
 
 	# 굴린 옵션은 등급이 정한 개수만큼, 종류가 겹치지 않고, 범위 안이다
@@ -244,3 +245,19 @@ func _case_equip() -> void:
 	if me.equipped.has("weapon"):
 		_fail("벗었는데 남아 있다")
 	print("  장착: 공격 %d -> %d -> %d" % [before, before + 8, me.stats.attack])
+
+
+## 저장된 옵션은 불러올 때 지금 범위로 잘린다 (2026-09-25: 관통 한 줄 최대 165 → 15%)
+func _case_clamp() -> void:
+	var tiers: Array = Items.option_tiers()
+	var first := str(tiers[0].key)
+	var stack := {"id": Items.item_id(7, "weapon"), "grade": 7, "enhance": 0}
+	stack[first] = [{"kind": "penetration", "value": 165.0}]
+	if tiers.size() > 1:
+		stack[str(tiers[1].key)] = [{"kind": "penetration", "value": 1.0}, {"kind": "attack", "value": 40.0}]
+	Items.clamp_options(stack)
+	_eq("관통 옛 값이 최대로 잘린다", float(stack[first][0].value), 15.0)
+	if tiers.size() > 1:
+		var second: Array = stack[str(tiers[1].key)]
+		_eq("관통이 최소보다 작으면 최소로 올린다", float(second[0].value), 8.0)
+		_eq("지금 표에 없는 옛 옵션은 그대로 둔다", float(second[1].value), 40.0)

@@ -431,7 +431,10 @@ export const OPTION_MAX_VALUE: Record<OptionKind, number> = {
   attackSpeed: 1.2,
   maxHp: 4,
   cooldown: 1,
-  penetration: 3.3,
+  // **2026-09-25 에 3.3 → 0.3** ★ (지시: "태초 무기 하나에 옵션에 방어력 관통력이 100프로가
+  // 넘는데 수치 줄여. 옵션 하나당 최대 15퍼센트고"). ×50 이라 7등급 한 줄이 8~15% 다
+  // (그 전 83~165%). 1차·2차가 다 관통이면 두 줄이 더해진다 — 상한 90% 는 그대로다
+  penetration: 0.3,
 };
 
 /**

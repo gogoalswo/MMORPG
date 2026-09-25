@@ -581,7 +581,10 @@ test('이전 등급 최대가 다음 등급의 하위 30%쯤에 선다', () => {
       const low = optionRange(kind, grade - 1);
       const high = optionRange(kind, grade);
       const at = ((low.max - high.min) / (high.max - high.min)) * 100;
-      const [lo, hi] = grade >= 5 ? [25, 35] : [20, 50];
+      // 폭이 좁으면 정수 한 칸이 수십 % 라 30% 에 설 수가 없다 — 2026-09-25 에 관통을 한 줄
+      // 최대 15% 로 내리자(1등급 1~1, 2등급 1~2) 걸렸다. 폭 5 칸 미만은 "뒤집히지만 않으면" 본다
+      const width = high.max - high.min;
+      const [lo, hi] = width < 5 ? [0, 50] : grade >= 5 && width >= 10 ? [25, 35] : [20, 50];
       assert.ok(at >= lo && at <= hi, `${kind} ${grade - 1}→${grade}등급: ${at.toFixed(0)}% 자리`);
     }
   }

@@ -153,6 +153,23 @@ static func option_range(kind: String, grade: int, _level: int = 1) -> Dictionar
 	return {"min": float(roundi(top * 0.5)), "max": float(roundi(top))}
 
 
+## 저장된 옵션을 **지금 범위로 자른다** ★ (2026-09-25). 관통 최대치를 165 → 15% 로
+## 내렸는데 불러올 때 안 자르면 이미 가진 물건이 옛 값을 그대로 든다 — `items.ts` 의
+## `sanitizeOptions` 와 같은 일이다. 지금 표에 없는 종류(옛 공격력·방어력)는 그대로 둔다
+static func clamp_options(stack: Dictionary) -> void:
+	var grade := int(stack.get("grade", 1))
+	var table: Dictionary = _g().get("optionMaxValue", {})
+	for row in option_tiers():
+		var key := str(row.key)
+		if not stack.has(key) or typeof(stack[key]) != TYPE_ARRAY:
+			continue
+		for option in stack[key]:
+			if typeof(option) != TYPE_DICTIONARY or not table.has(str(option.get("kind", ""))):
+				continue
+			var span := option_range(str(option.kind), grade)
+			option.value = clampf(float(option.get("value", 0.0)), float(span.min), float(span.max))
+
+
 ## 옵션을 굴린다. **종류는 겹치지 않게 고른다** — 치명타가 셋 붙으면 옵션이
 ## 하나 붙은 것과 다르지 않으면서 설명만 길어진다
 static func roll_options(item: Dictionary, grade: int, rng: RandomNumberGenerator) -> Array:

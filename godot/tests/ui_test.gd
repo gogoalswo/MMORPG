@@ -269,6 +269,7 @@ func _run_scene() -> void:
 
 	await _case_status(game)
 	await _case_bag(game)
+	await _case_char(game)
 	await _case_bag_drag(game)
 	await _case_skills(game)
 	await _case_design_panel(game)
@@ -926,6 +927,77 @@ func _case_bag(game: Node3D) -> void:
 		if panel.visible:
 			_fail("%s 의 X 를 눌렀는데 안 닫혔다" % panel_name)
 	print("  닫기는 창 오른쪽 위 X 하나다")
+
+
+## 캐릭터 정보 창 — 장비 창 "상세" 로 연다. 공격력은 **기본 → 증가 % → 최종** 세 줄이고
+## 값은 판정이 내려준 그대로다 (2026-09-25 요청). 상세 창과 같은 자리라 칸을 고르면 비켜 준다
+func _case_char(game: Node3D) -> void:
+	var world: World = game._transport._world
+	var me: Dictionary = game._transport.snapshot().players[game._transport.my_id()]
+	var kept: Dictionary = me.equipped
+	var was_open: bool = game._bag_panel.visible
+	var weapon_slot := str(Items.get_item("g3_w").slot)
+	me.equipped = {weapon_slot: {"id": "g3_w", "grade": 3, "enhance": 0, "options": []}}
+	world._refresh_stats(me)
+	if not was_open:
+		game._toggle_bag()
+	await process_frame
+
+	game._char_button.pressed.emit()
+	await process_frame
+	await process_frame
+	if not game._char_panel.visible or game._detail_panel.visible or game._crystal_panel.visible:
+		_fail("상세 단추 — 정보 %s · 상세 %s · 크리스탈 %s" % [game._char_panel.visible, game._detail_panel.visible, game._crystal_panel.visible])
+
+	var base := int(Combat.stats_for(str(me.job), int(me.level)).attack)
+	var pct := float(Items.equipment_stats(me.equipped).attack)
+	var rows: Array = []
+	for label in game._char_grids[0].get_children():
+		rows.append(label.text)
+	var want := [
+		"기본 공격력", str(base), "공격력 증가", game._bonus_text("attack", pct),
+		"최종 공격력", str(int(me.stats.attack)),
+	]
+	if pct <= 0.0:
+		_fail("무기를 꼈는데 공격력 증가가 %s" % pct)
+	if rows != want:
+		_fail("공격력 줄이 %s — %s 여야 한다" % [rows, want])
+	if int(me.stats.attack) != roundi(base * (1.0 + pct / 100.0)):
+		_fail("최종 공격력 %d ≠ %d × (1 + %s%%)" % [int(me.stats.attack), base, pct])
+	if game._char_grids.size() != game.CHAR_SPLIT.size() + 1:
+		_fail("묶음이 %d개" % game._char_grids.size())
+
+	# 자리 — 인벤토리 바로 왼쪽(상세 창 자리), 화면 안
+	var box: Rect2 = game._char_panel.get_global_rect()
+	var inv_box: Rect2 = game._bag_panel.get_global_rect()
+	if not Rect2(Vector2.ZERO, Vector2(1280, 720)).encloses(box):
+		_fail("정보 창이 화면 밖으로 나갔다: %s" % box)
+	if box.end.x > inv_box.position.x or inv_box.position.x - box.end.x > 20.0:
+		_fail("정보 창이 인벤토리 바로 왼쪽이 아니다: %s / %s" % [box, inv_box])
+	if box.intersects(game._gear_panel.get_global_rect()):
+		_fail("정보 창이 장비 창과 겹친다")
+
+	# 장비 칸을 고르면 상세 창이 그 자리를 쓴다
+	var at := Items.slots().find(weapon_slot)
+	game._gear_cells[at].get_node("hit").pressed.emit()
+	await process_frame
+	if game._char_panel.visible or not game._detail_panel.visible:
+		_fail("칸을 골랐는데 정보 %s · 상세 %s" % [game._char_panel.visible, game._detail_panel.visible])
+	game._toggle_char()
+	await process_frame
+	if not game._char_panel.visible or game._detail_panel.visible:
+		_fail("다시 열었는데 상세 창이 안 비켰다")
+	game._toggle_char()  # X 와 같은 길
+	await process_frame
+	if game._char_panel.visible:
+		_fail("정보 창 X 를 눌렀는데 그대로다")
+	print("  캐릭터 정보: 기본 %d · 증가 %s · 최종 %d" % [base, want[3], int(me.stats.attack)])
+
+	me.equipped = kept
+	world._refresh_stats(me)
+	if not was_open:
+		game._toggle_bag()
+	await process_frame
 
 
 ## 칸 목록은 **끌어서 내린다** (`DragScroll`) — 칸 단추가 끌기를 먹어 휠로만 내려갔다

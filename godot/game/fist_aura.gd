@@ -34,12 +34,17 @@ const RAY := 1.15
 ## 건틀릿 껍데기 반지름(m)쯤. 빛무리는 이만큼 카메라 쪽으로 당기고, 알갱이는
 ## 이 겉면에서 나온다 — 주먹 가운데에 두면 껍데기에 가려 안 보였다 (2026-09-25 찍어 봄)
 const SHELL := 0.11
+## 강화 한 단계마다 기운이 이만큼 커진다 (+9 면 1.9배). 2026-09-25 요청:
+## "강화 수치에 따라 주먹에서 오로라가 커지게"
+const GROW := 0.1
 
 ## 등급마다 재질을 한 벌만 짓는다 — 두 주먹·다시 낀 무기가 같이 쓰고, 살아 있는 동안
 ## 셰이더도 남는다 (FxWarm 의 "구운 셰이더가 남으려면")
 static var _mats: Dictionary = {}
 
 var _grade := 1
+## 강화로 커진 배율 (1 = +0)
+var _grow := 1.0
 var _t := 0.0
 ## 빛무리·심을 담는 자리. 매 프레임 카메라 쪽으로 `SHELL` 만큼 당긴다
 var _front: Node3D
@@ -55,10 +60,16 @@ static func color(grade: int) -> Color:
 	return Color.from_hsv(base.h, clampf(base.s * 1.4, 0.45, 0.9), 1.0)
 
 
-static func build(grade: int) -> FistAura:
+## 강화 배율 — +0 이 1, 한 단계마다 `GROW` 씩
+static func grow(enhance: int) -> float:
+	return 1.0 + GROW * maxi(enhance, 0)
+
+
+static func build(grade: int, enhance := 0) -> FistAura:
 	var aura := FistAura.new()
 	aura.name = "FistAura"
 	aura._grade = clampi(grade, 1, 7)
+	aura._grow = grow(enhance)
 	aura._build()
 	return aura
 
@@ -68,20 +79,23 @@ func _build() -> void:
 	var tint := color(g)
 	# 오르는 등급마다 진해진다
 	var power := 0.5 + 0.07 * g
+	# 강화로 커지는 것: 빛무리·심·알갱이 크기, 알갱이 수, 솟는 높이, 빛알 궤도, 빛살 길이.
+	# 알갱이 수도 같이 늘려야 넓어진 기운이 성기지 않다
+	var k := _grow
 
 	_front = Node3D.new()
 	add_child(_front)
-	_halo = _sprite(HALO + HALO_STEP * g, _mat("halo", tint * Color(1, 1, 1, power)), _front)
+	_halo = _sprite((HALO + HALO_STEP * g) * k, _mat("halo", tint * Color(1, 1, 1, power)), _front)
 	if g >= 3:
 		# 폭만 다른 3겹 — 넓은 빛무리 + 색 빛 + 가는 흰 심
-		_sprite((HALO + HALO_STEP * g) * 0.55, _mat("color", tint * Color(1, 1, 1, 0.7)), _front)
-		_core = _sprite(0.08 + 0.012 * g, _mat("core", tint.lerp(Color.WHITE, 0.6)), _front)
+		_sprite((HALO + HALO_STEP * g) * 0.55 * k, _mat("color", tint * Color(1, 1, 1, 0.7)), _front)
+		_core = _sprite((0.08 + 0.012 * g) * k, _mat("core", tint.lerp(Color.WHITE, 0.6)), _front)
 	if g >= 2:
 		# 불티 — 작은 빛알이 흩어지며 오른다
-		_particles("sparks", 3 + 3 * g, 0.75, 0.035 + 0.005 * g, 0.45, tint.lerp(Color.WHITE, 0.3))
+		_particles("sparks", roundi((3 + 3 * g) * k), 0.75, (0.035 + 0.005 * g) * k, 0.45 * k, tint.lerp(Color.WHITE, 0.3))
 	if g >= 4:
 		# 불꽃 — 큰 뭉치가 빠르게 솟았다 사그라든다
-		_particles("flame", 6 + 4 * (g - 4), 0.5, 0.14 + 0.03 * (g - 4), 0.7, tint * Color(1, 1, 1, 0.6))
+		_particles("flame", roundi((6 + 4 * (g - 4)) * k), 0.5, (0.14 + 0.03 * (g - 4)) * k, 0.7 * k, tint * Color(1, 1, 1, 0.6))
 	if g >= 5:
 		_orbit = Node3D.new()
 		add_child(_orbit)
@@ -91,10 +105,10 @@ func _build() -> void:
 			var pivot := Node3D.new()
 			pivot.rotation = Vector3(0.0, angle, 0.5 * (1 if i % 2 == 0 else -1))
 			_orbit.add_child(pivot)
-			var mote := _sprite(0.11, _mat("mote", tint.lerp(Color.WHITE, 0.3)), pivot)
-			mote.position = Vector3(ORBIT_R, 0, 0)
-			var glint := _sprite(0.035, _mat("core", tint.lerp(Color.WHITE, 0.7)), pivot)
-			glint.position = Vector3(ORBIT_R, 0, 0)
+			var mote := _sprite(0.11 * k, _mat("mote", tint.lerp(Color.WHITE, 0.3)), pivot)
+			mote.position = Vector3(ORBIT_R * k, 0, 0)
+			var glint := _sprite(0.035 * k, _mat("core", tint.lerp(Color.WHITE, 0.7)), pivot)
+			glint.position = Vector3(ORBIT_R * k, 0, 0)
 	if g >= 7:
 		# 빛살 — 판은 카메라를 보고, 판 안에서 천천히 돈다 (`_process`)
 		_rays = Node3D.new()
@@ -102,7 +116,7 @@ func _build() -> void:
 		for i in 4:
 			var ray := MeshInstance3D.new()
 			var quad := QuadMesh.new()
-			quad.size = Vector2(RAY * (1.0 if i % 2 == 0 else 0.6), 0.022)
+			quad.size = Vector2(RAY * k * (1.0 if i % 2 == 0 else 0.6), 0.022 * sqrt(k))
 			ray.mesh = quad
 			ray.material_override = _mat("ray", tint * Color(1, 1, 1, 0.9), false)
 			ray.rotation.z = PI * 0.25 * i
@@ -156,13 +170,14 @@ func _particles(key: String, amount: int, life: float, size: float, rise: float,
 	emitter.lifetime = life
 	emitter.local_coords = false
 	emitter.randomness = 0.5
-	emitter.visibility_aabb = AABB(Vector3(-1, -1, -1), Vector3(2, 2.5, 2))
+	emitter.visibility_aabb = AABB(Vector3(-1, -1, -1) * _grow, Vector3(2, 2.5, 2) * _grow)
 	emitter.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 	var process := ParticleProcessMaterial.new()
 	# 껍데기 겉면에서 바깥으로 튀어 나와 위로 오른다
 	process.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE_SURFACE
-	process.emission_sphere_radius = SHELL
+	# 강화로 커지면 조금 더 바깥에서 나온다 — 껍데기는 그대로라 절반만 키운다
+	process.emission_sphere_radius = SHELL * (1.0 + (_grow - 1.0) * 0.5)
 	process.direction = Vector3.UP
 	process.spread = 60.0
 	process.radial_velocity_min = rise * 0.3

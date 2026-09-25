@@ -271,6 +271,7 @@ func _run_scene() -> void:
 	await _case_bag(game)
 	await _case_char(game)
 	await _case_bag_drag(game)
+	await _case_compare(game)
 	await _case_skills(game)
 	await _case_design_panel(game)
 	# 존을 옮기므로 맨 끝에 둔다
@@ -1067,6 +1068,82 @@ func _case_bag_drag(game: Node3D) -> void:
 		if game._skill_pick != game._skill_ids[1]:
 			_fail("스킬 목록 1 번 칸을 눌렀는데 '%s' 가 골라졌다" % game._skill_pick)
 	game._toggle_skills()
+	await process_frame
+
+
+## 착용 중 비교 창 (2026-09-25 요청: "장착중인 장비가 있으면 장착중인 아이템도 상세 정보창
+## 띄워서 비교할 수 있게" + "상세 정보창 크기를 좀 줄여"). 가방 칸을 고르면 같은 부위에
+## 낀 것이 **상세 창 바로 왼쪽에 같은 높이로** 뜬다. 줄이 가장 많은 장비(능력치 셋 ·
+## 옵션 셋 = 8줄)로 채워도 두 창이 화면 안이어야 한다
+func _case_compare(game: Node3D) -> void:
+	var me: Dictionary = game._transport.snapshot().players[game._transport.my_id()]
+	var kept_bag: Array = me.bag.duplicate(true)
+	var kept_ring = me.equipped.get("ring", null)
+	me.equipped["ring"] = {"id": "g1_r", "grade": 1, "enhance": 3,
+		"options": [{"kind": "crit", "value": 2}], "options2": [{"kind": "penetration", "value": 1}]}
+	me.bag.clear()
+	me.bag.append({"id": "g1_r", "grade": 1, "enhance": 0,
+		"options": [{"kind": "critDamage", "value": 4}], "options2": [{"kind": "maxHp", "value": 3}]})
+	me.bag.append({"id": "g1_b", "grade": 1, "enhance": 0, "options": []})
+	game._gate_panel.close_panel()
+	if not game._bag_panel.visible:
+		game._toggle_bag()
+	await process_frame
+	await process_frame
+
+	# 반지를 고르면 — 낀 반지가 비교 창에 뜬다 (칸은 창에 입력을 넣어 누른다)
+	await _tap_cell(game._bag_drag, game._bag_scroll, game._bag_grid, 0)
+	await process_frame
+	var compare: PanelContainer = game._compare_panel
+	if not game._detail_panel.visible or not compare.visible:
+		_fail("낀 반지가 있는데 비교 창이 안 떴다 (상세 %s · 비교 %s)" % [game._detail_panel.visible, compare.visible])
+	else:
+		var view: Dictionary = game._compare_view
+		if view.state.text != "착용 중" or not view.name.text.ends_with("+3"):
+			_fail("비교 창이 낀 반지가 아니다: '%s' · '%s'" % [view.name.text, view.state.text])
+		if game._detail_state.text != "보유 중":
+			_fail("상세 창이 고른 반지가 아니다: '%s'" % game._detail_state.text)
+		var detail_box: Rect2 = game._detail_panel.get_global_rect()
+		var box: Rect2 = compare.get_global_rect()
+		var screen := Rect2(Vector2.ZERO, Vector2(1280, 720))
+		if absf(box.end.x + 8.0 - detail_box.position.x) > 1.0 or absf(box.position.y - detail_box.position.y) > 1.0:
+			_fail("비교 창이 상세 창 바로 왼쪽이 아니다: %s / %s" % [box, detail_box])
+		if not screen.encloses(box) or not screen.encloses(detail_box):
+			_fail("8줄짜리 두 창이 화면 밖으로 나갔다: %s / %s" % [box, detail_box])
+		# 줄 수가 같다 — 같은 틀이라 줄끼리 맞대어 읽힌다
+		if view.info.get_child_count() != game._detail_info.get_child_count():
+			_fail("두 창 줄 수가 다르다: 비교 %d · 상세 %d" % [view.info.get_child_count(), game._detail_info.get_child_count()])
+		print("  비교 창: %s · 상세 %s (%d줄)" % [box, detail_box, game._detail_info.get_child_count() / 2])
+
+		# 비교 창 X 는 비교 창만 닫는다
+		compare.find_child("close", true, false).find_child("hit", true, false).pressed.emit()
+		await process_frame
+		if compare.visible or not game._detail_panel.visible:
+			_fail("비교 창 X 를 눌렀는데 비교 %s · 상세 %s" % [compare.visible, game._detail_panel.visible])
+
+	# 낀 것이 없는 부위(신발)를 고르면 비교 창이 없다
+	me.equipped.erase("boots")
+	await _tap_cell(game._bag_drag, game._bag_scroll, game._bag_grid, 1)
+	if compare.visible:
+		_fail("낀 신발이 없는데 비교 창이 떴다")
+	# 다시 반지 → 뜨고, 빈칸을 누르면 상세 창과 같이 닫힌다
+	await _tap_cell(game._bag_drag, game._bag_scroll, game._bag_grid, 0)
+	await _tap_cell(game._bag_drag, game._bag_scroll, game._bag_grid, 5)
+	if compare.visible or game._detail_panel.visible:
+		_fail("빈칸을 눌렀는데 비교 %s · 상세 %s" % [compare.visible, game._detail_panel.visible])
+	# 장비 창의 낀 칸을 고르면 비교하지 않는다 (그것 자체가 낀 것이다)
+	game._gear_cells[Items.slots().find("ring")].get_node("hit").pressed.emit()
+	await process_frame
+	if compare.visible:
+		_fail("낀 반지를 골랐는데 비교 창이 떴다")
+
+	me.bag.clear()
+	me.bag.append_array(kept_bag)
+	if kept_ring == null:
+		me.equipped.erase("ring")
+	else:
+		me.equipped["ring"] = kept_ring
+	game._toggle_bag()
 	await process_frame
 
 

@@ -73,13 +73,16 @@ var picked_grid: GridContainer
 var list_grid: GridContainer
 var list_drag: DragScroll
 var list_head: Label
+## 목록 아래 "모두 담기" · "비우기" — 다중에서만 보인다
+var list_foot_buttons: Array = []
 
 var mode := "one"
 var filter := "item"
 var goal := 1
 ## 단일 대상 — {where: "bag"|"equip", index: 가방 번호 | 슬롯 번호}
 var target: Dictionary = {}
-## 목록 기준 — 연 장비의 id·등급. 한 개가 부서져도 남는다
+## 목록 기준 — **고른 장비**의 id·등급 (단일은 대상, 다중은 처음 담은 것). 비었으면 거르지 않는다.
+## 한 개가 부서져도 남는다
 var ref: Dictionary = {}
 ## 다중 강화에 담은 칸 — 가방 번호. 판정의 `picked` 로 이어 간다
 var picked: Array = []
@@ -338,14 +341,16 @@ func _build_list() -> void:
 	var all: Button = _game._inv_button("모두 담기", pick_all)
 	all.custom_minimum_size.x = 100
 	foot.add_child(all)
-	foot.add_child(_game._inv_button("비우기", clear_picked))
+	var clear: Button = _game._inv_button("비우기", clear_picked)
+	foot.add_child(clear)
+	list_foot_buttons = [all, clear]
 
 
 ## 연다 — `where_index` 는 {where, index}. 탭은 "단일 강화", 목표는 한 단계 위
 func open(where_index: Dictionary) -> void:
 	target = where_index.duplicate()
 	var stack := _stack()
-	ref = {"id": str(stack.get("id", "")), "grade": int(stack.get("grade", 1))}
+	ref = _ref_of(stack)
 	mode = "one"
 	filter = "item"
 	picked = []
@@ -403,18 +408,45 @@ func set_goal(level: int) -> void:
 	redraw()
 
 
-## 목록 칸 k 를 누르면 담고, 담긴 것이면 뺀다
+## 목록 칸 k 를 누르면 — 단일은 그것을 대상으로 고르고, 다중은 담고(담긴 것이면 뺀다).
+## **처음 담은 것이 목록 기준**이 된다 — "같은 아이템" · "같은 등급" 이 그것으로 거른다
 func toggle_list(k: int) -> void:
 	if running or k >= _list_view.size():
 		return
-	_compact()
 	var at: int = _list_view[k]
+	if mode == "one":
+		_choose(at)
+		return
+	_compact()
 	if picked.has(at):
 		picked.erase(at)
+		if picked.is_empty():
+			ref = _ref_of(_stack())
 	elif picked.size() < MULTI_MAX:
+		if picked.is_empty():
+			ref = _ref_of(_bag()[at])
 		picked.append(at)
 		picked.sort()
 	redraw()
+
+
+## 단일 — 목록에서 고른 가방 칸을 대상으로 삼는다. 목표는 한 단계 위.
+## 게임의 고른 칸(상세 창)은 비운다 — 대상이 바뀌었는데 두드린 결과를 옛 칸에 따라가게 하면 어긋난다
+func _choose(at: int) -> void:
+	target = {"where": "bag", "index": at}
+	var stack := _stack()
+	ref = _ref_of(stack)
+	goal = mini(int(stack.get("enhance", 0)) + 1, Items.max_enhance())
+	result.text = ""
+	acted.emit(false, 0)
+	redraw()
+
+
+## 목록 기준 — 장비의 id·등급. 장비가 아니면 비운다(거르지 않는다)
+func _ref_of(stack: Dictionary) -> Dictionary:
+	if Items.get_item(str(stack.get("id", ""))).is_empty():
+		return {}
+	return {"id": str(stack.id), "grade": int(stack.get("grade", 1))}
 
 
 ## 담은 칸 k 를 누르면 뺀다
@@ -423,6 +455,8 @@ func unpick_slot(k: int) -> void:
 		return
 	picked.remove_at(k)
 	_compact()
+	if picked.is_empty():
+		ref = _ref_of(_stack())
 	redraw()
 
 
@@ -435,6 +469,8 @@ func pick_all() -> void:
 		if picked.size() >= MULTI_MAX:
 			break
 		if not picked.has(at):
+			if picked.is_empty():
+				ref = _ref_of(_bag()[at])
 			picked.append(at)
 	picked.sort()
 	redraw()
@@ -444,6 +480,7 @@ func clear_picked() -> void:
 	if running:
 		return
 	picked = []
+	ref = _ref_of(_stack())
 	redraw()
 
 
@@ -497,7 +534,10 @@ func redraw() -> void:
 		chevron.queue_redraw()
 	one_box.visible = mode == "one"
 	multi_box.visible = mode == "multi"
-	list_panel.visible = mode == "multi"
+	# 목록은 두 탭이 같이 쓴다 — 단일은 대상을 고르고, 다중은 담는다
+	list_panel.visible = true
+	for button in list_foot_buttons:
+		button.visible = mode == "multi"
 	go.visible = mode == "one"
 	kind.add_theme_color_override("font_color", _game.INV_GOLD_HI)
 	if mode == "one":
@@ -534,6 +574,7 @@ func _redraw_one() -> void:
 		_game._fill_detail_rows([], info)
 		go.disabled = true
 		run_button.disabled = true
+		_redraw_list(_bag())
 		return
 
 	var grade := int(stack.get("grade", 1))
@@ -550,6 +591,7 @@ func _redraw_one() -> void:
 	if not can:
 		kind.text = "최대 강화"
 		_game._fill_detail_rows([["강화", "+%d (끝)" % enhance]], info)
+		_redraw_list(_bag())
 		return
 
 	# 확률은 설계 4장 그대로(90% → 10%). **유지가 없다** — 실패하면 무조건 파괴
@@ -569,6 +611,7 @@ func _redraw_one() -> void:
 	if int(stack.get("count", 1)) > 1:
 		rows.append(["겹친 칸", "한 개만 강화"])
 	_game._fill_detail_rows(rows, info)
+	_redraw_list(_bag())
 
 
 ## 다중 — 담은 칸 7×2 · 오른쪽 목록 · 대상 수·예상 도달·파괴 표
@@ -603,11 +646,15 @@ func _redraw_multi() -> void:
 	], info)
 
 
-## 오른쪽 목록을 채운다. 칸은 모자라면 더 짓고 남으면 감춘다 (가방 200칸을 매번 새로 짓지 않는다)
+## 오른쪽 목록을 채운다. 칸은 모자라면 더 짓고 남으면 감춘다 (가방 200칸을 매번 새로 짓지 않는다).
+## 기준(`ref`)이 비었으면 — 아직 아무것도 안 골랐으면 — 어느 탭이든 전부 보인다.
+## 단일은 목표와 상관없이 더 오를 수 있는 것을 다 보인다 (목표는 고른 뒤에 정한다)
 func _redraw_list(bag: Array) -> void:
 	_list_view = []
+	var how := filter if not ref.is_empty() else "all"
+	var cap := goal if mode == "multi" else Items.max_enhance()
 	for at in bag.size():
-		if Items.batch_match(bag[at], filter, str(ref.get("id", "")), int(ref.get("grade", 1)), goal):
+		if Items.batch_match(bag[at], how, str(ref.get("id", "")), int(ref.get("grade", 1)), cap):
 			_list_view.append(at)
 	while _list_cells.size() < _list_view.size():
 		var cell: PanelContainer = _game._make_cell(toggle_list.bind(_list_cells.size()), LIST_CELL)
@@ -620,8 +667,15 @@ func _redraw_list(bag: Array) -> void:
 			continue
 		var stack: Dictionary = bag[_list_view[k]]
 		_game._fill_cell(cell, stack, "", _game._item_icon(stack))
-		cell.get_node("pick").visible = picked.has(_list_view[k])
-	list_head.text = "담은 것 %d/%d" % [picked.size(), MULTI_MAX]
+		if mode == "one":
+			cell.get_node("pick").visible = str(target.get("where", "")) == "bag" \
+					and int(target.get("index", -1)) == _list_view[k]
+		else:
+			cell.get_node("pick").visible = picked.has(_list_view[k])
+	if mode == "one":
+		list_head.text = "강화할 장비를 고르세요"
+	else:
+		list_head.text = "담은 것 %d/%d" % [picked.size(), MULTI_MAX]
 
 
 func _percent(odds: float) -> String:

@@ -17,7 +17,7 @@ extends SceneTree
 ##                                        (긴 이펙트는 기본 0.36초로 모자란다)
 ##   npm run shot:godot -- enhance        강화 팝업 다중 강화 한 바퀴 (logs/shot_enhance.png)
 ##   npm run shot:godot -- fist           주먹 기운 등급 1~7 (logs/shot_sheet.png)
-##   npm run shot:godot -- fist:enhance   강화 단계별 오로라 — 희귀·태초 +6·+7·+8·+9
+##   npm run shot:godot -- fist:enhance   강화 단계별 오로라 — 희귀·태초 +5~+9
 ##
 ## 여섯 장의 **가운데를 잘라 한 장으로 붙인 것**(`logs/shot_sheet.png`)도 뽑는다.
 ## 한 장씩 읽으면 여섯 배를 낸다 — 시간 순서를 보는 데는 이것 한 장이면 된다.
@@ -111,7 +111,7 @@ func _run() -> void:
 	if skill == "fist":
 		await _fist(game)
 		return
-	# 강화 단계별 오로라 — 희귀·태초를 +6·+7·+8·+9 로 (색이 단계마다 바뀐다)
+	# 강화 단계별 오로라 — 희귀·태초를 +5~+9 로 (색이 단계마다 바뀐다)
 	if skill == "fist:enhance":
 		await _fist(game, true)
 		return
@@ -211,13 +211,14 @@ func _fist(game: Node3D, by_enhance := false) -> void:
 	rig.play("Idle")
 
 	var cell := Vector2i(360, 440)
+	var cols := 5 if by_enhance else 4
 	var sheet: Image = null
 	# 등급 1~7 (+9 — 오로라는 +6 부터라 겹을 다 보려면 강화가 있어야 한다)
-	# · 또는 희귀와 태초를 +6·+7·+8·+9 로
+	# · 또는 희귀와 태초를 +5~+9 로 (5열)
 	var looks: Array = []
 	if by_enhance:
 		for grade in [3, 7]:
-			for enhance in [6, 7, 8, 9]:
+			for enhance in [5, 6, 7, 8, 9]:
 				looks.append([grade, enhance])
 	else:
 		for grade in range(1, 8):
@@ -230,13 +231,13 @@ func _fist(game: Node3D, by_enhance := false) -> void:
 		await RenderingServer.frame_post_draw
 		var img := root.get_texture().get_image()
 		if sheet == null:
-			sheet = Image.create(cell.x * 4, cell.y * 2, false, img.get_format())
+			sheet = Image.create(cell.x * cols, cell.y * 2, false, img.get_format())
 		var from := Vector2i((img.get_width() - cell.x) / 2, (img.get_height() - cell.y) / 2)
-		sheet.blit_rect(img, Rect2i(from, cell), Vector2i((index % 4) * cell.x, (index / 4) * cell.y))
+		sheet.blit_rect(img, Rect2i(from, cell), Vector2i((index % cols) * cell.x, (index / cols) * cell.y))
 		print("  %d등급 +%d 찍음" % looks[index])
 	sheet.resize(int(sheet.get_width() * 0.7), int(sheet.get_height() * 0.7), Image.INTERPOLATE_BILINEAR)
 	sheet.save_png("res://../logs/shot_sheet.png")
-	print("logs/shot_sheet.png  (%s)" % ("윗줄 희귀 +6·+7·+8·+9, 아랫줄 태초" if by_enhance else "1~4등급 윗줄, 5~7등급 아랫줄 (+9)"))
+	print("logs/shot_sheet.png  (%s)" % ("윗줄 희귀 +5~+9, 아랫줄 태초" if by_enhance else "1~4등급 윗줄, 5~7등급 아랫줄 (+9)"))
 	quit(0)
 
 

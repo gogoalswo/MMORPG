@@ -174,7 +174,7 @@ npm run shot:godot -- rising_kick@225 # @각도(도, 0 = +Z) — 그 쪽을 보�
                                       # 보는 쪽마다 화면 모양이 달라 두세 방향을 찍어 본다 (225 = 화면 위)
 npm run shot:godot -- portal         # 차원문 소용돌이 (스킬이 아니라 늘 켜진 이펙트)
 npm run shot:godot -- fist           # 주먹 기운 등급 1~7(+9) 을 가까이 — 4열 판 한 장 (logs/shot_sheet.png)
-npm run shot:godot -- fist:enhance   # 강화 단계별 주먹 오로라 — 희귀·태초 +6·+7·+8·+9
+npm run shot:godot -- fist:enhance   # 강화 단계별 주먹 오로라 — 희귀·태초 +5~+9
 npm run shot:godot -- gate           # 차원문 창 (logs/gate_off.png · gate_on.png=줄 누른 채)
 npm run shot:godot -- range:sky_breaker  # 스킬 범위 표시 (logs/range_NN.png)
 npm run shot:godot -- enhance        # 강화 팝업 다중 강화 한 바퀴 — 슬라이드·반짝임·깨짐 (logs/shot_enhance.png, `enhance real` 은 제 속도)

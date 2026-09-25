@@ -166,7 +166,7 @@ func set_weapon(grade: int, enhance := 0) -> void:
 		if grade > 0:
 			var left: bool = bone == "LeftHand"
 			socket.add_child(Gauntlet.build(grade, left))
-			# 주먹 오로라 — 강화 +6 부터(`FistAura.FIRST`), 색은 강화 단계가 정한다.
+			# 주먹 오로라 — 강화 +5 부터(`FistAura.FIRST`), 색은 강화 단계가 정한다.
 			# 소켓은 모델 단위(모델 배율이 걸려 있다)라 배율을 되돌려 미터로 짓게 한다
 			if not FistAura.shows(enhance):
 				continue

@@ -368,7 +368,9 @@ test('등급이 곧 성능이다 — 무기는 등비 ×2.434 로 오른다', ()
   for (let g = 2; g <= GRADE_MAX; g++) {
     const now = baseBonus(getItem(itemId(g, 'weapon'))!).attack;
     const before = baseBonus(getItem(itemId(g - 1, 'weapon'))!).attack;
-    assert.ok(Math.abs(now / before - ratio) < 0.01, `${g}등급 무기가 ${now / before}배다`);
+    // 저장값이 소수 한 자리라 1등급(8.75 → 8.8)에서 반올림이 0.6% 튄다 — 2026-09-25 에 공격력을
+    // 반으로 내리면서 1등급 무기가 한 자리 수가 됐다
+    assert.ok(Math.abs(now / before - ratio) < 0.02, `${g}등급 무기가 ${now / before}배다`);
   }
   assert.equal(gradeMultiplier(GRADE_MIN), 1, '1등급이 값의 기준이어야 한다');
 });

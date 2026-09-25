@@ -174,16 +174,17 @@ func _gear() -> void:
 	_near("등급 간격", snappedf(Stats.grade_ratio(), 0.001), 2.434, 1e-9)
 	var common := 1.0 + float(Stats.slot_stats("weapon", 1.0, 1)["atk"]) / 100.0
 	var hero := 1.0 + float(Stats.slot_stats("weapon", 4.0, 1)["atk"]) / 100.0
-	_near("영웅/일반 무기 피해", hero / common, 3.0, 1e-6)
+	# 3배로 역산했지만 2026-09-25 에 장비 공격력 % 를 반으로 내려("반으로 줄여") 약 2.1배다
+	_near("영웅/일반 무기 피해", snappedf(hero / common, 0.01), 2.08, 1e-6)
 
 	# 등급7 실제 수치 (무강 → 강화 4단).
 	# **2026-09-21 에 배분을 바꿨다** — 무기 0.6→0.5, 갑옷 0.4→1/3, 장신구가 그 절반.
 	# 치확·공속은 장비 기본에서 걷었고(랜덤 옵션 전담) 풀세트 합은 그대로다
-	_eq("등급7 무기 무강", roundi(Stats.slot_stats("weapon", 7.0, 1)["atk"]), 3643)
-	_eq("등급7 무기 4단", roundi(Stats.slot_stats("weapon", 7.0, 4)["atk"]), 4749)
+	_eq("등급7 무기 무강", roundi(Stats.slot_stats("weapon", 7.0, 1)["atk"]), 1822)
+	_eq("등급7 무기 4단", roundi(Stats.slot_stats("weapon", 7.0, 4)["atk"]), 2375)
 	_eq("등급7 갑옷 방어", roundi(Stats.slot_stats("armor", 7.0, 1)["df"]), 1457)
 	_eq("등급7 갑옷 HP", roundi(Stats.slot_stats("armor", 7.0, 1)["hp"]), 850)
-	_eq("등급7 목걸이 공격", roundi(Stats.slot_stats("necklace", 7.0, 1)["atk"]), 1822)
+	_eq("등급7 목걸이 공격", roundi(Stats.slot_stats("necklace", 7.0, 1)["atk"]), 911)
 	_eq("등급7 목걸이 방어", roundi(Stats.slot_stats("necklace", 7.0, 1)["df"]), 729)
 	_eq("등급7 목걸이 치확", roundi(Stats.slot_stats("necklace", 7.0, 1)["crit"] * 100.0), 0)
 	_eq("등급7 반지 공속", roundi(Stats.slot_stats("ring", 7.0, 1)["aspd"] * 100.0), 0)

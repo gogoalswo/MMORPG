@@ -16,6 +16,7 @@ extends SceneTree
 ##   npm run shot:godot -- sky_breaker 2,9,20,45,90,150   찍을 프레임을 준다
 ##                                        (긴 이펙트는 기본 0.36초로 모자란다)
 ##   npm run shot:godot -- enhance        강화 팝업 다중 강화 한 바퀴 (logs/shot_enhance.png)
+##   npm run shot:godot -- fist           주먹 기운 등급 1~7 (logs/shot_sheet.png)
 ##
 ## 여섯 장의 **가운데를 잘라 한 장으로 붙인 것**(`logs/shot_sheet.png`)도 뽑는다.
 ## 한 장씩 읽으면 여섯 배를 낸다 — 시간 순서를 보는 데는 이것 한 장이면 된다.
@@ -105,6 +106,11 @@ func _run() -> void:
 		await _enhance(game)
 		return
 
+	# 주먹 기운 — 등급 일곱을 차례로 끼워 캐릭터 둘레를 가까이 찍는다
+	if skill == "fist":
+		await _fist(game)
+		return
+
 	# 창은 열어 놓고 한 장만 찍는다 — 움직이는 것이 없다
 	if skill == "bag" or skill == "skills":
 		await _window(game, skill)
@@ -172,6 +178,51 @@ func _add_to_sheet(sheet: Image, img: Image, index: int) -> Image:
 	var from := Vector2i((img.get_width() - cell.x) / 2, (img.get_height() - cell.y) / 2)
 	sheet.blit_rect(img, Rect2i(from, cell), Vector2i((index % 3) * cell.x, (index / 3) * cell.y))
 	return sheet
+
+
+## 주먹 기운을 등급마다 한 장씩 찍어 4열 판(`logs/shot_sheet.png`)으로 붙인다
+## (`npm run shot:godot -- fist`). 게임 각 그대로 가까이 당긴다 — 주먹은 화면에서
+## 작아서 게임 거리로는 못 읽는다. **게임의 _process 를 멈추므로** 장착 표시
+## (`_wear_weapon`)도 멈춘다 — 등급은 리그에 바로 끼운다
+const FIST_DISTANCE := 3.4
+const FIST_LOOK := 1.0
+## 기운이 한창 피어오르도록 끼우고 나서 기다리는 프레임
+const FIST_WAIT := 14
+
+
+func _fist(game: Node3D) -> void:
+	var player: Dictionary = game._transport._world._players[game._transport.my_id()]
+	# 카메라 쪽에서 비스듬히 — 두 주먹이 다 보이게
+	player["rot"] = CameraRig.YAW + 0.6
+	await process_frame
+	await process_frame
+	game.set_process(false)
+	var rig: Rig = game._player
+	var focus: Vector3 = rig.position + Vector3(0, FIST_LOOK, 0)
+	var pitch := deg_to_rad(CameraRig.PITCH)
+	var away := Vector3(cos(pitch) * sin(CameraRig.YAW), sin(pitch), cos(pitch) * cos(CameraRig.YAW))
+	game._camera.position = focus + away * FIST_DISTANCE
+	game._camera.look_at(focus, Vector3.UP)
+	rig.play("Idle")
+
+	var cell := Vector2i(360, 440)
+	var sheet: Image = null
+	for grade in range(1, 8):
+		rig.set_weapon(grade)
+		for i in FIST_WAIT:
+			await process_frame
+		await RenderingServer.frame_post_draw
+		var img := root.get_texture().get_image()
+		if sheet == null:
+			sheet = Image.create(cell.x * 4, cell.y * 2, false, img.get_format())
+		var from := Vector2i((img.get_width() - cell.x) / 2, (img.get_height() - cell.y) / 2)
+		var index := grade - 1
+		sheet.blit_rect(img, Rect2i(from, cell), Vector2i((index % 4) * cell.x, (index / 4) * cell.y))
+		print("  %d등급 찍음" % grade)
+	sheet.resize(int(sheet.get_width() * 0.7), int(sheet.get_height() * 0.7), Image.INTERPOLATE_BILINEAR)
+	sheet.save_png("res://../logs/shot_sheet.png")
+	print("logs/shot_sheet.png  (1~4등급 윗줄, 5~7등급 아랫줄)")
+	quit(0)
 
 
 ## 차원문 창을 열어 찍는다. 한 장은 그냥, 한 장은 **줄을 누른 채**로 —

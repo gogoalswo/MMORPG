@@ -161,7 +161,14 @@ func set_weapon(grade: int) -> void:
 			socket.remove_child(old)
 			old.queue_free()
 		if grade > 0:
-			socket.add_child(Gauntlet.build(grade, bone == "LeftHand"))
+			var left: bool = bone == "LeftHand"
+			socket.add_child(Gauntlet.build(grade, left))
+			# 주먹에 감도는 등급 색 기운. 소켓은 모델 단위(모델 배율이 걸려 있다)라
+			# 배율을 되돌려 미터로 짓게 한다
+			var aura := FistAura.build(grade)
+			aura.position = Gauntlet.fist_center(left)
+			aura.scale = Vector3.ONE / get_child(0).scale.x
+			socket.add_child(aura)
 
 
 func weapon_grade() -> int:

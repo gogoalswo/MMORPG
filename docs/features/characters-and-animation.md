@@ -63,6 +63,7 @@ KayKit Adventurers 5종과 화살통은 2026-09-10 에 **파일째 뺐다** (`mo
 | **`godot/game/game.gd`** `SWING_CLIPS` · `SKILL_CLIPS` · `_start_move` · `_play_player_clip` | 고도에서 평타·스킬마다 동작을 고르고 끝까지 튼다 |
 | **`godot/game/rig.gd`** `fist_socket` · `set_weapon` | ★ **주먹 소켓** — 손 뼈(`RightHand`·`LeftHand`)에 `BoneAttachment3D` 를 달고 무기를 끼운다 |
 | **`godot/game/gauntlet.gd`** | ★ 건틀릿 모델 — **등급마다 생김새**를 코드로 짓는다. `weapon_g<등급>.glb` 가 있으면 그걸 쓴다 |
+| **`godot/game/fist_aura.gd`** | ★ 주먹 기운 — **등급 색**, 좋은 무기일수록 겹이 는다 |
 | **`godot/game/game.gd`** `_wear_weapon` · `godot/tests/weapon_test.gd` | 장비 칸의 무기가 바뀌면 주먹 모델을 바꾼다 / 그 확인 |
 | `packages/client/src/game/modelRig.ts` | **모델 리그** — 클립 섞기, 크기 맞추기, 몬스터 색 입히기 |
 | `packages/shared/src/beasts.ts` | 짐승 키 표(`BEAST_HEIGHT`)와 클릭 상자 크기 — `hit-probe` 가 같이 쓴다 |
@@ -399,6 +400,20 @@ Rig(humanoid) → Animate 로 나온 것을 합쳤다. 출처와 약관은
   · 반 크기 `(0.049, 0.050, 0.036)`, 손목 반지름 0.041 (모델 단위 — 모델이 1.85배로
   커지므로 0.1 ≈ 0.19m). 모델을 바꾸면 `FIST_CENTER` · `FIST_HALF` 를 다시 잰다.
   등·손바닥 쪽이 어느 z 인지는 모르므로 **장식은 주먹 앞(+Y)과 토시 둘레에만** 둔다.
+- **주먹 기운** (`godot/game/fist_aura.gd`, 2026-09-25 요청: "등급 색상에 맞춰서",
+  "좋은 무기일수록 이펙트 더 화려하게"). 무기를 끼고 있으면 **늘** 두 주먹에 감돈다.
+  색은 `Items.grade_color` 의 **색조만 따서 밝힌 것**(`FistAura.color`) — 표의 색은
+  흙빛이라 그대로 가산하면 안 보인다. 등급마다 겹이 는다:
+  빛무리(1) → +불티(2) → +흰 심, 3겹(3) → +불꽃(4) → +도는 빛알 둘(5) → 빛알 셋·
+  굵은 불꽃(6) → 빛알 넷 + 빛살(7). 조각 수는 1·10·15·24·35·44·57 이다.
+  - **빛무리는 카메라 쪽으로 `SHELL`(0.11m) 당긴다.** 주먹 가운데에 뒀더니 껍데기에
+    가려 안 보였다 (찍어 보고 알았다). 불티·불꽃도 같은 까닭으로 **껍데기 겉면**에서
+    나온다. 알갱이는 월드 좌표에 남아 휘두르면 궤적처럼 흩어진다.
+  - 소켓은 모델 단위라 `Rig.set_weapon` 이 기운의 배율을 되돌려(÷1.85) **미터로** 짓게 한다.
+  - 깊이 검사는 켠다 (늘 켜진 이펙트 규칙 → [effect-rules.md](effect-rules.md)).
+    재질은 등급마다 한 벌을 `FistAura._mats` 가 붙들고, `FxWarm` 이 태초 한 벌을 미리 굽는다.
+  - **1등급은 흰 붕대 위라 거의 안 보인다** — 가산 빛은 흰 바탕에서 묻힌다. 가장 약한 등급이라 그대로 뒀다.
+  - 찍어 보기: `npm run shot:godot -- fist` → `logs/shot_sheet.png` (1~4등급 윗줄, 5~7 아랫줄)
 - 확인: `npm run test:godot -- weapon` — 등급 일곱이 서로 다른 모양, 두 주먹에 한 짝씩,
   손 뼈에서 20cm 안, 달리는 중에도 손을 따라감, 게임에서 무기를 바꾸면 모델이 바뀌고
   벗으면 맨주먹.

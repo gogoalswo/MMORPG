@@ -26,6 +26,11 @@ const CUFF_R := 0.046
 const CUFF_H := 0.07
 
 
+## 주먹 가운데 (손 뼈 기준, 모델 단위). 기운(`FistAura`)을 여기 둔다
+static func fist_center(left: bool) -> Vector3:
+	return Vector3(FIST_CENTER.x * (-1.0 if left else 1.0), FIST_CENTER.y, FIST_CENTER.z)
+
+
 ## 등급 하나로 한 손 몫을 짓는다. `left` 면 왼손(좌우 반전)
 static func build(grade: int, left: bool) -> Node3D:
 	var root := Node3D.new()

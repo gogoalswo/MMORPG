@@ -70,6 +70,9 @@ func _spawn(font: Font) -> void:
 	# 강화 이펙트(토네이도·진흙 셰이더와 방출기)도 한 번 띄워 굽는다
 	QuakeFx.slam(_stage, Vector3.ZERO, 0.0, true, true)
 	IceFx.burst(_stage, Vector3.ZERO, 0.0)
+	# 주먹 기운 — 태초가 모든 조각(빛무리·심·불티·불꽃·빛알·빛살)을 다 가진다.
+	# 재질은 FistAura 가 등급마다 붙들고 있어 셰이더가 남는다
+	_stage.add_child(FistAura.build(7))
 	for crit in [false, true]:
 		HitFx.spawn(_stage, Vector3.UP, {
 			"amount": 1234, "crit": crit, "heal": false, "target_kind": "monster",

@@ -245,6 +245,9 @@ var _bar_cooling: Array = []
 var _switch_buttons: Dictionary = {}
 ## 테스트 무적 단추. 글자는 **스냅샷(me.invincible)** 만 보고 그린다 (자동사냥과 같다)
 var _invincible_button: Button
+## 치트(테스트 단추) 목록 묶음과 그것을 여닫는 단추 (2026-09-25 — 왼쪽이 치트로 도배돼 안 보였다)
+var _cheat_column: VBoxContainer
+var _cheat_toggle: Button
 ## 자동 사냥 칸. 퀵슬롯 옆에 같은 모양으로 붙는다. 켜짐 표시는 **서버가 준
 ## me.auto** 로만 정한다 — 눌린 것으로 지레 바꾸면 판정이 거절했을 때 화면만
 ## 켜진 채로 남는다
@@ -357,6 +360,7 @@ func _ready() -> void:
 	_transport.open(GameData.start_zone())
 	_transport.event.connect(_on_event)
 	_build_persistent()
+	_apply_play_mode()
 	# 스킬·타격 이펙트를 미리 만들어 쉬게 둔다 — 시전 때 만들지 않고 되감아 쓴다
 	_fx = FxPool.new()
 	_fx.name = "FxPool"
@@ -2906,6 +2910,7 @@ func _build_test_switches() -> void:
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 6)
 	_ui_root.add_child(column)
+	_cheat_column = column
 	_switch_buttons.clear()
 	for name in SWITCH_BUTTONS:
 		var button := Button.new()
@@ -2997,8 +3002,52 @@ func _build_test_switches() -> void:
 	column.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	# 왼쪽 아래 구석은 채팅창 자리다 (2026-09-23) — 묶음을 채팅창 위로 올린다
 	var lift := ChatLog.SIZE.y + EXP_GAUGE_H + CHAT_MARGIN + 8 - 20
+	# 채팅창 바로 위에는 **치트 목록 여닫기 단추** 하나가 서고, 묶음은 그 위로 선다 (2026-09-25).
+	# 단추 열 개가 왼쪽을 다 덮어서 접을 수 있게 했다
+	_cheat_toggle = Button.new()
+	_cheat_toggle.custom_minimum_size = CHEAT_TOGGLE
+	_cheat_toggle.add_theme_font_size_override("font_size", 18)
+	_cheat_toggle.pressed.connect(_toggle_cheats)
+	_ui_root.add_child(_cheat_toggle)
+	_cheat_toggle.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 20)
+	_cheat_toggle.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_cheat_toggle.offset_top -= lift
+	_cheat_toggle.offset_bottom -= lift
+	lift += CHEAT_TOGGLE.y + 6
 	column.offset_top -= lift
 	column.offset_bottom -= lift
+	_set_cheats_open(true)
+
+
+## 치트 목록 여닫기 단추의 크기 — 테스트 단추(230)와 너비를 맞춘다
+const CHEAT_TOGGLE := Vector2(230, 44)
+
+
+func _toggle_cheats() -> void:
+	_set_cheats_open(not _cheat_column.visible)
+
+
+func _set_cheats_open(open: bool) -> void:
+	_cheat_column.visible = open
+	_cheat_toggle.text = "치트 목록 닫기" if open else "치트 목록 열기"
+	_cheat_toggle.modulate = Color.WHITE if open else Color(1, 1, 1, 0.75)
+
+
+## 시작 화면에서 고른 모드를 건다 → play-mode.md
+## - 테스트 모드: 무적과 쿨타임 0 을 켜고, 치트 목록은 접어 둔다 (펼치면 왼쪽을 다 덮는다)
+## - 일반 모드: 아무것도 안 켜고, 치트 목록과 여닫기 단추를 아예 숨긴다
+## - 모드 없음(테스트·도구가 main.tscn 을 바로 띄움): 지금까지처럼 둔다
+func _apply_play_mode() -> void:
+	match PlayMode.current:
+		PlayMode.TEST:
+			_transport.send(&"invincible", {"on": true})
+			if not Skills.cooldown_off():
+				_transport.send(&"testSwitch", {"name": "cooldownOff", "on": true})
+			_refresh_switches()
+			_set_cheats_open(false)
+		PlayMode.NORMAL:
+			_set_cheats_open(false)
+			_cheat_toggle.visible = false
 
 
 func _on_switch_pressed(name: String) -> void:

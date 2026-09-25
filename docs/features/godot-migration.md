@@ -15,8 +15,9 @@ three.js 웹 클라이언트를 **고도 엔진으로 갈아타는 중**이다. 
 
 | 파일 | 역할 |
 |---|---|
-| `godot/project.godot` | 프로젝트 설정. 렌더러는 `mobile`, 주 화면은 `main.tscn` |
-| `godot/main.tscn` | 시작 화면. `game/game.gd` 하나를 달고 나머지는 코드가 짓는다 |
+| `godot/project.godot` | 프로젝트 설정. 렌더러는 `mobile`, 주 화면은 `start.tscn` (모드 고르기 → [play-mode.md](play-mode.md)) |
+| `godot/start.tscn` | 처음 뜨는 화면 — 테스트 모드 / 일반 모드. 고르면 `main.tscn` 으로 넘어간다 |
+| `godot/main.tscn` | 게임 화면. `game/game.gd` 하나를 달고 나머지는 코드가 짓는다. 테스트는 이것을 바로 띄운다 |
 | `godot/world/world.gd` | **판정.** `ZoneRoom.ts` 의 자리다. 네트워크 얘기가 없다 |
 | `godot/world/movement.gd` | `shared/movement.ts` 이식본. TS 와 값이 같아야 한다 |
 | `godot/world/combat.gd` | `shared/combat.ts` 이식본 — 피해·치명타·경직·경험치. **수치는 `data/combat.json` 에서 읽는다** |

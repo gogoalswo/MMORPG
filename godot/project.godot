@@ -6,7 +6,7 @@ config_version=5
 [application]
 
 config/name="MMORPG"
-run/main_scene="res://main.tscn"
+run/main_scene="res://start.tscn"
 config/features=PackedStringArray("4.7", "Mobile")
 
 [display]

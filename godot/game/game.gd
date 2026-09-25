@@ -27,6 +27,13 @@ const GEAR_CELL := 64
 const DETAIL_ICON := 92
 ## 상세 창 폭
 const DETAIL_W := 300
+## 아이템 상세 창(고른 것 · 착용 중 비교)의 폭 · 큰 칸 · 글자. **작게 둔다** —
+## 두 창을 인벤토리 높이(670) 안에 위아래로 쌓는다 (2026-09-25 요청: "상세 정보창
+## 크기를 좀 줄여" + 착용 중 장비 비교). 옆으로는 자리가 없다: 1280 폭에 장비·상세·
+## 인벤토리가 이미 거의 다 찬다
+const ITEM_W := 240
+const ITEM_ICON := 64
+const ITEM_FONT := 14
 ## 창이 화면 양 끝에서 떨어지는 폭과, 상세 창·인벤토리 사이
 const WINDOW_EDGE := 16
 const WINDOW_GAP := 8
@@ -325,6 +332,10 @@ var _detail_state: Label
 var _detail_icon: PanelContainer
 ## 상세 창 "아이템 정보" 표 — 이름 · 값 두 칸씩
 var _detail_info: GridContainer
+## 착용 중 비교 창 — 가방 칸을 고르면, 같은 부위에 낀 것이 있을 때 상세 창 아래에 뜬다.
+## 노드는 `_build_item_view` 가 돌려준 묶음(grade·name·kind·state·icon·info)이다
+var _compare_panel: PanelContainer
+var _compare_view: Dictionary = {}
 ## 고른 칸 — {"where": "equip"|"bag", "index": int}. 비면 아무것도 안 골랐다
 var _bag_pick: Dictionary = {}
 ## 아이콘을 한 번만 찾아 기억해 둔다 (없는 것도 기억한다)
@@ -561,6 +572,8 @@ func _build_persistent() -> void:
 	_close_button(_bag_panel, _toggle_bag, 0)
 	_close_button(_gear_panel, _toggle_gear, 0)
 	_close_button(_detail_panel, _close_detail, 0)
+	# 비교 창 X 는 비교 창만 닫는다 — 고른 것은 그대로 (다른 칸을 고르면 다시 뜬다)
+	_close_button(_compare_panel, func() -> void: _compare_panel.visible = false, 0)
 	_close_button(_crystal_panel, _close_crystal, 0)
 	_close_button(_char_panel, _toggle_char, 0)
 	_close_button(_skill_panel, _toggle_skills)
@@ -945,7 +958,9 @@ func _build_bag_panel() -> void:
 	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(spacer)
 
+	# 상세 창은 **내용 높이만** 쓴다 (2026-09-25 요청: "크기를 좀 줄여") — 위에 붙인다
 	_detail_panel = _window_panel()
+	_detail_panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	row.add_child(_detail_panel)
 	_build_detail_window(_detail_panel)
 
@@ -957,6 +972,7 @@ func _build_bag_panel() -> void:
 	_bag_panel = _window_panel()
 	row.add_child(_bag_panel)
 	_build_bag_window(_bag_panel)
+	_build_compare_layer()
 
 
 ## 창 하나 — 바르코로 뽑은 창 바탕(`inv_panel`)을 9조각으로 깐다
@@ -1107,54 +1123,65 @@ func _build_char_window(panel: PanelContainer) -> void:
 	side.add_child(formula)
 
 
+## 착용 중 비교 창 — **상세 창 바로 왼쪽에 같은 높이로** 나란히 뜬다 (2026-09-25 요청:
+## "장착중인 장비가 있으면 장착중인 아이템도 상세 정보창 띄워서 비교할 수 있게").
+##
+## 나란히 두어야 줄끼리 맞대어 읽힌다. 그런데 1280 폭에 장비·상세·인벤토리가 이미
+## 거의 다 차서(378 + 276 + 428) 한 줄에 넣을 자리가 없다 — 위아래로 쌓으면 옵션 많은
+## 장비(8줄)에서 670 을 넘는다. 그래서 **위에 한 줄 더 깔고 장비 창 오른쪽을 덮는다.**
+## 줄은 가방 창과 같은 틀(양 끝 여백 · 세로 가운데)이라 자리는 컨테이너가 잡는다:
+##   [빈칸(늘어남)][비교 창][상세 + 틈 + 인벤토리 폭만큼 빈 자리]
+## 빈 자리의 크기는 두 창이 바뀔 때마다 따라간다 (`resized`)
+func _build_compare_layer() -> void:
+	var layer := MarginContainer.new()
+	layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_theme_constant_override("margin_left", WINDOW_EDGE)
+	layer.add_theme_constant_override("margin_right", WINDOW_EDGE)
+	_ui_root.add_child(layer)
+
+	var row := HBoxContainer.new()
+	row.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_constant_override("separation", WINDOW_GAP)
+	layer.add_child(row)
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(spacer)
+
+	_compare_panel = _window_panel()
+	_compare_panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	row.add_child(_compare_panel)
+	_compare_view = _build_item_view(_compare_panel)
+
+	# 상세 창 + 틈 + 인벤토리 자리. 높이도 인벤토리와 같아야 줄이 같은 높이에 선다
+	var room := Control.new()
+	room.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(room)
+	var fit := func() -> void:
+		room.custom_minimum_size = Vector2(
+			_detail_panel.size.x + WINDOW_GAP + _bag_panel.size.x, _bag_panel.size.y
+		)
+	_detail_panel.resized.connect(fit)
+	_bag_panel.resized.connect(fit)
+	# 상세 창이 지면 비교 창도 진다 (빈칸 · X · 가방 닫기 · 크리스탈 창)
+	_detail_panel.visibility_changed.connect(func() -> void:
+		if not _detail_panel.is_visible_in_tree():
+			_compare_panel.visible = false
+	)
+
+
 ## 상세 창 — 받은 그림의 왼쪽 창. 등급 · 이름 · 종류 · 큰 칸 · 아이템 정보 · 단추
 func _build_detail_window(panel: PanelContainer) -> void:
-	var side := VBoxContainer.new()
-	side.custom_minimum_size = Vector2(DETAIL_W, 0)
-	side.add_theme_constant_override("separation", 8)
-	panel.add_child(side)
-
-	_detail_grade = _window_title(side, "", 19)
-
-	var head := HBoxContainer.new()
-	head.add_theme_constant_override("separation", 10)
-	side.add_child(head)
-	var lines := VBoxContainer.new()
-	lines.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	lines.add_theme_constant_override("separation", 4)
-	head.add_child(lines)
-	_detail_name = _inv_label("", 24, INV_GOLD)
-	_detail_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	lines.add_child(_detail_name)
-	_detail_kind = _inv_label("", 17, INV_DIM)
-	lines.add_child(_detail_kind)
-	_detail_state = _inv_label("", 17, INV_GOLD)
-	lines.add_child(_detail_state)
-	_detail_icon = _make_cell(func() -> void: pass, DETAIL_ICON)
-	_detail_icon.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	# 강화는 큰 칸 오른쪽 아래 `+9` 로만 보인다 — 정보 표의 강화 줄은 뺐다 (2026-09-23 요청)
-	_detail_icon.get_node("badge").add_theme_font_size_override("font_size", 22)
-	head.add_child(_detail_icon)
-
-	# "아이템 정보" — 제목 아래에 가는 줄 한 가닥
-	var section := _inv_label("아이템 정보", 20, INV_GOLD)
-	side.add_child(section)
-	var rule := ColorRect.new()
-	rule.color = INV_RULE
-	rule.custom_minimum_size = Vector2(0, 1)
-	side.add_child(rule)
-
-	# 이름 · 값 두 줄짜리 표. 값은 오른쪽에 붙인다 (받은 그림대로)
-	_detail_info = GridContainer.new()
-	_detail_info.columns = 2
-	_detail_info.add_theme_constant_override("h_separation", 12)
-	_detail_info.add_theme_constant_override("v_separation", 6)
-	side.add_child(_detail_info)
-
-	var room := Control.new()
-	room.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	room.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	side.add_child(room)
+	var view := _build_item_view(panel)
+	_detail_grade = view.grade
+	_detail_name = view.name
+	_detail_kind = view.kind
+	_detail_state = view.state
+	_detail_icon = view.icon
+	_detail_info = view.info
+	var side: VBoxContainer = view.side
 
 	var buttons := HBoxContainer.new()
 	buttons.alignment = BoxContainer.ALIGNMENT_END
@@ -1165,6 +1192,55 @@ func _build_detail_window(panel: PanelContainer) -> void:
 	buttons.add_child(_enhance_button)
 	_bag_action = _inv_button("-", _on_bag_action)
 	buttons.add_child(_bag_action)
+
+
+## 아이템 한 벌을 보여 주는 틀 — 등급(머리 줄) · 이름 · 종류 · 상태 · 큰 칸 · 아이템 정보 표.
+## 상세 창과 착용 중 비교 창이 같이 쓴다 — **두 창이 같은 모양이라야 줄을 맞대어 비교된다.**
+## 단추는 상세 창만 단다. 글자·칸은 `ITEM_*` 로 작게 (2026-09-25 요청)
+func _build_item_view(panel: PanelContainer) -> Dictionary:
+	var side := VBoxContainer.new()
+	side.custom_minimum_size = Vector2(ITEM_W, 0)
+	side.add_theme_constant_override("separation", 6)
+	panel.add_child(side)
+
+	var grade := _window_title(side, "", 17)
+
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 8)
+	side.add_child(head)
+	var lines := VBoxContainer.new()
+	lines.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	lines.add_theme_constant_override("separation", 2)
+	head.add_child(lines)
+	var title := _inv_label("", 18, INV_GOLD)
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	lines.add_child(title)
+	var kind := _inv_label("", ITEM_FONT, INV_DIM)
+	lines.add_child(kind)
+	var state := _inv_label("", ITEM_FONT, INV_GOLD)
+	lines.add_child(state)
+	var icon := _make_cell(func() -> void: pass, ITEM_ICON)
+	icon.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	# 강화는 큰 칸 오른쪽 아래 `+9` 로만 보인다 — 정보 표의 강화 줄은 뺐다 (2026-09-23 요청)
+	icon.get_node("badge").add_theme_font_size_override("font_size", 18)
+	head.add_child(icon)
+
+	# "아이템 정보" — 제목 아래에 가는 줄 한 가닥
+	side.add_child(_inv_label("아이템 정보", 16, INV_GOLD))
+	var rule := ColorRect.new()
+	rule.color = INV_RULE
+	rule.custom_minimum_size = Vector2(0, 1)
+	side.add_child(rule)
+
+	# 이름 · 값 두 줄짜리 표. 값은 오른쪽에 붙인다 (받은 그림대로)
+	var info := GridContainer.new()
+	info.columns = 2
+	info.add_theme_constant_override("h_separation", 10)
+	info.add_theme_constant_override("v_separation", 3)
+	# 표 글자 크기 — `_fill_detail_rows` 가 읽는다 (다른 창의 표는 17 그대로)
+	info.set_meta("font", ITEM_FONT)
+	side.add_child(info)
+	return {"side": side, "grade": grade, "name": title, "kind": kind, "state": state, "icon": icon, "info": info}
 
 
 ## 크리스탈 창 — 상세 창과 같은 틀이다: 머리 줄 · 대상 이름과 큰 칸 · 옵션 표 · 아래 단추.
@@ -1811,33 +1887,67 @@ func _show_bag_detail() -> void:
 		_show_cell_action()
 		return
 	_detail_panel.visible = _bag_panel.visible
+	_compare_panel.visible = false
 	if Items.is_material(str(stack.get("id", ""))):
 		_show_material_detail(stack)
 		return
 
 	var item := Items.get_item(str(stack.get("id", "")))
-	var grade := int(stack.get("grade", 1))
 	var enhance := int(stack.get("enhance", 0))
 	var worn := str(_bag_pick.get("where", "")) == "equip"
-	var tint := _grade_tint(grade)
-	var slot := str(item.get("slot", ""))
-
-	_detail_grade.text = Items.grade_name(grade)
-	_detail_grade.add_theme_color_override("font_color", tint)
-	_detail_name.text = str(item.get("name", stack.get("id", "?")))
-	if enhance > 0:
-		_detail_name.text += " +%d" % enhance
-	_detail_name.add_theme_color_override("font_color", tint)
-	_detail_kind.text = "%s · 착용 Lv.%d" % [Items.slot_label(slot), int(item.get("level", 1))]
 	# **낄 수 있는지 판정과 같은 식으로 미리 본다** — 테스트 창·옛 저장은 레벨이 모자란
 	# 장비를 끼워 주는데, 한 번 벗으면 판정이 다시 끼기를 거부한다. 그때 "장착" 이 켜져
 	# 있으면 눌러도 아무 일이 없어 보인다 (2026-09-23)
 	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
 	var level := int(me.get("level", 1))
 	var fits := worn or Items.can_equip(item, str(me.get("job", "")), level)
-	_detail_kind.add_theme_color_override("font_color", INV_DIM if fits else INV_WARN)
-	_detail_state.text = "착용 중" if worn else "보유 중"
-	_fill_cell(_detail_icon, stack, "", _item_icon(stack))
+	_fill_item_view({
+		"grade": _detail_grade, "name": _detail_name, "kind": _detail_kind,
+		"state": _detail_state, "icon": _detail_icon, "info": _detail_info,
+	}, stack, worn, fits)
+
+	# 가방 칸이면 **같은 부위에 낀 것**을 아래 비교 창에 띄운다 (2026-09-25 요청:
+	# "장착중인 장비가 있으면 장착중인 아이템도 상세 정보창 띄워서 비교할 수 있게")
+	var equipped: Dictionary = me.get("equipped", {}).get(str(item.get("slot", "")), {})
+	_compare_panel.visible = not worn and not equipped.is_empty()
+	if _compare_panel.visible:
+		_fill_item_view(_compare_view, equipped, true, true)
+
+	# 성공률·실패 시 파괴는 **강화 팝업**에 적는다 (2026-09-23 요청 "강화 ui창을 따로 만들어")
+	var can := Items.can_enhance(enhance)
+	_enhance_button.text = "강화" if can else "최대"
+	_enhance_button.disabled = not can
+
+	if fits:
+		_bag_action.text = "해제" if worn else "장착"
+	else:
+		_bag_action.text = "레벨 부족" if level < int(item.get("level", 1)) else "착용 불가"
+	_bag_action.disabled = not fits
+	_show_cell_action()
+
+
+## 장비 한 벌을 틀(`_build_item_view` 묶음)에 채운다 — 등급 · 이름 +강화 · 부위와 착용 레벨
+## (못 끼면 붉게) · 착용 중/보유 중 · 큰 칸 · 아이템 정보(능력치 · 차수별 옵션).
+## 상세 창과 비교 창이 같이 쓴다 — 줄 순서가 같아야 맞대어 읽힌다
+func _fill_item_view(view: Dictionary, stack: Dictionary, worn: bool, fits: bool) -> void:
+	var item := Items.get_item(str(stack.get("id", "")))
+	var grade := int(stack.get("grade", 1))
+	var enhance := int(stack.get("enhance", 0))
+	var tint := _grade_tint(grade)
+	var grade_label: Label = view.grade
+	grade_label.text = Items.grade_name(grade)
+	grade_label.add_theme_color_override("font_color", tint)
+	var title: Label = view.name
+	title.text = str(item.get("name", stack.get("id", "?")))
+	if enhance > 0:
+		title.text += " +%d" % enhance
+	title.add_theme_color_override("font_color", tint)
+	var kind: Label = view.kind
+	kind.text = "%s · 착용 Lv.%d" % [Items.slot_label(str(item.get("slot", ""))), int(item.get("level", 1))]
+	kind.add_theme_color_override("font_color", INV_DIM if fits else INV_WARN)
+	var state: Label = view.state
+	state.text = "착용 중" if worn else "보유 중"
+	_fill_cell(view.icon, stack, "", _item_icon(stack))
 
 	# 아이템 정보 — 이름 · 값 두 줄짜리 표를 다시 채운다
 	var rows: Array = [
@@ -1860,18 +1970,7 @@ func _show_bag_detail() -> void:
 				"crystal": rows.append([head, "크리스탈로 붙임"])
 				"drop": pass
 				_: rows.append([head, "비어 있음"])
-	# 성공률·실패 시 파괴는 **강화 팝업**에 적는다 (2026-09-23 요청 "강화 ui창을 따로 만들어")
-	var can := Items.can_enhance(enhance)
-	_enhance_button.text = "강화" if can else "최대"
-	_enhance_button.disabled = not can
-	_fill_detail_rows(rows)
-
-	if fits:
-		_bag_action.text = "해제" if worn else "장착"
-	else:
-		_bag_action.text = "레벨 부족" if level < int(item.get("level", 1)) else "착용 불가"
-	_bag_action.disabled = not fits
-	_show_cell_action()
+	_fill_detail_rows(rows, view.info)
 
 
 ## 고른 가방 칸에만 상세 창 단추와 같은 글자("장착"/"사용")를 얹는다.
@@ -1896,12 +1995,13 @@ func _fill_detail_rows(rows: Array, grid: GridContainer = null) -> void:
 	for child in grid.get_children():
 		grid.remove_child(child)
 		child.queue_free()
+	var font := int(grid.get_meta("font", 17))
 	for row in rows:
-		var key_label := _inv_label(str(row[0]), 17, INV_DIM)
+		var key_label := _inv_label(str(row[0]), font, INV_DIM)
 		key_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		grid.add_child(key_label)
 		var tint: Color = row[2] if row.size() > 2 else INV_TEXT
-		var value_label := _inv_label(str(row[1]), 17, tint)
+		var value_label := _inv_label(str(row[1]), font, tint)
 		value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		grid.add_child(value_label)
 

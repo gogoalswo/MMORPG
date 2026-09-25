@@ -30,8 +30,9 @@ var _playing := ""
 var _speed := 1.0
 ## 히트스톱이 남은 시간(초)
 var _freeze := 0.0
-## 지금 낀 무기 등급 (0 = 맨주먹). 같은 등급이면 다시 짓지 않는다
+## 지금 낀 무기 등급 (0 = 맨주먹)과 강화 수치. 둘 다 같으면 다시 짓지 않는다
 var _weapon_grade := 0
+var _weapon_enhance := 0
 ## 손 뼈 이름 → BoneAttachment3D. 처음 무기를 낄 때 만든다
 var _sockets := {}
 
@@ -147,12 +148,14 @@ func _process(delta: float) -> void:
 
 
 ## 주먹 소켓에 무기를 끼운다. `grade` 는 무기 등급, 0 이면 벗긴다.
-## 같은 등급이면 아무것도 하지 않는다 — 매 프레임 불러도 된다.
+## 등급·강화가 같으면 아무것도 하지 않는다 — 매 프레임 불러도 된다.
 ## 뼈가 없는 모델(기둥·짐승)은 조용히 넘어간다
-func set_weapon(grade: int) -> void:
-	if grade == _weapon_grade:
+## 강화 수치(`enhance`)가 오르면 주먹 기운이 커진다 (`FistAura.GROW`)
+func set_weapon(grade: int, enhance := 0) -> void:
+	if grade == _weapon_grade and enhance == _weapon_enhance:
 		return
 	_weapon_grade = grade
+	_weapon_enhance = enhance
 	for bone in FIST_BONES:
 		var socket := fist_socket(bone)
 		if socket == null:
@@ -165,7 +168,7 @@ func set_weapon(grade: int) -> void:
 			socket.add_child(Gauntlet.build(grade, left))
 			# 주먹에 감도는 등급 색 기운. 소켓은 모델 단위(모델 배율이 걸려 있다)라
 			# 배율을 되돌려 미터로 짓게 한다
-			var aura := FistAura.build(grade)
+			var aura := FistAura.build(grade, enhance)
 			aura.position = Gauntlet.fist_center(left)
 			aura.scale = Vector3.ONE / get_child(0).scale.x
 			socket.add_child(aura)
@@ -173,6 +176,10 @@ func set_weapon(grade: int) -> void:
 
 func weapon_grade() -> int:
 	return _weapon_grade
+
+
+func weapon_enhance() -> int:
+	return _weapon_enhance
 
 
 ## 손 뼈를 따라다니는 자리. 뼈가 없으면 null

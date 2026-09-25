@@ -117,6 +117,19 @@ func _case_game() -> void:
 			_fail("%d등급 무기를 꼈는데 주먹에 %d등급" % [grade, rig.weapon_grade()])
 		elif rig.fist_socket("RightHand").get_child(0).name != "Gauntlet%d" % grade:
 			_fail("%d등급을 꼈는데 모델이 %s" % [grade, rig.fist_socket("RightHand").get_child(0).name])
+	# 강화하면 기운이 커진다 — 낀 무기의 강화 수치를 올려 본다
+	var halo_before := _halo_size(rig)
+	var enhance_before := int(me.equipped.weapon.get("enhance", 0))
+	me.equipped.weapon["enhance"] = 6
+	for i in 3:
+		await process_frame
+	if rig.weapon_enhance() != 6:
+		_fail("+6 으로 올렸는데 주먹이 +%d" % rig.weapon_enhance())
+	elif not is_equal_approx(_halo_size(rig) / halo_before, FistAura.grow(6) / FistAura.grow(enhance_before)):
+		_fail("+%d → +6 기운이 %.2f배 (%.2f배여야 한다)" % [
+			enhance_before, _halo_size(rig) / halo_before, FistAura.grow(6) / FistAura.grow(enhance_before)])
+	print("  강화: +%d → +6 이면 기운이 %.2f배" % [enhance_before, _halo_size(rig) / halo_before])
+
 	game._transport.send(&"unequip", {"slot": "weapon"})
 	for i in 3:
 		await process_frame
@@ -142,6 +155,12 @@ func _check_aura(rig: Rig, grade: int, skeleton: Skeleton3D) -> void:
 	var hue_got := FistAura.color(grade).h
 	if absf(hue_want - hue_got) > 0.02:
 		_fail("%d등급 기운 색조 %.2f — 등급 색은 %.2f" % [grade, hue_got, hue_want])
+
+
+## 오른주먹 빛무리 지름(m)
+func _halo_size(rig: Rig) -> float:
+	var aura: FistAura = rig.fist_socket("RightHand").get_node("FistAura")
+	return (aura._halo.mesh as QuadMesh).size.x
 
 
 ## 기운의 화려함 — 빛 조각 수 + 방출기 알갱이 수

@@ -3974,12 +3974,16 @@ func _draw_state() -> void:
 
 
 ## 낀 무기를 주먹 소켓에 보인다 — 무기를 바꾸면 모델이 바뀌고, 벗으면 맨주먹이다.
-## 등급이 곧 생김새다 (무기는 등급마다 하나). 같은 등급이면 Rig 가 다시 짓지 않는다
+## 등급이 곧 생김새다 (무기는 등급마다 하나). **강화 수치만큼 주먹 기운이 커진다**.
+## 등급·강화가 같으면 Rig 가 다시 짓지 않는다
 func _wear_weapon(me: Dictionary) -> void:
 	if not _player is Rig:
 		return
 	var weapon: Dictionary = me.get("equipped", {}).get("weapon", {})
-	(_player as Rig).set_weapon(0 if weapon.is_empty() else int(weapon.get("grade", 1)))
+	if weapon.is_empty():
+		(_player as Rig).set_weapon(0)
+	else:
+		(_player as Rig).set_weapon(int(weapon.get("grade", 1)), int(weapon.get("enhance", 0)))
 
 
 ## 맞았다. 맞은 자리에서 터뜨리고, 맞은 몸을 붉게 물들이고, 내가 맞았으면

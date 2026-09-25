@@ -68,8 +68,21 @@ export const GROWTH = 0.02;
 
 /** 기준 플레이어의 피해 감소율. `K` 를 여기서 역산한다 */
 export const TARGET_REDUCE = 0.3;
-/** 몬스터 방어력 = 기준 플레이어 총방어력 × 이것 (몬스터는 방어보다 체력형이어야 타격감이 산다) */
-export const MON_DEF_RATIO = 0.5;
+/**
+ * 동레벨 기준 플레이어가 때릴 때 몬스터 방어가 깎는 피해 비율 ★ (2026-09-25 지시: "관통 퍼센트
+ * 대비 데미지 상승이 너무 낮은거 아니야? 몬스터 방어가 피해를 최대 50프로 깎도록 잡아.
+ * 방어구 관통 효과가 더 커지게"). 그 전엔 17.6% 라 관통 15% 가 피해 +2.4% 에 그쳤다 —
+ * 50% 면 +8.1%, 상한 90% 면 +82% 다 (피해 배율 `1 / (2 − 관통)`).
+ */
+export const MON_REDUCE = 0.5;
+/**
+ * 몬스터 방어력 = 기준 플레이어 총방어력 × 이것. `MON_REDUCE` 에서 역산한다 —
+ * K = 기준 방어 × 0.7/0.3 이므로 감소율 50% 는 방어 = K, 곧 ×2.333 이다 (그 전 ×0.5).
+ */
+export const MON_DEF_RATIO =
+  ((1 - TARGET_REDUCE) / TARGET_REDUCE) * (MON_REDUCE / (1 - MON_REDUCE));
+/** 필요 킬 수를 셀 때의 몬스터 방어 비율 — **올리기 전 값**이다 (`paceKillRate`) */
+export const PACE_MON_DEF_RATIO = 0.5;
 export const MON_ATTACK_INTERVAL = 1.5;
 export const PLAYER_ATTACK_INTERVAL = 1.0;
 
@@ -455,7 +468,8 @@ export function hpRamp(level: number): number {
 export function paceKillRate(level: number): number {
   const pl = fullPlayer(level);
   const mo = monster(level);
-  const before = { ...mo, hp: mo.hp / hpRamp(level) };
+  // 방어도 올리기 전 값으로 센다 (2026-09-25 지시: "HP 그대로, 더 단단하게") — 킬 수는 그대로다
+  const before = { ...mo, hp: mo.hp / hpRamp(level), df: (mo.df * PACE_MON_DEF_RATIO) / MON_DEF_RATIO };
   return spawnCount(level) / (groupClear(pl, before).seconds + GROUP_GAP);
 }
 

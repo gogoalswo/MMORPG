@@ -353,12 +353,18 @@ func _case_range() -> void:
 	s[2].append(aside)
 	w.learn_skill("me", "rising_kick")
 	me.cast_until = 0
+	# 앞에서 할퀴기를 한 번 썼다 — 쿨타임 스위치(`cooldownOff`)가 꺼져 있으면 6.5초 쿨타임에
+	# 걸려 거절되고, 범위 이벤트가 없어 아래가 스크립트 오류로 **조용히** 건너뛰어졌다 (2026-09-25)
+	me.skill_ready_at = {}
 	w.set_skill_bar("me", ["rising_kick"])
 	w.drain_events()
 	w.cast("me", "rising_kick")
 	w._combos.clear()
 	var fan_events := w.drain_events()
 	var fan := _first(fan_events, "skillRange")
+	if fan.is_empty():
+		_fail("할퀴기가 안 나갔다 — 범위 이벤트가 없다 (시전 잠금·쿨타임을 풀었나)")
+		return
 	var struck: Array = []
 	for e in fan_events:
 		if e.get("type", "") == "hit":

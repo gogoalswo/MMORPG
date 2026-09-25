@@ -35,8 +35,9 @@ func _case_socket() -> void:
 	var skeleton: Skeleton3D = rig.find_children("*", "Skeleton3D", true, false)[0]
 	var shapes := {}
 	var layers: Array = []
+	# 오로라는 강화 +6 부터 — 겹은 등급마다 느는지 보려고 +9 로 끼운다
 	for grade in range(1, 8):
-		rig.set_weapon(grade)
+		rig.set_weapon(grade, 9)
 		await process_frame
 		for bone in Rig.FIST_BONES:
 			var socket := rig.fist_socket(bone)
@@ -117,18 +118,31 @@ func _case_game() -> void:
 			_fail("%d등급 무기를 꼈는데 주먹에 %d등급" % [grade, rig.weapon_grade()])
 		elif rig.fist_socket("RightHand").get_child(0).name != "Gauntlet%d" % grade:
 			_fail("%d등급을 꼈는데 모델이 %s" % [grade, rig.fist_socket("RightHand").get_child(0).name])
-	# 강화하면 기운이 커진다 — 낀 무기의 강화 수치를 올려 본다
-	var halo_before := _halo_size(rig)
-	var enhance_before := int(me.equipped.weapon.get("enhance", 0))
-	me.equipped.weapon["enhance"] = 6
-	for i in 3:
-		await process_frame
-	if rig.weapon_enhance() != 6:
-		_fail("+6 으로 올렸는데 주먹이 +%d" % rig.weapon_enhance())
-	elif not is_equal_approx(_halo_size(rig) / halo_before, FistAura.grow(6) / FistAura.grow(enhance_before)):
-		_fail("+%d → +6 기운이 %.2f배 (%.2f배여야 한다)" % [
-			enhance_before, _halo_size(rig) / halo_before, FistAura.grow(6) / FistAura.grow(enhance_before)])
-	print("  강화: +%d → +6 이면 기운이 %.2f배" % [enhance_before, _halo_size(rig) / halo_before])
+	# 강화 단계에 따라 — +5 까지는 오로라가 없고, +6 초록 · +7 파랑 · +8 빨강 · +9 하양,
+	# 한 단계마다 커진다
+	var names := {6: "초록", 7: "파랑", 8: "빨강", 9: "하양"}
+	var first_size := 0.0
+	for enhance in [5, 6, 7, 8, 9]:
+		me.equipped.weapon["enhance"] = enhance
+		for i in 3:
+			await process_frame
+		var aura: FistAura = rig.fist_socket("RightHand").get_node_or_null("FistAura")
+		if enhance < 6:
+			if aura != null:
+				_fail("+%d 인데 오로라가 나온다 (+6 부터여야 한다)" % enhance)
+			continue
+		if aura == null:
+			_fail("+%d 인데 오로라가 없다" % enhance)
+			continue
+		var got: Color = (aura._halo.material_override as StandardMaterial3D).albedo_color
+		var want: Color = FistAura.COLORS[enhance]
+		if not Vector3(got.r, got.g, got.b).is_equal_approx(Vector3(want.r, want.g, want.b)):
+			_fail("+%d 오로라가 %s 이 아니다 (%s)" % [enhance, names[enhance], got.to_html(false)])
+		if enhance == 6:
+			first_size = _halo_size(rig)
+		elif not is_equal_approx(_halo_size(rig) / first_size, FistAura.grow(enhance) / FistAura.grow(6)):
+			_fail("+6 → +%d 오로라가 %.2f배" % [enhance, _halo_size(rig) / first_size])
+	print("  강화: +5 없음 · +6 초록 · +7 파랑 · +8 빨강 · +9 하양 (+9 는 +6 의 %.2f배)" % (FistAura.grow(9) / FistAura.grow(6)))
 
 	game._transport.send(&"unequip", {"slot": "weapon"})
 	for i in 3:
@@ -151,10 +165,11 @@ func _check_aura(rig: Rig, grade: int, skeleton: Skeleton3D) -> void:
 	var hand := (skeleton.global_transform * skeleton.get_bone_global_pose(skeleton.find_bone("RightHand"))).origin
 	if aura.global_position.distance_to(hand) > 0.2:
 		_fail("%d등급 기운이 손에서 %.2fm" % [grade, aura.global_position.distance_to(hand)])
-	var hue_want := Items.grade_color(grade).h
-	var hue_got := FistAura.color(grade).h
-	if absf(hue_want - hue_got) > 0.02:
-		_fail("%d등급 기운 색조 %.2f — 등급 색은 %.2f" % [grade, hue_got, hue_want])
+	# 색은 등급이 아니라 강화 단계가 정한다 (+9 = 하양)
+	var got: Color = (aura._halo.material_override as StandardMaterial3D).albedo_color
+	var want: Color = FistAura.COLORS[9]
+	if not Vector3(got.r, got.g, got.b).is_equal_approx(Vector3(want.r, want.g, want.b)):
+		_fail("%d등급 +9 오로라 색이 %s (하양 %s 이어야 한다)" % [grade, got.to_html(false), want.to_html(false)])
 
 
 ## 오른주먹 빛무리 지름(m)

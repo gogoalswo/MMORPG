@@ -1778,6 +1778,11 @@ func _hit_monster(player: Dictionary, target: Dictionary, attack: float, skill_i
 func _refresh_stats(player: Dictionary) -> void:
 	var stats := Combat.stats_for(str(player.job), int(player.level))
 	var gear := Items.equipment_stats(player.equipped)
+	# 캐릭터 정보 창이 **기본 → 증가 % → 최종** 을 풀어 적는다 (2026-09-25 요청). 화면이
+	# 공식을 다시 돌리지 않게 곱하기 전 값과 장비 % 합계를 같이 내려보낸다
+	for key in ["attack", "defense", "maxHp"]:
+		stats["base_" + key] = int(stats[key])
+		stats["gear_" + key] = float(gear[key])
 	stats.attack = maxi(1, roundi(float(stats.attack) * (1.0 + float(gear.attack) / 100.0)))
 	stats.defense = maxi(0, roundi(float(stats.defense) * (1.0 + float(gear.defense) / 100.0)))
 	stats.maxHp = maxi(1, roundi(float(stats.maxHp) * (1.0 + float(gear.maxHp) / 100.0)))

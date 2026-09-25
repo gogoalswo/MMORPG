@@ -114,6 +114,8 @@ const ICON_DIR := "res://assets/icons/"
 const BAG_TABS := ["전체", "무기", "방어구", "장신구"]
 ## 스탯 상자에 놓는 여섯 개. 순서가 `_redraw_bag` 의 목록과 같아야 한다
 const STAT_NAMES := ["공격력", "방어력", "체력", "치명타", "치명타 피해", "공격 속도"]
+## 캐릭터 정보 창에서 **기본 → 증가 % → 최종** 으로 푸는 스탯. 이름은 `DETAIL_BONUS` 를 쓴다
+const CHAR_SPLIT := ["attack", "defense", "maxHp"]
 
 var _transport: Transport
 var _player: Node3D
@@ -297,6 +299,11 @@ var _enhance: EnhancePopup
 ## 크리스탈 창 — 크리스탈을 고르고 "사용" 을 누르면 상세 창 자리에 뜬다.
 ## 떠 있는 동안 장비 칸을 누르면 그 장비가 대상이 된다 (`_crystal_target`)
 var _crystal_panel: PanelContainer
+# 캐릭터 정보 창 — 장비 창의 "상세" 로 연다. 묶음마다 이름·값 표 하나 (`CHAR_SPLIT` + 전투 한 묶음)
+var _char_panel: PanelContainer
+var _char_head: Label
+var _char_button: Button
+var _char_grids: Array = []
 var _crystal_icon: PanelContainer
 var _crystal_name: Label
 var _crystal_kind: Label
@@ -553,6 +560,7 @@ func _build_persistent() -> void:
 	_close_button(_gear_panel, _toggle_gear, 0)
 	_close_button(_detail_panel, _close_detail, 0)
 	_close_button(_crystal_panel, _close_crystal, 0)
+	_close_button(_char_panel, _toggle_char, 0)
 	_close_button(_skill_panel, _toggle_skills)
 	_close_button(_npc_panel, func() -> void: _npc_panel.visible = false)
 
@@ -944,6 +952,11 @@ func _build_bag_panel() -> void:
 	row.add_child(_crystal_panel)
 	_build_crystal_window(_crystal_panel)
 
+	# 캐릭터 정보 창도 **같은 자리**다 — 1280 폭에 창 넷(장비·정보·상세·인벤토리)은 안 들어간다
+	_char_panel = _window_panel()
+	row.add_child(_char_panel)
+	_build_char_window(_char_panel)
+
 	_bag_panel = _window_panel()
 	row.add_child(_bag_panel)
 	_build_bag_window(_bag_panel)
@@ -1044,6 +1057,51 @@ func _build_gear_window(panel: PanelContainer) -> void:
 		label.custom_minimum_size = Vector2(150, 0)
 		grid.add_child(label)
 		_stat_labels.append(label)
+
+	# 스탯 상자 아래 "상세" — 캐릭터 정보 창에서 기본 → 증가 % → 최종을 풀어 본다
+	var foot := HBoxContainer.new()
+	foot.alignment = BoxContainer.ALIGNMENT_END
+	side.add_child(foot)
+	_char_button = _inv_button("상세", _toggle_char)
+	foot.add_child(_char_button)
+
+
+## 캐릭터 정보 창 — 상세 창과 같은 틀(머리 줄 · 가는 줄 · 이름/값 표).
+## 묶음 제목은 달지 않는다 — 줄 이름에 "공격력" 이 이미 있고, 달면 창이 782px 로 화면(720)을 넘는다.
+## 공격력·방어력·체력은 **기본 → 증가 % → 최종** 세 줄로 푼다 (2026-09-25 요청:
+## "기본 공격력 / 공격력 증가 % / 최종 공격력 이렇게 디테일하게")
+func _build_char_window(panel: PanelContainer) -> void:
+	var side := VBoxContainer.new()
+	side.custom_minimum_size = Vector2(DETAIL_W, 0)
+	side.add_theme_constant_override("separation", 8)
+	panel.add_child(side)
+
+	var title := _window_title(side, "캐릭터 정보", 22)
+	_char_head = _inv_label("", 20, INV_TEXT)
+	_char_head.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	title.get_parent().add_child(_char_head)
+	title.get_parent().move_child(_char_head, 1)
+
+	_char_grids.clear()
+	for index in CHAR_SPLIT.size() + 1:
+		var rule := ColorRect.new()
+		rule.color = INV_RULE
+		rule.custom_minimum_size = Vector2(0, 1)
+		side.add_child(rule)
+		var grid := GridContainer.new()
+		grid.columns = 2
+		grid.add_theme_constant_override("h_separation", 12)
+		grid.add_theme_constant_override("v_separation", 6)
+		side.add_child(grid)
+		_char_grids.append(grid)
+
+	var room := Control.new()
+	room.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	room.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	side.add_child(room)
+	var formula := _inv_label("최종 = 기본 × (1 + 증가 %)", 15, INV_DIM)
+	formula.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	side.add_child(formula)
 
 
 ## 상세 창 — 받은 그림의 왼쪽 창. 등급 · 이름 · 종류 · 큰 칸 · 아이템 정보 · 단추
@@ -1550,6 +1608,8 @@ func _pick_bag(where: String, index: int) -> void:
 	_bag_pick = {"where": where, "index": index}
 	if _picked_stack().is_empty():
 		_bag_pick = {}
+	else:
+		_char_panel.visible = false  # 상세 창과 같은 자리라 물건을 고르면 비켜 준다
 	_show_bag_detail()
 
 
@@ -1562,6 +1622,7 @@ func _toggle_bag() -> void:
 	_bag_pick = {}
 	_detail_panel.visible = false
 	_crystal_panel.visible = false
+	_char_panel.visible = false
 	_crystal_target = {}
 	_bag_drag.forget()
 	if open:
@@ -1573,6 +1634,52 @@ func _toggle_gear() -> void:
 	_gear_panel.visible = not _gear_panel.visible
 	if _gear_panel.visible:
 		_redraw_bag()
+	else:
+		_char_panel.visible = false  # "상세" 단추가 장비 창에 있으니 같이 닫는다
+
+
+## 장비 창 "상세" · 캐릭터 정보 창 X — 여닫는다. 상세·크리스탈 창과 **같은 자리**라
+## 열 때 그 둘을 닫는다 (고른 칸·크리스탈 대상도 풀린다)
+func _toggle_char() -> void:
+	var open := not _char_panel.visible
+	if open:
+		_bag_pick = {}
+		_crystal_panel.visible = false
+		_crystal_target = {}
+	_char_panel.visible = open
+	_show_bag_detail()
+	_redraw_char()
+
+
+## 캐릭터 정보 — 값은 판정(`world.gd` `_refresh_stats`)이 내려준 그대로 적는다.
+## 기본(`base_*`)은 레벨 맨몸 값, 증가(`gear_*`)는 장비 % 합계, 최종은 둘을 곱한 판정 값이다.
+## 화면이 공식을 다시 돌리지 않는다 — 돌리면 반올림이 어긋나 최종이 1 씩 틀려 보인다
+func _redraw_char() -> void:
+	if not _char_panel.visible:
+		return
+	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
+	if me.is_empty():
+		return
+	var stats: Dictionary = me.get("stats", {})
+	_char_head.text = "LV. %d" % int(me.get("level", 1))
+	for index in CHAR_SPLIT.size():
+		var key := str(CHAR_SPLIT[index])
+		var name := str(DETAIL_BONUS[key])
+		var final := int(stats.get(key, 0))
+		var gear := float(stats.get("gear_" + key, 0.0))
+		_fill_detail_rows([
+			["기본 " + name, "%d" % int(stats.get("base_" + key, final))],
+			[name + " 증가", _bonus_text(key, gear), INV_GOLD_HI if gear > 0.0 else INV_DIM],
+			["최종 " + name, "%d" % final, INV_GOLD_HI],
+		], _char_grids[index])
+	# 나머지는 맨몸 값이 없거나(0) 고정(치명타 피해 100%)이라 합계 한 줄씩이다
+	_fill_detail_rows([
+		["치명타", "%.0f%%" % (float(stats.get("crit", 0.0)) * 100.0)],
+		["치명타 피해", "%.0f%%" % (float(stats.get("critDamage", 1.0)) * 100.0)],
+		["공격 속도", "+%.0f%%" % (float(stats.get("attackSpeed", 0.0)) * 100.0)],
+		["쿨타임 감소", "%.0f%%" % (float(stats.get("cooldown", 0.0)) * 100.0)],
+		["방어력 관통", "%.0f%%" % (float(stats.get("penetration", 0.0)) * 100.0)],
+	], _char_grids[CHAR_SPLIT.size()])
 
 
 func _close_detail() -> void:
@@ -1590,6 +1697,7 @@ func _toggle_crystal() -> void:
 	_bag_pick = {}
 	_detail_panel.visible = false
 	_crystal_panel.visible = open
+	_char_panel.visible = false
 	_crystal_target = {}
 	if open:
 		_redraw_bag()
@@ -1658,6 +1766,7 @@ func _redraw_bag() -> void:
 	]
 	for index in _stat_labels.size():
 		_stat_labels[index].text = str(shown[index])
+	_redraw_char()
 
 	# 가방 — 탭으로 거른 것만. 보이는 칸이 가방 몇 번째인지 적어 둔다
 	_bag_view.clear()

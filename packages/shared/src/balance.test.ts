@@ -118,7 +118,9 @@ test('동레벨 타수 — 6타는 목표이지 불변식이 아니다', () => {
     assert.ok(hits >= TTK_HITS, `Lv${level}: ${hits}타 — 기준 장비로 설계보다 쉬우면 곡선이 무너진다`);
     // 한도는 2026-09-25 에 ×3 → ×9 로 풀었다 — 몬스터 HP 를 서서히 3배로 올려(지시: "후반부
     // 몬스터 hp를 세 배로 올려") 기준 장비 평타가 Lv197 에서 50타다. 스킬로 줄이는 것이 전제다
-    assert.ok(hits <= TTK_HITS * 9, `Lv${level}: ${hits}타 — 기준 장비로도 너무 오래 걸린다`);
+    // 같은 날 ×9 → ×15 로 한 번 더 풀었다 — 몬스터 방어를 피해 50% 감소로 올려(지시: "HP 그대로,
+    // 더 단단하게") Lv197 평타가 82타다. 관통·스킬로 줄이는 것이 전제다
+    assert.ok(hits <= TTK_HITS * 15, `Lv${level}: ${hits}타 — 기준 장비로도 너무 오래 걸린다`);
     previous = hits;
   }
   // 후반이 초반보다 적으면 성장 압력이 거꾸로 붙은 것이다
@@ -277,7 +279,8 @@ test('성장 곡선 — 만렙까지 2,880시간(120일)이 목표다', () => {
   // 뒀다(지시: "킬 수 그대로, 느려져도 됨"). 2,880 은 킬 수를 정한 계획 속도의 합이다
   let actual = 0;
   for (let level = 1; level < MAX_LEVEL; level++) actual += levelSeconds(level);
-  assert.equal(Math.round(actual / 3600), 6906);
+  // 같은 날 몬스터 방어를 피해 50% 감소로 올려 약 11,076시간(3.8배)이 됐다 — 킬 수는 그대로다
+  assert.equal(Math.round(actual / 3600), 11076);
 
   // 문서 7장 표의 "레벨당 킬 수" 열. **2026-09-23 에 다시 뽑았다** — 몬스터 HP 를
   // 되돌리면서 한 마리가 주는 경험치(HP × 0.2)가 커져 필요 킬 수가 줄었다.
@@ -299,9 +302,10 @@ test('성장 곡선 — 만렙까지 2,880시간(120일)이 목표다', () => {
     assert.equal(Math.round(killsPerLevel(level)), kills, `Lv${level} 킬 수`);
   }
 
-  // 초반 세 구간은 레벨당 2 / 3 / 4.5분
+  // 초반 세 구간은 레벨당 2 / 3 / 4.5분 — **계획 시간**이다. 몬스터 방어를 피해 50% 감소로
+  // 올린 뒤(2026-09-25) 실제로는 Lv1 이 2.9분 걸린다
   for (const [level, minutes] of [[1, 2], [11, 3], [21, 4.5]] as Array<[number, number]>) {
-    assert.equal(Math.round((levelSeconds(level) / 60) * 10) / 10, minutes, `Lv${level} 분`);
+    assert.equal(Math.round((planSeconds(level) / 60) * 10) / 10, minutes, `Lv${level} 분`);
   }
 });
 

@@ -116,8 +116,9 @@ func _ttk() -> void:
 		last = hits
 		if hits < 6:
 			_fail("Lv%d 타수 %d — 기준 장비로 설계보다 쉬우면 곡선이 무너진다" % [level, hits])
-		# 한도 18 → 54 (2026-09-25): 몬스터 HP 를 서서히 3배로 올려 Lv197 평타가 50타다
-		elif hits > 54:
+		# 한도 18 → 54 → 90 (2026-09-25): 몬스터 HP 를 서서히 3배로 올리고 방어를 피해 50% 감소로
+		# 올려 Lv197 평타가 82타다
+		elif hits > 90:
 			_fail("Lv%d 타수 %d — 기준 장비로도 너무 오래 걸린다" % [level, hits])
 		level += 7
 	if last < first:

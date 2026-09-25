@@ -299,11 +299,12 @@ var _enhance: EnhancePopup
 ## 크리스탈 창 — 크리스탈을 고르고 "사용" 을 누르면 상세 창 자리에 뜬다.
 ## 떠 있는 동안 장비 칸을 누르면 그 장비가 대상이 된다 (`_crystal_target`)
 var _crystal_panel: PanelContainer
-# 캐릭터 정보 창 — 장비 창의 "상세" 로 연다. 묶음마다 이름·값 표 하나 (`CHAR_SPLIT` + 전투 한 묶음)
+# 캐릭터 정보 창 — 오른쪽 위 "정보" 단추로 여는 **따로 뜨는 창**. 묶음마다 이름·값 표 하나
+# (`CHAR_SPLIT` + 전투 한 묶음). `_char_last` 는 지난번에 적은 줄 — 같으면 다시 안 짓는다
 var _char_panel: PanelContainer
 var _char_head: Label
-var _char_button: Button
 var _char_grids: Array = []
+var _char_last := ""
 var _crystal_icon: PanelContainer
 var _crystal_name: Label
 var _crystal_kind: Label
@@ -544,6 +545,7 @@ func _build_persistent() -> void:
 	_build_skill_panel()
 	_build_test_switches()
 	_build_bag_panel()
+	_build_char_panel()
 	_build_debug_panel()
 	_enhance = EnhancePopup.make(self)
 	_ui_root.add_child(_enhance)
@@ -952,11 +954,6 @@ func _build_bag_panel() -> void:
 	row.add_child(_crystal_panel)
 	_build_crystal_window(_crystal_panel)
 
-	# 캐릭터 정보 창도 **같은 자리**다 — 1280 폭에 창 넷(장비·정보·상세·인벤토리)은 안 들어간다
-	_char_panel = _window_panel()
-	row.add_child(_char_panel)
-	_build_char_window(_char_panel)
-
 	_bag_panel = _window_panel()
 	row.add_child(_bag_panel)
 	_build_bag_window(_bag_panel)
@@ -1058,12 +1055,18 @@ func _build_gear_window(panel: PanelContainer) -> void:
 		grid.add_child(label)
 		_stat_labels.append(label)
 
-	# 스탯 상자 아래 "상세" — 캐릭터 정보 창에서 기본 → 증가 % → 최종을 풀어 본다
-	var foot := HBoxContainer.new()
-	foot.alignment = BoxContainer.ALIGNMENT_END
-	side.add_child(foot)
-	_char_button = _inv_button("상세", _toggle_char)
-	foot.add_child(_char_button)
+
+## 캐릭터 정보 창 — 가방 창들과 따로 **화면 가운데**에 뜬다 (2026-09-25 요청: "상세 정보창을
+## 따로 띄우고 버튼을 만들어"). 처음엔 장비 창 "상세" 로 상세 창 자리를 번갈아 썼다.
+## 판은 인벤토리 결(`_window_panel`) 그대로다
+func _build_char_panel() -> void:
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ui_root.add_child(center)
+	_char_panel = _window_panel()
+	center.add_child(_char_panel)
+	_build_char_window(_char_panel)
 
 
 ## 캐릭터 정보 창 — 상세 창과 같은 틀(머리 줄 · 가는 줄 · 이름/값 표).
@@ -1608,8 +1611,6 @@ func _pick_bag(where: String, index: int) -> void:
 	_bag_pick = {"where": where, "index": index}
 	if _picked_stack().is_empty():
 		_bag_pick = {}
-	else:
-		_char_panel.visible = false  # 상세 창과 같은 자리라 물건을 고르면 비켜 준다
 	_show_bag_detail()
 
 
@@ -1634,52 +1635,56 @@ func _toggle_gear() -> void:
 	_gear_panel.visible = not _gear_panel.visible
 	if _gear_panel.visible:
 		_redraw_bag()
-	else:
-		_char_panel.visible = false  # "상세" 단추가 장비 창에 있으니 같이 닫는다
 
 
-## 장비 창 "상세" · 캐릭터 정보 창 X — 여닫는다. 상세·크리스탈 창과 **같은 자리**라
-## 열 때 그 둘을 닫는다 (고른 칸·크리스탈 대상도 풀린다)
+## 오른쪽 위 "정보" · 캐릭터 정보 창 X — 여닫는다. **가방 창들과는 번갈아 뜬다** —
+## 가운데 창이 상세 창 자리(인벤토리 왼쪽)를 덮기 때문이다. 가방·크리스탈 단추도 이 창을 닫는다
 func _toggle_char() -> void:
 	var open := not _char_panel.visible
-	if open:
-		_bag_pick = {}
-		_crystal_panel.visible = false
-		_crystal_target = {}
+	if open and _bag_panel.visible:
+		_toggle_bag()
 	_char_panel.visible = open
-	_show_bag_detail()
-	_redraw_char()
+	if open:
+		_char_panel.get_parent().move_to_front()
+		_char_last = ""
+		_redraw_char(_me())
 
 
 ## 캐릭터 정보 — 값은 판정(`world.gd` `_refresh_stats`)이 내려준 그대로 적는다.
 ## 기본(`base_*`)은 레벨 맨몸 값, 증가(`gear_*`)는 장비 % 합계, 최종은 둘을 곱한 판정 값이다.
 ## 화면이 공식을 다시 돌리지 않는다 — 돌리면 반올림이 어긋나 최종이 1 씩 틀려 보인다
-func _redraw_char() -> void:
-	if not _char_panel.visible:
-		return
-	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
-	if me.is_empty():
+## **`_refresh_status` 가 매 프레임 부른다** — 레벨업·장비가 가방을 닫은 채로도 바로 보인다.
+## 줄 글자가 지난번과 같으면 표를 다시 짓지 않는다
+func _redraw_char(me: Dictionary) -> void:
+	if not _char_panel.visible or me.is_empty():
 		return
 	var stats: Dictionary = me.get("stats", {})
-	_char_head.text = "LV. %d" % int(me.get("level", 1))
-	for index in CHAR_SPLIT.size():
-		var key := str(CHAR_SPLIT[index])
+	var groups: Array = []
+	for key in CHAR_SPLIT:
 		var name := str(DETAIL_BONUS[key])
 		var final := int(stats.get(key, 0))
 		var gear := float(stats.get("gear_" + key, 0.0))
-		_fill_detail_rows([
+		groups.append([
 			["기본 " + name, "%d" % int(stats.get("base_" + key, final))],
 			[name + " 증가", _bonus_text(key, gear), INV_GOLD_HI if gear > 0.0 else INV_DIM],
 			["최종 " + name, "%d" % final, INV_GOLD_HI],
-		], _char_grids[index])
+		])
 	# 나머지는 맨몸 값이 없거나(0) 고정(치명타 피해 100%)이라 합계 한 줄씩이다
-	_fill_detail_rows([
+	groups.append([
 		["치명타", "%.0f%%" % (float(stats.get("crit", 0.0)) * 100.0)],
 		["치명타 피해", "%.0f%%" % (float(stats.get("critDamage", 1.0)) * 100.0)],
 		["공격 속도", "+%.0f%%" % (float(stats.get("attackSpeed", 0.0)) * 100.0)],
 		["쿨타임 감소", "%.0f%%" % (float(stats.get("cooldown", 0.0)) * 100.0)],
 		["방어력 관통", "%.0f%%" % (float(stats.get("penetration", 0.0)) * 100.0)],
-	], _char_grids[CHAR_SPLIT.size()])
+	])
+	var head := "LV. %d" % int(me.get("level", 1))
+	var seen := head + str(groups)
+	if seen == _char_last:
+		return
+	_char_last = seen
+	_char_head.text = head
+	for index in groups.size():
+		_fill_detail_rows(groups[index], _char_grids[index])
 
 
 func _close_detail() -> void:
@@ -1766,7 +1771,6 @@ func _redraw_bag() -> void:
 	]
 	for index in _stat_labels.size():
 		_stat_labels[index].text = str(shown[index])
-	_redraw_char()
 
 	# 가방 — 탭으로 거른 것만. 보이는 칸이 가방 몇 번째인지 적어 둔다
 	_bag_view.clear()
@@ -2253,6 +2257,9 @@ func _build_skill_bar() -> void:
 	# 오른쪽 위 — 스킬·가방. 아이콘만 남기고 글자를 뺐다 (2026-09-19 요청).
 	# 무엇인지는 그림으로 알린다 — 그림이 없으면 글자가 대신 나온다
 	_menu_cells = [
+		# 캐릭터 정보 — 스킬 왼쪽, 메뉴 맨 앞 (2026-09-25 요청 "상세 정보창을 따로 띄우고
+		# 버튼을 만들어"). 아직 그림이 없어 글자로 나온다
+		_icon_button("ui_icon_character", "정보", _toggle_char),
 		_icon_button("ui_icon_skill", "스킬", _toggle_skills),
 		# 강화 — 가방 왼쪽 옆 (2026-09-24 요청 "가방 ui 옆에 강화 ui 버튼 만들어").
 		# 오른쪽 옆은 던전 자리다. 아직 그림이 없어 글자로 나온다
@@ -4050,6 +4057,7 @@ func _aoe_material(alpha: float) -> StandardMaterial3D:
 ## 왼쪽 위 상태판을 스냅샷에 맞춘다. 레벨·체력·경험치는 **여기 한 곳에서만** 그린다
 func _refresh_status(me: Dictionary) -> void:
 	_level_label.text = "Lv.%d" % int(me.level)
+	_redraw_char(me)
 	var max_hp := maxf(1.0, float(me.stats.maxHp))
 	_hp_bar.max_value = max_hp
 	_hp_bar.value = float(me.hp)

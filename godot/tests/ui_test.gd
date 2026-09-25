@@ -337,24 +337,25 @@ func _case_status(game: Node3D) -> void:
 
 	# 오른쪽 위 메뉴 — 화면 안, 묶음과 안 겹침.
 	# 스킬·가방·던전·설계(디버그) 넷이다 — 설계 재현 창은 문서 9장 5번의 디버그 수단이다
-	# 스킬 · 강화 · 크리스탈 · 가방 · 던전 · 설계 (강화·크리스탈은 2026-09-24 에 가방 왼쪽에 더했다)
-	if game._menu_cells.size() != 6:
-		_fail("오른쪽 위 단추가 6개여야 하는데 %d개" % game._menu_cells.size())
+	# 정보 · 스킬 · 강화 · 크리스탈 · 가방 · 던전 · 설계 (강화·크리스탈은 2026-09-24 에 가방 왼쪽에,
+	# 정보는 2026-09-25 에 맨 앞에 더했다)
+	if game._menu_cells.size() != 7:
+		_fail("오른쪽 위 단추가 7개여야 하는데 %d개" % game._menu_cells.size())
 		return
-	var skill_rect: Rect2 = game._menu_cells[0].get_global_rect()
-	var bag_rect: Rect2 = game._menu_cells[3].get_global_rect()
+	var skill_rect: Rect2 = game._menu_cells[1].get_global_rect()
+	var bag_rect: Rect2 = game._menu_cells[4].get_global_rect()
 	if bag_rect.end.x > screen.x or skill_rect.position.y < 0.0 or bag_rect.position.y > 120.0:
 		_fail("메뉴 단추가 오른쪽 위에 안 붙었다: %s / %s" % [skill_rect, bag_rect])
 	if skill_rect.intersects(hp_rect) or skill_rect.intersects(badge):
 		_fail("메뉴 단추가 퀵슬롯 위 묶음과 겹친다")
 
 	# 눌러서 창이 열린다
-	game._menu_cells[0].find_child("hit", true, false).pressed.emit()
+	game._menu_cells[1].find_child("hit", true, false).pressed.emit()
 	await process_frame
 	if not game._skill_panel.visible:
 		_fail("오른쪽 위 스킬 단추를 눌렀는데 스킬창이 안 열렸다")
 	game._toggle_skills()
-	game._menu_cells[3].find_child("hit", true, false).pressed.emit()
+	game._menu_cells[4].find_child("hit", true, false).pressed.emit()
 	await process_frame
 	if not game._bag_panel.visible:
 		_fail("오른쪽 위 가방 단추를 눌렀는데 가방이 안 열렸다")
@@ -362,33 +363,33 @@ func _case_status(game: Node3D) -> void:
 	await process_frame
 	# 크리스탈 — 가방 **바로 왼쪽**. 누르면 인벤토리·장비 창과 크리스탈 창이 같이 뜨고,
 	# 장비 칸을 누르면 대상이 된다. 다시 누르면 셋 다 닫힌다
-	var cry_rect: Rect2 = game._menu_cells[2].get_global_rect()
+	var cry_rect: Rect2 = game._menu_cells[3].get_global_rect()
 	if absf(bag_rect.position.x - cry_rect.end.x) > 12.0 or absf(cry_rect.position.y - bag_rect.position.y) > 1.0:
 		_fail("크리스탈 단추가 가방 옆이 아니다: 크리스탈 %s · 가방 %s" % [cry_rect, bag_rect])
-	if game._menu_cells[2].find_children("*", "TextureRect", true, false).is_empty():
+	if game._menu_cells[3].find_children("*", "TextureRect", true, false).is_empty():
 		_fail("크리스탈 단추에 그림이 없다 — npm run sync:godot 을 돌렸나 (crystal)")
-	game._menu_cells[2].find_child("hit", true, false).pressed.emit()
+	game._menu_cells[3].find_child("hit", true, false).pressed.emit()
 	await process_frame
 	if not (game._crystal_panel.visible and game._bag_panel.visible and game._gear_panel.visible) or game._detail_panel.visible:
 		_fail("크리스탈 단추 — 크리스탈 %s · 가방 %s · 장비 %s · 상세 %s" % [game._crystal_panel.visible, game._bag_panel.visible, game._gear_panel.visible, game._detail_panel.visible])
 	else:
 		print("  가방 옆 크리스탈: %s" % game._crystal_hint.text)
-	game._menu_cells[2].find_child("hit", true, false).pressed.emit()
+	game._menu_cells[3].find_child("hit", true, false).pressed.emit()
 	await process_frame
 	if game._crystal_panel.visible or game._bag_panel.visible or game._gear_panel.visible:
 		_fail("크리스탈 단추를 다시 눌렀는데 창이 안 닫혔다")
 	# 강화 — 크리스탈 **바로 왼쪽**. 누르면 강화 팝업이 대상 없이 **다중 강화 · 전체** 목록으로 뜬다
-	var enh_rect: Rect2 = game._menu_cells[1].get_global_rect()
+	var enh_rect: Rect2 = game._menu_cells[2].get_global_rect()
 	if absf(cry_rect.position.x - enh_rect.end.x) > 12.0 or absf(enh_rect.position.y - cry_rect.position.y) > 1.0:
 		_fail("강화 단추가 크리스탈 옆이 아니다: 강화 %s · 크리스탈 %s" % [enh_rect, cry_rect])
-	game._menu_cells[1].find_child("hit", true, false).pressed.emit()
+	game._menu_cells[2].find_child("hit", true, false).pressed.emit()
 	await process_frame
 	var pop: EnhancePopup = game._enhance
 	if not pop.visible or pop.mode != "multi" or pop.filter != "all" or not pop.list_panel.visible:
 		_fail("가방 옆 강화 단추 — 보임 %s · 탭 %s · 목록 %s · 목록 창 %s" % [pop.visible, pop.mode, pop.filter, pop.list_panel.visible])
 	else:
 		print("  가방 옆 강화: 다중 강화 · 전체 목록 %d칸" % pop._list_view.size())
-	game._menu_cells[1].find_child("hit", true, false).pressed.emit()
+	game._menu_cells[2].find_child("hit", true, false).pressed.emit()
 	await process_frame
 	if pop.visible:
 		_fail("강화 단추를 다시 눌렀는데 팝업이 안 닫혔다")
@@ -398,15 +399,15 @@ func _case_status(game: Node3D) -> void:
 ## 던전 — 가방 옆 단추 → 종류 셋 → 단계 목록 → 들어가면 보스 한 마리 (docs/features/dungeons.md)
 func _case_dungeon(game: Node3D) -> void:
 	var panel: DungeonPanel = game._dungeon_panel
-	var bag_rect: Rect2 = game._menu_cells[3].get_global_rect()
-	var cell_rect: Rect2 = game._menu_cells[4].get_global_rect()
+	var bag_rect: Rect2 = game._menu_cells[4].get_global_rect()
+	var cell_rect: Rect2 = game._menu_cells[5].get_global_rect()
 	# 가방 **바로 옆**이다 (2026-09-23 요청)
 	if absf(cell_rect.position.x - bag_rect.end.x) > 12.0 or absf(cell_rect.position.y - bag_rect.position.y) > 1.0:
 		_fail("던전 단추가 가방 옆이 아니다: 가방 %s · 던전 %s" % [bag_rect, cell_rect])
 	# 글자가 아니라 그림(ui_icon_dungeon)이 나와야 한다
-	if game._menu_cells[4].find_children("*", "TextureRect", true, false).is_empty():
+	if game._menu_cells[5].find_children("*", "TextureRect", true, false).is_empty():
 		_fail("던전 단추에 그림이 없다 — npm run sync:godot 을 돌렸나 (ui_icon_dungeon)")
-	game._menu_cells[4].find_child("hit", true, false).pressed.emit()
+	game._menu_cells[5].find_child("hit", true, false).pressed.emit()
 	await process_frame
 	if not panel.visible:
 		_fail("던전 단추를 눌렀는데 창이 안 떴다")
@@ -929,8 +930,8 @@ func _case_bag(game: Node3D) -> void:
 	print("  닫기는 창 오른쪽 위 X 하나다")
 
 
-## 캐릭터 정보 창 — 장비 창 "상세" 로 연다. 공격력은 **기본 → 증가 % → 최종** 세 줄이고
-## 값은 판정이 내려준 그대로다 (2026-09-25 요청). 상세 창과 같은 자리라 칸을 고르면 비켜 준다
+## 캐릭터 정보 창 — 오른쪽 위 "정보" 단추로 여는 **따로 뜨는 창**(2026-09-25 요청). 공격력은
+## **기본 → 증가 % → 최종** 세 줄이고 값은 판정이 내려준 그대로다. 가방 창들과는 번갈아 뜬다
 func _case_char(game: Node3D) -> void:
 	var world: World = game._transport._world
 	var me: Dictionary = game._transport.snapshot().players[game._transport.my_id()]
@@ -943,11 +944,17 @@ func _case_char(game: Node3D) -> void:
 		game._toggle_bag()
 	await process_frame
 
-	game._char_button.pressed.emit()
+	# 맨 앞 단추 — 스킬 바로 왼쪽. 가방이 떠 있으면 닫고 뜬다
+	var info_cell: Control = game._menu_cells[0]
+	var skill_rect: Rect2 = game._menu_cells[1].get_global_rect()
+	if absf(skill_rect.position.x - info_cell.get_global_rect().end.x) > 12.0:
+		_fail("정보 단추가 스킬 왼쪽 옆이 아니다: %s / %s" % [info_cell.get_global_rect(), skill_rect])
+	info_cell.find_child("hit", true, false).pressed.emit()
 	await process_frame
 	await process_frame
-	if not game._char_panel.visible or game._detail_panel.visible or game._crystal_panel.visible:
-		_fail("상세 단추 — 정보 %s · 상세 %s · 크리스탈 %s" % [game._char_panel.visible, game._detail_panel.visible, game._crystal_panel.visible])
+	if not game._char_panel.visible or game._bag_panel.visible or game._gear_panel.visible:
+		_fail("정보 단추 — 정보 %s · 가방 %s · 장비 %s" % [game._char_panel.visible, game._bag_panel.visible, game._gear_panel.visible])
+	game._refresh_status(me)  # 매 프레임 채우는 길 — 테스트는 프레임을 안 돌려 직접 부른다
 
 	var base := int(Combat.stats_for(str(me.job), int(me.level)).attack)
 	var pct := float(Items.equipment_stats(me.equipped).attack)
@@ -967,26 +974,28 @@ func _case_char(game: Node3D) -> void:
 	if game._char_grids.size() != game.CHAR_SPLIT.size() + 1:
 		_fail("묶음이 %d개" % game._char_grids.size())
 
-	# 자리 — 인벤토리 바로 왼쪽(상세 창 자리), 화면 안
+	# 자리 — 화면 가운데, 화면 안
 	var box: Rect2 = game._char_panel.get_global_rect()
-	var inv_box: Rect2 = game._bag_panel.get_global_rect()
 	if not Rect2(Vector2.ZERO, Vector2(1280, 720)).encloses(box):
 		_fail("정보 창이 화면 밖으로 나갔다: %s" % box)
-	if box.end.x > inv_box.position.x or inv_box.position.x - box.end.x > 20.0:
-		_fail("정보 창이 인벤토리 바로 왼쪽이 아니다: %s / %s" % [box, inv_box])
-	if box.intersects(game._gear_panel.get_global_rect()):
-		_fail("정보 창이 장비 창과 겹친다")
+	if absf(box.get_center().x - 640.0) > 2.0 or absf(box.get_center().y - 360.0) > 2.0:
+		_fail("정보 창이 화면 가운데가 아니다: %s" % box)
 
-	# 장비 칸을 고르면 상세 창이 그 자리를 쓴다
-	var at := Items.slots().find(weapon_slot)
-	game._gear_cells[at].get_node("hit").pressed.emit()
+	# 장비를 바꾸면 창을 연 채로 따라간다 (가방을 닫아 둬도)
+	me.equipped = {}
+	world._refresh_stats(me)
+	game._refresh_status(me)
+	if str(game._char_grids[0].get_child(3).text) != "+0%":
+		_fail("장비를 벗었는데 증가가 '%s'" % game._char_grids[0].get_child(3).text)
+
+	# 가방을 열면 정보 창이 비킨다
+	game._toggle_bag()
 	await process_frame
-	if game._char_panel.visible or not game._detail_panel.visible:
-		_fail("칸을 골랐는데 정보 %s · 상세 %s" % [game._char_panel.visible, game._detail_panel.visible])
+	if game._char_panel.visible or not game._bag_panel.visible:
+		_fail("가방을 열었는데 정보 %s · 가방 %s" % [game._char_panel.visible, game._bag_panel.visible])
+	game._toggle_bag()
 	game._toggle_char()
 	await process_frame
-	if not game._char_panel.visible or game._detail_panel.visible:
-		_fail("다시 열었는데 상세 창이 안 비켰다")
 	game._toggle_char()  # X 와 같은 길
 	await process_frame
 	if game._char_panel.visible:
@@ -995,7 +1004,7 @@ func _case_char(game: Node3D) -> void:
 
 	me.equipped = kept
 	world._refresh_stats(me)
-	if not was_open:
+	if was_open:
 		game._toggle_bag()
 	await process_frame
 

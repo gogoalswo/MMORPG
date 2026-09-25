@@ -80,11 +80,12 @@ func _monster_table() -> void:
 		# 장신구 변경 직전 것으로 복원했다 — 공격력·방어력은 그때도 안 바뀌었다.
 		# **2026-09-24 에 HP 를 공격력 축 배수만큼 올렸다** ("등급간 배수를 키워").
 		# 같은 날 방어·HP 축도 같은 배수가 되어 공격력·방어력 열도 설계 비율만큼 올렸다
-		{"level": 10, "grade": 1.0, "hp": 71, "atk": 2},
-		{"level": 50, "grade": 1.63, "hp": 235, "atk": 4},
-		{"level": 100, "grade": 3.3, "hp": 1894, "atk": 20},
-		{"level": 150, "grade": 4.97, "hp": 25446, "atk": 192},
-		{"level": 200, "grade": 6.63, "hp": 426182, "atk": 2547},
+		# 2026-09-25 에 HP 를 초반부터 서서히 올려 Lv200 에서 3배 (`3^((L−1)/199)`)
+		{"level": 10, "grade": 1.0, "hp": 75, "atk": 2},
+		{"level": 50, "grade": 1.63, "hp": 308, "atk": 4},
+		{"level": 100, "grade": 3.3, "hp": 3272, "atk": 20},
+		{"level": 150, "grade": 4.97, "hp": 57924, "atk": 192},
+		{"level": 200, "grade": 6.63, "hp": 1278546, "atk": 2547},
 	]
 	for row in rows:
 		var level := int(row["level"])
@@ -115,7 +116,8 @@ func _ttk() -> void:
 		last = hits
 		if hits < 6:
 			_fail("Lv%d 타수 %d — 기준 장비로 설계보다 쉬우면 곡선이 무너진다" % [level, hits])
-		elif hits > 18:
+		# 한도 18 → 54 (2026-09-25): 몬스터 HP 를 서서히 3배로 올려 Lv197 평타가 50타다
+		elif hits > 54:
 			_fail("Lv%d 타수 %d — 기준 장비로도 너무 오래 걸린다" % [level, hits])
 		level += 7
 	if last < first:

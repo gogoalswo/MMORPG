@@ -28,6 +28,7 @@ import {
   fieldOf,
   killsPerLevel,
   levelSeconds,
+  planSeconds,
   expToNext,
   meleeAttackers,
   monster,
@@ -84,11 +85,12 @@ test('몬스터 표가 설계 문서 6장과 같다 (사냥터 끝 레벨)', () 
   // "몬스터 HP도 같이 올린다") — 기준 플레이어 공격력(새/옛)을 곱했다. 같은 날 방어·HP 축도
   // 같은 배수가 되어("방어력이 올라감에 따라 몬스터 공격력도 올려") 공격력·방어력 열을 설계 비율만큼 올렸다
   const rows = [
-    { level: 10, grade: 1.0, hp: 71, atk: 2 },
-    { level: 50, grade: 1.63, hp: 235, atk: 4 },
-    { level: 100, grade: 3.3, hp: 1894, atk: 20 },
-    { level: 150, grade: 4.97, hp: 25446, atk: 192 },
-    { level: 200, grade: 6.63, hp: 426182, atk: 2547 },
+    // 2026-09-25 에 HP 를 초반부터 서서히 올려 Lv200 에서 3배 (`3^((L−1)/199)`)
+    { level: 10, grade: 1.0, hp: 75, atk: 2 },
+    { level: 50, grade: 1.63, hp: 308, atk: 4 },
+    { level: 100, grade: 3.3, hp: 3272, atk: 20 },
+    { level: 150, grade: 4.97, hp: 57924, atk: 192 },
+    { level: 200, grade: 6.63, hp: 1278546, atk: 2547 },
   ];
   for (const row of rows) {
     assert.equal(Math.round(refGrade(row.level) * 100) / 100, row.grade, `Lv${row.level} 기준 등급`);
@@ -114,7 +116,9 @@ test('동레벨 타수 — 6타는 목표이지 불변식이 아니다', () => {
     const hits = Math.ceil(m.hp / (damage(ref.atk, level, m.df) * ref.crit));
     seen.push(hits);
     assert.ok(hits >= TTK_HITS, `Lv${level}: ${hits}타 — 기준 장비로 설계보다 쉬우면 곡선이 무너진다`);
-    assert.ok(hits <= TTK_HITS * 3, `Lv${level}: ${hits}타 — 기준 장비로도 너무 오래 걸린다`);
+    // 한도는 2026-09-25 에 ×3 → ×9 로 풀었다 — 몬스터 HP 를 서서히 3배로 올려(지시: "후반부
+    // 몬스터 hp를 세 배로 올려") 기준 장비 평타가 Lv197 에서 50타다. 스킬로 줄이는 것이 전제다
+    assert.ok(hits <= TTK_HITS * 9, `Lv${level}: ${hits}타 — 기준 장비로도 너무 오래 걸린다`);
     previous = hits;
   }
   // 후반이 초반보다 적으면 성장 압력이 거꾸로 붙은 것이다
@@ -267,15 +271,21 @@ test('성장 곡선 — 만렙까지 2,880시간(120일)이 목표다', () => {
   // 2026-09-23 지시대로 2,880 을 불변식으로 지키려 들지는 않는다 — 목표를
   // 바꾸기로 하면 `TARGET_HOURS` 한 줄을 고치면 되고, 여기가 그걸 막지 않는다
   let seconds = 0;
-  for (let level = 1; level < MAX_LEVEL; level++) seconds += levelSeconds(level);
+  for (let level = 1; level < MAX_LEVEL; level++) seconds += planSeconds(level);
   assert.equal(Math.round((seconds / 3600) * 10) / 10, 2880);
+  // **실제로는 2.4배 걸린다** (2026-09-25) — 몬스터 HP 를 서서히 3배로 올리고 킬 수는 그대로
+  // 뒀다(지시: "킬 수 그대로, 느려져도 됨"). 2,880 은 킬 수를 정한 계획 속도의 합이다
+  let actual = 0;
+  for (let level = 1; level < MAX_LEVEL; level++) actual += levelSeconds(level);
+  assert.equal(Math.round(actual / 3600), 6906);
 
   // 문서 7장 표의 "레벨당 킬 수" 열. **2026-09-23 에 다시 뽑았다** — 몬스터 HP 를
   // 되돌리면서 한 마리가 주는 경험치(HP × 0.2)가 커져 필요 킬 수가 줄었다.
   // **2026-09-24 에 또 뽑았다** — 공격력 축 배수가 가팔라져 "제 등급 풀셋" 플레이어가
   // 후반에 더 빨리 잡으므로(Lv100 킬/초 3.13 → 3.85), 총 2,880시간에 맞추느라 Lv31 부터 +16%.
   // **2026-09-25 에 또 뽑았다** — 장비 공격력 % 를 반으로 내려("공격력이 과하게 강하다. 반으로
-  // 줄여") 잡는 속도가 느려졌고, 레벨당 시간은 목표에 묶여 있어 필요 킬 수가 그만큼 줄었다
+  // 줄여") 잡는 속도가 느려졌고, 레벨당 시간은 목표에 묶여 있어 필요 킬 수가 그만큼 줄었다.
+  // 2026-09-25 에 몬스터 HP 를 서서히 3배로 올렸지만 **킬 수는 그대로다** (`paceKillRate`)
   const want: Array<[number, number]> = [
     [1, 120],
     [11, 257],

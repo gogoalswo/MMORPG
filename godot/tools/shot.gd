@@ -17,7 +17,7 @@ extends SceneTree
 ##                                        (긴 이펙트는 기본 0.36초로 모자란다)
 ##   npm run shot:godot -- enhance        강화 팝업 다중 강화 한 바퀴 (logs/shot_enhance.png)
 ##   npm run shot:godot -- fist           주먹 기운 등급 1~7 (logs/shot_sheet.png)
-##   npm run shot:godot -- fist:enhance   강화로 커지는 기운 — 전설·태초 +0·+3·+6·+9
+##   npm run shot:godot -- fist:enhance   강화 단계별 오로라 — 희귀·태초 +6·+7·+8·+9
 ##
 ## 여섯 장의 **가운데를 잘라 한 장으로 붙인 것**(`logs/shot_sheet.png`)도 뽑는다.
 ## 한 장씩 읽으면 여섯 배를 낸다 — 시간 순서를 보는 데는 이것 한 장이면 된다.
@@ -111,7 +111,7 @@ func _run() -> void:
 	if skill == "fist":
 		await _fist(game)
 		return
-	# 강화로 커지는 기운 — 전설·태초를 +0·+3·+6·+9 로
+	# 강화 단계별 오로라 — 희귀·태초를 +6·+7·+8·+9 로 (색이 단계마다 바뀐다)
 	if skill == "fist:enhance":
 		await _fist(game, true)
 		return
@@ -212,15 +212,16 @@ func _fist(game: Node3D, by_enhance := false) -> void:
 
 	var cell := Vector2i(360, 440)
 	var sheet: Image = null
-	# 등급 1~7 (+0) · 또는 전설과 태초를 +0·+3·+6·+9 로
+	# 등급 1~7 (+9 — 오로라는 +6 부터라 겹을 다 보려면 강화가 있어야 한다)
+	# · 또는 희귀와 태초를 +6·+7·+8·+9 로
 	var looks: Array = []
 	if by_enhance:
-		for grade in [5, 7]:
-			for enhance in [0, 3, 6, 9]:
+		for grade in [3, 7]:
+			for enhance in [6, 7, 8, 9]:
 				looks.append([grade, enhance])
 	else:
 		for grade in range(1, 8):
-			looks.append([grade, 0])
+			looks.append([grade, 9])
 	for index in looks.size():
 		var grade: int = looks[index][0]
 		rig.set_weapon(grade, looks[index][1])
@@ -235,7 +236,7 @@ func _fist(game: Node3D, by_enhance := false) -> void:
 		print("  %d등급 +%d 찍음" % looks[index])
 	sheet.resize(int(sheet.get_width() * 0.7), int(sheet.get_height() * 0.7), Image.INTERPOLATE_BILINEAR)
 	sheet.save_png("res://../logs/shot_sheet.png")
-	print("logs/shot_sheet.png  (%s)" % ("윗줄 전설 +0·+3·+6·+9, 아랫줄 태초" if by_enhance else "1~4등급 윗줄, 5~7등급 아랫줄"))
+	print("logs/shot_sheet.png  (%s)" % ("윗줄 희귀 +6·+7·+8·+9, 아랫줄 태초" if by_enhance else "1~4등급 윗줄, 5~7등급 아랫줄 (+9)"))
 	quit(0)
 
 

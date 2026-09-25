@@ -1,9 +1,11 @@
 class_name FistAura
 extends Node3D
 
-## 무기(건틀릿)를 낀 주먹에 **늘 감도는 기운.** 색은 무기 **등급 색**이고,
-## **좋은 무기일수록 겹이 늘고 커진다** (2026-09-25 요청: "등급 색상에 맞춰서",
-## "좋은 무기일수록 이펙트 더 화려하게").
+## 무기(건틀릿)를 낀 주먹에 감도는 기운(오로라). **강화 +6 부터 나온다** —
+## +5 까지는 없다. **색은 강화 단계가 정한다**: +6 초록 · +7 파랑 · +8 빨강 ·
+## +9 하양 · +10 황금 (2026-09-25 요청: "등급에 따라서 오로라 색상을 바꾸지 말고
+## 강화 단계에 따라서"). 그 전엔 등급 색이었다. 강화 한 단계마다 커지고(`GROW`),
+## **좋은 무기일수록 겹이 는다** ("좋은 무기일수록 이펙트 더 화려하게"):
 ##
 ## | 등급 | 더해지는 것 |
 ## |---|---|
@@ -43,6 +45,8 @@ const GROW := 0.1
 static var _mats: Dictionary = {}
 
 var _grade := 1
+## 강화 단계 — 색을 정한다
+var _enhance := FIRST
 ## 강화로 커진 배율 (1 = +0)
 var _grow := 1.0
 var _t := 0.0
@@ -54,10 +58,28 @@ var _orbit: Node3D
 var _rays: Node3D
 
 
-## 등급 색을 빛으로 쓸 수 있게 — 표의 색은 어두운 흙빛이라 색조만 따고 밝힌다
-static func color(grade: int) -> Color:
-	var base := Items.grade_color(grade)
-	return Color.from_hsv(base.h, clampf(base.s * 1.4, 0.45, 0.9), 1.0)
+## 오로라가 나오는 첫 강화 단계
+const FIRST := 6
+## 강화 단계별 색 (+6 ~ +10). 최대 강화가 +9 라 황금(+10)은 지금은 안 나온다.
+## **하양만 알파를 낮춘다** — 가산이라 R·G·B 가 다 차 있는 하양은 겹치는 곳마다
+## 하얗게 타서 태초 +9 가 주먹 둘레 전체가 흰 덩어리로 보였다 (2026-09-25 찍어 봄)
+const COLORS := {
+	6: Color("#46ff78"),
+	7: Color("#3d8cff"),
+	8: Color("#ff3838"),
+	9: Color("#e8eeff", 0.5),
+	10: Color("#ffc53a"),
+}
+
+
+## 이 강화 단계에 오로라가 나오나 (+5 까지는 없다)
+static func shows(enhance: int) -> bool:
+	return enhance >= FIRST
+
+
+## 강화 단계의 오로라 색. 표보다 높으면 마지막 색
+static func color(enhance: int) -> Color:
+	return COLORS[clampi(enhance, FIRST, COLORS.keys().max())]
 
 
 ## 강화 배율 — +0 이 1, 한 단계마다 `GROW` 씩
@@ -69,6 +91,7 @@ static func build(grade: int, enhance := 0) -> FistAura:
 	var aura := FistAura.new()
 	aura.name = "FistAura"
 	aura._grade = clampi(grade, 1, 7)
+	aura._enhance = enhance
 	aura._grow = grow(enhance)
 	aura._build()
 	return aura
@@ -76,7 +99,7 @@ static func build(grade: int, enhance := 0) -> FistAura:
 
 func _build() -> void:
 	var g := _grade
-	var tint := color(g)
+	var tint := color(_enhance)
 	# 오르는 등급마다 진해진다
 	var power := 0.5 + 0.07 * g
 	# 강화로 커지는 것: 빛무리·심·알갱이 크기, 알갱이 수, 솟는 높이, 빛알 궤도, 빛살 길이.
@@ -215,7 +238,8 @@ func _particles(key: String, amount: int, life: float, size: float, rise: float,
 
 ## 가산 빛 재질. `particles` 면 알갱이 빌보드에 정점 색(사그라듦)을 곱한다
 func _mat(key: String, tint: Color, particles := false) -> StandardMaterial3D:
-	var id := "%s_%d" % [key, _grade]
+	# 같은 등급·같은 색이면 재질을 같이 쓴다 (겹 진하기는 등급, 색은 강화가 정한다)
+	var id := "%s_%d_%d" % [key, _grade, clampi(_enhance, FIRST, COLORS.keys().max())]
 	if _mats.has(id):
 		return _mats[id]
 	var mat := StandardMaterial3D.new()

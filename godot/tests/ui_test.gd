@@ -333,6 +333,8 @@ func _case_potion(game: Node3D) -> void:
 	# 칸을 누르면 마시고 쿨타임이 돈다
 	var max_hp := int(me.stats.maxHp)
 	me.hp = max_hp / 5
+	# 앞에서 기준을 80% 로 올린 사이 몬스터에게 맞아 이미 저절로 마셨을 수 있다 — 쿨타임을 비운다
+	me.potion_ready_at = 0
 	var before := int(me.hp)
 	cell.find_child("hit", true, false).pressed.emit()
 	await process_frame

@@ -73,12 +73,6 @@ func _spawn(font: Font) -> void:
 	# 주먹 기운 — 태초가 모든 조각(빛무리·심·불티·불꽃·빛알·빛살)을 다 가진다.
 	# 재질은 FistAura 가 등급마다 붙들고 있어 셰이더가 남는다
 	_stage.add_child(FistAura.build(7, Items.max_enhance()))
-	# 장비 오로라 — 태초가 모든 조각(빛·불티·불꽃·심·빛알)을 다 가진다
-	var gear_aura := GearAura.new()
-	gear_aura._grade = 7
-	gear_aura._box = AABB(Vector3(-0.1, 0, -0.1), Vector3(0.2, 0.2, 0.2))
-	gear_aura._build()
-	_stage.add_child(gear_aura)
 	for crit in [false, true]:
 		HitFx.spawn(_stage, Vector3.UP, {
 			"amount": 1234, "crit": crit, "heal": false, "target_kind": "monster",

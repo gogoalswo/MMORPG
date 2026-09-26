@@ -13,7 +13,7 @@ extends RefCounted
 ## (`_split`), 그 부위를 입으면 그 조각을 끈다. 투구는 얼굴째 떼 온 것이라 머리 조각을 통째로 끈다.
 ## 어느 삼각형이 어느 부위인지는 뼈 가중치가 정한다 — `build-gear-parts.mjs` 와 **같은 규칙**이다.
 ##
-## 오로라는 4등급부터 고도 이펙트로 붙는다 (`GearAura`).
+## 오로라는 붙이지 않는다 (2026-09-26 요청: "그냥 오로라 제거해"). 화려함은 모델이 낸다.
 ## → docs/features/characters-and-animation.md "장비 스킨"
 
 const DIR := "res://assets/models/"
@@ -30,8 +30,6 @@ const WAIST := 0.025
 
 ## 등급 → 부위 메시 {이름 → [ArrayMesh, Skin]}. 파일을 한 번만 연다
 static var _parts := {}
-## 몸 메시 → {뼈 이름 → [뼈 좌표 상자, 앞쪽]}. 오로라 자리를 잡는다 (`GearAura`)
-static var _boxes := {}
 
 
 ## 부위 하나를 등급으로 입힌다. 0 이면 벗긴다(맨몸). 그 등급 모델이 없으면 맨몸 그대로 둔다
@@ -59,8 +57,6 @@ static func wear(rig: Node3D, slot: String, grade: int) -> void:
 	var piece: MeshInstance3D = pieces.get(slot)
 	if piece != null:
 		piece.visible = part.is_empty()
-	# 오로라 — 4등급부터, 고도 이펙트로 뼈 소켓에 붙인다
-	GearAura.wear(rig, body, slot, grade)
 
 
 ## 그 등급·부위의 메시와 스킨. 파일이 없거나 그 부위가 없으면 []
@@ -202,46 +198,6 @@ static func _compact(arrays: Array, tris: PackedInt32Array, count: int) -> Array
 		cut[slot] = dst
 	cut[Mesh.ARRAY_INDEX] = index
 	return cut
-
-
-## 그 뼈에 0.5 넘게 묶인 정점의 상자(뼈 좌표)와 앞쪽 방향(뼈 좌표)
-static func _box(body: MeshInstance3D, bone: String) -> Array:
-	var key := body.mesh.get_instance_id()
-	if not _boxes.has(key):
-		_boxes[key] = _measure(body)
-	return _boxes[key].get(bone, [AABB(Vector3(-0.03, 0, -0.03), Vector3(0.06, 0.1, 0.06)), Vector3.BACK])
-
-
-static func _measure(body: MeshInstance3D) -> Dictionary:
-	var skin := body.skin
-	var source := body.mesh as ArrayMesh
-	var boxes := {}
-	var first := {}
-	for surface in source.get_surface_count():
-		var arrays := source.surface_get_arrays(surface)
-		var pos: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
-		var bones = arrays[Mesh.ARRAY_BONES]
-		var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
-		if bones == null or weights.is_empty():
-			continue
-		var per := weights.size() / pos.size()
-		for v in pos.size():
-			for k in per:
-				if weights[v * per + k] <= 0.5:
-					continue
-				var b := int(bones[v * per + k])
-				var p := skin.get_bind_pose(b) * pos[v]
-				if first.has(b):
-					boxes[b] = (boxes[b] as AABB).expand(p)
-				else:
-					boxes[b] = AABB(p, Vector3.ZERO)
-					first[b] = true
-	var out := {}
-	for b in boxes:
-		# 모델의 앞(+Z)을 뼈 좌표로 — 바인드 자세의 뼈 회전을 되돌린다
-		var front := (skin.get_bind_pose(b).basis * Vector3.BACK).normalized()
-		out[str(skin.get_bind_name(b))] = [boxes[b], front]
-	return out
 
 
 ## 원래 몸 메시 — 스킨이 붙은 것 중 가장 큰 것 (나눈 조각·입힌 부위는 빼고)

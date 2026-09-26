@@ -1703,6 +1703,22 @@ func debug_crystals(player_id: String, count: int) -> void:
 	_notice("테스트: 크리스탈 %d개를 넣었다" % count)
 
 
+## **설계 창의 레벨 단추** — 레벨만 맞추고 **장비는 건드리지 않는다** (2026-09-26 요청:
+## "설계버튼 누르면 장비를 자동 장착하는데 이 부분 없애"). 예전에는 창이 `debug_gear` 를
+## 불러 여섯 칸을 등급 N 풀세트로 갈아입혔다. 체력은 새 최대치로 채운다
+func debug_level(player_id: String, level: int) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	player.level = clampi(level, 1, Stats.max_level())
+	player.exp = 0
+	_refresh_stats(player)
+	player.hp = int(player.stats.maxHp)
+	_events.append({"type": "notice", "text": "디버그: Lv%d" % player.level})
+
+
+## 테스트 전용 — 레벨과 "등급 N 풀세트 + 강화 n" 을 강제로 세운다 (`gear_test`·`stats_test`).
+## 화면(설계 창)은 더 이상 부르지 않는다 — 위 `debug_level` 을 쓴다
 func debug_gear(player_id: String, level: int, grade: int, enhance: int) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty():

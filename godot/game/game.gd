@@ -304,13 +304,11 @@ var _skill_swap := false
 ## 가방·장비 창. 틀은 한 번만 짓고 `_redraw_bag` 이 내용만 채운다
 var _bag_panel: PanelContainer
 
-## **설계 재현 창** — 레벨·등급·강화를 강제로 맞추고, 그 조건에서 설계가 말하는
-## 값(그룹 정리 시간·HP 손실·몬스터 수치)을 같이 보여 준다. 설계 문서 9장 5번
+## **설계 재현 창** — 레벨을 맞추고, 그 레벨에서 설계가 말하는 값(그룹 정리 시간·
+## HP 손실·몬스터 수치)을 같이 보여 준다. 장비는 안 건드린다. 설계 문서 9장 5번
 var _debug_panel: PanelContainer
 var _debug_text: Label
 var _debug_level := 100
-var _debug_grade := 4
-var _debug_enhance := 3
 var _bag_head: Label
 var _bag_gold: Label
 var _bag_sum: Label
@@ -841,9 +839,10 @@ class SpinRing extends Control:
 ## 사람도 창은 돌아가야 한다 (모델이 없으면 기둥으로 그리는 것과 같은 규칙)
 ## **설계 재현 창** — 설계 문서 9장 5번이 요구한 디버그 수단이다.
 ##
-## 레벨·등급·강화를 강제로 맞춰 시뮬레이터와 같은 조건을 세우고, 그 조건에서
-## 설계가 말하는 값을 나란히 찍는다. 수치로만 맞다고 믿었다가 화면이 다른 적이
-## 여러 번이라, **게임 안에서 대조할 수단**이 있어야 한다.
+## 레벨을 맞추고, 지금 입은 장비 그대로의 스탯과 설계가 말하는 값을 나란히 찍는다.
+## 수치로만 맞다고 믿었다가 화면이 다른 적이 여러 번이라, **게임 안에서 대조할
+## 수단**이 있어야 한다. **장비는 자동으로 입히지 않는다** (2026-09-26 요청) — 예전의
+## 등급·강화 단추는 여섯 칸을 풀세트로 갈아입혀서 걷었다
 func _build_debug_panel() -> void:
 	var center := CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -873,14 +872,6 @@ func _build_debug_panel() -> void:
 		_debug_level = clampi(_debug_level + step, 1, Stats.max_level())
 		_apply_debug()
 	, [-10, -1, 1, 10]))
-	column.add_child(_debug_row("등급", func(step: int) -> void:
-		_debug_grade = clampi(_debug_grade + step, 1, Stats.grade_count())
-		_apply_debug()
-	, [-1, 1]))
-	column.add_child(_debug_row("강화", func(step: int) -> void:
-		_debug_enhance = clampi(_debug_enhance + step, 0, Items.max_enhance())
-		_apply_debug()
-	, [-1, 1]))
 
 	_debug_text = Label.new()
 	_debug_text.add_theme_font_size_override("font_size", 18)
@@ -908,7 +899,7 @@ func _debug_row(label: String, on_step: Callable, steps: Array) -> HBoxContainer
 
 ## **열기만 해서는 캐릭터를 건드리지 않는다** (2026-09-26 요청: "버튼 누른다고 세팅을
 ## 바꾸지 마"). 예전에는 여는 순간 `debugGear` 를 보내 100레벨·4등급 풀세트로 갈아입혔다.
-## 열 때는 레벨 칸을 지금 레벨에 맞추고 값만 찍는다 — 증감 단추를 눌러야 바뀐다
+## 열 때는 레벨 칸을 지금 레벨에 맞추고 값만 찍는다 — 레벨 단추를 눌러야 바뀐다
 func _toggle_debug() -> void:
 	_debug_panel.visible = not _debug_panel.visible
 	if _debug_panel.visible:
@@ -917,11 +908,9 @@ func _toggle_debug() -> void:
 		_refresh_debug()
 
 
-## 지금 값으로 캐릭터를 세우고 다시 찍는다 — 증감 단추만 부른다
+## 레벨만 맞추고 다시 찍는다 — 레벨 단추만 부른다. 장비는 안 건드린다
 func _apply_debug() -> void:
-	_transport.send(&"debugGear", {
-		"level": _debug_level, "grade": _debug_grade, "enhance": _debug_enhance
-	})
+	_transport.send(&"debugLevel", {"level": _debug_level})
 	_refresh_debug()
 
 
@@ -945,9 +934,8 @@ func _refresh_debug() -> void:
 	var loss := taken / maxf(1.0, float(stats.get("maxHp", 1)))
 
 	_debug_text.text = "\n".join([
-		"Lv%d · 등급%d · 강화 +%d   (사냥터 %d, 기준 등급 %.2f, 기준 강화 %d단)" % [
-			level, _debug_grade, _debug_enhance,
-			Stats.field_of(level), Stats.ref_grade(level), Stats.enh_ref_step(level)
+		"Lv%d   (사냥터 %d, 기준 등급 %.2f, 기준 강화 %d단)" % [
+			level, Stats.field_of(level), Stats.ref_grade(level), Stats.enh_ref_step(level)
 		],
 		"",
 		"내  HP %d  공격 %d  방어 %d" % [

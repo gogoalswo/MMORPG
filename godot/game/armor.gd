@@ -45,7 +45,7 @@ const WAIST := 0.025
 ##   4 보라 판금 + 빛나는 새김선 · 5 주황 금 용비늘 · 6 검은 돌 + 맥박 치는 용암 금 ·
 ##   7 진주빛(보는 각에 따라 무지개) + 금빛 무늬
 ## base 바탕 · alt 둘째 색 · line 홈·틈 · glow 빛(새김·금·무늬) · energy 빛 세기 ·
-## metal · rough · rim 테두리 빛(보는 각이 비스듬할수록) · aura 오로라 [색, 두께, 세기] (4~)
+## metal · rough · rim 테두리 빛(보는 각이 비스듬할수록)
 const LOOK := {
 	1: {"base": Color("#8e8e8b"), "alt": Color("#b4b4af"), "line": Color("#4a4a48"), "glow": Color.BLACK,
 		"energy": 0.0, "metal": 0.0, "rough": 0.95, "rim": 0.0},
@@ -54,13 +54,13 @@ const LOOK := {
 	3: {"base": Color("#c3d4e6"), "alt": Color("#e9f1f8"), "line": Color("#5f7389"), "glow": Color.BLACK,
 		"energy": 0.0, "metal": 0.85, "rough": 0.28, "rim": 0.15},
 	4: {"base": Color("#5d3796"), "alt": Color("#a888dc"), "line": Color("#2a1745"), "glow": Color("#c07cff"),
-		"energy": 2.2, "metal": 0.7, "rough": 0.3, "rim": 0.5, "aura": [Color("#a45cff"), 0.010, 0.55]},
+		"energy": 2.2, "metal": 0.7, "rough": 0.3, "rim": 0.5},
 	5: {"base": Color("#f0a22e"), "alt": Color("#ffd36a"), "line": Color("#7a3812"), "glow": Color("#ffb347"),
-		"energy": 0.9, "metal": 0.85, "rough": 0.3, "rim": 0.7, "aura": [Color("#ffb03a"), 0.014, 0.7]},
+		"energy": 0.9, "metal": 0.85, "rough": 0.3, "rim": 0.7},
 	6: {"base": Color("#221c1c"), "alt": Color("#3a302e"), "line": Color("#0c0808"), "glow": Color("#ff3a14"),
-		"energy": 3.2, "metal": 0.4, "rough": 0.7, "rim": 0.8, "aura": [Color("#ff3a14"), 0.018, 0.9]},
+		"energy": 3.2, "metal": 0.4, "rough": 0.7, "rim": 0.8},
 	7: {"base": Color("#f4f1ea"), "alt": Color("#ffffff"), "line": Color("#d49a2a"), "glow": Color("#ffd27a"),
-		"energy": 1.6, "metal": 0.35, "rough": 0.25, "rim": 1.0, "aura": [Color("#fff0c0"), 0.024, 1.0]},
+		"energy": 1.6, "metal": 0.35, "rough": 0.25, "rim": 1.0},
 }
 ## 장식 색 — 테두리·보석 (아이콘의 테두리 색)
 const TRIM := {
@@ -185,32 +185,6 @@ void fragment() {
 }
 """
 
-## 오로라 — 껍데기를 한 겹 더 바깥으로 밀어 **가산**으로 그린다. 가장자리만 빛나고(프레넬),
-## 빛결이 아래에서 위로 흘러오른다. 4등급부터, 등급이 오를수록 두껍고 밝다 (`LOOK.aura`)
-const AURA_SHADER := """
-shader_type spatial;
-render_mode blend_add, unshaded, cull_back, depth_draw_never;
-uniform vec3 color : source_color;
-uniform float thick = 0.01;
-uniform float strength = 0.6;
-varying vec3 bp;
-float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-float noise(vec2 p) {
-	vec2 i = floor(p); vec2 f = fract(p); vec2 u = f * f * (3.0 - 2.0 * f);
-	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
-}
-void vertex() {
-	VERTEX += NORMAL * thick;
-	bp = vec3(UV.x, UV.y, UV2.x);
-}
-void fragment() {
-	float edge = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 2.0);
-	float flow = noise(vec2((bp.x + bp.z) * 26.0, bp.y * 18.0 - TIME * 1.6));
-	float wisp = smoothstep(0.35, 0.9, flow);
-	ALBEDO = color * strength * (edge * (0.55 + wisp) + wisp * 0.12);
-}
-"""
-
 ## 몸 메시 → {부위 → ArrayMesh}. 등급을 바꿀 때마다 다시 떼지 않는다
 static var _shells := {}
 ## 몸 메시 → {뼈 이름 → [뼈 좌표 상자 AABB, 앞쪽 방향]}. 장식 자리를 잡는다
@@ -240,6 +214,8 @@ static func wear(rig: Node3D, slot: String, grade: int) -> void:
 	if grade > 0:
 		shell.material_override = material(grade)
 	_decorate(rig, body, slot, grade)
+	# 오로라 — 4등급부터, 고도 이펙트로 뼈 소켓에 붙인다 (`GearAura`)
+	GearAura.wear(rig, body, slot, grade)
 
 
 ## 등급 재질 — 무늬 셰이더, 4등급부터 오로라 한 겹(`next_pass`). 등급마다 한 벌을 나눠 쓴다
@@ -250,23 +226,13 @@ static func material(grade: int) -> ShaderMaterial:
 	if not _mats.has("shader"):
 		var shader := Shader.new()
 		shader.code = SHADER
-		var aura_shader := Shader.new()
-		aura_shader.code = AURA_SHADER
 		_mats["shader"] = shader
-		_mats["aura"] = aura_shader
 	var look: Dictionary = LOOK[grade]
 	var mat := ShaderMaterial.new()
 	mat.shader = _mats["shader"]
 	mat.set_shader_parameter("style", grade)
 	for key in ["base", "alt", "line", "glow", "energy", "metal", "rough", "rim"]:
 		mat.set_shader_parameter(key, look[key])
-	if look.has("aura"):
-		var aura := ShaderMaterial.new()
-		aura.shader = _mats["aura"]
-		aura.set_shader_parameter("color", look.aura[0])
-		aura.set_shader_parameter("thick", look.aura[1])
-		aura.set_shader_parameter("strength", look.aura[2])
-		mat.next_pass = aura
 	_mats[grade] = mat
 	return mat
 

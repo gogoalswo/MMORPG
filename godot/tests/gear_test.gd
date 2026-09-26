@@ -34,7 +34,7 @@ func _case_rig() -> void:
 	var tris := {}
 	for slot in Armor.SLOTS:
 		var mesh: Mesh = null
-		var last_thick := 0.0
+		var last_thick := 0
 		for grade in range(1, 8):
 			rig.set_gear(slot, grade)
 			await process_frame
@@ -54,15 +54,18 @@ func _case_rig() -> void:
 				_fail("%s %d등급 무늬가 아니다" % [slot, grade])
 			elif not (mat.get_shader_parameter("base") as Color).is_equal_approx(Armor.LOOK[grade].base):
 				_fail("%s %d등급 색이 표와 다르다" % [slot, grade])
-			# 오로라 — 4등급부터, 등급이 오를수록 두껍다
-			var aura := mat.next_pass as ShaderMaterial if mat != null else null
-			if (aura != null) != (grade >= 4):
-				_fail("%s %d등급 오로라가 %s" % [slot, grade, "있다 (4등급부터여야 한다)" if aura != null else "없다"])
-			elif aura != null:
-				var thick := float(aura.get_shader_parameter("thick"))
-				if thick <= last_thick:
-					_fail("%d등급 오로라(%.3f)가 아래 등급보다 두껍지 않다" % [grade, thick])
-				last_thick = thick
+			# 오로라 — 4등급부터 이펙트(`GearAura`)로 붙고, 등급이 오를수록 알갱이가 많다
+			var auras := rig.find_children("GearAura_" + slot, "", true, false)
+			if auras.is_empty() != (grade < 4):
+				_fail("%s %d등급 오로라가 %s" % [slot, grade, "없다" if auras.is_empty() else "있다 (4등급부터여야 한다)"])
+			elif not auras.is_empty():
+				var count := 0
+				for node in auras:
+					for emitter in node.find_children("*", "GPUParticles3D", true, false):
+						count += (emitter as GPUParticles3D).amount
+				if count <= last_thick:
+					_fail("%s %d등급 오로라 알갱이(%d)가 아래 등급보다 많지 않다" % [slot, grade, count])
+				last_thick = count
 			if grade >= 3 and _decor(rig, slot) == 0:
 				_fail("%s %d등급인데 장식이 없다" % [slot, grade])
 		tris[slot] = _count(mesh)

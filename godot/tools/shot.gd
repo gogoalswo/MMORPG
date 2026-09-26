@@ -303,7 +303,8 @@ func _gear(game: Node3D, close := false) -> void:
 	for grade in range(0, 8):
 		for slot in Armor.SLOTS:
 			rig.set_gear(slot, grade)
-		for i in 6:
+		# 오로라 알갱이가 쌓일 때까지 (FistAura 와 같은 대기)
+		for i in FIST_WAIT:
 			await process_frame
 		await RenderingServer.frame_post_draw
 		var img := root.get_texture().get_image()

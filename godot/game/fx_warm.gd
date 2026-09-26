@@ -78,6 +78,12 @@ func _spawn(font: Font) -> void:
 	armor.mesh = SphereMesh.new()
 	armor.material_override = Armor.material(7)
 	_stage.add_child(armor)
+	# 장비 오로라 — 태초가 모든 조각(빛·불티·불꽃·심·빛알)을 다 가진다
+	var gear_aura := GearAura.new()
+	gear_aura._grade = 7
+	gear_aura._box = AABB(Vector3(-0.1, 0, -0.1), Vector3(0.2, 0.2, 0.2))
+	gear_aura._build()
+	_stage.add_child(gear_aura)
 	for crit in [false, true]:
 		HitFx.spawn(_stage, Vector3.UP, {
 			"amount": 1234, "crit": crit, "heal": false, "target_kind": "monster",

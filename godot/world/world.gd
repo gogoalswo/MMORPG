@@ -1353,6 +1353,27 @@ func grant_test_kit(player_id: String) -> void:
 	_notice("테스트: 장비 %d개(+0)와 크리스탈 300개를 넣었다" % gear.size())
 
 
+## **테스트 모드 기본 레벨** — 200 (2026-09-26 요청: "테스트모드 일 경우 기본적으로 200 레벨로
+## 만들어"). 레벨만 올린다 — 장비는 꾸러미가, 스킬은 치트가 맡는다. **한 번만** 올린다
+## (`granted` 의 `testLevel`) — 설계 창으로 50레벨에 맞춰 두고 다시 들어왔는데 200으로
+## 되돌아가면 "버튼 안 눌렀는데 세팅이 바뀐다" 가 된다. 다시 받으려면 저장을 지운다
+const TEST_LEVEL := 200
+
+func grant_test_level(player_id: String) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty() or "testLevel" in player.get("granted", []):
+		return
+	player.granted.append("testLevel")
+	var level := mini(TEST_LEVEL, Stats.max_level())
+	if int(player.level) >= level:
+		return
+	player.level = level
+	player.exp = 0
+	_refresh_stats(player)
+	player.hp = int(player.stats.maxHp)
+	_notice("테스트: Lv%d 로 시작한다" % level)
+
+
 ## --- 스킬 강화 ---
 
 ## 스킬창에서 **고른 강화에 경험치북 한 권을 넣는다** — 그 스킬의 `slot` 번째(0 부터)

@@ -29,6 +29,7 @@
 | `godot/game/game.gd` `_cheat_toggle` · `_set_cheats_open` | 치트 목록(`_cheat_column`) 여닫기 |
 | `godot/project.godot` | `run/main_scene = res://start.tscn` |
 | `godot/world/world.gd` `grant_test_kit` | 테스트 모드 꾸러미 — 장비 42개(+0) · 크리스탈 300개, 한 번만 |
+| `godot/world/world.gd` `grant_test_level` | 테스트 모드 200레벨 — 한 번만 |
 | `godot/tests/play_mode_test.gd` | 두 모드에서 무적·쿨타임·목록 상태, 테스트 모드 꾸러미, 초기화 단추(두 번에 지움)를 본다 |
 | `godot/tests/loading_screen_test.gd` | 누르면 막이 덮이고, 게임이 뜰 때까지 남았다가, 서서히 걷혀 지워지는지 본다 |
 
@@ -51,6 +52,12 @@
   모드로 들어올 때마다 가방이 42칸씩 불어난다. 다시 받으려면 저장을 지운다.
   가방(200칸)에 다 안 들어가면 **아무것도 안 넣고** 다음에 다시 준다.
   모두에게 주는 크리스탈 30개(`crystal30`)와는 따로라 처음 들어오면 330개가 된다.
+- **테스트 모드는 200레벨로 시작한다** (2026-09-26 요청: "테스트모드 일 경우 기본적으로
+  200 레벨로 만들어"). `testLevel` 요청 → `World.grant_test_level` (`TEST_LEVEL`,
+  최고 레벨을 넘지 않게 자른다). **레벨만** 올린다 — 장비는 꾸러미, 스킬은 치트 몫이고
+  스킬 포인트도 안 준다. **한 번만** 올린다 (`granted` 의 `testLevel`) — 설계 창으로
+  낮춰 둔 걸 다시 들어올 때마다 200 으로 되돌리면 "안 눌렀는데 세팅이 바뀐다" 가 된다.
+  이미 200 이상이면 그대로 둔다. 다시 받으려면 저장을 지운다.
 - **일반 모드는 무적·쿨타임을 끄는 요청을 보내지 않는다.** 둘 다 저장되지 않아
   (`invincible` 은 존 이동에만 이어진다, `cooldownOff` 는 `skills.json` 기본값 `false`)
   새로 켜면 이미 꺼져 있다. 끄는 요청을 보내면 "무적 끔" 알림만 괜히 뜬다.

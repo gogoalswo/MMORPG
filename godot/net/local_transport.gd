@@ -58,6 +58,8 @@ func send(message: StringName, payload: Dictionary) -> void:
 			_world.debug_fill_bag(MY_ID)
 		&"testKit":
 			_world.grant_test_kit(MY_ID)
+		&"testLevel":
+			_world.grant_test_level(MY_ID)
 		&"debugCrystals":
 			_world.debug_crystals(MY_ID, int(payload.get("count", 30)))
 		&"debugGear":

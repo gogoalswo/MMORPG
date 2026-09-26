@@ -10,6 +10,7 @@ import { JOB_IDS } from './character.ts';
 import { MONSTER_STATS } from './monsterTable.ts';
 import {
   CLEAR_TIME,
+  DEF_BASE,
   EXP_COEF,
   EARLY_EXP_MULT,
   expMult,
@@ -118,7 +119,9 @@ test('동레벨 타수 — 6타는 목표이지 불변식이 아니다', () => {
     const m = monster(level);
     const hits = Math.ceil(m.hp / (damage(ref.atk, level, m.df) * ref.crit));
     seen.push(hits);
-    assert.ok(hits >= TTK_HITS, `Lv${level}: ${hits}타 — 기준 장비로 설계보다 쉬우면 곡선이 무너진다`);
+    // 바닥은 6 → 5 로 내렸다 (2026-09-26) — 맨몸 공격·방어를 10 → 20 으로 올렸는데 몬스터는
+    // 고정 표라 따라 오르지 않아 초반(Lv1~22)이 5타가 됐다. 사용자가 "검사 기준을 새 값에 맞춤" 으로 정했다
+    assert.ok(hits >= TTK_HITS - 1, `Lv${level}: ${hits}타 — 기준 장비로 설계보다 쉬우면 곡선이 무너진다`);
     // 한도는 2026-09-25 에 ×3 → ×9 로 풀었다 — 몬스터 HP 를 서서히 3배로 올려(지시: "후반부
     // 몬스터 hp를 세 배로 올려") 기준 장비 평타가 Lv197 에서 50타다. 스킬로 줄이는 것이 전제다
     // 같은 날 ×9 → ×15 로 한 번 더 풀었다 — 몬스터 방어를 피해 50% 감소로 올려(지시: "HP 그대로,
@@ -139,7 +142,9 @@ const DESIGN_DRIFT = 0.05; // 5%
 
 test('몬스터 방어력이 기준 플레이어의 절반쯤이다 — 체력형이어야 타격감이 산다', () => {
   for (const level of [1, 77, 200]) {
-    const want = refPlayer(level).df * MON_DEF_RATIO;
+    // 몬스터 표는 맨몸 방어 10 일 때 뽑았다. 2026-09-26 에 맨몸 방어를 20 으로 올렸는데
+    // 표는 그대로 두기로 했으므로(검사 기준을 새 값에 맞춤) **표를 뽑을 때의 방어**로 환산해 본다
+    const want = refPlayer(level).df * MON_DEF_RATIO * (10 / DEF_BASE);
     assert.ok(
       Math.abs(monster(level).df - want) <= want * DESIGN_DRIFT,
       `Lv${level}: ${monster(level).df} vs 설계 ${want}`
@@ -286,7 +291,8 @@ test('성장 곡선 — 만렙까지 2,880시간(120일)이 목표다', () => {
   let actual = 0;
   for (let level = 1; level < MAX_LEVEL; level++) actual += levelSeconds(level);
   // 같은 날 몬스터 방어를 피해 50% 감소로 올려 약 11,076시간(3.8배)이 됐다 — 킬 수는 그대로다
-  assert.equal(Math.round(actual / 3600), 11076);
+  // 2026-09-26 에 맨몸 공격·방어를 10 → 20 으로 올려 8,184시간(2.8배)으로 줄었다
+  assert.equal(Math.round(actual / 3600), 8184);
 
   // 문서 7장 표의 "레벨당 킬 수" 열. **2026-09-23 에 다시 뽑았다** — 몬스터 HP 를
   // 되돌리면서 한 마리가 주는 경험치(HP × 0.2)가 커져 필요 킬 수가 줄었다.
@@ -296,20 +302,22 @@ test('성장 곡선 — 만렙까지 2,880시간(120일)이 목표다', () => {
   // 줄여") 잡는 속도가 느려졌고, 레벨당 시간은 목표에 묶여 있어 필요 킬 수가 그만큼 줄었다.
   // 2026-09-25 에 몬스터 HP 를 서서히 3배로 올렸지만 **킬 수는 그대로다** (`paceKillRate`)
   const want: Array<[number, number]> = [
-    [1, 120],
-    [11, 257],
-    [21, 386],
-    [31, 939],
-    [91, 10693],
-    [141, 81202],
-    [191, 616624],
+    // **2026-09-26 에 또 뽑았다** — 맨몸 공격·방어를 10 → 20 으로 올려 계획 속도가 빨라졌고,
+    // 레벨당 계획 시간은 그대로라 필요 킬 수가 그만큼 늘었다
+    [1, 200],
+    [11, 450],
+    [21, 675],
+    [31, 1733],
+    [91, 19745],
+    [141, 149935],
+    [191, 1138571],
   ];
   for (const [level, kills] of want) {
     assert.equal(Math.round(killsPerLevel(level)), kills, `Lv${level} 킬 수`);
   }
 
   // 초반 세 구간은 레벨당 2 / 3 / 4.5분 — **계획 시간**이다. 몬스터 방어를 피해 50% 감소로
-  // 올린 뒤(2026-09-25) 실제로는 Lv1 이 2.9분 걸린다
+  // 올린 뒤(2026-09-25) 실제로는 Lv1 이 2.9분 걸렸고, 맨몸 공격·방어를 20 으로 올린 뒤(2026-09-26) 2.4분이다
   for (const [level, minutes] of [[1, 2], [11, 3], [21, 4.5]] as Array<[number, number]>) {
     assert.equal(Math.round((planSeconds(level) / 60) * 10) / 10, minutes, `Lv${level} 분`);
   }

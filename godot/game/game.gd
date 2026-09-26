@@ -249,8 +249,8 @@ var _npc_rows: VBoxContainer
 var _npc_role := ""
 var _npc_tab := ""
 var _npc_items: Array = []
-## 전직 창이 그릴 것 — `World._job_state` 가 준 그대로 (지금 단계 · 다음 전직 · 버튼이 눌리나)
-var _npc_job: Dictionary = {}
+## 전직 창 — 상점·대장간과 따로 조립한 창이다 (`JobPanel`)
+var _job_panel: JobPanel
 ## 액션바 4칸. 눌리면 그 스킬을 쓴다
 var _bar_buttons: Array = []
 ## 칸마다 지난 프레임에 쿨타임이 돌고 있었나 — 끝나는 순간을 잡아 번쩍인다
@@ -499,6 +499,7 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			_last_event = "%s 에 도착했습니다" % GameData.zone(str(payload.get("zone", ""))).get("name", "")
 			# 전직 버튼으로 옮겨 가면 창이 남는다 — 새 존에는 그 NPC 가 없다
 			_npc_panel.visible = false
+			_job_panel.visible = false
 		&"jobAdvanced":
 			# 글은 뒤따르는 notice 가 적는다. 스킬창이 열려 있으면 잠금을 풀어 다시 그린다
 			if _skill_panel.visible:
@@ -3423,17 +3424,43 @@ func _build_npc_panel() -> void:
 	_npc_rows = VBoxContainer.new()
 	rows.add_child(_npc_rows)
 
+	# 전직 창은 따로 조립한다 — 얇은 금테 결 (job_panel.gd).
+	# **HUD 보다 위 층에 단다** — `_ui_root` 에 두었더니 체력 막대·퀵슬롯이 아래쪽
+	# 단추를 덮었다 (2026-09-26, 찍어서 봤다). 차원문 창과 같은 층 번호다
+	var top := CanvasLayer.new()
+	top.name = "JobLayer"
+	top.layer = 10
+	add_child(top)
+	_job_panel = JobPanel.make(_frame_box, _icon)
+	# 한글 폰트는 _ui_root 의 테마에 있다 — 다른 층이라 직접 물려준다
+	_job_panel.theme = _ui_root.theme
+	top.add_child(_job_panel)
+	_close_button(_job_panel, func() -> void: _job_panel.visible = false)
+	_job_panel.advance.connect(func() -> void:
+		_transport.send(&"jobAdvance", {})
+		_job_panel.visible = false
+	)
+
 
 func _show_npc(payload: Dictionary) -> void:
 	var role := str(payload.get("role", ""))
 	var title := str(payload.get("title", ""))
+	if role == "jobs":
+		_npc_panel.visible = false
+		_job_panel.fill(
+			str(payload.get("name", "")),
+			payload.get("job", {}),
+			int(_me().get("level", 1)),
+			func(id: String) -> String: return str(Skills.all().get(id, {}).get("name", id)),
+		)
+		_job_panel.visible = true
+		return
 	_npc_title.text = "%s%s" % [
 		payload.get("name", ""),
 		"  (%s)" % title if title != "" else "",
 	]
 	_npc_role = role
 	_npc_items = payload.get("items", [])
-	_npc_job = payload.get("job", {})
 	_npc_tab = "buy" if role == "shop" else "enhance"
 	_redraw_npc()
 	_npc_panel.visible = true
@@ -3447,9 +3474,6 @@ func _redraw_npc() -> void:
 
 	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
 	if me.is_empty():
-		return
-	if _npc_role == "jobs":
-		_list_job()
 		return
 
 	var gold := Label.new()
@@ -3480,46 +3504,6 @@ func _redraw_npc() -> void:
 			_list_bag(me, "강화", func(index: int) -> void:
 				_transport.send(&"npcEnhance", {"index": index})
 			)
-
-
-## 전직 창 — **다음 전직 버튼 하나만** 낸다 (2차면 "3차 전직"). 레벨이 모자라면 흐린 버튼과
-## 몇 레벨에 되는지를 적는다. 누르면 `jobAdvance` 요청 — 거리·레벨·단계는 World 가 다시 본다
-func _list_job() -> void:
-	var tier := int(_npc_job.get("tier", 0))
-	var now := Label.new()
-	now.text = "지금: %s" % ("%d차 전직" % tier if tier > 0 else "전직 전")
-	_npc_rows.add_child(now)
-
-	var next: Dictionary = _npc_job.get("next", {})
-	if next.is_empty():
-		var done := Label.new()
-		done.text = "모든 전직을 마쳤습니다"
-		_npc_rows.add_child(done)
-		return
-
-	var names: Array = []
-	for id in _npc_job.get("skills", []):
-		names.append(str(Skills.all().get(str(id), {}).get("name", id)))
-	var info := Label.new()
-	info.text = "Lv.%d · 보스 %s 처치\n해금: %s" % [
-		int(next.get("level", 0)),
-		str(_npc_job.get("boss_name", "")),
-		", ".join(names) if not names.is_empty() else "아직 없음",
-	]
-	_npc_rows.add_child(info)
-
-	var button := Button.new()
-	button.name = "advance"
-	var ready := bool(_npc_job.get("ready", false))
-	button.text = "%d차 전직" % int(next.get("tier", tier + 1))
-	if not ready:
-		button.text += "  (Lv.%d 필요)" % int(next.get("level", 0))
-	button.disabled = not ready
-	button.pressed.connect(func() -> void:
-		_transport.send(&"jobAdvance", {})
-		_npc_panel.visible = false
-	)
-	_npc_rows.add_child(button)
 
 
 func _list_buy(me: Dictionary) -> void:

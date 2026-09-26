@@ -85,17 +85,24 @@
 
 | 카드 | 그림 | 어디서 |
 |---|---|---|
-| 토벌 던전 | 뿔 달린 보스 머리 | 던전 단추(`ui_icon_dungeon`)와 **같은 바르코 원본**을 384 로 굽는다 (`fetch-assets.sh` 의 `dungeon_raid`) |
-| 시련의 탑 | 뾰족 지붕 돌탑 · 아치 문 | **코드로 그렸다** — `scripts/draw-dungeon-art.mjs` (SVG → PNG) |
-| 보물 창고 | 둥근 뚜껑 상자 · 자물쇠 · 반짝임 | 〃 |
+| 토벌 던전 | 뿔 달린 오거 보스 머리 | 던전 단추(`ui_icon_dungeon`)와 **같은 바르코 원본**을 384 로 굽는다 (`fetch-assets.sh` 의 `dungeon_raid`) |
+| 시련의 탑 | 뾰족 지붕 돌탑 · 횃불 · 아치 문 | 바르코 (`dungeon_trial`) |
+| 보물 창고 | 금테 두른 나무 상자 · 자물쇠 · 금화와 보석 | 바르코 (`dungeon_treasure`) |
 
-**둘을 코드로 그린 이유** — 2026-09-23 세션에 바르코 커넥터가 끊겨 있었고, 사용자가
-"보스 · 돌탑 · 보물 상자로 일단 그려봐" 라고 했다. 아트풍 문서의 **아이콘 틀**(검은 바탕
-위 상아빛·옅은 금색 문장, 얇은 어두운 윤곽, 판 없음)과 색 표를 그대로 썼다
-→ [ui-art-style.md](ui-art-style.md). **바르코로 다시 뽑으면** 두 장을 `fetch-assets.sh`
-주소로 바꾸고 `draw-dungeon-art.mjs` 는 지운다.
+**실사풍이다** (2026-09-26 요청: "던전 아이콘이랑 안에 이미지 실사 느낌으로 교체해").
+그 전에는 아트풍 문서의 아이콘 틀(상아빛 문장)이었고, 탑·상자 둘은 바르코가 끊긴
+세션에서 코드(SVG)로 그렸다 — 그 스크립트(`draw-dungeon-art.mjs`)는 이때 지웠다.
+**던전 그림만 실사다** — 다른 UI 아이콘은 여전히 [ui-art-style.md](ui-art-style.md) 틀이다.
 
-다시 굽기: `node scripts/draw-dungeon-art.mjs && bash scripts/fetch-assets.sh && node scripts/build-item-icons.mjs`
+- 프롬프트 틀: `Photorealistic <무엇>, … Cinematic dark fantasy game key art,
+  hyper-detailed realistic textures, dramatic rim light … fully inside the frame with
+  generous empty margin, centered. Isolated on a pure solid black background (#000000),
+  no environment, no text, no border, no frame.` — 참고 그림 없이 `nano-banana-pro`, 1:1, 두 장씩.
+- **검은 단색 배경**으로 뽑아야 `build-item-icons.mjs` 가 가장자리부터 걷어 창 바탕에
+  녹는다. 풍경을 깔면 카드의 세로로 긴 칸에서 네모난 사진 가장자리가 드러난다.
+- 걷힌 배경: 보스 54% · 탑 77% · 상자 42%. 단추는 102x128.
+
+다시 굽기: `bash scripts/fetch-assets.sh && node scripts/build-item-icons.mjs`
 (크기는 `build-item-icons.mjs` 의 `FRAME_SIZE` 에 384) → `npm run sync:godot`.
 
 ### 창은 차원문 창을 물려받는다 ★
@@ -114,7 +121,11 @@
 
 ### 단추 그림 — 보스 머리 ★
 
-`ui_icon_dungeon` (2026-09-23). [ui-art-style.md](ui-art-style.md) 의 "아이콘류" 틀에
+`ui_icon_dungeon`. 2026-09-26 에 **실사풍으로 갈았다** — 토벌 카드와 같은 원본이다
+(위 "종류 카드" 의 프롬프트 틀). 두 장 중 검은 배경·따뜻한 빛 쪽을 골랐다
+(다른 한 장은 흰 배경이었다).
+
+처음(2026-09-23)엔 [ui-art-style.md](ui-art-style.md) 의 "아이콘류" 틀에
 `<무엇>` 만 "뿔 두 개 달린 도깨비(오거) 보스 머리, 정면" 으로 갈고, 이미 올라가 있는
 참고 그림을 물려 `nano-banana-pro` 로 두 장 뽑았다.
 
@@ -122,7 +133,7 @@
   라는 지적을 받았다.** 던전의 알맹이는 보스라서다. 문 그림은 밀지 않고 버렸다.
 - 두 장 중 **위로 솟은 뿔** 쪽을 골랐다 — 옆으로 말린 양뿔은 가로로 넓어 작은 칸에서
   얼굴이 작아진다.
-- 배경은 가장자리에서 번져 들어가는 것만 걷힌다(54%). 굽은 크기는 107x128.
+- 배경은 가장자리에서 번져 들어가는 것만 걷힌다(54%). 굽은 크기는 102x128.
 - 주소는 `fetch-assets.sh`, 굽는 것은 `build-item-icons.mjs`(기본 128), 옮기는 것은
   `sync-godot-assets.mjs` 의 `ICONS`. 그림이 없으면 글자 "던전" 으로 물러선다.
 

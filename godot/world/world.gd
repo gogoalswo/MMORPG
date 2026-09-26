@@ -223,7 +223,7 @@ func join(player_id: String) -> void:
 		# 존을 옮겨도 쿨타임은 이어진다 — 안 그러면 차원문을 오가며 연달아 마신다
 		"potion_ready_at": int(kept.get("potion_ready_at", 0)),
 		# HP 가 이 % 이하로 떨어지면 저절로 마신다. 0 이면 끔. 저장에 남는다
-		"potion_pct": int(kept.get("potion_pct", _potion_rule("potionAutoDefault", 50))),
+		"potion_pct": int(kept.get("potion_pct", _potion_rule("potionAutoDefault", 70))),
 		# 스킬 강화 — `{ 스킬 id: [강화 id, …] }`. 스킬창에서 경험치북으로 채우면 붙는다 (`feed_upgrade`)
 		"skill_upgrades": kept.get("skill_upgrades", {}).duplicate(true),
 		# 붙기 전까지 쌓인 경험치 — `{ 스킬 id: { 강화 id: 경험치 } }` (`feed_upgrade`)
@@ -1346,7 +1346,7 @@ func drink_potion(player_id: String, auto := false) -> void:
 		if not auto:
 			_events.append({"type": "notice", "text": "HP 가 가득 찼습니다"})
 		return
-	player.hp = mini(max_hp, before + maxi(1, roundi(max_hp * _potion_rule("potionHealRatio", 0.3))))
+	player.hp = mini(max_hp, before + maxi(1, roundi(max_hp * _potion_rule("potionHealRatio", 0.1))))
 	player.potion_ready_at = now + int(_potion_rule("potionCooldownMs", 10000))
 	# 회복기와 같은 "hit"(heal) 로 알린다 — 화면이 초록 숫자를 띄운다
 	_events.append({

@@ -120,11 +120,14 @@ else
 fi
 
 # 격투가 ★ 2026-09-26 부터 **팬티 차림 몸**이다 (장비 부위를 입히려고 옷을 벗겼다).
-# 원화(docs/art/fighter_concept.png)를 바르코 EditImage 로 벗기고 → Generate3D(T 포즈) → Rig(humanoid).
+# 원화(docs/art/fighter_concept.png)를 바르코 EditImage 로 벗기고 → 주먹을 쥐게 고치고 →
+# Generate3D(T 포즈) → Rig(**humanoid-fingers**). T 포즈가 손을 펴 버려서 손가락 뼈를 받아
+# `curl-fingers.mjs` 로 기본 자세를 말아 주먹을 쥐게 한다 (2026-09-26).
 # 동작은 새로 뽑지 않고 **옛 몸의 클립을 옮겨 붙인다** — 옛 몸의 클립 11개를 메시 없이 담은
 # public/assets/anim/fighter_clips.glb (커밋) 를 `add-clips --retarget` 으로 새 뼈대에 입힌다.
-fetch_varco ac369d05ce4960504bcaa2c5dde0f482 fighter_bare_rigged
-node scripts/build-varco-character.mjs public/assets/models/varco_fighter.glb assets-src/models/varco/fighter_bare_rigged.glb
+fetch_varco 615f33dfdc24a231f69d43926be1bcf1 fighter_bare_fingers
+node scripts/build-varco-character.mjs public/assets/models/varco_fighter.glb assets-src/models/varco/fighter_bare_fingers.glb
+node scripts/curl-fingers.mjs public/assets/models/varco_fighter.glb
 node scripts/add-clips.mjs public/assets/models/varco_fighter.glb public/assets/models/varco_fighter.glb public/assets/anim/fighter_clips.glb --retarget
 node scripts/add-clips.mjs public/assets/models/varco_fighter.glb public/assets/models/varco_fighter.glb public/assets/anim/fighter_moves.glb --retarget
 

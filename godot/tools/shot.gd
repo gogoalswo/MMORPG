@@ -120,6 +120,10 @@ func _run() -> void:
 	if skill == "gear":
 		await _gear(game)
 		return
+	# 맨주먹 — 무기를 벗기고 손을 가까이 (손가락을 말아 쥔 주먹이 제대로 쥐어졌나)
+	if skill == "hand":
+		await _hand(game)
+		return
 
 	# 창은 열어 놓고 한 장만 찍는다 — 움직이는 것이 없다
 	if skill == "bag" or skill == "skills":
@@ -243,6 +247,38 @@ func _fist(game: Node3D, by_enhance := false) -> void:
 	sheet.resize(int(sheet.get_width() * 0.7), int(sheet.get_height() * 0.7), Image.INTERPOLATE_BILINEAR)
 	sheet.save_png("res://../logs/shot_sheet.png")
 	print("logs/shot_sheet.png  (%s)" % ("윗줄 희귀 +5~+9, 아랫줄 태초" if by_enhance else "1~4등급 윗줄, 5~7등급 아랫줄 (+9)"))
+	quit(0)
+
+
+## 맨주먹을 네 각도로 가까이 (`npm run shot:godot -- hand`) — 대기 · 옆 · 달리기 · 평타
+func _hand(game: Node3D) -> void:
+	await process_frame
+	await process_frame
+	game.set_process(false)
+	var rig: Rig = game._player
+	rig.set_weapon(0)
+	var focus: Vector3 = rig.position + Vector3(0, 0.8, 0)
+	var pitch := deg_to_rad(CameraRig.PITCH)
+	var away := Vector3(cos(pitch) * sin(CameraRig.YAW), sin(pitch), cos(pitch) * cos(CameraRig.YAW))
+	game._camera.position = focus + away * 1.7
+	game._camera.look_at(focus, Vector3.UP)
+	var cell := Vector2i(760, 600)
+	var sheet: Image = null
+	var looks := [["Idle", 0.3], ["Idle", -0.6], ["Run", 0.3], ["Jab", 0.3]]
+	for index in looks.size():
+		rig.rotation.y = CameraRig.YAW + float(looks[index][1])
+		rig.play(str(looks[index][0]), 1.0, 0.0, true, 0.0)
+		for i in 8:
+			await process_frame
+		await RenderingServer.frame_post_draw
+		var img := root.get_texture().get_image()
+		if sheet == null:
+			sheet = Image.create(cell.x * 4, cell.y, false, img.get_format())
+		var from := Vector2i((img.get_width() - cell.x) / 2, (img.get_height() - cell.y) / 2)
+		sheet.blit_rect(img, Rect2i(from, cell), Vector2i(index * cell.x, 0))
+	sheet.resize(int(sheet.get_width() * 0.4), int(sheet.get_height() * 0.4), Image.INTERPOLATE_BILINEAR)
+	sheet.save_png("res://../logs/shot_sheet.png")
+	print("logs/shot_sheet.png  (대기 앞 · 대기 옆 · 달리기 · 평타)")
 	quit(0)
 
 

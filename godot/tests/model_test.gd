@@ -13,6 +13,7 @@ func _init() -> void:
 	_case_fighter()
 	_case_ogre()
 	_case_texture_size()
+	_case_texture_lossy()
 	_case_missing()
 	_case_height_table()
 	_case_every_kind()
@@ -102,6 +103,22 @@ func _case_texture_size() -> void:
 		_fail("텍스처가 %dpx 다 — 줄이기가 안 돌았다" % biggest)
 	else:
 		print("  텍스처 가장 큰 변 %dpx" % biggest)
+
+
+## 모델 텍스처는 손실, UI 아이콘은 무손실로 굽나. 기본값(무손실)으로 돌아가면
+## 90KB JPG 가 675KB 가 돼 pck 가 49MB 로 돌아간다 (2026-09-26)
+func _case_texture_lossy() -> void:
+	var defaults: Dictionary = ProjectSettings.get_setting("importer_defaults/texture", {})
+	if int(defaults.get("compress/mode", 0)) != 1:
+		_fail("project.godot 의 텍스처 기본값이 손실(compress/mode=1)이 아니다 — pck 가 49MB 로 돌아간다")
+		return
+	var cfg := ConfigFile.new()
+	if cfg.load("res://assets/icons/weapon.png.import") != OK:
+		return
+	if int(cfg.get_value("params", "compress/mode", -1)) != 0:
+		_fail("아이콘이 무손실이 아니다 — sync-godot-assets.mjs 의 LOSSLESS_IMPORT 가 안 써졌다")
+	else:
+		print("  텍스처: 모델은 손실 %.1f, 아이콘은 무손실" % float(defaults.get("compress/lossy_quality", 0.0)))
 
 
 func _case_missing() -> void:

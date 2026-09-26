@@ -332,6 +332,10 @@ fetch_icon 5eb4149d3844a5afb43f514f86b719ab dungeon_treasure # 보물 창고 —
 fetch_icon 9f519882b9a58b99a928564c0fb70efd ui_icon_auto   # 자동사냥 — 검 두 자루가 X자
 # 퀵슬롯 왼쪽 물약 칸 (2026-09-26) — 둥근 유리병 · 코르크 · 붉은 물약. 두 장 중 둘째(정면)
 fetch_icon 81fc643bd0233984e748b4bb3416fcc8 ui_icon_potion
+# 오른쪽 위 메뉴에서 글자로만 나오던 셋 (2026-09-26) — 아이콘류 틀 + 참고 그림. 각 두 장 중 고른 것
+fetch_icon ff246585b896e3f101f79fe2aa6540ad ui_icon_character # 정보 — 기사 투구 정면 (첫째)
+fetch_icon d01c60c00fd277fa99749720c9548453 ui_icon_enhance   # 강화 — 모루를 내리치는 망치 · 불꽃 (둘째)
+fetch_icon 14cbea32b4e936b84e09b6364f0b661a ui_icon_design    # 설계 — 톱니바퀴 위 제도용 컴퍼스 (첫째)
 fetch_icon 74df64ad7717d61a8ba37c600568f827 ui_auto_spin   # 자동사냥 고리 (굵은 화살표 — 얇은 것은 안 보였다)
 fetch_icon 69c32b07ca637a710819a6ba08020abf ui_close       # 모든 창 오른쪽 위 닫기 X
 fetch_icon 029c2be72082608b40dfaf00bebe782a ui_portrait    # 옛 초상 테두리 (미사용 — 상태판을 내리면서 빠졌다)

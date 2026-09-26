@@ -330,6 +330,11 @@ func _case_range() -> void:
 	var s := _setup(3)
 	var w: World = s[0]
 	var me: Dictionary = s[1]
+	# 허수아비가 앞 스킬에 죽으면 할퀴기가 **살아 있는 옆 놈 쪽으로 돌아서** 아래 부채꼴 검사가
+	# 거꾸로 걸린다 — 모양을 보는 검사라 죽지 않게 둔다 (2026-09-26 기본 공격력을 올리자 걸렸다)
+	for mob in s[2]:
+		mob.hp = 1000000
+		mob.max_hp = 1000000
 
 	# 1) 근접 부채꼴 — 중심은 내 몸, 각은 스킬의 각 그대로
 	w.learn_skill("me", "rising_kick")

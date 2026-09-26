@@ -51,13 +51,13 @@ func _eq(label: String, got: int, want: int) -> void:
 func _base() -> void:
 	var one := Stats.base(1)
 	_near("Lv1 HP", one["hp"], 100.0)
-	_near("Lv1 공격", one["atk"], 10.0)
-	_near("Lv1 방어", one["df"], 10.0)
+	_near("Lv1 공격", one["atk"], 20.0)
+	_near("Lv1 방어", one["df"], 20.0)
 
 	var top := Stats.base(Stats.max_level())
 	_eq("Lv200 맨몸 HP", roundi(top["hp"]), 5146)
-	_eq("Lv200 맨몸 공격", roundi(top["atk"]), 515)
-	_eq("Lv200 맨몸 방어", roundi(top["df"]), 515)
+	_eq("Lv200 맨몸 공격", roundi(top["atk"]), 1029)
+	_eq("Lv200 맨몸 방어", roundi(top["df"]), 1029)
 
 	# 레벨 1개는 언제나 +2% — 구간마다 다르면 "장비 비중" 의 기준이 사라진다
 	for level in [2, 50, 120, 199]:
@@ -114,7 +114,8 @@ func _ttk() -> void:
 		if first == 0:
 			first = hits
 		last = hits
-		if hits < 6:
+		# 바닥 6 → 5 (2026-09-26): 맨몸 공격·방어를 20 으로 올렸는데 몬스터는 고정 표라 초반이 5타다
+		if hits < 5:
 			_fail("Lv%d 타수 %d — 기준 장비로 설계보다 쉬우면 곡선이 무너진다" % [level, hits])
 		# 한도 18 → 54 → 90 (2026-09-25): 몬스터 HP 를 서서히 3배로 올리고 방어를 피해 50% 감소로
 		# 올려 Lv197 평타가 82타다

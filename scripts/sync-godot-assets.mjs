@@ -105,6 +105,22 @@ const GROUND = [
  */
 const MAX_TEXTURE = 512;
 
+/**
+ * 고도의 텍스처 기본값은 손실(WebP 0.9)이다 (`project.godot` 의 `importer_defaults`) —
+ * 모델 텍스처가 무손실로 구워져 pck 가 49MB 였다. UI 그림은 얇은 금선이 뭉개지면 안 되니
+ * **고도가 임포트하기 전에** 무손실 `.import` 를 써 둔다. 있으면 고도가 그 설정을 따르고
+ * 나머지 칸을 채운다. 이미 있으면(예전에 기본값=무손실로 만들어진 것) 건드리지 않는다.
+ */
+const LOSSLESS_IMPORT = `[remap]
+
+importer="texture"
+type="CompressedTexture2D"
+
+[params]
+
+compress/mode=0
+`;
+
 const jobs = [
   {
     names: MODELS,
@@ -123,22 +139,6 @@ const jobs = [
 let copied = 0;
 for (const job of jobs) copied += await run(job);
 console.log(`${copied}개 새로 복사했다 -> godot/assets/`);
-
-/**
- * 고도의 텍스처 기본값은 손실(WebP 0.9)이다 (`project.godot` 의 `importer_defaults`) —
- * 모델 텍스처가 무손실로 구워져 pck 가 49MB 였다. UI 그림은 얇은 금선이 뭉개지면 안 되니
- * **고도가 임포트하기 전에** 무손실 `.import` 를 써 둔다. 있으면 고도가 그 설정을 따르고
- * 나머지 칸을 채운다. 이미 있으면(예전에 기본값=무손실로 만들어진 것) 건드리지 않는다.
- */
-const LOSSLESS_IMPORT = `[remap]
-
-importer="texture"
-type="CompressedTexture2D"
-
-[params]
-
-compress/mode=0
-`;
 
 async function run({ names, from, to, shrink, lossless }) {
   mkdirSync(to, { recursive: true });

@@ -295,13 +295,15 @@ func _case_potion(game: Node3D) -> void:
 	game._transport.send(&"potionPct", {"pct": int(GameData.combat().get("potionAutoDefault", 50))})
 	await process_frame
 	var cell: Control = game._potion_cell
-	var last: Rect2 = game._bar_buttons[game._bar_buttons.size() - 1].get_global_rect()
+	# 퀵슬롯 **왼쪽**, 한 뼘(`AUTO_GAP`) 띄워서 (2026-09-26 요청)
+	var first: Rect2 = game._bar_buttons[0].get_global_rect()
 	var rect := cell.get_global_rect()
-	if absf(rect.get_center().y - last.get_center().y) > 2.0 or rect.position.x < last.end.x \
-			or rect.position.x - last.end.x > 12.0:
-		_fail("물약 칸이 퀵슬롯 바로 옆이 아니다: 물약 %s · 마지막 퀵슬롯 %s" % [rect, last])
-	if rect.end.x > game._auto_cell.get_global_rect().position.x:
-		_fail("물약 칸이 자동사냥 칸과 겹친다")
+	if absf(rect.get_center().y - first.get_center().y) > 2.0 or rect.end.x > first.position.x \
+			or first.position.x - rect.end.x > 20.0:
+		_fail("물약 칸이 퀵슬롯 바로 왼쪽이 아니다: 물약 %s · 첫 퀵슬롯 %s" % [rect, first])
+	var icon: TextureRect = cell.find_child("icon", true, false)
+	if icon.texture == null:
+		_fail("물약 아이콘이 없다 — npm run sync:godot 을 돌렸나")
 	var badge: Label = cell.find_child("badge", true, false)
 	if badge.text != "HP %d%%" % int(me.potion_pct):
 		_fail("물약 배지가 '%s' 다" % badge.text)
@@ -320,8 +322,25 @@ func _case_potion(game: Node3D) -> void:
 	await process_frame
 	if int(me.potion_pct) != start + 10 or game._potion_pct_label.text != "HP %d%% 이하" % (start + 10):
 		_fail("+ 를 눌렀는데 기준 %d · 글자 '%s'" % [int(me.potion_pct), game._potion_pct_label.text])
+	# "-" 단추 글자가 폰트에 있어야 한다 — 빼기 기호(U+2212)는 없어서 빈 단추였다
+	var down: Button = panel.find_child("potion_down", true, false)
+	var font: Font = down.get_theme_font("font")
+	for ch in down.text:
+		if not font.has_char(ch.unicode_at(0)):
+			_fail("- 단추 글자 '%s' 가 폰트에 없다" % down.text)
+	# 슬라이더로 고른다 — 끈 값이 판정을 거쳐 글자로, 판정 값이 손잡이로 돌아온다
+	var slider: HSlider = panel.find_child("potion_slider", true, false)
+	slider.value = 40
+	await process_frame
+	await process_frame
+	if int(me.potion_pct) != 40 or game._potion_pct_label.text != "HP 40% 이하":
+		_fail("슬라이더를 40 에 두었는데 기준 %d · 글자 '%s'" % [int(me.potion_pct), game._potion_pct_label.text])
+	panel.find_child("potion_up", true, false).pressed.emit()
+	await process_frame
+	if slider.value != 50.0:
+		_fail("+ 로 50 이 됐는데 손잡이가 %s 에 있다" % slider.value)
 	for i in 12:
-		panel.find_child("potion_down", true, false).pressed.emit()
+		down.pressed.emit()
 		await process_frame
 	if int(me.potion_pct) != 0 or badge.text != "자동 끔":
 		_fail("끝까지 내렸는데 기준 %d · 배지 '%s'" % [int(me.potion_pct), badge.text])
@@ -394,7 +413,9 @@ func _case_status(game: Node3D) -> void:
 		_fail("체력 막대가 퀵슬롯 바로 위가 아니다: 막대 %s · 퀵슬롯 %s" % [hp_rect, quick])
 	if absf(hp_rect.get_center().x - screen.x / 2.0) > 2.0:
 		_fail("체력 막대가 화면 가운데가 아니다: %s" % hp_rect)
-	if absf(hp_rect.size.x - float(game._auto_cell.get_global_rect().end.x - quick.position.x)) > 6.0:
+	# 줄은 물약 칸(맨 왼쪽)에서 자동사냥 칸(맨 오른쪽)까지다
+	var row_left: float = game._potion_cell.get_global_rect().position.x
+	if absf(hp_rect.size.x - float(game._auto_cell.get_global_rect().end.x - row_left)) > 6.0:
 		_fail("체력 막대가 퀵슬롯 줄과 길이가 다르다 (%.0f)" % hp_rect.size.x)
 	if badge.end.y > hp_rect.position.y or badge.position.y < 0.0:
 		_fail("레벨 배지가 막대 위에 안 올라갔다: %s" % badge)
@@ -1392,7 +1413,8 @@ func _case_skills(game: Node3D) -> void:
 	var last: Rect2 = quick[3].get_global_rect()
 	# 자동사냥 칸까지 **다섯 칸 한 줄**이 아래 가운데다 (2026-09-19 요청)
 	var auto_rect: Rect2 = game._auto_cell.get_global_rect()
-	var middle := (first.position.x + auto_rect.end.x) / 2.0
+	# 묶음은 물약 칸(맨 왼쪽)부터 자동사냥 칸까지다 (2026-09-26 에 물약이 왼쪽으로 왔다)
+	var middle: float = (game._potion_cell.get_global_rect().position.x + auto_rect.end.x) / 2.0
 	if absf(middle - screen.x / 2.0) > 2.0 or last.end.y > screen.y or last.end.y < screen.y - 60:
 		_fail("퀵슬롯이 아래 가운데가 아니다: %s ~ %s" % [first, last])
 	if last.intersects(auto_rect):

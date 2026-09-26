@@ -262,6 +262,7 @@ var _potion_cooling := false
 ## 물약 설정 창 — 저절로 마실 HP % 를 고른다 (`_potion_step`)
 var _potion_panel: PanelContainer
 var _potion_pct_label: Label
+var _potion_slider: HSlider
 ## 테스트 스위치 단추 — 이름 → Button
 var _switch_buttons: Dictionary = {}
 ## 테스트 무적 단추. 글자는 **스냅샷(me.invincible)** 만 보고 그린다 (자동사냥과 같다)
@@ -2344,43 +2345,13 @@ func _build_skill_bar() -> void:
 	dock.add_theme_constant_override("separation", 5)
 	column.add_child(dock)
 	_bar_buttons.clear()
+	_build_potion_cell(dock)
 	for slot in int(GameData.combat().get("skillBarSize", 4)):
 		var cell := _make_skill_cell(QUICK_CELL, "ui_quick_slot", _on_bar_pressed.bind(slot), QUICK_MARGIN)
 		cell.find_child("key", true, false).text = str(slot + 1)
 		dock.add_child(cell)
 		_bar_buttons.append(cell)
 		_bar_cooling.append(false)
-
-	# 물약 — 퀵슬롯 바로 옆 (2026-09-26 요청). 누르면 마시고, 오른쪽 위 "설정" 으로
-	# 저절로 마실 HP % 를 고른다. 쿨타임은 스킬 칸과 같은 어둠·바늘로 돈다 (`_refresh_potion`)
-	_potion_cell = _make_skill_cell(QUICK_CELL, "ui_quick_slot", _drink_potion, QUICK_MARGIN)
-	_potion_cell.name = "potion"
-	var potion_icon: TextureRect = _potion_cell.find_child("icon", true, false)
-	potion_icon.texture = _icon("ui_icon_potion")
-	# 아직 그림이 없어 글자로 나온다
-	if potion_icon.texture == null:
-		_potion_cell.find_child("text", true, false).text = "물약"
-	# 칸의 누름(hit)보다 **뒤에** 얹어야 이 단추가 먼저 눌린다
-	var setting := Button.new()
-	setting.name = "potion_setting"
-	setting.text = "설정"
-	setting.add_theme_font_size_override("font_size", 10)
-	setting.add_theme_constant_override("outline_size", 4)
-	setting.add_theme_color_override("font_outline_color", Color.BLACK)
-	setting.add_theme_color_override("font_color", INV_GOLD_HI)
-	setting.size_flags_horizontal = Control.SIZE_SHRINK_END
-	setting.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	for state in ["normal", "hover", "pressed", "focus"]:
-		var box := StyleBoxFlat.new()
-		box.bg_color = Color(0, 0, 0, 0.55)
-		box.border_color = Color(INV_GOLD, 0.8)
-		box.set_border_width_all(1)
-		box.set_corner_radius_all(3)
-		box.set_content_margin_all(2)
-		setting.add_theme_stylebox_override(state, box)
-	setting.pressed.connect(_toggle_potion_panel)
-	_potion_cell.add_child(setting)
-	dock.add_child(_potion_cell)
 
 	# 자동사냥도 같은 칸이다 — 엄지가 퀵슬롯과 같은 높이에서 닿는다 (2026-09-19 요청).
 	# 켜지면 칸 위에서 화살표 고리가 돈다
@@ -2459,6 +2430,46 @@ func _build_skill_bar() -> void:
 		menu.add_child(cell)
 	menu.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE, 20)
 	menu.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+
+
+## 물약 칸 — **퀵슬롯 왼쪽** (2026-09-26 요청: 처음엔 오른쪽 옆이었다가 "물약을 퀵슬롯 왼쪽에 두고").
+## 누르면 마시고, 오른쪽 위 "설정" 으로 저절로 마실 HP % 를 고른다. 쿨타임은 스킬 칸과 같은
+## 어둠·바늘로 돈다 (`_refresh_potion`). 퀵슬롯과 `AUTO_GAP` 만큼 띄운다 — 붙이면 다섯 번째
+## 스킬 칸으로 보인다 (자동사냥 칸에서 받은 지적과 같다)
+func _build_potion_cell(dock: HBoxContainer) -> void:
+	_potion_cell = _make_skill_cell(QUICK_CELL, "ui_quick_slot", _drink_potion, QUICK_MARGIN)
+	_potion_cell.name = "potion"
+	var potion_icon: TextureRect = _potion_cell.find_child("icon", true, false)
+	potion_icon.texture = _icon("ui_icon_potion")
+	# 그림을 안 받은 사람에게는 글자로 나온다
+	if potion_icon.texture == null:
+		_potion_cell.find_child("text", true, false).text = "물약"
+	# 칸의 누름(hit)보다 **뒤에** 얹어야 이 단추가 먼저 눌린다
+	var setting := Button.new()
+	setting.name = "potion_setting"
+	setting.text = "설정"
+	setting.add_theme_font_size_override("font_size", 10)
+	setting.add_theme_constant_override("outline_size", 4)
+	setting.add_theme_color_override("font_outline_color", Color.BLACK)
+	setting.add_theme_color_override("font_color", INV_GOLD_HI)
+	setting.size_flags_horizontal = Control.SIZE_SHRINK_END
+	setting.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	for state in ["normal", "hover", "pressed", "focus"]:
+		var box := StyleBoxFlat.new()
+		box.bg_color = Color(0, 0, 0, 0.55)
+		box.border_color = Color(INV_GOLD, 0.8)
+		box.set_border_width_all(1)
+		box.set_corner_radius_all(3)
+		box.set_content_margin_all(2)
+		setting.add_theme_stylebox_override(state, box)
+	setting.pressed.connect(_toggle_potion_panel)
+	_potion_cell.add_child(setting)
+	dock.add_child(_potion_cell)
+
+	var gap := Control.new()
+	gap.custom_minimum_size = Vector2(AUTO_GAP, 0)
+	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dock.add_child(gap)
 
 
 ## 스킬 칸 하나 — 퀵슬롯·창 안 장착 칸·목록 칸·설명 쪽 큰 아이콘이 전부 이것이다.
@@ -4456,6 +4467,8 @@ func _refresh_potion(me: Dictionary) -> void:
 	_potion_cell.find_child("badge", true, false).text = "HP %d%%" % pct if pct > 0 else "자동 끔"
 	if _potion_panel.visible:
 		_potion_pct_label.text = "HP %d%% 이하" % pct if pct > 0 else "자동 끔"
+		# 신호 없이 옮긴다 — 신호를 내면 받은 값을 다시 보내는 되먹임이 된다
+		_potion_slider.set_value_no_signal(pct)
 
 
 func _drink_potion() -> void:
@@ -4484,7 +4497,8 @@ func _build_potion_panel() -> void:
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 12)
 	side.add_child(row)
-	var down := _inv_button("−", _potion_step.bind(-1))
+	# ASCII "-" 다 — 빼기 기호(U+2212)는 한글 폰트 부분집합에 없어 **빈 단추로 나왔다** (2026-09-26 지적)
+	var down := _inv_button("-", _potion_step.bind(-1))
 	down.name = "potion_down"
 	row.add_child(down)
 	_potion_pct_label = _inv_label("", 20, INV_GOLD_HI)
@@ -4494,6 +4508,21 @@ func _build_potion_panel() -> void:
 	var up := _inv_button("+", _potion_step.bind(1))
 	up.name = "potion_up"
 	row.add_child(up)
+
+	# 슬라이더로도 고른다 (2026-09-26 요청). 끌면 칸(10%p)마다 판정에 보내고,
+	# 판정이 자른 값이 스냅샷으로 돌아오면 `_refresh_potion` 이 손잡이를 거기 맞춘다
+	_potion_slider = HSlider.new()
+	_potion_slider.name = "potion_slider"
+	_potion_slider.min_value = 0
+	_potion_slider.max_value = int(GameData.combat().get("potionAutoMax", 90))
+	_potion_slider.step = int(GameData.combat().get("potionAutoStep", 10))
+	_potion_slider.tick_count = int(_potion_slider.max_value / _potion_slider.step) + 1
+	_potion_slider.ticks_on_borders = true
+	_potion_slider.custom_minimum_size = Vector2(0, 32)
+	_potion_slider.value_changed.connect(
+		func(value: float) -> void: _transport.send(&"potionPct", {"pct": roundi(value)})
+	)
+	side.add_child(_potion_slider)
 
 	var rules := GameData.combat()
 	side.add_child(_inv_label(

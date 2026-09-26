@@ -48,6 +48,33 @@ func _run() -> void:
 	else:
 		print("  1.5초 동안 %.2f m 이동, 지금 (%.1f, %.1f)" % [moved, after.x, after.z])
 
+	# 누른 채로 끌면 목표가 손가락을 따라온다 (2026-09-26 요청: "누른 지점만 움직여")
+	if not game._holding:
+		print("  실패: 땅을 누르고 있는데 누르는 중으로 안 잡혔다")
+		_failed += 1
+	var drag := InputEventMouseMotion.new()
+	drag.position = Vector2(600, 200)
+	game._input(drag)
+	await process_frame
+	var dragged: Vector3 = game._target
+	if dragged == Vector3.INF or Vector2(dragged.x - target.x, dragged.z - target.z).length() < 0.5:
+		print("  실패: 끌었는데 목표가 안 따라왔다")
+		_failed += 1
+
+	# 떼면 더는 다시 잡지 않는다
+	var release := InputEventMouseButton.new()
+	release.button_index = MOUSE_BUTTON_LEFT
+	release.pressed = false
+	release.position = drag.position
+	game._input(release)
+	var left_at: Vector3 = game._target
+	drag.position = Vector2(200, 200)
+	game._input(drag)
+	await process_frame
+	if game._holding or (left_at != Vector3.INF and game._target != Vector3.INF and game._target != left_at):
+		print("  실패: 뗐는데 목표가 계속 따라온다")
+		_failed += 1
+
 	if _failed == 0:
 		print("터치 이동: 통과")
 		quit(0)

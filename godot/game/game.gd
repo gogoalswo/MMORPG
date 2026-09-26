@@ -180,6 +180,11 @@ var _label: Label
 var _marker: MeshInstance3D
 
 var _target: Vector3 = Vector3.INF
+## 땅을 누른 채로 있나. 누르고 있는 동안은 매 프레임 그 화면 점 아래로 `_target` 을
+## 다시 잡는다 — 손가락(마우스)을 따라 걷는다 (2026-09-26 요청)
+var _holding := false
+## 누르고 있는 화면 점. 끌면 `_input` 이 옮긴다
+var _hold_at := Vector2.ZERO
 var _seq := 0
 var _half_size := 0.0
 ## 이 존의 지형. 없으면(`null`) 평평한 바닥이다 — 높이는 `_ground_y` 로만 읽는다
@@ -421,6 +426,7 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 		&"died":
 			_last_event = "쓰러졌습니다 — 아무 데나 눌러 마을에서 되살아나기"
 			_target = Vector3.INF
+			_holding = false
 			_target_mob = ""
 			_marker.visible = false
 			_gate_panel.visible = false
@@ -3679,6 +3685,17 @@ func _build_zone(zone_id: String) -> void:
 		_mob_nodes[monster.id] = node
 
 
+## 누르고 있던 손을 떼거나 끄는 것은 UI 위에서 일어나도 받아야 한다 —
+## `_unhandled_input` 은 UI 가 먹은 이벤트를 못 받아서, 창 위에서 떼면 계속 걷는다
+func _input(event: InputEvent) -> void:
+	if not _holding:
+		return
+	if event is InputEventMouseMotion:
+		_hold_at = event.position
+	elif event is InputEventMouseButton and not event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		_holding = false
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	# 퀵슬롯 단축키 1~4. 칸 왼쪽 위에 적힌 번호와 같다
 	if event is InputEventKey and event.pressed and not event.echo:
@@ -3689,6 +3706,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 	# 터치는 기본 설정이 마우스로 바꿔 주므로 이 한 줄이 폰도 덮는다
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		_holding = false
 		# 죽어 있으면 어딜 눌러도 부활 요청이다
 		if _am_dead():
 			_transport.send(&"revive", {})
@@ -3717,9 +3735,16 @@ func _unhandled_input(event: InputEvent) -> void:
 			# 원거리 직업이 자리를 옮겨 가며 같은 놈을 보는 게 자연스럽다
 			# (docs/features/auto-hunt-and-targeting.md 의 "클릭 타겟팅")
 			_target_mob = ""
-			_target = hit
-			_marker.position = hit + Vector3(0, 0.05, 0)
-			_marker.visible = true
+			_holding = true
+			_hold_at = event.position
+			_set_target(hit)
+
+
+## 걸어갈 바닥 점을 잡고 표시를 그 자리에 세운다
+func _set_target(hit: Vector3) -> void:
+	_target = hit
+	_marker.position = hit + Vector3(0, 0.05, 0)
+	_marker.visible = true
 
 
 ## 화면의 그 점이 차원문 아치에 닿나
@@ -3898,6 +3923,12 @@ func _send_input(delta: float) -> void:
 	if _target_mob != "":
 		_chase_and_hit(delta)
 		return
+	# 누르고 있으면 그 화면 점 아래를 다시 잡는다. 캐릭터가 걸으면 카메라가 따라와서
+	# 손가락을 가만히 둬도 바닥 점이 앞으로 밀린다 — 누르는 동안 계속 걷는다
+	if _holding:
+		var hit := _ground_point(_hold_at)
+		if hit != Vector3.INF:
+			_set_target(hit)
 	if _target == Vector3.INF:
 		return
 	var me := _my_position()

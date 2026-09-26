@@ -16,7 +16,12 @@ import { readFileSync, writeFileSync } from 'node:fs';
 const [path, scaleArg] = process.argv.slice(2);
 const scale = Number(scaleArg ?? 1);
 // 마디별 말기 각도(도) — [뿌리, 가운데, 끝]. 부호는 손바닥 쪽 (찍어 보고 정했다)
-export const CURL = { finger: [80, 95, 65], thumb: [20, 35, 40] };
+export const CURL = {
+  finger: (process.env.CURL_FINGER ?? '80,95,65').split(',').map(Number),
+  thumb: (process.env.CURL_THUMB ?? '20,35,40').split(',').map(Number),
+};
+// 엄지 뿌리를 손바닥 쪽으로 눕히는 각(자기 Z 축) — 엄지가 손가락 위를 덮게
+const THUMB_ROLL = Number(process.env.CURL_THUMB_ROLL ?? 0);
 export const SIGN = 1;
 
 const buf = readFileSync(path);
@@ -38,6 +43,11 @@ for (const node of json.nodes) {
   const deg = (m[1] === '0' ? CURL.thumb : CURL.finger)[joint] * scale * SIGN;
   const half = (deg * Math.PI) / 360;
   node.rotation = qmul(node.rotation ?? [0, 0, 0, 1], [Math.sin(half), 0, 0, Math.cos(half)]);
+  if (m[1] === '0' && joint === 0 && THUMB_ROLL) {
+    const side = /_R_/.test(node.name) ? -1 : 1;
+    const r = (THUMB_ROLL * side * scale * Math.PI) / 360;
+    node.rotation = qmul(node.rotation, [0, 0, Math.sin(r), Math.cos(r)]);
+  }
   count += 1;
 }
 if (!count) throw new Error(`${path}: 손가락 뼈(…Finger…)가 없다 — Rig 를 humanoid-fingers 로 했나`);

@@ -17,11 +17,11 @@ extends RefCounted
 
 const DIR := "res://assets/models/"
 
-## 오른손 가운데와 반 크기 (손에 묶인 정점 809개의 상자). 왼손은 x 를 뒤집는다.
-## 2026-09-26 팬티 차림 몸으로 바꾸며 다시 쟀다 (`node scripts/measure-bones.mjs`) —
-## 새 몸은 주먹이 아니라 **펼친 손**이라 길고(y) 얇다(z). 옛 몸: (-0.011, 0.046, -0.014) ± (0.049, 0.050, 0.036)
-const FIST_CENTER := Vector3(-0.005, 0.063, -0.005)
-const FIST_HALF := Vector3(0.045, 0.065, 0.030)
+## 오른주먹 가운데와 반 크기 (손·손가락 뼈에 묶인 정점 871개의 상자). 왼주먹은 x 를 뒤집는다.
+## 2026-09-26 팬티 차림 몸으로 바꾸며 다시 쟀다 — 손가락을 말아 쥔 주먹을 **기본 자세로 스키닝해서**
+## 잰다 (`node scripts/measure-bones.mjs <glb> RightHand --posed`). 옛 몸: (-0.011, 0.046, -0.014) ± (0.049, 0.050, 0.036)
+const FIST_CENTER := Vector3(-0.007, 0.036, 0.001)
+const FIST_HALF := Vector3(0.044, 0.038, 0.029)
 ## 손목 토시 — 아래팔 정점이 손목에서 반지름 0.041
 const CUFF_Y := -0.028
 const CUFF_R := 0.046

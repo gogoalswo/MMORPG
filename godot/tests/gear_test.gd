@@ -67,6 +67,28 @@ func _case_rig() -> void:
 		_fail("투구가 머리 전체(%d)를 덮는다 — 얼굴을 빼야 한다" % _head_tris(rig))
 	print("  껍데기 삼각형: 갑옷 %d · 투구 %d (머리 %d 중) · 신발 %d" % [tris.armor, tris.helmet, _head_tris(rig), tris.boots])
 
+	# 배 — 갑옷 아래 끝이 반바지 허리(골반 뼈 + WAIST)까지 내려와야 사이가 안 드러난다
+	var body: MeshInstance3D = Armor._body(rig)
+	var armor_mesh := Armor.shell_mesh(body, "armor")
+	var hips_y := 0.0
+	for i in body.skin.get_bind_count():
+		if str(body.skin.get_bind_name(i)) == "Hips":
+			hips_y = body.skin.get_bind_pose(i).affine_inverse().origin.y
+	var bottom := armor_mesh.get_aabb().position.y - hips_y
+	if bottom > Armor.WAIST + 0.01:
+		_fail("갑옷 아래 끝이 골반 위 %.3f — 배가 드러난다 (허리선 %.3f)" % [bottom, Armor.WAIST])
+
+	# 주먹 — 손가락 뼈를 말아 쥐고 있어야 한다 (가운데 마디가 60° 넘게 굽었나)
+	var skeleton0: Skeleton3D = rig.find_children("*", "Skeleton3D", true, false)[0]
+	var curled := 0
+	for i in skeleton0.get_bone_count():
+		if skeleton0.get_bone_name(i).ends_with("Finger21") or skeleton0.get_bone_name(i).ends_with("Finger11"):
+			if skeleton0.get_bone_rest(i).basis.get_rotation_quaternion().get_angle() > deg_to_rad(60):
+				curled += 1
+	if curled < 4:
+		_fail("손가락이 말려 있지 않다 (%d/4) — 주먹이 아니다 (scripts/curl-fingers.mjs)" % curled)
+	print("  배: 갑옷 아래 끝이 골반 위 %.3f · 주먹: 손가락 마디 %d/4 가 말려 있다" % [bottom, curled])
+
 	# 달리는 동안 껍데기가 몸을 따라간다 — 정강이 껍데기 상자가 멈춰 있을 때와 달라야 한다
 	rig.set_gear("boots", 3)
 	rig.play("Run")

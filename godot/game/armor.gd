@@ -27,10 +27,16 @@ const COVER := {"armor": 0.3, "helmet": 0.5, "boots": 0.5}
 const PUSH := {"armor": 0.007, "helmet": 0.009, "boots": 0.007}
 ## 껍데기를 몇 번 펴나 — 근육·머리카락 굴곡을 죽여 판처럼 보이게 (`_smooth`)
 const SMOOTH := {"armor": 8, "helmet": 6, "boots": 6}
-## 투구는 얼굴을 덮지 않는다 — 머리 뼈 좌표로 이마 위(`BROW`)와 뒤통수(`BACK`)만 덮는다.
-## 앞이 +Z 다 (모델이 +Z 를 본다)
-const HELMET_BROW := 0.058
-const HELMET_BACK := -0.012
+## 투구는 얼굴을 덮지 않는다 — 이마 위와 뒤통수만 덮는다. 앞이 +Z 다.
+## **모델 축으로 잰 머리 상자에 대한 비율**로 잡는다 (`_head_frame`). 머리 뼈 좌표로 잡으면
+## 목이 숙여진 몸(주먹 몸은 목 35°)에서 이마선이 비스듬해져 얼굴을 가로질렀고, 고정 수치(0.058)는
+## 머리 뼈 자리가 바뀌자 눈높이에 걸렸다. 이마 = 상자 아래에서 62%, 뒤통수 = 가운데보다 0.02 뒤
+const HELMET_BROW_AT := 0.62
+const HELMET_BACK_BY := 0.02
+## 배를 덮는 허리선 — 골반 뼈 좌표 y. 몸통 쪽(몸통·골반·허벅지 뼈에 90% 넘게 묶인 — 팔·머리는
+## 빠진다) 정점 가운데 이보다 위는 갑옷이 덮는다. 아랫배는 **허벅지 뼈**에 주로 묶여 있어서
+## 가중치만으로는 가슴과 반바지 사이가 비었다 (골반 위 0.02~0.05 가 그랬다)
+const WAIST := 0.025
 
 ## 등급 재질 — [색, 금속성, 거칠기, 빛 색, 빛 세기]. 건틀릿과 같은 색이다
 const LOOK := {
@@ -119,11 +125,23 @@ static func _cut(body: MeshInstance3D, slot: String) -> ArrayMesh:
 	var bind_in := PackedByteArray()
 	bind_in.resize(skin.get_bind_count())
 	var head := -1
+	var hips := -1
+	var lower := PackedByteArray()
+	lower.resize(skin.get_bind_count())
 	for i in skin.get_bind_count():
 		var bone_name := str(skin.get_bind_name(i))
 		bind_in[i] = 1 if bone_name in wanted else 0
 		if bone_name == "Head":
 			head = i
+		if bone_name == "Hips":
+			hips = i
+		if bone_name in ["Hips", "LeftUpLeg", "RightUpLeg"]:
+			lower[i] = 1
+	var head_frame := _head_frame(body)
+	var head_box: AABB = head_frame[1]
+	var head_at: Vector3 = head_frame[2]
+	var brow := head_box.position.y + head_box.size.y * HELMET_BROW_AT
+	var back := head_box.get_center().z - HELMET_BACK_BY
 
 	var out := ArrayMesh.new()
 	for surface in source.get_surface_count():
@@ -146,6 +164,7 @@ static func _cut(body: MeshInstance3D, slot: String) -> ArrayMesh:
 		for v in pos.size():
 			var sum := 0.0
 			var on_head := 0.0
+			var on_hips := 0.0
 			for k in per:
 				var w := weights[v * per + k]
 				var b := int(bones[v * per + k])
@@ -153,11 +172,16 @@ static func _cut(body: MeshInstance3D, slot: String) -> ArrayMesh:
 					sum += w
 				if b == head:
 					on_head += w
+				if lower[b]:
+					on_hips += w
 			var yes := sum > float(COVER[slot])
+			if not yes and slot == "armor" and hips >= 0 and sum + on_hips > 0.9:
+				# 배 — 허리선 위 몸통이면 덮는다
+				yes = (skin.get_bind_pose(hips) * pos[v]).y > WAIST
 			if yes and slot == "helmet" and on_head > 0.5:
 				# 머리 뼈 좌표로 옮겨 얼굴을 걸러 낸다
-				var local := skin.get_bind_pose(head) * pos[v]
-				yes = local.y > HELMET_BROW or local.z < HELMET_BACK
+				var local := pos[v] - head_at
+				yes = local.y > brow or local.z < back
 			inside[v] = 1 if yes else 0
 
 		# 세 정점이 다 들어온 삼각형만 — 새 번호를 매겨 옮긴다
@@ -322,21 +346,28 @@ static func _decorate(rig: Node3D, body: MeshInstance3D, slot: String, grade: in
 			var holder := _holder(rig, "Head", slot)
 			if holder == null:
 				return
-			var box := _box(body, "Head")
-			var front: Vector3 = box[1]
-			var top := Vector3(0, box[0].end.y, 0) + Vector3(box[0].get_center().x, 0, box[0].get_center().z)
+			# 머리 장식은 **모델 축**으로 짓고 통째로 머리 뼈 좌표로 옮긴다 (`_head_frame`)
+			var frame := _head_frame(body)
+			var to_bone: Transform3D = frame[0]
+			var box: AABB = frame[1]
+			var hat := Node3D.new()
+			hat.transform = to_bone
+			holder.add_child(hat)
+			var mid := box.get_center()
+			var brow := box.position.y + box.size.y * HELMET_BROW_AT
+			var top := Vector3(mid.x, box.end.y, mid.z)
 			# 이마 테 — 투구 가장자리를 따라 두른다
-			var band := _part(holder, _ring(box[0].size.x * 0.52, 0.006), trim, Vector3(box[0].get_center().x, HELMET_BROW, box[0].get_center().z))
-			band.scale = Vector3(1.0, 1.0, box[0].size.z / box[0].size.x)
+			var band := _part(hat, _ring(box.size.x * 0.52, 0.006), trim, Vector3(mid.x, brow, mid.z))
+			band.scale = Vector3(1.0, 1.0, box.size.z / box.size.x)
 			if grade >= 4:
-				_part(holder, _sphere(0.014), _gem(grade), Vector3(0, HELMET_BROW + 0.012, 0) + front * (_reach(box[0], front) + 0.004))
+				_part(hat, _sphere(0.014), _gem(grade), Vector3(mid.x, brow + 0.012, box.end.z * 0.92))
 			if grade in [5, 6]:
 				# 뿔 둘 — 정수리 양옆에서 비스듬히
 				for side in [-1.0, 1.0]:
-					var dir := (Vector3.UP * 0.8 + Vector3(side, 0, 0) * 0.6 - front * 0.2).normalized()
-					_spike(holder, trim if grade == 6 else base, top + Vector3(side * box[0].size.x * 0.3, -0.02, 0), dir, 0.06)
+					var dir := (Vector3.UP * 0.8 + Vector3(side, 0, 0) * 0.6 - Vector3.BACK * 0.2).normalized()
+					_spike(hat, trim if grade == 6 else base, top + Vector3(side * box.size.x * 0.3, -0.02, 0), dir, 0.06)
 			if grade == 7:
-				_part(holder, _ring(0.06, 0.005), trim, top + Vector3(0, 0.045, 0))
+				_part(hat, _ring(0.06, 0.005), trim, top + Vector3(0, 0.045, 0))
 		"boots":
 			for bone in ["LeftLeg", "RightLeg"]:
 				var holder := _holder(rig, bone, slot)
@@ -374,6 +405,48 @@ static func _holder(rig: Node3D, bone: String, slot: String) -> Node3D:
 	holder.name = "GearDecor_" + slot
 	socket.add_child(holder)
 	return holder
+
+
+## 머리를 **모델 축**으로 잰다 — [모델 축 → 머리 뼈 좌표 변환, 머리 상자(머리 뼈 자리를 원점으로
+## 한 모델 축 좌표), 머리 뼈 자리(모델 좌표)]. 머리 뼈 좌표로 재면 목 기울기만큼 비스듬하다
+static func _head_frame(body: MeshInstance3D) -> Array:
+	var key := "head/%d" % body.mesh.get_instance_id()
+	if _boxes.has(key):
+		return _boxes[key]
+	var skin := body.skin
+	var head := -1
+	for i in skin.get_bind_count():
+		if str(skin.get_bind_name(i)) == "Head":
+			head = i
+	if head < 0:
+		return [Transform3D(), AABB(Vector3(-0.05, 0, -0.05), Vector3(0.1, 0.12, 0.1)), Vector3.ZERO]
+	var bind := skin.get_bind_pose(head)
+	var at := bind.affine_inverse().origin
+	var box := AABB()
+	var first := true
+	var source := body.mesh as ArrayMesh
+	for surface in source.get_surface_count():
+		var arrays := source.surface_get_arrays(surface)
+		var pos: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var bones = arrays[Mesh.ARRAY_BONES]
+		var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
+		if bones == null or weights.is_empty():
+			continue
+		var per := weights.size() / pos.size()
+		for v in pos.size():
+			var w := 0.0
+			for k in per:
+				if int(bones[v * per + k]) == head:
+					w += weights[v * per + k]
+			if w <= 0.5:
+				continue
+			var local := pos[v] - at
+			box = AABB(local, Vector3.ZERO) if first else box.expand(local)
+			first = false
+	# 모델 축 좌표 p(머리 뼈 자리 원점) → 머리 뼈 좌표 = bind · (at + p)
+	var to_bone := bind * Transform3D(Basis(), at)
+	_boxes[key] = [to_bone, box, at]
+	return _boxes[key]
 
 
 ## 그 뼈에 0.5 넘게 묶인 정점의 상자(뼈 좌표)와 앞쪽 방향(뼈 좌표)

@@ -24,7 +24,8 @@ const COLORS := {
 	4: Color("#b464ff"),
 	5: Color("#ffb03a"),
 	6: Color("#ff3a14"),
-	7: Color("#fff0c0"),
+	# 흰 갑옷 위라 흰빛은 더하면 하얗게 탄다 — 금빛으로 (찍어 보고 바꿨다)
+	7: Color("#ffc85a"),
 }
 ## 부위 → 기운이 붙는 뼈
 const BONES := {
@@ -82,7 +83,9 @@ func _build() -> void:
 	halo_quad.size = Vector2.ONE * (span * 1.25 + 0.08)
 	_halo.mesh = halo_quad
 	_halo.position = _box.get_center()
-	_halo.material_override = _mat("halo", tint * Color(1, 1, 1, 0.3 + 0.08 * (g - 4)))
+	# 7등급은 흰 갑옷 위라 빛무리가 얼굴까지 하얗게 태웠다 — 6등급보다 옅게 (찍어 보고 낮췄다)
+	var halo_alpha := 0.3 + 0.08 * (g - 4) if g < 7 else 0.26
+	_halo.material_override = _mat("halo", tint * Color(1, 1, 1, halo_alpha))
 	_halo.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(_halo)
 	# 피어오르는 빛 — 부위 겉에서 큰 빛뭉치가 천천히 오르며 사그라든다
@@ -96,7 +99,7 @@ func _build() -> void:
 		_particles("flame", 8 + 5 * (g - 6), 0.55, 0.2 + 0.05 * (g - 6), 0.85, tint * Color(1, 1, 1, 0.7))
 	if g >= 7:
 		# 흰 심 — 가는 빛이 촘촘히
-		_particles("core", 10, 0.6, 0.05, 0.4, Color(1, 1, 1, 0.9))
+		_particles("core", 10, 0.6, 0.05, 0.4, Color(1, 1, 1, 0.55))
 		# 빛알 셋이 부위 둘레를 돈다
 		_orbit = Node3D.new()
 		_orbit.position = _box.get_center()

@@ -1,6 +1,6 @@
 extends SceneTree
 
-## 갑옷·투구·신발을 입히면 그 부위 스킨이 등급대로 바뀌는지 본다 (`Armor`).
+## 갑옷·투구·신발을 입히면 그 부위가 바르코 모델(`gear_g<등급>.glb`)로 바뀌는지 본다 (`Armor`).
 ##
 ##   godot --headless --path godot --script tests/gear_test.gd
 
@@ -24,7 +24,7 @@ func _run() -> void:
 	quit(1 if _failed > 0 else 0)
 
 
-## 부위마다 껍데기가 몸에 붙고, 등급을 바꾸면 모양은 그대로 재질만 바뀐다
+## 등급마다 다른 부위 모델이 뼈대에 묶이고, 그 아래 맨몸은 꺼진다
 func _case_rig() -> void:
 	var rig := Rig.create("varco_fighter", Rig.HUMAN_HEIGHT)
 	if rig == null:
@@ -33,28 +33,23 @@ func _case_rig() -> void:
 	root.add_child(rig)
 	var tris := {}
 	for slot in Armor.SLOTS:
-		var mesh: Mesh = null
-		var last_thick := 0
+		var meshes := {}
+		var last_count := 0
 		for grade in range(1, 8):
 			rig.set_gear(slot, grade)
 			await process_frame
-			var shell: MeshInstance3D = rig.find_child("Gear_" + slot, true, false)
-			if shell == null or not shell.visible:
-				_fail("%s %d등급을 입혔는데 껍데기가 안 보인다" % [slot, grade])
+			var part: MeshInstance3D = rig.find_child("Gear_" + slot, true, false)
+			if part == null:
+				_fail("%s %d등급 모델이 없다 — gear_g%d.glb 를 만들었나 (scripts/build-gear-parts.mjs)" % [slot, grade, grade])
 				continue
-			if not (shell.get_node_or_null(shell.skeleton) is Skeleton3D):
-				_fail("%s 껍데기가 뼈대에 안 묶였다 — 몸과 같이 안 움직인다" % slot)
-			if mesh == null:
-				mesh = shell.mesh
-			elif shell.mesh != mesh:
-				_fail("%s 등급을 바꿀 때마다 껍데기를 다시 뗀다" % slot)
-			# 등급마다 무늬가 다르고(style), 색은 아이콘에 맞춘 표 그대로
-			var mat := shell.material_override as ShaderMaterial
-			if mat == null or int(mat.get_shader_parameter("style")) != grade:
-				_fail("%s %d등급 무늬가 아니다" % [slot, grade])
-			elif not (mat.get_shader_parameter("base") as Color).is_equal_approx(Armor.LOOK[grade].base):
-				_fail("%s %d등급 색이 표와 다르다" % [slot, grade])
-			# 오로라 — 4등급부터 이펙트(`GearAura`)로 붙고, 등급이 오를수록 알갱이가 많다
+			if not (part.get_node_or_null(part.skeleton) is Skeleton3D):
+				_fail("%s %d등급이 뼈대에 안 묶였다 — 몸과 같이 안 움직인다" % [slot, grade])
+			meshes[part.mesh] = grade
+			tris["%s%d" % [slot, grade]] = _count(part.mesh)
+			var piece: MeshInstance3D = rig.find_child("Body_" + slot, true, false)
+			if piece == null or piece.visible:
+				_fail("%s 를 입었는데 그 아래 맨몸이 보인다" % slot)
+			# 오로라 — 4등급부터 이펙트(`GearAura`), 등급이 오를수록 알갱이가 많다
 			var auras := rig.find_children("GearAura_" + slot, "", true, false)
 			if auras.is_empty() != (grade < 4):
 				_fail("%s %d등급 오로라가 %s" % [slot, grade, "없다" if auras.is_empty() else "있다 (4등급부터여야 한다)"])
@@ -63,62 +58,42 @@ func _case_rig() -> void:
 				for node in auras:
 					for emitter in node.find_children("*", "GPUParticles3D", true, false):
 						count += (emitter as GPUParticles3D).amount
-				if count <= last_thick:
+				if count <= last_count:
 					_fail("%s %d등급 오로라 알갱이(%d)가 아래 등급보다 많지 않다" % [slot, grade, count])
-				last_thick = count
-			if grade >= 3 and _decor(rig, slot) == 0:
-				_fail("%s %d등급인데 장식이 없다" % [slot, grade])
-		tris[slot] = _count(mesh)
+				last_count = count
+		if meshes.size() != 7:
+			_fail("%s 일곱 등급이 서로 다른 모델이 아니다 (%d 가지)" % [slot, meshes.size()])
 		rig.set_gear(slot, 0)
 		await process_frame
-		var gone: MeshInstance3D = rig.find_child("Gear_" + slot, true, false)
-		if gone != null and gone.visible:
-			_fail("%s 를 벗었는데 껍데기가 남았다" % slot)
-		if _decor(rig, slot) != 0:
-			_fail("%s 를 벗었는데 장식이 남았다" % slot)
-	# 부위 크기 — 갑옷이 가장 넓고, 투구는 얼굴을 빼서 좁다
-	if int(tris.get("armor", 0)) < 1000 or int(tris.get("boots", 0)) < 500 or int(tris.get("helmet", 0)) < 200:
-		_fail("껍데기 삼각형이 너무 적다 %s" % str(tris))
-	if int(tris.get("helmet", 0)) >= _head_tris(rig):
-		_fail("투구가 머리 전체(%d)를 덮는다 — 얼굴을 빼야 한다" % _head_tris(rig))
-	print("  껍데기 삼각형: 갑옷 %d · 투구 %d (머리 %d 중) · 신발 %d" % [tris.armor, tris.helmet, _head_tris(rig), tris.boots])
-
-	# 배 — 갑옷 아래 끝이 반바지 허리(골반 뼈 + WAIST)까지 내려와야 사이가 안 드러난다
-	var body: MeshInstance3D = Armor._body(rig)
-	var armor_mesh := Armor.shell_mesh(body, "armor")
-	var hips_y := 0.0
-	for i in body.skin.get_bind_count():
-		if str(body.skin.get_bind_name(i)) == "Hips":
-			hips_y = body.skin.get_bind_pose(i).affine_inverse().origin.y
-	var bottom := armor_mesh.get_aabb().position.y - hips_y
-	if bottom > Armor.WAIST + 0.01:
-		_fail("갑옷 아래 끝이 골반 위 %.3f — 배가 드러난다 (허리선 %.3f)" % [bottom, Armor.WAIST])
+		if rig.find_child("Gear_" + slot, true, false) != null:
+			_fail("%s 를 벗었는데 모델이 남았다" % slot)
+		var bare: MeshInstance3D = rig.find_child("Body_" + slot, true, false)
+		if bare == null or not bare.visible:
+			_fail("%s 를 벗었는데 맨몸이 안 돌아왔다" % slot)
+	print("  부위 삼각형(1·4·7등급): 갑옷 %s · 투구 %s · 신발 %s" % [
+		[tris.get("armor1"), tris.get("armor4"), tris.get("armor7")],
+		[tris.get("helmet1"), tris.get("helmet4"), tris.get("helmet7")],
+		[tris.get("boots1"), tris.get("boots4"), tris.get("boots7")]])
 
 	# 주먹 — 손가락 뼈를 말아 쥐고 있어야 한다 (가운데 마디가 60° 넘게 굽었나)
-	var skeleton0: Skeleton3D = rig.find_children("*", "Skeleton3D", true, false)[0]
+	var skeleton: Skeleton3D = rig.find_children("*", "Skeleton3D", true, false)[0]
 	var curled := 0
-	for i in skeleton0.get_bone_count():
-		if skeleton0.get_bone_name(i).ends_with("Finger21") or skeleton0.get_bone_name(i).ends_with("Finger11"):
-			if skeleton0.get_bone_rest(i).basis.get_rotation_quaternion().get_angle() > deg_to_rad(60):
+	for i in skeleton.get_bone_count():
+		if skeleton.get_bone_name(i).ends_with("Finger21") or skeleton.get_bone_name(i).ends_with("Finger11"):
+			if skeleton.get_bone_rest(i).basis.get_rotation_quaternion().get_angle() > deg_to_rad(60):
 				curled += 1
 	if curled < 4:
 		_fail("손가락이 말려 있지 않다 (%d/4) — 주먹이 아니다 (scripts/curl-fingers.mjs)" % curled)
-	print("  배: 갑옷 아래 끝이 골반 위 %.3f · 주먹: 손가락 마디 %d/4 가 말려 있다" % [bottom, curled])
 
-	# 달리는 동안 껍데기가 몸을 따라간다 — 정강이 껍데기 상자가 멈춰 있을 때와 달라야 한다
+	# 달리는 동안 부위가 몸을 따라간다 — 발 뼈가 움직여야 한다
 	rig.set_gear("boots", 3)
 	rig.play("Run")
-	var shell: MeshInstance3D = rig.find_child("Gear_boots", true, false)
-	var skeleton: Skeleton3D = rig.find_children("*", "Skeleton3D", true, false)[0]
 	var bone := skeleton.find_bone("LeftFoot")
 	var foot_a := skeleton.get_bone_global_pose(bone).origin
 	for i in 12:
 		await process_frame
-	var foot_b := skeleton.get_bone_global_pose(bone).origin
-	if foot_a.distance_to(foot_b) < 0.001:
+	if foot_a.distance_to(skeleton.get_bone_global_pose(bone).origin) < 0.001:
 		_fail("달리기에서 발이 안 움직인다 — 동작이 안 옮겨졌다")
-	if shell.skin != (Armor._body(rig) as MeshInstance3D).skin:
-		_fail("신발 껍데기가 몸과 다른 스킨을 쓴다")
 	rig.queue_free()
 
 
@@ -150,43 +125,8 @@ func _case_game() -> void:
 	print("  게임: 고급 → 초월 세트로 갈아입으면 세 부위가 따라 바뀌고, 투구만 벗으면 투구만 사라진다")
 
 
-func _decor(rig: Rig, slot: String) -> int:
-	var count := 0
-	for node in rig.find_children("GearDecor_" + slot, "Node3D", true, false):
-		count += node.get_child_count()
-	return count
-
-
 func _count(mesh: Mesh) -> int:
 	var total := 0
 	for s in mesh.get_surface_count():
 		total += (mesh.surface_get_arrays(s)[Mesh.ARRAY_INDEX] as PackedInt32Array).size() / 3
 	return total
-
-
-## 머리 뼈에 절반 넘게 묶인 삼각형 수 — 투구가 이보다 적어야 얼굴이 드러난다
-func _head_tris(rig: Rig) -> int:
-	var body: MeshInstance3D = Armor._body(rig)
-	var whole := 0
-	for s in body.mesh.get_surface_count():
-		var arrays: Array = body.mesh.surface_get_arrays(s)
-		var bones = arrays[Mesh.ARRAY_BONES]
-		var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
-		var pos: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
-		var per := weights.size() / pos.size()
-		var head := -1
-		for i in body.skin.get_bind_count():
-			if str(body.skin.get_bind_name(i)) == "Head":
-				head = i
-		var idx: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
-		for t in range(0, idx.size() - 2, 3):
-			var ok := true
-			for v in [idx[t], idx[t + 1], idx[t + 2]]:
-				var w := 0.0
-				for k in per:
-					if int(bones[v * per + k]) == head:
-						w += weights[v * per + k]
-				ok = ok and w > 0.5
-			if ok:
-				whole += 1
-	return whole

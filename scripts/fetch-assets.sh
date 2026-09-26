@@ -131,6 +131,17 @@ node scripts/curl-fingers.mjs public/assets/models/varco_fighter.glb
 node scripts/add-clips.mjs public/assets/models/varco_fighter.glb public/assets/models/varco_fighter.glb public/assets/anim/fighter_clips.glb --retarget
 node scripts/add-clips.mjs public/assets/models/varco_fighter.glb public/assets/models/varco_fighter.glb public/assets/anim/fighter_moves.glb --retarget
 
+# 장비 — 등급마다 갑옷·투구·신발 (2026-09-26). 바르코가 몸 그림 + 그 등급 아이콘 셋으로 장비 입은
+# 격투가를 뽑아 humanoid-fingers 로 리깅한 것 → build-gear-parts.mjs 가 부위를 떼어 우리 뼈대로 옮긴다.
+# 외형은 코드로 짓지 않는다 (CLAUDE.md) → characters-and-animation.md "장비 스킨"
+GEAR=(62228eb50dde01466717c8c312509a3a 0491c53e4580f0201e736f21b748d162 039c78fbd12442f44a7ac846aa12095e
+  30a39cf6f2a3dcab743efaab285b42a3 6303ef7b7100086003853577d316846e d52e433d62b7d12667455af2e76ad6e0
+  aaa47c5c77f704d614cdcc6a8ad2263a)
+for g in 1 2 3 4 5 6 7; do
+  fetch_varco "${GEAR[$((g-1))]}" "gear_g${g}_rigged"
+  node scripts/build-gear-parts.mjs "public/assets/models/gear_g${g}.glb" public/assets/models/varco_fighter.glb "assets-src/models/varco/gear_g${g}_rigged.glb"
+done
+
 # (옛 몸) 옷 입은 격투가 — 아래는 fighter_clips.glb 를 다시 뽑아야 할 때만 쓴다. 원본 넷이 있으면
 # 옛 몸을 짓고, 그 클립을 fighter_clips.glb 로 옮긴다 (메시는 버린다).
 # 격투가 — 궁수와 같은 방식. 받은 파일: 격투가-Animate-격투가-1 = 대기, -1-2 = 달리기, -1-3 = 공격, -1-4 = 사망

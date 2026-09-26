@@ -116,6 +116,11 @@ func _run() -> void:
 		await _fist(game, true)
 		return
 
+	# 장비 스킨 — 등급 1~7 세트(갑옷·투구·신발)를 입혀 온몸을 가까이 찍는다
+	if skill == "gear":
+		await _gear(game)
+		return
+
 	# 창은 열어 놓고 한 장만 찍는다 — 움직이는 것이 없다
 	if skill == "bag" or skill == "skills":
 		await _window(game, skill)
@@ -238,6 +243,42 @@ func _fist(game: Node3D, by_enhance := false) -> void:
 	sheet.resize(int(sheet.get_width() * 0.7), int(sheet.get_height() * 0.7), Image.INTERPOLATE_BILINEAR)
 	sheet.save_png("res://../logs/shot_sheet.png")
 	print("logs/shot_sheet.png  (%s)" % ("윗줄 희귀 +5~+9, 아랫줄 태초" if by_enhance else "1~4등급 윗줄, 5~7등급 아랫줄 (+9)"))
+	quit(0)
+
+
+## 장비 스킨을 등급마다 한 장씩 — 맨몸 + 1~7등급 세트를 4열 판으로 (`npm run shot:godot -- gear`).
+## 무기는 벗긴다 (오로라가 몸을 가린다). 게임의 _process 를 멈추므로 장비는 리그에 바로 입힌다
+func _gear(game: Node3D) -> void:
+	var player: Dictionary = game._transport._world._players[game._transport.my_id()]
+	player["rot"] = CameraRig.YAW + 0.5
+	await process_frame
+	await process_frame
+	game.set_process(false)
+	var rig: Rig = game._player
+	var focus: Vector3 = rig.position + Vector3(0, 0.95, 0)
+	var pitch := deg_to_rad(CameraRig.PITCH)
+	var away := Vector3(cos(pitch) * sin(CameraRig.YAW), sin(pitch), cos(pitch) * cos(CameraRig.YAW))
+	game._camera.position = focus + away * 5.2
+	game._camera.look_at(focus, Vector3.UP)
+	rig.set_weapon(0)
+	rig.play("Idle")
+	var cell := Vector2i(300, 520)
+	var sheet: Image = null
+	for grade in range(0, 8):
+		for slot in Armor.SLOTS:
+			rig.set_gear(slot, grade)
+		for i in 6:
+			await process_frame
+		await RenderingServer.frame_post_draw
+		var img := root.get_texture().get_image()
+		if sheet == null:
+			sheet = Image.create(cell.x * 4, cell.y * 2, false, img.get_format())
+		var from := Vector2i((img.get_width() - cell.x) / 2, (img.get_height() - cell.y) / 2)
+		sheet.blit_rect(img, Rect2i(from, cell), Vector2i((grade % 4) * cell.x, (grade / 4) * cell.y))
+		print("  %d등급 찍음" % grade)
+	sheet.resize(int(sheet.get_width() * 0.75), int(sheet.get_height() * 0.75), Image.INTERPOLATE_BILINEAR)
+	sheet.save_png("res://../logs/shot_sheet.png")
+	print("logs/shot_sheet.png  (윗줄 맨몸·1~3등급, 아랫줄 4~7등급)")
 	quit(0)
 
 

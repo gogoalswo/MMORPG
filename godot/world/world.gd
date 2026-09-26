@@ -1454,7 +1454,8 @@ func debug_gear(player_id: String, level: int, grade: int, enhance: int) -> void
 				best = item
 		if best.is_empty():
 			continue
-		equipped[slot] = {"id": str(best.id), "grade": 1, "enhance": step, "options": []}
+		# 등급은 고른 물건의 것 — 1 로 두면 장비 스킨(`Armor`)이 늘 1등급으로 보인다
+		equipped[slot] = {"id": str(best.id), "grade": int(best.get("grade", 1)), "enhance": step, "options": []}
 	player.equipped = equipped
 	_refresh_stats(player)
 	player.hp = int(player.stats.maxHp)

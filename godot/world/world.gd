@@ -177,6 +177,12 @@ func join(player_id: String) -> void:
 	var kept: Dictionary = _players.get(player_id, {})
 	var level := int(kept.get("level", 1))
 	var stats := Combat.stats_for(DEFAULT_JOB, level)
+	# 새 캐릭터는 직업의 첫 스킬을 배운 채 퀵슬롯 1번에 올려 두고 시작한다 (2026-09-26 요청).
+	# 1레벨은 스킬 포인트가 0 이라 안 주면 아무것도 못 쓴다. 이어하기는 `restore` 가 저장으로 덮는다
+	var starter: Array = []
+	if kept.is_empty():
+		for id in Skills.for_job(DEFAULT_JOB).slice(0, 1):
+			starter.append(str(id))
 	_players[player_id] = {
 		"id": player_id,
 		"x": float(spawn[0]),
@@ -214,9 +220,9 @@ func join(player_id: String) -> void:
 		# 사람이 몰고 있는 동안은 자동 사냥이 손을 뗀다
 		"manual_until": 0,
 		# --- 스킬 ---
-		"skills": kept.get("skills", []).duplicate(),
+		"skills": kept.get("skills", starter).duplicate(),
 		"skill_points": int(kept.get("skill_points", level - 1)),
-		"skill_bar": kept.get("skill_bar", []).duplicate(),
+		"skill_bar": kept.get("skill_bar", starter).duplicate(),
 		# 스킬별 다음에 쓸 수 있는 시각
 		"skill_ready_at": {},
 		# --- 물약 (`drink_potion`) --- 개수는 세지 않고 쿨타임(10초)만 막는다.

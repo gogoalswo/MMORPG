@@ -13,6 +13,7 @@ var _failed := 0
 
 func _init() -> void:
 	Save.clear()
+	_case_starter()
 	_case_learn()
 	_case_bar()
 	_case_cast()
@@ -64,6 +65,9 @@ func _setup(mob_count: int = 1) -> Array:
 	# 스킬 판정을 보는 테스트다 — 전직 스킬(낙뢰·빙주각·천붕각)을 다 쓰게 3차까지 마쳐 둔다.
 	# 전직 잠금 자체는 job_advance_test 가 본다
 	me["job_tier"] = 3
+	# 배우기·액션바를 빈손에서 본다 — 새 캐릭터의 첫 스킬은 `_case_starter` 가 본다
+	me.skills = []
+	me.skill_bar = []
 	var mobs: Array = w.snapshot().monsters
 	for i in mob_count:
 		var mob := World.make_monster(
@@ -73,6 +77,28 @@ func _setup(mob_count: int = 1) -> Array:
 	# 몬스터 쪽을 본다
 	w.input_move("me", 1, 1.0, 0.0, 0.0)
 	return [w, me, mobs]
+
+
+## 새 캐릭터는 직업의 첫 스킬을 배운 채 퀵슬롯 1번에 올려 두고 시작한다.
+## 존을 옮겨도(다시 join) 지금 액션바를 그대로 가져간다
+func _case_starter() -> void:
+	var w := World.new()
+	w.open("village")
+	w.join("me")
+	var me: Dictionary = w.snapshot().players["me"]
+	var first := str(Skills.for_job(str(me.job))[0])
+	if me.skills != [first] or me.skill_bar != [first]:
+		_fail("새 캐릭터: 배움 %s · 액션바 %s — %s 하나여야 한다" % [str(me.skills), str(me.skill_bar), first])
+		return
+	if int(me.skill_points) != 0:
+		_fail("첫 스킬에 포인트를 썼다/더 줬다 (%d)" % int(me.skill_points))
+	me.skill_bar = []
+	w.join("me")
+	me = w.snapshot().players["me"]
+	if not me.skill_bar.is_empty():
+		_fail("다시 join 하자 해제한 첫 스킬이 되살아났다 %s" % str(me.skill_bar))
+	else:
+		print("  새 캐릭터: %s 장착으로 시작 (포인트 0)" % first)
 
 
 func _case_learn() -> void:

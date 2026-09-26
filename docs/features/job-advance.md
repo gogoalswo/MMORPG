@@ -35,7 +35,7 @@
 | `godot/world/save.gd` | `job_tier` 저장 (옛 저장은 0) |
 | `godot/net/local_transport.gd` | `jobAdvance` 요청 |
 | `godot/game/game.gd` | `_list_job`(전직 창) · 스킬창의 "N차 전직" 표시(`_redraw_skills`) · `jobAdvanced` 이벤트 |
-| `godot/tests/job_advance_test.gd` | 잠금 · NPC 창 상태 · 시험 → 처치 → 전직 · 지름길 막기 · 저장 · 창 버튼 |
+| `godot/tests/job_advance_test.gd` | 잠금 · NPC 창 상태 · 시험 → 처치 → 전직 · 지름길 막기 · 저장 · 창 버튼 · 치트 "스킬 모두 배우기"(화면 안인가 · 다 배웠나 · 낙뢰가 나가나) |
 
 ## 규칙
 
@@ -57,6 +57,9 @@
   "Lv.N" 과 전직 레벨이 같은 수를 가리키고, 목록 순서(요구 레벨 순)가 전직 순서가 된다.
   스킬창은 전직이 모자라면 "N차 전직" 배지 · "N차 전직 후 배웁니다" 를 적는다.
 - **테스트 모드(Lv.200)도 전직은 직접 해야 한다.** 무적이라 네 번 다 금방 돈다.
+  건너뛰려면 치트 목록의 **"스킬 모두 배우기"** (`World.debug_learn_all`, 2026-09-26 요청) —
+  **전직을 끝까지(4차) 올리고** 그 직업 스킬을 전부 배워 액션바 빈 칸에 차례로 올린다.
+  배우기만 하면 전직 잠금 때문에 안 나가서 전직도 같이 올린다. 레벨·포인트는 안 본다.
 - 옛 Colyseus 서버는 전직을 모른다 — `canLearn` 의 `jobTier` 를 안 넘기면 잠금을 안 본다.
 
 ## 손댈 때

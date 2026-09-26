@@ -41,6 +41,8 @@ func send(message: StringName, payload: Dictionary) -> void:
 			)
 		&"attack":
 			_world.attack(MY_ID)
+		&"strike":
+			_world.strike(MY_ID, str(payload.get("id", "")))
 		&"revive":
 			_world.revive(MY_ID)
 		&"autoHunt":

@@ -48,6 +48,8 @@ func _run() -> void:
 	else:
 		print("  1.5초 동안 %.2f m 이동, 지금 (%.1f, %.1f)" % [moved, after.x, after.z])
 
+	await _edge_tap(game)
+
 	if _failed == 0:
 		print("터치 이동: 통과")
 		quit(0)
@@ -60,3 +62,40 @@ func _me(game: Node3D) -> Vector3:
 	var players: Dictionary = game._transport.snapshot().get("players", {})
 	var me: Dictionary = players.get(game._transport.my_id(), {})
 	return Vector3(me.get("x", 0.0), 0, me.get("z", 0.0)) if not me.is_empty() else Vector3.ZERO
+
+
+## 이동 끝 너머(마을 언덕)를 누르면 끝에 닿아 **멈춰야 한다** (2026-09-26 — 끝에 막힌 채
+## 목표가 안 지워져 제자리 뛰기를 했다). 누른 자리가 끝 안으로 당겨지는지와 멈추는지를 본다
+func _edge_tap(game: Node3D) -> void:
+	var world = game._transport._world
+	var me: Dictionary = world._players[game._transport.my_id()]
+	me.x = world.half_size - 0.3
+	# 카메라가 따라와야 화면 오른쪽 끝이 이동 끝 너머가 된다
+	game._camera.follow(Vector3(me.x, 0, me.z), 0.0, true)
+	await process_frame
+	await process_frame
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	press.position = Vector2(root.get_visible_rect().size.x - 40, root.get_visible_rect().size.y * 0.5)
+	game._unhandled_input(press)
+	var raw: Vector3 = game._ground_point(press.position)
+	if raw.x <= world.half_size:
+		print("  실패: 끝 너머를 못 눌렀다 (%.1f) — 테스트가 엉뚱한 데를 눌렀다" % raw.x)
+		_failed += 1
+		return
+	var target: Vector3 = game._target
+	if target == Vector3.INF:
+		print("  실패: 끝 너머를 눌렀는데 목표가 없다")
+		_failed += 1
+		return
+	if absf(target.x) > world.half_size or absf(target.z) > world.half_size:
+		print("  실패: 목표 (%.1f, %.1f) 가 이동 끝 ±%.0f 밖이다" % [target.x, target.z, world.half_size])
+		_failed += 1
+	for i in 600:
+		if game._target == Vector3.INF:
+			break
+		await process_frame
+	if game._target != Vector3.INF:
+		print("  실패: 끝에 막혀 제자리에서 뛴다 — 지금 (%.1f, %.1f)" % [me.x, me.z])
+		_failed += 1

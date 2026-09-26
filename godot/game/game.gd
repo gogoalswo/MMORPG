@@ -3716,6 +3716,12 @@ func _unhandled_input(event: InputEvent) -> void:
 			# 땅을 누르면 걸어가기만 한다. **골라 둔 놈은 그대로 둔다** —
 			# 원거리 직업이 자리를 옮겨 가며 같은 놈을 보는 게 자연스럽다
 			# (docs/features/auto-hunt-and-targeting.md 의 "클릭 타겟팅")
+			# **이동 끝 너머를 눌렀으면 끝으로 당긴다** (2026-09-26). 마을은 언덕이 끝(±29)
+			# 너머까지 그려져서 거기를 누를 수 있는데, World 는 끝에서 멈추니 목표에
+			# 영영 못 닿아 제자리 뛰기를 했다. 고리도 실제로 설 자리에 둔다
+			var x := clampf(hit.x, -_half_size, _half_size)
+			var z := clampf(hit.z, -_half_size, _half_size)
+			hit = Vector3(x, _ground_y(x, z), z)
 			_target_mob = ""
 			_target = hit
 			_marker.position = hit + Vector3(0, 0.05, 0)

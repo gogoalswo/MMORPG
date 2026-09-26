@@ -38,21 +38,178 @@ const HELMET_BACK_BY := 0.02
 ## 가중치만으로는 가슴과 반바지 사이가 비었다 (골반 위 0.02~0.05 가 그랬다)
 const WAIST := 0.025
 
-## 등급 재질 — [색, 금속성, 거칠기, 빛 색, 빛 세기]. 건틀릿과 같은 색이다
+## 등급 재질 — **아이콘(`icons/<부위>_g<등급>.png`)에 맞춘 색과 무늬** (2026-09-26 요청: "아이콘
+## 색상이랑 실제 모델이랑 너무 다르다 · 동일한 모델에 색상만 다른 느낌 — 재질이랑 무늬 다르게,
+## 좋은 등급일수록 화려하게"). 무늬는 `SHADER` 의 `style` 이 고른다:
+##   1 붕대 감은 회색 천 · 2 크림 가죽 판 + 올리브 틈 + 놋쇠 리벳 · 3 푸른 은빛 판금 마디 ·
+##   4 보라 판금 + 빛나는 새김선 · 5 주황 금 용비늘 · 6 검은 돌 + 맥박 치는 용암 금 ·
+##   7 진주빛(보는 각에 따라 무지개) + 금빛 무늬
+## base 바탕 · alt 둘째 색 · line 홈·틈 · glow 빛(새김·금·무늬) · energy 빛 세기 ·
+## metal · rough · rim 테두리 빛(보는 각이 비스듬할수록) · aura 오로라 [색, 두께, 세기] (4~)
 const LOOK := {
-	1: [Color("#e6dcc3"), 0.0, 1.0, Color.BLACK, 0.0],
-	2: [Color("#4a2616"), 0.0, 0.6, Color.BLACK, 0.0],
-	3: [Color("#c9ced6"), 0.9, 0.3, Color.BLACK, 0.0],
-	4: [Color("#3b3450"), 0.85, 0.35, Color.BLACK, 0.0],
-	5: [Color("#d98a2b"), 0.9, 0.3, Color.BLACK, 0.0],
-	6: [Color("#1b1818"), 0.8, 0.45, Color.BLACK, 0.0],
-	7: [Color("#f6f2e6"), 0.3, 0.3, Color("#fff6dc"), 0.2],
+	1: {"base": Color("#8e8e8b"), "alt": Color("#b4b4af"), "line": Color("#4a4a48"), "glow": Color.BLACK,
+		"energy": 0.0, "metal": 0.0, "rough": 0.95, "rim": 0.0},
+	2: {"base": Color("#ddd3a4"), "alt": Color("#7d8a4c"), "line": Color("#4b4a2a"), "glow": Color("#d6ad4e"),
+		"energy": 0.0, "metal": 0.0, "rough": 0.7, "rim": 0.0},
+	3: {"base": Color("#c3d4e6"), "alt": Color("#e9f1f8"), "line": Color("#5f7389"), "glow": Color.BLACK,
+		"energy": 0.0, "metal": 0.85, "rough": 0.28, "rim": 0.15},
+	4: {"base": Color("#5d3796"), "alt": Color("#a888dc"), "line": Color("#2a1745"), "glow": Color("#c07cff"),
+		"energy": 2.2, "metal": 0.7, "rough": 0.3, "rim": 0.5, "aura": [Color("#a45cff"), 0.010, 0.55]},
+	5: {"base": Color("#f0a22e"), "alt": Color("#ffd36a"), "line": Color("#7a3812"), "glow": Color("#ffb347"),
+		"energy": 0.9, "metal": 0.85, "rough": 0.3, "rim": 0.7, "aura": [Color("#ffb03a"), 0.014, 0.7]},
+	6: {"base": Color("#221c1c"), "alt": Color("#3a302e"), "line": Color("#0c0808"), "glow": Color("#ff3a14"),
+		"energy": 3.2, "metal": 0.4, "rough": 0.7, "rim": 0.8, "aura": [Color("#ff3a14"), 0.018, 0.9]},
+	7: {"base": Color("#f4f1ea"), "alt": Color("#ffffff"), "line": Color("#d49a2a"), "glow": Color("#ffd27a"),
+		"energy": 1.6, "metal": 0.35, "rough": 0.25, "rim": 1.0, "aura": [Color("#fff0c0"), 0.024, 1.0]},
 }
-## 장식 색 — 테두리·보석
+## 장식 색 — 테두리·보석 (아이콘의 테두리 색)
 const TRIM := {
-	1: Color("#a8987a"), 2: Color("#3f2716"), 3: Color("#7d848f"), 4: Color("#8c7ab8"),
+	1: Color("#6f6f6c"), 2: Color("#c8a24a"), 3: Color("#8fa6bd"), 4: Color("#c9b0f0"),
 	5: Color("#8a3a18"), 6: Color("#ff3a1a"), 7: Color("#ffd27a"),
 }
+
+## 껍데기 셰이더. 무늬는 **바인드 자세 좌표**(정점에 구워 둔 `UV`·`UV2`·`COLOR`)로 그린다 —
+## 스키닝된 자리로 그리면 달릴 때 무늬가 몸 위를 흘러간다. 면 방향에 따라 세 평면에서 뽑아 섞는다
+const SHADER := """
+shader_type spatial;
+render_mode cull_back;
+uniform int style = 1;
+uniform vec3 base : source_color;
+uniform vec3 alt : source_color;
+uniform vec3 line : source_color;
+uniform vec3 glow : source_color;
+uniform float energy = 0.0;
+uniform float metal = 0.0;
+uniform float rough = 0.8;
+uniform float rim = 0.0;
+varying vec3 bp;
+varying vec3 bn;
+
+void vertex() {
+	bp = vec3(UV.x, UV.y, UV2.x);
+	bn = COLOR.rgb * 2.0 - 1.0;
+}
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float noise(vec2 p) {
+	vec2 i = floor(p); vec2 f = fract(p); vec2 u = f * f * (3.0 - 2.0 * f);
+	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
+}
+// 보로노이 가장자리까지 거리 — 용암 금
+float crack(vec2 p) {
+	vec2 i = floor(p); vec2 f = fract(p); float d1 = 8.0; float d2 = 8.0;
+	for (int y = -1; y <= 1; y++) { for (int x = -1; x <= 1; x++) {
+		vec2 g = vec2(float(x), float(y));
+		vec2 o = vec2(hash(i + g), hash(i + g + 17.0));
+		float d = length(g + o - f);
+		if (d < d1) { d2 = d1; d1 = d; } else if (d < d2) { d2 = d; }
+	} }
+	return d2 - d1;
+}
+// 비늘 — 줄마다 반 칸 어긋난 둥근 비늘, **윗줄이 아랫줄을 덮는다** (물고기 비늘).
+// 0 = 비늘 뿌리, 1 = 가장자리. 한 줄짜리 원으로 그렸더니 가장자리가 굵어 호랑이 줄무늬로 보였다
+float scale_of(vec2 p) {
+	p.x += 0.5 * mod(floor(p.y), 2.0);
+	vec2 f = fract(p);
+	float up = min(length(f - vec2(0.0, 1.0)), length(f - vec2(1.0, 1.0)));
+	float here = length(f - vec2(0.5, 0.0));
+	return (up < 0.72 ? up : here) / 0.72;
+}
+vec3 tri_w() { vec3 w = pow(abs(bn), vec3(4.0)); return w / (w.x + w.y + w.z + 1e-4); }
+
+void fragment() {
+	vec3 w = tri_w();
+	vec3 col = base;
+	vec3 emit = vec3(0.0);
+	float m = metal;
+	float r = rough;
+	if (style == 1) {
+		// 붕대 — 비스듬히 감긴 띠와 띠 사이 어두운 틈, 천 결
+		float b = fract(bp.y * 52.0 + (bp.x + bp.z) * 9.0);
+		float gap = smoothstep(0.0, 0.1, b) * smoothstep(1.0, 0.86, b);
+		col = mix(line, mix(base, alt, smoothstep(0.3, 0.7, b)), gap);
+		col *= 0.88 + 0.12 * noise(vec2(bp.x + bp.z, bp.y) * 700.0);
+	} else if (style == 2) {
+		// 가죽 — 크림 판과 올리브 틈, 판 위 끝 바늘땀, 판 아래 끝 놋쇠 리벳
+		float band = fract(bp.y * 15.0);
+		float plate = step(band, 0.72);
+		col = mix(alt, base, plate) * (0.9 + 0.1 * noise(vec2(bp.x + bp.z, bp.y) * 300.0));
+		float dash = step(0.5, fract((bp.x + bp.z) * 140.0));
+		col = mix(col, line, (1.0 - smoothstep(0.0, 0.025, abs(band - 0.66))) * dash * 0.8);
+		float rv = 1.0 - smoothstep(0.1, 0.16, length(vec2(fract((bp.x + bp.z) * 24.0) - 0.5, (band - 0.08) * 2.4)));
+		col = mix(col, glow, rv); m = mix(m, 0.45, rv); r = mix(r, 0.35, rv);
+	} else if (style == 3 || style == 4) {
+		// 판금 — 가로 마디마다 홈, 마디 위쪽이 밝게 꺾이고 결이 얇게 긁혔다
+		float band = fract(bp.y * 13.0);
+		float groove = smoothstep(0.0, 0.07, band) * smoothstep(1.0, 0.95, band);
+		col = mix(line, mix(alt, base, smoothstep(0.0, 0.5, band)), groove);
+		col *= 0.94 + 0.06 * noise(vec2((bp.x + bp.z) * 900.0, bp.y * 30.0));
+		if (style == 4) {
+			// 새김선 — 판 위에 마름모 격자로 새기고 보랏빛으로 빛난다
+			float a = abs(fract((bp.x + bp.z) * 16.0 + bp.y * 16.0) - 0.5);
+			float c = abs(fract((bp.x + bp.z) * 16.0 - bp.y * 16.0) - 0.5);
+			float lines = (1.0 - smoothstep(0.0, 0.035, min(a, c))) * groove;
+			col = mix(col, glow, lines * 0.6);
+			emit += glow * lines * energy * (0.8 + 0.2 * sin(TIME * 2.0));
+		}
+	} else if (style == 5) {
+		// 용비늘 — 세 평면에서 뽑아 섞는다. 가운데가 밝고 가장자리가 붉게 어둡다
+		float s = scale_of(bp.zy * 34.0) * w.x + scale_of(bp.xz * 34.0) * w.y + scale_of(bp.xy * 34.0) * w.z;
+		col = mix(alt, base, smoothstep(0.0, 0.85, s));
+		col = mix(col, line, smoothstep(0.86, 1.0, s) * 0.85);
+		emit += glow * (1.0 - smoothstep(0.0, 0.35, s)) * energy * (0.6 + 0.4 * sin(TIME * 1.5 + bp.y * 40.0));
+	} else if (style == 6) {
+		// 용암 금 — 검은 돌의 갈라진 틈이 맥박 치며 빛난다
+		float c = crack(bp.zy * 26.0) * w.x + crack(bp.xz * 26.0) * w.y + crack(bp.xy * 26.0) * w.z;
+		float lava = 1.0 - smoothstep(0.0, 0.07, c);
+		col = mix(base, alt, noise(vec2(bp.x + bp.z, bp.y) * 120.0));
+		float pulse = 0.65 + 0.35 * sin(TIME * 3.0 + bp.y * 50.0);
+		col = mix(col, glow, lava);
+		emit += glow * lava * energy * pulse;
+		r = mix(r, 0.4, lava);
+	} else {
+		// 진주 — 보는 각에 따라 무지개빛이 돌고, 금빛 덩굴 무늬가 빛난다
+		float f = 1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0);
+		vec3 iris = 0.5 + 0.5 * cos(6.2831 * (f * 1.2 + vec3(0.0, 0.33, 0.67)) + TIME * 0.6);
+		col = mix(base, iris, 0.22 * f + 0.06);
+		float vine = abs(sin((bp.x + bp.z) * 45.0 + sin(bp.y * 40.0) * 2.5));
+		float gold = 1.0 - smoothstep(0.05, 0.3, vine);
+		col = mix(col, line, gold * 0.9);
+		emit += glow * gold * energy;
+	}
+	// 테두리 빛 — 비스듬히 보이는 가장자리일수록 등급 빛이 돈다
+	emit += glow * rim * pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 3.0);
+	ALBEDO = col;
+	METALLIC = m;
+	ROUGHNESS = r;
+	EMISSION = emit;
+}
+"""
+
+## 오로라 — 껍데기를 한 겹 더 바깥으로 밀어 **가산**으로 그린다. 가장자리만 빛나고(프레넬),
+## 빛결이 아래에서 위로 흘러오른다. 4등급부터, 등급이 오를수록 두껍고 밝다 (`LOOK.aura`)
+const AURA_SHADER := """
+shader_type spatial;
+render_mode blend_add, unshaded, cull_back, depth_draw_never;
+uniform vec3 color : source_color;
+uniform float thick = 0.01;
+uniform float strength = 0.6;
+varying vec3 bp;
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float noise(vec2 p) {
+	vec2 i = floor(p); vec2 f = fract(p); vec2 u = f * f * (3.0 - 2.0 * f);
+	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
+}
+void vertex() {
+	VERTEX += NORMAL * thick;
+	bp = vec3(UV.x, UV.y, UV2.x);
+}
+void fragment() {
+	float edge = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 2.0);
+	float flow = noise(vec2((bp.x + bp.z) * 26.0, bp.y * 18.0 - TIME * 1.6));
+	float wisp = smoothstep(0.35, 0.9, flow);
+	ALBEDO = color * strength * (edge * (0.55 + wisp) + wisp * 0.12);
+}
+"""
 
 ## 몸 메시 → {부위 → ArrayMesh}. 등급을 바꿀 때마다 다시 떼지 않는다
 static var _shells := {}
@@ -85,21 +242,49 @@ static func wear(rig: Node3D, slot: String, grade: int) -> void:
 	_decorate(rig, body, slot, grade)
 
 
-## 등급 재질 (등급마다 한 벌을 나눠 쓴다)
-static func material(grade: int) -> StandardMaterial3D:
+## 등급 재질 — 무늬 셰이더, 4등급부터 오로라 한 겹(`next_pass`). 등급마다 한 벌을 나눠 쓴다
+static func material(grade: int) -> ShaderMaterial:
 	grade = clampi(grade, 1, 7)
 	if _mats.has(grade):
 		return _mats[grade]
-	var look: Array = LOOK[grade]
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = look[0]
-	mat.metallic = look[1]
-	mat.roughness = look[2]
-	if float(look[4]) > 0.0:
-		mat.emission_enabled = true
-		mat.emission = look[3]
-		mat.emission_energy_multiplier = look[4]
+	if not _mats.has("shader"):
+		var shader := Shader.new()
+		shader.code = SHADER
+		var aura_shader := Shader.new()
+		aura_shader.code = AURA_SHADER
+		_mats["shader"] = shader
+		_mats["aura"] = aura_shader
+	var look: Dictionary = LOOK[grade]
+	var mat := ShaderMaterial.new()
+	mat.shader = _mats["shader"]
+	mat.set_shader_parameter("style", grade)
+	for key in ["base", "alt", "line", "glow", "energy", "metal", "rough", "rim"]:
+		mat.set_shader_parameter(key, look[key])
+	if look.has("aura"):
+		var aura := ShaderMaterial.new()
+		aura.shader = _mats["aura"]
+		aura.set_shader_parameter("color", look.aura[0])
+		aura.set_shader_parameter("thick", look.aura[1])
+		aura.set_shader_parameter("strength", look.aura[2])
+		mat.next_pass = aura
 	_mats[grade] = mat
+	return mat
+
+
+## 장식(어깨받이·무릎받이·뿔)의 재질 — 무늬 없이 그 등급 바탕색
+static func _decor_mat(grade: int) -> StandardMaterial3D:
+	var look: Dictionary = LOOK[clampi(grade, 1, 7)]
+	var key := "decor/%d" % grade
+	if _mats.has(key):
+		return _mats[key]
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = look.base
+	mat.metallic = look.metal
+	mat.roughness = look.rough
+	if float(look.rim) > 0.0:
+		mat.rim_enabled = true
+		mat.rim = look.rim
+	_mats[key] = mat
 	return mat
 
 
@@ -214,12 +399,26 @@ static func _cut(body: MeshInstance3D, slot: String) -> ArrayMesh:
 		var smoothed := _smooth(new_pos, new_index, SMOOTH[slot])
 		new_pos = smoothed[0]
 		new_normal = smoothed[1]
+		# 무늬를 붙일 바인드 자세 좌표 — 자리는 UV(x, y)·UV2(z), 법선은 정점 색에 굽는다
+		var uv := PackedVector2Array()
+		var uv2 := PackedVector2Array()
+		var tint := PackedColorArray()
+		uv.resize(new_pos.size())
+		uv2.resize(new_pos.size())
+		tint.resize(new_pos.size())
 		for v in new_pos.size():
+			uv[v] = Vector2(new_pos[v].x, new_pos[v].y)
+			uv2[v] = Vector2(new_pos[v].z, 0.0)
+			var n := new_normal[v] * 0.5 + Vector3(0.5, 0.5, 0.5)
+			tint[v] = Color(n.x, n.y, n.z)
 			new_pos[v] += new_normal[v] * push
 		var cut := []
 		cut.resize(Mesh.ARRAY_MAX)
 		cut[Mesh.ARRAY_VERTEX] = new_pos
 		cut[Mesh.ARRAY_NORMAL] = new_normal
+		cut[Mesh.ARRAY_TEX_UV] = uv
+		cut[Mesh.ARRAY_TEX_UV2] = uv2
+		cut[Mesh.ARRAY_COLOR] = tint
 		cut[Mesh.ARRAY_BONES] = new_bones
 		cut[Mesh.ARRAY_WEIGHTS] = new_weights
 		cut[Mesh.ARRAY_INDEX] = new_index
@@ -315,7 +514,7 @@ static func _decorate(rig: Node3D, body: MeshInstance3D, slot: String, grade: in
 	if grade < 3:
 		return
 	var trim := _plain(TRIM[grade], 0.9, 0.3, grade >= 4)
-	var base := material(grade)
+	var base := _decor_mat(grade)
 	match slot:
 		"armor":
 			for bone in ["LeftArm", "RightArm"]:

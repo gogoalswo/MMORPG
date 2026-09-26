@@ -117,8 +117,8 @@ func _run() -> void:
 		return
 
 	# 장비 스킨 — 등급 1~7 세트(갑옷·투구·신발)를 입혀 온몸을 가까이 찍는다
-	if skill == "gear":
-		await _gear(game)
+	if skill == "gear" or skill == "gear:close":
+		await _gear(game, skill == "gear:close")
 		return
 	# 맨주먹 — 무기를 벗기고 손을 가까이 (손가락을 말아 쥔 주먹이 제대로 쥐어졌나)
 	if skill == "hand":
@@ -284,17 +284,17 @@ func _hand(game: Node3D) -> void:
 
 ## 장비 스킨을 등급마다 한 장씩 — 맨몸 + 1~7등급 세트를 4열 판으로 (`npm run shot:godot -- gear`).
 ## 무기는 벗긴다 (오로라가 몸을 가린다). 게임의 _process 를 멈추므로 장비는 리그에 바로 입힌다
-func _gear(game: Node3D) -> void:
+func _gear(game: Node3D, close := false) -> void:
 	var player: Dictionary = game._transport._world._players[game._transport.my_id()]
 	player["rot"] = CameraRig.YAW + 0.5
 	await process_frame
 	await process_frame
 	game.set_process(false)
 	var rig: Rig = game._player
-	var focus: Vector3 = rig.position + Vector3(0, 0.95, 0)
+	var focus: Vector3 = rig.position + Vector3(0, 1.3 if close else 0.95, 0)
 	var pitch := deg_to_rad(CameraRig.PITCH)
 	var away := Vector3(cos(pitch) * sin(CameraRig.YAW), sin(pitch), cos(pitch) * cos(CameraRig.YAW))
-	game._camera.position = focus + away * 5.2
+	game._camera.position = focus + away * (2.6 if close else 5.2)
 	game._camera.look_at(focus, Vector3.UP)
 	rig.set_weapon(0)
 	rig.play("Idle")

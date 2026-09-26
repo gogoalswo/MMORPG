@@ -1,7 +1,8 @@
 extends Control
 
 ## 게임을 켜면 처음 뜨는 화면 — **테스트 모드 / 일반 모드** 를 고른다 (2026-09-25 요청).
-## 고르면 `PlayMode.current` 에 적고 `main.tscn` 으로 넘어간다. 무적·쿨타임을 켜는 건
+## 고르면 `PlayMode.current` 에 적고 로딩 막(`loading_screen.gd`)을 덮은 채 `main.tscn` 으로
+## 넘어간다. 무적·쿨타임을 켜는 건
 ## 게임 쪽(`game.gd` 의 `_apply_play_mode`)이 한다 — 여기는 고르기만 한다.
 ##
 ## 색은 ui-art-style.md 의 판·금테·상아 글자를 그대로 쓴다. 조각 그림 없이 코드로 그린다
@@ -80,6 +81,12 @@ func _mode_button(name: String, note: String, mode: String) -> Button:
 	return button
 
 
+## 고른 모드를 적고, 로딩 막(`LoadingScreen`)을 덮은 채 게임으로 넘어간다.
+## 막은 루트에 달아서 장면이 바뀌어도 남고, 게임이 자리 잡으면 페이드 아웃으로 걷힌다
 func choose(mode: String) -> void:
 	PlayMode.current = mode
-	get_tree().change_scene_to_file(GAME_SCENE)
+	test_button.disabled = true
+	normal_button.disabled = true
+	var curtain := LoadingScreen.new("테스트 모드" if mode == PlayMode.TEST else "일반 모드")
+	get_tree().root.add_child(curtain)
+	curtain.load_scene(GAME_SCENE)

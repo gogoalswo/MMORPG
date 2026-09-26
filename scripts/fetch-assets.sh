@@ -134,9 +134,9 @@ node scripts/add-clips.mjs public/assets/models/varco_fighter.glb public/assets/
 # 장비 — 등급마다 갑옷·투구·신발 (2026-09-26). 바르코가 몸 그림 + 그 등급 아이콘 셋으로 장비 입은
 # 격투가를 뽑아 humanoid-fingers 로 리깅한 것 → build-gear-parts.mjs 가 부위를 떼어 우리 뼈대로 옮긴다.
 # 외형은 코드로 짓지 않는다 (CLAUDE.md) → characters-and-animation.md "장비 스킨"
-GEAR=(62228eb50dde01466717c8c312509a3a 0491c53e4580f0201e736f21b748d162 039c78fbd12442f44a7ac846aa12095e
-  30a39cf6f2a3dcab743efaab285b42a3 6303ef7b7100086003853577d316846e d52e433d62b7d12667455af2e76ad6e0
-  aaa47c5c77f704d614cdcc6a8ad2263a)
+GEAR=(6a7022efbd141b240c84b8979e6dc824 73ee568dc290695eb008cef273f26a7e 7467685d6a4533d172e45fe69d0ac09c
+  db450181f7af31740a47d8a1608b4538 de57c12ec7c1f05c96d6bf0dbd08920d d4667f3f1849f78c44bb9fdce74ef0aa
+  3609d86c890e082ff0c0c7e995243bc4)
 for g in 1 2 3 4 5 6 7; do
   fetch_varco "${GEAR[$((g-1))]}" "gear_g${g}_rigged"
   node scripts/build-gear-parts.mjs "public/assets/models/gear_g${g}.glb" public/assets/models/varco_fighter.glb "assets-src/models/varco/gear_g${g}_rigged.glb"

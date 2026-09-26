@@ -250,35 +250,38 @@ func _fist(game: Node3D, by_enhance := false) -> void:
 	quit(0)
 
 
-## 맨주먹을 네 각도로 가까이 (`npm run shot:godot -- hand`) — 대기 · 옆 · 달리기 · 평타
+## 맨주먹을 가까이 (`npm run shot:godot -- hand`) — **오른손 뼈에 초점**을 맞춰 네 방향(앞 · 옆 · 뒤 · 손등)
+## 대기 자세로 찍는다. 손이 화면에서 작으면 모양을 못 읽는다 (주먹이 "발 같다" 는 지적을 이걸로 봤다)
 func _hand(game: Node3D) -> void:
 	await process_frame
 	await process_frame
 	game.set_process(false)
 	var rig: Rig = game._player
 	rig.set_weapon(0)
-	var focus: Vector3 = rig.position + Vector3(0, 0.8, 0)
-	var pitch := deg_to_rad(CameraRig.PITCH)
-	var away := Vector3(cos(pitch) * sin(CameraRig.YAW), sin(pitch), cos(pitch) * cos(CameraRig.YAW))
-	game._camera.position = focus + away * 1.7
-	game._camera.look_at(focus, Vector3.UP)
-	var cell := Vector2i(760, 600)
+	rig.play("Idle", 1.0, 0.0, true, 0.0)
+	var skeleton: Skeleton3D = rig.find_children("*", "Skeleton3D", true, false)[0]
+	var bone := skeleton.find_bone("RightHand")
+	var cell := Vector2i(420, 420)
 	var sheet: Image = null
-	var looks := [["Idle", 0.3], ["Idle", -0.6], ["Run", 0.3], ["Jab", 0.3]]
-	for index in looks.size():
-		rig.rotation.y = CameraRig.YAW + float(looks[index][1])
-		rig.play(str(looks[index][0]), 1.0, 0.0, true, 0.0)
-		for i in 8:
+	var turns := [0.0, PI * 0.5, PI, -PI * 0.5]
+	for index in turns.size():
+		for i in 6:
 			await process_frame
+		var hand := (skeleton.global_transform * skeleton.get_bone_global_pose(bone)).origin
+		var angle: float = rig.rotation.y + turns[index]
+		var away := Vector3(sin(angle), 0.35, cos(angle)).normalized()
+		game._camera.position = hand + away * 1.6
+		game._camera.look_at(hand, Vector3.UP)
+		await process_frame
 		await RenderingServer.frame_post_draw
 		var img := root.get_texture().get_image()
 		if sheet == null:
 			sheet = Image.create(cell.x * 4, cell.y, false, img.get_format())
 		var from := Vector2i((img.get_width() - cell.x) / 2, (img.get_height() - cell.y) / 2)
 		sheet.blit_rect(img, Rect2i(from, cell), Vector2i(index * cell.x, 0))
-	sheet.resize(int(sheet.get_width() * 0.4), int(sheet.get_height() * 0.4), Image.INTERPOLATE_BILINEAR)
+	sheet.resize(int(sheet.get_width() * 0.6), int(sheet.get_height() * 0.6), Image.INTERPOLATE_BILINEAR)
 	sheet.save_png("res://../logs/shot_sheet.png")
-	print("logs/shot_sheet.png  (대기 앞 · 대기 옆 · 달리기 · 평타)")
+	print("logs/shot_sheet.png  (오른주먹 — 앞 · 옆 · 뒤 · 반대 옆)")
 	quit(0)
 
 

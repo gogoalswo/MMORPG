@@ -128,6 +128,9 @@ fi
 fetch_varco 615f33dfdc24a231f69d43926be1bcf1 fighter_bare_fingers
 node scripts/build-varco-character.mjs public/assets/models/varco_fighter.glb assets-src/models/varco/fighter_bare_fingers.glb
 node scripts/curl-fingers.mjs public/assets/models/varco_fighter.glb
+# 주먹 — 편 손가락을 말면 발굽처럼 보여서, 같은 그림을 T 포즈 없이 뽑아(주먹이 조각된다) 손만 이식한다
+fetch_varco e90ac5c2d911469e183c39142c31fe4f fighter_fist_pose
+node scripts/graft-fists.mjs public/assets/models/varco_fighter.glb assets-src/models/varco/fighter_fist_pose.glb
 node scripts/add-clips.mjs public/assets/models/varco_fighter.glb public/assets/models/varco_fighter.glb public/assets/anim/fighter_clips.glb --retarget
 node scripts/add-clips.mjs public/assets/models/varco_fighter.glb public/assets/models/varco_fighter.glb public/assets/anim/fighter_moves.glb --retarget
 

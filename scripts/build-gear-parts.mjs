@@ -10,7 +10,7 @@
  * - **부위는 장비 모델의 뼈 가중치로 고른다** — 투구 = 머리 뼈(얼굴째. 우리 몸 머리는 게임에서 숨긴다),
  *   신발 = 정강이·발·발가락 뼈, 갑옷 = 몸통·어깨·위팔 뼈 + 허리선 위 몸통(`armor.gd` 의 규칙과 같다).
  *   세 정점이 다 그 부위인 삼각형만 남긴다.
- * - **정점을 우리 몸의 바인드 자세로 옮긴다.** 두 모델은 같은 그림에서 나와 T 포즈 비율이 거의 같지만
+ * - **정점을 우리 몸의 (가상 T) 바인드 자세로 옮긴다.** 두 모델은 같은 그림에서 나와 T 포즈 비율이 거의 같지만
  *   관절 자리가 조금씩 다르다. 정점마다 `Σ w · (우리 뼈 바인드 · 장비 뼈 역바인드)` 를 곱해 뼈에 붙은
  *   자리 그대로 우리 뼈대로 옮기고, 스킨은 **우리 몸의 것**(뼈 순서·역바인드)을 그대로 쓴다.
  *   그래서 게임에서 우리 뼈대에 바로 묶이고 동작도 우리 것을 탄다.
@@ -19,6 +19,7 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import sharp from 'sharp';
+import { alignedRest, matrixOf } from './align-rest.mjs';
 
 const args = process.argv.slice(2);
 const texAt = args.indexOf('--tex');
@@ -122,7 +123,13 @@ const toBase = gearNames.map((name) => {
   if (at < 0) throw new Error(`장비 모델의 뼈 ${name} 가 몸에 없다 — 둘 다 humanoid-fingers 로 리깅했나`);
   return at;
 });
-const move = gearNames.map((_, k) => mul(invert(mat(baseIbm, toBase[k])), mat(gearIbm, k)));
+// 우리 몸은 팔을 내린 채 리깅됐다(주먹 모델, 2026-09-26). 장비는 T 포즈라 몸 바인드로 옮기면 어깨·위팔
+// 조각이 한 번 접혔다 펴진다. 그래서 장비는 **몸 뼈대를 장비 뼈 방향에 맞춘 가상 T 자세**(`align-rest.mjs`)로
+// 옮기고, 장비 스킨의 역바인드도 그 자세로 쓴다 — 고도에서 장비 메시는 자기 스킨을 쓰므로 몸과 어긋나지 않는다.
+const tBind = alignedRest(base.json.nodes, gear.json.nodes);
+const bindOf = (k) => matrixOf(tBind.get(baseSkin.joints[k]));
+const move = gearNames.map((_, k) => mul(bindOf(toBase[k]), mat(gearIbm, k)));
+const tIbm = new Float32Array(baseSkin.joints.flatMap((_, k) => invert(bindOf(k))));
 // 장비 모델의 골반 뼈 자리 (허리선)
 const gearHipsY = invert(mat(gearIbm, gearNames.indexOf('Hips')))[13];
 
@@ -282,7 +289,7 @@ const nodes = base.json.nodes.map((n) => {
   delete copy.skin;
   return copy;
 });
-const ibmAcc = addAcc(new Float32Array(baseIbm), 'MAT4', 5126);
+const ibmAcc = addAcc(tIbm, 'MAT4', 5126);
 const meshNodes = meshes.map((m, i) => {
   nodes.push({ name: m.name, mesh: i, skin: 0 });
   return nodes.length - 1;

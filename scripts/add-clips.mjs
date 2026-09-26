@@ -22,8 +22,14 @@
  * 가므로, 뼈마다 **월드 회전이 기본 자세에서 얼마나 돌았나**(D = G(t)·G_rest⁻¹)를 재서
  * 새 뼈대의 기본 자세에 똑같이 입힌다. `Root` 이동은 다리 길이 비로 줄인다.
  * 이때는 기본 자세 검사와 "캐릭터 클립이 가진 채널만" 규칙을 건너뛴다 (새 몸엔 클립이 없다).
+ *
+ * `--align` (`--retarget` 과 같이) — 새 몸의 기본 자세가 **T 포즈가 아닐 때** (2026-09-26, 주먹 쥔
+ * 채 팔을 내리고 뽑은 격투가). 새 뼈대의 기본 자세 대신 **뼈 방향을 클립 뼈대에 맞춘 가상 자세**
+ * (`align-rest.mjs`)에 돈 만큼을 입힌다. 클립이 키로 안 가진 뼈도 가상 자세로 가야 하므로 클립 뼈대에
+ * 있는 뼈는 **전부** 채널을 쓴다 (손가락은 가상 자세에서도 안 돌아 주먹이 그대로다).
  */
 import { readFileSync, writeFileSync } from 'node:fs';
+import { alignedRest } from './align-rest.mjs';
 
 const GLB_MAGIC = 0x46546c67;
 const CHUNK_JSON = 0x4e4f534a;
@@ -33,10 +39,11 @@ const SIZE = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4, MAT4: 16 };
 // 기본 자세와 이만큼 넘게 다르면 "다르다" 로 본다
 const REST_EPS = 1e-3;
 
-const RETARGET = process.argv.includes('--retarget');
-const [output, base, clips] = process.argv.slice(2).filter((a) => a !== '--retarget');
+const ALIGN = process.argv.includes('--align');
+const RETARGET = ALIGN || process.argv.includes('--retarget');
+const [output, base, clips] = process.argv.slice(2).filter((a) => a !== '--retarget' && a !== '--align');
 if (!output || !base || !clips) {
-  console.error('사용법: node scripts/add-clips.mjs <출력.glb> <캐릭터.glb> <클립.glb>');
+  console.error('사용법: node scripts/add-clips.mjs <출력.glb> <캐릭터.glb> <클립.glb> [--retarget | --align]');
   process.exit(1);
 }
 
@@ -179,9 +186,21 @@ function retarget(anim) {
   });
   const times = [...new Set(tracks.flatMap((t) => Array.from(t.times)))].sort((a, b) => a - b);
   const sRestG = globals(sNodes, sParent, (i) => restOf(sNodes[i], 'rotation'));
-  const dRestG = globals(dNodes, dParent, (i) => restOf(dNodes[i], 'rotation'));
+  const dRestG = ALIGN
+    ? new Map([...alignedRest(dNodes, sNodes)].map(([i, g]) => [i, g.q]))
+    : globals(dNodes, dParent, (i) => restOf(dNodes[i], 'rotation'));
   const dIndex = (i) => nodeByName.get(sNodes[i].name);
-  const rotTracks = tracks.filter((t) => t.path === 'rotation' && dIndex(t.node) !== undefined);
+  const keyedRot = tracks.filter((t) => t.path === 'rotation' && dIndex(t.node) !== undefined);
+  // --align: 키가 없는 뼈도 가상 자세로 보내야 하므로 클립 뼈대의 (몸에도 있는) 뼈를 전부 쓴다
+  const skinJoints = new Set((json.skins ?? []).flatMap((s) => s.joints));
+  const rotTracks = ALIGN
+    ? [
+        ...keyedRot,
+        ...sNodes
+          .map((_, i) => ({ node: i, rest: true }))
+          .filter((t) => !keyedRot.some((k) => k.node === t.node) && skinJoints.has(dIndex(t.node))),
+      ]
+    : keyedRot;
   const leg = (nodes, byName) =>
     ['LeftLeg', 'LeftFoot'].reduce((s, n) => s + Math.hypot(...restOf(nodes[byName(n)], 'translation')), 0);
   const sByName = (n) => sNodes.findIndex((x) => x.name === n);
@@ -192,7 +211,7 @@ function retarget(anim) {
     .filter((t) => t.path === 'translation' && dIndex(t.node) !== undefined)
     .map((t) => ({ t, name: sNodes[t.node].name, path: 'translation', values: [] }));
   for (const time of times) {
-    const at = new Map(rotTracks.map((t) => [t.node, sample(t.times, t.values, 4, time, true)]));
+    const at = new Map(rotTracks.filter((t) => !t.rest).map((t) => [t.node, sample(t.times, t.values, 4, time, true)]));
     const sG = globals(sNodes, sParent, (i) => at.get(i) ?? restOf(sNodes[i], 'rotation'));
     // 새 뼈대의 월드 회전 = (옛 뼈가 기본 자세에서 돈 만큼) · 새 기본 자세
     const dG = new Map();

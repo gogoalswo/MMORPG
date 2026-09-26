@@ -68,8 +68,10 @@ KayKit Adventurers 5종과 화살통은 2026-09-10 에 **파일째 뺐다** (`mo
 | **`godot/game/armor.gd`** · `Rig.set_gear` · `godot/tests/gear_test.gd` | ★ **장비 스킨** — 바르코로 뽑은 부위(`gear_g<등급>.glb`)를 우리 뼈대에 묶고 그 아래 맨몸을 끈다 / 그 확인 |
 | **`scripts/build-gear-parts.mjs`** | 바르코 장비 모델에서 갑옷·투구·신발을 떼어 우리 몸의 뼈대로 옮긴다 |
 | **`scripts/measure-bones.mjs`** | 뼈마다 묶인 정점의 상자를 뼈 좌표로 잰다 — 무기·장비를 뼈에 맞출 때 (`FIST_*`) |
-| **`scripts/blender/fighter_idle.py`** · `public/assets/anim/fighter_idle.glb` | ★ 새 몸의 대기 동작 (블렌더) — 편 손, 숨 쉬기 3초 |
-| **`public/assets/anim/fighter_clips.glb`** | 옛(옷 입은) 격투가의 클립 11개 — 메시 없이 뼈대+클립만. 새 몸에 `add-clips --retarget` 으로 입힌다 |
+| **`scripts/blender/fighter_idle.py`** · `public/assets/anim/fighter_idle.glb` | ★ 새 몸의 대기 동작 (블렌더) — 숨 쉬기 3초 |
+| **`scripts/align-rest.mjs`** | ★ 기본 자세가 T 가 아닌 몸(주먹 쥔 A 자세 격투가)을 뼈 방향으로 T 에 맞춘 가상 자세 — `add-clips --align` · `build-gear-parts` 가 쓴다 |
+| **`scripts/fix-back-skin.mjs`** | ★ 바르코가 적갈색으로 지은 등 살색을 앞 살색에 맞춘다 |
+| **`public/assets/anim/fighter_clips.glb`** | 옛(옷 입은) 격투가의 클립 11개 — 메시 없이 뼈대+클립만. 새 몸에 `add-clips --align` 으로 입힌다 |
 | `packages/client/src/game/modelRig.ts` | **모델 리그** — 클립 섞기, 크기 맞추기, 몬스터 색 입히기 |
 | `packages/shared/src/beasts.ts` | 짐승 키 표(`BEAST_HEIGHT`)와 클릭 상자 크기 — `hit-probe` 가 같이 쓴다 |
 | `scripts/trim-gltf.mjs` | 안 쓰는 애니메이션을 잘라 파일을 줄인다 (KayKit·Quaternius 를 빼서 지금 부르는 곳이 없다) |
@@ -458,21 +460,38 @@ Rig(humanoid) → Animate 로 나온 것을 합쳤다. 출처와 약관은
   자기 자신에게 옮기면 최대 차이 6.6e-7 로 되돌아온다(검산).
 - 옛 몸의 클립 11개(바르코 넷 + 블렌더 일곱)는 메시 없이 `anim/fighter_clips.glb`(0.33MB) 로 남겼다.
   옛 원본 GLB 가 없어도 다시 지을 수 있다. 블렌더 동작을 고치면 `fighter_moves.glb` 도
-  `--retarget` 으로 입힌다 (옛 뼈대에서 지은 것이라서).
-- **손은 편 손이다 — 주먹은 걷었다** ★ (2026-09-26 "그냥 평상시에는 손을 펴고 T 자 모양으로 만들고 · 주먹은
-  틀려 먹은 것 같다"). 같은 날 주먹을 쥐게 하려고 두 길을 다 가 봤다 — 다시 시도하지 않는다:
-  1. 편 손가락의 기본 자세를 뼈로 말았다(`curl-fingers.mjs`) → 뭉개진 덩어리의 손가락 끝이 **발가락처럼**
-     줄지어 "발 같다". 각도를 여러 벌 바꿔도 같았다 — `Generate3D`(`tPose` 1)가 **손을 펴서 조각**하기 때문이다
-     (주먹 그림을 넣어도 편다).
-  2. 같은 그림을 `tPose` 0 으로 뽑아 주먹이 조각된 손만 떼어 손 뼈에 붙였다(`graft-fists.mjs`) → 모양은 주먹인데
-     그 모델이 팔을 내린 채 리깅돼서 손목 **꺾임(25~31°)** 과 **비틀림(약 100°)** 을 하나씩 맞춰야 했고,
-     그래도 "관절이 꺾였다 · 정면으로 쥐고 있다" 는 지적이 이어졌다.
-  두 스크립트는 지웠다 (필요하면 git 이력에). 모델은 T 자세·편 손 그대로 쓰고, 건틀릿 `FIST_*` 는 편 손을
-  `measure-bones.mjs <glb> RightHand --posed`(손가락 뼈 정점을 그 손 몫으로 센다)로 쟀다.
-  - 찍어 보기: `npm run shot:godot -- hand` — 오른손 뼈에 초점을 맞춰 네 방향 (게임 카메라는 화각이 좁고
-    가까운 절단면이 멀어 1.6m 보다 붙으면 손이 잘린다).
+  `--align` 으로 입힌다 (옛 뼈대에서 지은 것이라서).
+- **주먹 쥔 A 자세 몸** ★★ (2026-09-26 두 번째 — "손은 왜 저렇게 가시처럼 생긴거야 · 바르코 보면 정상적으로
+  주먹을 잘 쥐고 있는데 왜 이대로 적용을 못 하는거야"). 편 손(T 포즈)은 손가락이 가시처럼 벌어져 보였다.
+  - **왜 바르코 미리보기와 달랐나** — `Generate3D` 를 `tPose` 1 로 뽑으면 **손을 펴서 조각한다** (주먹 그림을 넣어도).
+    주먹이 조각되는 건 `tPose` 0 뿐인데, 그 모델은 팔을 내린 채 리깅되고 동작은 전부 T 포즈 뼈대에서 왔다.
+  - 먼저 해 본 것 (다시 하지 않는다):
+    1. 편 손가락을 뼈로 말기(`curl-fingers.mjs`) → 손가락 끝이 **발가락처럼** 줄지었다.
+    2. `tPose` 0 모델의 손만 떼어 붙이기(`graft-fists.mjs`) → 손목 꺾임·비틀림을 맞춰도 "관절이 꺾였다".
+    3. `tPose` 0 모델(`e90ac5c2…`, 팔을 몸에 붙이고 선 그림)을 **통째로** 쓰기 → 주먹이 **반바지에 붙어 조각돼**
+       반바지 옆 정점이 손 뼈에 묶였다. 팔을 벌리면 반바지가 치마처럼 벌어지고, 가중치를 색·거리로 떼어도
+       붙은 자리의 조각이 늘어나거나 얼룩이 남았다 (`clean-arm-weights.mjs` — 걷었다, git 이력에).
+  - **된 것**: 원화부터 **팔을 벌린 A 자세**(주먹이 반바지에서 한 뼘 떨어짐)로 고쳐(`EditImage`, 결과 `4cf27dd6…`)
+    `tPose` 0 으로 뽑았다 → `Rig`(`humanoid-fingers`). 주먹이 몸에 안 붙어 가중치 손질이 필요 없다.
+    프롬프트 요지: "그림결·인물 그대로, 팔만 어깨에서 40° 벌린 A 자세, 주먹과 반바지 사이에 빈 틈, 주먹을 꽉 쥐고".
+  - **동작 옮기기 `--align`** (`scripts/align-rest.mjs`) — 몸의 기본 자세가 T 가 아니므로 뼈를 위에서부터
+    **자식 관절 쪽 방향만** 클립 뼈대와 같게 돌린 **가상 T 자세**를 만들고, 거기에 "기본 자세에서 돈 만큼" 을
+    입힌다. 비틀림은 안 건드리고(내린 팔을 옆으로 들면 손등이 위로 — 사람 몸 그대로) 손가락은 안 돌려 주먹이
+    따라간다. 클립이 키로 안 가진 뼈도 가상 자세로 가야 하므로 클립 뼈대에 있는 뼈는 전부 채널을 쓴다.
+    메시는 조각된 자세 그대로라 대기·달리기처럼 팔을 내린 동작에서 가장 깨끗하다.
+  - **장비도 가상 T 자세로** — `build-gear-parts.mjs` 가 T 포즈 장비를 몸의 **가상 T 바인드**로 옮기고, 장비
+    스킨의 역바인드도 그걸로 쓴다 (고도에서 장비 메시는 자기 스킨을 쓴다 — `Armor.wear`). 몸 바인드(팔 내림)로
+    옮기면 어깨받이가 접혔다 펴진다.
+  - 건틀릿 `FIST_*` 는 새 주먹을 `measure-bones.mjs <glb> RightHand --posed` 로 다시 쟀다.
+  - 찍어 보기: `npm run shot:godot -- idle:close` (대기 · 정면·옆·뒤를 가까이) ·
+    `-- pose:Jab:0.12` (클립:초 — 그 순간에 세워 셋) · `-- hand` · `-- fist` · `-- gear:close`
   - ⚠ 찍기 도구는 **임포트를 다시 안 한다** — GLB 를 바꿨으면 `godot --headless --path godot --import` 부터.
-- **대기는 블렌더로 새로 지었다** (`scripts/blender/fighter_idle.py` → `public/assets/anim/fighter_idle.glb`, 커밋).
+- **등 살색** (`scripts/fix-back-skin.mjs`, 2026-09-26 "캐릭터 뒷모습 색상이 왜이렇게 빨개") — 바르코는 앞 그림 한
+  장으로 뒤를 지어내며 애니풍 그림자 색(적갈)을 등 전체에 칠한다. **조명 탓이 아니다.** 텍스처 칸마다 면이 어느
+  쪽을 보는지(노멀 z)를 UV 에 그려 재고, 뒤 살색의 채널별 평균·편차를 앞 살색에 맞춘다(옆면은 섞는다). 반바지·
+  머리칼(채도 낮음)은 안 건드린다. 모델을 새로 뽑아도 같은 일이 생기므로 짓는 절차에 넣었다.
+  NPC 들도 같은 식으로 지어졌으니 등이 붉으면 이걸 돌리면 된다 (아직 안 돌렸다).
+- **대기는 블렌더로 새로 지었다** (`scripts/blender/fighter_idle.py` → `public/assets/anim/fighter_idle.glb`, 커밋). 편 손 T 포즈 몸에서 지었고, 지금의 주먹 A 자세 몸에는 `--align` 으로 옮긴다.
   옛 몸(옷 입은 격투가)에서 옮겨 온 바르코 대기 대신 새 몸에 맞춘다: 발은 어깨너비, 무릎 살짝, **편 손으로 팔을
   편하게 내리고** 3초에 한 번 숨 쉰다(들숨 1.35초 — 가슴이 들리고 몸이 조금 내려앉는다).
   팔은 **사용자가 준 선 자세 그림**(2026-09-26 "이런식으로 팔을 자연스럽게")에 맞췄다: 윗팔이 몸통에서 조금
@@ -485,7 +504,7 @@ Rig(humanoid) → Animate 로 나온 것을 합쳤다. 출처와 약관은
   IK·발 붙이기·키 박기는 `fighter_moves.py` 의 것을 빌린다 (그래서 그 파일은 `__main__` 일 때만 돈다).
   ```bash
   npm run blender -- --python scripts/blender/fighter_idle.py
-  node scripts/add-clips.mjs public/assets/models/varco_fighter.glb public/assets/models/varco_fighter.glb public/assets/anim/fighter_idle.glb
+  node scripts/add-clips.mjs public/assets/models/varco_fighter.glb public/assets/models/varco_fighter.glb public/assets/anim/fighter_idle.glb --align
   ```
 
 ### 장비 스킨 ★ (고도, 2026-09-26 — 바르코 모델)

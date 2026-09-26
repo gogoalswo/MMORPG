@@ -121,8 +121,13 @@ func _run() -> void:
 		await _gear(game, skill == "gear:close")
 		return
 	# 대기 자세 — 정면·옆 온몸을 눈높이에서 (사용자가 준 선 자세 참고 그림과 견준다)
-	if skill == "idle":
-		await _idle(game)
+	if skill == "idle" or skill == "idle:close":
+		await _idle(game, skill == "idle:close")
+		return
+	# 동작 한 순간 — `pose:Jab:0.1` (클립:초) · 정면 · 옆 · 뒤를 가까이
+	if skill.begins_with("pose:"):
+		var part := skill.split(":")
+		await _idle(game, true, part[1], float(part[2]))
 		return
 	# 맨주먹 — 무기를 벗기고 손을 가까이 (손가락을 말아 쥔 주먹이 제대로 쥐어졌나)
 	if skill == "hand":
@@ -299,7 +304,7 @@ func _hand(game: Node3D) -> void:
 
 
 ## 대기 자세를 정면과 옆에서 온몸으로 (`npm run shot:godot -- idle`) — 눈높이 카메라라 팔 각도가 그대로 보인다
-func _idle(game: Node3D) -> void:
+func _idle(game: Node3D, close := false, clip := "Idle", at := 0.0) -> void:
 	await process_frame
 	await process_frame
 	game.set_process(false)
@@ -307,26 +312,27 @@ func _idle(game: Node3D) -> void:
 	rig.set_weapon(0)
 	for slot in Armor.SLOTS:
 		rig.set_gear(slot, 0)
-	rig.play("Idle", 1.0, 0.0, true, 0.0)
-	var focus: Vector3 = rig.position + Vector3(0, 0.9, 0)
+	# 대기는 흘려 보내고, 다른 동작은 그 순간에 세운다
+	rig.play(clip, 1.0 if clip == "Idle" else 0.0, at, true, 0.0)
+	var focus: Vector3 = rig.position + Vector3(0, 0.75 if close else 0.9, 0)
 	var cell := Vector2i(520, 700)
 	var sheet: Image = null
-	for index in 2:
+	for index in 3:
 		for i in 6:
 			await process_frame
-		var angle: float = rig.rotation.y + (0.0 if index == 0 else PI * 0.5)
-		game._camera.position = focus + Vector3(sin(angle), 0.05, cos(angle)) * 6.5
+		var angle: float = rig.rotation.y + PI * 0.5 * index
+		game._camera.position = focus + Vector3(sin(angle), 0.05, cos(angle)) * (3.2 if close else 6.5)
 		game._camera.look_at(focus, Vector3.UP)
 		await process_frame
 		await RenderingServer.frame_post_draw
 		var img := root.get_texture().get_image()
 		if sheet == null:
-			sheet = Image.create(cell.x * 2, cell.y, false, img.get_format())
+			sheet = Image.create(cell.x * 3, cell.y, false, img.get_format())
 		var from := Vector2i((img.get_width() - cell.x) / 2, (img.get_height() - cell.y) / 2)
 		sheet.blit_rect(img, Rect2i(from, cell), Vector2i(index * cell.x, 0))
 	sheet.resize(int(sheet.get_width() * 0.6), int(sheet.get_height() * 0.6), Image.INTERPOLATE_BILINEAR)
 	sheet.save_png("res://../logs/shot_sheet.png")
-	print("logs/shot_sheet.png  (대기 — 정면 · 옆)")
+	print("logs/shot_sheet.png  (대기 — 정면 · 옆 · 뒤)")
 	quit(0)
 
 

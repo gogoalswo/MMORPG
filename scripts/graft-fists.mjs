@@ -236,7 +236,38 @@ for (const side of ['Right', 'Left']) {
       N[v * 3 + r] = n[r];
     }
   }
-  console.log(`  ${side === 'Right' ? '오른' : '왼'}주먹을 ${((angle * 180) / Math.PI).toFixed(1)}° 펴서 아래팔과 곧게 이었다`);
+  // **엄지 쪽을 맞춘다** — 축만 맞추면 팔 축으로 얼마나 돌았는지는 주먹 모델 뼈의 비틀림을 따라가서, 쥔
+  // 손가락이 앞을 봤다 ("누가 주먹을 정면으로 쥐고 있냐 — 뒤로 쥐어야지"). 주먹 모델의 엄지 뿌리가 우리 몸
+  // 원래 손의 엄지 뿌리 쪽을 보도록 아래팔 축(d)을 중심으로 돌린다 — 그러면 팔을 내렸을 때 엄지가 앞,
+  // 쥔 손가락이 허벅지·뒤를 본다
+  const thumbName = `HandLoRA_Bip01_${side[0]}_Finger0`;
+  const sThumbW = invert(mat(fistIbm, fistNames.indexOf(thumbName)));
+  const bThumbW = invert(mat(baseIbm, baseNames.indexOf(thumbName)));
+  const sThumb = turn([0, 1, 2].map((r) => m[r] * sThumbW[12] + m[4 + r] * sThumbW[13] + m[8 + r] * sThumbW[14] + m[12 + r] - wrist[r]));
+  const bThumb = [0, 1, 2].map((r) => bThumbW[12 + r] - wrist[r]);
+  const flat = (x) => {
+    const along = x[0] * d[0] + x[1] * d[1] + x[2] * d[2];
+    return norm([0, 1, 2].map((r) => x[r] - along * d[r]));
+  };
+  const [ts, tb] = [flat(sThumb), flat(bThumb)];
+  const crossTs = [ts[1] * tb[2] - ts[2] * tb[1], ts[2] * tb[0] - ts[0] * tb[2], ts[0] * tb[1] - ts[1] * tb[0]];
+  const roll = Math.atan2(crossTs[0] * d[0] + crossTs[1] * d[1] + crossTs[2] * d[2], ts[0] * tb[0] + ts[1] * tb[1] + ts[2] * tb[2]);
+  const spin = (x) => {
+    const c = Math.cos(roll);
+    const s = Math.sin(roll);
+    const dot = d[0] * x[0] + d[1] * x[1] + d[2] * x[2];
+    const cross = [d[1] * x[2] - d[2] * x[1], d[2] * x[0] - d[0] * x[2], d[0] * x[1] - d[1] * x[0]];
+    return [0, 1, 2].map((r) => x[r] * c + cross[r] * s + d[r] * dot * (1 - c));
+  };
+  for (let v = first; v < last; v += 1) {
+    const p = spin([0, 1, 2].map((r) => P[v * 3 + r] - wrist[r]));
+    const n = spin([N[v * 3], N[v * 3 + 1], N[v * 3 + 2]]);
+    for (let r = 0; r < 3; r += 1) {
+      P[v * 3 + r] = p[r] + wrist[r];
+      N[v * 3 + r] = n[r];
+    }
+  }
+  console.log(`  ${side === 'Right' ? '오른' : '왼'}주먹을 ${((angle * 180) / Math.PI).toFixed(1)}° 펴서 아래팔과 곧게 잇고, 팔 축으로 ${((roll * 180) / Math.PI).toFixed(1)}° 돌려 엄지를 맞췄다`);
 }
 if (!made.Right || !made.Left) throw new Error(`주먹을 못 뗐다 (오른손 ${made.Right} · 왼손 ${made.Left})`);
 

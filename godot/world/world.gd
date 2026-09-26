@@ -1341,7 +1341,7 @@ func grant_test_kit(player_id: String) -> void:
 					"id": str(item.id), "grade": grade, "enhance": 0,
 					"options": Items.roll_options(item, grade, _rng),
 				})
-	var has_crystal := player.bag.any(func(held: Dictionary) -> bool:
+	var has_crystal: bool = player.bag.any(func(held: Dictionary) -> bool:
 		return str(held.get("id", "")) == Items.crystal_id())
 	if player.bag.size() + gear.size() + (0 if has_crystal else 1) > Items.bag_size():
 		_notice("가방이 모자라 테스트 장비를 못 넣었다 — 비우고 다시 들어오면 넣는다")

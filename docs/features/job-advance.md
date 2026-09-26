@@ -35,7 +35,7 @@
 | `godot/world/save.gd` | `job_tier` 저장 (옛 저장은 0) |
 | `godot/net/local_transport.gd` | `jobAdvance` 요청 |
 | **`godot/game/job_panel.gd`** | ★ **전직 창** (`JobPanel`) — 조각으로 조립한다. 아래 "창" |
-| `godot/game/game.gd` | `_build_npc_panel` 이 전직 창을 **HUD 위 층(`JobLayer`, 10)** 에 단다 · `_show_npc` 가 `jobs` 면 전직 창을 채운다 · 스킬창의 "N차 전직" 표시(`_redraw_skills`) · `jobAdvanced` 이벤트 |
+| `godot/game/game.gd` | `_build_npc_panel` 이 전직 창을 상점·대장간 창과 같은 **HUD 위 층(`NpcLayer`, 10)** 에 단다 · `_show_npc` 가 `jobs` 면 전직 창을 채운다 · 스킬창의 "N차 전직" 표시(`_redraw_skills`) · `jobAdvanced` 이벤트 |
 | `godot/tools/shot.gd` `_job` | `npm run shot:godot -- job` — 1차를 마친 Lv.70 이 말을 건 창을 찍는다 |
 | `godot/tests/job_advance_test.gd` | 잠금 · NPC 창 상태 · 시험 → 처치 → 전직 · 지름길 막기 · 저장 · 창 버튼 · 치트 "스킬 모두 배우기"(화면 안인가 · 다 배웠나 · 낙뢰가 나가나) |
 

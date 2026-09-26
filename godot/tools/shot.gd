@@ -133,6 +133,10 @@ func _run() -> void:
 	if skill == "job":
 		await _job(game)
 		return
+	# 상점·대장간 창 — Lv.40 에 골드와 장비를 쥐여 주고 말을 건 모습
+	if skill == "shop" or skill == "smith":
+		await _npc_window(game, skill)
+		return
 
 	# 창은 열어 놓고 한 장만 찍는다 — 움직이는 것이 없다
 	if skill == "bag" or skill == "skills":
@@ -524,6 +528,25 @@ func _kill(game: Node3D, crit := false) -> void:
 			taken += 1
 	sheet.save_png("res://../logs/shot_sheet.png")
 	print("logs/shot_sheet.png")
+	quit(0)
+
+
+## 상점·대장간 창. 줄의 아이콘·이름·값표가 한 줄에 서는지, 글자가 테 밖으로 안 나가는지
+func _npc_window(game: Node3D, which: String) -> void:
+	var player: Dictionary = game._transport._world._players[game._transport.my_id()]
+	player["level"] = 40
+	player["gold"] = 12345
+	game._transport.send(&"debugGauntlets", {})
+	var npc: Array = {"shop": ["상인 보리스", -5.0, 4.0], "smith": ["대장장이 군터", 0.0, 4.5]}[which]
+	player["x"] = npc[1]
+	player["z"] = npc[2]
+	game._transport.send(&"npc", {"name": npc[0]})
+	for i in 30:
+		await process_frame
+	await RenderingServer.frame_post_draw
+	var img := root.get_viewport().get_texture().get_image()
+	img.save_png("res://../logs/shot_%s.png" % which)
+	print("logs/shot_%s.png" % which)
 	quit(0)
 
 

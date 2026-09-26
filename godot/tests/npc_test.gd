@@ -103,6 +103,57 @@ func _case_unknown() -> void:
 
 
 ## 화면에서 눌러 창이 뜨는지
+## 상점 창 모양과 누르기 — 화면 가운데 안 · HUD 위 층 · 줄이 창 안 · X 가 오른쪽 위 ·
+## 줄을 누르면 산다 · 팔기 탭 · 대장간은 강화 탭 하나
+func _check_shop(game: Node3D, panel: NpcPanel, me: Dictionary) -> void:
+	await process_frame
+	var rect := panel.get_global_rect()
+	if not Rect2(0, 0, 1280, 720).encloses(rect) or absf(rect.get_center().x - 640.0) > 2.0:
+		_fail("상점 창이 화면 가운데 안이 아니다 (%s)" % rect)
+	var layer := panel.get_parent() as CanvasLayer
+	if layer == null or layer.layer < 10:
+		_fail("상점 창이 HUD 위 층이 아니다")
+	var close: Control = panel.find_child("close", true, false)
+	if close == null or close.get_global_rect().get_center().x < rect.get_center().x:
+		_fail("닫기 X 가 오른쪽 위가 아니다")
+	var first: Control = panel.list.get_child(0)
+	if not rect.encloses(first.get_global_rect()) or first.get_node_or_null("hit") == null:
+		_fail("첫 줄이 창 밖이거나 누름 자리가 없다")
+
+	# 골드를 쥐여 주고 첫 줄을 누르면 산다
+	me.gold = 1000000
+	var before: int = me.bag.size()
+	panel.redraw()
+	(panel.list.get_child(0).get_node("hit") as Button).pressed.emit()
+	await process_frame
+	if me.bag.size() != before + 1:
+		_fail("줄을 눌렀는데 안 샀다 (가방 %d → %d)" % [before, me.bag.size()])
+
+	# 팔기 탭 — 가방의 장비가 줄로 선다
+	(panel.find_child("tab_sell", true, false) as Button).pressed.emit()
+	await process_frame
+	var rows := panel.list.get_child_count()
+	if rows < 1 or panel.list.get_child(0).get_node_or_null("hit") == null:
+		_fail("팔기 탭에 산 장비가 없다 (%d줄)" % rows)
+	var wallet: Label = panel.find_child("wallet", true, false)
+	print("  상점 창: %s · 샀다 · 팔기 %d줄 · '%s'" % [rect.size, rows, wallet.text])
+
+	# 대장간 — 강화 탭 하나, 값표에 "+0 → +1"
+	me.x = 0.0
+	me.z = 4.5
+	game._transport.send(&"npc", {"name": "대장장이 군터"})
+	await process_frame
+	if panel.title_label.text != "대장간" or panel.find_child("tab_sell", true, false) != null:
+		_fail("대장간 창이 다르다 ('%s')" % panel.title_label.text)
+	elif panel.list.get_child_count() < 1:
+		_fail("대장간 목록이 비었다")
+	else:
+		var tag: Label = panel.list.get_child(0).find_child("tag", true, false).get_child(0)
+		if not tag.text.begins_with("+"):
+			_fail("강화 값표가 '%s'" % tag.text)
+		print("  대장간 창: 첫 줄 '%s'" % tag.text)
+
+
 func _run_scene() -> void:
 	root.add_child(load("res://main.tscn").instantiate())
 	await process_frame
@@ -115,18 +166,21 @@ func _run_scene() -> void:
 	game._transport.send(&"npc", {"name": "상인 보리스"})
 	await process_frame
 
-	if not game._npc_panel.visible:
+	var panel: NpcPanel = game._npc_panel
+	if not panel.visible:
 		_fail("화면에서 창이 안 떴다")
-	elif not game._npc_title.text.begins_with("상인 보리스"):
-		_fail("창 제목이 다르다: %s" % game._npc_title.text)
+	elif panel.title_label.text != "상점":
+		_fail("창 제목이 다르다: %s" % panel.title_label.text)
 	else:
-		# 상점이면 파는 목록이 줄로 서 있어야 한다 (탭 줄 + 단추들)
-		var lines: int = game._npc_rows.get_child_count()
+		# 상점이면 파는 목록이 줄로 서 있어야 한다 (줄마다 아이콘 · 이름 · 값표 · 누름 자리)
+		var lines: int = panel.list.get_child_count()
 		print("  창: '%s', 줄 %d개, 파는 것 %d종" % [
-			game._npc_title.text, lines, game._npc_items.size()
+			panel.title_label.text, lines, panel.items.size()
 		])
-		if game._npc_items.is_empty():
-			_fail("상점에 파는 것이 없다")
+		if panel.items.is_empty() or lines != panel.items.size():
+			_fail("상점 목록이 비었거나 줄 수가 다르다 (%d줄 · %d종)" % [lines, panel.items.size()])
+		else:
+			await _check_shop(game, panel, me)
 
 	Save.clear()
 	if _failed == 0:

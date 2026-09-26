@@ -135,8 +135,8 @@ node scripts/add-clips.mjs public/assets/models/varco_fighter.glb public/assets/
 # 격투가를 뽑아 humanoid-fingers 로 리깅한 것 → build-gear-parts.mjs 가 부위를 떼어 우리 뼈대로 옮긴다.
 # 외형은 코드로 짓지 않는다 (CLAUDE.md) → characters-and-animation.md "장비 스킨"
 GEAR=(6a7022efbd141b240c84b8979e6dc824 73ee568dc290695eb008cef273f26a7e 7467685d6a4533d172e45fe69d0ac09c
-  db450181f7af31740a47d8a1608b4538 de57c12ec7c1f05c96d6bf0dbd08920d d4667f3f1849f78c44bb9fdce74ef0aa
-  3609d86c890e082ff0c0c7e995243bc4)
+  db450181f7af31740a47d8a1608b4538 8de3c3db9a4812b2f05b1129d741bc5c d4667f3f1849f78c44bb9fdce74ef0aa
+  7fd5ba94003f61c25677d1b1c7bb093a)
 for g in 1 2 3 4 5 6 7; do
   fetch_varco "${GEAR[$((g-1))]}" "gear_g${g}_rigged"
   node scripts/build-gear-parts.mjs "public/assets/models/gear_g${g}.glb" public/assets/models/varco_fighter.glb "assets-src/models/varco/gear_g${g}_rigged.glb"

@@ -22,3 +22,13 @@ renderer/rendering_method.mobile="mobile"
 ; 안드로이드 익스포트가 요구한다. 없으면 "ETC2/ASTC texture compression is
 ; required for Android export" 로 익스포트가 거부된다.
 textures/vram_compression/import_etc2_astc=true
+
+; 모델 텍스처(GLB 에서 떼어낸 JPG)를 손실(WebP 0.9)로 굽는다. 기본값인 무손실은
+; 90KB JPG 를 675KB 로 불려 pck 가 49MB 였다. UI 아이콘은 sync-godot-assets.mjs 가
+; 무손실 .import 를 먼저 써 둬서 여기에 안 걸린다 → docs/features/godot-migration.md
+[importer_defaults]
+
+texture={
+"compress/lossy_quality": 0.9,
+"compress/mode": 1
+}

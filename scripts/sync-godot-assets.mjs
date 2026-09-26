@@ -112,9 +112,9 @@ const jobs = [
     to: join(ROOT, 'godot', 'assets', 'models'),
     shrink: true,
   },
-  { names: UI, from: join(ROOT, 'public', 'assets', 'ui'), to: join(ROOT, 'godot', 'assets', 'ui') },
+  { names: UI, from: join(ROOT, 'public', 'assets', 'ui'), to: join(ROOT, 'godot', 'assets', 'ui'), lossless: true },
   { names: FONTS, from: join(ROOT, 'public', 'assets', 'fonts'), to: join(ROOT, 'godot', 'assets', 'fonts') },
-  { names: ICONS, from: join(ROOT, 'public', 'assets', 'icons'), to: join(ROOT, 'godot', 'assets', 'icons') },
+  { names: ICONS, from: join(ROOT, 'public', 'assets', 'icons'), to: join(ROOT, 'godot', 'assets', 'icons'), lossless: true },
   // 보내는 쪽과 받는 쪽 폴더 이름을 같게 둔다 — play.bat 이 public/assets 를 통째로
   // 미러링하므로, 이름이 어긋나면 PC 에서만 바닥이 빠진다 (2026-09-19 에 맞췄다)
   { names: GROUND, from: join(ROOT, 'public', 'assets', 'textures'), to: join(ROOT, 'godot', 'assets', 'textures') },
@@ -124,7 +124,23 @@ let copied = 0;
 for (const job of jobs) copied += await run(job);
 console.log(`${copied}개 새로 복사했다 -> godot/assets/`);
 
-async function run({ names, from, to, shrink }) {
+/**
+ * 고도의 텍스처 기본값은 손실(WebP 0.9)이다 (`project.godot` 의 `importer_defaults`) —
+ * 모델 텍스처가 무손실로 구워져 pck 가 49MB 였다. UI 그림은 얇은 금선이 뭉개지면 안 되니
+ * **고도가 임포트하기 전에** 무손실 `.import` 를 써 둔다. 있으면 고도가 그 설정을 따르고
+ * 나머지 칸을 채운다. 이미 있으면(예전에 기본값=무손실로 만들어진 것) 건드리지 않는다.
+ */
+const LOSSLESS_IMPORT = `[remap]
+
+importer="texture"
+type="CompressedTexture2D"
+
+[params]
+
+compress/mode=0
+`;
+
+async function run({ names, from, to, shrink, lossless }) {
   mkdirSync(to, { recursive: true });
   // 원본이 안 바뀌었으면 다시 쓰지 않는다. 고도가 매번 다시 임포트하지 않게.
   // 줄인 파일은 크기가 원본과 다르므로 무엇으로 만들었는지를 따로 적어 둔다.
@@ -141,6 +157,9 @@ async function run({ names, from, to, shrink }) {
       continue;
     }
     const dst = join(to, name);
+    if (lossless && name.endsWith('.png') && !existsSync(`${dst}.import`)) {
+      writeFileSync(`${dst}.import`, LOSSLESS_IMPORT);
+    }
     const hash = createHash('sha1').update(readFileSync(src)).digest('hex');
     const key = `${hash}:${shrink ? MAX_TEXTURE : 0}`;
     if (existsSync(dst) && stamp[name] === key) {

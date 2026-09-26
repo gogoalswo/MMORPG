@@ -1321,28 +1321,22 @@ func _case_design_panel(game: Node3D) -> void:
 	if game._debug_level != start_level:
 		_fail("레벨 칸이 지금 레벨이 아니다 (%d ≠ %d)" % [game._debug_level, start_level])
 
-	# 증감 단추를 눌러야 그 조건으로 선다
+	# 레벨 단추를 눌러야 레벨이 바뀐다 — 장비는 그대로다 (2026-09-26 요청: 자동 장착 없앰)
+	var before := int(me.get("stats", {}).get("attack", 0))
 	game._debug_level = clampi(start_level + 10, 1, 200)
 	game._apply_debug()
 	await game.get_tree().process_frame
 	me = game._transport.snapshot().get("players", {}).get("me", {})
 	if int(me.get("level", 0)) != game._debug_level:
 		_fail("단추를 눌렀는데 레벨이 안 맞춰졌다 (%d ≠ %d)" % [int(me.get("level", 0)), game._debug_level])
-	if me.get("equipped", {}).size() != 6:
-		_fail("여섯 칸이 안 찼다 (%d)" % me.get("equipped", {}).size())
-
-	# 등급을 내리면 실제로 약해져야 한다
-	var before := int(me.get("stats", {}).get("attack", 0))
-	game._debug_grade = maxi(1, game._debug_grade - 2)
-	game._apply_debug()
-	await game.get_tree().process_frame
-	var after: int = int(
-		game._transport.snapshot().players["me"].get("stats", {}).get("attack", 0)
-	)
-	if after >= before:
-		_fail("등급을 내렸는데 공격력이 안 줄었다 (%d -> %d)" % [before, after])
-	else:
-		print("  설계 창: 등급 내리니 공격 %d -> %d" % [before, after])
+	if me.get("equipped", {}) != start_equipped:
+		_fail("레벨 단추를 눌렀는데 장비가 바뀌었다 — 자동 장착은 없앴다")
+	var after := int(me.get("stats", {}).get("attack", 0))
+	if game._debug_level > start_level and after <= before:
+		_fail("레벨을 올렸는데 공격력이 안 늘었다 (%d -> %d)" % [before, after])
+	for label in game._debug_panel.find_children("", "Label", true, false):
+		if (label as Label).text in ["등급", "강화"]:
+			_fail("설계 창에 장비를 입히는 '%s' 단추 줄이 남아 있다" % (label as Label).text)
 
 	game._toggle_debug()
 	await game.get_tree().process_frame

@@ -217,6 +217,11 @@ func join(player_id: String) -> void:
 		"skill_bar": kept.get("skill_bar", []).duplicate(),
 		# 스킬별 다음에 쓸 수 있는 시각
 		"skill_ready_at": {},
+		# --- 물약 (`drink_potion`) --- 개수는 세지 않고 쿨타임(10초)만 막는다.
+		# 존을 옮겨도 쿨타임은 이어진다 — 안 그러면 차원문을 오가며 연달아 마신다
+		"potion_ready_at": int(kept.get("potion_ready_at", 0)),
+		# HP 가 이 % 이하로 떨어지면 저절로 마신다. 0 이면 끔. 저장에 남는다
+		"potion_pct": int(kept.get("potion_pct", _potion_rule("potionAutoDefault", 50))),
 		# 스킬 강화 — `{ 스킬 id: [강화 id, …] }`. 스킬창에서 경험치북으로 채우면 붙는다 (`feed_upgrade`)
 		"skill_upgrades": kept.get("skill_upgrades", {}).duplicate(true),
 		# 붙기 전까지 쌓인 경험치 — `{ 스킬 id: { 강화 id: 경험치 } }` (`feed_upgrade`)
@@ -286,6 +291,7 @@ func step(delta: float) -> void:
 	_run_zones(now)
 	_step_monsters(delta, now)
 	_drive_auto(delta, now)
+	_drive_potions(now)
 	_check_gate()
 
 	# 주기적으로 남긴다. 탭이 갑자기 닫혀도 최근 것은 지킨다
@@ -1126,6 +1132,8 @@ func restore(player_id: String) -> bool:
 						and not (str(id) in upgraded.get(str(skill_id), [])):
 					progress.get_or_add(str(skill_id), {})[str(id)] = amount
 	player.skill_upgrade_exp = progress
+	# 물약을 저절로 마시는 기준 — 없던 칸이라 옛 저장은 처음 값으로 읽힌다
+	set_potion_pct(player_id, int(saved.get("potion_pct", player.potion_pct)))
 
 	# 가방·장비도 되살린다. **옛 id 는 지금 id 로 옮긴다** (2026-09-21 에 단계 축을
 	# 없앴다) — 갈 자리가 없는 것만 버린다. 등급은 아이템이 들고 있으므로
@@ -1241,6 +1249,66 @@ func set_test_switch(name: String, on: bool) -> void:
 		return
 	var label := "쿨타임 0" if name == "cooldownOff" else "레벨 잠금 해제"
 	_events.append({"type": "notice", "text": "%s %s" % [label, "켬" if on else "끔"]})
+
+
+## 물약 수치 — `combat.json` 의 `potion*` (shared `combat.ts`)
+func _potion_rule(key: String, fallback: float) -> float:
+	return float(GameData.combat().get(key, fallback))
+
+
+## 물약을 마신다 — 물약 칸을 누르거나(`auto` 거짓) HP 가 기준 아래로 내려갔을 때(`_drive_potions`).
+## 쿨타임(10초) 중이거나 HP 가 가득하면 안 마신다 — 가득 찬 채 마시면 쿨타임만 버린다
+func drink_potion(player_id: String, auto := false) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty() or bool(player.dead):
+		return
+	var now := Time.get_ticks_msec()
+	if now < int(player.get("potion_ready_at", 0)):
+		if not auto:
+			_events.append({"type": "notice", "text": "물약 쿨타임 %.1f초" % ((int(player.potion_ready_at) - now) / 1000.0)})
+		return
+	var max_hp := int(player.stats.maxHp)
+	var before := int(player.hp)
+	if before >= max_hp:
+		if not auto:
+			_events.append({"type": "notice", "text": "HP 가 가득 찼습니다"})
+		return
+	player.hp = mini(max_hp, before + maxi(1, roundi(max_hp * _potion_rule("potionHealRatio", 0.3))))
+	player.potion_ready_at = now + int(_potion_rule("potionCooldownMs", 10000))
+	# 회복기와 같은 "hit"(heal) 로 알린다 — 화면이 초록 숫자를 띄운다
+	_events.append({
+		"type": "hit",
+		"target": player_id,
+		"target_kind": "player",
+		"amount": int(player.hp) - before,
+		"heal": true,
+		"crit": false,
+		"killed": false,
+		"x": player.x,
+		"z": player.z,
+	})
+	_events.append({"type": "potion", "id": player_id, "auto": auto})
+
+
+## 자동으로 마시는 기준(HP %). 설정 폭(10)에 맞춰 0 ~ 90 으로 자른다. 0 이면 끔
+func set_potion_pct(player_id: String, pct: int) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	var step := maxi(1, int(_potion_rule("potionAutoStep", 10)))
+	player.potion_pct = clampi(roundi(float(pct) / step) * step, 0, int(_potion_rule("potionAutoMax", 90)))
+
+
+## HP 가 기준 이하로 떨어진 사람에게 물약을 먹인다. 자동 사냥과 같이 **서버에서** 돈다 —
+## 화면이 꺼져도(모바일) 마셔야 한다
+func _drive_potions(now: int) -> void:
+	for id in _players:
+		var player: Dictionary = _players[id]
+		var pct := int(player.get("potion_pct", 0))
+		if pct <= 0 or bool(player.dead) or now < int(player.get("potion_ready_at", 0)):
+			continue
+		if float(player.hp) * 100.0 <= float(player.stats.maxHp) * pct:
+			drink_potion(id, true)
 
 
 ## 테스트용 무적. 맞는 판정·이벤트는 그대로 두고 피해만 0 으로 만든다 (`_hit_player`)

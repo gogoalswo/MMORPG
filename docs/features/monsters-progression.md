@@ -154,6 +154,12 @@ monsters.ts 의 statsForLevel          거기서 받아 반올림해 몬스터 �
 ### 레벨 곡선
 - `MAX_LEVEL = 200`, `expToNext(L) = round(55 * L^1.2)`.
 - `expReward` 는 레벨 차이로 감쇠한다. 차이가 크면 0이 된다 (파워레벨링 방지).
+- **초반(Lv1~30) 몬스터는 경험치가 3배다** ★ (2026-09-26 지시: "초반 구간이 많이 힘드네. 초반 구간에
+  지금보다 경험치를 3배 많게 해"). `balance.ts` 의 `EARLY_EXP_MULT` · `expMult(level)` 이
+  `monster().exp` 에 곱하고, `expToNext` 는 **곱하기 전** 값으로 센다 — 같이 곱하면 상쇄된다.
+  몬스터 레벨로 가른다(`EARLY_FIELDS × FIELD_SPAN` = 30). 고도 `stats.gd` 의 `monster` 도
+  `balance.json` 의 `earlyExpMult`·`earlyExpTop` 으로 같이 곱한다 (설계 창 표시용).
+  Lv1~30 이 약 2.4시간 → 0.8시간. → [stat-balance.md](stat-balance.md) "성장 곡선"
 
 ## 손댈 때
 

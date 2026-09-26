@@ -106,6 +106,10 @@ func send(message: StringName, payload: Dictionary) -> void:
 			_world.npc_enhance(MY_ID, int(payload.get("index", -1)))
 		&"save":
 			_world.save(MY_ID)
+		&"potion":
+			_world.drink_potion(MY_ID)
+		&"potionPct":
+			_world.set_potion_pct(MY_ID, int(payload.get("pct", 0)))
 		_:
 			push_warning("모르는 메시지: %s" % message)
 

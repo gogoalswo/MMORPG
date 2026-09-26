@@ -149,6 +149,7 @@ import { RUN_SPEED } from './constants.ts';
 import {
   buildPlayer,
   damage as designDamage,
+  expMult,
   killsPerLevel,
   monster as designMonster,
   refWorn,
@@ -180,10 +181,11 @@ test('필요 경험치와 몬스터 보상이 설계 곡선과 맞물린다', ()
   // `expToNext` 는 balance.ts 의 성장 곡선에서, 몬스터 보상은 같은 곳의 HP×0.2 에서
   // 나온다. 둘을 나누면 설계가 정한 "레벨당 필요 킬 수" 가 그대로 나와야 한다 —
   // 어느 한쪽만 손대면 여기서 걸린다
+  // 초반(Lv1~30)은 한 마리 경험치가 `expMult` 배라 그만큼 적게 잡아도 된다
   for (const level of [1, 11, 31, 91, 141, 191]) {
     const perKill = designMonster(level).exp;
     const got = expToNext(level) / perKill;
-    const want = killsPerLevel(level);
+    const want = killsPerLevel(level) / expMult(level);
     assert.ok(
       Math.abs(got / want - 1) < 0.01,
       `Lv${level}: ${Math.round(got)}마리인데 설계는 ${Math.round(want)}마리`

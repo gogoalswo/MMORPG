@@ -1016,6 +1016,8 @@
   "clearTime": 15,
   "hpLossPerClear": 0.5,
   "expCoef": 0.2,
+  "earlyExpMult": 3,
+  "earlyExpTop": 30,
   "jobs": [
     "fighter",
     "mage",

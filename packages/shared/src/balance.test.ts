@@ -11,6 +11,8 @@ import { MONSTER_STATS } from './monsterTable.ts';
 import {
   CLEAR_TIME,
   EXP_COEF,
+  EARLY_EXP_MULT,
+  expMult,
   HP_LOSS_PER_CLEAR,
   JOB_MULT,
   K,
@@ -186,10 +188,13 @@ test('역할 배수 — 보스는 설계 보류라 임시값이다', () => {
 
 test('경험치는 몬스터 HP 에 정비례한다', () => {
   // 지수 1.0 — 아래 사냥터를 손해로 만들고, 위쪽 한계는 경험치가 아니라 사망이 정한다
-  for (const level of [1, 60, 200]) {
+  // 초반(Lv1~30)만 `expMult` 배(2026-09-26 지시로 3배)를 더 얹는다
+  for (const level of [1, 30, 31, 60, 200]) {
     const m = monster(level);
-    assert.ok(Math.abs(m.exp - m.hp * EXP_COEF) < 1e-9, `Lv${level}`);
+    assert.ok(Math.abs(m.exp - m.hp * EXP_COEF * expMult(level)) < 1e-9, `Lv${level}`);
   }
+  assert.equal(expMult(30), EARLY_EXP_MULT);
+  assert.equal(expMult(31), 1);
 });
 
 test('스킬 해금 단계에 그룹 크기가 묶인다', () => {

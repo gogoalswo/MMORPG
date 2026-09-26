@@ -115,6 +115,17 @@ export const EARLY_FIELDS = 3;
 export const EARLY_LEVEL_MIN = 2;
 /** 초반 사냥터마다 레벨당 시간 × 이 값 */
 export const EARLY_TIME_MULT = 1.5;
+/**
+ * 초반(Lv1~30) 몬스터가 주는 경험치 × 이 값 ★ (2026-09-26 지시: "초반 구간이 많이
+ * 힘드네. 초반 구간에 지금보다 경험치를 3배 많게 해.") 필요 경험치(`expToNext`)는
+ * 곱하기 **전** 값으로 세므로, 레벨당 킬 수·시간이 1/3 이 된다.
+ */
+export const EARLY_EXP_MULT = 3;
+
+/** 그 레벨 몬스터 경험치에 곱하는 배수 — 초반(Lv1~30)만 `EARLY_EXP_MULT` */
+export function expMult(level: number): number {
+  return level <= EARLY_FIELDS * FIELD_SPAN ? EARLY_EXP_MULT : 1;
+}
 
 /**
  * 직업 배수 — 기본 스탯에 곱한다. **DPS × 버티는 시간이 서로 ±10% 안**이라야
@@ -361,7 +372,7 @@ export function monster(level: number, role: MonsterRole = 'normal'): Monster {
     atk: atk * r.atk,
     df,
     interval: MON_ATTACK_INTERVAL,
-    exp: hp * r.hp * EXP_COEF,
+    exp: hp * r.hp * EXP_COEF * expMult(level),
   };
 }
 
@@ -524,9 +535,12 @@ export function planSeconds(level: number): number {
   return killsPerLevel(level) / paceKillRate(level);
 }
 
-/** L → L+1 에 필요한 경험치 */
+/**
+ * L → L+1 에 필요한 경험치. 초반 배수(`expMult`)를 **걷어 낸** 한 마리 값으로 센다 —
+ * 그래야 배수만큼 레벨이 빨라진다 (같이 곱하면 둘이 상쇄된다).
+ */
 export function expToNext(level: number): number {
-  return killsPerLevel(level) * monster(level).exp;
+  return (killsPerLevel(level) * monster(level).exp) / expMult(level);
 }
 
 /** 내보내기용 — 고도가 읽는 `data/balance.json` 의 알맹이 */
@@ -550,6 +564,9 @@ export function balanceTable() {
     clearTime: CLEAR_TIME,
     hpLossPerClear: HP_LOSS_PER_CLEAR,
     expCoef: EXP_COEF,
+    // 초반(Lv1 ~ earlyExpTop) 몬스터 경험치 배수 — 고도 `stats.gd` 의 `monster` 가 같이 곱한다
+    earlyExpMult: EARLY_EXP_MULT,
+    earlyExpTop: EARLY_FIELDS * FIELD_SPAN,
     jobs: JOB_IDS,
     jobMult: JOB_MULT,
     roleMult: ROLE_MULT,

@@ -339,5 +339,7 @@ static func monster(level: int, role: String = "normal") -> Dictionary:
 		"atk": float(row[1]) * float(r.get("atk", 1.0)),
 		"df": float(row[2]),
 		"interval": float(b.get("monAttackInterval", 1.5)),
-		"exp": mon_hp * float(b.get("expCoef", 0.2)),
+		# 초반(Lv1~earlyExpTop)은 경험치 × earlyExpMult (2026-09-26, balance.ts `expMult`)
+		"exp": mon_hp * float(b.get("expCoef", 0.2)) \
+			* (float(b.get("earlyExpMult", 1)) if level <= int(b.get("earlyExpTop", 0)) else 1.0),
 	}

@@ -77,6 +77,20 @@ export function effectiveCooldown(cooldown: number, attackSpeed: number): number
  */
 export const ATTACK_ROOT_MS = 400;
 
+/**
+ * 물약 (2026-09-26 요청: "퀵슬롯 옆에 물약 슬롯 만들고, 설정한 HP 퍼센트가 되면 물약을
+ * 마시도록… 물약 쿨타임은 10초로 하고 클릭하면 직접 사용도"). 개수는 세지 않는다 —
+ * 쿨타임만 막는다. 자동으로 마시는 기준(HP %)은 캐릭터마다 저장한다.
+ */
+export const POTION_COOLDOWN_MS = 10_000;
+/** 한 병이 채우는 몫 — 최대 HP 의 이 비율 */
+export const POTION_HEAL_RATIO = 0.3;
+/** 자동으로 마시는 기준의 처음 값(HP %). 0 이면 자동으로 안 마신다 */
+export const POTION_AUTO_DEFAULT = 50;
+/** 설정 창에서 한 번 누를 때 움직이는 폭(%p)과 상한 */
+export const POTION_AUTO_STEP = 10;
+export const POTION_AUTO_MAX = 90;
+
 /** 이번 공격이 몸을 묶는 시간. 다음 공격까지의 간격을 넘지 않는다 */
 export function attackRootMs(cooldownMs: number): number {
   return Math.max(0, Math.min(ATTACK_ROOT_MS, Math.round(cooldownMs)));

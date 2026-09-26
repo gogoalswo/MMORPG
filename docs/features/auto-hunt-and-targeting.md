@@ -101,7 +101,8 @@ tryAutoSkill(...) || (거리 <= attackRange && handleAttack(...))
   끌려가지 않기)가 그대로 살아 있어야 한다.
 
 **고도 쪽은 표시만 옮겼다.** 누른 놈 발밑에 고리를 그리고 쫓아가서 치지만,
-대상 id 를 판정에 보내지는 않는다 (정면 부채꼴에서 서버가 다시 고른다) →
+맞출 놈을 판정에 정해 주지는 않는다 (정면 부채꼴에서 서버가 다시 고른다. 자동 사냥 중에
+보내는 `strike {id}` 는 볼 쪽과 스킬 사거리에만 쓴다 — 아래 "눌러 쫓아도 스킬부터") →
 [godot-migration.md](godot-migration.md) 의 "몬스터를 골라 두면 발밑에 고리가 돈다".
 
 ### 안 찍고 스킬을 누르면 가장 가까운 놈 ★
@@ -210,10 +211,10 @@ tryAutoSkill(...) || (거리 <= attackRange && handleAttack(...))
 
 | 파일 | 역할 |
 |---|---|
-| `godot/world/world.gd` | `set_auto` / `_drive_auto` / `_pick_hunt_target` / `_walk_auto` / `_auto_cast` / `_patrol_auto` / `_take_manual` / `_anchor_here`, 상수 `HUNT_*` · `MANUAL_HOLD_MS` |
-| `godot/net/local_transport.gd` | 메시지 `autoHunt {on}` |
+| `godot/world/world.gd` | `set_auto` / `_drive_auto` / `_pick_hunt_target` / `_walk_auto` / `_auto_strike` / `_auto_cast` / `strike` / `_patrol_auto` / `_take_manual` / `_anchor_here`, 상수 `HUNT_*` · `MANUAL_HOLD_MS` |
+| `godot/net/local_transport.gd` | 메시지 `autoHunt {on}` · `strike {id}` |
 | `godot/game/game.gd` | 칸과 표시 — `_toggle_auto` / `_refresh_auto`. **퀵슬롯 옆 다섯 번째 칸**이고 켜면 화살표 고리가 돈다 (2026-09-19) → [hud.md](hud.md) |
-| `godot/tests/auto_hunt_test.gd` | 반경·붙어서 때리기·스킬 먼저·순찰·리쉬·끄기·조작 우선 |
+| `godot/tests/auto_hunt_test.gd` | 반경·붙어서 때리기·스킬 먼저·눌러 쫓을 때도 스킬 먼저·순찰·리쉬·끄기·조작 우선 |
 
 ### 반경은 무리 하나 크기로 고정이다 ★
 
@@ -332,6 +333,25 @@ tryAutoSkill(...) || (거리 <= attackRange && handleAttack(...))
 - **스킬 시전(`cast_until`)이 끝날 때까지도 기다린다** (2026-09-24). 시전 중에는 다음
   스킬도 기본 공격도 판정이 거절하므로(`cast` · `attack`), 경직(0.4초)만 보고 넣으면 헛요청이다
   → [skills.md](skills.md) 의 "시전 중에는 다른 스킬을 못 쓴다".
+- 위의 "보고 → 경직·시전 기다리고 → 스킬 → 사거리 안이면 평타" 는 `_auto_strike` 한 곳에
+  있다. 자동 사냥 한 틱과 아래 "눌러 쫓을 때" 가 같이 쓴다.
+
+### 켜 둔 채로 몬스터를 눌러 쫓아도 스킬부터 (`strike`) ★
+
+2026-09-26 "자동공격중에 몬스터를 클릭하면 평타만 사용해" 로 고쳤다. 몬스터를 누르면
+화면(`game.gd` 의 `_chase_and_hit`)이 매 프레임 이동 입력을 보내므로 **그동안 자동 사냥이
+통째로 쉰다**(위 "조작하면 사람이 이긴다"). 그런데 화면은 `attack` 만 보내고 있어서 스킬이
+안 나갔다.
+
+- 자동 사냥이 켜져 있으면 화면은 `attack` 대신 **`strike {id}`** 를 보낸다. 판정(`World.strike`)은
+  자동 사냥과 같은 `_auto_strike` 로 **스킬부터** 쓰고, 나간 게 없으면 사거리 안일 때만 평타다.
+  꺼져 있으면 `strike` 는 그냥 `attack` 이다.
+- **붙는 도중에도 매 프레임 보낸다.** 원거리기는 그 스킬 사거리에 들자마자 나가야 한다 —
+  기본 공격 사거리까지 다 걸어 들어간 뒤에야 쓰면 원거리기가 아니다.
+- 보내는 id 는 **어느 쪽을 볼지와 스킬 사거리를 재는 데만** 쓴다. 누구를 맞출지는 여전히
+  `cast` · `attack` 이 정면에서 다시 고른다.
+- 누른 놈을 자동 사냥의 대상(`auto_target`)으로 넘기는 방법은 쓰지 않았다. 앵커 리쉬 밖의
+  놈을 누르면 자동 사냥이 놓아 버려서, 누른 놈을 쫓는다는 뜻이 깨진다.
 
 ### 아직 없는 것
 

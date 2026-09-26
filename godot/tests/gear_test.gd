@@ -34,6 +34,7 @@ func _case_rig() -> void:
 	var tris := {}
 	for slot in Armor.SLOTS:
 		var mesh: Mesh = null
+		var last_thick := 0.0
 		for grade in range(1, 8):
 			rig.set_gear(slot, grade)
 			await process_frame
@@ -47,9 +48,21 @@ func _case_rig() -> void:
 				mesh = shell.mesh
 			elif shell.mesh != mesh:
 				_fail("%s 등급을 바꿀 때마다 껍데기를 다시 뗀다" % slot)
-			var got: Color = (shell.material_override as StandardMaterial3D).albedo_color
-			if not got.is_equal_approx(Armor.LOOK[grade][0]):
-				_fail("%s %d등급 색이 %s" % [slot, grade, got.to_html(false)])
+			# 등급마다 무늬가 다르고(style), 색은 아이콘에 맞춘 표 그대로
+			var mat := shell.material_override as ShaderMaterial
+			if mat == null or int(mat.get_shader_parameter("style")) != grade:
+				_fail("%s %d등급 무늬가 아니다" % [slot, grade])
+			elif not (mat.get_shader_parameter("base") as Color).is_equal_approx(Armor.LOOK[grade].base):
+				_fail("%s %d등급 색이 표와 다르다" % [slot, grade])
+			# 오로라 — 4등급부터, 등급이 오를수록 두껍다
+			var aura := mat.next_pass as ShaderMaterial if mat != null else null
+			if (aura != null) != (grade >= 4):
+				_fail("%s %d등급 오로라가 %s" % [slot, grade, "있다 (4등급부터여야 한다)" if aura != null else "없다"])
+			elif aura != null:
+				var thick := float(aura.get_shader_parameter("thick"))
+				if thick <= last_thick:
+					_fail("%d등급 오로라(%.3f)가 아래 등급보다 두껍지 않다" % [grade, thick])
+				last_thick = thick
 			if grade >= 3 and _decor(rig, slot) == 0:
 				_fail("%s %d등급인데 장식이 없다" % [slot, grade])
 		tris[slot] = _count(mesh)

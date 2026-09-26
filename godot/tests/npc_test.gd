@@ -39,8 +39,9 @@ func _first(events: Array, type_name: String) -> Dictionary:
 
 func _case_list() -> void:
 	var npcs: Array = _village().snapshot().get("npcs", [])
-	if npcs.size() != 6:
-		_fail("마을 NPC 가 6명이어야 하는데 %d명" % npcs.size())
+	# 상인 · 대장장이 · 전직관(2026-09-26) + 마을 사람 넷
+	if npcs.size() != 7:
+		_fail("마을 NPC 가 7명이어야 하는데 %d명" % npcs.size())
 	var roles: Array = []
 	for npc in npcs:
 		if npc.has("role"):

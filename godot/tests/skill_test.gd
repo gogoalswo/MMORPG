@@ -61,6 +61,9 @@ func _setup(mob_count: int = 1) -> Array:
 	w.open("village")
 	w.join("me")
 	var me: Dictionary = w.snapshot().players["me"]
+	# 스킬 판정을 보는 테스트다 — 전직 스킬(낙뢰·빙주각·천붕각)을 다 쓰게 3차까지 마쳐 둔다.
+	# 전직 잠금 자체는 job_advance_test 가 본다
+	me["job_tier"] = 3
 	var mobs: Array = w.snapshot().monsters
 	for i in mob_count:
 		var mob := World.make_monster(

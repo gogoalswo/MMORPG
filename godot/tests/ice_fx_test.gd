@@ -64,10 +64,11 @@ func _case_upgrades(game: Node3D) -> void:
 
 
 ## 액션바의 빙주각을 누르면 이펙트가 서고 화면이 흔들린다 — **실제 경로로 쏜다.**
-## Lv.40 스킬이라 레벨과 포인트를 직접 올린다
+## 2차 전직(Lv.70) 스킬이라 레벨·포인트·전직 단계를 직접 올린다
 func _case_cast(game: Node3D) -> void:
 	var player: Dictionary = game._transport._world._players[game._transport.my_id()]
-	player["level"] = 40
+	player["level"] = 70
+	player["job_tier"] = 2
 	player["skill_points"] = 5
 	game._transport.send(&"learnSkill", {"skill": "frost_pillar"})
 	game._transport.send(&"setSkillBar", {"bar": ["frost_pillar"]})

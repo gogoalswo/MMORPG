@@ -237,6 +237,8 @@ var _npc_rows: VBoxContainer
 var _npc_role := ""
 var _npc_tab := ""
 var _npc_items: Array = []
+## 전직 창이 그릴 것 — `World._job_state` 가 준 그대로 (지금 단계 · 다음 전직 · 버튼이 눌리나)
+var _npc_job: Dictionary = {}
 ## 액션바 4칸. 눌리면 그 스킬을 쓴다
 var _bar_buttons: Array = []
 ## 칸마다 지난 프레임에 쿨타임이 돌고 있었나 — 끝나는 순간을 잡아 번쩍인다
@@ -473,6 +475,12 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			_open_gate()
 		&"zone":
 			_last_event = "%s 에 도착했습니다" % GameData.zone(str(payload.get("zone", ""))).get("name", "")
+			# 전직 버튼으로 옮겨 가면 창이 남는다 — 새 존에는 그 NPC 가 없다
+			_npc_panel.visible = false
+		&"jobAdvanced":
+			# 글은 뒤따르는 notice 가 적는다. 스킬창이 열려 있으면 잠금을 풀어 다시 그린다
+			if _skill_panel.visible:
+				_redraw_skills()
 
 
 ## 존이 바뀌어도 살아 있는 것들
@@ -3181,6 +3189,7 @@ func _redraw_skills() -> void:
 	var bar: Array = me.get("skill_bar", [])
 	var learned: Array = me.get("skills", [])
 	var level := int(me.get("level", 1))
+	var job_tier := int(me.get("job_tier", 0))
 
 	for index in _skill_cells.size():
 		var id := str(_skill_ids[index])
@@ -3189,9 +3198,16 @@ func _redraw_skills() -> void:
 		_fill_skill_cell(cell, id, "")
 		# 안 배운 것만 "Lv.N 습득". 배웠으면 지운다. 장착 번호는 적지 않는다 — 번호는 퀵슬롯에 있다
 		var badge: Label = cell.find_child("badge", true, false)
-		badge.text = "" if id in learned else "Lv.%d 습득" % int(skill.get("reqLevel", 1))
-		# 아직 배울 수 없는 것은 흐리게
-		var open: bool = id in learned or Skills.can_learn(skill, job, level)
+		# 전직이 모자라면 "N차 전직" — 레벨보다 이것이 먼저 막는다
+		var tier := Skills.tier_of(skill)
+		if id in learned and tier <= job_tier:
+			badge.text = ""
+		elif tier > job_tier:
+			badge.text = "%d차 전직" % tier
+		else:
+			badge.text = "Lv.%d 습득" % int(skill.get("reqLevel", 1))
+		# 아직 배울 수 없는 것은 흐리게 (배웠어도 전직 전이면 못 쓴다)
+		var open: bool = (id in learned and tier <= job_tier) or Skills.can_learn(skill, job, level, job_tier)
 		cell.modulate = Color.WHITE if open else Color(0.5, 0.5, 0.5)
 		cell.get_node("pick").visible = id == _skill_pick
 
@@ -3206,8 +3222,10 @@ func _redraw_skills() -> void:
 	_skill_name.text = str(skill.get("name", ""))
 	# 범위기는 범위에 든 놈을 **전부** 친다 — 명수 상한이 없어서 "범위" 라고만 적는다
 	var targets := int(skill.get("maxTargets", 1))
-	_skill_info.text = "요구 레벨 %d\n재사용 %s초\n사거리 %s, %s" % [
+	var need_tier := Skills.tier_of(skill)
+	_skill_info.text = "요구 레벨 %d%s\n재사용 %s초\n사거리 %s, %s" % [
 		int(skill.get("reqLevel", 1)),
+		" · %d차 전직" % need_tier if need_tier > 0 else "",
 		str(snappedf(float(skill.get("cooldown", 0)) / 1000.0, 0.1)),
 		str(skill.get("range", 0)),
 		"대상 %d명" % targets if targets <= 1 else "범위",
@@ -3222,9 +3240,11 @@ func _redraw_skills() -> void:
 		_skill_state.text = "바꿀 칸을 누르세요"
 	elif equipped:
 		_skill_state.text = "장착 중 (%d번 칸)" % (bar.find(_skill_pick) + 1)
+	elif need_tier > job_tier:
+		_skill_state.text = "%d차 전직 후 배웁니다" % need_tier
 	elif _skill_pick in learned:
 		_skill_state.text = "배움"
-	elif Skills.can_learn(skill, job, level):
+	elif Skills.can_learn(skill, job, level, job_tier):
 		_skill_state.text = "장착하면 배웁니다"
 	else:
 		_skill_state.text = "%d레벨에 배웁니다" % int(skill.get("reqLevel", 1))
@@ -3341,6 +3361,7 @@ func _show_npc(payload: Dictionary) -> void:
 	]
 	_npc_role = role
 	_npc_items = payload.get("items", [])
+	_npc_job = payload.get("job", {})
 	_npc_tab = "buy" if role == "shop" else "enhance"
 	_redraw_npc()
 	_npc_panel.visible = true
@@ -3354,6 +3375,9 @@ func _redraw_npc() -> void:
 
 	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
 	if me.is_empty():
+		return
+	if _npc_role == "jobs":
+		_list_job()
 		return
 
 	var gold := Label.new()
@@ -3384,6 +3408,46 @@ func _redraw_npc() -> void:
 			_list_bag(me, "강화", func(index: int) -> void:
 				_transport.send(&"npcEnhance", {"index": index})
 			)
+
+
+## 전직 창 — **다음 전직 버튼 하나만** 낸다 (2차면 "3차 전직"). 레벨이 모자라면 흐린 버튼과
+## 몇 레벨에 되는지를 적는다. 누르면 `jobAdvance` 요청 — 거리·레벨·단계는 World 가 다시 본다
+func _list_job() -> void:
+	var tier := int(_npc_job.get("tier", 0))
+	var now := Label.new()
+	now.text = "지금: %s" % ("%d차 전직" % tier if tier > 0 else "전직 전")
+	_npc_rows.add_child(now)
+
+	var next: Dictionary = _npc_job.get("next", {})
+	if next.is_empty():
+		var done := Label.new()
+		done.text = "모든 전직을 마쳤습니다"
+		_npc_rows.add_child(done)
+		return
+
+	var names: Array = []
+	for id in _npc_job.get("skills", []):
+		names.append(str(Skills.all().get(str(id), {}).get("name", id)))
+	var info := Label.new()
+	info.text = "Lv.%d · 보스 %s 처치\n해금: %s" % [
+		int(next.get("level", 0)),
+		str(_npc_job.get("boss_name", "")),
+		", ".join(names) if not names.is_empty() else "아직 없음",
+	]
+	_npc_rows.add_child(info)
+
+	var button := Button.new()
+	button.name = "advance"
+	var ready := bool(_npc_job.get("ready", false))
+	button.text = "%d차 전직" % int(next.get("tier", tier + 1))
+	if not ready:
+		button.text += "  (Lv.%d 필요)" % int(next.get("level", 0))
+	button.disabled = not ready
+	button.pressed.connect(func() -> void:
+		_transport.send(&"jobAdvance", {})
+		_npc_panel.visible = false
+	)
+	_npc_rows.add_child(button)
 
 
 func _list_buy(me: Dictionary) -> void:

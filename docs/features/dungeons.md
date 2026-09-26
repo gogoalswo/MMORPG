@@ -130,7 +130,7 @@
 
 - 종류를 열 때: `DUNGEON_TYPES` 에 단계를 채우고 `open: true` → `npm run export:godot`
   → `npm test` · `npm run test:godot`. `ui_test` 의 "토벌만 열리고" 검사도 같이 고친다.
-- 존 개수가 바뀌므로 `godotExport.test.ts` 의 존 수(지금 41 = 마을 1 + 사냥터 20 + 던전 20)도 고친다.
+- 존 개수가 바뀌므로 `godotExport.test.ts` 의 존 수(지금 45 = 마을 1 + 사냥터 20 + 던전 20 + 전직 시험 4)도 고친다.
 - 보스를 던전 전용으로 세게 만들고 싶으면 몬스터 표(`monsters.ts`)에 종을 따로 만든다 —
   사냥터 보스 수치를 바꾸면 사냥터도 같이 흔들린다.
 

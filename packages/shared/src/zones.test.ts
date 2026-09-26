@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FIELD_ORDER, START_ZONE, ZONES, getSpawn, getZone } from './zones.ts';
 import { DUNGEON_TYPES, DUNGEON_ZONES } from './dungeons.ts';
+import { JOB_ADVANCES } from './jobAdvance.ts';
 import { MONSTER_KINDS } from './monsters.ts';
 import { GROUND_KINDS } from './zone.ts';
 import { MONSTER_GAP, monsterRadius, scatterSpawn, zoneHalfSize, type Solid } from './movement.ts';
@@ -69,7 +70,13 @@ test('차원문 목록이 세상의 모든 존을 덮는다', () => {
   // 목록에 없는 존은 만들어놓고 못 가는 콘텐츠가 된다.
   // 창은 마을 + FIELD_ORDER 로 줄을 만든다 (zoneGate.ts).
   // 던전 단계는 차원문이 아니라 던전 창으로 간다 (dungeons.ts)
-  const reachable = new Set<string>([START_ZONE, ...FIELD_ORDER, ...DUNGEON_ZONES]);
+  // 전직 시험은 전직 NPC 로 간다 (jobAdvance.ts)
+  const reachable = new Set<string>([
+    START_ZONE,
+    ...FIELD_ORDER,
+    ...DUNGEON_ZONES,
+    ...JOB_ADVANCES.map((a) => a.zone),
+  ]);
   assert.deepEqual([...reachable].sort(), Object.keys(ZONES).sort());
 });
 

@@ -1,6 +1,7 @@
 import type { GroundKind, ZoneDef, ZoneEnv } from './zone.ts';
 import { bossIdFor, monsterIdFor, tierLevels } from './monsters.ts';
 import { dungeonZones } from './dungeons.ts';
+import { jobAdvanceZones } from './jobAdvance.ts';
 
 /**
  * 존 배치.
@@ -194,6 +195,9 @@ const VILLAGE: ZoneDef = {
     // 말을 걸 수 있는 세 사람. 스폰 지점에서 걸어서 바로 닿는 거리에 둔다.
     { name: '상인 보리스', job: 'mage', look: 'merchant', x: -7, z: 4, role: 'shop', title: '상점' },
     { name: '대장장이 군터', job: 'fighter', look: 'smith', x: 0, z: 6.5, role: 'smith', title: '대장간' },
+    // 전직 — 차원문(4, 0) 뒤쪽. 닿는 거리(4.5) 끝에 서도 문(2.6) 밖이다.
+    // 누르면 다음 전직 버튼이 뜨고, 레벨이 되면 시험(보스)으로 보낸다 (jobAdvance.ts)
+    { name: '전직관 레온', job: 'fighter', x: 7, z: 7, role: 'jobs', title: '전직' },
 
     // 배경에 서 있는 마을 사람. 전부 다르게 생겨야 마을로 보인다.
     { name: '아네트', job: 'fighter', look: 'villager_sack', x: -8.7, z: -1.3 },
@@ -220,6 +224,8 @@ export const ZONES: Record<string, ZoneDef> = {
   ...Object.fromEntries(FIELDS.map((theme, i) => [theme.id, buildField(theme, i)])),
   // 던전 단계마다 존 하나 — 차원문 목록에는 없고 던전 창으로만 간다 (dungeons.ts)
   ...Object.fromEntries(dungeonZones(gateFor).map((zone) => [zone.id, zone])),
+  // 전직 시험마다 존 하나 — 전직 NPC 로만 간다 (jobAdvance.ts)
+  ...Object.fromEntries(jobAdvanceZones(gateFor).map((zone) => [zone.id, zone])),
 };
 
 export const START_ZONE = VILLAGE.id;

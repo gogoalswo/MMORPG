@@ -97,7 +97,8 @@ func _material(color: Color, priority: int) -> StandardMaterial3D:
 ## 자리를 **판정이 준 좌표에서** 받는 것은 고리(`select_ring.gd`)와 같다 —
 ## 그려 둔 몸에서 읽으면 그 몸을 옮기기 전인지 뒤인지에 따라 한 프레임 늦는다
 func follow(at: Vector3, ratio: float) -> void:
-	position = Vector3(at.x, _head, at.z)
+	# at.y 는 발밑 땅 높이다 (지형이 없는 존은 0)
+	position = Vector3(at.x, at.y + _head, at.z)
 	_set_ratio(ratio)
 
 

@@ -20,6 +20,7 @@ func _init() -> void:
 	_case_drop()
 	_case_equip()
 	_case_clamp()
+	_case_starter_gear()
 	Save.clear()
 
 	if _failed == 0:
@@ -248,6 +249,29 @@ func _case_equip() -> void:
 
 
 ## 저장된 옵션은 불러올 때 지금 범위로 잘린다 (2026-09-25: 관통 한 줄 최대 165 → 15%)
+## 새 캐릭터(저장 없음)는 일반 무기·갑옷을 끼고 시작한다. 저장에서 이어 온 캐릭터는 안 받는다
+func _case_starter_gear() -> void:
+	Save.clear()
+	var t := LocalTransport.new()
+	t.open("village")
+	var me: Dictionary = t._world.snapshot().players["me"]
+	_eq("시작 무기", str(me.equipped.get("weapon", {}).get("id", "")), Items.item_id(1, "weapon"))
+	_eq("시작 갑옷", str(me.equipped.get("armor", {}).get("id", "")), Items.item_id(1, "armor"))
+	_eq("시작 장비 +0", int(me.equipped.get("weapon", {}).get("enhance", -1)), 0)
+	_eq("시작 장비는 가방에 안 들어간다", me.bag.filter(func(s): return not Items.is_material(str(s.id))).size(), 0)
+	t._world.grant_starter_gear("me")
+	_eq("한 번만 준다", me.bag.filter(func(s): return not Items.is_material(str(s.id))).size(), 0)
+
+	# 키우던 캐릭터 — 무기를 벗고 저장했다가 다시 들어와도 또 주지 않는다
+	me.equipped.erase("weapon")
+	t._world.save("me")
+	var again := LocalTransport.new()
+	again.open("village")
+	var back: Dictionary = again._world.snapshot().players["me"]
+	_eq("이어 온 캐릭터는 안 받는다", back.equipped.has("weapon"), false)
+	Save.clear()
+
+
 func _case_clamp() -> void:
 	var tiers: Array = Items.option_tiers()
 	var first := str(tiers[0].key)

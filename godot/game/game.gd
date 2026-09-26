@@ -3908,7 +3908,11 @@ func _send_input(delta: float) -> void:
 
 
 ## 눌러 둔 몬스터에게 걸어가서 사거리에 들면 계속 친다.
-## 때릴 수 있는지는 **World 가 다시 본다** — 여기서 보내는 건 요청일 뿐이다
+## 때릴 수 있는지는 **World 가 다시 본다** — 여기서 보내는 건 요청일 뿐이다.
+##
+## **자동 사냥을 켜 뒀으면 `strike` 로 보내 스킬부터 쓴다** (2026-09-26 요청). 쫓는 동안은
+## 이동 입력 때문에 자동 사냥이 쉬어서, `attack` 만 보내면 평타만 나갔다. 붙는 도중에도
+## 매 프레임 보낸다 — 원거리기는 그 스킬 사거리에 들자마자 나가야 한다
 func _chase_and_hit(delta: float) -> void:
 	var snap := _transport.snapshot()
 	var me: Dictionary = snap.get("players", {}).get(_transport.my_id(), {})
@@ -3920,12 +3924,18 @@ func _chase_and_hit(delta: float) -> void:
 	var to := Vector2(mob.x - me.x, mob.z - me.z)
 	var dir := to.normalized()
 	var reach: float = float(me.stats.attackRange)
+	var auto := bool(me.get("auto", false))
 	if to.length() > reach:
 		_move(dir, delta)
+		if auto:
+			_transport.send(&"strike", {"id": _target_mob})
 		return
 	# 사거리 안이다. 제자리에서 그쪽을 보고(dt 0) 친다
 	_move(dir, 0.0)
-	_transport.send(&"attack", {})
+	if auto:
+		_transport.send(&"strike", {"id": _target_mob})
+	else:
+		_transport.send(&"attack", {})
 
 
 func _move(dir: Vector2, delta: float) -> void:

@@ -119,13 +119,14 @@ else
   echo "건너뜀: varco_archer — 원본이 없다 (궁수는 절차적 리그로 나온다)"
 fi
 
-# 격투가 ★ 2026-09-26 부터 **팬티 차림 몸**이다 (장비 부위를 입히려고 옷을 벗겼다).
-# 원화(docs/art/fighter_concept.png)를 바르코 EditImage 로 벗기고 → 주먹을 쥐게 고치고 →
-# Generate3D(T 포즈) → Rig(humanoid-fingers). 손은 편 손이다 (주먹 쥐기·이식은 걷었다, 2026-09-26).
-# 동작은 새로 뽑지 않고 **옛 몸의 클립을 옮겨 붙인다** — 옛 몸의 클립 11개를 메시 없이 담은
-# public/assets/anim/fighter_clips.glb (커밋) 를 `add-clips --retarget` 으로 새 뼈대에 입힌다.
-fetch_varco 615f33dfdc24a231f69d43926be1bcf1 fighter_bare_fingers
-node scripts/build-varco-character.mjs public/assets/models/varco_fighter.glb assets-src/models/varco/fighter_bare_fingers.glb
+# 격투가 ★ 2026-09-26 부터 **팬티 차림 몸 · 주먹 쥔 A 자세**다. 주먹 쥔 반바지 그림(2dee781b…)을
+# EditImage 로 팔을 벌린 A 자세로 고치고(4cf27dd6…) → Generate3D(**tPose 0** — T 포즈로 뽑으면 손을 편다)
+# → Rig(humanoid-fingers). 주먹이 몸에서 떨어져 있어 반바지가 팔 뼈에 묶이지 않는다.
+# 등이 적갈색으로 지어져 나와 앞 살색에 맞춘다 (fix-back-skin).
+# 동작은 **옛 몸의 클립을 옮겨 붙인다** — 몸이 T 포즈가 아니므로 `--align`(뼈 방향을 맞춘 가상 T 자세)으로.
+fetch_varco f6af3424bbea6032dc9ad9216fd986b7 fighter_apose
+node scripts/build-varco-character.mjs public/assets/models/varco_fighter.glb assets-src/models/varco/fighter_apose.glb
+node scripts/fix-back-skin.mjs public/assets/models/varco_fighter.glb
 
 # 마을 NPC 7명 (2026-09-26) — 원화(docs/art/npc/*.jpg, 격투가 원화를 결 참고로) → Generate3D(tPose 1,
 # 3만 면) → Rig(humanoid) → Animate(standing_idle_1·2 를 번갈아). 대기 하나뿐이라 오우거처럼
@@ -141,10 +142,10 @@ fetch_npc b31b48d65104023c965e641dc248a38f villager_sack   # 아네트
 fetch_npc 5748431e4991180b5d4607d688ff296f villager_apron  # 요한
 fetch_npc 20c5da3110a518f717284b5a41cc98ee villager_hood   # 릴리
 fetch_npc e15cff61633c8920a7e71da26fb0d563 villager_old    # 노인 하르트
-node scripts/add-clips.mjs public/assets/models/varco_fighter.glb public/assets/models/varco_fighter.glb public/assets/anim/fighter_clips.glb --retarget
-node scripts/add-clips.mjs public/assets/models/varco_fighter.glb public/assets/models/varco_fighter.glb public/assets/anim/fighter_moves.glb --retarget
-# 대기는 새 몸에서 블렌더로 지었다 (scripts/blender/fighter_idle.py → 커밋된 fighter_idle.glb) — 같은 뼈대라 그대로 붙인다
-node scripts/add-clips.mjs public/assets/models/varco_fighter.glb public/assets/models/varco_fighter.glb public/assets/anim/fighter_idle.glb
+node scripts/add-clips.mjs public/assets/models/varco_fighter.glb public/assets/models/varco_fighter.glb public/assets/anim/fighter_clips.glb --align
+node scripts/add-clips.mjs public/assets/models/varco_fighter.glb public/assets/models/varco_fighter.glb public/assets/anim/fighter_moves.glb --align
+# 대기는 편 손 T 포즈 몸에서 블렌더로 지었다 (scripts/blender/fighter_idle.py → 커밋된 fighter_idle.glb) — 그 뼈대에서 옮긴다
+node scripts/add-clips.mjs public/assets/models/varco_fighter.glb public/assets/models/varco_fighter.glb public/assets/anim/fighter_idle.glb --align
 
 # 장비 — 등급마다 갑옷·투구·신발 (2026-09-26). 바르코가 몸 그림 + 그 등급 아이콘 셋으로 장비 입은
 # 격투가를 뽑아 humanoid-fingers 로 리깅한 것 → build-gear-parts.mjs 가 부위를 떼어 우리 뼈대로 옮긴다.

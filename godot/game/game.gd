@@ -241,6 +241,13 @@ var _npc_items: Array = []
 var _bar_buttons: Array = []
 ## 칸마다 지난 프레임에 쿨타임이 돌고 있었나 — 끝나는 순간을 잡아 번쩍인다
 var _bar_cooling: Array = []
+## 물약 칸 — 퀵슬롯 바로 옆. 누르면 마신다. 쿨타임·자동 기준은 스냅샷(me.potion_*)만 보고 그린다
+var _potion_cell: PanelContainer
+## 지난 프레임에 물약 쿨타임이 돌고 있었나 — 끝나는 순간 번쩍인다
+var _potion_cooling := false
+## 물약 설정 창 — 저절로 마실 HP % 를 고른다 (`_potion_step`)
+var _potion_panel: PanelContainer
+var _potion_pct_label: Label
 ## 테스트 스위치 단추 — 이름 → Button
 var _switch_buttons: Dictionary = {}
 ## 테스트 무적 단추. 글자는 **스냅샷(me.invincible)** 만 보고 그린다 (자동사냥과 같다)
@@ -377,11 +384,13 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 	match name:
 		&"hit":
 			_show_hit(payload)
+			# 회복(물약·회복기)은 맞은 게 아니다 — 움찔 동작을 틀지 않는다
+			var healed := bool(payload.get("heal", false))
 			if str(payload.get("target_kind", "")) == "player" \
-					and str(payload.get("target", "")) == _transport.my_id() \
+					and str(payload.get("target", "")) == _transport.my_id() and not healed \
 					and int(payload.get("amount", 0)) > 0 and not bool(payload.get("killed", false)):
 				_start_hit()
-			var who := "맞음" if payload.get("target_kind", "") == "player" else "피해"
+			var who := "회복" if healed else "맞음" if payload.get("target_kind", "") == "player" else "피해"
 			_last_event = "%s %d%s%s" % [
 				who,
 				payload.get("amount", 0),
@@ -561,6 +570,7 @@ func _build_persistent() -> void:
 	_build_test_switches()
 	_build_bag_panel()
 	_build_char_panel()
+	_build_potion_panel()
 	_build_debug_panel()
 	_enhance = EnhancePopup.make(self)
 	_ui_root.add_child(_enhance)
@@ -580,6 +590,7 @@ func _build_persistent() -> void:
 	_close_button(_compare_panel, func() -> void: _compare_panel.visible = false, 0)
 	_close_button(_crystal_panel, _close_crystal, 0)
 	_close_button(_char_panel, _toggle_char, 0)
+	_close_button(_potion_panel, _toggle_potion_panel, 0)
 	_close_button(_skill_panel, _toggle_skills)
 	_close_button(_npc_panel, func() -> void: _npc_panel.visible = false)
 
@@ -2320,6 +2331,37 @@ func _build_skill_bar() -> void:
 		_bar_buttons.append(cell)
 		_bar_cooling.append(false)
 
+	# 물약 — 퀵슬롯 바로 옆 (2026-09-26 요청). 누르면 마시고, 오른쪽 위 "설정" 으로
+	# 저절로 마실 HP % 를 고른다. 쿨타임은 스킬 칸과 같은 어둠·바늘로 돈다 (`_refresh_potion`)
+	_potion_cell = _make_skill_cell(QUICK_CELL, "ui_quick_slot", _drink_potion, QUICK_MARGIN)
+	_potion_cell.name = "potion"
+	var potion_icon: TextureRect = _potion_cell.find_child("icon", true, false)
+	potion_icon.texture = _icon("ui_icon_potion")
+	# 아직 그림이 없어 글자로 나온다
+	if potion_icon.texture == null:
+		_potion_cell.find_child("text", true, false).text = "물약"
+	# 칸의 누름(hit)보다 **뒤에** 얹어야 이 단추가 먼저 눌린다
+	var setting := Button.new()
+	setting.name = "potion_setting"
+	setting.text = "설정"
+	setting.add_theme_font_size_override("font_size", 10)
+	setting.add_theme_constant_override("outline_size", 4)
+	setting.add_theme_color_override("font_outline_color", Color.BLACK)
+	setting.add_theme_color_override("font_color", INV_GOLD_HI)
+	setting.size_flags_horizontal = Control.SIZE_SHRINK_END
+	setting.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	for state in ["normal", "hover", "pressed", "focus"]:
+		var box := StyleBoxFlat.new()
+		box.bg_color = Color(0, 0, 0, 0.55)
+		box.border_color = Color(INV_GOLD, 0.8)
+		box.set_border_width_all(1)
+		box.set_corner_radius_all(3)
+		box.set_content_margin_all(2)
+		setting.add_theme_stylebox_override(state, box)
+	setting.pressed.connect(_toggle_potion_panel)
+	_potion_cell.add_child(setting)
+	dock.add_child(_potion_cell)
+
 	# 자동사냥도 같은 칸이다 — 엄지가 퀵슬롯과 같은 높이에서 닿는다 (2026-09-19 요청).
 	# 켜지면 칸 위에서 화살표 고리가 돈다
 	# 퀵슬롯에서 한 뼘 띄운다 — 붙여 두면 다섯 번째 스킬 칸으로 보인다
@@ -4028,6 +4070,7 @@ func _draw_state() -> void:
 
 	_refresh_status(me)
 	_refresh_bar(me)
+	_refresh_potion(me)
 	_refresh_auto(me)
 	_refresh_invincible(me)
 
@@ -4273,6 +4316,94 @@ func _refresh_bar(me: Dictionary) -> void:
 		if _bar_cooling[slot] and not cooling:
 			_flash_ready(cell)
 		_bar_cooling[slot] = cooling
+
+
+## 물약 칸 — 쿨타임(어둠·바늘·남은 초)과 아래 배지(저절로 마시는 HP %)를 스냅샷으로 그린다
+func _refresh_potion(me: Dictionary) -> void:
+	var left := int(me.get("potion_ready_at", 0)) - Time.get_ticks_msec()
+	var cooling := left > 0
+	var cool: TextureProgressBar = _potion_cell.find_child("cool", true, false)
+	var edge: CoolEdge = _potion_cell.find_child("edge", true, false)
+	var secs: Label = _potion_cell.find_child("secs", true, false)
+	cool.visible = cooling
+	edge.visible = cooling
+	if cooling:
+		var total := maxf(float(GameData.combat().get("potionCooldownMs", 10000)), float(left))
+		cool.value = left / total
+		edge.ratio = cool.value
+		edge.queue_redraw()
+		secs.text = "%.1f" % (left / 1000.0) if left < 1000 else str(ceili(left / 1000.0))
+	else:
+		secs.text = ""
+	if _potion_cooling and not cooling:
+		_flash_ready(_potion_cell)
+	_potion_cooling = cooling
+	var pct := int(me.get("potion_pct", 0))
+	_potion_cell.find_child("badge", true, false).text = "HP %d%%" % pct if pct > 0 else "자동 끔"
+	if _potion_panel.visible:
+		_potion_pct_label.text = "HP %d%% 이하" % pct if pct > 0 else "자동 끔"
+
+
+func _drink_potion() -> void:
+	_transport.send(&"potion", {})
+
+
+## 물약 설정 창 — 저절로 마실 HP % 를 −/+ 로 고른다. 값은 판정(`World.set_potion_pct`)이
+## 자르고 저장한다. 창은 스냅샷(me.potion_pct)만 보고 글자를 바꾼다
+func _build_potion_panel() -> void:
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ui_root.add_child(center)
+	_potion_panel = _window_panel()
+	_potion_panel.name = "potion_panel"
+	center.add_child(_potion_panel)
+
+	var side := VBoxContainer.new()
+	side.custom_minimum_size = Vector2(300, 0)
+	side.add_theme_constant_override("separation", 12)
+	_potion_panel.add_child(side)
+	_window_title(side, "물약 설정", 20)
+	side.add_child(_inv_label("HP 가 이만큼 떨어지면 물약을 저절로 마신다", 14, INV_TEXT))
+
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 12)
+	side.add_child(row)
+	var down := _inv_button("−", _potion_step.bind(-1))
+	down.name = "potion_down"
+	row.add_child(down)
+	_potion_pct_label = _inv_label("", 20, INV_GOLD_HI)
+	_potion_pct_label.custom_minimum_size = Vector2(110, 0)
+	_potion_pct_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	row.add_child(_potion_pct_label)
+	var up := _inv_button("+", _potion_step.bind(1))
+	up.name = "potion_up"
+	row.add_child(up)
+
+	var rules := GameData.combat()
+	side.add_child(_inv_label(
+		"쿨타임 %d초 · 최대 HP %d%% 회복 · 칸을 누르면 바로 마신다" % [
+			int(rules.get("potionCooldownMs", 10000)) / 1000,
+			roundi(float(rules.get("potionHealRatio", 0.3)) * 100.0),
+		],
+		12, INV_GOLD,
+	))
+
+
+func _toggle_potion_panel() -> void:
+	_potion_panel.visible = not _potion_panel.visible
+	if _potion_panel.visible:
+		_potion_panel.get_parent().move_to_front()
+		_refresh_potion(_me())
+
+
+## −/+ 한 번 — 설정 폭(10%p)만큼. 0 아래로 내리면 "자동 끔"
+func _potion_step(dir: int) -> void:
+	var rules := GameData.combat()
+	var step := int(rules.get("potionAutoStep", 10))
+	var pct := clampi(int(_me().get("potion_pct", 0)) + dir * step, 0, int(rules.get("potionAutoMax", 90)))
+	_transport.send(&"potionPct", {"pct": pct})
 
 
 ## 쿨타임이 끝났다 — 칸이 번쩍이며 살짝 튀었다 가라앉는다

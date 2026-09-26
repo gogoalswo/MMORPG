@@ -268,6 +268,7 @@ func _run_scene() -> void:
 		_fail("껐는데 화살표 고리가 남아 있다")
 
 	await _case_status(game)
+	await _case_potion(game)
 	await _case_bag(game)
 	await _case_char(game)
 	await _case_bag_drag(game)
@@ -283,6 +284,70 @@ func _run_scene() -> void:
 	else:
 		print("UI: %d개 실패" % _failed)
 		quit(1)
+
+
+## 물약 칸 (2026-09-26) — 퀵슬롯 바로 옆 · 누르면 마시고 쿨타임이 돈다 · "설정" 으로 기준(HP %)을 고른다
+func _case_potion(game: Node3D) -> void:
+	var me: Dictionary = game._me()
+	# 앞 대목(`_case_status`)이 막대를 보려고 자동 물약을 끄고 HP 를 반으로 뒀다 —
+	# 채운 뒤에 처음 값으로 되돌린다 (반인 채로 켜면 그 자리에서 마셔 쿨타임이 돈다)
+	me.hp = int(me.stats.maxHp)
+	game._transport.send(&"potionPct", {"pct": int(GameData.combat().get("potionAutoDefault", 50))})
+	await process_frame
+	var cell: Control = game._potion_cell
+	var last: Rect2 = game._bar_buttons[game._bar_buttons.size() - 1].get_global_rect()
+	var rect := cell.get_global_rect()
+	if absf(rect.get_center().y - last.get_center().y) > 2.0 or rect.position.x < last.end.x \
+			or rect.position.x - last.end.x > 12.0:
+		_fail("물약 칸이 퀵슬롯 바로 옆이 아니다: 물약 %s · 마지막 퀵슬롯 %s" % [rect, last])
+	if rect.end.x > game._auto_cell.get_global_rect().position.x:
+		_fail("물약 칸이 자동사냥 칸과 겹친다")
+	var badge: Label = cell.find_child("badge", true, false)
+	if badge.text != "HP %d%%" % int(me.potion_pct):
+		_fail("물약 배지가 '%s' 다" % badge.text)
+
+	# 설정 — 창이 뜨고 +/− 가 기준을 10%p 씩 옮긴다 (판정이 자른 값이 글자로 돌아온다)
+	var setting: Button = cell.find_child("potion_setting", true, false)
+	if not rect.encloses(setting.get_global_rect()):
+		_fail("설정 단추가 물약 칸 밖이다: %s" % setting.get_global_rect())
+	setting.pressed.emit()
+	await process_frame
+	var panel: Control = game._potion_panel
+	if not panel.visible:
+		_fail("설정을 눌렀는데 창이 안 떴다")
+	var start := int(me.potion_pct)
+	panel.find_child("potion_up", true, false).pressed.emit()
+	await process_frame
+	if int(me.potion_pct) != start + 10 or game._potion_pct_label.text != "HP %d%% 이하" % (start + 10):
+		_fail("+ 를 눌렀는데 기준 %d · 글자 '%s'" % [int(me.potion_pct), game._potion_pct_label.text])
+	for i in 12:
+		panel.find_child("potion_down", true, false).pressed.emit()
+		await process_frame
+	if int(me.potion_pct) != 0 or badge.text != "자동 끔":
+		_fail("끝까지 내렸는데 기준 %d · 배지 '%s'" % [int(me.potion_pct), badge.text])
+	panel.find_child("close", true, false).find_child("hit", true, false).pressed.emit()
+	await process_frame
+	if panel.visible:
+		_fail("X 를 눌렀는데 설정 창이 남았다")
+
+	# 칸을 누르면 마시고 쿨타임이 돈다
+	var max_hp := int(me.stats.maxHp)
+	me.hp = max_hp / 5
+	var before := int(me.hp)
+	cell.find_child("hit", true, false).pressed.emit()
+	await process_frame
+	var cool: Control = cell.find_child("cool", true, false)
+	var secs: Label = cell.find_child("secs", true, false)
+	if int(me.hp) <= before:
+		_fail("물약 칸을 눌렀는데 HP 가 %d 그대로다" % before)
+	if not cool.visible or secs.text == "":
+		_fail("마셨는데 쿨타임이 안 돈다 (어둠 %s · 초 '%s')" % [cool.visible, secs.text])
+	print("  물약 칸: %s · 설정 %d%%→0 · 눌러서 HP %d → %d, 쿨 %s초" % [rect, start, before, int(me.hp), secs.text])
+	# 뒤 대목이 HP 를 깎아 보므로 되돌려 둔다
+	me.potion_ready_at = 0
+	me.hp = max_hp
+	game._transport.send(&"potionPct", {"pct": start})
+	await process_frame
 
 
 ## 퀵슬롯 위 묶음과 오른쪽 위 메뉴 — 자리, 숫자, 누르면 창이 열리나.
@@ -310,6 +375,8 @@ func _case_status(game: Node3D) -> void:
 		_fail("경험치 게이지 최대치가 %d 이어야 하는데 %d" % [need, game._exp_bar.max_value])
 
 	# 막대가 줄어든다 — 반쯤 깎아 보고 채움 폭이 아니라 값으로 본다
+	# 자동 물약은 끈다 — 켜 두면 반(50%)에서 저절로 마셔 막대가 도로 찬다
+	me.potion_pct = 0
 	me.hp = int(me.stats.maxHp) / 2
 	await process_frame
 	if game._hp_bar.value != float(me.hp):

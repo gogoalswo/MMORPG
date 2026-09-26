@@ -42,6 +42,8 @@ static func write(zone_id: String, player: Dictionary) -> void:
 		"skill_upgrades": player.get("skill_upgrades", {}),
 		# 붙기 전까지 쌓인 경험치 `{ 스킬 id: { 강화 id: 경험치 } }` — 이것도 없던 칸이다
 		"skill_upgrade_exp": player.get("skill_upgrade_exp", {}),
+		# 물약을 저절로 마시는 기준(HP %) — 없던 칸이라 옛 저장은 처음 값(50)으로 읽힌다
+		"potion_pct": player.get("potion_pct", 50),
 	}, "\t"))
 	file.close()
 

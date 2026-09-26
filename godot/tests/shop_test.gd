@@ -39,10 +39,24 @@ func _fail(text: String) -> void:
 	_failed += 1
 
 
+## 마을에 상인·대장장이가 없다 (2026-09-26 에 뺐다) — 판정은 남아 있으므로 **시험용으로 세운다.**
+## 존 표는 GameData 가 한 벌만 쥐고 있어 복사해서 고친다 (안 그러면 다른 테스트로 샌다)
+const SHOP_NPCS := [
+	{"name": "상인 보리스", "job": "mage", "x": -7.0, "z": 4.0, "role": "shop", "title": "상점"},
+	{"name": "대장장이 군터", "job": "fighter", "x": 0.0, "z": 6.5, "role": "smith", "title": "대장간"},
+]
+
+
+static func stand_shops(w: World) -> void:
+	w.zone = w.zone.duplicate(true)
+	w.zone["npcs"] = w.zone.get("npcs", []) + SHOP_NPCS.duplicate(true)
+
+
 ## 상인(-7, 4) 또는 대장장이(0, 6.5) 옆에 세운다
 func _at(role: String) -> Array:
 	var w := World.new()
 	w.open("village")
+	stand_shops(w)
 	w.join("me")
 	var me: Dictionary = w.snapshot().players["me"]
 	if role == "shop":

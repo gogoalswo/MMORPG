@@ -191,19 +191,14 @@ const VILLAGE: ZoneDef = {
   spawns: { default: [0, 0] },
   // 사냥터로 나가는 유일한 문. 사냥터에 선 것과 같은 자리·같은 색이다.
   gate: gateFor(),
+  // **전직관 한 명만 선다** (2026-09-26 요청: "마을에 불필요한 NPC들은 제거해. 지금은 전직
+  // 교관만 있으면 되겠어"). 상인·대장장이·마을 사람 넷을 뺐다. 상점·대장간 판정(`World`)과
+  // 창(`NpcPanel`), 모델(`merchant`·`smith`·`villager_*`)은 남아 있다 — 줄만 되살리면 선다
+  // → docs/features/npc-town.md
   npcs: [
-    // 말을 걸 수 있는 세 사람. 스폰 지점에서 걸어서 바로 닿는 거리에 둔다.
-    { name: '상인 보리스', job: 'mage', look: 'merchant', x: -7, z: 4, role: 'shop', title: '상점' },
-    { name: '대장장이 군터', job: 'fighter', look: 'smith', x: 0, z: 6.5, role: 'smith', title: '대장간' },
     // 전직 — 차원문(4, 0) 뒤쪽. 닿는 거리(4.5) 끝에 서도 문(2.6) 밖이다.
     // 누르면 다음 전직 버튼이 뜨고, 레벨이 되면 시험(보스)으로 보낸다 (jobAdvance.ts)
     { name: '전직관 레온', job: 'fighter', look: 'trainer', x: 7, z: 7, role: 'jobs', title: '전직' },
-
-    // 배경에 서 있는 마을 사람. 전부 다르게 생겨야 마을로 보인다.
-    { name: '아네트', job: 'fighter', look: 'villager_sack', x: -8.7, z: -1.3 },
-    { name: '요한', job: 'mage', look: 'villager_apron', x: -6.2, z: -3.8, hp: 72 },
-    { name: '릴리', job: 'archer', look: 'villager_hood', x: -3.8, z: -6.2 },
-    { name: '노인 하르트', job: 'archer', look: 'villager_old', x: -9, z: -12 },
   ],
   env: {
     skyColor: '#b9c9d8',

@@ -65,15 +65,15 @@ func _case_rig() -> void:
 		[tris.get("helmet1"), tris.get("helmet4"), tris.get("helmet7")],
 		[tris.get("boots1"), tris.get("boots4"), tris.get("boots7")]])
 
-	# 주먹 — 손가락 뼈를 말아 쥐고 있어야 한다 (가운데 마디가 60° 넘게 굽었나)
+	# 손은 편 손, 대기는 블렌더로 새 몸에 지은 3초짜리 (2026-09-26 — 주먹 쥐기·이식은 걷었다)
 	var skeleton: Skeleton3D = rig.find_children("*", "Skeleton3D", true, false)[0]
-	var curled := 0
+	if rig.find_child("fists", true, false) != null:
+		_fail("이식한 주먹(fists)이 남아 있다 — 편 손으로 돌아갔다")
 	for i in skeleton.get_bone_count():
-		if skeleton.get_bone_name(i).ends_with("Finger21") or skeleton.get_bone_name(i).ends_with("Finger11"):
-			if skeleton.get_bone_rest(i).basis.get_rotation_quaternion().get_angle() > deg_to_rad(60):
-				curled += 1
-	if curled < 4:
-		_fail("손가락이 말려 있지 않다 (%d/4) — 주먹이 아니다 (scripts/curl-fingers.mjs)" % curled)
+		if skeleton.get_bone_name(i).ends_with("Finger21") and skeleton.get_bone_rest(i).basis.get_rotation_quaternion().get_angle() > deg_to_rad(30):
+			_fail("손가락이 말려 있다 — 편 손이어야 한다")
+	if not is_equal_approx(rig.clip_length("Idle"), 3.0):
+		_fail("대기가 새로 지은 3초짜리가 아니다 (%.2fs) — fighter_idle.glb 를 붙였나" % rig.clip_length("Idle"))
 
 	# 달리는 동안 부위가 몸을 따라간다 — 발 뼈가 움직여야 한다
 	rig.set_gear("boots", 3)

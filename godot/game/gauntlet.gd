@@ -17,13 +17,12 @@ extends RefCounted
 
 const DIR := "res://assets/models/"
 
-## 오른주먹 가운데와 반 크기 (이식한 주먹 메시 `fists` 의 오른손 정점 1546개 상자). 왼주먹은 x 를 뒤집는다.
-## 2026-09-26 — 바르코가 주먹을 조각한 모델에서 손을 떼어 붙였다 (`scripts/graft-fists.mjs`). 잴 때는
-## `node scripts/measure-bones.mjs <glb> RightHand --mesh fists` (몸 메시엔 뺀 편 손 정점이 남아 있다).
+## 오른손 가운데와 반 크기 (손·손가락 뼈에 묶인 정점 871개의 상자). 왼손은 x 를 뒤집는다.
+## 2026-09-26 — 주먹 이식을 걷고 **편 손**으로 돌아갔다 ("주먹은 틀려 먹은 것 같다"). 잴 때는
+## `node scripts/measure-bones.mjs <glb> RightHand --posed` (손가락 뼈 정점을 그 손 몫으로 센다).
 ## 옛 몸: (-0.011, 0.046, -0.014) ± (0.049, 0.050, 0.036)
-## (손목 꺾임을 펴고, 쥔 손가락이 뒤를 보게 팔 축으로 돌린 뒤 다시 쟀다)
-const FIST_CENTER := Vector3(-0.002, 0.044, 0.003)
-const FIST_HALF := Vector3(0.039, 0.056, 0.041)
+const FIST_CENTER := Vector3(-0.012, 0.063, -0.007)
+const FIST_HALF := Vector3(0.046, 0.063, 0.028)
 ## 손목 토시 — 아래팔 정점이 손목에서 반지름 0.041
 const CUFF_Y := -0.028
 const CUFF_R := 0.046

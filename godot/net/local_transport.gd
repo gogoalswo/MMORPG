@@ -56,6 +56,8 @@ func send(message: StringName, payload: Dictionary) -> void:
 			_world.debug_gauntlets(MY_ID)
 		&"debugFillBag":
 			_world.debug_fill_bag(MY_ID)
+		&"testKit":
+			_world.grant_test_kit(MY_ID)
 		&"debugCrystals":
 			_world.debug_crystals(MY_ID, int(payload.get("count", 30)))
 		&"debugGear":

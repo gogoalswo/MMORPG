@@ -3049,6 +3049,8 @@ func _apply_play_mode() -> void:
 			_transport.send(&"invincible", {"on": true})
 			if not Skills.cooldown_off():
 				_transport.send(&"testSwitch", {"name": "cooldownOff", "on": true})
+			# 모든 장비 등급별로 하나씩(+0)과 크리스탈 300개 — 한 번만 준다 (`World.grant_test_kit`)
+			_transport.send(&"testKit", {})
 			_refresh_switches()
 			_set_cheats_open(false)
 		PlayMode.NORMAL:

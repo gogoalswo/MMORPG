@@ -1323,6 +1323,36 @@ func grant_once(player_id: String, key: String, stack: Dictionary) -> void:
 	_notice("%s %d개를 가방에 넣었다" % [Items.stack_name(stack), int(stack.get("count", 1))])
 
 
+## **테스트 모드 꾸러미** — 모든 장비를 등급별로 하나씩(등급 7 × 부위 6 = 42개, 전부 +0)과
+## 크리스탈 300개 (2026-09-26 요청: "테스트 모드에서는 인벤토리에서 모든 장비 등급별로 하나씩
+## 넣어. 0강으로. 크리스탈로 300개 넣고"). 테스트 모드로 들어올 때 부른다(`game.gd` 의
+## `_apply_play_mode`). **한 번만** 준다 — 매번 주면 들어올 때마다 가방이 42칸씩 는다.
+## 가방에 다 안 들어가면 아무것도 안 넣고 다음에 다시 준다. 옵션은 드랍처럼 그 등급대로 굴린다
+func grant_test_kit(player_id: String) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty() or "testKit" in player.get("granted", []):
+		return
+	var gear: Array = []
+	for grade in range(1, Stats.grade_count() + 1):
+		for slot in Items.slots():
+			var item := Items.get_item(Items.item_id(grade, str(slot)))
+			if not item.is_empty():
+				gear.append({
+					"id": str(item.id), "grade": grade, "enhance": 0,
+					"options": Items.roll_options(item, grade, _rng),
+				})
+	var has_crystal := player.bag.any(func(held: Dictionary) -> bool:
+		return str(held.get("id", "")) == Items.crystal_id())
+	if player.bag.size() + gear.size() + (0 if has_crystal else 1) > Items.bag_size():
+		_notice("가방이 모자라 테스트 장비를 못 넣었다 — 비우고 다시 들어오면 넣는다")
+		return
+	player.bag.append_array(gear)
+	_give(player, {"id": Items.crystal_id(), "count": 300})
+	player.granted.append("testKit")
+	_inventory_changed(player)
+	_notice("테스트: 장비 %d개(+0)와 크리스탈 300개를 넣었다" % gear.size())
+
+
 ## --- 스킬 강화 ---
 
 ## 스킬창에서 **고른 강화에 경험치북 한 권을 넣는다** — 그 스킬의 `slot` 번째(0 부터)

@@ -38,7 +38,7 @@ func _run() -> void:
 	await _case(PlayMode.NORMAL)
 	PlayMode.current = ""
 	if _failed == 0:
-		print("  테스트 모드: 무적·쿨타임 0 켬, 목록 접힘 · 일반 모드: 전부 끔, 목록 숨김")
+		print("  테스트 모드: 무적·쿨타임 0 켬, 목록 접힘, 장비 42종·크리스탈 300 · 일반 모드: 전부 끔, 목록 숨김")
 	quit(1 if _failed > 0 else 0)
 
 
@@ -60,7 +60,25 @@ func _case(mode: String) -> void:
 		_fail("%s: 치트 여닫기 단추가 %s 이어야 한다" % [mode, "보여야" if test else "숨어야"])
 	if test and not game._invincible_button.text.ends_with("켬"):
 		_fail("테스트 모드인데 무적 단추 글자가 켬이 아니다: %s" % game._invincible_button.text)
+	if test:
+		_check_test_kit(me)
 	# 다음 경우를 위해 되돌린다 — 쿨타임 스위치는 표(static)라 장면을 치워도 남는다
 	Skills.set_switch("cooldownOff", false)
 	game.queue_free()
 	await process_frame
+
+
+## 테스트 모드 꾸러미 — 모든 장비 등급별로 하나씩(+0), 크리스탈 300개 (2026-09-26)
+func _check_test_kit(me: Dictionary) -> void:
+	var seen := {}
+	var crystals := 0
+	for stack in me.get("bag", []):
+		if str(stack.id) == Items.crystal_id():
+			crystals += int(stack.get("count", 1))
+		elif int(stack.get("enhance", 0)) == 0:
+			seen[str(stack.id)] = true
+	var want := Stats.grade_count() * Items.slots().size()
+	if seen.size() != want:
+		_fail("테스트 모드: +0 장비가 %d종이어야 한다 — %d종" % [want, seen.size()])
+	if crystals < 300:
+		_fail("테스트 모드: 크리스탈이 300개 이상이어야 한다 — %d개" % crystals)

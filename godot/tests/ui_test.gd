@@ -1211,8 +1211,12 @@ func _push_move(at: Vector2, mask: int) -> void:
 ## 퀵슬롯과 스킬창 — 자리, 크기, 그림, 장착·해제·바꾸기.
 ## 창은 **왼쪽이 설명, 오른쪽이 고르기** 다 (2026-09-19 요청)
 ## **설계 재현 창** — 문서 9장 5번의 디버그 수단. 눌러서 열고, 값을 바꾸면
-## 캐릭터가 실제로 그 조건으로 서는지 본다 (화면만 바뀌고 판정이 안 따라오면 쓸모없다)
+## 캐릭터가 실제로 그 조건으로 서는지 본다 (화면만 바뀌고 판정이 안 따라오면 쓸모없다).
+## **열기만 해서는 캐릭터가 안 바뀌어야 한다** (2026-09-26 — 열자마자 100레벨이 됐다)
 func _case_design_panel(game: Node3D) -> void:
+	var start: Dictionary = game._transport.snapshot().get("players", {}).get("me", {})
+	var start_level := int(start.get("level", 0))
+	var start_equipped: Dictionary = start.get("equipped", {}).duplicate(true)
 	game._toggle_debug()
 	await game.get_tree().process_frame
 	if not game._debug_panel.visible:
@@ -1222,8 +1226,18 @@ func _case_design_panel(game: Node3D) -> void:
 		_fail("설계 창이 비어 있다")
 
 	var me: Dictionary = game._transport.snapshot().get("players", {}).get("me", {})
+	if int(me.get("level", 0)) != start_level or me.get("equipped", {}) != start_equipped:
+		_fail("창을 열기만 했는데 캐릭터가 바뀌었다 (Lv%d -> Lv%d)" % [start_level, int(me.get("level", 0))])
+	if game._debug_level != start_level:
+		_fail("레벨 칸이 지금 레벨이 아니다 (%d ≠ %d)" % [game._debug_level, start_level])
+
+	# 증감 단추를 눌러야 그 조건으로 선다
+	game._debug_level = clampi(start_level + 10, 1, 200)
+	game._apply_debug()
+	await game.get_tree().process_frame
+	me = game._transport.snapshot().get("players", {}).get("me", {})
 	if int(me.get("level", 0)) != game._debug_level:
-		_fail("창을 열었는데 레벨이 안 맞춰졌다 (%d ≠ %d)" % [int(me.get("level", 0)), game._debug_level])
+		_fail("단추를 눌렀는데 레벨이 안 맞춰졌다 (%d ≠ %d)" % [int(me.get("level", 0)), game._debug_level])
 	if me.get("equipped", {}).size() != 6:
 		_fail("여섯 칸이 안 찼다 (%d)" % me.get("equipped", {}).size())
 

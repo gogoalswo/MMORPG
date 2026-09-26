@@ -877,17 +877,27 @@ func _debug_row(label: String, on_step: Callable, steps: Array) -> HBoxContainer
 	return row
 
 
+## **열기만 해서는 캐릭터를 건드리지 않는다** (2026-09-26 요청: "버튼 누른다고 세팅을
+## 바꾸지 마"). 예전에는 여는 순간 `debugGear` 를 보내 100레벨·4등급 풀세트로 갈아입혔다.
+## 열 때는 레벨 칸을 지금 레벨에 맞추고 값만 찍는다 — 증감 단추를 눌러야 바뀐다
 func _toggle_debug() -> void:
 	_debug_panel.visible = not _debug_panel.visible
 	if _debug_panel.visible:
-		_apply_debug()
+		var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
+		_debug_level = int(me.get("level", _debug_level))
+		_refresh_debug()
 
 
-## 지금 값으로 캐릭터를 세우고, 설계가 말하는 값을 함께 찍는다
+## 지금 값으로 캐릭터를 세우고 다시 찍는다 — 증감 단추만 부른다
 func _apply_debug() -> void:
 	_transport.send(&"debugGear", {
 		"level": _debug_level, "grade": _debug_grade, "enhance": _debug_enhance
 	})
+	_refresh_debug()
+
+
+## 지금 캐릭터 스탯과 설계가 말하는 값을 함께 찍는다 (캐릭터는 안 바꾼다)
+func _refresh_debug() -> void:
 	var level := _debug_level
 	var mon := Stats.monster(level)
 	var ref := Stats.ref_player(level)
@@ -3051,6 +3061,8 @@ func _apply_play_mode() -> void:
 				_transport.send(&"testSwitch", {"name": "cooldownOff", "on": true})
 			# 모든 장비 등급별로 하나씩(+0)과 크리스탈 300개 — 한 번만 준다 (`World.grant_test_kit`)
 			_transport.send(&"testKit", {})
+			# 200레벨로 시작한다 — 한 번만 (`World.grant_test_level`)
+			_transport.send(&"testLevel", {})
 			_refresh_switches()
 			_set_cheats_open(false)
 		PlayMode.NORMAL:

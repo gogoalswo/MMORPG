@@ -39,7 +39,7 @@ func _run() -> void:
 	await _case(PlayMode.NORMAL)
 	PlayMode.current = ""
 	if _failed == 0:
-		print("  초기화 단추: 두 번에 지움 · 테스트 모드: 무적·쿨타임 0 켬, 목록 접힘, 장비 42종·크리스탈 300 · 일반 모드: 전부 끔, 목록 숨김")
+		print("  초기화 단추: 두 번에 지움 · 테스트 모드: 무적·쿨타임 0 켬, 목록 접힘, 장비 42종·크리스탈 300·Lv200 · 일반 모드: 전부 끔, 목록 숨김")
 	quit(1 if _failed > 0 else 0)
 
 
@@ -63,6 +63,7 @@ func _case(mode: String) -> void:
 		_fail("테스트 모드인데 무적 단추 글자가 켬이 아니다: %s" % game._invincible_button.text)
 	if test:
 		_check_test_kit(me)
+		await _check_test_level(game, me)
 	# 다음 경우를 위해 되돌린다 — 쿨타임 스위치는 표(static)라 장면을 치워도 남는다
 	Skills.set_switch("cooldownOff", false)
 	game.queue_free()
@@ -88,6 +89,20 @@ func _case_reset() -> void:
 			_fail("지운 뒤에도 초기화 단추가 켜져 있다")
 	start.queue_free()
 	await process_frame
+
+
+## 테스트 모드는 200레벨로 시작한다 — 한 번만 (2026-09-26). 설계 창으로 낮춘 뒤
+## 다시 들어와도 200 으로 되돌아가면 안 된다
+func _check_test_level(game: Node3D, me: Dictionary) -> void:
+	var want := mini(200, Stats.max_level())
+	if int(me.get("level", 0)) != want:
+		_fail("테스트 모드: Lv%d 로 시작해야 한다 — Lv%d" % [want, int(me.get("level", 0))])
+	game._transport.send(&"debugGear", {"level": 50, "grade": 1, "enhance": 0})
+	game._transport.send(&"testLevel", {})
+	await process_frame
+	var again := int(game._transport.snapshot().players[game._transport.my_id()].get("level", 0))
+	if again != 50:
+		_fail("테스트 모드: 200레벨은 한 번만 줘야 한다 — 50 으로 낮췄는데 Lv%d" % again)
 
 
 ## 테스트 모드 꾸러미 — 모든 장비 등급별로 하나씩(+0), 크리스탈 300개 (2026-09-26)

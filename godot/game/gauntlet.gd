@@ -21,9 +21,9 @@ const DIR := "res://assets/models/"
 ## 2026-09-26 — 바르코가 주먹을 조각한 모델에서 손을 떼어 붙였다 (`scripts/graft-fists.mjs`). 잴 때는
 ## `node scripts/measure-bones.mjs <glb> RightHand --mesh fists` (몸 메시엔 뺀 편 손 정점이 남아 있다).
 ## 옛 몸: (-0.011, 0.046, -0.014) ± (0.049, 0.050, 0.036)
-## (손목 꺾임을 펴고 다시 쟀다 — 이제 주먹이 손 뼈 축 위에 곧게 놓인다)
-const FIST_CENTER := Vector3(-0.003, 0.044, -0.003)
-const FIST_HALF := Vector3(0.045, 0.056, 0.037)
+## (손목 꺾임을 펴고, 쥔 손가락이 뒤를 보게 팔 축으로 돌린 뒤 다시 쟀다)
+const FIST_CENTER := Vector3(-0.002, 0.044, 0.003)
+const FIST_HALF := Vector3(0.039, 0.056, 0.041)
 ## 손목 토시 — 아래팔 정점이 손목에서 반지름 0.041
 const CUFF_Y := -0.028
 const CUFF_R := 0.046

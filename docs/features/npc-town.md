@@ -7,6 +7,37 @@
 **상점·전직은 `npcDialog`, 대장간은 `craftWindow`** 로 갈린다.
 대장간은 2026-09-20 에 제작을 걷으면서 **강화 하나만** 남았다.
 
+## 외형 ★ (2026-09-26 — 바르코 모델)
+
+요청: "마을에 있는 NPC들 모델링을 만들어". 그 전까지 고도에서는 **기둥 + 이름표**였다.
+마을 7명이 전부 제 모델로 서서 **대기 동작**을 튼다. 외형은 코드로 짓지 않는다(CLAUDE.md).
+
+| look | 누구 | 키(m) | 대기 |
+|---|---|---|---|
+| `merchant` | 상인 보리스 — 녹색 털깃 외투, 동전 주머니·저울 | 1.75 | `standing_idle_1` |
+| `smith` | 대장장이 군터 — 민머리, 땋은 붉은 수염, 가죽 앞치마 | 1.95 | `standing_idle_2` |
+| `trainer` | 전직관 레온 — 은발 교관, 금 문장 남색 겉옷 + 사슬갑옷, 붉은 망토 | 1.8 | `standing_idle_1` |
+| `villager_sack` | 아네트 — 머릿수건, 등에 곡식 자루 | 1.66 | `standing_idle_2` |
+| `villager_apron` | 요한 — 제빵사 모자·흰 앞치마 | 1.8 | `standing_idle_1` |
+| `villager_hood` | 릴리 — 붉은 두건 망토, 허리에 약초 바구니 | 1.55 | `standing_idle_2` |
+| `villager_old` | 노인 하르트 — 긴 흰 수염, 숄 두른 잿빛 로브 | 1.68 | `standing_idle_1` |
+
+- **만드는 법** (바르코 워크플로우, 격투가와 같은 설정):
+  1. `GenerateImage`(`nano-banana-pro`, 9:16) — 참고 그림 = **격투가 원화**(`bffec01b…jpg`, `docs/art/fighter_concept.png`
+     와 같은 그림)로 아니메풍 채색 결을 맞춘다. 프롬프트는 사람마다 옷차림 + 공통 꼬리("정면, 팔은 몸에서 조금 떨어뜨려
+     내리고 **두 손은 비우고**, 발은 어깨너비, 흰 바탕"). 손에 든 물건은 T자세 3D 에서 뭉개지므로 소품은 **허리·등에 단다.**
+  2. **원화를 먼저 보여 주고** 3D 로 넘긴다 (원화 20 크레딧, 3D 200). 원화는 `docs/art/npc/<look>.jpg`.
+  3. `Generate3D`(`tPose` 1, 3만 면, 2048) → `Rig`(`humanoid`) → `Animate`(`standing_idle_1`/`_2` 번갈아, `inPlace` 1).
+  4. 결과물 주소는 `scripts/fetch-assets.sh` 의 `fetch_npc` 줄. 대기 하나뿐이라 **오우거처럼 대기 파일을 기본 메시로도
+     쓴다** → `public/assets/models/npc_<look>.glb` (텍스처 1024, 고도로 갈 때 512).
+- **게임에서** (`game.gd` 의 존 짓기) — `Rig.create(look, NPC_HEIGHTS[look])`. 파일이 없으면 예전처럼 기둥이다.
+  **마을 가운데(0, 0)를 본다** (`rot = atan2(-x, -z)`, 모델 앞 +Z). 다 같이 숨 쉬면 복제인간이라 사람마다 클립 중간
+  다른 자리(`i × 1.7초`)에서 튼다. 대기 동작도 둘을 번갈아 줬다. 키는 `game.gd` 의 `NPC_HEIGHTS`(없으면 1.8).
+- 말 걸기 판정은 모델과 상관없다 — 누른 **바닥 점**이 NPC 자리 1.2 안이면 된다(`_npc_at`).
+- 확인: `npm run test:godot -- model` 의 `_case_npcs` — 마을 NPC 전원이 모델로 만들어지고 `Idle` 이 있고 키가 맞다.
+- 새 NPC 를 더하면: 원화 → 3D → 리깅 → 대기를 같은 설정으로 뽑고, `fetch_npc <해시> <look>` 한 줄,
+  `rig.gd` 의 `FILES`, `sync-godot-assets.mjs` 의 `MODELS`, `zones.ts` 의 `look` 을 맞춘다.
+
 ## 어디
 
 | 파일 | 역할 |

@@ -126,6 +126,21 @@ fi
 # public/assets/anim/fighter_clips.glb (커밋) 를 `add-clips --retarget` 으로 새 뼈대에 입힌다.
 fetch_varco 615f33dfdc24a231f69d43926be1bcf1 fighter_bare_fingers
 node scripts/build-varco-character.mjs public/assets/models/varco_fighter.glb assets-src/models/varco/fighter_bare_fingers.glb
+
+# 마을 NPC 7명 (2026-09-26) — 원화(docs/art/npc/*.jpg, 격투가 원화를 결 참고로) → Generate3D(tPose 1,
+# 3만 면) → Rig(humanoid) → Animate(standing_idle_1·2 를 번갈아). 대기 하나뿐이라 오우거처럼
+# 대기 파일을 기본 메시로도 쓴다. look 이름은 zones.ts 의 NpcDef.look → godot/game/rig.gd 의 FILES
+fetch_npc() { # $1=대기 결과물 해시  $2=look
+  fetch_varco "$1" "npc_$2_idle"
+  node scripts/build-varco-character.mjs "public/assets/models/npc_$2.glb" "assets-src/models/varco/npc_$2_idle.glb" "Idle=assets-src/models/varco/npc_$2_idle.glb"
+}
+fetch_npc 873b748a81947311b8ed5eedcfe17c84 merchant        # 상인 보리스
+fetch_npc 4ec93a0384f80e5d4b8c70d64d634e4f smith           # 대장장이 군터
+fetch_npc b890f4305f0990fa0ade869b9085fc5f trainer         # 전직관 레온
+fetch_npc b31b48d65104023c965e641dc248a38f villager_sack   # 아네트
+fetch_npc 5748431e4991180b5d4607d688ff296f villager_apron  # 요한
+fetch_npc 20c5da3110a518f717284b5a41cc98ee villager_hood   # 릴리
+fetch_npc e15cff61633c8920a7e71da26fb0d563 villager_old    # 노인 하르트
 node scripts/add-clips.mjs public/assets/models/varco_fighter.glb public/assets/models/varco_fighter.glb public/assets/anim/fighter_clips.glb --retarget
 node scripts/add-clips.mjs public/assets/models/varco_fighter.glb public/assets/models/varco_fighter.glb public/assets/anim/fighter_moves.glb --retarget
 # 대기는 새 몸에서 블렌더로 지었다 (scripts/blender/fighter_idle.py → 커밋된 fighter_idle.glb) — 같은 뼈대라 그대로 붙인다

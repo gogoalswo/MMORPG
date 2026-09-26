@@ -440,7 +440,8 @@ const SKILL_LIST: SkillDef[] = [
     delayMs: 720,
     castMs: 1450,
     arc: Math.PI * 2,
-    power: 5.5,
+    // 1000% · 재사용 10초 (2026-09-26 요청: 낙뢰 450%/5초 · 빙주각 700%/7초 · 천붕각 1000%/10초)
+    power: 10.0,
     maxTargets: 10,
     // 3차 전직(Lv.120)에 열린다 — 요구 레벨을 전직 레벨에 맞춰 둔다 (jobAdvance.ts)
     reqLevel: 120,
@@ -463,13 +464,13 @@ const SKILL_LIST: SkillDef[] = [
     id: 'thunder_fall',
     name: '낙뢰',
     job: 'fighter',
-    cooldown: 10000,
+    cooldown: 5000,
     castMs: 1100,
     range: 4.0,
     // **내 주위 원**이다 (2026-09-24 요청: "낙뢰 범위가 부채꼴인데 원 범위로 바꿔").
     // 처음엔 108° 부채꼴이었다 — 번개가 발밑에 떨어지는데 뒤에 선 놈이 안 맞았다
     arc: Math.PI * 2,
-    power: 4.2,
+    power: 4.5,
     maxTargets: 4,
     // 1차 전직(Lv.30)에 열린다
     reqLevel: 30,
@@ -483,17 +484,17 @@ const SKILL_LIST: SkillDef[] = [
      * 전방위(`arc` 2π)이고, 기둥이 서는 가장 바깥 고리(4.3m) + 기울기만큼이
      * 사거리(5m)다 — 기둥 끝이 사거리를 넘으면 "저기까지 맞는다" 로 읽힌다.
      *
-     * 낙뢰(Lv.30 · 12초 · 4.2 · 넷)와 천붕각(Lv.20 · 55초 · 5.5 · 열) 사이 —
+     * 낙뢰(5초 · 450% · 넷)와 천붕각(10초 · 1000% · 열) 사이 —
      * 여럿을 한꺼번에 치는 광역인데 천붕각보다 자주 쓰고 약하다.
      */
     id: 'frost_pillar',
     name: '빙주각',
     job: 'fighter',
-    cooldown: 10000,
+    cooldown: 7000,
     castMs: 1000,
     range: 5.0,
     arc: Math.PI * 2,
-    power: 4.6,
+    power: 7.0,
     maxTargets: 8,
     // 2차 전직(Lv.70)에 열린다
     reqLevel: 70,

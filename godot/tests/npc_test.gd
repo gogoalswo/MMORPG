@@ -5,6 +5,9 @@ extends SceneTree
 ##
 ##   godot --headless --path godot --script tests/npc_test.gd
 
+## 시험용 상인·대장장이를 세우는 손 — 마을에서 뺐다 (shop_test.stand_shops)
+const ShopTest := preload("res://tests/shop_test.gd")
+
 var _failed := 0
 
 
@@ -26,6 +29,7 @@ func _fail(text: String) -> void:
 func _village() -> World:
 	var w := World.new()
 	w.open("village")
+	ShopTest.stand_shops(w)
 	w.join("me")
 	return w
 
@@ -37,19 +41,19 @@ func _first(events: Array, type_name: String) -> Dictionary:
 	return {}
 
 
+## 마을에는 **전직관 한 명만** 선다 (2026-09-26 요청: "지금은 전직 교관만 있으면 되겠어")
 func _case_list() -> void:
-	var npcs: Array = _village().snapshot().get("npcs", [])
-	# 상인 · 대장장이 · 전직관(2026-09-26) + 마을 사람 넷
-	if npcs.size() != 7:
-		_fail("마을 NPC 가 7명이어야 하는데 %d명" % npcs.size())
-	var roles: Array = []
-	for npc in npcs:
-		if npc.has("role"):
-			roles.append(str(npc.role))
-	if not ("shop" in roles and "smith" in roles):
-		_fail("상점·대장간이 없다: %s" % str(roles))
+	var w := World.new()
+	w.open("village")
+	var npcs: Array = w.snapshot().get("npcs", [])
+	if npcs.size() != 1 or str(npcs[0].get("role", "")) != "jobs":
+		_fail("마을 NPC 가 전직관 한 명이 아니다: %s" % str(npcs.map(func(n): return n.get("name", ""))))
 	else:
-		print("  마을 NPC %d명, 역할 %s" % [npcs.size(), str(roles)])
+		print("  마을 NPC: %s 한 명" % npcs[0].name)
+	# 시험용으로 세운 상인이 전역 존 표로 새지 않았나 (복사해서 고친다)
+	_village()
+	if GameData.zone("village").get("npcs", []).size() != 1:
+		_fail("시험용 상인이 GameData 의 존 표로 샜다")
 
 
 func _case_talk() -> void:
@@ -160,6 +164,8 @@ func _run_scene() -> void:
 	var game: Node3D = root.get_node("Game")
 	await process_frame
 
+	# 마을에 상인이 없다 — 판정 쪽에 시험용으로 세운다 (창은 판정이 여는 대로 뜬다)
+	ShopTest.stand_shops(game._transport._world)
 	var me: Dictionary = game._transport.snapshot().players[game._transport.my_id()]
 	me.x = -7.0
 	me.z = 2.5

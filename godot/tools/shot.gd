@@ -537,6 +537,8 @@ func _npc_window(game: Node3D, which: String) -> void:
 	player["level"] = 40
 	player["gold"] = 12345
 	game._transport.send(&"debugGauntlets", {})
+	# 마을에서 뺐다 (2026-09-26) — 테스트와 같은 시험용 상인·대장장이를 판정 쪽에 세운다
+	preload("res://tests/shop_test.gd").stand_shops(game._transport._world)
 	var npc: Array = {"shop": ["상인 보리스", -5.0, 4.0], "smith": ["대장장이 군터", 0.0, 4.5]}[which]
 	player["x"] = npc[1]
 	player["z"] = npc[2]

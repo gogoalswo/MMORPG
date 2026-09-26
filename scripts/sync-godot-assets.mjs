@@ -78,6 +78,8 @@ const ICONS = [
   'ui_icon_skill.png', 'ui_icon_bag.png', 'ui_icon_auto.png', 'ui_auto_spin.png',
   // 퀵슬롯 왼쪽 물약 칸 (2026-09-26)
   'ui_icon_potion.png',
+  // 오른쪽 위 정보 · 강화 · 설계 (2026-09-26) — 그 전에는 글자로 나왔다
+  'ui_icon_character.png', 'ui_icon_enhance.png', 'ui_icon_design.png',
   // 던전 단추 — 뿔 달린 보스 머리 (2026-09-23, docs/features/dungeons.md)
   'ui_icon_dungeon.png',
   // 던전 종류 카드 그림 셋 — 토벌(보스 머리) · 시련의 탑 · 보물 창고 (2026-09-23)

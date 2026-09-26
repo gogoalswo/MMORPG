@@ -47,6 +47,10 @@ func _setup(mob_x: float, mob_z: float) -> Array:
 	var me: Dictionary = w.snapshot().players["me"]
 	me.x = 0.0
 	me.z = 0.0
+	# 새 캐릭터는 첫 스킬을 장착하고 시작한다 — 기본 공격을 보는 사례가 있어 빈손으로 둔다.
+	# 스킬을 보는 사례는 거기서 배우고 올린다
+	me.skills = []
+	me.skill_bar = []
 	var mobs: Array = w.snapshot().monsters
 	mobs.append(World.make_monster(
 		"dummy", GameData.monster_kind("mob003"), mob_x, mob_z, 10000.0, 0.0

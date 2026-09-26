@@ -2396,7 +2396,8 @@ func _build_skill_bar() -> void:
 	# 아이콘 바로 위, 글자 아래로 넣는다 — 맨 뒤에 두면 고리가 글자를 덮는다
 	_auto_cell.move_child(spin_pad, 1)
 
-	column.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM, Control.PRESET_MODE_MINSIZE, 16)
+	# 경험치 띠 위로 한 뼘 띄운다 — 16 으로 두었더니 칸 아래가 띠에 가렸다 (2026-09-26 요청)
+	column.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM, Control.PRESET_MODE_MINSIZE, EXP_GAUGE_H + 8)
 	column.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	column.grow_vertical = Control.GROW_DIRECTION_BEGIN
 
@@ -2408,20 +2409,21 @@ func _build_skill_bar() -> void:
 	# 무엇인지는 그림으로 알린다 — 그림이 없으면 글자가 대신 나온다
 	_menu_cells = [
 		# 캐릭터 정보 — 스킬 왼쪽, 메뉴 맨 앞 (2026-09-25 요청 "상세 정보창을 따로 띄우고
-		# 버튼을 만들어"). 아직 그림이 없어 글자로 나온다
+		# 버튼을 만들어"). 그림은 기사 투구 (2026-09-26)
 		_icon_button("ui_icon_character", "정보", _toggle_char),
 		_icon_button("ui_icon_skill", "스킬", _toggle_skills),
 		# 강화 — 가방 왼쪽 옆 (2026-09-24 요청 "가방 ui 옆에 강화 ui 버튼 만들어").
-		# 오른쪽 옆은 던전 자리다. 아직 그림이 없어 글자로 나온다
+		# 오른쪽 옆은 던전 자리다. 그림은 모루를 내리치는 망치 (2026-09-26)
 		_icon_button("ui_icon_enhance", "강화", _toggle_enhance),
 		# 크리스탈 강화 — 가방 바로 왼쪽 (2026-09-24 요청 "크리스탈 사용해서 강화하는 ui도 따로
 		# 버튼을 만들고 싶어. 가방 옆에"). 오른쪽 옆은 던전이라 강화를 한 칸 밀었다.
 		# UI 결 그림(`ui_icon_crystal`)이 아직 없어 가방 아이콘 `crystal.png` 를 쓴다
 		_icon_button("crystal", "크리스탈", _toggle_crystal),
 		_icon_button("ui_icon_bag", "가방", _toggle_bag),
-		# 던전 — 가방 바로 옆 (2026-09-23 요청). 아직 그림이 없어 글자로 나온다
+		# 던전 — 가방 바로 옆 (2026-09-23 요청)
 		_icon_button("ui_icon_dungeon", "던전", _toggle_dungeon),
-		_icon_button("", "설계", _toggle_debug),
+		# 설계(치트 목록) — 톱니바퀴 위 제도용 컴퍼스 (2026-09-26)
+		_icon_button("ui_icon_design", "설계", _toggle_debug),
 	]
 	for cell in _menu_cells:
 		menu.add_child(cell)

@@ -51,13 +51,13 @@ func _eq(label: String, got: int, want: int) -> void:
 func _base() -> void:
 	var one := Stats.base(1)
 	_near("Lv1 HP", one["hp"], 100.0)
-	_near("Lv1 공격", one["atk"], 10.0)
-	_near("Lv1 방어", one["df"], 10.0)
+	_near("Lv1 공격", one["atk"], 30.0)
+	_near("Lv1 방어", one["df"], 20.0)
 
 	var top := Stats.base(Stats.max_level())
 	_eq("Lv200 맨몸 HP", roundi(top["hp"]), 5146)
-	_eq("Lv200 맨몸 공격", roundi(top["atk"]), 515)
-	_eq("Lv200 맨몸 방어", roundi(top["df"]), 515)
+	_eq("Lv200 맨몸 공격", roundi(top["atk"]), 1544)
+	_eq("Lv200 맨몸 방어", roundi(top["df"]), 1029)
 
 	# 레벨 1개는 언제나 +2% — 구간마다 다르면 "장비 비중" 의 기준이 사라진다
 	for level in [2, 50, 120, 199]:

@@ -39,8 +39,8 @@ func _eq(label: String, got, want) -> void:
 func _stats() -> void:
 	var k1 := Combat.stats_for("fighter", 1)
 	_eq("격투가1 체력", k1.maxHp, 100)
-	_eq("격투가1 공격", k1.attack, 10)
-	_eq("격투가1 방어", k1.defense, 10)
+	_eq("격투가1 공격", k1.attack, 30)
+	_eq("격투가1 방어", k1.defense, 20)
 	_eq("격투가1 사거리", k1.attackRange, 2.2)
 	# 공격 간격은 설계의 직업 배수에서 온다 (격투가 0.9초)
 	_eq("격투가1 간격", k1.attackCooldown, 900.0)
@@ -48,7 +48,7 @@ func _stats() -> void:
 	# 레벨 1개는 언제나 +2% — 구간마다 다르면 "장비 비중" 의 기준이 사라진다
 	var k10 := Combat.stats_for("fighter", 10)
 	_eq("격투가10 체력", k10.maxHp, roundi(100.0 * pow(1.02, 9)))
-	_eq("격투가10 공격", k10.attack, roundi(10.0 * pow(1.02, 9)))
+	_eq("격투가10 공격", k10.attack, roundi(30.0 * pow(1.02, 9)))
 
 	# 직업은 같은 바탕에 배수만 다르다 — 마법사는 공격 1.35 / HP 0.8 / 방어 0.75
 	var m50 := Combat.stats_for("mage", 50)

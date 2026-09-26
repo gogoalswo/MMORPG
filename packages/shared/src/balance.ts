@@ -50,8 +50,8 @@ export const FIELD_SPAN = 10;
 
 /** Lv1 맨몸 기본 스탯 */
 export const HP_BASE = 100;
-export const ATK_BASE = 10;
-export const DEF_BASE = 10;
+export const ATK_BASE = 30;
+export const DEF_BASE = 20;
 
 /**
  * 레벨당 성장률 — **복리다.**

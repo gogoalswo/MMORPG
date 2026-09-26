@@ -41,16 +41,17 @@ import {
 } from './balance.ts';
 
 test('기본 스탯은 레벨당 복리 ×1.02 다', () => {
-  // 문서 2장: Lv1 HP100/공10/방10 → Lv200 맨몸 HP 5,146 / 공 515 / 방 515
+  // Lv1 HP100/공30/방20 → Lv200 맨몸 HP 5,146 / 공 1,544 / 방 1,029
+  // (문서 2장은 공10/방10 — 2026-09-26 에 공 30 · 방 20 으로 올렸다)
   const one = base(1);
   assert.equal(one.hp, 100);
-  assert.equal(one.atk, 10);
-  assert.equal(one.df, 10);
+  assert.equal(one.atk, 30);
+  assert.equal(one.df, 20);
 
   const top = base(MAX_LEVEL);
   assert.equal(Math.round(top.hp), 5146);
-  assert.equal(Math.round(top.atk), 515);
-  assert.equal(Math.round(top.df), 515);
+  assert.equal(Math.round(top.atk), 1544);
+  assert.equal(Math.round(top.df), 1029);
 
   // 레벨 1개는 언제나 +2% — 구간마다 다르면 "장비 비중" 의 기준이 사라진다
   for (const level of [2, 50, 120, 199]) {

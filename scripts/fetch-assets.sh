@@ -119,6 +119,17 @@ else
   echo "건너뜀: varco_archer — 원본이 없다 (궁수는 절차적 리그로 나온다)"
 fi
 
+# 격투가 ★ 2026-09-26 부터 **팬티 차림 몸**이다 (장비 부위를 입히려고 옷을 벗겼다).
+# 원화(docs/art/fighter_concept.png)를 바르코 EditImage 로 벗기고 → Generate3D(T 포즈) → Rig(humanoid).
+# 동작은 새로 뽑지 않고 **옛 몸의 클립을 옮겨 붙인다** — 옛 몸의 클립 11개를 메시 없이 담은
+# public/assets/anim/fighter_clips.glb (커밋) 를 `add-clips --retarget` 으로 새 뼈대에 입힌다.
+fetch_varco ac369d05ce4960504bcaa2c5dde0f482 fighter_bare_rigged
+node scripts/build-varco-character.mjs public/assets/models/varco_fighter.glb assets-src/models/varco/fighter_bare_rigged.glb
+node scripts/add-clips.mjs public/assets/models/varco_fighter.glb public/assets/models/varco_fighter.glb public/assets/anim/fighter_clips.glb --retarget
+node scripts/add-clips.mjs public/assets/models/varco_fighter.glb public/assets/models/varco_fighter.glb public/assets/anim/fighter_moves.glb --retarget
+
+# (옛 몸) 옷 입은 격투가 — 아래는 fighter_clips.glb 를 다시 뽑아야 할 때만 쓴다. 원본 넷이 있으면
+# 옛 몸을 짓고, 그 클립을 fighter_clips.glb 로 옮긴다 (메시는 버린다).
 # 격투가 — 궁수와 같은 방식. 받은 파일: 격투가-Animate-격투가-1 = 대기, -1-2 = 달리기, -1-3 = 공격, -1-4 = 사망
 # (클립 이름이 비어 있어 길이·동작 폭을 재서 가렸다 — characters-and-animation.md)
 # 공격은 #face 를 안 붙인다: 골반이 -70° 쯤 틀어진 건 격투 자세이고, 차는 발은 정면(7°)으로 나간다.
@@ -128,12 +139,10 @@ FIGHTER_CLIPS+=("Run=assets-src/models/varco/fighter_run.glb#loop#face")
 FIGHTER_CLIPS+=("Attack=assets-src/models/varco/fighter_attack.glb")
 FIGHTER_CLIPS+=("Death=assets-src/models/varco/fighter_death.glb")
 if [ -f assets-src/models/varco/fighter_idle.glb ] && [ -f assets-src/models/varco/fighter_run.glb ] && [ -f assets-src/models/varco/fighter_attack.glb ] && [ -f assets-src/models/varco/fighter_death.glb ]; then
-  node scripts/build-varco-character.mjs public/assets/models/varco_fighter.glb assets-src/models/varco/fighter_idle.glb "${FIGHTER_CLIPS[@]}"
-  # 블렌더로 지은 평타·스킬 동작을 붙인다 (커밋된 결과물이라 블렌더는 필요 없다).
-  # 동작을 고치려면 scripts/blender/fighter_moves.py → characters-and-animation.md 의 "블렌더 동작"
-  node scripts/add-clips.mjs public/assets/models/varco_fighter.glb public/assets/models/varco_fighter.glb public/assets/anim/fighter_moves.glb
+  node scripts/build-varco-character.mjs assets-src/models/varco/fighter_clothed.glb assets-src/models/varco/fighter_idle.glb "${FIGHTER_CLIPS[@]}"
+  node scripts/add-clips.mjs public/assets/anim/fighter_clips.glb public/assets/anim/fighter_moves.glb assets-src/models/varco/fighter_clothed.glb
 else
-  echo "건너뜀: varco_fighter — 원본이 없다 (격투가는 절차적 리그로 나온다)"
+  echo "건너뜀: 옛 격투가 클립 — 원본이 없다 (커밋된 fighter_clips.glb 를 그대로 쓴다)"
 fi
 
 # 오우거 5종 — 몬스터 외형. 사냥터 20곳과 보스가 다섯을 차례로 돌려 쓴다 (monsters.ts 의 TIERS[].look · BOSS_LOOKS).

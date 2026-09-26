@@ -151,9 +151,12 @@ const WIDE_TOLERANCE = new Set([
 /**
  * **색을 빼는 것.** ★ 일반 등급 무기는 "더 안 좋아 보이게" 회색조로 굽는다
  * (2026-09-23 요청). 받은 그림은 상아빛 붕대라 고급(가죽·초록)과 나란히 두면
- * 오히려 밝고 깨끗해 보였다. 밝기만 남기고 조금 어둡게(`GREY_DIM`) 한다
+ * 오히려 밝고 깨끗해 보였다. 밝기만 남기고 조금 어둡게(`GREY_DIM`) 한다.
+ * 2026-09-26 에 나머지 다섯 부위도 등급별 그림을 받아 **일반은 전부** 같은 처리를 한다
  */
-const GREY = new Set(['weapon_g1.png']);
+const GREY = new Set(
+  ['weapon', 'armor', 'helmet', 'boots', 'necklace', 'ring'].map((slot) => `${slot}_g1.png`),
+);
 const GREY_DIM = 0.8;
 
 function toGrey(data) {

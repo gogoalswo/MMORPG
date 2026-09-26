@@ -829,6 +829,13 @@ func _case_bag(game: Node3D) -> void:
 		if game._icon("weapon_g5") != null and icon != "weapon_g5":
 			_fail("전설 건틀릿 아이콘이 '%s' (weapon_g5 여야 한다)" % icon)
 		print("  건틀릿 7등급: 전설 아이콘 %s" % icon)
+		# 나머지 다섯 부위도 등급별 그림이 있으면 그걸 쓴다 (2026-09-26 — 35장)
+		for slot in ["armor", "helmet", "boots", "necklace", "ring"]:
+			for g in [1, 7]:
+				var want := "%s_g%d" % [slot, g]
+				var got: String = game._item_icon({"id": Items.item_id(g, slot), "grade": g})
+				if game._icon(want) != null and got != want:
+					_fail("%d등급 %s 아이콘이 '%s' (%s 여야 한다)" % [g, slot, got, want])
 		# 태초는 +9 — 상세 창 큰 칸 오른쪽 아래에 나와야 한다
 		game._pick_bag("bag", 6)
 		await process_frame

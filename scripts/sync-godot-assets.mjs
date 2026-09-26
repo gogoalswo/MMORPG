@@ -49,6 +49,9 @@ const ICONS = [
   // 등급별 무기 = 건틀릿 일곱 장 (2026-09-23) — `_item_icon` 이 슬롯 그림보다 먼저 찾는다
   'weapon_g1.png', 'weapon_g2.png', 'weapon_g3.png', 'weapon_g4.png',
   'weapon_g5.png', 'weapon_g6.png', 'weapon_g7.png',
+  // 나머지 다섯 부위도 등급별 일곱 장씩 (2026-09-26) — 이름은 무기와 같은 `<슬롯>_g<등급>`
+  ...['armor', 'helmet', 'boots', 'necklace', 'ring']
+    .flatMap((slot) => [1, 2, 3, 4, 5, 6, 7].map((g) => `${slot}_g${g}.png`)),
   'boots.png', 'necklace.png', 'ring.png',
   // 재료 — 크리스탈 (2026-09-23). `_item_icon` 이 재료는 id 를 그림 이름으로 쓴다
   'crystal.png',

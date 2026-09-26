@@ -180,6 +180,43 @@ fetch_icon 7dd9fcea4f4443c8d79a1bb0a7a94c7a weapon_g4 # 영웅 — 보랏빛 보
 fetch_icon 432b36454810c91498d2a86dcf5b3d92 weapon_g5 # 전설 — 용린
 fetch_icon 5cdd1dcc38b9efcdbd1ca5d3346244fb weapon_g6 # 초월 — 붉게 갈라진 검은 쇠
 fetch_icon 9cb037d770778e71703e7a9b4fe2279c weapon_g7 # 태초 — 빛나는 흰 주먹과 고리
+# 나머지 다섯 부위 × 7등급 (2026-09-26). 등급마다 같은 등급의 건틀릿 원본을 참고 그림으로
+# 물려 바르코로 만들었다 — 재질·색이 등급끼리 맞는다 (docs/features/inventory-equipment.md)
+fetch_icon 942aba995cd9802e722c5d785991e5d8 armor_g1
+fetch_icon b208db2a7c3d8f92fc42fd47a9a12b67 armor_g2
+fetch_icon b5e4848ea3cd3c526b2d40888a7a14fb armor_g3
+fetch_icon 8451956e76f591ac2d1c6c1aae9a840e armor_g4
+fetch_icon e2581c491c197332188043c5bcd18b99 armor_g5
+fetch_icon 24252cd866beb02ea44d719a9772d418 armor_g6
+fetch_icon 3e6188dbcdd79f2e9e957771e129bdd2 armor_g7
+fetch_icon 0a0f2cf6c4b4254cd6702a608300fc3d helmet_g1
+fetch_icon 85668facde84902d61ca22d484eb89db helmet_g2
+fetch_icon cbf3ac7f2d1c42cc8ecb303f58a1c4f8 helmet_g3
+fetch_icon a4cf97bed4485512cddfcf9c5dc7bf97 helmet_g4
+fetch_icon 9119f0b1ea48175dd5327c5bc136824f helmet_g5
+fetch_icon 59d2ffd558e14f12942474b63aaab68c helmet_g6
+fetch_icon 76dee2926d678ed1a5f8d32ef028fbb1 helmet_g7
+fetch_icon 560e695cd49d1525cbba5393a47ece63 boots_g1
+fetch_icon 80f6ce01a1cd8cbd7ce8650c8380ef68 boots_g2
+fetch_icon 31d3d8231155153c732d76a7e194e8f1 boots_g3
+fetch_icon 3ebf0f3cd2f96c517c69a32e1956721e boots_g4
+fetch_icon 19a31c55df2d1d795e407e083ab4843c boots_g5
+fetch_icon ca6f31c5600e855f1b3dd994806f1782 boots_g6
+fetch_icon 10759c58bd5dab1af1e3fe616e63ddea boots_g7
+fetch_icon 0700934bd673c7dc0e22040cf602de01 necklace_g1
+fetch_icon c4b13e70459a75ab49f65dee6d5caa2d necklace_g2
+fetch_icon 57f83be49ed9fcca9ecb4d4f54721acc necklace_g3
+fetch_icon bbd515233f562a91e9769ab8ef1f00a8 necklace_g4
+fetch_icon 59b61bc8b852213922341ca8f007049e necklace_g5
+fetch_icon 4392e6dbc933f42bc0d50ef5c6240a11 necklace_g6
+fetch_icon 2bda84cb934de8afbcf1138b51e812d3 necklace_g7
+fetch_icon a29f34ccc91f899c5897e740356b0286 ring_g1
+fetch_icon 240a7e95fdfd96cf3148da9428846314 ring_g2
+fetch_icon 200bf228b2a324595c4ce7c7fadda5f9 ring_g3
+fetch_icon 8078f8d06255a85568061d23e5cb2891 ring_g4
+fetch_icon e9ebc1438165a04e124f1ce6d14c0690 ring_g5
+fetch_icon 0b6d1c4c065113270b08cca56c51df74 ring_g6
+fetch_icon d568940b9d3d9f61e37c60791af11ad9 ring_g7
 fetch_icon 5c25daa856bca458f26f703fe63424f4 offhand   # 방패
 fetch_icon 756fe1b855b1e5cff5038c21253b244a helmet    # 투구
 fetch_icon 0779fa082cdcbc922c8bf8104e9212ea armor     # 갑옷

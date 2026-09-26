@@ -4039,6 +4039,10 @@ func _wear_weapon(me: Dictionary) -> void:
 		(_player as Rig).set_weapon(0)
 	else:
 		(_player as Rig).set_weapon(int(weapon.get("grade", 1)), int(weapon.get("enhance", 0)))
+	# 갑옷·투구·신발 — 그 부위 스킨을 등급으로 갈아입는다 (`Armor`)
+	for slot in Armor.SLOTS:
+		var item: Dictionary = me.get("equipped", {}).get(slot, {})
+		(_player as Rig).set_gear(slot, 0 if item.is_empty() else int(item.get("grade", 1)))
 
 
 ## 맞았다. 맞은 자리에서 터뜨리고, 맞은 몸을 붉게 물들이고, 내가 맞았으면

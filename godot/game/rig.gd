@@ -33,8 +33,10 @@ var _freeze := 0.0
 ## 지금 낀 무기 등급 (0 = 맨주먹)과 강화 수치. 둘 다 같으면 다시 짓지 않는다
 var _weapon_grade := 0
 var _weapon_enhance := 0
-## 손 뼈 이름 → BoneAttachment3D. 처음 무기를 낄 때 만든다
+## 뼈 이름 → BoneAttachment3D. 처음 무기·장비를 낄 때 만든다
 var _sockets := {}
+## 부위("armor" "helmet" "boots") → 입은 등급 (0 = 맨몸). 같으면 다시 입히지 않는다
+var _gear := {}
 
 ## 주먹 소켓이 붙는 뼈 — 건틀릿은 두 손에 한 짝씩 낀다
 const FIST_BONES := ["RightHand", "LeftHand"]
@@ -174,6 +176,19 @@ func set_weapon(grade: int, enhance := 0) -> void:
 			aura.position = Gauntlet.fist_center(left)
 			aura.scale = Vector3.ONE / get_child(0).scale.x
 			socket.add_child(aura)
+
+
+## 갑옷·투구·신발을 입힌다 — 몸에 딱 맞는 껍데기를 등급 재질로 (`Armor`). 0 이면 벗긴다.
+## 등급이 같으면 아무것도 하지 않는다 — 매 프레임 불러도 된다
+func set_gear(slot: String, grade: int) -> void:
+	if int(_gear.get(slot, 0)) == grade:
+		return
+	_gear[slot] = grade
+	Armor.wear(self, slot, grade)
+
+
+func gear_grade(slot: String) -> int:
+	return int(_gear.get(slot, 0))
 
 
 func weapon_grade() -> int:

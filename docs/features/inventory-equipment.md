@@ -281,6 +281,9 @@
 - 슬롯을 추가하면 `EQUIP_SLOTS`, `SLOT_CODE`, `bonusFor`, `FIXED_SLOT_LABEL`,
   아이콘, 창 격자를 같이 봐야 한다. 칸 이름은 `slotLabels`·`offhandNames` 로
   `items.json` 에 나가므로 `npm run export:godot` 을 다시 돌린다.
+- **장비를 끼면 캐릭터 겉모습이 바뀐다** — 무기는 주먹 소켓의 건틀릿, 갑옷·투구·신발은 몸에 입히는
+  껍데기(`godot/game/armor.gd`, 2026-09-26). 슬롯을 더하거나 칸의 `grade` 를 다르게 적으면 거기가
+  흔들린다 → [characters-and-animation.md](characters-and-animation.md) "장비 스킨"
 - **닫기는 창 오른쪽 위 X 하나다** (2026-09-20 요청 — 모든 창이 같다). 아래쪽
   "닫기" 글자 단추는 지웠고, 남은 단추는 **장착/해제** 하나뿐이다
   (`_close_button` → [ui-art-style.md](ui-art-style.md)).

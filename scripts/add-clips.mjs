@@ -16,6 +16,12 @@
  * - 뼈의 기본 자세(노드 이동·회전)가 캐릭터와 다르면 멈춘다. 채널 값은 부모 기준 절대값이라
  *   기본 자세가 다른 뼈대에서 온 값은 팔을 엉뚱한 데로 보낸다.
  * - 끝에서 아무도 안 쓰는 접근자·버퍼 조각을 치운다.
+ *
+ * `--retarget` (맨 끝에 붙인다) — **다른 몸에 같은 동작을 입힌다** (2026-09-26, 팬티 차림 격투가).
+ * 뼈 이름은 같은데 기본 자세가 다른 뼈대로 옮긴다. 채널 값을 그대로 쓰면 팔이 엉뚱한 데로
+ * 가므로, 뼈마다 **월드 회전이 기본 자세에서 얼마나 돌았나**(D = G(t)·G_rest⁻¹)를 재서
+ * 새 뼈대의 기본 자세에 똑같이 입힌다. `Root` 이동은 다리 길이 비로 줄인다.
+ * 이때는 기본 자세 검사와 "캐릭터 클립이 가진 채널만" 규칙을 건너뛴다 (새 몸엔 클립이 없다).
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 
@@ -27,7 +33,8 @@ const SIZE = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4, MAT4: 16 };
 // 기본 자세와 이만큼 넘게 다르면 "다르다" 로 본다
 const REST_EPS = 1e-3;
 
-const [output, base, clips] = process.argv.slice(2);
+const RETARGET = process.argv.includes('--retarget');
+const [output, base, clips] = process.argv.slice(2).filter((a) => a !== '--retarget');
 if (!output || !base || !clips) {
   console.error('사용법: node scripts/add-clips.mjs <출력.glb> <캐릭터.glb> <클립.glb>');
   process.exit(1);
@@ -79,7 +86,7 @@ const nodeByName = new Map(json.nodes.map((n, i) => [n.name, i]));
 const REST = { rotation: [0, 0, 0, 1], translation: [0, 0, 0], scale: [1, 1, 1] };
 const restOf = (node, path) => node[path] ?? REST[path];
 
-for (const node of src.json.nodes) {
+for (const node of RETARGET ? [] : src.json.nodes) {
   const at = nodeByName.get(node.name);
   if (at === undefined) continue;
   for (const path of ['rotation', 'translation']) {
@@ -114,7 +121,124 @@ const addFloats = (data, type) => {
   return json.accessors.length - 1;
 };
 
-for (const anim of src.json.animations) {
+// ---------------------------------------------------------------- --retarget
+
+const qmul = (a, b) => [
+  a[3] * b[0] + a[0] * b[3] + a[1] * b[2] - a[2] * b[1],
+  a[3] * b[1] - a[0] * b[2] + a[1] * b[3] + a[2] * b[0],
+  a[3] * b[2] + a[0] * b[1] - a[1] * b[0] + a[2] * b[3],
+  a[3] * b[3] - a[0] * b[0] - a[1] * b[1] - a[2] * b[2],
+];
+const qinv = (q) => [-q[0], -q[1], -q[2], q[3]];
+const qnorm = (q) => {
+  const l = Math.hypot(...q) || 1;
+  return q.map((v) => v / l);
+};
+const parentsOf = (nodes) => {
+  const parent = new Map();
+  nodes.forEach((n, i) => (n.children ?? []).forEach((c) => parent.set(c, i)));
+  return parent;
+};
+
+// 한 파일의 뼈마다 월드 회전 — local(i) 가 그 뼈의 부모 기준 회전을 준다
+function globals(nodes, parent, local) {
+  const out = new Map();
+  const walk = (i) => {
+    if (out.has(i)) return out.get(i);
+    const p = parent.get(i);
+    const g = p === undefined ? local(i) : qmul(walk(p), local(i));
+    out.set(i, g);
+    return g;
+  };
+  nodes.forEach((_, i) => walk(i));
+  return out;
+}
+
+// 채널 하나를 시각 t 에서 읽는다 (LINEAR — 회전은 부호를 맞춘 nlerp)
+function sample(times, values, n, t, rot) {
+  let k = 0;
+  while (k < times.length - 2 && times[k + 1] <= t) k += 1;
+  const a = times[k];
+  const b = times[Math.min(k + 1, times.length - 1)];
+  const f = b > a ? Math.min(Math.max((t - a) / (b - a), 0), 1) : 0;
+  const va = Array.from(values.subarray(k * n, k * n + n));
+  const vb = Array.from(values.subarray(Math.min(k + 1, times.length - 1) * n, Math.min(k + 1, times.length - 1) * n + n));
+  if (rot && va.reduce((s, v, i) => s + v * vb[i], 0) < 0) vb.forEach((v, i) => (vb[i] = -v));
+  const out = va.map((v, i) => v + (vb[i] - v) * f);
+  return rot ? qnorm(out) : out;
+}
+
+function retarget(anim) {
+  const sNodes = src.json.nodes;
+  const dNodes = json.nodes;
+  const sParent = parentsOf(sNodes);
+  const dParent = parentsOf(dNodes);
+  const tracks = anim.channels.map((ch) => {
+    const s = anim.samplers[ch.sampler];
+    return { node: ch.target.node, path: ch.target.path, times: floats(src, s.input), values: floats(src, s.output) };
+  });
+  const times = [...new Set(tracks.flatMap((t) => Array.from(t.times)))].sort((a, b) => a - b);
+  const sRestG = globals(sNodes, sParent, (i) => restOf(sNodes[i], 'rotation'));
+  const dRestG = globals(dNodes, dParent, (i) => restOf(dNodes[i], 'rotation'));
+  const dIndex = (i) => nodeByName.get(sNodes[i].name);
+  const rotTracks = tracks.filter((t) => t.path === 'rotation' && dIndex(t.node) !== undefined);
+  const leg = (nodes, byName) =>
+    ['LeftLeg', 'LeftFoot'].reduce((s, n) => s + Math.hypot(...restOf(nodes[byName(n)], 'translation')), 0);
+  const sByName = (n) => sNodes.findIndex((x) => x.name === n);
+  const k = leg(dNodes, (n) => nodeByName.get(n)) / leg(sNodes, sByName);
+
+  const out = rotTracks.map((t) => ({ name: sNodes[t.node].name, path: 'rotation', values: [] }));
+  const moves = tracks
+    .filter((t) => t.path === 'translation' && dIndex(t.node) !== undefined)
+    .map((t) => ({ t, name: sNodes[t.node].name, path: 'translation', values: [] }));
+  for (const time of times) {
+    const at = new Map(rotTracks.map((t) => [t.node, sample(t.times, t.values, 4, time, true)]));
+    const sG = globals(sNodes, sParent, (i) => at.get(i) ?? restOf(sNodes[i], 'rotation'));
+    // 새 뼈대의 월드 회전 = (옛 뼈가 기본 자세에서 돈 만큼) · 새 기본 자세
+    const dG = new Map();
+    dNodes.forEach((n, i) => {
+      const si = sByName(n.name);
+      dG.set(i, si >= 0 ? qmul(qmul(sG.get(si), qinv(sRestG.get(si))), dRestG.get(i)) : null);
+    });
+    const worldOf = (i) => {
+      if (i === undefined) return [0, 0, 0, 1];
+      if (dG.get(i)) return dG.get(i);
+      const p = dParent.get(i);
+      return qmul(worldOf(p), restOf(dNodes[i], 'rotation'));
+    };
+    rotTracks.forEach((t, j) => {
+      const d = dIndex(t.node);
+      const local = qnorm(qmul(qinv(worldOf(dParent.get(d))), dG.get(d)));
+      out[j].values.push(...local);
+    });
+    for (const m of moves) {
+      const v = sample(m.t.times, m.t.values, 3, time, false);
+      const sRest = restOf(sNodes[m.t.node], 'translation');
+      const dRest = restOf(dNodes[dIndex(m.t.node)], 'translation');
+      m.values.push(...dRest.map((r, i) => r + (v[i] - sRest[i]) * k));
+    }
+  }
+  return { times: Float32Array.from(times), tracks: [...out, ...moves], k };
+}
+
+if (RETARGET) {
+  const incoming2 = new Set(src.json.animations.map((a) => a.name));
+  json.animations = (json.animations ?? []).filter((a) => !incoming2.has(a.name));
+  for (const anim of src.json.animations) {
+    const { times, tracks, k } = retarget(anim);
+    const input = addFloats(times, 'SCALAR');
+    const samplers = [];
+    const channels = [];
+    for (const t of tracks) {
+      samplers.push({ input, output: addFloats(Float32Array.from(t.values), t.path === 'rotation' ? 'VEC4' : 'VEC3') });
+      channels.push({ sampler: samplers.length - 1, target: { node: nodeByName.get(t.name), path: t.path } });
+    }
+    json.animations.push({ name: anim.name, samplers, channels });
+    console.log(`  ~ ${anim.name.padEnd(12)} ${times[times.length - 1].toFixed(2)}s  채널 ${channels.length}  (이동 ×${k.toFixed(3)})`);
+  }
+}
+
+for (const anim of RETARGET ? [] : src.json.animations) {
   const samplers = [];
   const channels = [];
   const timeCache = new Map();

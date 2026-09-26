@@ -3029,9 +3029,16 @@ func _build_test_switches() -> void:
 	column.add_child(reset)
 	column.move_child(reset, 0)
 	# 경험치북 — 종류마다 10권 (던전 드랍 전까지 얻을 길이 이것뿐이다, 사용자 선택)
-	var books := _test_button("테스트: 경험치북 +10", 230, 18, &"debugBooks", {})
-	column.add_child(books)
-	column.move_child(books, 0)
+	# 스킬 모두 배우기 — 전직도 끝까지 올린다 (2026-09-26 요청, `World.debug_learn_all`).
+	# 목록이 이미 화면 위로 넘치므로 **줄을 늘리지 않고** 경험치북과 한 줄에 반씩 놓는다
+	var book_row := HBoxContainer.new()
+	book_row.add_theme_constant_override("separation", 6)
+	book_row.add_child(_test_button("경험치북 +10", 112, 16, &"debugBooks", {}))
+	var learn_all := _test_button("스킬 모두\n배우기", 112, 16, &"debugLearnAll", {})
+	learn_all.name = "learnAll"
+	book_row.add_child(learn_all)
+	column.add_child(book_row)
+	column.move_child(book_row, 0)
 	var upgrade_row := HBoxContainer.new()
 	upgrade_row.add_theme_constant_override("separation", 6)
 	for slot in 2:

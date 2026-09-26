@@ -1571,6 +1571,28 @@ func debug_books(player_id: String) -> void:
 	_notice("테스트: 스킬 경험치북을 10권씩 넣었다")
 
 
+## **테스트: 스킬 모두 배우기** (2026-09-26 요청). 전직 스킬은 전직해야 쓰므로(job-advance.md)
+## **전직 단계도 끝까지 올린다** — 배우기만 하면 낙뢰·빙주각·천붕각이 안 나간다.
+## 레벨·포인트는 안 본다(치트다). 액션바 빈 칸은 배운 순서대로 채운다 — 4칸이 차 있으면 그대로
+func debug_learn_all(player_id: String) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	player.job_tier = Skills.job_advances().size()
+	for id in Skills.for_job(str(player.job)):
+		if not (str(id) in player.skills):
+			player.skills.append(str(id))
+	var size := int(GameData.combat().get("skillBarSize", 4))
+	for id in player.skills:
+		if player.skill_bar.size() >= size:
+			break
+		if not (id in player.skill_bar):
+			player.skill_bar.append(id)
+	_events.append({"type": "skills", "learned": player.skills.duplicate()})
+	_events.append({"type": "skillBar", "bar": player.skill_bar.duplicate()})
+	_notice("테스트: %d차 전직 · 스킬 %d개를 모두 배웠다" % [int(player.job_tier), player.skills.size()])
+
+
 ## 강화를 붙이고, 그 강화에 쌓이던 경험치를 지운다 (붙은 뒤에는 더 못 넣는다)
 func _add_upgrade(player: Dictionary, skill_id: String, upgrade_id: String) -> void:
 	var have: Array = player.skill_upgrades.get_or_add(skill_id, [])

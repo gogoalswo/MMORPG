@@ -90,6 +90,8 @@ func send(message: StringName, payload: Dictionary) -> void:
 			)
 		&"debugBooks":
 			_world.debug_books(MY_ID)
+		&"debugLearnAll":
+			_world.debug_learn_all(MY_ID)
 		&"debugUpgradeAll":
 			_world.debug_upgrade_all(MY_ID, int(payload.get("slot", 0)))
 		&"debugResetUpgrades":

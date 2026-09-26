@@ -143,6 +143,43 @@ func _case_no_shortcut() -> void:
 		_fail("NPC 에게서 먼데 시험으로 갔다")
 
 
+## 치트 "스킬 모두 배우기" — 전직을 끝까지 올리고 그 직업 스킬을 다 배워 액션바에 올린다
+func _case_learn_all(game: Node3D) -> void:
+	var cheat: Button = game._cheat_column.find_child("learnAll", true, false)
+	if cheat == null:
+		_fail("치트 목록에 '스킬 모두 배우기' 단추가 없다")
+		return
+	# 단추가 늘면 목록이 위로 자란다 — 펼쳤을 때 맨 위 단추가 화면 안이어야 누를 수 있다
+	game._set_cheats_open(true)
+	await process_frame
+	var rect := cheat.get_global_rect()
+	if rect.position.y < 0.0 or rect.end.y > 720.0:
+		_fail("'스킬 모두 배우기' 단추가 화면 밖이다 (%s)" % rect)
+	if game._cheat_column.size.x > 240.0:
+		_fail("치트 목록이 넓어졌다 (%.0f)" % game._cheat_column.size.x)
+	var me: Dictionary = game._transport._world._players[game._transport.my_id()]
+	me.job_tier = 0
+	me.skills = []
+	me.skill_bar = []
+	cheat.pressed.emit()
+	await process_frame
+	var all := Skills.for_job(str(me.job))
+	if int(me.job_tier) != Skills.job_advances().size():
+		_fail("전직이 끝까지 안 올랐다 (%d차)" % int(me.job_tier))
+	for id in all:
+		if not (str(id) in me.skills):
+			_fail("%s 을(를) 안 배웠다" % id)
+	if me.skill_bar.size() != mini(all.size(), 4):
+		_fail("액션바가 %d칸" % me.skill_bar.size())
+	# 배운 낙뢰가 실제로 나간다
+	me.cast_until = 0
+	me.skill_ready_at = {}
+	game._transport._world.cast(game._transport.my_id(), "thunder_fall")
+	if int(me.skill_ready_at.get("thunder_fall", 0)) == 0:
+		_fail("모두 배운 뒤에도 낙뢰가 안 나간다")
+	print("  치트: %d차 전직 · 스킬 %d개 · 액션바 %s" % [int(me.job_tier), me.skills.size(), str(me.skill_bar)])
+
+
 ## 전직 단계는 저장에 남는다
 func _case_save() -> void:
 	var w := _village(70)
@@ -188,6 +225,8 @@ func _run_scene() -> void:
 			_fail("버튼을 눌렀는데 2차 시험에 안 갔다 (%s · 창 %s)" % [zone, game._npc_panel.visible])
 		else:
 			print("  창: '%s' → 누르니 %s" % [button.text, zone])
+
+	await _case_learn_all(game)
 
 	Save.clear()
 	if _failed == 0:

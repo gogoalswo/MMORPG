@@ -34,7 +34,6 @@ func _case_rig() -> void:
 	var tris := {}
 	for slot in Armor.SLOTS:
 		var meshes := {}
-		var last_count := 0
 		for grade in range(1, 8):
 			rig.set_gear(slot, grade)
 			await process_frame
@@ -49,18 +48,9 @@ func _case_rig() -> void:
 			var piece: MeshInstance3D = rig.find_child("Body_" + slot, true, false)
 			if piece == null or piece.visible:
 				_fail("%s 를 입었는데 그 아래 맨몸이 보인다" % slot)
-			# 오로라 — 4등급부터 이펙트(`GearAura`), 등급이 오를수록 알갱이가 많다
-			var auras := rig.find_children("GearAura_" + slot, "", true, false)
-			if auras.is_empty() != (grade < 4):
-				_fail("%s %d등급 오로라가 %s" % [slot, grade, "없다" if auras.is_empty() else "있다 (4등급부터여야 한다)"])
-			elif not auras.is_empty():
-				var count := 0
-				for node in auras:
-					for emitter in node.find_children("*", "GPUParticles3D", true, false):
-						count += (emitter as GPUParticles3D).amount
-				if count <= last_count:
-					_fail("%s %d등급 오로라 알갱이(%d)가 아래 등급보다 많지 않다" % [slot, grade, count])
-				last_count = count
+			# 오로라는 붙이지 않는다 (2026-09-26 "그냥 오로라 제거해")
+			if not rig.find_children("GearAura*", "", true, false).is_empty():
+				_fail("%s %d등급에 오로라가 붙었다 — 걷어 냈다" % [slot, grade])
 		if meshes.size() != 7:
 			_fail("%s 일곱 등급이 서로 다른 모델이 아니다 (%d 가지)" % [slot, meshes.size()])
 		rig.set_gear(slot, 0)

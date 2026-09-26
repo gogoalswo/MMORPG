@@ -97,9 +97,11 @@ func _case_game() -> void:
 		_fail("게임 화면·캐릭터 모델을 못 띄웠다")
 		return
 	var rig: Rig = game._player
+	# 새 캐릭터는 시작 장비(1등급, World.STARTER_SLOTS)를 입고 나온다 (2026-09-26) — 나머지는 맨몸
 	for slot in Armor.SLOTS:
-		if rig.gear_grade(slot) != 0:
-			_fail("처음부터 %s 를 입고 있다 (%d등급)" % [slot, rig.gear_grade(slot)])
+		var want := 1 if slot in World.STARTER_SLOTS else 0
+		if rig.gear_grade(slot) != want:
+			_fail("처음 %s 가 %d등급이다 (%d등급이어야 한다)" % [slot, rig.gear_grade(slot), want])
 	for grade in [2, 6]:
 		game._transport.send(&"debugGear", {"level": 200, "grade": grade, "enhance": 0})
 		for i in 3:

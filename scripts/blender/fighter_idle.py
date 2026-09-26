@@ -51,10 +51,11 @@ def stance(poser, breath):
         reach = poser.length(bones[0], bones[1]) + poser.length(bones[1], bones[2])
         # 팔을 거의 곧게 내리되 몸에서 조금 떼고, 손목이 허벅지 옆 조금 앞에 온다.
         # 들숨에 팔이 몸에서 조금 더 벌어진다
-        hand = shoulder + Vector((sign * (0.065 + 0.008 * breath), -0.025, -reach * 0.93))
+        # 팔을 거의 곧게 편다 — 팔 길이의 93% 로 두고 팔꿈치를 뒤로 뺐더니 "팔이 너무 뒤로 꺾였다"
+        # (2026-09-26). 98.5% 로 늘리고 손목을 조금 앞에 두고, 팔꿈치는 뒤가 아니라 바깥을 본다
+        hand = shoulder + Vector((sign * (0.06 + 0.008 * breath), -0.045, -reach * 0.985))
         spec[key] = tuple(hand)
-        # 팔꿈치는 뒤로, 조금 바깥으로
-        spec[key + "Pole"] = (sign * 0.35, 1.0, 0.0)
+        spec[key + "Pole"] = (sign * 1.0, 0.25, 0.0)
     return spec
 
 

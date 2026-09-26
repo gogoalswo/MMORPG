@@ -11,7 +11,10 @@
 import { readFileSync } from 'node:fs';
 
 const posed = process.argv.includes('--posed');
-const [path, ...only] = process.argv.slice(2).filter((a) => a !== '--posed');
+// --mesh 이름: 그 메시만 잰다 (주먹을 이식한 몸은 `fists` — 몸 메시엔 뺀 편 손 정점이 남아 있다)
+const meshAt = process.argv.indexOf('--mesh');
+const meshName = meshAt >= 0 ? process.argv[meshAt + 1] : null;
+const [path, ...only] = process.argv.slice(2).filter((a, i) => a !== '--posed' && a !== '--mesh' && !(meshAt >= 0 && i === meshAt - 1));
 const buf = readFileSync(path);
 const jsonLen = buf.readUInt32LE(12);
 const json = JSON.parse(buf.subarray(20, 20 + jsonLen).toString('utf8'));
@@ -75,7 +78,7 @@ const apply = (m, p) => [0, 1, 2].map((r) => m[r] * p[0] + m[4 + r] * p[1] + m[8
 const names = skin.joints.map((j) => json.nodes[j].name);
 const boxes = names.map(() => ({ min: [Infinity, Infinity, Infinity], max: [-Infinity, -Infinity, -Infinity], sum: [0, 0, 0], n: 0 }));
 
-for (const mesh of json.meshes)
+for (const mesh of json.meshes.filter((m) => !meshName || m.name === meshName))
   for (const prim of mesh.primitives) {
     const pos = read(prim.attributes.POSITION);
     const joints = read(prim.attributes.JOINTS_0);

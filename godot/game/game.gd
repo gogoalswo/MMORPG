@@ -243,12 +243,8 @@ var _show_range := false
 ## 스킬 범위 표시 단추와, 그 위에 마지막 시전의 반경·각·맞은 수를 적는 줄
 var _range_button: Button
 var _range_label: Label
-var _npc_panel: PanelContainer
-var _npc_title: Label
-var _npc_rows: VBoxContainer
-var _npc_role := ""
-var _npc_tab := ""
-var _npc_items: Array = []
+## 상점·대장간 창 — 전직 창과 같은 결로 조립한 창이다 (`NpcPanel`)
+var _npc_panel: NpcPanel
 ## 전직 창 — 상점·대장간과 따로 조립한 창이다 (`JobPanel`)
 var _job_panel: JobPanel
 ## 액션바 4칸. 눌리면 그 스킬을 쓴다
@@ -469,7 +465,7 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			if _bag_panel.visible:
 				_redraw_bag()
 			if _npc_panel.visible:
-				_redraw_npc()
+				_npc_panel.redraw()
 		&"skillBar":
 			if _skill_panel.visible:
 				_redraw_skills()
@@ -3410,27 +3406,32 @@ func _on_bar_pressed(slot: int) -> void:
 
 ## NPC 와 말하는 창. 웹 클라의 ui/npcDialog.ts 자리다
 func _build_npc_panel() -> void:
-	_npc_panel = PanelContainer.new()
-	_npc_panel.set_anchors_preset(Control.PRESET_CENTER)
-	_npc_panel.visible = false
-	_ui_root.add_child(_npc_panel)
-
-	var rows := VBoxContainer.new()
-	_npc_panel.add_child(rows)
-
-	_npc_title = Label.new()
-	rows.add_child(_npc_title)
-
-	_npc_rows = VBoxContainer.new()
-	rows.add_child(_npc_rows)
-
-	# 전직 창은 따로 조립한다 — 얇은 금테 결 (job_panel.gd).
-	# **HUD 보다 위 층에 단다** — `_ui_root` 에 두었더니 체력 막대·퀵슬롯이 아래쪽
-	# 단추를 덮었다 (2026-09-26, 찍어서 봤다). 차원문 창과 같은 층 번호다
+	# 상점·대장간 창과 전직 창은 **HUD 보다 위 층**에 단다 — `_ui_root` 에 두었더니 체력
+	# 막대·퀵슬롯이 창 아래쪽을 덮었다 (2026-09-26, 찍어서 봤다). 차원문 창과 같은 층 번호다
 	var top := CanvasLayer.new()
-	top.name = "JobLayer"
+	top.name = "NpcLayer"
 	top.layer = 10
 	add_child(top)
+
+	# 상점·대장간 — 얇은 금테 결 (npc_panel.gd). 줄을 누르면 신호가 오고 요청만 보낸다
+	_npc_panel = NpcPanel.make(_frame_box, _icon, _item_icon, _grade_tint, _me)
+	# 한글 폰트는 _ui_root 의 테마에 있다 — 다른 층이라 직접 물려준다
+	_npc_panel.theme = _ui_root.theme
+	top.add_child(_npc_panel)
+	_npc_panel.buy.connect(func(id: String) -> void:
+		_transport.send(&"npcBuy", {"item": id})
+		_npc_panel.redraw()
+	)
+	_npc_panel.sell.connect(func(index: int) -> void:
+		_transport.send(&"npcSell", {"index": index})
+		_npc_panel.redraw()
+	)
+	_npc_panel.enhance.connect(func(index: int) -> void:
+		_transport.send(&"npcEnhance", {"index": index})
+		_npc_panel.redraw()
+	)
+
+	# 전직 창도 같은 층이다 — 얇은 금테 결 (job_panel.gd)
 	_job_panel = JobPanel.make(_frame_box, _icon)
 	# 한글 폰트는 _ui_root 의 테마에 있다 — 다른 층이라 직접 물려준다
 	_job_panel.theme = _ui_root.theme
@@ -3455,90 +3456,8 @@ func _show_npc(payload: Dictionary) -> void:
 		)
 		_job_panel.visible = true
 		return
-	_npc_title.text = "%s%s" % [
-		payload.get("name", ""),
-		"  (%s)" % title if title != "" else "",
-	]
-	_npc_role = role
-	_npc_items = payload.get("items", [])
-	_npc_tab = "buy" if role == "shop" else "enhance"
-	_redraw_npc()
-	_npc_panel.visible = true
-
-
-## 목록은 **열 때마다 다시 그린다** — 사고팔고 두드리는 동안 계속 바뀐다.
-## 웹 클라의 npcDialog(상점) · craftWindow 자리다. 대장간은 제작을 걷은 뒤 강화만 남았다
-func _redraw_npc() -> void:
-	for child in _npc_rows.get_children():
-		child.queue_free()
-
-	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
-	if me.is_empty():
-		return
-
-	var gold := Label.new()
-	gold.text = "골드 %d   가방 %d/%d" % [me.get("gold", 0), me.bag.size(), Items.bag_size()]
-	_npc_rows.add_child(gold)
-
-	var tabs := HBoxContainer.new()
-	_npc_rows.add_child(tabs)
-	var names := {"buy": "사기", "sell": "팔기"} if _npc_role == "shop" else {"enhance": "강화"}
-	for key in names:
-		var tab := Button.new()
-		tab.text = names[key]
-		tab.disabled = (_npc_tab == key)
-		tab.pressed.connect(func() -> void:
-			_npc_tab = str(key)
-			_redraw_npc()
-		)
-		tabs.add_child(tab)
-
-	match _npc_tab:
-		"buy":
-			_list_buy(me)
-		"sell":
-			_list_bag(me, "팔기", func(index: int) -> void:
-				_transport.send(&"npcSell", {"index": index})
-			)
-		"enhance":
-			_list_bag(me, "강화", func(index: int) -> void:
-				_transport.send(&"npcEnhance", {"index": index})
-			)
-
-
-func _list_buy(me: Dictionary) -> void:
-	for id in _npc_items:
-		var item := Items.get_item(str(id))
-		var button := Button.new()
-		button.text = "%s   %d G" % [item.get("name", id), item.get("price", 0)]
-		button.disabled = int(me.get("gold", 0)) < int(item.get("price", 0))
-		button.pressed.connect(func() -> void:
-			_transport.send(&"npcBuy", {"item": str(id)})
-			_redraw_npc()
-		)
-		_npc_rows.add_child(button)
-
-
-
-func _list_bag(me: Dictionary, verb: String, action: Callable) -> void:
-	if me.bag.is_empty():
-		var empty := Label.new()
-		empty.text = "가방이 비었습니다"
-		_npc_rows.add_child(empty)
-		return
-	for index in mini(me.bag.size(), 12):
-		var stack: Dictionary = me.bag[index]
-		# 재료는 팔지도 강화하지도 않는다
-		if Items.is_material(str(stack.get("id", ""))):
-			continue
-		var button := Button.new()
-		button.text = "%s  [%s]" % [_stack_label(stack), verb]
-		button.pressed.connect(func() -> void:
-			action.call(index)
-			_redraw_npc()
-		)
-		_npc_rows.add_child(button)
-
+	_job_panel.visible = false
+	_npc_panel.open(str(payload.get("name", "")), role, title, payload.get("items", []))
 
 
 func _make_theme() -> Theme:

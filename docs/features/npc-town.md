@@ -46,7 +46,10 @@
 | `packages/shared/src/items.ts` | `NPC_REACH`, 상점 목록 계산 근거 |
 | `packages/server/src/ZoneRoom.ts` | `npcNear` / `shopStock` / `handleNpcOpen·Buy·Sell·Enhance·Job` |
 | `packages/client/src/ui/npcPrompt.ts` | 말걸기 버튼 (F) |
-| `packages/client/src/ui/npcDialog.ts` | 상점·전직 창 |
+| `packages/client/src/ui/npcDialog.ts` | 상점·전직 창 (옛 웹 — 지워짐) |
+| **`godot/game/npc_panel.gd`** | ★ **고도 상점·대장간 창** (`NpcPanel`) — 아래 "창 (고도)" |
+| `godot/game/game.gd` `_build_npc_panel` · `_show_npc` | 창을 HUD 위 층(`NpcLayer`, 10)에 달고 신호를 요청(`npcBuy`·`npcSell`·`npcEnhance`)으로 잇는다. `jobs` 면 전직 창(`JobPanel`)을 연다 |
+| `godot/tools/shot.gd` `_npc_window` | `npm run shot:godot -- shop` · `smith` |
 
 ## 규칙
 
@@ -60,6 +63,39 @@
   보스 전용 아이템이 붙을 자리가 여기이기 때문이다.
 - 어느 창을 열지는 `main.ts` 의 `onNpc` 가 `role` 로 가른다.
   서버 메시지는 `npc` · `npcEnhance` 둘만 남았다 (`npcForge` · `craft` 는 없앴다).
+
+### 창 (고도) ★ (2026-09-26 다시 지음)
+
+```
+┌ 상점                                             [X] ┐   ui_panel
+│ 상인 보리스                                          │
+│ ──────────────────────────────────────────────────── │
+│ [사기] [팔기]                  골드 12,345  가방 8/200 │   탭 = ui_button (고른 것은 달아오름)
+│ ┌──────────────────────────────────────────────────┐ │   목록 = ui_slot, 끌어서 내림
+│ │ [아이콘] 가죽 건틀릿            [  32 G  ]        │ │   줄 = 어두운 판 + 가는 테
+│ │          무기 · Lv.1                             │ │   아이콘 테 = 등급 색
+│ └──────────────────────────────────────────────────┘ │
+│        줄을 누르면 삽니다 · 살 때 옵션이 붙습니다       │
+└──────────────────────────────────────────────────────┘
+```
+
+- **처음 판은 고도 기본 패널에 글자·단추만 쌓았다** → 전직 창을 다시 지은 뒤 "상점이랑
+  대장간 창도 같은 결로 다시 만들어" (2026-09-26). 전직 창(`JobPanel`)과 같은 조각·색이다
+  → [ui-art-style.md](ui-art-style.md) · [job-advance.md](job-advance.md).
+- **줄 전체가 누르는 자리다** (`hit`). 가방·스킬 목록과 같은 `DragScroll` 이 끌기(스크롤)와
+  누르기를 가른다. 오른쪽 값표(`tag`)는 단추처럼 보이는 표일 뿐 따로 눌리지 않는다.
+  `DragScroll` 은 `disabled` 를 안 보고 `pressed` 를 내서, 막힌 줄은 `hit` 의 콜백이 거른다.
+- 값표: 사기 = 가격(골드가 모자라면 붉게) · 팔기 = 판매가 · 강화 = `+N → +N+1`(최대면 "최대",
+  흐리게). 강화 줄의 설명은 "성공 N% · 실패 시 파괴" — **값표는 붉히지 않는다.** 모든 단계에
+  파괴 확률이 있어서 값표까지 붉히면 전부 붉다 (찍어서 봤다).
+- 팔기·강화 목록은 **가방의 장비 전부**다 (재료 — 크리스탈·물약 — 는 뺀다). 옛 창은 앞 12칸만
+  보였다. 넘치면 끌어서 내린다.
+- **HUD 위 층(`CanvasLayer` 10)** 에 단다 — 전직 창에서 체력 막대·퀵슬롯이 아래쪽을 덮는 걸
+  봤다. 한글 폰트는 `_ui_root.theme` 을 물려준다.
+- 창은 그리기만 한다. 파는 목록은 World 가 주고(`npc` 이벤트의 `items`), 사고팔고 두드리는
+  판정·거리는 World 가 다시 본다. 창은 `me` 를 `game._me` 로 매번 새로 읽는다.
+- 테스트(`npc_test._check_shop`): 화면 가운데 안 · HUD 위 층 · X 오른쪽 위 · 줄이 창 안 ·
+  줄을 누르면 산다 · 팔기 탭 · 대장간은 강화 탭 하나에 "+0 → +1".
 
 ### 상점
 - **무기만** 판다. 방어구·장신구는 **사냥으로만** 줍는다.

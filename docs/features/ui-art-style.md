@@ -211,8 +211,8 @@ HUD·스킬창·NPC 창은 위의 "얇은 금테" 그대로다.
 ## 아직 안 맞춘 것
 
 - 스킬창·NPC 창은 얇은 금테 결이다. 인벤토리 결로 맞출지는 안 정했다.
-- **상점·대장간 창(`_npc_panel`)은 아직 고도 기본 패널 그대로다** (테·판 없이 글자·단추만).
-  전직 창(`job_panel.gd`)은 2026-09-26 에 이 결로 다시 지었다 → [job-advance.md](job-advance.md).
+- 상점·대장간 창(`npc_panel.gd`)과 전직 창(`job_panel.gd`)은 2026-09-26 에 이 결로 다시
+  지었다 (그 전엔 고도 기본 패널에 글자·단추만) → [npc-town.md](npc-town.md) · [job-advance.md](job-advance.md).
 - `ui_tab_on`/`ui_tab_off` 는 인벤토리 결로 바꾼 뒤 아무도 안 쓴다 (파일은 남겨 뒀다).
 
 - 차원문 창(`ui/panel.png`, `gate_*`)은 따로 논다 → [portal-ui.md](portal-ui.md).

@@ -76,6 +76,13 @@ export interface SkillDef {
   projectile?: ProjectileKind;
   /** 배우려면 필요한 레벨 */
   reqLevel: number;
+  /**
+   * **전직 단계** — 이만큼 전직해야 배우고 쓴다 (없으면 0 = 기본 스킬). 2026-09-26 요청:
+   * "기본 스킬은 할퀴기고 1차 전직하면 낙뢰 2차 전직하면 빙주각 3차 전직하면 천붕각".
+   * 테스트 스위치(`SKILL_UNLOCK_ALL`)와 **무관하게** 본다 — 스위치는 레벨·포인트만 푼다.
+   * 전직 레벨·보스는 `jobAdvance.ts` → [job-advance.md]
+   */
+  tier?: number;
   description: string;
 }
 
@@ -435,7 +442,9 @@ const SKILL_LIST: SkillDef[] = [
     arc: Math.PI * 2,
     power: 5.5,
     maxTargets: 10,
-    reqLevel: 20,
+    // 3차 전직(Lv.120)에 열린다 — 요구 레벨을 전직 레벨에 맞춰 둔다 (jobAdvance.ts)
+    reqLevel: 120,
+    tier: 3,
     description: '뛰어올라 내리찍어 일대를 무너뜨린다.',
   },
   {
@@ -462,7 +471,9 @@ const SKILL_LIST: SkillDef[] = [
     arc: Math.PI * 2,
     power: 4.2,
     maxTargets: 4,
+    // 1차 전직(Lv.30)에 열린다
     reqLevel: 30,
+    tier: 1,
     description: '번개를 세 번 내리꽂아 땅을 가른다.',
   },
   {
@@ -484,7 +495,9 @@ const SKILL_LIST: SkillDef[] = [
     arc: Math.PI * 2,
     power: 4.6,
     maxTargets: 8,
-    reqLevel: 40,
+    // 2차 전직(Lv.70)에 열린다
+    reqLevel: 70,
+    tier: 2,
     description: '땅을 짓밟아 사방에서 얼음 기둥을 솟구치게 한다.',
   },
 ];
@@ -662,9 +675,19 @@ function skillsOf(job: JobId): string[] {
     .map((s) => s.id);
 }
 
-/** 그 레벨에 배울 수 있는지 — 테스트 스위치(`SKILL_UNLOCK_ALL`)가 켜져 있으면 레벨을 안 본다 */
-export function canLearn(skill: SkillDef, job: JobId, level: number): boolean {
+/**
+ * 그 레벨에 배울 수 있는지 — 테스트 스위치(`SKILL_UNLOCK_ALL`)가 켜져 있으면 레벨을 안 본다.
+ * **전직 단계(`tier`)는 스위치와 무관하게 본다.** `jobTier` 를 안 넘기면(옛 Colyseus 서버)
+ * 전직을 안 본다 — 전직은 고도 판정(`World`)에만 있다
+ */
+export function canLearn(
+  skill: SkillDef,
+  job: JobId,
+  level: number,
+  jobTier: number = Number.POSITIVE_INFINITY
+): boolean {
   if (skill.job !== job) return false;
+  if ((skill.tier ?? 0) > jobTier) return false;
   return SKILL_UNLOCK_ALL || level >= skill.reqLevel;
 }
 

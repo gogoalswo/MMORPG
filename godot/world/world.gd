@@ -185,6 +185,8 @@ func join(player_id: String) -> void:
 		"last_seq": -1,
 		"dead": bool(kept.get("dead", false)),
 		"job": DEFAULT_JOB,
+		# 전직 단계 — 0 이 전직 전. 전직 시험 보스를 잡으면 오른다 (`_advance_job`)
+		"job_tier": int(kept.get("job_tier", 0)),
 		"level": level,
 		# 존을 옮겨도 성장은 따라간다
 		"exp": int(kept.get("exp", 0)),
@@ -330,6 +332,14 @@ func travel(player_id: String, target: String) -> void:
 	var all: Dictionary = GameData.zones().get("zones", {})
 	if not all.has(target) or target == zone_id:
 		return
+	# 전직 시험은 **전직 NPC 로만** 간다 (`job_advance`) — 레벨·단계를 거기서 본다
+	if Skills.job_tier_of_zone(target) > 0:
+		return
+	_move_to(target)
+
+
+## 존을 옮긴다. 있는 존인지는 부르는 쪽이 봤다
+func _move_to(target: String) -> void:
 	open(target)
 	for who in _players:
 		join(who)
@@ -636,6 +646,7 @@ func _kill(player: Dictionary, target: Dictionary, now: int) -> void:
 	player.level = grown.level
 	player.exp = grown.exp
 	_events.append({"type": "reward", "exp": gained})
+	_check_job_trial(player, target)
 
 	if grown.level > before:
 		# 레벨이 오르면 스탯을 다시 만들고 체력을 채운다
@@ -1087,6 +1098,7 @@ func restore(player_id: String) -> bool:
 
 	var player: Dictionary = _players[player_id]
 	player.level = int(saved.get("level", 1))
+	player.job_tier = clampi(int(saved.get("job_tier", 0)), 0, Skills.job_advances().size())
 	player.stats = Combat.stats_for(str(player.job), player.level)
 	player.exp = int(saved.get("exp", 0))
 	player.hp = clampi(int(saved.get("hp", player.stats.maxHp)), 0, int(player.stats.maxHp))
@@ -1204,14 +1216,71 @@ func npc_open(player_id: String, npc_name: String) -> void:
 		match role:
 			"shop":
 				listed = Items.shop_stock(str(player.job), int(player.level))
-		_events.append({
+		var event := {
 			"type": "npc",
 			"name": npc_name,
 			"role": role,
 			"title": str(npc.get("title", "")),
 			"items": listed,
-		})
+		}
+		if role == "jobs":
+			event["job"] = _job_state(player)
+		_events.append(event)
 		return
+
+
+## --- 전직 (docs/features/job-advance.md) ---
+
+## 전직 창이 그릴 것 — 지금 단계와 **다음 전직 한 줄**(없으면 빈 사전 = 다 마쳤다).
+## 버튼이 눌리는지(`ready`)도 여기서 정한다 — 화면이 레벨을 다시 재지 않는다
+func _job_state(player: Dictionary) -> Dictionary:
+	var tier := int(player.get("job_tier", 0))
+	var next := Skills.job_advance(tier + 1)
+	var state := {"tier": tier, "next": next.duplicate()}
+	if not next.is_empty():
+		state["ready"] = int(player.level) >= int(next.level)
+		state["skills"] = Skills.unlocked_at(str(player.job), tier + 1)
+		var boss := GameData.monster_kind(str(next.boss))
+		state["boss_name"] = str(boss.get("name", next.boss))
+	return state
+
+
+## 전직 버튼. **NPC 곁인지 · 레벨이 되는지 · 다음 단계인지를 여기서 다시 본다** —
+## 되면 그 단계의 시험(보스 한 마리)으로 옮긴다. 전직은 보스를 잡아야 된다 (`_check_job_trial`)
+func job_advance(player_id: String) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty() or bool(player.dead) or not _npc_near(player, "jobs"):
+		return
+	var next := Skills.job_advance(int(player.get("job_tier", 0)) + 1)
+	if next.is_empty():
+		_notice("모든 전직을 마쳤습니다")
+		return
+	if int(player.level) < int(next.level):
+		_notice("%d레벨에 %d차 전직을 받을 수 있습니다" % [int(next.level), int(next.tier)])
+		return
+	_move_to(str(next.zone))
+	_notice("%d차 전직 시험 — 보스를 처치하세요" % int(next.tier))
+
+
+## 전직 시험에서 보스를 잡았다 → **그 단계가 바로 다음 단계일 때만** 전직한다.
+## 지난 시험을 다시 잡거나(이미 전직) 건너뛴 시험은 아무 일 없다
+func _check_job_trial(player: Dictionary, target: Dictionary) -> void:
+	var tier := Skills.job_tier_of_zone(zone_id)
+	if tier == 0 or not bool(target.get("boss", false)):
+		return
+	if tier != int(player.get("job_tier", 0)) + 1:
+		return
+	if int(player.level) < int(Skills.job_advance(tier).get("level", 0)):
+		return
+	player.job_tier = tier
+	var names: Array = []
+	for id in Skills.unlocked_at(str(player.job), tier):
+		names.append(str(Skills.all().get(id, {}).get("name", id)))
+	_events.append({"type": "jobAdvanced", "tier": tier, "skills": names})
+	if names.is_empty():
+		_notice("%d차 전직을 마쳤습니다" % tier)
+	else:
+		_notice("%d차 전직! %s 을(를) 배울 수 있습니다" % [tier, ", ".join(names)])
 
 
 ## 기본 공격이 닿는 정면 각도(라디안). 등 뒤의 적은 맞지 않는다
@@ -1230,7 +1299,11 @@ func learn_skill(player_id: String, skill_id: String) -> void:
 		return
 	if skill_id in player.skills:
 		return
-	if not Skills.can_learn(skill, str(player.job), int(player.level)):
+	var tier := Skills.tier_of(skill)
+	if tier > int(player.get("job_tier", 0)):
+		_notice("%d차 전직 후 배웁니다" % tier)
+		return
+	if not Skills.can_learn(skill, str(player.job), int(player.level), int(player.job_tier)):
 		_events.append({"type": "notice", "text": "%d레벨에 배웁니다" % int(skill.get("reqLevel", 1))})
 		return
 	var cost := Skills.point_cost()
@@ -1609,6 +1682,9 @@ func cast(player_id: String, skill_id: String) -> void:
 	# 없는 스킬이거나 다른 직업 스킬
 	var skill := Skills.get_skill(str(player.job), skill_id)
 	if skill.is_empty():
+		return
+	# **전직 스킬은 전직해야 쓴다** — 전직이 생기기 전 저장에 배운 채로 남아 있어도 막는다
+	if Skills.tier_of(skill) > int(player.get("job_tier", 0)):
 		return
 
 	# 배워서 액션바에 올린 것만 쓸 수 있다.

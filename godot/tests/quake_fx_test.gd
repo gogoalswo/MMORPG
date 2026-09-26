@@ -42,10 +42,11 @@ func _run() -> void:
 
 
 ## 액션바의 천붕각을 누르면 이펙트가 선다 — **실제 경로로 쏜다.**
-## Lv.20 스킬이라 레벨과 포인트를 직접 올린다 (테스트 스위치에 기대지 않는다)
+## 3차 전직(Lv.120) 스킬이라 레벨·포인트·전직 단계를 직접 올린다 (테스트 스위치에 기대지 않는다)
 func _case_cast(game: Node3D) -> void:
 	var player: Dictionary = game._transport._world._players[game._transport.my_id()]
-	player["level"] = 20
+	player["level"] = 120
+	player["job_tier"] = 3
 	player["skill_points"] = 5
 	game._transport.send(&"learnSkill", {"skill": "sky_breaker"})
 	game._transport.send(&"setSkillBar", {"bar": ["sky_breaker"]})

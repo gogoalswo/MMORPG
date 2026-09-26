@@ -51,7 +51,8 @@ ZoneRoom 돌리기) · `DEPLOY.md`(터널로 친구에게 열어주기). 셋 다
 | [hit-effects.md](hit-effects.md) | **피격 이펙트** — 섬광·파편·피해 숫자, 맞은 몸 붉히기, 화면 가장자리 비네트, **타격감 네 단계**(히트스톱·흔들림·튕김·찌그러짐) |
 | [collision.md](collision.md) | **충돌 셋 다**(캐릭터↔몬스터·캐릭터끼리·몬스터끼리) — 몸 반지름, 미는 쪽, 스폰 자리 잡기, 사거리와의 관계 |
 | [auto-hunt-and-targeting.md](auto-hunt-and-targeting.md) | 자동 사냥, **클릭 타겟팅**(겨눈 쪽으로 쏘기), 둘의 관계 |
-| [npc-town.md](npc-town.md) | 마을 NPC, 상점, 대장간(강화) |
+| [npc-town.md](npc-town.md) | 마을 NPC, 상점, 대장간(강화), 전직관 |
+| [job-advance.md](job-advance.md) | ★ **전직** — Lv.30·70·120·180, 전직 NPC 의 "N차 전직" 버튼 → 시험 존의 보스 → 잡으면 전직·스킬 해금 (할퀴기 → 낙뢰 → 빙주각 → 천붕각) |
 | [networking-state.md](networking-state.md) | Colyseus 스키마, 관심영역, 예측·보정, 메시지 목록 |
 | [persistence.md](persistence.md) | SQLite 스키마, 마이그레이션, 계정·토큰 |
 | [characters-and-animation.md](characters-and-animation.md) | 캐릭터·몬스터·NPC 외형, 본 구조, 걷기·대기·공격 동작, ★ **격투가 평타·스킬 동작(블렌더로 지음)**, ★ **팬티 차림 몸과 장비 스킨**(갑옷·투구·신발을 끼면 그 부위가 등급 재질로 바뀐다) |

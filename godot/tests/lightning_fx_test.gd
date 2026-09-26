@@ -57,11 +57,12 @@ func _cast(game: Node3D) -> void:
 
 ## **실제 경로로 쏜다** — 이벤트만 흉내 내면 액션바·전송이 끊겨도 통과한다.
 ##
-## 낙뢰는 Lv.30 스킬이라 **레벨과 포인트를 직접 올려 둔다.** 테스트 스위치
+## 낙뢰는 1차 전직(Lv.30) 스킬이라 **레벨·포인트·전직 단계를 직접 올려 둔다.** 테스트 스위치
 ## (`SKILL_UNLOCK_ALL`)에 기대면 스위치를 끄는 날 이 테스트가 같이 깨진다
 func _case_cast(game: Node3D) -> void:
 	var player: Dictionary = game._transport._world._players[game._transport.my_id()]
 	player["level"] = 30
+	player["job_tier"] = 1
 	player["skill_points"] = 5
 
 	game._transport.send(&"learnSkill", {"skill": "thunder_fall"})

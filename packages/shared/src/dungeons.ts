@@ -43,9 +43,9 @@ export interface DungeonType {
  * 대각선이다. 거리는 사냥터 보스(23)와 비슷하게 두어 보스 인식 범위(무리 반경 3 +
  * 18 = 21) 밖이라, 들어서자마자 달려들지 않고 한 걸음 나가야 싸움이 시작된다.
  */
-const BOSS_SPOT: [number, number] = [-16, -16];
+export const DUNGEON_BOSS_SPOT: [number, number] = [-16, -16];
 
-const RAID_ENV: ZoneDef['env'] = {
+export const DUNGEON_ENV: ZoneDef['env'] = {
   skyColor: '#2a2530',
   sunIntensity: 1.2,
   hemiIntensity: 0.6,
@@ -90,8 +90,8 @@ export function dungeonZones(gate: () => GateDef): ZoneDef[] {
         size: 66,
         spawns: { default: [0, 0] },
         gate: gate(),
-        monsters: [{ kind: s.boss, x: BOSS_SPOT[0], z: BOSS_SPOT[1], radius: 3, count: 1, respawnMs: 900000 }],
-        env: RAID_ENV,
+        monsters: [{ kind: s.boss, x: DUNGEON_BOSS_SPOT[0], z: DUNGEON_BOSS_SPOT[1], radius: 3, count: 1, respawnMs: 900000 }],
+        env: DUNGEON_ENV,
       });
     }
   }

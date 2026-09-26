@@ -1377,6 +1377,8 @@ func _check_upgrades(game: Node3D, me: Dictionary, panel: Control, screen: Vecto
 
 func _case_skills(game: Node3D) -> void:
 	var me: Dictionary = game._transport.snapshot().players[game._transport.my_id()]
+	# 스킬창·퀵슬롯을 보는 케이스다 — 전직 스킬까지 다 올리게 3차까지 마쳐 둔다
+	me["job_tier"] = 3
 	var screen := Vector2(1280, 720)
 
 	# 퀵슬롯 4칸이 화면 아래 가운데에, 오른쪽 단추들과 겹치지 않게

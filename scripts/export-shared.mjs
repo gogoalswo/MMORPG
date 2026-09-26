@@ -31,6 +31,7 @@ import {
   SKILL_UPGRADES,
   SKILL_UPGRADE_MAX,
   SKILL_EXP_BOOKS,
+  JOB_ADVANCES,
   JOB_IDS,
   JOB_STATS,
   PROJECTILE_SPEED,
@@ -129,6 +130,8 @@ export function buildData() {
       upgradeMax: SKILL_UPGRADE_MAX,
       // 스킬 경험치북 — 스킬창에서 고른 강화에 경험치를 넣는다
       expBooks: SKILL_EXP_BOOKS,
+      // 전직 — 단계마다 레벨·시험 존·보스 (jobAdvance.ts). 스킬의 `tier` 와 짝이다
+      jobAdvances: JOB_ADVANCES,
     },
     // 밸런스 설계(stat-balance.md)의 수치. **아직 게임이 안 읽는다** — 판정은
     // 여전히 combat.json 으로 돈다. 설계 문서 9장 순서대로 stats.gd 가 먼저 서야 한다

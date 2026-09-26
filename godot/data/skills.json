@@ -285,7 +285,8 @@
       "arc": 6.283185307179586,
       "power": 5.5,
       "maxTargets": 10,
-      "reqLevel": 20,
+      "reqLevel": 120,
+      "tier": 3,
       "description": "뛰어올라 내리찍어 일대를 무너뜨린다."
     },
     "thunder_fall": {
@@ -299,6 +300,7 @@
       "power": 4.2,
       "maxTargets": 4,
       "reqLevel": 30,
+      "tier": 1,
       "description": "번개를 세 번 내리꽂아 땅을 가른다."
     },
     "frost_pillar": {
@@ -311,16 +313,17 @@
       "arc": 6.283185307179586,
       "power": 4.6,
       "maxTargets": 8,
-      "reqLevel": 40,
+      "reqLevel": 70,
+      "tier": 2,
       "description": "땅을 짓밟아 사방에서 얼음 기둥을 솟구치게 한다."
     }
   },
   "byJob": {
     "fighter": [
       "rising_kick",
-      "sky_breaker",
       "thunder_fall",
-      "frost_pillar"
+      "frost_pillar",
+      "sky_breaker"
     ],
     "mage": [
       "fireball",
@@ -444,6 +447,36 @@
       "name": "상급 스킬 경험치북",
       "short": "상급",
       "exp": 2000
+    }
+  ],
+  "jobAdvances": [
+    {
+      "tier": 1,
+      "level": 30,
+      "zone": "job_1",
+      "boss": "boss02",
+      "bossLevel": 29
+    },
+    {
+      "tier": 2,
+      "level": 70,
+      "zone": "job_2",
+      "boss": "boss06",
+      "bossLevel": 69
+    },
+    {
+      "tier": 3,
+      "level": 120,
+      "zone": "job_3",
+      "boss": "boss11",
+      "bossLevel": 119
+    },
+    {
+      "tier": 4,
+      "level": 180,
+      "zone": "job_4",
+      "boss": "boss17",
+      "bossLevel": 179
     }
   ]
 }

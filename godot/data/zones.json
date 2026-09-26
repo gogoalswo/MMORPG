@@ -203,6 +203,14 @@
           "title": "대장간"
         },
         {
+          "name": "전직관 레온",
+          "job": "fighter",
+          "x": 7,
+          "z": 7,
+          "role": "jobs",
+          "title": "전직"
+        },
+        {
           "name": "아네트",
           "job": "fighter",
           "look": "villager_sack",
@@ -2425,6 +2433,162 @@
       "monsters": [
         {
           "kind": "boss19",
+          "x": -16,
+          "z": -16,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "job_1": {
+      "id": "job_1",
+      "name": "1차 전직 시험",
+      "size": 66,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          4,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss02",
+          "x": -16,
+          "z": -16,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "job_2": {
+      "id": "job_2",
+      "name": "2차 전직 시험",
+      "size": 66,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          4,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss06",
+          "x": -16,
+          "z": -16,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "job_3": {
+      "id": "job_3",
+      "name": "3차 전직 시험",
+      "size": 66,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          4,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss11",
+          "x": -16,
+          "z": -16,
+          "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "job_4": {
+      "id": "job_4",
+      "name": "4차 전직 시험",
+      "size": 66,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "gate": {
+        "position": [
+          4,
+          0
+        ],
+        "radius": 2.6,
+        "color": "#4aa8ff",
+        "name": "사냥터 이동"
+      },
+      "monsters": [
+        {
+          "kind": "boss17",
           "x": -16,
           "z": -16,
           "radius": 3,

@@ -110,12 +110,51 @@ static func cooldown_of(skill: Dictionary) -> int:
 	return 0 if cooldown_off() else int(skill.get("cooldown", 0))
 
 
-## 배울 수 있나. **직업은 스위치와 무관하게 본다** —
-## 남의 직업 스킬은 배워 봐야 쓸 수가 없다
-static func can_learn(skill: Dictionary, job: String, level: int) -> bool:
+## 배울 수 있나. **직업과 전직 단계는 스위치와 무관하게 본다** —
+## 남의 직업 스킬은 배워 봐야 쓸 수가 없고, 전직 스킬은 전직해야 풀린다
+static func can_learn(skill: Dictionary, job: String, level: int, job_tier: int) -> bool:
 	if str(skill.get("job", "")) != job:
 		return false
+	if tier_of(skill) > job_tier:
+		return false
 	return unlock_all() or level >= int(skill.get("reqLevel", 1))
+
+
+## --- 전직 (`jobAdvance.ts` → docs/features/job-advance.md) ---
+
+## 이 스킬이 풀리는 전직 단계 — 없으면 0 (기본 스킬)
+static func tier_of(skill: Dictionary) -> int:
+	return int(skill.get("tier", 0))
+
+
+## 전직 표 — 1차부터 차례로 `{ tier, level, zone, boss, bossLevel }`
+static func job_advances() -> Array:
+	return _table().get("jobAdvances", [])
+
+
+## `tier` 차 전직 한 줄. 없으면(0 이하 · 마지막 넘어) 빈 사전
+static func job_advance(tier: int) -> Dictionary:
+	var all := job_advances()
+	if tier < 1 or tier > all.size():
+		return {}
+	return all[tier - 1]
+
+
+## 이 존이 전직 시험이면 몇 차인지, 아니면 0
+static func job_tier_of_zone(zone_id: String) -> int:
+	for entry in job_advances():
+		if str(entry.get("zone", "")) == zone_id:
+			return int(entry.get("tier", 0))
+	return 0
+
+
+## 그 직업이 `tier` 차 전직으로 푸는 스킬 id 들 (4차처럼 아직 없으면 빈 배열)
+static func unlocked_at(job: String, tier: int) -> Array:
+	var out: Array = []
+	for id in for_job(job):
+		if tier_of(all().get(str(id), {})) == tier:
+			out.append(str(id))
+	return out
 
 
 static func point_cost() -> int:

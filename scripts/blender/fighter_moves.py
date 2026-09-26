@@ -460,4 +460,6 @@ def bend_check(poser):
     return worst
 
 
-main()
+# 다른 스크립트(fighter_idle.py)가 자세 도구만 빌려 쓸 때는 돌지 않는다
+if __name__ == "__main__":
+    main()

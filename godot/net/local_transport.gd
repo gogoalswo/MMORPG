@@ -19,6 +19,9 @@ func open(zone_id: String) -> void:
 	# 저장한 것이 있으면 그 자리에서 이어서 시작한다
 	if _world.restore(MY_ID):
 		print("저장에서 이어서 시작: %s" % _world.zone_id)
+	else:
+		# 새 캐릭터 — 일반 등급 무기·갑옷을 끼워서 시작한다 (2026-09-26 요청)
+		_world.grant_starter_gear(MY_ID)
 	# 크리스탈 30개 — 한 번만 (2026-09-23 요청 "가방에 30개 넣어"). 드랍이 0.01% 라
 	# 주워서는 시험해 볼 수 없다. 받았다는 표시가 저장에 남는다
 	_world.grant_once(MY_ID, "crystal30", {"id": Items.crystal_id(), "count": 30})

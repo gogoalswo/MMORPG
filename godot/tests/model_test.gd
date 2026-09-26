@@ -16,6 +16,7 @@ func _init() -> void:
 	_case_missing()
 	_case_height_table()
 	_case_every_kind()
+	_case_npcs()
 	_run_scene.call_deferred()
 
 
@@ -132,6 +133,24 @@ func _case_every_kind() -> void:
 		if Rig.create(look, 2.0) == null:
 			_fail("%s(%s) 의 look %s 가 모델로 안 만들어진다" % [id, kinds[id].get("name", ""), look])
 	print("  몬스터 %d종 → 모델 %s" % [kinds.size(), looks])
+
+
+## 마을 NPC 는 전부 제 모델이 있고 대기 동작으로 선다 — 기둥이 남으면 안 된다
+func _case_npcs() -> void:
+	var looks := []
+	for npc in GameData.zone("village").get("npcs", []):
+		var look := str(npc.get("look", ""))
+		var rig := Rig.create(look, Rig.HUMAN_HEIGHT)
+		if rig == null:
+			_fail("NPC %s 의 look '%s' 가 모델로 안 만들어진다" % [npc.get("name", ""), look])
+			continue
+		if not rig.has_clip("Idle"):
+			_fail("NPC %s 모델에 Idle 클립이 없다 %s" % [npc.get("name", ""), rig.clips()])
+		if absf(_height(rig) - Rig.HUMAN_HEIGHT) > 0.02:
+			_fail("NPC %s 키가 %.2f" % [npc.get("name", ""), _height(rig)])
+		looks.append(look)
+		rig.free()
+	print("  NPC %d명 → 모델 %s" % [looks.size(), looks])
 
 
 ## 이벤트가 오면 그 동작을 틀고, 끝나면 대기로 돌아가는지 본다

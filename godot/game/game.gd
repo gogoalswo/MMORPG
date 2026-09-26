@@ -11,6 +11,16 @@ extends Node3D
 
 const STOP_DISTANCE := 0.15
 
+## 마을 NPC 의 키(m). 모델은 높이 1 로 정규화돼 오니 여기서 키를 준다.
+## 다 1.8 이면 복제인간이 선다 — 대장장이는 크게, 소녀·노인은 작게. 없으면 Rig.HUMAN_HEIGHT
+const NPC_HEIGHTS := {
+	"smith": 1.95,
+	"merchant": 1.75,
+	"villager_sack": 1.66,
+	"villager_hood": 1.55,
+	"villager_old": 1.68,
+}
+
 ## 가방·장비 창. 가방 격자는 5열 — 웹 클라의 COLUMNS 와 같다
 ## (docs/features/inventory-equipment.md). 장비는 8칸이라 4열 두 줄로 떨어진다
 const BAG_COLUMNS := 5
@@ -3671,18 +3681,30 @@ func _build_zone(zone_id: String) -> void:
 	if not gate.is_empty():
 		_zone_node.add_child(Portal.create(gate))
 
-	# NPC. 모델이 없는 look 뿐이라 기둥에 이름표를 얹는다
+	# NPC. 모델이 있는 look 은 바르코 모델이 대기 동작으로 서 있고, 없으면 기둥이다
+	var npc_index := 0
 	for npc in _transport.snapshot().get("npcs", []):
-		var post := MeshInstance3D.new()
-		var shape := CapsuleMesh.new()
-		shape.radius = 0.35
-		shape.height = 1.7
-		post.mesh = shape
-		var npc_mat := StandardMaterial3D.new()
-		npc_mat.albedo_color = Color("#d8c48a") if npc.has("role") else Color("#b9b3a6")
-		post.material_override = npc_mat
-		post.position = Vector3(npc.x, shape.height * 0.5, npc.z)
-		_zone_node.add_child(post)
+		var look := str(npc.get("look", ""))
+		var rig := Rig.create(look, float(NPC_HEIGHTS.get(look, Rig.HUMAN_HEIGHT)))
+		if rig != null:
+			rig.position = Vector3(npc.x, 0.0, npc.z)
+			# 마을 가운데(스폰 0,0)를 본다. 모델 앞은 +Z 라 World 의 rot 규약과 같다
+			rig.rotation.y = atan2(-float(npc.x), -float(npc.z))
+			_zone_node.add_child(rig)
+			# 다 같이 숨 쉬면 복제인간이다 — 사람마다 클립 중간 다른 자리에서 시작한다
+			rig.play("Idle", 1.0, fmod(npc_index * 1.7, maxf(rig.clip_length("Idle"), 0.1)))
+		else:
+			var post := MeshInstance3D.new()
+			var shape := CapsuleMesh.new()
+			shape.radius = 0.35
+			shape.height = 1.7
+			post.mesh = shape
+			var npc_mat := StandardMaterial3D.new()
+			npc_mat.albedo_color = Color("#d8c48a") if npc.has("role") else Color("#b9b3a6")
+			post.material_override = npc_mat
+			post.position = Vector3(npc.x, shape.height * 0.5, npc.z)
+			_zone_node.add_child(post)
+		npc_index += 1
 
 		var plate := Label3D.new()
 		plate.text = "%s\n%s" % [npc.get("name", ""), npc.get("title", "")]

@@ -24,6 +24,9 @@ const MODELS = [
   // 몬스터 — 사냥터 20곳이 오우거 5종을 차례로 돌려 쓴다 (monsters.ts 의 TIERS[].look · BOSS_LOOKS)
   'varco_ogre1.glb', 'varco_ogre2.glb', 'varco_ogre3.glb', 'varco_ogre4.glb', 'varco_ogre5.glb',
   'varco_portal.glb', // 차원문 (모든 존의 GATE_SPOT)
+  // 마을 NPC 7명 — zones.ts 의 NpcDef.look (rig.gd 의 FILES)
+  'npc_merchant.glb', 'npc_smith.glb', 'npc_trainer.glb',
+  'npc_villager_sack.glb', 'npc_villager_apron.glb', 'npc_villager_hood.glb', 'npc_villager_old.glb',
   // 장비 — 등급마다 갑옷·투구·신발 부위 (바르코, scripts/build-gear-parts.mjs → armor.gd)
   'gear_g1.glb', 'gear_g2.glb', 'gear_g3.glb', 'gear_g4.glb', 'gear_g5.glb', 'gear_g6.glb', 'gear_g7.glb',
 ];

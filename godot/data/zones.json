@@ -205,6 +205,7 @@
         {
           "name": "전직관 레온",
           "job": "fighter",
+          "look": "trainer",
           "x": 7,
           "z": 7,
           "role": "jobs",

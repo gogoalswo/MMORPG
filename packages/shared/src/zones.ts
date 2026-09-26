@@ -197,7 +197,7 @@ const VILLAGE: ZoneDef = {
     { name: '대장장이 군터', job: 'fighter', look: 'smith', x: 0, z: 6.5, role: 'smith', title: '대장간' },
     // 전직 — 차원문(4, 0) 뒤쪽. 닿는 거리(4.5) 끝에 서도 문(2.6) 밖이다.
     // 누르면 다음 전직 버튼이 뜨고, 레벨이 되면 시험(보스)으로 보낸다 (jobAdvance.ts)
-    { name: '전직관 레온', job: 'fighter', x: 7, z: 7, role: 'jobs', title: '전직' },
+    { name: '전직관 레온', job: 'fighter', look: 'trainer', x: 7, z: 7, role: 'jobs', title: '전직' },
 
     // 배경에 서 있는 마을 사람. 전부 다르게 생겨야 마을로 보인다.
     { name: '아네트', job: 'fighter', look: 'villager_sack', x: -8.7, z: -1.3 },

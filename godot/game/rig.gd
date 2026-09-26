@@ -21,6 +21,14 @@ const FILES := {
 	"varco_ogre3": "varco_ogre3.glb",
 	"varco_ogre4": "varco_ogre4.glb",
 	"varco_ogre5": "varco_ogre5.glb",
+	# 마을 NPC — 키는 zones.ts 의 NpcDef.look. 바르코 원화 → 3D → 리깅 → 대기 하나
+	"merchant": "npc_merchant.glb",
+	"smith": "npc_smith.glb",
+	"trainer": "npc_trainer.glb",
+	"villager_sack": "npc_villager_sack.glb",
+	"villager_apron": "npc_villager_apron.glb",
+	"villager_hood": "npc_villager_hood.glb",
+	"villager_old": "npc_villager_old.glb",
 }
 
 var _anim: AnimationPlayer

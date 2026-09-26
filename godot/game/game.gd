@@ -3728,8 +3728,15 @@ func _unhandled_input(event: InputEvent) -> void:
 			_set_target(hit)
 
 
-## 걸어갈 바닥 점을 잡고 표시를 그 자리에 세운다
+## 걸어갈 바닥 점을 잡고 표시를 그 자리에 세운다.
+##
+## **이동 끝 너머를 눌렀으면 끝으로 당긴다** (2026-09-26). 마을은 언덕이 끝(±29)
+## 너머까지 그려져서 거기를 누를 수 있는데, World 는 끝에서 멈추니 목표에
+## 영영 못 닿아 제자리 뛰기를 했다. 고리도 실제로 설 자리에 둔다
 func _set_target(hit: Vector3) -> void:
+	var x := clampf(hit.x, -_half_size, _half_size)
+	var z := clampf(hit.z, -_half_size, _half_size)
+	hit = Vector3(x, _ground_y(x, z), z)
 	_target = hit
 	_marker.position = hit + Vector3(0, 0.05, 0)
 	_marker.visible = true

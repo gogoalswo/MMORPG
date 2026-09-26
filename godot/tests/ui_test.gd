@@ -653,6 +653,10 @@ func _case_bag(game: Node3D) -> void:
 	await process_frame
 	# 고른 칸에 "장착" 이 얹히고, **한 번 더 누르면 낀다** (2026-09-23 요청)
 	var act: Label = first.get_node("act")
+	await process_frame
+	# 글자 판이 칸을 꽉 덮어야 한다 — 띠로 깔리면 그림 위쪽을 가리고 배지와 겹친다
+	if act.size.y < first.get_node("icon").size.y:
+		_fail("'장착' 판이 칸을 안 덮는다: 높이 %.0f (그림 %.0f)" % [act.size.y, first.get_node("icon").size.y])
 	if not act.visible or act.text != "장착":
 		_fail("고른 칸에 '장착' 이 안 얹혔다 (%s '%s')" % [act.visible, act.text])
 	if game._bag_grid.get_child(1).get_node("act").visible:

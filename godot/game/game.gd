@@ -1508,6 +1508,9 @@ func _make_cell(on_press: Callable, size: int = CELL) -> PanelContainer:
 	badge.name = "badge"
 	badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	badge.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	# 칸 높이를 다 받아야 BOTTOM 이 먹는다 — 안 주면 글자 높이로 가운데에 떠서 오른쪽
+	# **가운데**에 찍혔고, 고른 칸의 "장착" 과 붙어 "장착3" 으로 읽혔다 (2026-09-26)
+	badge.size_flags_vertical = Control.SIZE_FILL
 	badge.add_theme_font_size_override("font_size", 15)
 	badge.add_theme_color_override("font_outline_color", Color.BLACK)
 	badge.add_theme_constant_override("outline_size", 4)
@@ -1534,6 +1537,9 @@ func _make_cell(on_press: Callable, size: int = CELL) -> PanelContainer:
 	var shade := StyleBoxFlat.new()
 	shade.bg_color = Color(0, 0, 0, 0.55)
 	act.add_theme_stylebox_override("normal", shade)
+	# 칸을 **꽉 덮어야** 한다. 안 주면 글자 높이(27px)만큼 가운데 띠로 깔려 그림 위쪽을
+	# 가리고 강화 배지(+3)와 겹쳤다 (2026-09-26, 찍어서 봤다)
+	act.size_flags_vertical = Control.SIZE_FILL
 	act.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cell.add_child(act)
 

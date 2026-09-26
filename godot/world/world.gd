@@ -497,23 +497,49 @@ func _drive_auto(delta: float, now: int) -> void:
 		# 사거리를 꽉 채우고 서면 상대가 조금만 움직여도 빠진다. 안쪽으로 붙는다
 		var reach := float(player.stats.attackRange)
 		_walk_auto(player, float(target.x), float(target.z), delta, now, reach * HUNT_STANDOFF)
-		# 치기 전에 그쪽을 본다. 판정 부채꼴이 rot 를 보기 때문이다 —
-		# 안 돌리면 마지막으로 걷던 쪽으로 헛친다 (attack 은 정면에서 다시 고른다)
-		player.rot = atan2(float(target.x) - player.x, float(target.z) - player.z)
-		# 휘두르는 중에는 다음 것을 넣지 않는다. 스킬 경직 중에 기본 공격이 끼면
-		# 스킬 동작이 끊기고, 쿨타임이 0 인 테스트 스위치에서는 스킬이 매 틱 나간다.
-		# **스킬 시전이 끝날 때까지도 기다린다** — 경직(0.4초)이 풀려도 동작은 1초 넘게
-		# 남는데, 그 사이 다음 스킬은 막혀 있으니 평타가 끼어 동작을 끊는다
-		if now < maxi(int(player.rooted_until), int(player.get("cast_until", 0))):
-			continue
-		var gap := Vector2(float(target.x) - player.x, float(target.z) - player.z).length()
-		# 스킬이 먼저다. 돌아온 스킬이 있으면 기본 공격 대신 그걸 쓴다
-		if _auto_cast(player, id, gap, now):
-			continue
-		# **사거리 안일 때만 휘두른다.** 멀리서 헛휘두르면 그때마다 경직(400ms)이
-		# 걸려 한 발짝도 못 나간다 — 붙기 전에 제자리에서 팔만 돌게 된다
-		if gap <= reach:
-			attack(id)
+		_auto_strike(player, id, target, now)
+
+
+## 자동 사냥 중인 사람이 대상에게 넣는 한 수 — 스킬이 먼저, 없으면 사거리 안일 때만
+## 기본 공격. 자동 사냥 한 틱(`_drive_auto`)과 몬스터를 눌러 쫓을 때(`strike`)가 같이 쓴다.
+func _auto_strike(player: Dictionary, id: String, target: Dictionary, now: int) -> void:
+	# 치기 전에 그쪽을 본다. 판정 부채꼴이 rot 를 보기 때문이다 —
+	# 안 돌리면 마지막으로 걷던 쪽으로 헛친다 (attack 은 정면에서 다시 고른다)
+	player.rot = atan2(float(target.x) - player.x, float(target.z) - player.z)
+	# 휘두르는 중에는 다음 것을 넣지 않는다. 스킬 경직 중에 기본 공격이 끼면
+	# 스킬 동작이 끊기고, 쿨타임이 0 인 테스트 스위치에서는 스킬이 매 틱 나간다.
+	# **스킬 시전이 끝날 때까지도 기다린다** — 경직(0.4초)이 풀려도 동작은 1초 넘게
+	# 남는데, 그 사이 다음 스킬은 막혀 있으니 평타가 끼어 동작을 끊는다
+	if now < maxi(int(player.rooted_until), int(player.get("cast_until", 0))):
+		return
+	var gap := Vector2(float(target.x) - player.x, float(target.z) - player.z).length()
+	# 스킬이 먼저다. 돌아온 스킬이 있으면 기본 공격 대신 그걸 쓴다
+	if _auto_cast(player, id, gap, now):
+		return
+	# **사거리 안일 때만 휘두른다.** 멀리서 헛휘두르면 그때마다 경직(400ms)이
+	# 걸려 한 발짝도 못 나간다 — 붙기 전에 제자리에서 팔만 돌게 된다
+	if gap <= float(player.stats.attackRange):
+		attack(id)
+
+
+## 몬스터를 눌러 쫓는 동안 화면이 보내는 한 수 (game.gd `_chase_and_hit`).
+## 쫓는 동안은 이동 입력이 매 프레임 와서 자동 사냥이 통째로 쉬므로(`manual_until`),
+## 예전처럼 `attack` 만 보내면 **자동 사냥을 켜 둬도 평타만 나갔다** (2026-09-26 지적).
+## 켜 둔 사람은 자동 사냥과 같은 `_auto_strike` 로 스킬부터 쓴다. 끈 사람은 기본 공격이다.
+##
+## 누른 놈 id 는 **어느 쪽을 볼지와 스킬 사거리를 재는 데만** 쓴다 — 맞는지는
+## `cast` · `attack` 이 정면에서 다시 고른다.
+func strike(player_id: String, mob_id: String) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty() or bool(player.dead):
+		return
+	if not bool(player.get("auto", false)):
+		attack(player_id)
+		return
+	for monster in _monsters:
+		if str(monster.id) == mob_id and int(monster.hp) > 0:
+			_auto_strike(player, player_id, monster, Time.get_ticks_msec())
+			return
 
 
 ## 자동 사냥의 스킬. 액션바 **칸 순서대로** 보고, 쿨타임이 돈 것 중 대상이 그 스킬
@@ -1462,6 +1488,35 @@ func grant_once(player_id: String, key: String, stack: Dictionary) -> void:
 	player.granted.append(key)
 	_inventory_changed(player)
 	_notice("%s %d개를 가방에 넣었다" % [Items.stack_name(stack), int(stack.get("count", 1))])
+
+
+## **시작 장비** — 새 캐릭터에게 일반(1등급) 무기와 갑옷을 **끼운 채로** 준다 (2026-09-26 요청:
+## "처음 캐릭터 생성시 일반 등급 무기랑 갑옷 지급해"). 부르는 쪽(`LocalTransport.open`)이
+## **저장이 없을 때만** 부른다 — 이미 키우던 캐릭터에게는 안 준다. `granted` 의 `starterGear`
+## 로 한 번만 준다. +0 이고 옵션은 드랍처럼 1등급대로 굴린다. 그 부위에 이미 낀 게 있으면 가방으로
+const STARTER_SLOTS := ["weapon", "armor"]
+
+func grant_starter_gear(player_id: String) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty() or "starterGear" in player.get("granted", []):
+		return
+	for slot in STARTER_SLOTS:
+		var item := Items.get_item(Items.item_id(1, slot))
+		if item.is_empty():
+			continue
+		var stack := {
+			"id": str(item.id), "grade": 1, "enhance": 0,
+			"options": Items.roll_options(item, 1, _rng),
+		}
+		if player.equipped.get(slot, {}).is_empty():
+			player.equipped[slot] = stack
+		elif not _give(player, stack):
+			return  # 가방이 꽉 찼으면 다음 접속에 다시 준다
+	player.granted.append("starterGear")
+	_refresh_stats(player)
+	# 갑옷만큼 최대 HP 가 늘었다 — 새 캐릭터는 가득 찬 채로 시작한다
+	player.hp = int(player.stats.maxHp)
+	_inventory_changed(player)
 
 
 ## **테스트 모드 꾸러미** — 모든 장비를 등급별로 하나씩(등급 7 × 부위 6 = 42개, 전부 +0)과

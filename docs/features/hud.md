@@ -6,10 +6,10 @@
 체력 막대 · 퀵슬롯 4칸 + **물약 칸** + 자동사냥 칸)과 **오른쪽 위 메뉴**(정보·스킬·강화·크리스탈·가방·던전·설계)다.
 물약 칸은 2026-09-26 에 더했고, 같은 날 퀵슬롯 **왼쪽**으로 옮겼다 → 아래 "물약 칸".
 정보 단추는 2026-09-25 에 메뉴 맨 앞(스킬 왼쪽)에 더했다 — 캐릭터 정보 창을 따로 띄운다
-→ [inventory-equipment.md](inventory-equipment.md). 그림(`ui_icon_character`)이 아직 없어 글자로 나온다.
+→ [inventory-equipment.md](inventory-equipment.md). 그림은 기사 투구(`ui_icon_character`, 2026-09-26).
 던전 단추는 2026-09-23 에 가방 오른쪽 옆에 더했다 → [dungeons.md](dungeons.md).
 강화 단추는 2026-09-24 에 가방 **왼쪽** 옆에 더했다 (오른쪽 옆은 던전 자리) — 강화 팝업을
-다중 강화 · 전체 목록으로 연다 → [items.md](items.md) "강화". 그림(`ui_icon_enhance`)이 아직 없어 글자로 나온다.
+다중 강화 · 전체 목록으로 연다 → [items.md](items.md) "강화". 그림은 모루를 내리치는 망치(`ui_icon_enhance`, 2026-09-26).
 크리스탈 단추는 같은 날 가방 **바로 왼쪽**에 더했다 (강화는 한 칸 왼쪽으로 밀렸다) — 인벤토리·장비
 창과 크리스탈 강화 창을 같이 연다 → [items.md](items.md) "크리스탈". UI 결 그림(`ui_icon_crystal`)이
 아직 없어 가방 아이콘 `crystal.png` 를 쓴다.
@@ -63,7 +63,7 @@
 의 같은 규칙). 해상도가 바뀌어도 앵커로 자리를 잡아야 한다.
 
 ```
-묶음  VBox(아래 가운데, 바닥에서 16)
+묶음  VBox(아래 가운데, 바닥에서 경험치 띠 높이 + 8 = 28 — 16 이면 칸이 띠에 가렸다)
  ├ Control(LEVEL_BADGE) ─ TextureRect(ui_level_badge) + Label "58"
  ├ Label "경험치 40.00%"
  ├ PanelContainer(ui_bar_frame) ─ TextureProgressBar(ui_bar_fill) ─ Label "72 / 120"
@@ -293,7 +293,8 @@ frame.add_child(border)         # 채움 **다음**에 붙여야 위로 온다
 
 ## 설계 재현 창 ★
 
-오른쪽 위 메뉴 네 번째 **"설계"** 단추. [stat-balance.md](stat-balance.md) 9장 5번이
+오른쪽 위 메뉴 맨 끝 **"설계"** 단추 — 그림은 톱니바퀴 위 제도용 컴퍼스(`ui_icon_design`, 2026-09-26).
+[stat-balance.md](stat-balance.md) 9장 5번이
 요구한 디버그 수단이다 — 시뮬레이터와 같은 조건을 게임에서 세워 놓고 대조한다.
 
 - **레벨 ±1/±10 · 등급 ±1 · 강화 ±1** 을 누르면 `World.debug_gear` 가 캐릭터를 그

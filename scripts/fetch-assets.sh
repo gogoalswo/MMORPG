@@ -331,6 +331,8 @@ fetch_icon 5ba8037d1557db3aaa50724f3773a062 dungeon_raid
 fetch_icon 83ade51b31eaabf39062e899b8b4b39d dungeon_trial    # 시련의 탑 — 뾰족 지붕 돌탑 · 횃불 (둘째)
 fetch_icon 5eb4149d3844a5afb43f514f86b719ab dungeon_treasure # 보물 창고 — 금테 상자 · 자물쇠 · 금화 (첫째)
 fetch_icon 9f519882b9a58b99a928564c0fb70efd ui_icon_auto   # 자동사냥 — 검 두 자루가 X자
+# 퀵슬롯 왼쪽 물약 칸 (2026-09-26) — 둥근 유리병 · 코르크 · 붉은 물약. 두 장 중 둘째(정면)
+fetch_icon 81fc643bd0233984e748b4bb3416fcc8 ui_icon_potion
 fetch_icon 74df64ad7717d61a8ba37c600568f827 ui_auto_spin   # 자동사냥 고리 (굵은 화살표 — 얇은 것은 안 보였다)
 fetch_icon 69c32b07ca637a710819a6ba08020abf ui_close       # 모든 창 오른쪽 위 닫기 X
 fetch_icon 029c2be72082608b40dfaf00bebe782a ui_portrait    # 옛 초상 테두리 (미사용 — 상태판을 내리면서 빠졌다)

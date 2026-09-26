@@ -76,6 +76,8 @@ const ICONS = [
   // 레벨 배지가 새로 들어왔고 초상(ui_portrait)은 빠졌다
   'ui_bar_frame.png', 'ui_bar_fill.png', 'ui_level_badge.png', 'ui_quick_slot.png',
   'ui_icon_skill.png', 'ui_icon_bag.png', 'ui_icon_auto.png', 'ui_auto_spin.png',
+  // 퀵슬롯 왼쪽 물약 칸 (2026-09-26)
+  'ui_icon_potion.png',
   // 던전 단추 — 뿔 달린 보스 머리 (2026-09-23, docs/features/dungeons.md)
   'ui_icon_dungeon.png',
   // 던전 종류 카드 그림 셋 — 토벌(보스 머리) · 시련의 탑 · 보물 창고 (2026-09-23)

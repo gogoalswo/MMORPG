@@ -33,12 +33,13 @@ func _run() -> void:
 	if start.test_button == null or start.normal_button == null:
 		_fail("시작 화면에 모드 단추가 없다")
 	start.queue_free()
+	await _case_reset()
 
 	await _case(PlayMode.TEST)
 	await _case(PlayMode.NORMAL)
 	PlayMode.current = ""
 	if _failed == 0:
-		print("  테스트 모드: 무적·쿨타임 0 켬, 목록 접힘, 장비 42종·크리스탈 300 · 일반 모드: 전부 끔, 목록 숨김")
+		print("  초기화 단추: 두 번에 지움 · 테스트 모드: 무적·쿨타임 0 켬, 목록 접힘, 장비 42종·크리스탈 300 · 일반 모드: 전부 끔, 목록 숨김")
 	quit(1 if _failed > 0 else 0)
 
 
@@ -65,6 +66,27 @@ func _case(mode: String) -> void:
 	# 다음 경우를 위해 되돌린다 — 쿨타임 스위치는 표(static)라 장면을 치워도 남는다
 	Skills.set_switch("cooldownOff", false)
 	game.queue_free()
+	await process_frame
+
+
+## 저장 초기화 단추 — 한 번 누르면 되묻기만 하고, 두 번째에 지운다 (2026-09-26)
+func _case_reset() -> void:
+	Save.write("town", {"x": 0.0, "z": 0.0, "level": 100, "exp": 0, "hp": 1})
+	var start: Control = load("res://start.tscn").instantiate()
+	root.add_child(start)
+	await process_frame
+	if start.reset_button == null or start.reset_button.disabled:
+		_fail("저장이 있는데 초기화 단추가 없거나 꺼져 있다")
+	else:
+		start.reset_button.pressed.emit()
+		if not FileAccess.file_exists(Save.PATH):
+			_fail("초기화 단추를 한 번 눌렀는데 벌써 지웠다")
+		start.reset_button.pressed.emit()
+		if FileAccess.file_exists(Save.PATH):
+			_fail("초기화 단추를 두 번 눌렀는데 저장이 남았다")
+		if not start.reset_button.disabled:
+			_fail("지운 뒤에도 초기화 단추가 켜져 있다")
+	start.queue_free()
 	await process_frame
 
 

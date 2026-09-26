@@ -17,6 +17,11 @@ const DIM := Color("#948c7a")
 
 var test_button: Button
 var normal_button: Button
+## 저장 초기화 — **두 번 눌러야 지운다** (2026-09-26 요청: "초기화 버튼을 만들어서 초기화 시켜").
+## 모드가 저장 하나를 같이 써서, 테스트 모드에서 치트로 올린 100레벨이 일반 모드에 그대로 떴다
+var reset_button: Button
+var _reset_note: Label
+var _reset_armed := false
 
 
 func _ready() -> void:
@@ -50,6 +55,13 @@ func _ready() -> void:
 	column.add_child(test_button)
 	normal_button = _mode_button("일반 모드", "캐릭터만 만들어 시작", PlayMode.NORMAL)
 	column.add_child(normal_button)
+	reset_button = _mode_button("저장 초기화", "", "")
+	reset_button.custom_minimum_size.y = 80
+	reset_button.pressed.disconnect(choose)
+	reset_button.pressed.connect(_on_reset)
+	_reset_note = reset_button.get_child(0).get_child(1)
+	column.add_child(reset_button)
+	_show_reset(false)
 
 
 ## 두 줄짜리 단추 — 위는 모드 이름, 아래는 무엇이 켜지는지. 글자는 Label 로 얹는다
@@ -78,6 +90,30 @@ func _mode_button(name: String, note: String, mode: String) -> Button:
 		lines.add_child(label)
 	button.pressed.connect(choose.bind(mode))
 	return button
+
+
+## 처음 누르면 되묻고, 한 번 더 누르면 지운다 — 다음에 고르는 모드는 1레벨부터 새로 시작한다
+func _on_reset() -> void:
+	if not _reset_armed:
+		_reset_armed = true
+		_reset_note.text = "한 번 더 누르면 지웁니다"
+		_reset_note.add_theme_color_override("font_color", GOLD_HI)
+		return
+	Save.clear()
+	_reset_armed = false
+	_show_reset(true)
+
+
+func _show_reset(cleared: bool) -> void:
+	var has_save := FileAccess.file_exists(Save.PATH)
+	reset_button.disabled = not has_save
+	_reset_note.add_theme_color_override("font_color", DIM)
+	if cleared:
+		_reset_note.text = "지웠습니다 — 1레벨부터 시작합니다"
+	elif has_save:
+		_reset_note.text = "캐릭터를 지우고 1레벨부터"
+	else:
+		_reset_note.text = "저장이 없습니다"
 
 
 func choose(mode: String) -> void:

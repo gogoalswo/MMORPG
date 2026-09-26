@@ -276,6 +276,8 @@ func _hand(game: Node3D) -> void:
 	game.set_process(false)
 	var rig: Rig = game._player
 	rig.set_weapon(0)
+	for slot in Armor.SLOTS:
+		rig.set_gear(slot, 0)
 	rig.play("Idle", 1.0, 0.0, true, 0.0)
 	var skeleton: Skeleton3D = rig.find_children("*", "Skeleton3D", true, false)[0]
 	var bone := skeleton.find_bone("RightHand")

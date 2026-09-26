@@ -182,6 +182,8 @@ var _marker: MeshInstance3D
 var _target: Vector3 = Vector3.INF
 var _seq := 0
 var _half_size := 0.0
+## 이 존의 지형. 없으면(`null`) 평평한 바닥이다 — 높이는 `_ground_y` 로만 읽는다
+var _terrain: Terrain = null
 ## 존마다 다시 짓는 것들(바닥·하늘·몬스터·차원문)은 여기 아래에 둔다.
 ## 캐릭터·카메라·UI 는 존이 바뀌어도 그대로라 밖에 있다
 var _zone_node: Node3D
@@ -3675,18 +3677,26 @@ func _build_zone(zone_id: String) -> void:
 	sun.rotation_degrees = Vector3(-50, -35, 0)
 	_zone_node.add_child(sun)
 
-	var ground := MeshInstance3D.new()
-	var plane := PlaneMesh.new()
-	plane.size = Vector2(size, size)
-	ground.mesh = plane
-	ground.material_override = Ground.material_for(env, size)
-	_zone_node.add_child(ground)
+	# 바닥. 지형이 있는 존(지금은 마을)은 높낮이와 바닥 여러 장을 섞은 메시,
+	# 없으면 평평한 한 장이다 → docs/features/world-zones.md "지형"
+	_terrain = Terrain.build(zone_id)
+	if _terrain != null:
+		_zone_node.add_child(_terrain.mesh_instance(env))
+	else:
+		var ground := MeshInstance3D.new()
+		var plane := PlaneMesh.new()
+		plane.size = Vector2(size, size)
+		ground.mesh = plane
+		ground.material_override = Ground.material_for(env, size)
+		_zone_node.add_child(ground)
 
 
 	# 차원문. 여기 들어가면 존이 바뀐다 (World._check_gate)
 	var gate: Dictionary = zone.get("gate", {})
 	if not gate.is_empty():
-		_zone_node.add_child(Portal.create(gate))
+		var portal := Portal.create(gate)
+		portal.position.y = _ground_y(portal.position.x, portal.position.z)
+		_zone_node.add_child(portal)
 
 	# NPC. 모델이 있는 look 은 바르코 모델이 대기 동작으로 서 있고, 없으면 기둥이다
 	var npc_index := 0
@@ -3694,7 +3704,7 @@ func _build_zone(zone_id: String) -> void:
 		var look := str(npc.get("look", ""))
 		var rig := Rig.create(look, float(NPC_HEIGHTS.get(look, Rig.HUMAN_HEIGHT)))
 		if rig != null:
-			rig.position = Vector3(npc.x, 0.0, npc.z)
+			rig.position = Vector3(npc.x, _ground_y(npc.x, npc.z), npc.z)
 			# 마을 가운데(스폰 0,0)를 본다. 모델 앞은 +Z 라 World 의 rot 규약과 같다
 			rig.rotation.y = atan2(-float(npc.x), -float(npc.z))
 			_zone_node.add_child(rig)
@@ -3709,7 +3719,7 @@ func _build_zone(zone_id: String) -> void:
 			var npc_mat := StandardMaterial3D.new()
 			npc_mat.albedo_color = Color("#d8c48a") if npc.has("role") else Color("#b9b3a6")
 			post.material_override = npc_mat
-			post.position = Vector3(npc.x, shape.height * 0.5, npc.z)
+			post.position = Vector3(npc.x, _ground_y(npc.x, npc.z) + shape.height * 0.5, npc.z)
 			_zone_node.add_child(post)
 		npc_index += 1
 
@@ -3720,7 +3730,7 @@ func _build_zone(zone_id: String) -> void:
 		plate.pixel_size = 0.004
 		plate.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		plate.no_depth_test = true
-		plate.position = Vector3(npc.x, 2.3, npc.z)
+		plate.position = Vector3(npc.x, _ground_y(npc.x, npc.z) + 2.3, npc.z)
 		_zone_node.add_child(plate)
 
 	# 몬스터. 자리는 World 가 정했고 여기서는 그리기만 한다.
@@ -3746,7 +3756,9 @@ func _build_zone(zone_id: String) -> void:
 			body.material_override = mat
 			node = body
 			foot = shape.height * 0.5
-		node.position = Vector3(monster.x, foot, monster.z)
+		node.position = Vector3(monster.x, _ground_y(monster.x, monster.z) + foot, monster.z)
+		# 매 프레임 발밑 높이에 더한다 — 기둥은 원점이 몸 가운데다
+		node.set_meta("foot", foot)
 		_zone_node.add_child(node)
 		_mob_nodes[monster.id] = node
 
@@ -3859,7 +3871,7 @@ func _tick_ring(snap: Dictionary) -> void:
 		return
 	if _ring == null or not is_instance_valid(_ring):
 		return
-	_ring.follow(Vector3(mob.x, 0.0, mob.z), float(mob.r), _last_delta)
+	_ring.follow(Vector3(mob.x, _ground_y(mob.x, mob.z), mob.z), float(mob.r), _last_delta)
 
 
 ## 몬스터 머리 위 체력 막대. **골라 둔 놈과 방금 때린 놈만** 보여 준다
@@ -3923,7 +3935,7 @@ func _tick_mob_bar(monster: Dictionary, node: Node3D) -> void:
 		bar = HpBar3D.create(_zone_node, node, HpBar3D.COLOR_MOB)
 		_mob_bars[id] = bar
 	bar.follow(
-		Vector3(monster.x, 0.0, monster.z),
+		Vector3(monster.x, _ground_y(monster.x, monster.z), monster.z),
 		float(monster.hp) / maxf(1.0, float(monster.max_hp))
 	)
 
@@ -3934,8 +3946,15 @@ func _ground_point(screen: Vector2) -> Vector3:
 		return Vector3.INF
 	var from := _camera.project_ray_origin(screen)
 	var dir := _camera.project_ray_normal(screen)
+	if _terrain != null:
+		return _terrain.ray_hit(from, dir)
 	var hit = Plane(Vector3.UP, 0.0).intersects_ray(from, dir)
 	return hit if hit != null else Vector3.INF
+
+
+## 발밑 높이. 지형이 없는 존은 0 이다. **그리기만** 쓴다 — 판정은 평면에서 돈다
+func _ground_y(x: float, z: float) -> float:
+	return _terrain.height_at(x, z) if _terrain != null else 0.0
 
 
 func _process(delta: float) -> void:
@@ -4100,7 +4119,7 @@ func _draw_state() -> void:
 	# `_moving`(=_move 가 켠다)만 보면 대기 자세로 미끄러진다. 실제로 움직인
 	# 거리에서 되돌린다 — 웹 클라이언트가 서버 주도 이동에서 쓰던 방법과 같다
 	# (docs/features/auto-hunt-and-targeting.md 의 "클라이언트가 하는 일" 3번)
-	var walked_to := Vector3(me.x, _player_y, me.z)
+	var walked_to := Vector3(me.x, _player_y + _ground_y(me.x, me.z), me.z)
 	if not _moving and not zone_changed and _last_delta > 0.0:
 		var step := Vector2(
 			walked_to.x - _player.position.x, walked_to.z - _player.position.z
@@ -4129,6 +4148,7 @@ func _draw_state() -> void:
 			continue
 		node.position.x = monster.x
 		node.position.z = monster.z
+		node.position.y = float(node.get_meta("foot", 0.0)) + _ground_y(monster.x, monster.z)
 		HitFx.apply_react(node, _last_delta)
 		_tick_frozen(monster, node)
 		node.rotation.y = monster.get("rot", 0.0)
@@ -4158,7 +4178,7 @@ func _draw_state() -> void:
 	_player_bar.visible = _player.visible
 	if _player_bar.visible:
 		_player_bar.follow(
-			Vector3(me.x, 0.0, me.z), float(me.hp) / maxf(1.0, float(me.stats.maxHp))
+			Vector3(me.x, _ground_y(me.x, me.z), me.z), float(me.hp) / maxf(1.0, float(me.stats.maxHp))
 		)
 
 	_refresh_status(me)
@@ -4294,7 +4314,7 @@ func _show_skill(payload: Dictionary) -> void:
 	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
 	if me.is_empty():
 		return
-	var here := Vector3(me.x, 0.0, me.z)
+	var here := Vector3(me.x, _ground_y(me.x, me.z), me.z)
 	if skill == "thunder_fall":
 		# 강화는 판정이 이벤트에 실어 보낸다 — "기절" 이면 붉은 번개, "범위" 면 좌우로
 		# 두 번 더. 둘은 따로 논다 (범위만 붙었으면 색은 그대로)
@@ -4325,7 +4345,8 @@ func _show_aoe(payload: Dictionary) -> void:
 	if _zone_node == null:
 		return
 	var radius := float(payload.get("radius", 7.0))
-	var here := Vector3(payload.get("x", 0.0), 0.06, payload.get("z", 0.0))
+	var here := Vector3(payload.get("x", 0.0), 0.0, payload.get("z", 0.0))
+	here.y = _ground_y(here.x, here.z) + 0.06
 
 	var mark := Node3D.new()
 	mark.position = here

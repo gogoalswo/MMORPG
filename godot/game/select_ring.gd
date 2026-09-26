@@ -65,7 +65,8 @@ func follow(at: Vector3, radius: float, delta: float) -> void:
 		torus.outer_radius = radius + MARGIN
 		torus.inner_radius = maxf(torus.outer_radius - THICKNESS, 0.05)
 
-	position = Vector3(at.x, HEIGHT, at.z)
+	# at.y 는 발밑 땅 높이다 (지형이 없는 존은 0)
+	position = Vector3(at.x, at.y + HEIGHT, at.z)
 	_t += delta
 	_ring.rotation.y = _t * SPIN
 	var pulse := 1.0 + PULSE * sin(_t * PULSE_SPEED)

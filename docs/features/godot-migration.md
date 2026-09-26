@@ -31,7 +31,8 @@ three.js 웹 클라이언트를 **고도 엔진으로 갈아타는 중**이다. 
 | `godot/game/game.gd` | 화면. 바닥·카메라·모델·터치 이동. **`World` 를 직접 안 만진다** |
 | `godot/game/rig.gd` | `.glb` 하나를 씌우고 클립을 트는 껍데기. **없으면 `null`**. 손 뼈에 **주먹 소켓**을 달아 무기를 끼운다(`set_weapon`) |
 | `godot/game/gauntlet.gd` | 주먹에 끼는 건틀릿 — 등급마다 생김새를 코드로 짓는다 → [characters-and-animation.md](characters-and-animation.md) "무기 소켓" |
-| `godot/game/ground.gd` | 존 바닥 재질 — 텍스처·타일 크기·존 틴트 |
+| `godot/game/ground.gd` | 존 바닥 재질 — 텍스처·타일 크기·존 틴트. 지형 재질(`terrain_material`)도 여기 |
+| `godot/game/terrain.gd` | ★ **지형** — 높낮이 메시 + 바닥 섞기. 마을만. 화면은 `_ground_y` 로 발밑 높이를 읽는다 → [world-zones.md](world-zones.md) "지형" |
 | `godot/game/hit_fx.gd` | **피격 이펙트.** 맞은 자리의 섬광·파편·피해 숫자. 에셋 없이 코드로 짓는다 |
 | `godot/game/skill_fx.gd` | **스킬 이펙트.** 지금은 할퀴기 하나 — `CPUParticles3D` 여섯으로 짓는다 (판 메시 금지) |
 | `godot/game/portal.gd` · `gate_panel.gd` | **차원문 아치와 창.** 창은 조각을 앵커로 조립한다 → [portal-ui.md](portal-ui.md) |

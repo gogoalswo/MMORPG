@@ -30,6 +30,7 @@ const CONTRAST := 1.4
 const NORMAL_DEPTH := 2.0
 
 const SHADER := preload("res://game/ground.gdshader")
+const TERRAIN_SHADER := preload("res://game/terrain.gdshader")
 
 
 static func look_of(kind: String) -> Dictionary:
@@ -84,4 +85,46 @@ static func material_for(env: Dictionary, size: float) -> Material:
 	# 타일 크기는 미터다. 존이 92m 이고 풀이 4m 면 23번 반복된다
 	var tile := maxf(1.0, float(look.get("tile", 6)))
 	mat.set_shader_parameter("tiling", Vector2(size / tile, size / tile))
+	return mat
+
+
+## 지형 재질 — 바닥 네 장(`layers`, 0 번이 나머지를 채운다)을 섞기 그림대로 섞는다
+## (`terrain.gd`). 한 장마다의 틴트·대비·노멀은 위 `material_for` 와 같은 식이다.
+##
+## 틴트: 풀은 `grassLight`, 돌판·자갈은 `groundTint` 쪽으로 끌어당긴다 — 사냥터가
+## 풀밭이면 grassLight, 아니면 흙색을 쓰는 것과 같은 규칙이다. 흙은 제 색 그대로다
+## (`groundTint` 가 회색이라 끌어당기면 흙이 잿빛 돌처럼 된다).
+## 텍스처가 하나라도 없으면 단색으로 떨어진다
+static func terrain_material(env: Dictionary, layers: Array, splat: Texture2D, splat_half: float) -> Material:
+	var targets := {
+		"grass": str(env.get("grassLight", "#82905a")),
+		"stone": str(env.get("groundTint", "#6a665c")),
+		"cobble": str(env.get("groundTint", "#6a665c")),
+	}
+	var mat := ShaderMaterial.new()
+	mat.shader = TERRAIN_SHADER
+	var tiles := Vector4.ONE
+	var roughs := Vector4.ONE
+	for k in layers.size():
+		var kind := str(layers[k])
+		var look := look_of(kind)
+		var color_path := DIR + "ground_%s_color.ktx2" % kind
+		var normal_path := DIR + "ground_%s_normal.ktx2" % kind
+		if look.is_empty() or not ResourceLoader.exists(color_path) or not ResourceLoader.exists(normal_path):
+			var flat := StandardMaterial3D.new()
+			flat.albedo_color = Color(str(env.get("groundTint", "#6a665c")))
+			return flat
+		var mean := str(look.mean)
+		mat.set_shader_parameter("albedo%d" % k, load(color_path))
+		mat.set_shader_parameter("normal%d" % k, load(normal_path))
+		mat.set_shader_parameter("mean%d" % k, Color(mean).srgb_to_linear())
+		mat.set_shader_parameter("tint%d" % k, tint_for(str(targets.get(kind, mean)), mean) * ALBEDO)
+		tiles[k] = maxf(1.0, float(look.get("tile", 6)))
+		roughs[k] = float(look.get("roughness", 0.9))
+	mat.set_shader_parameter("tile", tiles)
+	mat.set_shader_parameter("rough", roughs)
+	mat.set_shader_parameter("contrast", CONTRAST)
+	mat.set_shader_parameter("normal_depth", NORMAL_DEPTH)
+	mat.set_shader_parameter("splat", splat)
+	mat.set_shader_parameter("splat_half", splat_half)
 	return mat

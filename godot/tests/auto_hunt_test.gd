@@ -18,6 +18,7 @@ func _init() -> void:
 	_case_anchor_on_toggle()
 	_case_walks_in_and_hits()
 	_case_casts_skills()
+	_case_click_casts_skills()
 	_case_patrol_when_empty()
 	_case_outside_radius()
 	_case_off_stops()
@@ -178,6 +179,42 @@ func _case_casts_skills() -> void:
 		_fail("돌아온 스킬을 두고 기본 공격을 먼저 휘둘렀다")
 	else:
 		print("  사거리 안(%.2f m)에 들자 스킬부터 썼다" % cast_at)
+
+
+## 켜 둔 채로 몬스터를 눌러 쫓아도 스킬부터 쓴다 (2026-09-26 "평타만 사용해").
+## 쫓는 동안은 이동 입력 때문에 `_drive_auto` 가 쉬므로, 화면(`_chase_and_hit`)이 하듯
+## 매 프레임 이동 + `strike` 를 넣는다. 끈 채로는 `strike` 가 기본 공격이다
+func _case_click_casts_skills() -> void:
+	for auto in [true, false]:
+		var s := _setup(10.0, 0.0)
+		var w: World = s[0]
+		var me: Dictionary = s[1]
+		var mob: Dictionary = s[2]
+		me.skills = ["rising_kick"]
+		me.skill_bar = ["rising_kick"]
+		w.set_auto("me", auto)
+		w.drain_events()
+
+		var first := ""
+		var seq := 0
+		for i in 600:
+			var to := Vector2(mob.x - me.x, mob.z - me.z)
+			var dt := 1.0 / 60.0 if to.length() > float(me.stats.attackRange) else 0.0
+			seq += 1
+			w.input_move("me", seq, to.normalized().x, to.normalized().y, dt)
+			w.strike("me", str(mob.id))
+			w.step(1.0 / 60.0)
+			for e in w.drain_events():
+				if first == "" and (e.type == "swing" or e.type == "skill"):
+					first = str(e.type)
+			if first != "":
+				break
+
+		var want := "skill" if auto else "swing"
+		if first != want:
+			_fail("눌러 쫓기(자동 %s): 첫 수가 %s 여야 하는데 %s" % [auto, want, first if first != "" else "없음"])
+		else:
+			print("  눌러 쫓기(자동 %s): 첫 수가 %s" % ["켬" if auto else "끔", "스킬" if auto else "기본 공격"])
 
 
 ## 잡을 것이 없으면 앵커 주변을 서성인다 — 선 채로 굳어 있으면 멈춘 것처럼 보인다.

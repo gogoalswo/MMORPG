@@ -136,8 +136,27 @@ const made = { Right: 0, Left: 0 };
 for (const side of ['Right', 'Left']) {
   const bi = baseNames.indexOf(`${side}Hand`);
   const fi = fistNames.indexOf(`${side}Hand`);
-  const m = mul(invert(mat(baseIbm, bi)), mat(fistIbm, fi));
+  // 방향은 **아래팔 뼈**로, 자리는 **손목(손 뼈 원점)** 으로 맞춘다. 손 뼈 기준으로 옮겼더니 손목이 꺾여
+  // 보였다 (2026-09-26 "관절이 꺾였자나") — 주먹 모델은 팔을 내린 자세라 손 뼈 방향이 주먹과 어긋나
+  // 있었다. 그림의 주먹은 아래팔과 곧게 이어져 있으므로 "아래팔 → 주먹" 을 그대로 우리 아래팔에 맞춘다
+  const bHand = invert(mat(baseIbm, bi));
+  const sHand = invert(mat(fistIbm, fi));
+  const rot = (w) => {
+    // 뼈 월드 행렬에서 배율을 뺀 회전 (열 우선 3x3 → 4x4)
+    const cols = [0, 1, 2].map((c) => {
+      const v = [w[c * 4], w[c * 4 + 1], w[c * 4 + 2]];
+      const l = Math.hypot(...v) || 1;
+      return v.map((x) => x / l);
+    });
+    return [...cols[0], 0, ...cols[1], 0, ...cols[2], 0, 0, 0, 0, 1];
+  };
+  const transpose = (r) => [r[0], r[4], r[8], 0, r[1], r[5], r[9], 0, r[2], r[6], r[10], 0, 0, 0, 0, 1];
+  const move = (t) => [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, t[0], t[1], t[2], 1];
+  const bFore = rot(invert(mat(baseIbm, baseNames.indexOf(`${side}ForeArm`))));
+  const sFore = rot(invert(mat(fistIbm, fistNames.indexOf(`${side}ForeArm`))));
+  const m = mul(mul(move([bHand[12], bHand[13], bHand[14]]), mul(bFore, transpose(sFore))), move([-sHand[12], -sHand[13], -sHand[14]]));
   const remap = new Map();
+  const first = P.length / 3;
   // **가장 큰 한 덩어리만** — 주먹 모델은 주먹이 반바지에 붙어 있어서 반바지 조각도 손 뼈 가중치를 받아
   // 같이 떨어져 왔다 (검은 조각이 주먹 옆에 떴다). 같은 자리 정점을 한 점으로 묶어 이은 덩어리를 센다
   const tris = [];
@@ -183,6 +202,41 @@ for (const side of ['Right', 'Left']) {
     }
     made[side] += 1;
   }
+  // **모양으로 곧게 편다** — 뼈 축을 맞춰도 손목이 꺾여 보였다: 주먹 모델은 팔을 내린 채 리깅돼서
+  // 아래팔 뼈 축이 실제 팔 메시와 어긋나 있다. "손목 → 주먹 가운데" 가 우리 "팔꿈치 → 손목" 과
+  // 곧게 이어지도록 손목을 축으로 가장 짧게 돌린다
+  const elbow = invert(mat(baseIbm, baseNames.indexOf(`${side}ForeArm`)));
+  const wrist = [bHand[12], bHand[13], bHand[14]];
+  const want = [0, 1, 2].map((r) => wrist[r] - elbow[12 + r]);
+  const mid = [0, 0, 0];
+  const last = P.length / 3;
+  for (let v = first; v < last; v += 1) for (let r = 0; r < 3; r += 1) mid[r] += P[v * 3 + r] / (last - first);
+  const have = [0, 1, 2].map((r) => mid[r] - wrist[r]);
+  const norm = (x) => {
+    const l = Math.hypot(...x) || 1;
+    return x.map((y) => y / l);
+  };
+  const [a, d] = [norm(have), norm(want)];
+  const axis = norm([a[1] * d[2] - a[2] * d[1], a[2] * d[0] - a[0] * d[2], a[0] * d[1] - a[1] * d[0]]);
+  const angle = Math.acos(Math.max(-1, Math.min(1, a[0] * d[0] + a[1] * d[1] + a[2] * d[2])));
+  const turn = (x) => {
+    // 로드리게스 회전
+    const c = Math.cos(angle);
+    const s = Math.sin(angle);
+    const k = axis;
+    const dot = k[0] * x[0] + k[1] * x[1] + k[2] * x[2];
+    const cross = [k[1] * x[2] - k[2] * x[1], k[2] * x[0] - k[0] * x[2], k[0] * x[1] - k[1] * x[0]];
+    return [0, 1, 2].map((r) => x[r] * c + cross[r] * s + k[r] * dot * (1 - c));
+  };
+  for (let v = first; v < last; v += 1) {
+    const p = turn([0, 1, 2].map((r) => P[v * 3 + r] - wrist[r]));
+    const n = turn([N[v * 3], N[v * 3 + 1], N[v * 3 + 2]]);
+    for (let r = 0; r < 3; r += 1) {
+      P[v * 3 + r] = p[r] + wrist[r];
+      N[v * 3 + r] = n[r];
+    }
+  }
+  console.log(`  ${side === 'Right' ? '오른' : '왼'}주먹을 ${((angle * 180) / Math.PI).toFixed(1)}° 펴서 아래팔과 곧게 이었다`);
 }
 if (!made.Right || !made.Left) throw new Error(`주먹을 못 뗐다 (오른손 ${made.Right} · 왼손 ${made.Left})`);
 

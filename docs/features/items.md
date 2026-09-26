@@ -374,6 +374,14 @@ equipmentStats(equipped)        장착 8칸 합
 
 되살리려면 그 커밋을 뒤집는 게 빠르다.
 
+### 시작 장비 (2026-09-26)
+새 캐릭터는 **일반(1등급) 무기와 갑옷을 끼운 채로** 시작한다 (요청: "처음 캐릭터 생성시
+일반 등급 무기랑 갑옷 지급해"). `world.gd` 의 `grant_starter_gear` — +0, 옵션은 드랍처럼
+1등급대로 굴리고, 갑옷으로 늘어난 최대 HP 까지 채운다.
+- **저장이 없을 때만** 준다 (`LocalTransport.open` 에서 `restore` 가 실패했을 때). 키우던
+  캐릭터에게 뒤늦게 주지 않는다. `granted` 의 `starterGear` 로 한 번만 준다.
+- 부위는 `STARTER_SLOTS` 한 줄이다. 검사는 `item_test.gd` 의 `_case_starter_gear`.
+
 ### 드롭
 - 확률은 **설계값**이다 (`dropChanceFor` — 아래 "드랍 확률은 설계값이다").
 - 슬롯 6칸이 고루 나온다. 등급은 사냥터가 정한다.

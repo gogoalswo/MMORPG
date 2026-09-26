@@ -1464,6 +1464,35 @@ func grant_once(player_id: String, key: String, stack: Dictionary) -> void:
 	_notice("%s %d개를 가방에 넣었다" % [Items.stack_name(stack), int(stack.get("count", 1))])
 
 
+## **시작 장비** — 새 캐릭터에게 일반(1등급) 무기와 갑옷을 **끼운 채로** 준다 (2026-09-26 요청:
+## "처음 캐릭터 생성시 일반 등급 무기랑 갑옷 지급해"). 부르는 쪽(`LocalTransport.open`)이
+## **저장이 없을 때만** 부른다 — 이미 키우던 캐릭터에게는 안 준다. `granted` 의 `starterGear`
+## 로 한 번만 준다. +0 이고 옵션은 드랍처럼 1등급대로 굴린다. 그 부위에 이미 낀 게 있으면 가방으로
+const STARTER_SLOTS := ["weapon", "armor"]
+
+func grant_starter_gear(player_id: String) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty() or "starterGear" in player.get("granted", []):
+		return
+	for slot in STARTER_SLOTS:
+		var item := Items.get_item(Items.item_id(1, slot))
+		if item.is_empty():
+			continue
+		var stack := {
+			"id": str(item.id), "grade": 1, "enhance": 0,
+			"options": Items.roll_options(item, 1, _rng),
+		}
+		if player.equipped.get(slot, {}).is_empty():
+			player.equipped[slot] = stack
+		elif not _give(player, stack):
+			return  # 가방이 꽉 찼으면 다음 접속에 다시 준다
+	player.granted.append("starterGear")
+	_refresh_stats(player)
+	# 갑옷만큼 최대 HP 가 늘었다 — 새 캐릭터는 가득 찬 채로 시작한다
+	player.hp = int(player.stats.maxHp)
+	_inventory_changed(player)
+
+
 ## **테스트 모드 꾸러미** — 모든 장비를 등급별로 하나씩(등급 7 × 부위 6 = 42개, 전부 +0)과
 ## 크리스탈 300개 (2026-09-26 요청: "테스트 모드에서는 인벤토리에서 모든 장비 등급별로 하나씩
 ## 넣어. 0강으로. 크리스탈로 300개 넣고"). 테스트 모드로 들어올 때 부른다(`game.gd` 의

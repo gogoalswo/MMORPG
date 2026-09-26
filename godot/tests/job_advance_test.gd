@@ -143,6 +143,47 @@ func _case_no_shortcut() -> void:
 		_fail("NPC 에게서 먼데 시험으로 갔다")
 
 
+## 전직 창 모양 — 화면 가운데 안 · 단계 점 다섯(마친 데까지 금빛) · 해금 스킬 아이콘 ·
+## 조건 줄 · 단추가 창 안 · 닫기 X 가 오른쪽 위
+func _check_layout(game: Node3D, panel: JobPanel) -> void:
+	await process_frame
+	var screen := Rect2(Vector2.ZERO, Vector2(1280, 720))
+	var rect := panel.get_global_rect()
+	if not screen.encloses(rect):
+		_fail("전직 창이 화면 밖으로 나간다 (%s)" % rect)
+	if absf(rect.get_center().x - 640.0) > 2.0:
+		_fail("전직 창이 가운데가 아니다 (%s)" % rect)
+	var steps := 0
+	for i in 5:
+		var step: Node = panel.find_child("step%d" % i, true, false)
+		if step != null:
+			steps += 1
+	if steps != 5:
+		_fail("단계 점이 %d개 (기본 + 4차 = 5)" % steps)
+	var done: StyleBoxFlat = panel.find_child("step1", true, false).get_node("dot").get_theme_stylebox("panel")
+	var ahead: StyleBoxFlat = panel.find_child("step3", true, false).get_node("dot").get_theme_stylebox("panel")
+	if done.bg_color == ahead.bg_color:
+		_fail("1차를 마쳤는데 1차 점과 3차 점이 같은 색이다")
+	var icon: TextureRect = panel.find_child("skill_icon", true, false)
+	if icon.texture == null:
+		_fail("해금 스킬(빙주각) 아이콘이 없다 — npm run sync:godot 을 돌렸나")
+	var level_row: Label = panel.find_child("level_row", true, false)
+	var boss_row: Label = panel.find_child("boss_row", true, false)
+	if not level_row.text.begins_with("레벨 70") or not boss_row.text.contains("Lv.69"):
+		_fail("조건 줄이 다르다: '%s' · '%s'" % [level_row.text, boss_row.text])
+	var button: Button = panel.find_child("advance", true, false)
+	if not rect.encloses(button.get_global_rect()):
+		_fail("단추가 창 밖이다")
+	var close: Control = panel.find_child("close", true, false)
+	if close == null:
+		_fail("닫기 X 가 없다")
+	else:
+		var x := close.get_global_rect()
+		if x.get_center().x < rect.get_center().x or x.get_center().y > rect.position.y + 100:
+			_fail("닫기 X 가 오른쪽 위가 아니다 (%s)" % x)
+	print("  전직 창: %s · 단계 5 · '%s' · '%s'" % [rect.size, level_row.text, boss_row.text])
+
+
 ## 치트 "스킬 모두 배우기" — 전직을 끝까지 올리고 그 직업 스킬을 다 배워 액션바에 올린다
 func _case_learn_all(game: Node3D) -> void:
 	var cheat: Button = game._cheat_column.find_child("learnAll", true, false)
@@ -211,18 +252,31 @@ func _run_scene() -> void:
 	game._transport.send(&"npc", {"name": NPC})
 	await process_frame
 
-	var button: Button = game._npc_rows.find_child("advance", true, false)
-	if not game._npc_panel.visible or button == null:
+	var panel: JobPanel = game._job_panel
+	var button: Button = panel.find_child("advance", true, false)
+	await _check_layout(game, panel)
+	if not panel.visible or button == null:
 		_fail("전직 창이나 버튼이 안 떴다")
-	elif button.text != "2차 전직" or button.disabled:
+	elif game._npc_panel.visible:
+		_fail("전직 창과 상점 창이 같이 떴다")
+	elif button.text != "2차 전직 시험 입장" or button.disabled:
 		_fail("1차 · Lv.70 인데 버튼이 '%s' (막힘 %s)" % [button.text, button.disabled])
 	else:
+		# 레벨이 모자라면 단추가 막히고 몇 레벨에 열리는지 적는다
+		me.level = 60
+		game._transport.send(&"npc", {"name": NPC})
+		await process_frame
+		if not button.disabled or button.text != "Lv.70 에 열립니다":
+			_fail("Lv.60 인데 단추가 '%s' (막힘 %s)" % [button.text, button.disabled])
+		me.level = 70
+		game._transport.send(&"npc", {"name": NPC})
+		await process_frame
 		button.pressed.emit()
 		await process_frame
 		await process_frame
 		var zone := str(game._transport.snapshot().get("zone", ""))
-		if zone != "job_2" or game._npc_panel.visible:
-			_fail("버튼을 눌렀는데 2차 시험에 안 갔다 (%s · 창 %s)" % [zone, game._npc_panel.visible])
+		if zone != "job_2" or panel.visible:
+			_fail("버튼을 눌렀는데 2차 시험에 안 갔다 (%s · 창 %s)" % [zone, panel.visible])
 		else:
 			print("  창: '%s' → 누르니 %s" % [button.text, zone])
 

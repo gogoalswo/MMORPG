@@ -129,6 +129,11 @@ func _run() -> void:
 		await _hand(game)
 		return
 
+	# 전직 창 — 1차를 마친 Lv.70 이 전직관에게 말을 건 모습 (`npm run shot:godot -- job`)
+	if skill == "job":
+		await _job(game)
+		return
+
 	# 창은 열어 놓고 한 장만 찍는다 — 움직이는 것이 없다
 	if skill == "bag" or skill == "skills":
 		await _window(game, skill)
@@ -519,6 +524,23 @@ func _kill(game: Node3D, crit := false) -> void:
 			taken += 1
 	sheet.save_png("res://../logs/shot_sheet.png")
 	print("logs/shot_sheet.png")
+	quit(0)
+
+
+## 전직 창. 단계 줄의 점·선이 한 줄에 서는지, 카드 안 글자가 테 밖으로 안 나가는지 눈으로 본다
+func _job(game: Node3D) -> void:
+	var player: Dictionary = game._transport._world._players[game._transport.my_id()]
+	player["level"] = 70
+	player["job_tier"] = 1
+	player["x"] = 5.0
+	player["z"] = 7.0
+	game._transport.send(&"npc", {"name": "전직관 레온"})
+	for i in 30:
+		await process_frame
+	await RenderingServer.frame_post_draw
+	var img := root.get_viewport().get_texture().get_image()
+	img.save_png("res://../logs/shot_job.png")
+	print("logs/shot_job.png")
 	quit(0)
 
 

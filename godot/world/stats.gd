@@ -31,7 +31,8 @@ static func base(level: int) -> Dictionary:
 	var b := _b()
 	var g := growth(level)
 	return {
-		"hp": float(b.get("hpBase", 100)) * g,
+		# HP 만 성장률이 따로다 (2026-09-27) — Lv1 300 → Lv200 5,146, 후반 2만은 그대로
+		"hp": float(b.get("hpBase", 100)) * pow(1.0 + float(b.get("hpGrowth", b.get("growth", 0.02))), float(level - 1)),
 		"atk": float(b.get("atkBase", 10)) * g,
 		"df": float(b.get("defBase", 10)) * g,
 	}

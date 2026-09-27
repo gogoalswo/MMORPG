@@ -38,7 +38,8 @@ func _eq(label: String, got, want) -> void:
 ## 격투가 배수가 전부 1.0 이라 Lv1 이 곧 설계의 바탕값(100/10/10)이다
 func _stats() -> void:
 	var k1 := Combat.stats_for("fighter", 1)
-	_eq("격투가1 체력", k1.maxHp, 100)
+	# 2026-09-27: Lv1 HP 300, HP 만 성장률이 따로다 (Lv200 5,146 에 닿는 복리)
+	_eq("격투가1 체력", k1.maxHp, 300)
 	_eq("격투가1 공격", k1.attack, 20)
 	_eq("격투가1 방어", k1.defense, 20)
 	_eq("격투가1 사거리", k1.attackRange, 2.2)
@@ -47,7 +48,7 @@ func _stats() -> void:
 
 	# 레벨 1개는 언제나 +2% — 구간마다 다르면 "장비 비중" 의 기준이 사라진다
 	var k10 := Combat.stats_for("fighter", 10)
-	_eq("격투가10 체력", k10.maxHp, roundi(100.0 * pow(1.02, 9)))
+	_eq("격투가10 체력", k10.maxHp, roundi(300.0 * pow(5145.578 / 300.0, 9.0 / 199.0)))
 	_eq("격투가10 공격", k10.attack, roundi(20.0 * pow(1.02, 9)))
 
 	# 직업은 같은 바탕에 배수만 다르다 — 마법사는 공격 1.35 / HP 0.8 / 방어 0.75

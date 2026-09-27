@@ -50,7 +50,8 @@ func _eq(label: String, got: int, want: int) -> void:
 ## 문서 2장 — 레벨당 복리 ×1.02
 func _base() -> void:
 	var one := Stats.base(1)
-	_near("Lv1 HP", one["hp"], 100.0)
+	# 2026-09-27: Lv1 HP 100 → 300. HP 만 성장률이 따로라 Lv200 은 그대로 5,146
+	_near("Lv1 HP", one["hp"], 300.0)
 	_near("Lv1 공격", one["atk"], 20.0)
 	_near("Lv1 방어", one["df"], 20.0)
 
@@ -139,6 +140,11 @@ func _group_loss() -> void:
 		# 몬스터가 때리는 쪽이라 맞는 쪽 K(`damage_taken`)다 (2026-09-27)
 		var per := Stats.damage_taken(m["atk"], level, ref["df"])
 		var taken: float = per * float(Stats.melee_attackers(level)) * 15.0 / float(m["interval"])
+		# 초반·중반은 Lv1 HP 300 덕에 덜 잃는다 (2026-09-27) — 후반만 설계값 50% 에 묶는다
+		if level < 190:
+			if taken / float(ref["hp"]) >= 0.5:
+				_fail("Lv%d 그룹 HP 손실 %.2f — 초반은 50%% 보다 적어야 한다" % [level, taken / float(ref["hp"])])
+			continue
 		_near("Lv%d 그룹 HP 손실" % level, taken / float(ref["hp"]), 0.5, 0.025)
 	# 후반 HP 는 2만 근처이고 생존은 감소율이 맡는다 — 초반 30% → Lv200 94%
 	var hp200: float = Stats.ref_player(200)["hp"]

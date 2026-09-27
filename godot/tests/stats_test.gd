@@ -50,12 +50,12 @@ func _eq(label: String, got: int, want: int) -> void:
 ## 문서 2장 — 레벨당 복리 ×1.02
 func _base() -> void:
 	var one := Stats.base(1)
-	_near("Lv1 HP", one["hp"], 100.0)
+	_near("Lv1 HP", one["hp"], 200.0)
 	_near("Lv1 공격", one["atk"], 20.0)
 	_near("Lv1 방어", one["df"], 20.0)
 
 	var top := Stats.base(Stats.max_level())
-	_eq("Lv200 맨몸 HP", roundi(top["hp"]), 5146)
+	_eq("Lv200 맨몸 HP", roundi(top["hp"]), 10291)
 	_eq("Lv200 맨몸 공격", roundi(top["atk"]), 1029)
 	_eq("Lv200 맨몸 방어", roundi(top["df"]), 1029)
 
@@ -138,7 +138,9 @@ func _group_loss() -> void:
 		var m := Stats.monster(level)
 		var per := Stats.damage(m["atk"], level, ref["df"])
 		var taken: float = per * float(Stats.melee_attackers(level)) * 15.0 / float(m["interval"])
-		_near("Lv%d 그룹 HP 손실" % level, taken / float(ref["hp"]), 0.5, 0.025)
+		# 몬스터 표는 맨몸 HP 100 일 때 뽑았다 — 2026-09-27 에 200 으로 올리고 표는 그대로라 절반 → 1/4
+		var want := 0.5 * 100.0 / float(Stats.base(1)["hp"])
+		_near("Lv%d 그룹 HP 손실" % level, taken / float(ref["hp"]), want, want * 0.05)
 
 
 ## 문서 5장 — 스킬 해금에 그룹 크기가 묶인다

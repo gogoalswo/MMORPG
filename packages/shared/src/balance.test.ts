@@ -11,7 +11,6 @@ import { MONSTER_STATS } from './monsterTable.ts';
 import {
   CLEAR_TIME,
   DEF_BASE,
-  HP_BASE,
   EXP_COEF,
   EARLY_EXP_MULT,
   expMult,
@@ -43,16 +42,15 @@ import {
 } from './balance.ts';
 
 test('기본 스탯은 레벨당 복리 ×1.02 다', () => {
-  // Lv1 HP200/공20/방20 → Lv200 맨몸 HP 10,291 / 공 1,029 / 방 1,029
-  // (2026-09-27 에 HP 를 100 → 200 으로 올렸다)
+  // Lv1 HP100/공20/방20 → Lv200 맨몸 HP 5,146 / 공 1,029 / 방 1,029
   // (문서 2장은 공10/방10 — 2026-09-26 에 공 20 · 방 20 으로 올렸다)
   const one = base(1);
-  assert.equal(one.hp, 200);
+  assert.equal(one.hp, 100);
   assert.equal(one.atk, 20);
   assert.equal(one.df, 20);
 
   const top = base(MAX_LEVEL);
-  assert.equal(Math.round(top.hp), 10291);
+  assert.equal(Math.round(top.hp), 5146);
   assert.equal(Math.round(top.atk), 1029);
   assert.equal(Math.round(top.df), 1029);
 
@@ -161,11 +159,8 @@ test('한 그룹을 정리하는 동안 HP 를 절반쯤 잃는다', () => {
     const perHit = damage(m.atk, level, ref.df);
     const taken = (perHit * meleeAttackers(level) * CLEAR_TIME) / m.interval;
     const ratio = taken / ref.hp;
-    // 몬스터 표는 맨몸 HP 100 일 때 뽑았다. 2026-09-27 에 맨몸 HP 를 200 으로 올리고 표는 그대로
-    // 두었으므로(검사 기준을 새 값에 맞춤) 잃는 몫이 그만큼 줄어든다 — 절반 → 1/4
-    const want = HP_LOSS_PER_CLEAR * (100 / HP_BASE);
     assert.ok(
-      Math.abs(ratio - want) <= want * DESIGN_DRIFT,
+      Math.abs(ratio - HP_LOSS_PER_CLEAR) <= HP_LOSS_PER_CLEAR * DESIGN_DRIFT,
       `Lv${level} ${ratio}`
     );
   }

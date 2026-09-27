@@ -139,7 +139,7 @@ func _fight() -> void:
 	# 피해는 설계 공식이다 — 공격력 × K / (K + 방어력), K 는 공격자 레벨에서 역산.
 	# 수치를 박아 두면 밸런스를 만질 때마다 여기서 걸리므로 같은 식으로 잰다
 	var plain := roundi(Stats.damage(float(me.stats.attack), int(me.level), float(mobs[0].defense)))
-	var want: int = roundi(plain * float(me.stats.critDamage)) if hit.crit else plain
+	var want: int = roundi(plain * (1.0 + float(me.stats.critDamage))) if hit.crit else plain
 	_eq("피해량", hit.amount, want)
 	_eq("체력이 그만큼 줄었다", mobs[0].hp, full - want)
 	print("  들늑대 %d -> %d (%s)" % [full, mobs[0].hp, "치명타" if hit.crit else "보통"])

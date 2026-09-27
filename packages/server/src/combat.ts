@@ -5,7 +5,6 @@ import {
   SpatialGrid,
   computeDamage,
   rollCrit,
-  BASE_CRIT_DAMAGE,
   getMonsterKind,
   MONSTER_KINDS,
   monsterRadius,
@@ -249,7 +248,7 @@ export class CombatSystem {
       const crit = rollCrit(extra.crit ?? 0, Math.random());
       const base = computeDamage(attack, runtime.kind.defense);
       const amount = crit
-        ? Math.max(1, Math.round(base * (extra.critDamage ?? BASE_CRIT_DAMAGE)))
+        ? Math.max(1, Math.round(base * (1 + (extra.critDamage ?? 1))))
         : base;
       monster.hp = Math.max(0, monster.hp - amount);
 

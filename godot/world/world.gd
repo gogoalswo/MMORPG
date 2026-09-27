@@ -2097,8 +2097,10 @@ func _hit_monster(player: Dictionary, target: Dictionary, attack: float, skill_i
 	var pierced: float = float(target.defense) * (1.0 - float(stats.get("penetration", 0.0)))
 	var damage := roundi(Stats.damage(attack, int(player.level), pierced))
 	var crit := Combat.roll_crit(float(stats.crit), _rng.randf())
+	# **치명타 데미지는 더하는 %다** (2026-09-27 요청) — 100% 면 기본 피해에 100% 를 더해 ×2.
+	# 맨몸이 1.0(100%) 이라 그냥 곱하면 치명타가 떠도 평타와 같았다
 	if crit:
-		damage = roundi(damage * float(stats.critDamage))
+		damage = roundi(damage * (1.0 + float(stats.critDamage)))
 
 	target.hp = maxi(0, int(target.hp) - damage)
 	_events.append({

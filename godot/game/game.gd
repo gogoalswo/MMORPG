@@ -1083,11 +1083,21 @@ func _build_gear_window(panel: PanelContainer) -> void:
 	right_col.alignment = BoxContainer.ALIGNMENT_CENTER
 	body.add_child(right_col)
 
+	# 장비 6칸은 양옆에 세 칸씩, **그 뒤 칸(이빨, 2026-09-27)은 캐릭터 아래 가운데 한 줄**이다.
+	# 일곱 칸을 반으로 가르면 한쪽이 네 칸이라 캐릭터 옆이 기운다
+	var below := HBoxContainer.new()
+	below.add_theme_constant_override("separation", BAG_GRID_GAP * 2)
+	below.alignment = BoxContainer.ALIGNMENT_CENTER
+	side.add_child(below)
 	_gear_cells.clear()
+	var paired := Items.drop_slots().size()
 	var count := Items.slots().size()
 	for index in count:
 		var cell := _make_cell(_pick_bag.bind("equip", index), GEAR_CELL)
-		(left_col if index < ceili(count / 2.0) else right_col).add_child(cell)
+		if index >= paired:
+			below.add_child(cell)
+		else:
+			(left_col if index < ceili(paired / 2.0) else right_col).add_child(cell)
 		_gear_cells.append(cell)
 
 	# 스탯 상자 — 여섯 개를 두 줄씩 세 단으로. 바탕은 칸과 같은 움푹한 판이다
@@ -1707,7 +1717,7 @@ func _tab_keeps(stack: Dictionary) -> bool:
 	match _bag_tab:
 		1: return slot == "weapon"
 		2: return slot in ["armor", "helmet", "boots"]
-		3: return slot in ["necklace", "ring"]
+		3: return slot in ["necklace", "ring", "tooth"]
 	return false
 
 
@@ -1720,7 +1730,8 @@ func _pick_bag(where: String, index: int) -> void:
 		if where == "bag":
 			at = int(_bag_view[index]) if index >= 0 and index < _bag_view.size() else -1
 		var target := {"where": where, "index": at}
-		if not Items.get_item(str(_stack_at(target).get("id", ""))).is_empty():
+		var aim := Items.get_item(str(_stack_at(target).get("id", "")))
+		if not aim.is_empty() and not Items.is_fixed(aim):  # 이빨엔 크리스탈을 못 쓴다
 			_crystal_target = target
 			_redraw_bag()
 		return
@@ -1795,6 +1806,7 @@ func _redraw_char(me: Dictionary) -> void:
 		["공격 속도", "+%.0f%%" % (float(stats.get("attackSpeed", 0.0)) * 100.0)],
 		["쿨타임 감소", "%.0f%%" % (float(stats.get("cooldown", 0.0)) * 100.0)],
 		["방어력 관통", "%.0f%%" % (float(stats.get("penetration", 0.0)) * 100.0)],
+		["HP 흡수", "%.0f%%" % (float(stats.get("lifesteal", 0.0)) * 100.0)],
 	])
 	var head := "LV. %d" % int(me.get("level", 1))
 	var seen := head + str(groups)
@@ -1922,7 +1934,9 @@ func _show_bag_detail() -> void:
 		return
 
 	var stack := _picked_stack()
-	_enhance_button.visible = not Items.get_item(str(stack.get("id", ""))).is_empty()
+	var picked_item := Items.get_item(str(stack.get("id", "")))
+	# 이빨은 강화가 없다 — 단추를 안 띄운다
+	_enhance_button.visible = not picked_item.is_empty() and not Items.is_fixed(picked_item)
 	if stack.is_empty():
 		_detail_panel.visible = false
 		_bag_action.text = "-"
@@ -2184,6 +2198,8 @@ func _on_crystal_roll() -> void:
 const DETAIL_BONUS := {
 	"attack": "공격력", "defense": "방어력", "maxHp": "체력",
 	"crit": "치명타", "attackSpeed": "공격 속도",
+	# 이빨 — 퍼센트 정수로 들어 있다 (3 = 입힌 피해의 3%)
+	"lifesteal": "HP 흡수",
 }
 
 
@@ -2260,7 +2276,8 @@ func _on_bag_action() -> void:
 ## 상세 창 "강화" — 고른 장비로 강화 팝업을 연다. 대상은 **가방 번호**로 잡는다
 ## (칸 번호는 탭으로 거르면 어긋난다 — 크리스탈 대상과 같다)
 func _open_enhance() -> void:
-	if Items.get_item(str(_picked_stack().get("id", ""))).is_empty():
+	var item := Items.get_item(str(_picked_stack().get("id", "")))
+	if item.is_empty() or Items.is_fixed(item):
 		return
 	var worn := str(_bag_pick.get("where", "")) == "equip"
 	_enhance.open({

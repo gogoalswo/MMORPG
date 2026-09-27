@@ -19,6 +19,7 @@ func _init() -> void:
 	_case_walks_in_and_hits()
 	_case_casts_skills()
 	_case_click_casts_skills()
+	_case_skill_faces_body()
 	_case_patrol_when_empty()
 	_case_outside_radius()
 	_case_off_stops()
@@ -183,6 +184,52 @@ func _case_casts_skills() -> void:
 		_fail("돌아온 스킬을 두고 기본 공격을 먼저 휘둘렀다")
 	else:
 		print("  사거리 안(%.2f m)에 들자 스킬부터 썼다" % cast_at)
+
+
+## 스킬이 나간 쪽을 몸이 **동작 내내** 본다 (2026-09-27 "스킬 쓰는 방향으로 몸이 안 돌아가").
+## 자동 사냥 대상(A, 앞 2.5m)보다 가까운 놈(B, 뒤 1.2m)이 있으면 스킬은 가장 가까운 B 로
+## 나가고, 다음 틱에 `_auto_strike` 가 몸을 A 로 되돌렸다. 이제 ① 자동 사냥은 제 대상 A 로
+## 쏘고 ② 사람이 눌러 B 로 나간 것은 시전이 끝날 때까지 몸이 B 를 본다 — 자동 사냥도,
+## 쫓던 놈 앞에서 화면이 보내는 제자리 입력(`dt` 0)도 그동안 몸을 돌리지 않는다
+func _case_skill_faces_body() -> void:
+	for manual in [false, true]:
+		var s := _setup(2.5, 0.0)
+		var w: World = s[0]
+		var me: Dictionary = s[1]
+		var a: Dictionary = s[2]
+		a.id = "A"
+		var b := World.make_monster("B", GameData.monster_kind("mob003"), -1.2, 0.0, 10000.0, 0.0)
+		w.snapshot().monsters.append(b)
+		for mob in [a, b]:
+			mob.max_hp = 999999
+			mob.hp = 999999
+		me.skills = ["thunder_fall"]
+		me.skill_bar = ["thunder_fall"]
+		me.job_tier = 3
+		w.set_auto("me", true)
+		me.auto_target = "A"
+		me.rot = PI / 2.0
+		w.drain_events()
+		if manual:
+			w.cast("me", "thunder_fall")
+		var want := -PI / 2.0 if manual else PI / 2.0
+		var facing := INF
+		var worst := 0.0
+		for i in 10:
+			w.step(1.0 / 60.0)
+			# 쫓던 A 앞에서 화면이 보내는 제자리 입력
+			w.input_move("me", i + 1, 1.0, 0.0, 0.0)
+			for e in w.drain_events():
+				if e.type == "skillRange" and facing == INF:
+					facing = float(e.facing)
+			worst = maxf(worst, absf(angle_difference(float(me.rot), want)))
+		var who := "손으로 누른 스킬(B)" if manual else "자동 사냥 스킬(A)"
+		if facing == INF or absf(angle_difference(facing, want)) > 1e-3:
+			_fail("%s 이 %.2f 쪽으로 나갔다 (%.2f 여야 한다)" % [who, facing, want])
+		elif worst > 1e-3:
+			_fail("%s 동작 중에 몸이 %.2f rad 돌아갔다" % [who, worst])
+		else:
+			print("  %s: 스킬이 나간 쪽을 동작 내내 본다" % who)
 
 
 ## 켜 둔 채로 몬스터를 눌러 쫓아도 스킬부터 쓴다 (2026-09-26 "평타만 사용해").

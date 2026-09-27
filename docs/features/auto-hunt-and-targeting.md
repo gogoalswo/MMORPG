@@ -211,10 +211,13 @@ tryAutoSkill(...) || (거리 <= attackRange && handleAttack(...))
 
 | 파일 | 역할 |
 |---|---|
-| `godot/world/world.gd` | `set_auto` / `_drive_auto` / `_pick_hunt_target` / `_walk_auto` / `_auto_strike` / `_auto_cast` / `strike` / `_patrol_auto` / `_take_manual` / `_anchor_here`, 상수 `HUNT_*` · `MANUAL_HOLD_MS` |
-| `godot/net/local_transport.gd` | 메시지 `autoHunt {on}` · `strike {id}` |
-| `godot/game/game.gd` | 칸과 표시 — `_toggle_auto` / `_refresh_auto`. **퀵슬롯 옆 다섯 번째 칸**이고 켜면 화살표 고리가 돈다 (2026-09-19) → [hud.md](hud.md) |
-| `godot/tests/auto_hunt_test.gd` | 반경·붙어서 때리기·스킬 먼저·눌러 쫓을 때도 스킬 먼저·순찰·리쉬·끄기·조작 우선 |
+| `godot/world/world.gd` | `set_auto` / `_drive_auto` / `_pick_hunt_target` / `_walk_auto` / `_auto_strike` / `_auto_cast` / `set_auto_priority` / `strike` / `_patrol_auto` / `_take_manual` / `_anchor_here`, 상수 `HUNT_*` · `MANUAL_HOLD_MS` |
+| `godot/world/skills.gd` | `Skills.auto_order` — 스킬을 볼 순서 (판정과 설정 창이 같이 쓴다) |
+| `godot/world/save.gd` | `auto_priority` 저장 |
+| `godot/net/local_transport.gd` | 메시지 `autoHunt {on}` · `strike {id}` · `autoPriority {ids}` |
+| `godot/game/game.gd` | 칸과 표시 — `_toggle_auto` / `_refresh_auto`. **퀵슬롯 옆 다섯 번째 칸**이고 켜면 화살표 고리가 돈다 (2026-09-19) → [hud.md](hud.md). 스킬 순서 창 `_build_auto_panel` · `_redraw_auto_panel` · `_auto_move` |
+| `godot/tests/auto_hunt_test.gd` | 반경·붙어서 때리기·스킬 먼저·**스킬 순서(`_case_skill_priority`)**·눌러 쫓을 때도 스킬 먼저·순찰·리쉬·끄기·조작 우선 |
+| `godot/tests/ui_test.gd` | `_case_auto_priority` — 설정 단추 · 쿨타임 긴 순 · 위로 올리기 · 되돌리기 · 글꼴 |
 
 ### 반경은 무리 하나 크기로 고정이다 ★
 
@@ -324,8 +327,23 @@ tryAutoSkill(...) || (거리 <= attackRange && handleAttack(...))
 2026-09-23 "자동사냥하면 스킬을 안 사용해" 로 붙였다. **액션바에 올린 스킬 전부**를
 쓴다 — TS 의 칸마다 `A` 스위치는 옮기지 않았다(액션바에 올린 것이 곧 쓰겠다는 뜻).
 
-- 액션바 **칸 순서대로** 보고, 쿨타임이 돈 것 중 **대상이 그 스킬 `range` 안**에 든
-  첫 것을 쓴다. 칸 순서가 우선순위다. 원거리기는 걸어 붙는 도중에 사거리에 들면 나간다.
+- **우선순위 순서대로**(`Skills.auto_order`) 보고, 쿨타임이 돈 것 중 **대상이 그 스킬
+  `range` 안**에 든 첫 것을 쓴다. 원거리기는 걸어 붙는 도중에 사거리에 들면 나간다.
+  못 쓰는 것(전직 전 스킬 등)은 `cast` 가 거절하고 다음으로 넘어간다.
+- **우선순위** (2026-09-27 "자동사냥할 때 할퀴기 스킬만 사용해 … 기본적으로 쿨타임이 가장 긴
+  스킬부터"). ★ 예전에는 **칸 순서**가 우선순위였는데, 1번 칸 할퀴기는 쿨타임 1초 = 동작
+  (`castMs`) 1초라 **시전이 끝날 때마다 돌아와 있어서** 다른 스킬 차례가 오지 않았다.
+  - **기본은 쿨타임이 긴 것부터** (같으면 칸 순서). 짧은 것은 긴 것이 도는 사이를 메운다.
+    쿨타임은 표의 값으로 잰다 — 테스트 스위치(쿨타임 0)에도 순서는 그대로다.
+  - **사람이 정한 순서**(`player.auto_priority`)가 있으면 거기 든 것을 먼저, 나머지(새로 올린
+    스킬)는 그 뒤에 쿨타임 긴 순으로 붙는다. 빈 목록이 "기본" 이다.
+  - 정하는 곳은 **자동사냥 칸 오른쪽 위 "설정"** 창 — 퀵슬롯 스킬이 지금 순서대로 서고,
+    줄마다 "위"/"아래" 로 한 칸씩 옮긴다. 옮기면 **보이는 순서 전체**를 `autoPriority` 로
+    보낸다. "쿨타임 긴 순으로" 가 빈 목록을 보내 되돌린다 → [hud.md](hud.md)
+  - `set_auto_priority` 는 **이 직업 스킬 id 만, 겹치지 않게** 남긴다. 액션바에 없는 id 도
+    남긴다 — 뺐다 다시 올려도 정한 자리로 돌아온다. 저장(`save.gd`)에 남는다.
+  - 순서를 판정과 화면이 **같은 함수**(`Skills.auto_order`)로 그린다 — 두 벌로 두면 창에
+    보이는 순서와 실제로 나가는 순서가 어긋난다.
 - 회복기(`selfHeal`)는 **채울 만큼 빠졌을 때만** 쓴다 — 가득 찬 채로 쓰면 쿨타임만 버린다.
 - **자기가 고른 놈을 `cast` 에 넘긴다** (`aim_id`, 2026-09-27). 안 넘기면 `cast` 가
   사거리 안에서 가장 가까운 놈을 잡아, 무리 속에서는 자동 사냥 대상과 다른 놈 쪽으로

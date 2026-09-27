@@ -174,7 +174,7 @@ func _case_cast() -> void:
 	# 맨몸에는 치명타가 없으므로(설계: 치확·치피는 목걸이 전담) 치명타면 배수만 곱한다
 	var power := float(Skills.get_skill("fighter", "rising_kick").get("power", 1.0))
 	var plain := roundi(Stats.damage(float(me.stats.attack) * power, int(me.level), float(mob.defense)))
-	var want: int = roundi(plain * float(me.stats.critDamage)) if hit.crit else plain
+	var want: int = roundi(plain * (1.0 + float(me.stats.critDamage))) if hit.crit else plain
 	if int(hit.amount) != want:
 		_fail("피해가 %d 여야 하는데 %d" % [want, hit.amount])
 	elif str(hit.get("skill", "")) != "rising_kick":

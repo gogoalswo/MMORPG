@@ -97,7 +97,9 @@
 computeDamage(attack, defense) = max(1, round(attack * (1 - defense/(defense+45))))
 ```
 - 빼기가 아니라 **비율 감쇠**다. 빼기면 방어가 공격을 넘는 순간 0이 되어 전투가 멈춘다.
-- 치명타: `rollCrit(chance, roll)` → 터지면 `round(base * critDamage)`.
+- 치명타: `rollCrit(chance, roll)` → 터지면 `round(base * (1 + critDamage))`.
+  **치명타 데미지는 기본 피해에 더하는 %다** — 맨몸 100%(`critDamage: 1`)면 ×2, 장비로
+  +20% 붙으면 ×2.2. 예전엔 `base * critDamage` 라 맨몸 치명타가 평타와 같았다 (2026-09-27 수정).
   **대상마다 따로 굴린다** — 범위기 한 방이 통째로 터지면 피해가 뭉쳐 숫자가 튄다.
 - 공격 간격: `effectiveCooldown(cooldown, attackSpeed) = round(cooldown / (1 + speed))`.
 

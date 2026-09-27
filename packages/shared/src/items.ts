@@ -787,9 +787,20 @@ export function dropChanceFor(monsterLevel: number): number {
   return dropGradesFor(monsterLevel).reduce((sum, g) => sum + gearDropRate(g), 0);
 }
 
-/** 등급 하나의 킬당 확률(0~1). 표는 퍼센트라 100 으로 나눈다 */
+/**
+ * 설계 드랍률에 거는 배율 — **2026-09-27 에 2배로 올렸다.** ★
+ *
+ * 요청: "레벨10 찍을 동안 장비를 한 개도 못 먹네 … 드랍률을 전체적으로 두배로 늘려".
+ * 설계값은 설계의 사냥 속도(50마리 무리를 12~15초)를 전제로 역산한 것인데, 지금은
+ * 범위 스킬이 4~6마리만 쳐서 Lv10 까지 586마리에 기대 1.7개, 빈손이 17.6% 였다.
+ * `GEAR_DROP_RATE`(시뮬레이터 원본)는 그대로 두고 여기 하나로 올린다 — 킬 속도가
+ * 설계에 닿으면 1 로 되돌린다. 모든 등급에 같이 걸어서 창 안의 등급 비는 그대로다.
+ */
+export const GEAR_DROP_BOOST = 2;
+
+/** 등급 하나의 킬당 확률(0~1). 표는 퍼센트라 100 으로 나누고 배율을 건다 */
 function gearDropRate(grade: number): number {
-  return (GEAR_DROP_RATE[Math.min(GEAR_DROP_RATE.length, Math.max(1, grade)) - 1] ?? 0) / 100;
+  return ((GEAR_DROP_RATE[Math.min(GEAR_DROP_RATE.length, Math.max(1, grade)) - 1] ?? 0) / 100) * GEAR_DROP_BOOST;
 }
 
 /**

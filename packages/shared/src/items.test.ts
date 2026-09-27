@@ -46,6 +46,7 @@ import {
   rollTierOptions,
   CRYSTAL_ID,
   CRYSTAL_DROP_CHANCE,
+  GEAR_DROP_BOOST,
   getMaterial,
 } from './items.ts';
 import { optionCount } from './gear.ts';
@@ -275,7 +276,8 @@ test('드롭은 항상 골드를 주고, 아이템은 가끔 준다', () => {
 test('드랍률이 설계값이다 — 평면 14% 가 아니다', () => {
   // 2026-09-21 지적: "md 파일 준걸로는 1등급 드랍률 0.3% 라고 했는데 지금은 왜
   // 말도 안 되게 높은거지?" — 설계값이 balance.json 에 있기만 하고 판정이 안
-  // 읽고 있었다. 설계 문서 7장의 표를 그대로 박아 둔다 (단위: 퍼센트)
+  // 읽고 있었다. 설계 문서 7장의 표를 그대로 박아 둔다 (단위: 퍼센트).
+  // 판정은 여기에 `GEAR_DROP_BOOST` 를 곱한다 (2026-09-27 에 2배)
   const want: Record<number, number> = {
     15: 0.2963, // 사냥터 2 — 등급1 만
     45: 0.2963 + 0.08, // 사냥터 5 — 등급1 + 등급2
@@ -287,10 +289,11 @@ test('드랍률이 설계값이다 — 평면 14% 가 아니다', () => {
   };
   for (const [level, percent] of Object.entries(want)) {
     const got = dropChanceFor(Number(level)) * 100;
-    assert.ok(Math.abs(got - percent) < 1e-9, `Lv${level}: ${got}% (${percent}% 여야 한다)`);
+    const boosted = percent * GEAR_DROP_BOOST;
+    assert.ok(Math.abs(got - boosted) < 1e-9, `Lv${level}: ${got}% (${boosted}% 여야 한다)`);
   }
-  // 예전 평면값보다 한참 낮다 — 등급1 기준 47배
-  assert.ok(dropChanceFor(15) < 0.14 / 40, '아직 평면값 수준이다');
+  // 배율을 걸어도 예전 평면값보다 한참 낮다 — 등급1 기준 47배 ÷ 배율
+  assert.ok(dropChanceFor(15) < 0.14 / 20, '아직 평면값 수준이다');
 });
 
 test('등급 비율이 설계의 드랍률 비 그대로다', () => {

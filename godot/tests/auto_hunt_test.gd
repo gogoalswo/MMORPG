@@ -18,6 +18,7 @@ func _init() -> void:
 	_case_anchor_on_toggle()
 	_case_walks_in_and_hits()
 	_case_casts_skills()
+	_case_skill_priority()
 	_case_click_casts_skills()
 	_case_skill_faces_body()
 	_case_patrol_when_empty()
@@ -184,6 +185,63 @@ func _case_casts_skills() -> void:
 		_fail("돌아온 스킬을 두고 기본 공격을 먼저 휘둘렀다")
 	else:
 		print("  사거리 안(%.2f m)에 들자 스킬부터 썼다" % cast_at)
+
+
+## 스킬 우선순위 (2026-09-27 "자동사냥할 때 할퀴기 스킬만 사용해"). 칸 순서로 보던 때는 1번 칸
+## 할퀴기(쿨타임 1초 = 동작 1초)가 시전이 끝날 때마다 돌아와 있어 그것만 나갔다.
+## ① 기본은 **쿨타임이 긴 것부터** 쓰고, 그게 돌면 다음 긴 것으로 넘어간다
+## ② 정한 순서가 있으면 그것부터 ③ 남의 직업·없는 id·겹친 id 는 걸러진다
+func _case_skill_priority() -> void:
+	var bar := ["rising_kick", "thunder_fall", "frost_pillar", "sky_breaker"]
+	var s := _setup(1.5, 0.0)
+	var w: World = s[0]
+	var me: Dictionary = s[1]
+	me.skills = bar.duplicate()
+	me.skill_bar = bar.duplicate()
+	# 낙뢰·빙주각·천붕각은 전직 스킬이다 — 전직을 마친 셈 친다
+	me.job_tier = 3
+	# 전직 스킬 두 방이면 더미가 죽는다 — 넷 다 볼 때까지 버티게 한다
+	s[2].hp = 100000000
+	w.set_auto("me", true)
+
+	var used: Array = []
+	for turn in bar.size():
+		# 헤드리스 프레임으로는 동작(1초 남짓)이 안 끝난다 — 끝난 셈 친다
+		me.rooted_until = 0
+		me.cast_until = 0
+		w.drain_events()
+		w.step(1.0 / 60.0)
+		for e in w.drain_events():
+			if e.type == "skill":
+				used.append(str(e.skill))
+	var expect := ["sky_breaker", "frost_pillar", "thunder_fall", "rising_kick"]
+	if used != expect:
+		_fail("기본 순서가 쿨타임 긴 순이 아니다: %s (기대 %s)" % [used, expect])
+	else:
+		print("  기본은 쿨타임 긴 순으로 돌려 썼다: %s" % [used])
+
+	w.set_auto_priority("me", ["rising_kick", "nope", "rising_kick", "sky_breaker", "fireball"])
+	if me.auto_priority != ["rising_kick", "sky_breaker"]:
+		_fail("우선순위가 걸러지지 않았다: %s" % [me.auto_priority])
+	var order := Skills.auto_order(str(me.job), me.skill_bar, me.auto_priority)
+	if order != ["rising_kick", "sky_breaker", "frost_pillar", "thunder_fall"]:
+		_fail("정한 것 먼저, 나머지 쿨타임 긴 순이 아니다: %s" % [order])
+	me.skill_ready_at = {}
+	me.rooted_until = 0
+	me.cast_until = 0
+	w.drain_events()
+	w.step(1.0 / 60.0)
+	var first := ""
+	for e in w.drain_events():
+		if e.type == "skill" and first == "":
+			first = str(e.skill)
+	if first != "rising_kick":
+		_fail("정한 순서의 맨 앞(할퀴기)이 아니라 %s 부터 썼다" % first)
+	else:
+		print("  정한 순서가 있으면 그 맨 앞부터 썼다")
+	w.set_auto_priority("me", [])
+	if Skills.auto_order(str(me.job), me.skill_bar, me.auto_priority)[0] != "sky_breaker":
+		_fail("빈 목록으로 기본(쿨타임 긴 순)에 안 돌아갔다")
 
 
 ## 스킬이 나간 쪽을 몸이 **동작 내내** 본다 (2026-09-27 "스킬 쓰는 방향으로 몸이 안 돌아가").

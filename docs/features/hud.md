@@ -44,7 +44,7 @@
 | ″ | `_build_potion_cell` · `_refresh_potion` · `_build_potion_panel` · `_potion_step` — **물약 칸**과 설정 창(−/+ · 슬라이더). 아래 "물약 칸" |
 | `godot/world/world.gd` | `drink_potion` · `set_potion_pct` · `_drive_potions` — 물약 판정 (저절로 마시기는 `step` 에서) |
 | `godot/tests/potion_test.gd` | 저절로 마시기 · 쿨타임 10초 · 직접 마시기 · 기준 자르기 · 저장 |
-| `godot/tests/ui_test.gd` | `_case_potion` — 퀵슬롯 옆 자리 · 설정 창 +/− · 눌러서 마시고 쿨타임이 돈다 |
+| `godot/tests/ui_test.gd` | `_case_potion` — 퀵슬롯 옆 자리 · 설정 창 +/− · 눌러서 마시고 쿨타임이 돈다. `_case_auto_priority` — 자동사냥 스킬 순서 창 |
 | `godot/game/chat_log.gd` | **채팅창** (`ChatLog`) — 왼쪽 아래 구석, 경험치·장비 획득을 한 줄씩 적는다. 아래 "채팅창" |
 | `godot/game/game.gd` `_on_event` | `reward` → `add_exp`, `loot`(장비가 있을 때) → `add_item` |
 | `godot/tests/ui_test.gd` | `_case_status` — 자리·숫자·안 겹침·눌러서 창 열기 |
@@ -219,6 +219,12 @@ frame.add_child(border)         # 채움 **다음**에 붙여야 위로 온다
   넣었는데, 자동사냥 이라고 넣어"). 켜졌는지는 **고리가 도는 것으로** 안다.
 - 켜짐을 **칸 전체 초록 `modulate`** 로 알리던 것은 뺐다 — 고리와 아이콘이 한
   덩어리로 보여 무엇이 도는지 알 수 없었다.
+- **칸 오른쪽 위 "설정"** (2026-09-27) → 가운데에 **자동사냥 스킬 순서** 창. 단추는 물약 칸과
+  같은 `_cell_setting` 이다. 창은 퀵슬롯 스킬을 쓸 순서대로 한 줄씩(순번 · 아이콘 · 이름·쿨타임 ·
+  "위"/"아래") 세우고, 아래 "쿨타임 긴 순으로" 가 기본으로 되돌린다. 줄은 **순서가 바뀔 때만**
+  다시 짓는다(`_auto_shown`) — 매 프레임 지으면 누르는 단추가 사라진다. 옛 줄은 `remove_child`
+  하고 지운다 — 트리에 남으면 새 줄 이름이 겹쳐 바뀐다. **▲▼ 는 글꼴에 없어 "위"/"아래"** 다.
+  판정 쪽 규칙은 [auto-hunt-and-targeting.md](auto-hunt-and-targeting.md) 의 "스킬도 쓴다".
 
 ### 켜지면 고리가 돈다 ★
 

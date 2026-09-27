@@ -76,6 +76,7 @@ func _run() -> void:
 		_failed += 1
 
 	await _edge_tap(game)
+	await _surrounded_tap(game)
 
 	if _failed == 0:
 		print("터치 이동: 통과")
@@ -83,6 +84,52 @@ func _run() -> void:
 	else:
 		print("터치 이동: %d개 실패" % _failed)
 		quit(1)
+
+
+## 몬스터에 둘러싸여 못 나가는 데를 누르면 **이동 명령을 버려야 한다** (2026-09-27 — 막힌
+## 채 입력을 계속 보내서 자동 사냥이 "사람이 몰고 있다" 로 영영 쉬었고, 캐릭터가 서 있기만 했다)
+func _surrounded_tap(game: Node3D) -> void:
+	var world = game._transport._world
+	var me: Dictionary = world._players[game._transport.my_id()]
+	me.x = 0.0
+	me.z = 0.0
+	var kind: Dictionary = GameData.monster_kind("mob003")
+	for i in 12:
+		var mob: Dictionary = World.make_monster("ring_%d" % i, kind, 0.0, 0.0, 10000.0, 0.0)
+		var at := Vector2.from_angle(TAU * i / 12.0) * (float(mob.r) + Movement.PLAYER_RADIUS + 0.05)
+		mob.x = at.x
+		mob.z = at.y
+		world._monsters.append(mob)
+	world.set_auto(game._transport.my_id(), true)
+	game._camera.follow(Vector3(me.x, 0, me.z), 0.0, true)
+	await process_frame
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	press.position = Vector2(200, 200)
+	game._unhandled_input(press)
+	if game._target == Vector3.INF:
+		print("  실패: 둘러싸인 채 누른 자리를 바닥 좌표로 못 바꿨다")
+		_failed += 1
+		return
+	# 누른 채로 둬도 버려야 한다 — 누르고 있다고 막힌 발이 풀리지는 않는다
+	var start := Time.get_ticks_msec()
+	while game._target != Vector3.INF and Time.get_ticks_msec() - start < 3000:
+		await process_frame
+	if game._target != Vector3.INF:
+		print("  실패: 둘러싸여 못 가는데 이동 명령이 안 지워졌다")
+		_failed += 1
+		return
+	var waited := Time.get_ticks_msec() - start
+	# 명령을 버렸으면 입력이 끊겨 자동 사냥이 이어받는다
+	start = Time.get_ticks_msec()
+	while Time.get_ticks_msec() - start < 1000:
+		await process_frame
+	if Time.get_ticks_msec() < int(me.manual_until) or str(me.auto_target) == "":
+		print("  실패: 이동 명령을 버렸는데 자동 사냥이 안 이어받았다")
+		_failed += 1
+		return
+	print("  둘러싸인 채 누름 -> %dms 만에 명령 취소, 자동 사냥이 %s 를 잡음" % [waited, me.auto_target])
 
 
 func _me(game: Node3D) -> Vector3:

@@ -46,10 +46,11 @@ import {
 } from './balance.ts';
 
 test('기본 스탯은 레벨당 복리 ×1.02 다', () => {
-  // Lv1 HP100/공20/방20 → Lv200 맨몸 HP 5,146 / 공 1,029 / 방 1,029
+  // Lv1 HP300/공20/방20 → Lv200 맨몸 HP 5,146 / 공 1,029 / 방 1,029
   // (문서 2장은 공10/방10 — 2026-09-26 에 공 20 · 방 20 으로 올렸다)
+  // 2026-09-27: Lv1 HP 100 → 300, HP 만 성장률을 따로 둬서 Lv200 은 그대로 5,146 (후반 2만 유지)
   const one = base(1);
-  assert.equal(one.hp, 100);
+  assert.equal(one.hp, 300);
   assert.equal(one.atk, 20);
   assert.equal(one.df, 20);
 
@@ -164,6 +165,12 @@ test('한 그룹을 정리하는 동안 HP 를 절반쯤 잃는다', () => {
     const perHit = damageTaken(m.atk, level, ref.df);
     const taken = (perHit * meleeAttackers(level) * CLEAR_TIME) / m.interval;
     const ratio = taken / ref.hp;
+    // 2026-09-27: Lv1 HP 를 300 으로 올려(Lv200 은 그대로) 초반·중반은 덜 잃는다 —
+    // "1레벨부터 몬스터한테 너무 죽어서" 가 그 이유다. 후반만 설계값 50% 에 묶는다
+    if (level < 190) {
+      assert.ok(ratio < HP_LOSS_PER_CLEAR, `Lv${level} ${ratio}`);
+      continue;
+    }
     assert.ok(
       Math.abs(ratio - HP_LOSS_PER_CLEAR) <= HP_LOSS_PER_CLEAR * DESIGN_DRIFT,
       `Lv${level} ${ratio}`

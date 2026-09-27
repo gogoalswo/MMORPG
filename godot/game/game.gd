@@ -10,6 +10,11 @@ extends Node3D
 ## 매끄럽다. 서버를 붙이는 단계에서 넣는다 → docs/features/networking-state.md
 
 const STOP_DISTANCE := 0.15
+## 땅을 눌러 걷는데 **이만큼(ms) 동안 이만큼(m)도 못 가면 이동 명령을 버린다**
+## (2026-09-27 "둘러싸인 채 못 가는 데를 누르면 가만히 서 있다"). 휘두르는 경직
+## (400ms)에는 걸리지 않게 그보다 길게 잡았다 → "켜 둔 채로 조작하면 사람이 이긴다"
+const STUCK_MS := 600
+const STUCK_GAIN := 0.1
 
 ## 마을 NPC 의 키(m). 모델은 높이 1 로 정규화돼 오니 여기서 키를 준다.
 ## 다 1.8 이면 복제인간이 선다 — 대장장이는 크게, 소녀·노인은 작게. 없으면 Rig.HUMAN_HEIGHT
@@ -180,6 +185,9 @@ var _label: Label
 var _marker: MeshInstance3D
 
 var _target: Vector3 = Vector3.INF
+## 막혔는지 재는 기준점과 그 시각. 여기서 `STUCK_GAIN` 을 벗어나면 다시 잡는다
+var _stuck_at: Vector3 = Vector3.INF
+var _stuck_since := 0
 ## 땅을 누른 채로 있나. 누르고 있는 동안은 매 프레임 그 화면 점 아래로 `_target` 을
 ## 다시 잡는다 — 손가락(마우스)을 따라 걷는다 (2026-09-26 요청)
 var _holding := false
@@ -3754,6 +3762,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			_target_mob = ""
 			_holding = true
 			_hold_at = event.position
+			_stuck_at = Vector3.INF
 			_set_target(hit)
 
 
@@ -3957,11 +3966,27 @@ func _send_input(delta: float) -> void:
 		return
 	var me := _my_position()
 	var to := Vector2(_target.x - me.x, _target.z - me.z)
-	if to.length() <= STOP_DISTANCE:
+	if to.length() <= STOP_DISTANCE or _stuck(me):
 		_target = Vector3.INF
+		_holding = false
+		_stuck_at = Vector3.INF
 		_marker.visible = false
 		return
 	_move(to.normalized(), delta)
+
+
+## 걷는데 발이 안 나가나. **막힌 채 이동 입력을 계속 보내면 자동 사냥이 영영 쉰다** —
+## 입력이 올 때마다 World 가 "사람이 몰고 있다"(`manual_until`)로 잡기 때문이다.
+## 몬스터에 둘러싸인 채 바깥을 누르면 캐릭터가 그 자리에 서서 아무것도 안 했다.
+## 옆으로 미끄러지는 것도 움직인 것이다 — 목표까지 거리가 아니라 **발이 옮겨 간 거리**로
+## 잰다 (누르고 있으면 목표가 매 프레임 바뀌어서 거리로는 못 잰다)
+func _stuck(me: Vector3) -> bool:
+	var now := Time.get_ticks_msec()
+	if _stuck_at == Vector3.INF or me.distance_to(_stuck_at) >= STUCK_GAIN:
+		_stuck_at = me
+		_stuck_since = now
+		return false
+	return now - _stuck_since >= STUCK_MS
 
 
 ## 눌러 둔 몬스터에게 걸어가서 사거리에 들면 계속 친다.

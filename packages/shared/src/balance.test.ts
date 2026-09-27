@@ -25,7 +25,11 @@ import {
   aoeTargets,
   balanceTable,
   base,
+  buildPlayer,
   damage,
+  damageTaken,
+  defReduce,
+  defK,
   dropLevels,
   enhRefStep,
   fieldOf,
@@ -156,7 +160,8 @@ test('한 그룹을 정리하는 동안 HP 를 절반쯤 잃는다', () => {
   for (const level of [15, 100, 195]) {
     const ref = refPlayer(level);
     const m = monster(level);
-    const perHit = damage(m.atk, level, ref.df);
+    // 몬스터가 때리는 쪽이라 맞는 쪽 K(`damageTaken`)다 (2026-09-27)
+    const perHit = damageTaken(m.atk, level, ref.df);
     const taken = (perHit * meleeAttackers(level) * CLEAR_TIME) / m.interval;
     const ratio = taken / ref.hp;
     assert.ok(
@@ -164,6 +169,34 @@ test('한 그룹을 정리하는 동안 HP 를 절반쯤 잃는다', () => {
       `Lv${level} ${ratio}`
     );
   }
+});
+
+test('후반 HP 는 2만 근처이고, 생존은 방어의 감소율이 맡는다 ★★', () => {
+  // 2026-09-27 지시: "체력은 후반에도 2만 정도만 되고 방어력 올려서 피해감소를 해서 안 죽으면 좋겠어"
+  const hp200 = refPlayer(MAX_LEVEL).hp;
+  assert.ok(hp200 > 15000 && hp200 < 25000, `Lv200 기준 HP ${Math.round(hp200)}`);
+  // 등급7 풀세트는 풀강(10단)이어도 무강과 HP 가 같다 — HP 는 강화를 안 탄다
+  const worn = (step: number) =>
+    refWorn(MAX_LEVEL).map(([slot]) => [slot, 7, step] as [typeof slot, number, number]);
+  const plain = buildPlayer(MAX_LEVEL, worn(1));
+  const maxed = buildPlayer(MAX_LEVEL, worn(10));
+  assert.equal(maxed.hp, plain.hp, 'HP 가 강화를 탔다');
+  assert.ok(maxed.df > plain.df * 3, '방어는 강화를 탄다');
+  assert.ok(plain.hp < 21000, `등급7 풀세트 HP ${Math.round(plain.hp)}`);
+  // 맞는 쪽 감소율: 초반 30% → 후반 90% 대, 줄지 않는다
+  assert.equal(defReduce(1), TARGET_REDUCE);
+  assert.ok(defReduce(MAX_LEVEL) > 0.9, `Lv200 감소율 ${defReduce(MAX_LEVEL)}`);
+  for (let l = 2; l <= MAX_LEVEL; l++) {
+    assert.ok(defReduce(l) >= defReduce(l - 1), `Lv${l} 감소율이 줄었다`);
+  }
+  // 기준 플레이어는 그 레벨 몬스터에게 정확히 defReduce 만큼 덜 맞는다
+  for (const level of [50, 150, 200]) {
+    const ref = refPlayer(level);
+    const got = 1 - damageTaken(1e6, level, ref.df) / 1e6;
+    assert.ok(Math.abs(got - defReduce(level)) < 1e-9, `Lv${level} ${got}`);
+  }
+  // 때리는 쪽 K 는 그대로다 — 후반 감소율을 올려도 내 공격이 깎이지 않는다
+  assert.ok(defK(MAX_LEVEL) < K(MAX_LEVEL), '맞는 쪽 K 가 더 작아야 한다 (감소율이 높다)');
 });
 
 test('몬스터 표는 고정 표에서 나온다 — 장비를 고쳐도 안 움직인다 ★', () => {

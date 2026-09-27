@@ -463,9 +463,11 @@ test('강화는 공짜다 — 값을 매기면 골드를 모으는 일이 된다
   }
 });
 
-test('강화는 기본 수치를 키운다', () => {
+test('강화는 기본 수치를 키운다 — HP 는 빼고', () => {
   const item = getItem(itemId(3, 'armor'))!;
-  assert.ok(baseBonus(item, 5).maxHp > baseBonus(item, 0).maxHp, '강화가 기본 수치에 붙어야 한다');
+  assert.ok(baseBonus(item, 5).defense > baseBonus(item, 0).defense, '강화가 기본 수치에 붙어야 한다');
+  // 2026-09-27: HP 는 강화를 안 탄다 — 후반 HP 를 2만 근처에 묶고 생존은 방어가 맡는다
+  assert.equal(baseBonus(item, 5).maxHp, baseBonus(item, 0).maxHp);
 });
 
 
@@ -556,7 +558,8 @@ test('옵션 수치가 50배다 — 태초 치명타가 38~75%p', () => {
   // 2026-09-21 지시: "지금보다 50배 올려. 예를 들어 치명타 확률이 40%~75%".
   // 최소가 40 이 아니라 38 인 것은 **최대의 정확히 절반**이라서다 (아래 테스트)
   assert.deepEqual(optionRange('crit', 7), { min: 38, max: 75 });
-  assert.deepEqual(optionRange('maxHp', 7), { min: 100, max: 200 });
+  // HP 만 2026-09-27 에 4 → 0.5 로 내렸다 (장비 HP 예산 2550% → 300% 와 같은 비율)
+  assert.deepEqual(optionRange('maxHp', 7), { min: 13, max: 25 });
 });
 
 test('최소는 최대의 절반이다 — 굴림 폭 50% 상한', () => {

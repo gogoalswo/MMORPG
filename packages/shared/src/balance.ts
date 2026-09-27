@@ -24,7 +24,8 @@ import {
   GEAR_ATK_FACTOR,
   GEAR_DEF_FACTOR,
   GEAR_DROP_RATE,
-  GEAR_HP_FACTOR,
+  GEAR_HP_START,
+  GEAR_HP_END,
   GRADE_COUNT,
   GRADE_LV_SPAN,
   GRADE_SUM_START,
@@ -81,6 +82,27 @@ export const MON_REDUCE = 0.5;
  */
 export const MON_DEF_RATIO =
   ((1 - TARGET_REDUCE) / TARGET_REDUCE) * (MON_REDUCE / (1 - MON_REDUCE));
+/**
+ * **몬스터가 플레이어를 때릴 때**의 기준 감소율 — 레벨을 따라 오른다 ★★ (2026-09-27 지시:
+ * "체력은 후반에도 2만 정도만 되고 방어력 올려서 피해감소를 해서 안 죽으면 좋겠어").
+ *
+ * 장비 HP 를 떼어 내(`gear.ts` 의 `hpBudget`) Lv200 기준 HP 가 21만 → 1.8만이 됐다. 버티는
+ * 양(유효 체력 = HP ÷ (1 − 감소율))은 그대로 두고 **몫을 HP 에서 방어로 옮긴 것**이라, 고정
+ * 몬스터 표(`monsterTable.ts`)를 안 건드려도 "한 무리 정리하는 동안 HP 50%" 가 유지된다.
+ *
+ * 값은 `[레벨, 감소율]` 점이고 사이는 선형 보간이다. 점은 **새 HP 와 고정 몬스터 공격력에서
+ * 한 번 계산해 박은 것**이다 — 런타임에 몬스터 표에서 역산하면, 몬스터 공격력을 손으로
+ * 올렸을 때 K 가 따라 움직여 그 손질을 지워 버린다. 초반은 30% 를 바닥으로 뒀다.
+ *
+ * 감소율이 90% 를 넘으면 받는 피해 ≈ K ÷ 방어력이라 **방어력 2배 = 받는 피해 절반**이다.
+ * 플레이어가 몬스터를 때릴 때는 여기가 아니라 `TARGET_REDUCE`·`K` 를 그대로 쓴다.
+ */
+export const DEF_REDUCE_BY_LEVEL: Array<[level: number, reduce: number]> = [
+  [1, 0.3], [10, 0.3], [20, 0.32], [30, 0.32], [40, 0.34], [50, 0.36], [60, 0.39],
+  [70, 0.45], [80, 0.49], [90, 0.54], [100, 0.59], [110, 0.64], [120, 0.69],
+  [130, 0.77], [140, 0.8], [150, 0.83], [160, 0.86], [170, 0.88], [180, 0.92],
+  [190, 0.93], [200, 0.94],
+];
 /** 필요 킬 수를 셀 때의 몬스터 방어 비율 — **올리기 전 값**이다 (`paceKillRate`) */
 export const PACE_MON_DEF_RATIO = 0.5;
 export const MON_ATTACK_INTERVAL = 1.5;
@@ -330,7 +352,8 @@ export function refPlayer(level: number): Player {
 }
 
 /**
- * 피해 공식의 K — **상수로 두면 안 된다.**
+ * 피해 공식의 K — **상수로 두면 안 된다.** **플레이어가 때릴 때** 쓴다. 몬스터가
+ * 플레이어를 때릴 때는 `defK` 다 (2026-09-27 에 나눴다).
  *
  * 기본 스탯은 복리로, 장비는 등급으로 커지기 때문에 K 를 선형으로 두면 후반에
  * 감소율이 68% 까지 치솟는다. "그 레벨 기준 플레이어의 감소율이 정확히 30% 가 되는
@@ -341,6 +364,36 @@ export function refPlayer(level: number): Player {
  */
 export function K(attackerLevel: number): number {
   return (refPlayer(attackerLevel).df * (1 - TARGET_REDUCE)) / TARGET_REDUCE;
+}
+
+/** 공격자 레벨 L 몬스터가 때릴 때의 기준 감소율 (`DEF_REDUCE_BY_LEVEL` 보간) */
+export function defReduce(attackerLevel: number): number {
+  const t = DEF_REDUCE_BY_LEVEL;
+  if (attackerLevel <= t[0]![0]) return t[0]![1];
+  for (let i = 1; i < t.length; i++) {
+    const [l1, r1] = t[i]!;
+    if (attackerLevel <= l1) {
+      const [l0, r0] = t[i - 1]!;
+      return r0 + ((r1 - r0) * (attackerLevel - l0)) / (l1 - l0);
+    }
+  }
+  return t[t.length - 1]![1];
+}
+
+/**
+ * **맞는 쪽 K** — 몬스터가 플레이어를 때릴 때만 쓴다 (2026-09-27). 기준 플레이어의 감소율이
+ * `defReduce` 가 되도록 역산한다. 때리는 쪽 K(`K`)와 나눈 이유: 하나로 두면 후반에
+ * 감소율을 올리는 순간 **내 공격도 같이** 몬스터 방어에 깎인다.
+ */
+export function defK(attackerLevel: number): number {
+  const r = defReduce(attackerLevel);
+  return (refPlayer(attackerLevel).df * (1 - r)) / r;
+}
+
+/** 몬스터가 플레이어를 때린 피해 — 공식은 `damage` 와 같고 K 만 `defK` 다 */
+export function damageTaken(atk: number, attackerLevel: number, df: number): number {
+  const k = defK(attackerLevel);
+  return Math.max(1, (atk * k) / (k + df));
 }
 
 /**
@@ -412,7 +465,7 @@ export function monsterByDesign(level: number, role: MonsterRole = 'normal'): Mo
   // 한 그룹을 정리하는 동안 HP 를 HP_LOSS_PER_CLEAR 만큼 잃도록
   const dpsIn = (ref.hp * HP_LOSS_PER_CLEAR) / CLEAR_TIME;
   const want = (dpsIn * MON_ATTACK_INTERVAL) / meleeAttackers(level);
-  const k = K(level);
+  const k = defK(level);
   const atk = (want * (k + ref.df)) / k;
   const r = ROLE_MULT[role];
   return {
@@ -553,6 +606,8 @@ export function balanceTable() {
     defBase: DEF_BASE,
     growth: GROWTH,
     targetReduce: TARGET_REDUCE,
+    // 몬스터가 플레이어를 때릴 때의 기준 감소율 `[레벨, 감소율]` — 고도 `stats.gd` 의 `def_k_of`
+    defReduceByLevel: DEF_REDUCE_BY_LEVEL,
     monDefRatio: MON_DEF_RATIO,
     // 몬스터 고정 표 `[HP, 공격력, 방어력]` × 200레벨 — **역산이 아니다**
     // (2026-09-21). 고도도 이 표만 읽는다 (`stats.gd` 의 `monster`)
@@ -595,7 +650,8 @@ export function balanceTable() {
       sumEnd: gradeSum(GRADE_COUNT),
       atkFactor: GEAR_ATK_FACTOR,
       defFactor: GEAR_DEF_FACTOR,
-      hpFactor: GEAR_HP_FACTOR,
+      hpStart: GEAR_HP_START,
+      hpEnd: GEAR_HP_END,
       critRateMax: CRIT_RATE_MAX,
       critDmgMax: CRIT_DMG_MAX,
       aspdMax: ASPD_MAX,

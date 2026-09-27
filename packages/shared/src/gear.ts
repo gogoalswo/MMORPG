@@ -47,7 +47,18 @@ export const GRADE_SUM_START = 35;
  */
 export const GEAR_ATK_FACTOR = 0.5;
 export const GEAR_DEF_FACTOR = 0.6;
-export const GEAR_HP_FACTOR = 0.35;
+
+/**
+ * **장비 HP 는 공격력 등비에서 떼어 냈다** ★★ (2026-09-27 지시: "체력은 후반에도 2만 정도만
+ * 되고 방어력 올려서 피해감소를 해서 안 죽으면 좋겠어").
+ *
+ * 그 전에는 공격력 합계(×2.434 등비)에 0.35 를 곱해 등급7 풀세트가 **+2550%** 였고, 강화까지
+ * 곱해져 Lv200 기준 플레이어 HP 가 21만(풀강 53만)이었다. 이제 HP 는 제 등비를 따로 탄다 —
+ * 등급1 풀세트 12% → 등급7 300% (×1.71). 맨몸 Lv200 5,146 × (1 + 300%) ≈ **2만**.
+ * 줄어든 HP 만큼의 생존은 **방어력의 감소율**이 맡는다 (`balance.ts` 의 `defReduce`).
+ */
+export const GEAR_HP_START = 12;
+export const GEAR_HP_END = 300;
 
 /** 등급 7 에서의 치명타 확률 (등급 1 = 0, 그 사이는 선형) */
 export const CRIT_RATE_MAX = 0.5;
@@ -101,7 +112,9 @@ export type GearStat = 'atk' | 'df' | 'hp' | 'crit' | 'critDamage' | 'aspd' | 'm
 
 /** 강화가 곱해지는 스탯. **치명타·공속에는 안 곱한다** — 두 곱산 버킷이 동시에 */
 /** 커지면 총 배수 상한을 관리할 수 없다 */
-const ENHANCED: GearStat[] = ['atk', 'df', 'hp'];
+/** **HP 에도 안 곱한다** (2026-09-27) — 곱하면 풀강이 HP ×4 라 "후반 2만" 이 깨진다. */
+/** 강화는 공격력·방어력을 키우고, 방어력이 감소율로 생존을 맡는다 */
+const ENHANCED: GearStat[] = ['atk', 'df'];
 
 /**
  * 영웅 무기가 일반 무기의 몇 배 피해를 내는가 ★ (2026-09-24 지시: "등급간 배수를 키워.
@@ -145,6 +158,13 @@ export function gradeSum(grade: number): number {
   return GRADE_SUM_START * gradeRatio() ** (Math.min(grade, GRADE_COUNT) - 1);
 }
 
+/** 등급 g 풀세트의 HP % 합계 — 공격력과 따로 가는 등비 (12% → 300%) */
+export function hpBudget(grade: number): number {
+  if (grade <= 0) return 0;
+  const g = Math.min(grade, GRADE_COUNT);
+  return GEAR_HP_START * (GEAR_HP_END / GEAR_HP_START) ** ((g - 1) / (GRADE_COUNT - 1));
+}
+
 /** 등급 g 를 낄 수 있는 레벨 */
 export function equipLevel(grade: number): number {
   return 1 + GRADE_LV_SPAN * (grade - 1);
@@ -174,7 +194,7 @@ export function statBudget(grade: number): Record<GearStat, number> {
   return {
     atk: s * GEAR_ATK_FACTOR,
     df: s * GEAR_DEF_FACTOR,
-    hp: s * GEAR_HP_FACTOR,
+    hp: hpBudget(grade),
     crit: CRIT_RATE_MAX * r,
     critDamage: CRIT_DMG_MAX * r,
     aspd: ASPD_MAX * r,
@@ -429,7 +449,10 @@ export const OPTION_MAX_VALUE: Record<OptionKind, number> = {
   crit: 1.5,
   critDamage: 3,
   attackSpeed: 1.2,
-  maxHp: 4,
+  // **2026-09-27 에 4 → 0.5** ★ — 장비 HP 예산을 2550% → 300% 로 줄이면서(`hpBudget`) 같은
+  // 비율로 내렸다. ×50 이라 7등급 한 줄이 13~25% 다 (그 전 100~200% — 여섯 칸이 다 HP 면
+  // 후반 HP 가 8만을 넘어 "후반 2만" 이 깨진다). 옛 비율: 200 / 2550 = 7.8% ≈ 25 / 300
+  maxHp: 0.5,
   cooldown: 1,
   // **2026-09-25 에 3.3 → 0.3** ★ (지시: "태초 무기 하나에 옵션에 방어력 관통력이 100프로가
   // 넘는데 수치 줄여. 옵션 하나당 최대 15퍼센트고"). ×50 이라 7등급 한 줄이 8~15% 다

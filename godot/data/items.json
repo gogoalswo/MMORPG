@@ -24,7 +24,7 @@
       "bonus": {
         "attack": 0,
         "defense": 7,
-        "maxHp": 4.1,
+        "maxHp": 4,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -114,7 +114,7 @@
       "bonus": {
         "attack": 0,
         "defense": 17,
-        "maxHp": 9.9,
+        "maxHp": 6.8,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -129,7 +129,7 @@
       "bonus": {
         "attack": 0,
         "defense": 8.5,
-        "maxHp": 5,
+        "maxHp": 3.4,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -144,7 +144,7 @@
       "bonus": {
         "attack": 0,
         "defense": 8.5,
-        "maxHp": 5,
+        "maxHp": 3.4,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -159,7 +159,7 @@
       "bonus": {
         "attack": 10.7,
         "defense": 8.5,
-        "maxHp": 5,
+        "maxHp": 3.4,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -174,7 +174,7 @@
       "bonus": {
         "attack": 10.7,
         "defense": 8.5,
-        "maxHp": 5,
+        "maxHp": 3.4,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -204,7 +204,7 @@
       "bonus": {
         "attack": 0,
         "defense": 41.5,
-        "maxHp": 24.2,
+        "maxHp": 11.7,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -219,7 +219,7 @@
       "bonus": {
         "attack": 0,
         "defense": 20.7,
-        "maxHp": 12.1,
+        "maxHp": 5.8,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -234,7 +234,7 @@
       "bonus": {
         "attack": 0,
         "defense": 20.7,
-        "maxHp": 12.1,
+        "maxHp": 5.8,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -249,7 +249,7 @@
       "bonus": {
         "attack": 25.9,
         "defense": 20.7,
-        "maxHp": 12.1,
+        "maxHp": 5.8,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -264,7 +264,7 @@
       "bonus": {
         "attack": 25.9,
         "defense": 20.7,
-        "maxHp": 12.1,
+        "maxHp": 5.8,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -294,7 +294,7 @@
       "bonus": {
         "attack": 0,
         "defense": 101,
-        "maxHp": 58.9,
+        "maxHp": 20,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -309,7 +309,7 @@
       "bonus": {
         "attack": 0,
         "defense": 50.5,
-        "maxHp": 29.5,
+        "maxHp": 10,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -324,7 +324,7 @@
       "bonus": {
         "attack": 0,
         "defense": 50.5,
-        "maxHp": 29.5,
+        "maxHp": 10,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -339,7 +339,7 @@
       "bonus": {
         "attack": 63.1,
         "defense": 50.5,
-        "maxHp": 29.5,
+        "maxHp": 10,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -354,7 +354,7 @@
       "bonus": {
         "attack": 63.1,
         "defense": 50.5,
-        "maxHp": 29.5,
+        "maxHp": 10,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -384,7 +384,7 @@
       "bonus": {
         "attack": 0,
         "defense": 245.9,
-        "maxHp": 143.4,
+        "maxHp": 34.2,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -399,7 +399,7 @@
       "bonus": {
         "attack": 0,
         "defense": 122.9,
-        "maxHp": 71.7,
+        "maxHp": 17.1,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -414,7 +414,7 @@
       "bonus": {
         "attack": 0,
         "defense": 122.9,
-        "maxHp": 71.7,
+        "maxHp": 17.1,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -429,7 +429,7 @@
       "bonus": {
         "attack": 153.7,
         "defense": 122.9,
-        "maxHp": 71.7,
+        "maxHp": 17.1,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -444,7 +444,7 @@
       "bonus": {
         "attack": 153.7,
         "defense": 122.9,
-        "maxHp": 71.7,
+        "maxHp": 17.1,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -474,7 +474,7 @@
       "bonus": {
         "attack": 0,
         "defense": 598.6,
-        "maxHp": 349.2,
+        "maxHp": 58.5,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -489,7 +489,7 @@
       "bonus": {
         "attack": 0,
         "defense": 299.3,
-        "maxHp": 174.6,
+        "maxHp": 29.2,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -504,7 +504,7 @@
       "bonus": {
         "attack": 0,
         "defense": 299.3,
-        "maxHp": 174.6,
+        "maxHp": 29.2,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -519,7 +519,7 @@
       "bonus": {
         "attack": 374.1,
         "defense": 299.3,
-        "maxHp": 174.6,
+        "maxHp": 29.2,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -534,7 +534,7 @@
       "bonus": {
         "attack": 374.1,
         "defense": 299.3,
-        "maxHp": 174.6,
+        "maxHp": 29.2,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -564,7 +564,7 @@
       "bonus": {
         "attack": 0,
         "defense": 1457.3,
-        "maxHp": 850.1,
+        "maxHp": 100,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -579,7 +579,7 @@
       "bonus": {
         "attack": 0,
         "defense": 728.6,
-        "maxHp": 425,
+        "maxHp": 50,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -594,7 +594,7 @@
       "bonus": {
         "attack": 0,
         "defense": 728.6,
-        "maxHp": 425,
+        "maxHp": 50,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -609,7 +609,7 @@
       "bonus": {
         "attack": 910.8,
         "defense": 728.6,
-        "maxHp": 425,
+        "maxHp": 50,
         "crit": 0,
         "attackSpeed": 0
       },
@@ -624,7 +624,7 @@
       "bonus": {
         "attack": 910.8,
         "defense": 728.6,
-        "maxHp": 425,
+        "maxHp": 50,
         "crit": 0,
         "attackSpeed": 0
       },

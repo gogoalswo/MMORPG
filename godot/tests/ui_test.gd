@@ -600,8 +600,9 @@ func _case_bag(game: Node3D) -> void:
 
 	# 장착 6칸(3열) · 가방 5열 세 줄
 	var slots: Array = Items.slots()
-	if slots.size() != 6:
-		_fail("슬롯이 6종이어야 하는데 %d종: %s" % [slots.size(), str(slots)])
+	# 장비 6칸 + 이빨(2026-09-27)
+	if slots.size() != 7:
+		_fail("슬롯이 7종이어야 하는데 %d종: %s" % [slots.size(), str(slots)])
 	var gear: Array = game._gear_cells
 	if gear.size() != slots.size():
 		_fail("장착이 %d칸이어야 하는데 %d칸" % [slots.size(), gear.size()])
@@ -609,6 +610,21 @@ func _case_bag(game: Node3D) -> void:
 		_fail("가방 격자가 15칸 이상이어야 하는데 %d칸" % game._bag_grid.get_child_count())
 	if game._bag_grid.columns != 5:
 		_fail("가방 격자가 5열이어야 하는데 %d열" % game._bag_grid.columns)
+
+	# **이빨 칸은 캐릭터 아래 가운데** — 장비 6칸(양옆 세 칸씩) 아래, 양옆 줄 사이에 선다
+	var tooth_at := slots.find("tooth")
+	if tooth_at >= 0 and tooth_at < gear.size():
+		var tooth_box: Rect2 = gear[tooth_at].get_global_rect()
+		var left_box: Rect2 = gear[0].get_global_rect()
+		var right_box: Rect2 = gear[3].get_global_rect()
+		var lowest := maxf(gear[2].get_global_rect().end.y, gear[5].get_global_rect().end.y)
+		var mid := tooth_box.get_center().x
+		if tooth_box.position.y < lowest or mid <= left_box.end.x or mid >= right_box.position.x:
+			_fail("이빨 칸이 캐릭터 아래 가운데가 아니다: %s (왼쪽 %s · 오른쪽 %s)" % [tooth_box, left_box, right_box])
+		else:
+			print("  이빨 칸: %s" % tooth_box)
+	else:
+		_fail("이빨 칸이 없다")
 
 	# **왼쪽이 장착, 오른쪽이 가방이다** (2026-09-18 요청)
 	var gear_x: float = gear[0].get_global_rect().position.x

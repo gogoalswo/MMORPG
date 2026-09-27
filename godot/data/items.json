@@ -629,9 +629,102 @@
         "attackSpeed": 0
       },
       "price": 2192
+    },
+    "g1_t": {
+      "id": "g1_t",
+      "name": "짐승 이빨",
+      "slot": "tooth",
+      "grade": 1,
+      "level": 1,
+      "bonus": {
+        "lifesteal": 1
+      },
+      "price": 0,
+      "fixed": true
+    },
+    "g2_t": {
+      "id": "g2_t",
+      "name": "늑대 이빨",
+      "slot": "tooth",
+      "grade": 2,
+      "level": 31,
+      "bonus": {
+        "lifesteal": 2
+      },
+      "price": 0,
+      "fixed": true
+    },
+    "g3_t": {
+      "id": "g3_t",
+      "name": "흑랑 이빨",
+      "slot": "tooth",
+      "grade": 3,
+      "level": 61,
+      "bonus": {
+        "lifesteal": 3
+      },
+      "price": 0,
+      "fixed": true
+    },
+    "g4_t": {
+      "id": "g4_t",
+      "name": "투사의 이빨",
+      "slot": "tooth",
+      "grade": 4,
+      "level": 91,
+      "bonus": {
+        "lifesteal": 4
+      },
+      "price": 0,
+      "fixed": true
+    },
+    "g5_t": {
+      "id": "g5_t",
+      "name": "용 이빨",
+      "slot": "tooth",
+      "grade": 5,
+      "level": 121,
+      "bonus": {
+        "lifesteal": 5
+      },
+      "price": 0,
+      "fixed": true
+    },
+    "g6_t": {
+      "id": "g6_t",
+      "name": "성운 이빨",
+      "slot": "tooth",
+      "grade": 6,
+      "level": 151,
+      "bonus": {
+        "lifesteal": 6
+      },
+      "price": 0,
+      "fixed": true
+    },
+    "g7_t": {
+      "id": "g7_t",
+      "name": "창세의 이빨",
+      "slot": "tooth",
+      "grade": 7,
+      "level": 181,
+      "bonus": {
+        "lifesteal": 7
+      },
+      "price": 0,
+      "fixed": true
     }
   },
   "slots": [
+    "weapon",
+    "armor",
+    "helmet",
+    "boots",
+    "necklace",
+    "ring",
+    "tooth"
+  ],
+  "dropSlots": [
     "weapon",
     "armor",
     "helmet",
@@ -645,7 +738,8 @@
     "helmet": "투구",
     "boots": "신발",
     "necklace": "목걸이",
-    "ring": "반지"
+    "ring": "반지",
+    "tooth": "이빨"
   },
   "slotCode": {
     "weapon": "w",
@@ -653,7 +747,8 @@
     "helmet": "h",
     "boots": "b",
     "ring": "r",
-    "necklace": "n"
+    "necklace": "n",
+    "tooth": "t"
   },
   "jobSlots": [],
   "bagSize": 200,

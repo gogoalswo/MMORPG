@@ -7,6 +7,7 @@ export * from './beasts.ts';
 export * from './skills.ts';
 export * from './autoHunt.ts';
 export * from './items.ts';
+export * from './tooth.ts';
 export * from './movement.ts';
 export * from './zone.ts';
 export * from './zones.ts';

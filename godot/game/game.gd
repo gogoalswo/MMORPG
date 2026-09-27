@@ -235,6 +235,7 @@ var _hp_text: Label
 var _exp_text: Label
 ## 맞았을 때 화면 가장자리가 붉어지는 비네트 (game/hurt_flash.gd)
 var _hurt: HurtFlash
+var _touch_guard: TouchGuard
 var _gate_panel: GatePanel
 ## 던전 창 — 가방 옆 단추로 연다 (docs/features/dungeons.md)
 var _dungeon_panel: DungeonPanel
@@ -566,6 +567,9 @@ func _build_persistent() -> void:
 	# 제일 먼저 넣어 HUD 글자 밑에 깔린다 — 비네트가 체력·상태를 가리면 안 된다
 	_hurt = HurtFlash.new()
 	_ui_root.add_child(_hurt)
+	# 폰 웹에서 손가락 떼기를 놓치면 모든 누름이 죽는다 — 막히면 푼다 (touch_guard.gd)
+	_touch_guard = TouchGuard.new()
+	add_child(_touch_guard)
 
 	# 존 이름·골드·몬스터 수·fps·빌드. **체력·레벨·경험치는 여기서 지웠다** —
 	# 퀵슬롯 위 묶음이 보여 준다. 빌드 표시는 남긴다 (지금 보는 것이 어느 빌드인지)

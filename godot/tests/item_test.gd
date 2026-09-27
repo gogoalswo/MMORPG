@@ -21,7 +21,6 @@ func _init() -> void:
 	_case_equip()
 	_case_clamp()
 	_case_starter_gear()
-	_case_tooth()
 	Save.clear()
 
 	if _failed == 0:
@@ -271,71 +270,6 @@ func _case_starter_gear() -> void:
 	var back: Dictionary = again._world.snapshot().players["me"]
 	_eq("이어 온 캐릭터는 안 받는다", back.equipped.has("weapon"), false)
 	Save.clear()
-
-
-## 이빨 (2026-09-27) — 새 캐릭터·기존 캐릭터 모두 일반 이빨을 한 번 받는다 · 흡혈은 등급 × 1% ·
-## 드랍으로 안 나온다 · 강화·크리스탈·판매가 안 된다
-func _case_tooth() -> void:
-	Save.clear()
-	var t := LocalTransport.new()
-	t.open("village")
-	var me: Dictionary = t._world._players["me"]
-	_eq("새 캐릭터 시작 이빨", str(me.equipped.get("tooth", {}).get("id", "")), Items.item_id(1, "tooth"))
-	_eq("이빨엔 랜덤 옵션이 없다", me.equipped.tooth.get("options", []).size(), 0)
-	_eq("일반 이빨 흡혈 1%", float(me.stats.get("lifesteal", 0.0)), 0.01)
-	t._world.grant_starter_tooth("me")
-	_eq("이빨도 한 번만 준다", me.bag.filter(func(s): return str(s.id).ends_with("_t")).size(), 0)
-
-	# 이빨 칸이 생기기 전 저장 — 이빨도 `starterTooth` 도 없다. 다시 들어오면 받는다
-	me.equipped.erase("tooth")
-	me.granted.erase("starterTooth")
-	t._world.save("me")
-	var again := LocalTransport.new()
-	again.open("village")
-	var back: Dictionary = again._world._players["me"]
-	_eq("기존 캐릭터도 이빨을 받는다", str(back.equipped.get("tooth", {}).get("id", "")), Items.item_id(1, "tooth"))
-	Save.clear()
-
-	# 흡혈 — 등급 × 1%, 태초 7%
-	for grade in [1, 7]:
-		_eq("%d등급 이빨 흡혈" % grade, int(Items.get_item(Items.item_id(grade, "tooth")).bonus.lifesteal), grade)
-	var w := World.new()
-	w.open("meadow")
-	w.join("me")
-	var p: Dictionary = w._players["me"]
-	p.equipped["tooth"] = {"id": Items.item_id(7, "tooth"), "grade": 7, "enhance": 0, "options": []}
-	w._refresh_stats(p)
-	var mob: Dictionary = w.snapshot().monsters[0]
-	mob.hp = 1 << 40  # 안 죽게
-	p.hp = 1
-	w.drain_events()
-	w._hit_monster(p, mob, 50.0, "")
-	var dealt := 0
-	for event in w.drain_events():
-		if str(event.get("type", "")) == "hit":
-			dealt = int(event.amount)
-	_eq("입힌 피해의 7% 가 돌아온다", int(p.hp), mini(int(p.stats.maxHp), 1 + roundi(dealt * 0.07)))
-	if dealt * 0.07 < 1.0:
-		_fail("흡혈 검사: 피해(%d)가 작아 돌아오는 게 0 이다 — 공격을 올린다" % dealt)
-
-	# 드랍 — 이빨은 안 나온다
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 7
-	for i in 3000:
-		var gear: Dictionary = Items._roll_gear_drop(200, rng)
-		if str(gear.id).ends_with("_t"):
-			_fail("이빨이 드랍됐다: %s" % gear.id)
-			break
-
-	# 강화·크리스탈·판매는 막는다 — 다시 얻을 길이 없다
-	p.gold = 1 << 30
-	p.bag.append({"id": Items.crystal_id(), "count": 5})
-	w.enhance_item("me", "equip", "tooth")
-	_eq("이빨은 강화 안 된다", int(p.equipped.tooth.get("enhance", 0)), 0)
-	w.use_crystal("me", "equip", "tooth")
-	_eq("이빨엔 크리스탈을 못 쓴다", p.equipped.tooth.get("options2", []).size(), 0)
-	_eq("크리스탈이 안 줄었다", int(p.bag[p.bag.size() - 1].count), 5)
-	_eq("다중 강화 목록에서 빠진다", Items.batch_match(p.equipped.tooth, "all", "", 0, 10), false)
 
 
 func _case_clamp() -> void:

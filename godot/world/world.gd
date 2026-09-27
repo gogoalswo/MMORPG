@@ -1466,7 +1466,7 @@ func debug_fill_bag(player_id: String) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty():
 		return
-	var slots: Array = Items.drop_slots()  # 이빨은 빼고 — 여러 개 들고 있을 물건이 아니다
+	var slots: Array = Items.slots()
 	var kinds := Stats.grade_count() * slots.size()
 	var added := 0
 	while player.bag.size() < Items.bag_size():
@@ -1523,28 +1523,6 @@ func grant_starter_gear(player_id: String) -> void:
 	_refresh_stats(player)
 	# 갑옷만큼 최대 HP 가 늘었다 — 새 캐릭터는 가득 찬 채로 시작한다
 	player.hp = int(player.stats.maxHp)
-	_inventory_changed(player)
-
-
-## **시작 이빨** — 일반(1등급) 이빨을 이빨 칸에 끼워 준다 (2026-09-27 지시 "이빨 슬롯을 넣어" —
-## 드랍으로 안 나오므로 고른 갈래: "일반 이빨을 시작 지급"). **기존 캐릭터도 한 번** 받는다 —
-## 그래서 `grant_starter_gear` 와 달리 저장이 있어도 부른다 (`LocalTransport.open`).
-## `granted` 의 `starterTooth` 로 한 번만. 칸에 이미 뭔가 있으면 가방으로 넣는다.
-## 올리는 길(신규 던전)은 아직 없다
-func grant_starter_tooth(player_id: String) -> void:
-	var player: Dictionary = _players.get(player_id, {})
-	if player.is_empty() or "starterTooth" in player.get("granted", []):
-		return
-	var item := Items.get_item(Items.item_id(1, "tooth"))
-	if item.is_empty():
-		return
-	var stack := {"id": str(item.id), "grade": 1, "enhance": 0, "options": []}
-	if player.equipped.get("tooth", {}).is_empty():
-		player.equipped["tooth"] = stack
-	elif not _give(player, stack):
-		return  # 가방이 꽉 찼으면 다음 접속에 다시 준다
-	player.granted.append("starterTooth")
-	_refresh_stats(player)
 	_inventory_changed(player)
 
 
@@ -1769,8 +1747,7 @@ func debug_gear(player_id: String, level: int, grade: int, enhance: int) -> void
 		if best.is_empty():
 			continue
 		# 등급은 고른 물건의 것 — 1 로 두면 장비 스킨(`Armor`)이 늘 1등급으로 보인다
-		var fixed := Items.is_fixed(best)  # 이빨은 강화가 없다
-		equipped[slot] = {"id": str(best.id), "grade": int(best.get("grade", 1)), "enhance": 0 if fixed else step, "options": []}
+		equipped[slot] = {"id": str(best.id), "grade": int(best.get("grade", 1)), "enhance": step, "options": []}
 	player.equipped = equipped
 	_refresh_stats(player)
 	player.hp = int(player.stats.maxHp)
@@ -2072,10 +2049,6 @@ func _hit_monster(player: Dictionary, target: Dictionary, attack: float, skill_i
 		damage = roundi(damage * float(stats.critDamage))
 
 	target.hp = maxi(0, int(target.hp) - damage)
-	# **흡혈** — 입힌 피해의 일부가 HP 로 돌아온다. 이빨만 준다 (일반 1% → 태초 7%, 2026-09-27)
-	var drain := roundi(damage * float(stats.get("lifesteal", 0.0)))
-	if drain > 0 and not player.get("dead", false):
-		player.hp = mini(int(stats.maxHp), int(player.hp) + drain)
 	_events.append({
 		"type": "hit",
 		"target": target.id,
@@ -2120,7 +2093,6 @@ func _refresh_stats(player: Dictionary) -> void:
 	stats.attackSpeed = maxf(float(stats.attackSpeed) + gear.attackSpeed, 0.0)
 	# **쿨감·관통만 90% 에서 멈춘다** ★ (2026-09-23 지시). 수치를 더 주고 싶으면
 	# 이 줄이 아니라 옵션 최대치(`OPTION_MAX_VALUE`)를 올린다
-	stats["lifesteal"] = float(gear.get("lifesteal", 0.0))
 	var c := GameData.combat()
 	stats["cooldown"] = clampf(float(gear.get("cooldown", 0.0)), 0.0, float(c.get("cooldownCap", 0.9)))
 	stats["penetration"] = clampf(
@@ -2226,9 +2198,6 @@ func use_crystal(player_id: String, where: String, key: Variant) -> void:
 	var item := Items.get_item(str(target.get("id", "")))
 	if item.is_empty():
 		return  # 장비에만 붙는다
-	if Items.is_fixed(item):
-		_notice("크리스탈을 쓸 수 없는 장비입니다")
-		return
 
 	var crystal := -1
 	for index in player.bag.size():
@@ -2315,9 +2284,6 @@ func npc_sell(player_id: String, index: int) -> void:
 	var item := Items.get_item(str(stack.id))
 	if item.is_empty():
 		return
-	if Items.is_fixed(item):
-		_notice("팔 수 없는 장비입니다")
-		return
 
 	var price := Items.sell_price(item, int(stack.get("grade", 1)))
 	player.bag.remove_at(index)
@@ -2370,9 +2336,6 @@ func _enhance(player: Dictionary, where: String, key: Variant) -> void:
 	var item := Items.get_item(str(stack.get("id", "")))
 	if item.is_empty():
 		return  # 장비만 두드린다
-	if Items.is_fixed(item):
-		_notice("강화할 수 없는 장비입니다")
-		return
 
 	var level := int(stack.get("enhance", 0))
 	if not Items.can_enhance(level):
@@ -2435,8 +2398,7 @@ func enhance_many(player_id: String, indices: Array, cap: int = -1) -> void:
 		if at < 0 or at >= player.bag.size() or chosen.has(at):
 			continue
 		var stack: Dictionary = player.bag[at]
-		var pick := Items.get_item(str(stack.get("id", "")))
-		if pick.is_empty() or Items.is_fixed(pick):
+		if Items.get_item(str(stack.get("id", ""))).is_empty():
 			continue
 		chosen.append(at)
 		if int(stack.get("enhance", 0)) < limit:

@@ -100,9 +100,6 @@ computeDamage(attack, defense) = max(1, round(attack * (1 - defense/(defense+45)
 - 치명타: `rollCrit(chance, roll)` → 터지면 `round(base * critDamage)`.
   **대상마다 따로 굴린다** — 범위기 한 방이 통째로 터지면 피해가 뭉쳐 숫자가 튄다.
 - 공격 간격: `effectiveCooldown(cooldown, attackSpeed) = round(cooldown / (1 + speed))`.
-- **흡혈** (2026-09-27): 몬스터에게 입힌 피해(치명타 포함) × `stats.lifesteal` 을 반올림해
-  HP 로 채운다 (최대 HP 까지, 죽었으면 안 채움). `world.gd` 의 `_hit_monster` 한 자리다.
-  이빨만 주고 일반 1% → 태초 7% → [items.md](items.md) "이빨".
 
 ### 맞는 쪽 K — 후반 HP 2만, 생존은 방어가 ★★ (2026-09-27)
 지시: **"체력은 후반에도 2만 정도만 되고 방어력 올려서 피해감소를 해서 안 죽으면 좋겠어."**

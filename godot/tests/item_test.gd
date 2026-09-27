@@ -195,7 +195,7 @@ func _case_drop() -> void:
 			return
 	if drops == 0:
 		_fail("20,000번 돌렸는데 하나도 안 떨어졌다")
-	# 설계값(stat-balance.md 7장)과 맞나 — 1등급 0.2963%
+	# 판정값과 맞나 — 1등급 설계 0.2963% × 배율 2 = 0.5926% (items.md "드랍 확률은 설계값이다")
 	var by_design := Items.drop_chance(35)
 	var measured := float(drops) / 20000.0
 	if absf(measured - by_design) > by_design * 0.35:

@@ -67,10 +67,6 @@ import {
   GROUND_KINDS,
   GROUND_LOOKS,
   ITEMS,
-  TOOTH_ITEMS,
-  TOOTH_SLOT,
-  TOOTH_CODE,
-  TOOTH_LABEL,
   EQUIP_SLOTS,
   SLOT_CODE,
   slotLabel,
@@ -166,18 +162,12 @@ export function buildData() {
       skillBlastMin: SKILL_BLAST_MIN,
     },
     'items.json': {
-      // 이빨(2026-09-27)은 장비 6칸과 표가 따로다 (`tooth.ts`) — 고도에는 합쳐서 준다.
-      // 장착 칸(`slots`)에는 들고, 드랍(`dropSlots`)에는 안 든다
-      items: { ...ITEMS, ...TOOTH_ITEMS },
-      slots: [...EQUIP_SLOTS, TOOTH_SLOT],
-      dropSlots: EQUIP_SLOTS,
+      items: ITEMS,
+      slots: EQUIP_SLOTS,
       // 창에 적는 칸 이름
-      slotLabels: {
-        ...Object.fromEntries(EQUIP_SLOTS.map((slot) => [slot, slotLabel(slot)])),
-        [TOOTH_SLOT]: TOOTH_LABEL,
-      },
+      slotLabels: Object.fromEntries(EQUIP_SLOTS.map((slot) => [slot, slotLabel(slot)])),
       // 드롭이 후보 id 를 만들 때 쓴다 (`g{등급}_{슬롯코드}`)
-      slotCode: { ...SLOT_CODE, [TOOTH_SLOT]: TOOTH_CODE },
+      slotCode: SLOT_CODE,
       jobSlots: JOB_SLOTS,
       bagSize: INVENTORY_SIZE,
       gradeMin: GRADE_MIN,

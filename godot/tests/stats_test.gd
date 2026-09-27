@@ -238,9 +238,8 @@ func _debug_gear() -> void:
 	var me: Dictionary = w.snapshot().players["me"]
 	if int(me.level) != 100:
 		_fail("레벨이 100 이 아니다 (%d)" % int(me.level))
-	# 장비 6칸 + 이빨(2026-09-27) — 이빨은 흡혈뿐이라 아래 세기 대조에는 안 걸린다
-	if me.equipped.size() != Items.slots().size():
-		_fail("장착 칸이 다 안 찼다 (%d)" % me.equipped.size())
+	if me.equipped.size() != 6:
+		_fail("여섯 칸이 안 찼다 (%d)" % me.equipped.size())
 	if int(me.hp) != int(me.stats.maxHp):
 		_fail("체력이 가득 안 찼다")
 

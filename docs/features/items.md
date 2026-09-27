@@ -17,8 +17,6 @@
 |---|---|
 | `packages/shared/src/items.ts` | 전부. 생성·등급·옵션·강화·드롭 |
 | `packages/shared/src/items.test.ts` | 규칙 전수 검사 (단계 순서, 옵션 범위, 등급 단조성 등) |
-| `packages/shared/src/tooth.ts` | **이빨 7종** — 장비 표와 따로. 내보낼 때 `items.json` 에 합친다 (아래 "이빨") |
-| `packages/shared/src/tooth.test.ts` | 이빨 7종 · 흡혈 등급 × 1% · 장비 표에 안 섞임 |
 | `packages/shared/src/gear.ts` | ★ **설계 표** — 등급 7 × 슬롯 6 = 42종. 수치·카탈로그 다 붙였다 |
 | `packages/shared/src/gear.test.ts` | 설계 문서의 표를 박아 두고 전수 대조 |
 | `packages/shared/src/balance.ts` | ★ 레벨 곡선·피해 공식·몬스터 역산 → [stat-balance.md](stat-balance.md) |
@@ -372,34 +370,6 @@ equipmentStats(equipped)        장착 8칸 합
 장신구(반지·목걸이·귀걸이)와 마법서는 원래 **마나를 주던 자리**였다. 마나를
 걷어내면서 그 몫을 공격과 체력으로 옮겼다 — 안 그러면 여덟 자리 중 셋이
 빈 물건이 된다.
-
-### 이빨 ★ (2026-09-27)
-지시: **"이빨 슬롯을 넣어. 아이템 등급은 기존과 동일하고 옵션은 hp흡수 옵션이야. 입힌 피해의
-1% 부터 등급별로 1%씩 올라갈거야. 이 아이템은 드랍으로 안 나와. 나중에 신규 던전 깨면
-업그레이드 할 수 있게 할거야"**. 갈래는 사용자가 골랐다 — **일반 이빨 시작 지급**(기존
-캐릭터도 한 번) · **흡혈만**.
-
-| 등급 | 일반 | 고급 | 희귀 | 영웅 | 전설 | 초월 | 태초 |
-|---|---|---|---|---|---|---|---|
-| 이름 | 짐승 이빨 | 늑대 〃 | 흑랑 〃 | 투사의 〃 | 용 〃 | 성운 〃 | 창세의 〃 |
-| 흡혈 | 1% | 2% | 3% | 4% | 5% | 6% | 7% |
-
-- id `g{등급}_t`, 착용 레벨은 다른 장비와 같다 (1·31·…·181). 흡혈은 `bonus.lifesteal`
-  (퍼센트 정수), 판정은 `world.gd` `_hit_monster` → [combat.md](combat.md) "피해".
-- **공격·방어·HP 가 없고, 랜덤 옵션·크리스탈·강화·판매가 없다** — `fixed: true`
-  (`Items.is_fixed`). 다시 얻을 길이 없어서 부수거나 팔 수 있으면 안 된다.
-  판정(`_enhance` · `enhance_many` · `use_crystal` · `npc_sell`)과 화면(강화 단추 ·
-  크리스탈 대상 · 다중 강화 목록의 `batch_match`)이 둘 다 막는다.
-- **드랍으로 안 나온다** — 드랍은 `items.json` 의 `dropSlots`(장비 6칸)만 고른다.
-- **왜 `EquipSlot` 에 안 넣었나** — 장비 6칸은 설계 예산(`SLOT_SHARE` 열 합계 1.0)·드랍·강화
-  표와 옛 서버 타입에 묶여 있다. 이빨은 그 어디에도 안 들어서 표를 따로 두고
-  (`TOOTH_ITEMS`), `export-shared.mjs` 가 `items`·`slots`·`slotLabels`·`slotCode` 에 합친다.
-- **시작 지급**: `world.gd` 의 `grant_starter_tooth` — `LocalTransport.open` 이 저장이 있든 없든
-  부르고, `granted` 의 `starterTooth` 로 한 번만 준다. 이빨 칸에 이미 뭔가 있으면 가방으로.
-- **올리는 길(신규 던전 보상)은 아직 없다.** 붙일 때 끼고 있는 이빨의 id 를 다음 등급
-  (`Items.item_id(등급, "tooth")`)으로 갈아 끼우고 `_refresh_stats` 를 부르면 된다.
-- 테스트 모드 꾸러미(`grant_test_kit`)에는 이빨 7종도 든다 (`Items.slots()` 를 훑는다).
-- 검사: `item_test.gd` 의 `_case_tooth` (시작 지급 · 기존 캐릭터 · 흡혈 7% · 드랍 없음 · 강화/크리스탈 막기).
 
 ### 제작 — **없앴다 (2026-09-20)**
 등급 올리기·새로 만들기·보스 재료(`m_XX`)를 전부 걷었다. 설계([stat-balance.md](stat-balance.md))에

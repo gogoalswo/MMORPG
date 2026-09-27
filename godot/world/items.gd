@@ -54,20 +54,8 @@ static func stack_name(stack: Dictionary) -> String:
 	return str(get_item(id).get("name", id))
 
 
-## 장착 칸 전부 — 장비 6칸 + 이빨(2026-09-27). 장비창·저장·능력치 합이 쓴다
 static func slots() -> Array:
 	return _t().get("slots", [])
-
-
-## 드랍이 고르는 칸 — 장비 6칸뿐. **이빨은 안 떨어진다** (2026-09-27 지시)
-static func drop_slots() -> Array:
-	return _t().get("dropSlots", slots())
-
-
-## 강화·크리스탈·판매·랜덤 옵션이 없는 물건인가 — 지금은 이빨뿐이다 (`tooth.ts` 의 `fixed`).
-## 다시 얻을 길이 없어서 부수거나 팔 수 있으면 안 된다
-static func is_fixed(item: Dictionary) -> bool:
-	return bool(item.get("fixed", false))
 
 
 ## 창에 적는 칸 이름. 표는 shared 의 slotLabel 이 낸다.
@@ -185,8 +173,6 @@ static func clamp_options(stack: Dictionary) -> void:
 ## 옵션을 굴린다. **종류는 겹치지 않게 고른다** — 치명타가 셋 붙으면 옵션이
 ## 하나 붙은 것과 다르지 않으면서 설명만 길어진다
 static func roll_options(item: Dictionary, grade: int, rng: RandomNumberGenerator) -> Array:
-	if is_fixed(item):
-		return []  # 이빨은 흡혈 하나뿐이다
 	# **개수는 품질 등급이 정한다** — 등급이 오르면 개수와 수치가 같이 커진다
 	var counts: Array = _g().get("optionCount", [])
 	var top := int(_g().get("optionGradeMax", 10))
@@ -305,8 +291,7 @@ static func enhance_reach_odds(from: int, goal: int) -> float:
 ## `mode` 가 "all" 이면 전부, "item" 이면 같은 아이템(id·등급), "grade" 면 같은 등급.
 ## 재료·+cap 이상은 빠진다. 팝업의 오른쪽 목록 탭과 "모두 담기" 가 쓴다
 static func batch_match(stack: Dictionary, mode: String, ref_id: String, grade: int, cap: int) -> bool:
-	var item := get_item(str(stack.get("id", "")))
-	if item.is_empty() or is_fixed(item):
+	if get_item(str(stack.get("id", ""))).is_empty():
 		return false
 	if int(stack.get("enhance", 0)) >= mini(cap, max_enhance()):
 		return false
@@ -345,8 +330,6 @@ static func base_bonus(item: Dictionary, enhance: int = 0) -> Dictionary:
 		# 두 자리가 강화 한 번에 다른 슬롯 넷을 합친 값을 넘어선다
 		"crit": int(bonus.get("crit", 0)),
 		"attackSpeed": int(bonus.get("attackSpeed", 0)),
-		# 이빨의 흡혈 — 퍼센트 정수 (3 = 입힌 피해의 3%). 강화가 없어 안 곱한다
-		"lifesteal": int(bonus.get("lifesteal", 0)),
 	}
 
 
@@ -356,8 +339,6 @@ static func empty_stats() -> Dictionary:
 		"crit": 0.0, "critDamage": 0.0, "attackSpeed": 0.0,
 		# 옵션으로만 붙는 두 축 — 쿨타임 감소와 방어력 관통
 		"cooldown": 0.0, "penetration": 0.0,
-		# 흡혈 — 입힌 피해 중 HP 로 돌아오는 비율. 이빨만 준다 (2026-09-27)
-		"lifesteal": 0.0,
 	}
 
 
@@ -375,7 +356,6 @@ static func stack_stats(stack: Dictionary) -> Dictionary:
 	# 치확·공속은 퍼센트 정수로 들어 있다 (목걸이 50 = +50%p)
 	total.crit = base.crit / 100.0
 	total.attackSpeed = base.attackSpeed / 100.0
-	total.lifesteal = base.lifesteal / 100.0
 
 	# 옵션 여섯 종은 전부 퍼센트다. HP 만 **기본 스탯에 곱할 %** 라 같은 자리에 더하고,
 	# 나머지 다섯은 비율(0.07 = 7%)로 바꿔 담는다. **1·2·3차를 다 더한다**
@@ -527,7 +507,7 @@ static func _roll_gear_drop(monster_level: int, rng: RandomNumberGenerator) -> D
 	# 슬롯은 고루 나와야 한다 — 한쪽만 나오면 나머지 자리는 영영 빈다.
 	# 직업은 더 이상 후보를 가르지 않는다. **굴리는 순서는 슬롯 → 등급** —
 	# `items.ts` 와 같은 순서라야 같은 씨앗에서 같은 것이 나온다
-	var all_slots := drop_slots()
+	var all_slots := slots()
 	var pick := mini(all_slots.size() - 1, int(rng.randf() * all_slots.size()))
 	var grade := roll_grade(rng.randf(), monster_level)
 	var id := item_id(grade, str(all_slots[pick]))

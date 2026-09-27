@@ -283,7 +283,12 @@ func input_move(player_id: String, seq: int, dx: float, dz: float, dt: float) ->
 	player.last_seq = seq
 
 	if sqrt(dx * dx + dz * dz) > 1e-4:
-		player.rot = atan2(dx, dz)
+		# **시전 중에는 제자리에서 돌지 않는다** (2026-09-27 "스킬 쓰는 방향으로 몸이 안
+		# 돌아가"). 쫓던 놈 앞에서 화면은 `dt` 0 으로 매 프레임 그쪽을 보게 보내는데,
+		# 경직이 풀리자마자 스킬 동작 도중에 몸이 그놈 쪽으로 돌아갔다. 실제로 걸으면
+		# 동작이 끊기므로(`_play_player_clip` 의 `cut`) 그때는 걷는 쪽을 본다
+		if dt > 0.0 or now >= int(player.get("cast_until", 0)):
+			player.rot = atan2(dx, dz)
 		# **걸어간 자리가 새 사냥터다.** 앵커를 안 옮기면 손을 떼는 순간 자동
 		# 사냥이 원래 자리로 도로 끌고 간다 — 조작이 이긴 것처럼 보이지 않는다
 		if bool(player.get("auto", false)):
@@ -509,18 +514,22 @@ func _drive_auto(delta: float, now: int) -> void:
 ## 자동 사냥 중인 사람이 대상에게 넣는 한 수 — 스킬이 먼저, 없으면 사거리 안일 때만
 ## 기본 공격. 자동 사냥 한 틱(`_drive_auto`)과 몬스터를 눌러 쫓을 때(`strike`)가 같이 쓴다.
 func _auto_strike(player: Dictionary, id: String, target: Dictionary, now: int) -> void:
-	# 치기 전에 그쪽을 본다. 판정 부채꼴이 rot 를 보기 때문이다 —
-	# 안 돌리면 마지막으로 걷던 쪽으로 헛친다 (attack 은 정면에서 다시 고른다)
-	player.rot = atan2(float(target.x) - player.x, float(target.z) - player.z)
 	# 휘두르는 중에는 다음 것을 넣지 않는다. 스킬 경직 중에 기본 공격이 끼면
 	# 스킬 동작이 끊기고, 쿨타임이 0 인 테스트 스위치에서는 스킬이 매 틱 나간다.
 	# **스킬 시전이 끝날 때까지도 기다린다** — 경직(0.4초)이 풀려도 동작은 1초 넘게
 	# 남는데, 그 사이 다음 스킬은 막혀 있으니 평타가 끼어 동작을 끊는다
+	#
+	# **몸도 그동안은 돌리지 않는다** (2026-09-27). 돌리는 줄이 이 위에 있어서, 스킬이
+	# 가까운 놈 쪽으로 나가고 바로 다음 틱에 몸이 자동 사냥 대상 쪽으로 되돌아갔다 —
+	# 화면에서는 몸이 스킬 쪽을 한 번도 안 봤다
 	if now < maxi(int(player.rooted_until), int(player.get("cast_until", 0))):
 		return
+	# 치기 전에 그쪽을 본다. 판정 부채꼴이 rot 를 보기 때문이다 —
+	# 안 돌리면 마지막으로 걷던 쪽으로 헛친다 (attack 은 정면에서 다시 고른다)
+	player.rot = atan2(float(target.x) - player.x, float(target.z) - player.z)
 	var gap := Vector2(float(target.x) - player.x, float(target.z) - player.z).length()
 	# 스킬이 먼저다. 돌아온 스킬이 있으면 기본 공격 대신 그걸 쓴다
-	if _auto_cast(player, id, gap, now):
+	if _auto_cast(player, id, str(target.id), gap, now):
 		return
 	# **사거리 안일 때만 휘두른다.** 멀리서 헛휘두르면 그때마다 경직(400ms)이
 	# 걸려 한 발짝도 못 나간다 — 붙기 전에 제자리에서 팔만 돌게 된다
@@ -554,7 +563,7 @@ func strike(player_id: String, mob_id: String) -> void:
 ## 쏘는 것은 사람이 누를 때와 **같은 `cast`** 다. 쿨타임·액션바·조준 검증을 두 벌
 ## 만들면 반드시 어긋난다. 나갔는지는 경직이 새로 걸렸는지로 본다 — 쿨타임으로
 ## 보면 테스트 스위치(쿨타임 0)에서 나갔는데도 안 나간 것으로 읽힌다.
-func _auto_cast(player: Dictionary, id: String, gap: float, now: int) -> bool:
+func _auto_cast(player: Dictionary, id: String, aim_id: String, gap: float, now: int) -> bool:
 	var ready_at: Dictionary = player.skill_ready_at
 	for skill_id in player.skill_bar:
 		if now < int(ready_at.get(skill_id, 0)):
@@ -570,7 +579,7 @@ func _auto_cast(player: Dictionary, id: String, gap: float, now: int) -> bool:
 				continue
 		elif gap > float(skill.range):
 			continue
-		cast(id, str(skill_id))
+		cast(id, str(skill_id), aim_id)
 		if int(player.rooted_until) > now:
 			return true
 	return false
@@ -1774,7 +1783,12 @@ func set_skill_bar(player_id: String, ids: Array) -> void:
 
 
 ## 스킬을 쓴다. 판정은 전부 여기서 한다 — 화면이 보내는 건 "쓰고 싶다" 뿐이다.
-func cast(player_id: String, skill_id: String) -> void:
+##
+## `aim_id` 는 **자동 사냥이 고른 놈**이다 (`_auto_cast`). 그놈이 사거리 안이면 그쪽으로
+## 나간다 — 안 넘기면 가장 가까운 놈 쪽으로 나가서, 자동 사냥이 대상 쪽으로 몸을
+## 되돌리는 순간 스킬과 몸이 갈린다. 화면이 누르는 단추는 넘기지 않는다
+## (docs/features/godot-migration.md 의 "대상은 서버가 고른다").
+func cast(player_id: String, skill_id: String, aim_id := "") -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty() or bool(player.dead):
 		return
@@ -1821,9 +1835,12 @@ func cast(player_id: String, skill_id: String) -> void:
 	var range_now := float(skill.range) * Skills.range_mul(skill_id, upgrades)
 	var aim: Dictionary = {}
 	if int(skill.get("maxTargets", 1)) > 0:
-		var near := _pick_targets(player, range_now, TAU, 1)
-		if not near.is_empty():
-			aim = near[0]
+		aim = _aimed(player, aim_id, range_now)
+		if aim.is_empty():
+			var near := _pick_targets(player, range_now, TAU, 1)
+			if not near.is_empty():
+				aim = near[0]
+		if not aim.is_empty():
 			player.rot = atan2(aim.x - player.x, aim.z - player.z)
 
 	# 스킬도 같은 공격 모션을 쓰므로 같은 동안 발이 묶인다.
@@ -1893,6 +1910,19 @@ func _run_landings(now: int) -> void:
 			continue
 		_land(player, skill, str(landing.skill), landing.upgrades, float(landing.range), landing.aim, now)
 	_landings = left
+
+
+## 겨눈 놈 — `id` 인 산 몬스터가 사거리 안이면 그놈, 아니면 빈 것 (`cast` 가 쓴다).
+## 사거리 밖이면 잡지 않는다 — 날아가지도 않을 놈 쪽으로 몸만 돈다
+func _aimed(player: Dictionary, id: String, reach: float) -> Dictionary:
+	if id == "":
+		return {}
+	for monster in _monsters:
+		if str(monster.id) != id or int(monster.hp) <= 0:
+			continue
+		var gap := Vector2(monster.x - player.x, monster.z - player.z).length()
+		return monster if gap <= reach else {}
+	return {}
 
 
 ## 스킬이 **떨어지는 순간** — 대상을 고르고 때리고, 지대·연타를 건다.

@@ -72,13 +72,14 @@ test('레벨에서 낄 수 있는 최고 등급 — 경계가 착용 레벨과 �
 });
 
 test('스탯 예산 — 등급7 풀세트가 문서의 값과 같다', () => {
-  // 문서: "공격력 3643% / 방어력 4372% / HP 2550% / 치확 50% / 치피 +100% / 공속 +20% / 이동 +25%"
+  // 문서: "공격력 3643% / 방어력 4372% / HP 300% / 치확 50% / 치피 +100% / 공속 +20% / 이동 +25%"
   // 2026-09-24 에 등급 배수가 커졌다 (공 856 · 방 514 · HP 300 → 7286 · 4372 · 2550),
   // 2026-09-25 에 공격력만 계수 0.5 로 반을 냈다 (7286 → 3643)
   const b = statBudget(7);
   assert.equal(Math.round(b.atk), 3643);
   assert.equal(Math.round(b.df), 4372);
-  assert.equal(Math.round(b.hp), 2550);
+  // 2026-09-27 에 HP 를 공격력 등비에서 떼어 냈다 (2550 → 300, `hpBudget`) — 후반 HP 2만
+  assert.equal(Math.round(b.hp), 300);
   assert.equal(b.crit, 0.5);
   assert.equal(b.critDamage, 1);
   assert.equal(b.aspd, 0.2);
@@ -137,13 +138,14 @@ test('등급7 슬롯 수치 (무강 → 강화 4단)', () => {
 
   assert.equal(r(at('armor', 1).df), 1457);
   assert.equal(r(at('armor', 4).df), 1900);
-  assert.equal(r(at('armor', 1).hp), 850);
-  assert.equal(r(at('armor', 4).hp), 1108);
+  // HP 는 강화를 안 탄다 (2026-09-27) — 무강과 4단이 같다
+  assert.equal(r(at('armor', 1).hp), 100);
+  assert.equal(r(at('armor', 4).hp), 100);
 
   assert.equal(r(at('helmet', 1).df), 729);
   assert.equal(r(at('helmet', 4).df), 950);
-  assert.equal(r(at('helmet', 1).hp), 425);
-  assert.equal(r(at('helmet', 4).hp), 554);
+  assert.equal(r(at('helmet', 1).hp), 50);
+  assert.equal(r(at('helmet', 4).hp), 50);
 
   // 신발은 투구와 같은 수치에 이동속도만 더 붙는다
   assert.equal(r(at('boots', 4).df), 950);
@@ -154,8 +156,8 @@ test('등급7 슬롯 수치 (무강 → 강화 4단)', () => {
     assert.equal(r(at(slot, 4).atk), 1187, `${slot} 공격력(4단)`);
     assert.equal(r(at(slot, 1).df), 729, `${slot} 방어력`);
     assert.equal(r(at(slot, 4).df), 950, `${slot} 방어력(4단)`);
-    assert.equal(r(at(slot, 1).hp), 425, `${slot} HP`);
-    assert.equal(r(at(slot, 4).hp), 554, `${slot} HP(4단)`);
+    assert.equal(r(at(slot, 1).hp), 50, `${slot} HP`);
+    assert.equal(r(at(slot, 4).hp), 50, `${slot} HP(4단)`);
   }
   // 치확·공속은 장비 기본에서 걷었다 — 랜덤 옵션으로만 붙는다
   assert.equal(at('necklace', 1).crit, 0);
@@ -167,6 +169,7 @@ test('강화는 %스탯에만 곱한다 — 치명타·공속은 그대로다', 
   const bare = slotStats('necklace', 7, 1);
   const maxed = slotStats('necklace', 7, ENH_MAX);
   assert.ok(maxed.atk > bare.atk * 5, '공격력은 커져야 한다');
+  assert.equal(maxed.hp, bare.hp, 'HP 는 강화를 안 탄다 (2026-09-27)');
   assert.equal(maxed.crit, bare.crit);
   assert.equal(maxed.critDamage, bare.critDamage);
   assert.equal(slotStats('ring', 7, ENH_MAX).aspd, slotStats('ring', 7, 1).aspd);

@@ -103,6 +103,18 @@ static func grade_sum(grade: float) -> float:
 	return float(_g().get("sumStart", 35.0)) * pow(grade_ratio(), g - 1.0)
 
 
+## 등급 g 풀세트의 HP % 합계 — 공격력 등비에서 떼어 낸 제 등비 (12% → 300%).
+## 후반 HP 를 2만 근처에 묶는다 (2026-09-27, `gear.ts` 의 `hpBudget`)
+static func hp_budget(grade: float) -> float:
+	if grade <= 0.0:
+		return 0.0
+	var g := _g()
+	var n := grade_count()
+	var start := float(g.get("hpStart", 12.0))
+	var end := float(g.get("hpEnd", 300.0))
+	return start * pow(end / start, (minf(grade, float(n)) - 1.0) / float(n - 1))
+
+
 ## 등급 g 착용 레벨 — 1 / 31 / 61 / 91 / 121 / 151 / 181
 static func equip_level(grade: int) -> int:
 	return 1 + int(_g().get("gradeLvSpan", 30)) * (grade - 1)
@@ -127,7 +139,7 @@ static func stat_budget(grade: float) -> Dictionary:
 	return {
 		"atk": s * float(g.get("atkFactor", 1.0)),
 		"df": s * float(g.get("defFactor", 0.6)),
-		"hp": s * float(g.get("hpFactor", 0.35)),
+		"hp": hp_budget(grade),
 		"crit": float(g.get("critRateMax", 0.5)) * r,
 		"critDamage": float(g.get("critDmgMax", 1.0)) * r,
 		"aspd": float(g.get("aspdMax", 0.2)) * r,
@@ -182,8 +194,9 @@ static func enhance_reach(step: int) -> float:
 	return p
 
 
-## 슬롯 하나가 주는 수치. 강화는 %스탯(atk/df/hp)에만 곱한다 —
-## 두 곱산 버킷이 동시에 커지면 총 배수 상한을 관리할 수 없다
+## 슬롯 하나가 주는 수치. 강화는 공격·방어 %에만 곱한다 — 두 곱산 버킷이 동시에
+## 커지면 총 배수 상한을 관리할 수 없다. **HP 에도 안 곱한다** (2026-09-27) —
+## 곱하면 풀강이 HP ×4 라 "후반 2만" 이 깨진다
 static func slot_stats(slot: String, grade: float, enhance: int = 1) -> Dictionary:
 	var share: Dictionary = _g().get("slotShare", {}).get(slot, {})
 	var budget := stat_budget(grade)
@@ -191,7 +204,7 @@ static func slot_stats(slot: String, grade: float, enhance: int = 1) -> Dictiona
 	var out := {}
 	for stat in budget:
 		var v: float = budget[stat] * float(share.get(stat, 0.0))
-		if stat == "atk" or stat == "df" or stat == "hp":
+		if stat == "atk" or stat == "df":
 			v *= mult
 		out[stat] = v
 	return out
@@ -283,7 +296,8 @@ static func ref_player(level: int) -> Dictionary:
 
 # ---------------------------------------------------------------- 피해·몬스터
 
-## 피해 공식의 K. **상수로 두면 안 된다** — 기준 플레이어의 감소율이 정확히 30% 가
+## 피해 공식의 K — **플레이어가 때릴 때** 쓴다 (몬스터가 때릴 때는 `def_k_of`).
+## **상수로 두면 안 된다** — 기준 플레이어의 감소율이 정확히 30% 가
 ## 되도록 역산한다. 공격자 레벨에 의존하므로 레벨 차이 페널티가 공식에 내장된다.
 ##
 ## **레벨마다 한 번만 구한다** ★ — `ref_player` 는 기준 장비 여섯 벌을 강화까지
@@ -308,10 +322,53 @@ static var _k_memo: Dictionary = {}
 static var _k_table: Dictionary = {}
 
 
+## 몬스터가 때릴 때의 기준 감소율 — `defReduceByLevel` 점을 선형 보간한다 (2026-09-27).
+## 후반 HP 를 2만 근처에 묶은 대신 방어가 생존을 맡는다 (`balance.ts` 의 `DEF_REDUCE_BY_LEVEL`)
+static func def_reduce(attacker_level: int) -> float:
+	var t: Array = _b().get("defReduceByLevel", [])
+	if t.is_empty():
+		return float(_b().get("targetReduce", 0.3))
+	if attacker_level <= int(t[0][0]):
+		return float(t[0][1])
+	for i in range(1, t.size()):
+		var l1 := int(t[i][0])
+		if attacker_level <= l1:
+			var l0 := int(t[i - 1][0])
+			var r0 := float(t[i - 1][1])
+			return r0 + (float(t[i][1]) - r0) * float(attacker_level - l0) / float(l1 - l0)
+	return float(t[t.size() - 1][1])
+
+
+## **맞는 쪽 K** — 몬스터가 플레이어를 때릴 때만 쓴다. 기준 플레이어의 감소율이
+## `def_reduce` 가 되도록 역산한다. `k_of` 와 나눈 이유: 하나로 두면 후반에 감소율을
+## 올리는 순간 내 공격도 같이 몬스터 방어에 깎인다. `k_of` 처럼 레벨마다 한 번만 구한다
+static func def_k_of(attacker_level: int) -> float:
+	var b := _b()
+	if not is_same(b, _def_k_table):
+		_def_k_table = b
+		_def_k_memo.clear()
+	if _def_k_memo.has(attacker_level):
+		return _def_k_memo[attacker_level]
+	var r := def_reduce(attacker_level)
+	var k: float = ref_player(attacker_level)["df"] * (1.0 - r) / r
+	_def_k_memo[attacker_level] = k
+	return k
+
+
+static var _def_k_memo: Dictionary = {}
+static var _def_k_table: Dictionary = {}
+
+
 ## 피해 = 공격력 × K / (K + 방어력). **뺄셈이 아니라 나눗셈이다** —
 ## 방어력이 아무리 커도 감소율이 100% 에 도달하지 않는다
 static func damage(atk: float, attacker_level: int, df: float) -> float:
 	var k := k_of(attacker_level)
+	return maxf(1.0, atk * k / (k + df))
+
+
+## 몬스터가 플레이어를 때린 피해 — 공식은 `damage` 와 같고 K 만 `def_k_of` 다
+static func damage_taken(atk: float, attacker_level: int, df: float) -> float:
+	var k := def_k_of(attacker_level)
 	return maxf(1.0, atk * k / (k + df))
 
 

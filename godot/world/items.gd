@@ -323,8 +323,10 @@ static func base_bonus(item: Dictionary, enhance: int = 0) -> Dictionary:
 	return {
 		"attack": snappedf(float(bonus.get("attack", 0)) * m, 0.1),
 		"defense": snappedf(float(bonus.get("defense", 0)) * m, 0.1),
-		"maxHp": snappedf(float(bonus.get("maxHp", 0)) * m, 0.1),
-		# **강화는 공격·방어·HP 에만 곱한다** — 치확·공속까지 곱하면 목걸이·반지
+		# **HP 에는 강화를 안 곱한다** (2026-09-27) — 후반 HP 를 2만 근처에 묶고,
+		# 강화는 방어력(감소율)으로 생존을 키운다
+		"maxHp": snappedf(float(bonus.get("maxHp", 0)), 0.1),
+		# **강화는 공격·방어에만 곱한다** — 치확·공속까지 곱하면 목걸이·반지
 		# 두 자리가 강화 한 번에 다른 슬롯 넷을 합친 값을 넘어선다
 		"crit": int(bonus.get("crit", 0)),
 		"attackSpeed": int(bonus.get("attackSpeed", 0)),

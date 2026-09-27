@@ -920,6 +920,12 @@ func _apply_debug() -> void:
 	_refresh_debug()
 
 
+## 같은 레벨 몬스터가 때릴 때 들어오는 비율 — `Stats.damage_taken` 과 같은 K
+func _taken_share(level: int, defense: float) -> float:
+	var k := Stats.def_k_of(level)
+	return k / (k + maxf(0.0, defense))
+
+
 ## 지금 캐릭터 스탯과 설계가 말하는 값을 함께 찍는다 (캐릭터는 안 바꾼다)
 func _refresh_debug() -> void:
 	var level := _debug_level
@@ -934,7 +940,7 @@ func _refresh_debug() -> void:
 	var casts := int(ceil(float(Stats.spawn_count(level)) * hits / float(Stats.aoe_targets(level))))
 	var clear := casts * float(stats.get("attackCooldown", 1000)) / 1000.0
 	var taken: float = (
-		Stats.damage(float(mon["atk"]), level, float(stats.get("defense", 1)))
+		Stats.damage_taken(float(mon["atk"]), level, float(stats.get("defense", 1)))
 		* float(Stats.melee_attackers(level)) * clear / float(mon["interval"])
 	)
 	var loss := taken / maxf(1.0, float(stats.get("maxHp", 1)))
@@ -1795,6 +1801,9 @@ func _redraw_char(me: Dictionary) -> void:
 		["공격 속도", "+%.0f%%" % (float(stats.get("attackSpeed", 0.0)) * 100.0)],
 		["쿨타임 감소", "%.0f%%" % (float(stats.get("cooldown", 0.0)) * 100.0)],
 		["방어력 관통", "%.0f%%" % (float(stats.get("penetration", 0.0)) * 100.0)],
+		# 같은 레벨 몬스터에게 맞을 때 원래 피해의 몇 % 가 들어오나 (2026-09-27). 후반 감소율이
+		# 90% 대라 "감소율 94 → 95%" 는 1%p 로 보여도 받는 피해는 17% 준다 — 그래서 이쪽을 보인다
+		["받는 피해", "%.1f%%" % (_taken_share(int(me.get("level", 1)), float(stats.get("defense", 0))) * 100.0)],
 	])
 	var head := "LV. %d" % int(me.get("level", 1))
 	var seen := head + str(groups)

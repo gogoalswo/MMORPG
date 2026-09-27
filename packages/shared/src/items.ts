@@ -656,12 +656,14 @@ export function baseBonus(item: ItemDef, enhance = 0): Required<ItemBonus> {
   const m = enhanceMultiplier(enhance);
   // **소수 한 자리를 남긴다.** 이 값들은 이제 절대 수치가 아니라 **%** 라서
   // 정수로 자르면 낮은 단계에서 오차가 커진다 (등급1 갑옷 방어 8.4% → 8%)
-  const pct = (v: number) => Math.round(v * m * 10) / 10;
+  const pct = (v: number, by = m) => Math.round(v * by * 10) / 10;
   return {
     attack: pct(item.bonus.attack ?? 0),
     defense: pct(item.bonus.defense ?? 0),
-    maxHp: pct(item.bonus.maxHp ?? 0),
-    // **강화는 공격·방어·HP 에만 곱한다.** 치확·공속까지 곱하면 목걸이·반지 두 자리가
+    // **HP 에는 강화를 안 곱한다** (2026-09-27) — 후반 HP 를 2만 근처에 묶고, 강화는
+    // 방어력(감소율)으로 생존을 키운다 (`gear.ts` 의 `ENHANCED`)
+    maxHp: pct(item.bonus.maxHp ?? 0, 1),
+    // **강화는 공격·방어에만 곱한다.** 치확·공속까지 곱하면 목걸이·반지 두 자리가
     // 강화 한 번에 다른 슬롯 넷을 합친 값을 넘어선다 (설계 문서와 시뮬레이터가 같다)
     crit: item.bonus.crit ?? 0,
     attackSpeed: item.bonus.attackSpeed ?? 0,

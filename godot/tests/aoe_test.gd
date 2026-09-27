@@ -85,7 +85,7 @@ func _case_cast_and_burst() -> void:
 	w.step(0.016)
 	var hit := _first(w.drain_events(), "hit")
 	var power := float(boss.attack) * float(boss.get("aoe", {}).get("power", 2.2))
-	var want := roundi(Stats.damage(power, int(boss.level), float(me.stats.defense)))
+	var want := roundi(Stats.damage_taken(power, int(boss.level), float(me.stats.defense)))
 	if hit.is_empty():
 		_fail("시간이 지났는데 안 터졌다")
 	elif int(hit.amount) != want:

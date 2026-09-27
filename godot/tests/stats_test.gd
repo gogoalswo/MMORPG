@@ -136,9 +136,22 @@ func _group_loss() -> void:
 	for level in [15, 100, 195]:
 		var ref := Stats.ref_player(level)
 		var m := Stats.monster(level)
-		var per := Stats.damage(m["atk"], level, ref["df"])
+		# 몬스터가 때리는 쪽이라 맞는 쪽 K(`damage_taken`)다 (2026-09-27)
+		var per := Stats.damage_taken(m["atk"], level, ref["df"])
 		var taken: float = per * float(Stats.melee_attackers(level)) * 15.0 / float(m["interval"])
 		_near("Lv%d 그룹 HP 손실" % level, taken / float(ref["hp"]), 0.5, 0.025)
+	# 후반 HP 는 2만 근처이고 생존은 감소율이 맡는다 — 초반 30% → Lv200 94%
+	var hp200: float = Stats.ref_player(200)["hp"]
+	if hp200 < 15000.0 or hp200 > 25000.0:
+		_fail("Lv200 기준 HP %d 가 2만 근처가 아니다" % roundi(hp200))
+	_near("Lv1 맞는 쪽 감소율", Stats.def_reduce(1), 0.3)
+	_near("Lv200 맞는 쪽 감소율", Stats.def_reduce(200), 0.94)
+	if Stats.k_of(200) <= Stats.def_k_of(200):
+		_fail("때리는 쪽 K 가 맞는 쪽 K 보다 커야 한다 — 내 공격까지 깎인다")
+	for level in [1, 50, 150, 200]:
+		var df: float = Stats.ref_player(level)["df"]
+		var rd := 1.0 - Stats.damage_taken(1e6, level, df) / 1e6
+		_near("Lv%d 기준 플레이어 받는 감소율" % level, rd, Stats.def_reduce(level), 1e-6)
 
 
 ## 문서 5장 — 스킬 해금에 그룹 크기가 묶인다
@@ -187,7 +200,9 @@ func _gear() -> void:
 	_eq("등급7 무기 무강", roundi(Stats.slot_stats("weapon", 7.0, 1)["atk"]), 1822)
 	_eq("등급7 무기 4단", roundi(Stats.slot_stats("weapon", 7.0, 4)["atk"]), 2375)
 	_eq("등급7 갑옷 방어", roundi(Stats.slot_stats("armor", 7.0, 1)["df"]), 1457)
-	_eq("등급7 갑옷 HP", roundi(Stats.slot_stats("armor", 7.0, 1)["hp"]), 850)
+	# HP 는 공격력 등비에서 떼어 냈고(2550% → 300%) 강화를 안 탄다 (2026-09-27)
+	_eq("등급7 갑옷 HP", roundi(Stats.slot_stats("armor", 7.0, 1)["hp"]), 100)
+	_eq("등급7 갑옷 HP 10단", roundi(Stats.slot_stats("armor", 7.0, 10)["hp"]), 100)
 	_eq("등급7 목걸이 공격", roundi(Stats.slot_stats("necklace", 7.0, 1)["atk"]), 911)
 	_eq("등급7 목걸이 방어", roundi(Stats.slot_stats("necklace", 7.0, 1)["df"]), 729)
 	_eq("등급7 목걸이 치확", roundi(Stats.slot_stats("necklace", 7.0, 1)["crit"] * 100.0), 0)

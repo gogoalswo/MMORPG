@@ -987,7 +987,8 @@ func _hit_player(player: Dictionary, monster: Dictionary, attack: float = -1.0) 
 	var power := float(monster.attack) if attack < 0.0 else attack
 	# **공격자 레벨로 K 를 뽑는다** — 높은 사냥터 몬스터가 때리면 내 방어력 효율이
 	# 자동으로 떨어진다. 레벨차 보정 시스템이 따로 필요 없는 이유다 (설계 1장)
-	var damage := roundi(Stats.damage(power, int(monster.get("level", 1)), float(player.stats.defense)))
+	# 맞는 쪽 K(`damage_taken`) — 후반 감소율이 90% 대까지 올라 방어가 생존을 맡는다
+	var damage := roundi(Stats.damage_taken(power, int(monster.get("level", 1)), float(player.stats.defense)))
 	if bool(player.get("invincible", false)):
 		damage = 0
 	player.hp = maxi(0, int(player.hp) - damage)

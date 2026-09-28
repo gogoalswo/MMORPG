@@ -175,6 +175,7 @@ const SKILL_CLIPS := {
 	"ki_burst": "KiBurst",
 	# 폭렬권 — 0.10초에 주먹을 뻗고 버티다가 0.77초에 두 팔을 펼쳐 기를 터뜨린다
 	"nova_fist": "NovaFist",
+	"blast_heel": "BlastHeel",
 }
 ## 판정은 늦게 떨어지는데 **이펙트는 누르자마자 시작하는** 스킬. 폭렬권은 주먹이
 ## 닿는 순간부터 기운이 끓다가 판정 시각(`delayMs`)에 터진다 — 그 시각은 이펙트가
@@ -4650,7 +4651,7 @@ func _show_skill(payload: Dictionary) -> void:
 	if str(payload.get("id", "")) != _transport.my_id():
 		return
 	var skill := str(payload.get("skill", ""))
-	if not (skill in ["rising_kick", "thunder_fall", "sky_breaker", "frost_pillar", "ki_burst", "nova_fist"]):
+	if not (skill in ["rising_kick", "thunder_fall", "sky_breaker", "frost_pillar", "ki_burst", "nova_fist", "blast_heel"]):
 		return
 	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
 	if me.is_empty():
@@ -4679,6 +4680,9 @@ func _show_skill(payload: Dictionary) -> void:
 		NovaFx.burst(_fx, here, float(me.rot))
 		get_tree().create_timer(NovaFx.EXPLODE).timeout.connect(
 			_camera.shake.bind(NovaFx.SHAKE, NovaFx.SHAKE_TIME))
+	elif skill == "blast_heel":
+		BlastFx.blast(_fx, here, float(me.rot))
+		_camera.shake(BlastFx.SHAKE, BlastFx.SHAKE_TIME)
 	else:
 		# 강화 — "연타" 면 두 번 더 긁고 보라다. "위력"(`wide`)은 피해만 키워서 이펙트가 그대로다
 		var claw_up: Array = payload.get("upgrades", [])

@@ -13,7 +13,7 @@ GLB 정리·아이콘 렌더처럼 블렌더로 될 것 같은 일이라도 먼�
 | `scripts/blender.sh` | 블렌더를 찾고, 없으면 받아 두고, 가상 디스플레이 위에서 돌린다 |
 | `package.json` 의 `blender` | `npm run blender -- <블렌더 인자>` |
 | `~/blender-bin/` | 받은 휴대용 블렌더 (저장소 밖, 1.2GB) |
-| `scripts/blender/fighter_moves.py` | **격투가 평타·스킬 동작 7개** — 손발 목표점 + 2본 IK 로 키를 짓는다 → [characters-and-animation.md](characters-and-animation.md) 의 "블렌더 동작" |
+| `scripts/blender/fighter_moves.py` | **격투가 평타·스킬 동작 8개** — 손발 목표점 + 2본 IK 로 키를 짓는다 → [characters-and-animation.md](characters-and-animation.md) 의 "블렌더 동작" |
 
 ## 쓰는 법
 

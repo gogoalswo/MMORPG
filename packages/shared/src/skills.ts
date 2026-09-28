@@ -557,6 +557,33 @@ const SKILL_LIST: SkillDef[] = [
     tier: 4,
     description: '주먹에 기를 실어 내질러 일대를 폭발시킨다.',
   },
+  {
+    /**
+     * 뛰어올라 오른 다리를 머리 위로 곧게 치켜들었다가 **뒤꿈치로 땅을 내리찍으면**
+     * 발밑이 불길로 터지고, 달아오른 금과 불씨가 **잔불로 4초 남는다**
+     * (`BlastFx.blast`, 2026-09-28 요청: "점프해서 뒷꿈치로 바닥을 강하게 내려 바닥에
+     * 폭발이 일어나게 … 잔불이 남게", 참고 그림 두 장).
+     *
+     * 천붕각처럼 **착지에 맞춰 늦게 터진다** — 동작(`fighter_moves.py` 의 BlastHeel)이
+     * 0.5초에 땅을 찍는다. 둘은 같이 고친다. 잔불은 **그림일 뿐 피해가 없다.**
+     *
+     * 4차 전직 셋째다 — 위력은 파천장(1200%)과 폭렬권(1400%) 사이 1300%.
+     */
+    id: 'blast_heel',
+    name: '폭렬 찍기',
+    job: 'fighter',
+    cooldown: 10000,
+    range: 6.0,
+    delayMs: 500,
+    castMs: 1300,
+    arc: Math.PI * 2,
+    power: 13.0,
+    maxTargets: 10,
+    // 4차 전직(Lv.180)에 열린다
+    reqLevel: 180,
+    tier: 4,
+    description: '뛰어올라 뒤꿈치로 땅을 찍어 폭발을 일으키고 잔불을 남긴다.',
+  },
 ];
 
 export const SKILLS: Record<string, SkillDef> = Object.fromEntries(

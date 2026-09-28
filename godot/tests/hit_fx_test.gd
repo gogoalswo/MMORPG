@@ -189,8 +189,15 @@ func _case_feel(game: Node3D, mob: Dictionary, body: Node3D) -> void:
 	if body != null:
 		if not body.has_meta(&"hit_react"):
 			_fail("맞은 몸에 반응이 안 걸렸다")
-		elif body.scale.x <= 1.0:
-			_fail("맞은 몸이 안 퍼졌다 (%.3f)" % body.scale.x)
+		else:
+			# 퍼짐은 `SQUASH_TIME`(0.14초) 동안 줄어든다. 두 프레임을 기다린 뒤 크기를 읽으면 CI 처럼
+			# 프레임이 느린 기계에서는 이미 1.000 으로 돌아와 있다 (2026-09-28 배포가 그래서 깨졌다).
+			# 실제 프레임 시간 대신 **정해진 한 걸음**(1/60초)을 얹어서 본다
+			var r: Dictionary = body.get_meta(&"hit_react")
+			r.t = 0.0
+			HitFx.apply_react(body, 1.0 / 60.0)
+			if body.scale.x <= 1.0:
+				_fail("맞은 몸이 안 퍼졌다 (%.3f)" % body.scale.x)
 		var waited := 0
 		while body.has_meta(&"hit_react") and waited < 240:
 			await process_frame

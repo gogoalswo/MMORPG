@@ -307,6 +307,8 @@ var _auto_shown := ""
 var _menu_cells: Array = []
 ## 가방 단추의 빨간 점 (`_add_red_dot`). 장비를 얻으면 켜고, 가방을 열면 끈다
 var _bag_dot: Control
+## 설계 창 단추 — 오른쪽 맨 아래, 알파 0 (안 보이지만 눌린다)
+var _design_cell: Control
 var _skill_panel: PanelContainer
 ## 스킬창. 틀은 한 번 짓고 `_redraw_skills` 가 채운다
 var _skill_big: PanelContainer
@@ -2613,15 +2615,22 @@ func _build_skill_bar() -> void:
 	# 그림은 월계관 두른 금 트로피(`ui_icon_rank`)
 	if _transport.online():
 		_menu_cells.append(_icon_button("ui_icon_rank", "랭킹", _toggle_rank, MENU_BTN, true))
-	_menu_cells += [
-		# 설계(치트 목록) — 톱니바퀴 위 제도용 컴퍼스
-		_icon_button("ui_icon_design", "설계", _toggle_debug, MENU_BTN, true),
-	]
 	for cell in _menu_cells:
 		menu.add_child(cell)
 	_bag_dot = _add_red_dot(bag_cell)
 	menu.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE, 20)
 	menu.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+
+	# 설계(치트 목록) — 메뉴에서 빼서 **화면 오른쪽 맨 아래 모서리**에 숨겨 둔다 (2026-09-28 요청:
+	# "설계 버튼을 오른쪽 맨 아래로 위치 변경하고, 아이콘이랑 텍스트 안 보이게 알파0으로").
+	# `modulate` 알파 0 이라 그림·글자는 안 보이지만 누름(hit)은 그대로 받는다
+	_design_cell = _icon_button("ui_icon_design", "설계", _toggle_debug, MENU_BTN, true)
+	_design_cell.name = "design"
+	_design_cell.modulate.a = 0.0
+	_ui_root.add_child(_design_cell)
+	_design_cell.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE)
+	_design_cell.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_design_cell.grow_vertical = Control.GROW_DIRECTION_BEGIN
 
 
 ## 물약 칸 — **퀵슬롯 왼쪽** (2026-09-26 요청: 처음엔 오른쪽 옆이었다가 "물약을 퀵슬롯 왼쪽에 두고").

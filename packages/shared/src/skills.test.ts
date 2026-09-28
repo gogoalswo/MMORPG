@@ -126,11 +126,16 @@ test('투사체는 속도가 정의된 종류만 쓴다', () => {
   }
 });
 
+// 투사체는 없지만 **이펙트가 사거리 끝까지 눈에 보이게 날아가는** 스킬 — 규칙의 뜻(멀리서
+// 아무것도 안 날아가는데 맞는 것)에 안 걸린다. 파천장은 2026-09-29 요청으로 6m 가 됐다
+const FLYING_FX = ['ki_burst'];
+
 test('한 방향으로 쏘는 스킬에는 투사체가 붙어 있다', () => {
   // 안 붙으면 멀리서 쏘는데 아무것도 안 날아가 즉시 맞는 것처럼 보인다.
   // 자기 주위로 터지는 기술(전방위)은 날아갈 게 없으므로 예외다 — 서리 폭발 같은 것.
   for (const skill of all) {
     if (skill.selfHeal) continue;
+    if (FLYING_FX.includes(skill.id)) continue;
     if (skill.arc >= Math.PI * 2) continue;
     if (skill.range <= 4) continue; // 근접은 손이 닿는다
     assert.ok(skill.projectile, `${skill.id}: 멀리 쏘는데 투사체가 없다`);

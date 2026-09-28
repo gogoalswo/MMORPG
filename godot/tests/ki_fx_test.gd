@@ -28,13 +28,14 @@ func _run() -> void:
 	await process_frame
 
 	await _case_cast(game)
+	await _case_hold(game)
 	_case_reach()
 	await _case_once(game)
 	await _case_gone(game)
 	_done()
 
 
-## 액션바의 파천장을 누르면 이펙트가 서고 화면이 흔들린다 — **실제 경로로 쏜다.**
+## 액션바의 파천장을 누르면 **멈춤 뒤에** 이펙트가 서고 화면이 흔들린다 — **실제 경로로 쏜다.**
 ## 4차 전직(Lv.180) 스킬이라 레벨·포인트·전직 단계를 직접 올린다
 func _case_cast(game: Node3D) -> void:
 	var player: Dictionary = game._transport._world._players[game._transport.my_id()]
@@ -51,6 +52,13 @@ func _case_cast(game: Node3D) -> void:
 	game._transport.send(&"skill", {"skill": "ki_burst"})
 	for i in 4:
 		await process_frame
+	# 주먹을 내질러 0.2초 멈췄다가 나간다 — 이펙트는 판정 시각(`delayMs`)에 선다. 그 전에는 없다
+	var delay := float(Skills.get_skill("fighter", "ki_burst").get("delayMs", 0)) / 1000.0
+	if delay <= 0.0:
+		_fail("판정 지연(delayMs)이 없다 — 주먹을 내지르는 것과 같은 순간에 나간다")
+	if _newest(game) != null:
+		_fail("파천장 이펙트가 멈춤(%.2f초)이 끝나기 전에 섰다" % delay)
+	await create_timer(delay + 0.05).timeout
 	var fx := _newest(game)
 	if fx == null:
 		_fail("파천장을 썼는데 이펙트가 안 섰다")
@@ -68,6 +76,38 @@ func _case_cast(game: Node3D) -> void:
 	for node in fx.find_children("*", "MeshInstance3D", true, false):
 		if (node as MeshInstance3D).mesh is TorusMesh:
 			_fail("고리 메시가 있다 — 퍼지는 충격 파동 고리는 쓰지 않는다")
+
+
+## **절도** — 주먹을 내질러 멈춘 채로 이펙트가 나간다. 제 속도(벽시계)로 돌려서, 이펙트가 서는
+## 순간 캐릭터가 여전히 `KiBurst` 를 틀고 있고 멈춤 끝(판정 시각) 근처에 있는지 잰다.
+## 동작 상한(`_move_until`)이 벽시계라 `shot.gd` 처럼 시간을 늦추면 동작이 일찍 잘려 보인다 —
+## 그래서 장면이 아니라 여기서 본다
+func _case_hold(game: Node3D) -> void:
+	if not game._player is Rig:
+		print("  내 캐릭터가 모델이 아니다 (에셋 미동기화) — 멈춤 확인 건너뜀")
+		return
+	var rig: Rig = game._player
+	var clip := str(game.SKILL_CLIPS["ki_burst"])
+	var me: Dictionary = game._transport._world._players[game._transport.my_id()]
+	while Time.get_ticks_msec() < int(me.rooted_until) or _newest(game) != null:
+		OS.delay_msec(16)
+		await process_frame
+	me.skill_ready_at = {}
+	me.cast_until = 0
+	game._transport.send(&"skill", {"skill": "ki_burst"})
+	var delay := float(Skills.get_skill("fighter", "ki_burst").get("delayMs", 0)) / 1000.0
+	for i in 120:
+		OS.delay_msec(16)
+		await process_frame
+		if _newest(game) != null:
+			var at := rig._anim.current_animation_position
+			if rig._anim.current_animation != clip or absf(at - delay) > 0.08:
+				_fail("이펙트가 설 때 동작이 %s %.2f초다 — %s %.2f초(멈춤 끝)여야 한다" % [
+					rig._anim.current_animation, at, clip, delay])
+			else:
+				print("  이펙트가 설 때 %s %.2f초 (멈춤 0.22~%.2f초)" % [clip, at, delay])
+			return
+	_fail("제 속도로 쐈는데 이펙트가 안 섰다")
 
 
 ## 가장 먼 것(소용돌이 · 빛살)이 **판정 사거리 안**이고 **앞쪽**이다

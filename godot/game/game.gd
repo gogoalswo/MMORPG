@@ -5017,10 +5017,9 @@ func _flash_ready(cell: PanelContainer) -> void:
 ## 자동 사냥 버튼 글자와 사냥 자리 표시. **상태는 스냅샷(me.auto)만 보고 그린다** —
 ## 누른 것으로 지레 바꾸면 판정이 거절했을 때 화면만 켜진 채로 남는다.
 ##
-## 사람이 몰고 있지 않을 때만 파란 고리가 **앵커**(사냥하며 서성이는 중심)를
-## 가리킨다. 어디를 중심으로 도는지 안 보이면 왜 저기서 멈추는지 알 수 없다.
-## 조작 중에는 같은 고리가 "눌러 둔 자리"라 건드리지 않는다 — 한 고리가 두 가지를
-## 가리키면 걸어가는 도중에 표시가 발밑으로 튄다 (앵커가 따라오기 때문이다)
+## 파란 고리는 **눌러 둔 자리만** 가리킨다. 자동 사냥의 앵커는 그리지 않는다
+## (2026-09-28 요청) — 켜는 순간 발 밑에 떠서 클릭 이펙트로 읽혔고, 마을처럼
+## 잡을 것이 없는 곳에서는 고리만 뜬 채 서 있는 것처럼 보였다
 func _refresh_auto(me: Dictionary) -> void:
 	if _auto_panel.visible:
 		_redraw_auto_panel(me)
@@ -5035,11 +5034,7 @@ func _refresh_auto(me: Dictionary) -> void:
 	_auto_cell.find_child("badge", true, false).text = "자동사냥"
 	if _target != Vector3.INF or _target_mob != "":
 		return
-	if on:
-		_marker.position = Vector3(float(me.get("auto_x", 0.0)), 0.05, float(me.get("auto_z", 0.0)))
-		_marker.visible = true
-	else:
-		_marker.visible = false
+	_marker.visible = false
 
 
 func _tick_aoe() -> void:

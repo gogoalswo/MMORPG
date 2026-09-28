@@ -210,8 +210,8 @@ func _run_scene() -> void:
 		_fail("자동사냥 칸을 눌렀는데 안 켜졌다")
 	elif not game._auto_spin.visible:
 		_fail("켜졌는데 화살표 고리가 안 보인다")
-	elif not game._marker.visible:
-		_fail("켜졌는데 사냥 자리 표시가 없다")
+	elif game._marker.visible:
+		_fail("켜졌는데 발 밑에 고리가 떴다 — 앵커는 그리지 않는다 (클릭 이펙트로 읽힌다)")
 	else:
 		print("  자동사냥 켜짐 — 앵커 (%.1f, %.1f)" % [me.auto_x, me.auto_z])
 

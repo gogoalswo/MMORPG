@@ -86,19 +86,24 @@ func _case_embers(game: Node3D) -> void:
 	await process_frame
 	await process_frame
 	var first := _newest(game)
-	if fx._lava.mesh != QuakeFx.crack_meshes()[0] or fx._core.mesh != QuakeFx.crack_meshes()[1]:
-		_fail("금 메시를 새로 깎는다 — 천붕각 것을 돌려 써야 한다")
-	if first != null and fx._char.mesh != first._char.mesh:
-		_fail("달무리 메시를 쓸 때마다 새로 깎는다")
+	if first != null and fx._ray_core.mesh != first._ray_core.mesh:
+		_fail("빛살 메시를 쓸 때마다 새로 깎는다")
 	if absf(fx._turn.rotation.y - 1.0) > 1e-4:
-		_fail("금·불꽃 자리가 캐릭터가 보는 쪽으로 안 돌았다")
+		_fail("빛살·불꽃 자리가 캐릭터가 보는 쪽으로 안 돌았다")
 	if not fx._bursts[0].emitting:
 		_fail("불덩이가 안 터졌다")
+	# 빛살은 폭발 순간에만 — 다 지나가기 전에 숨기면 잘린다
+	if BlastFx.ray_end() > BlastFx.RAY_END:
+		_fail("빛살이 %.2f초까지 가는데 %.2f초에 숨긴다" % [BlastFx.ray_end(), BlastFx.RAY_END])
+	# 바닥 용암은 걷어냈다 (2026-09-28 요청) — 땅에 눕힌 금 메시가 없어야 한다
+	for node in fx._turn.get_children():
+		if node is MeshInstance3D and node.mesh in QuakeFx.crack_meshes():
+			_fail("바닥에 용암 금이 남아 있다")
+			break
 	fx._t = BlastFx.EMBER_TIME - 0.5
 	await process_frame
-	if not (fx._lava.visible and fx._embers[0].emitting):
-		_fail("잔불이 %.1f초 전에 꺼졌다 (금 %s · 불꽃 %s)" % [
-			BlastFx.EMBER_TIME, fx._lava.visible, fx._embers[0].emitting])
+	if not fx._embers[0].emitting:
+		_fail("잔불이 %.1f초 전에 꺼졌다" % BlastFx.EMBER_TIME)
 	fx._t = BlastFx.EMBER_TIME + 0.1
 	await process_frame
 	for e in fx._embers:
@@ -107,8 +112,8 @@ func _case_embers(game: Node3D) -> void:
 			break
 	fx._t = BlastFx.EMBER_TIME + BlastFx.EMBER_FADE + 0.05
 	await process_frame
-	if fx._lava.visible or fx._char.visible:
-		_fail("잔불이 다 식었는데 금이 남아 있다")
+	if fx._light.visible or fx._stain.visible:
+		_fail("잔불이 다 식었는데 빛·그을림이 남아 있다")
 	fx.queue_free()
 	await process_frame
 

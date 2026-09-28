@@ -1,25 +1,24 @@
 class_name BlastFx
 extends Node3D
 
-## 폭렬 찍기(`blast_heel`) 연출 — **뒤꿈치로 땅을 찍은 자리가 불길로 터지고,
-## 달아오른 금과 불씨가 잔불로 남는다** (2026-09-28 요청, 참고 그림 두 장:
-## 화면을 뒤덮는 주황·노랑 폭발 / 돌바닥에 용암빛 금이 갈라지고 작은 불꽃·연기가 남은 자리).
+## 폭렬 찍기(`blast_heel`) 연출 — **한 발로 땅을 쾅 찍은 자리가 빛살과 불길로 터지고,
+## 작은 불꽃과 불씨가 잔불로 남는다** (2026-09-28 요청, 참고 그림: 방사형 빛살이 튀는 주황 폭발.
+## 처음엔 바닥에 용암빛 금을 깔았는데 같은 날 "지면에 용암은 제거해" 로 걷어냈다).
 ##
 ## 두 벌이다.
-## - **터짐** (0~1.2초) — 섬광·빛, 발밑에서 부푸는 **불덩이**(`FIRE_*`)와 그 속의
-##   **달아오른 심**(`HEAT_*`, 가산), 땅을 따라 사방으로 밀려나다 멈추는 **바닥 불길**
-##   (`WAVE_*` — 고리 메시가 아니라 덩이가 밀려난다, 규칙 3절), 튀는 **불똥**(가산)과
-##   **돌 조각**(알파), 뒤따라 피어오르는 **검은 연기**.
-## - **잔불** (`EMBER_TIME` 4초 + `EMBER_FADE`) — 천붕각 금 메시를 **그을린 틈 + 용암빛 심 +
-##   가산 달무리** 세 겹으로 깔아 일렁이게 하고, 금 둘레에 **녹은 자국**(`POOLS`)이 깜빡인다.
-##   **금 위에서 작은 불꽃**이 계속 날름거리고, **불씨**가 떠오르고, 가는 연기가 오른다.
+## - **터짐** (0~1.2초) — 섬광·빛, 사방으로 튀는 **빛살**(`RAYS`)과 **잔금 번쩍임**(`CRACKLES`)
+##   (띠라서 메시 — 규칙 3절), 발밑에서 부푸는 **불덩이**(`FIRE_*`)와 그 속의 가산 불빛,
+##   땅을 따라 밀려나다 멈추는 **바닥 불길**(`WAVE_*` — 고리 메시가 아니라 덩이가 밀려난다),
+##   튀는 **불똥**(가산)과 **돌 조각**(알파), 뒤따라 피어오르는 옅은 연기.
+## - **잔불** (`EMBER_TIME` 4초 + `EMBER_FADE`) — 발밑 둘레에 흩은 자리에서 **작은 불꽃**이
+##   날름거리고, **불씨**가 떠오르고, 가는 연기가 오른다. 그을림이 옅게 스민다.
 ##
 ## 불은 빛이지만 **불꽃·불덩이는 알파 혼합**이다 — 밝은 돌바닥에서 가산은 안 보인다
 ## (천붕각 "달아오른 심" 과 같은 결론). 밝은 노랑~주황을 알파로 칠하고, 그 위에 가산을
 ## 조금 얹어 어두운 바닥에서도 빛나 보이게 한다.
 ##
 ## **판정을 하지 않는다.** 잔불도 그림일 뿐 피해가 없다. 끝나면 풀로 돌아간다 (`FxPool`).
-## **방향은 캐릭터 기준이다** — 금과 불꽃 자리를 보는 쪽으로 돌린다.
+## **방향은 캐릭터 기준이다** — 빛살과 불꽃 자리를 보는 쪽으로 돌린다.
 
 const GROUND := 0.05
 
@@ -96,25 +95,35 @@ const CINDER_LIFE := 1.6
 const WISP_COUNT := 10
 const WISP_SIZE := 1.7
 const WISP_LIFE := 2.2
-## 금 둘레 달무리·그을린 가장자리의 폭(m) — 천붕각 금(0.5)보다 넓게 따로 한 번 깐다
-const HALO_WIDTH := 1.3
-## 넓은 겹은 발밑 이만큼(m) 안쪽을 서서히 비운다 (금 셰이더의 `inner`). 여덟 갈래가 한가운데서
-## 겹쳐 **검은 원판**이 됐고(2차 캡처), 1m 를 잘라내니 잘린 끝단이 **고리**가 됐다(5차 캡처)
-const HALO_INNER := 1.8
-## 달아오른 발밑 — 둥근 빛 판. 달무리가 비운 발밑이 **맨바닥으로 드러나 검은 구멍**처럼
-## 보였다 (8차 캡처). 참고 그림 2 처럼 금이 모이는 한가운데가 가장 뜨겁다
-const HOT_SIZE := 3.6
-const HOT_ALPHA := 0.6
+## 빛살 — 발밑에서 사방(위쪽으로 치우쳐)으로 곧게 튀는 빛줄기. 참고 그림 3 의 방사형 불빛이다.
+## 띠라서 파티클이 아니라 **메시**(규칙 3절) — 폭렬권 빛살 셰이더(`NovaFx.swirl_material`)를 돌려 쓴다
+const RAYS := 30
+const RAY_MIN := 2.4
+const RAY_MAX := 5.0
+const RAY_SEGMENTS := 6
+## 잔금 번쩍임 — 들쭉날쭉한 짧은 빛줄기가 폭발 속에서 번쩍인다 (참고 그림 3 의 노란 잔금)
+const CRACKLES := 14
+const CRACKLE_MIN := 1.4
+const CRACKLE_MAX := 3.2
+## 빛살 두 겹의 폭(m) — 주황 헤일로 + 흰 심
+const RAY_HALO := 0.34
+const RAY_CORE := 0.09
+## 머리 뒤로 끌리는 꼬리 비율 (셰이더 `trail`)
+const RAY_TRAIL := 0.5
+## 빛살이 다 지나가는 때(초) — 이 뒤로는 숨긴다 (`ray_end()` 가 가닥에서 셈한 값보다 크게)
+const RAY_END := 0.6
 ## 그을림
 const STAIN_SIZE := 6.2
 ## 그을림은 **폭발이 걷힌 뒤에 스며든다** — 처음부터 짙으면 땅 가까이서 옅어지는 불덩이 사이로
 ## 비쳐 캐릭터 둘레가 **검은 원판**이 됐다 (6차 캡처)
-const STAIN_ALPHA := 0.4
+const STAIN_ALPHA := 0.28
 ## 그을림이 스미기 시작하는 때(초) — 불덩이·가운데 불기둥이 다 걷힌 뒤
 const STAIN_DELAY := 1.3
-## 불꽃이 나는 금 위의 자리 — 발밑에서 이만큼(m) 안쪽만 쓴다 (끝까지 쓰면 흩어져 보인다)
+## 불꽃이 나는 자리 — 발밑에서 이만큼(m) 안쪽에 흩는다
 ## 3.6 이었을 때 고른 원뿔이 넓게 흩어져 사탕 밭이었다 (2차 캡처) — 가운데로 모은다
 const FLAME_REACH := 2.8
+## 불꽃이 나는 자리 수
+const FLAME_SPOTS := 36
 
 ## 흔들림 — 천붕각(0.14 · 0.35)보다 조금 세다
 const SHAKE := 0.16
@@ -128,18 +137,12 @@ const COLOR_CHIP := Color("#3b2a20")
 ## 짙은 회색이면 캐릭터 둘레에 **어두운 고리**가 남았다 (4차 캡처) — 옅은 잿빛으로 높이 띄운다
 const COLOR_SMOKE := Color("#6e625a")
 const COLOR_WISP := Color("#5b514c")
-const COLOR_CHAR := Color("#170c07")
 const COLOR_STAIN := Color("#21140d")
-## 용암빛 심 — 두 색 사이를 일렁인다
-const COLOR_LAVA := Color("#ffb13a")
-const COLOR_LAVA_DEEP := Color("#ff5a14")
-## 금 둘레 달무리 (가산)
-const COLOR_HALO := Color("#ff6a1c")
-## 가운데 흰 심 — 가장 뜨거운 줄
-const COLOR_CORE := Color("#fff0a8")
+const COLOR_RAY := Color("#ff9a30")
+const COLOR_RAY_CORE := Color("#fff4c8")
 
-## 달무리 메시 — 게임 전체에서 한 번만 깐다 (천붕각 금 경로 그대로, 폭만 넓다)
-static var _wide: ArrayMesh
+## 빛살·잔금 메시 — 게임 전체에서 한 번만 깐다
+static var _ray_mesh: ArrayMesh
 
 var _t := 0.0
 var _started := false
@@ -147,16 +150,13 @@ var _embers_on := true
 var _flare: MeshInstance3D
 var _light: OmniLight3D
 var _stain: MeshInstance3D
-var _char: MeshInstance3D
-var _halo: MeshInstance3D
-var _lava: MeshInstance3D
-var _core: MeshInstance3D
-var _hot: MeshInstance3D
+var _ray_halo: MeshInstance3D
+var _ray_core: MeshInstance3D
 ## 한 번 터지는 것 — [불덩이, 불꽃 혀, 심, 바닥 불길, 불똥, 돌 조각, 연기]
 var _bursts: Array[CPUParticles3D] = []
 ## 잔불 동안 계속 나는 것 — [불꽃, 불씨, 연기]
 var _embers: Array[CPUParticles3D] = []
-## 보는 쪽을 따라 도는 것 (금·자국·불꽃 자리)
+## 보는 쪽을 따라 도는 것 (빛살·그을림·불꽃 자리)
 var _turn: Node3D
 
 
@@ -182,38 +182,19 @@ static func span() -> float:
 func _build() -> void:
 	_turn = Node3D.new()
 	add_child(_turn)
-	var meshes := QuakeFx.crack_meshes()
-	if _wide == null:
-		_wide = QuakeFx._crack_mesh(QuakeFx.crack_paths(), HALO_WIDTH)
-	# 그을림 → 그을린 가장자리 → 달무리 → 용암 → 흰 심 순으로 쌓는다. 같은 높이면 서로 깜빡인다
 	_stain = _sheet(LightningFx.stain(COLOR_STAIN), _turn)
 	var quad := QuadMesh.new()
 	quad.size = Vector2(STAIN_SIZE, STAIN_SIZE)
 	quad.orientation = PlaneMesh.FACE_Y
 	_stain.mesh = quad
 	_stain.position.y = GROUND
-
-	_char = _sheet(QuakeFx.crack_material("blend_mix", COLOR_CHAR), _turn)
-	_char.mesh = _wide
-	_char.position.y = GROUND + 0.005
-	_char.material_override.set_shader_parameter(&"inner", HALO_INNER)
-	_hot = _sheet(LightningFx.stain(COLOR_HALO), _turn)
-	_hot.material_override.albedo_texture = FxTex.glow()
-	var hot := QuadMesh.new()
-	hot.size = Vector2(HOT_SIZE, HOT_SIZE)
-	hot.orientation = PlaneMesh.FACE_Y
-	_hot.mesh = hot
-	_hot.position.y = GROUND + 0.008
-	_halo = _sheet(QuakeFx.crack_material("blend_add", COLOR_HALO), _turn)
-	_halo.mesh = _wide
-	_halo.position.y = GROUND + 0.01
-	_halo.material_override.set_shader_parameter(&"inner", HALO_INNER)
-	_lava = _sheet(QuakeFx.crack_material("blend_mix", COLOR_LAVA), _turn)
-	_lava.mesh = meshes[0]
-	_lava.position.y = GROUND + 0.015
-	_core = _sheet(QuakeFx.crack_material("blend_mix", COLOR_CORE), _turn)
-	_core.mesh = meshes[1]
-	_core.position.y = GROUND + 0.02
+	# 빛살·잔금 두 겹 — 넓은 주황 헤일로 위에 가는 흰 심
+	_ray_halo = _sheet(NovaFx.swirl_material(RAY_HALO, COLOR_RAY), _turn)
+	_ray_core = _sheet(NovaFx.swirl_material(RAY_CORE, COLOR_RAY_CORE), _turn)
+	for node in [_ray_halo, _ray_core]:
+		node.mesh = ray_mesh()
+		node.position.y = 0.4
+		node.material_override.set_shader_parameter(&"trail", RAY_TRAIL)
 
 	_flare = _sheet(LightningFx.flare(COLOR_FLARE), self)
 	var glare := QuadMesh.new()
@@ -290,49 +271,115 @@ func _show() -> void:
 	var warm := heat()
 	# 일렁임 — 두 사인을 곱해 규칙적으로 안 보이게 한다
 	var flicker := 0.82 + 0.18 * sin(_t * 13.0) * sin(_t * 7.3 + 1.1)
-	# 막 터졌을 때 가장 밝고, 0.8초에 걸쳐 잔불 밝기로 가라앉는다
-	var boom := clampf(1.0 - _t / 0.8, 0.0, 1.0)
 	if _t < LIGHT_LIFE:
 		_light.light_energy = lerpf(EMBER_LIGHT, LIGHT_ENERGY, 1.0 - _t / LIGHT_LIFE)
 	else:
 		_light.light_energy = EMBER_LIGHT * flicker * warm
 	_light.visible = _light.light_energy > 0.01
 
-	for node in [_char, _halo, _lava, _core]:
-		(node.material_override as ShaderMaterial).set_shader_parameter(&"now", _t)
-	(_char.material_override as ShaderMaterial).set_shader_parameter(
-		&"tint", Color(COLOR_CHAR.r, COLOR_CHAR.g, COLOR_CHAR.b, 0.75 * warm))
-	# 용암은 깊은 주황과 밝은 주황 사이를 일렁이고, 흰 심은 식을수록 먼저 사그라든다
-	var lava := COLOR_LAVA_DEEP.lerp(COLOR_LAVA, clampf(flicker + boom * 0.5, 0.0, 1.0))
-	(_lava.material_override as ShaderMaterial).set_shader_parameter(
-		&"tint", Color(lava.r, lava.g, lava.b, warm))
-	(_core.material_override as ShaderMaterial).set_shader_parameter(
-		&"tint", Color(COLOR_CORE.r, COLOR_CORE.g, COLOR_CORE.b, flicker * warm * warm))
-	(_halo.material_override as ShaderMaterial).set_shader_parameter(
-		&"tint", Color(COLOR_HALO.r, COLOR_HALO.g, COLOR_HALO.b, (0.7 + 0.3 * boom) * flicker * warm))
-	for node in [_char, _halo, _lava, _core, _hot]:
-		node.visible = warm > 0.0
-	_hot.material_override.albedo_color = Color(
-		COLOR_HALO.r, COLOR_HALO.g, COLOR_HALO.b, HOT_ALPHA * flicker * warm)
+	for node in [_ray_halo, _ray_core]:
+		node.material_override.set_shader_parameter(&"now", _t)
+		node.visible = _t < RAY_END
 
-	# 그을림은 금이 뻗는 동안 넓어지고(규칙 3절) 잔불과 같이 흐려진다
-	var grow := clampf(_t * QuakeFx.CRACK_SPEED / QuakeFx.CRACK_LENGTH, 0.0, 1.0)
-	_stain.scale = Vector3.ONE * lerpf(0.4, 1.0, sqrt(grow))
+	# 그을림은 폭발이 걷힌 뒤 스며들며 넓어지고(규칙 3절) 잔불과 같이 흐려진다
+	var grow := clampf((_t - STAIN_DELAY) / 1.0, 0.0, 1.0)
+	_stain.scale = Vector3.ONE * lerpf(0.6, 1.0, sqrt(grow))
 	_stain.visible = warm > 0.0
 	_stain.material_override.albedo_color = Color(
 		COLOR_STAIN.r, COLOR_STAIN.g, COLOR_STAIN.b,
-		STAIN_ALPHA * warm * clampf((_t - STAIN_DELAY) / 1.0, 0.0, 1.0))
+		STAIN_ALPHA * warm * grow)
 
 
-## 불꽃이 나는 자리 — 금 경로의 점 중 `FLAME_REACH` 안쪽 (보는 쪽 0 기준)
+## 불꽃이 나는 자리 — 발밑 둘레 `FLAME_REACH` 안에 흩는다 (씨앗을 박아 늘 같다).
+## 전엔 금 경로 위였는데 바닥 용암을 걷어내며(2026-09-28 요청) 금도 없어졌다.
+## 가운데 0.6m 는 비운다 — 캐릭터 발에서 불이 나면 몸이 타는 것으로 보인다
 static func flame_points() -> PackedVector3Array:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 20260928
 	var out := PackedVector3Array()
-	for entry in QuakeFx.crack_paths():
-		var path: PackedVector3Array = entry[0]
-		for p in path:
-			if Vector2(p.x, p.z).length() <= FLAME_REACH:
-				out.append(Vector3(p.x, GROUND, p.z))
+	for i in FLAME_SPOTS:
+		var a := rng.randf_range(0.0, TAU)
+		var r := lerpf(0.6, FLAME_REACH, sqrt(rng.randf()))
+		out.append(Vector3(sin(a) * r, GROUND, cos(a) * r))
 	return out
+
+
+## 빛살·잔금 전부를 한 메시에 — **처음 한 번만** 깐다 (가운데 = 원점). 꼭짓점 배치는
+## `NovaFx.swirl_mesh` 와 같다: `UV` = (나가기 시작하는 시각, 걸리는 시간), `UV2` = (가닥 위
+## 자리 0~1, 폭 방향 −1·0·1), `COLOR.r` = 폭 배율. 셰이더가 `now` 로 머리~꼬리만 벌린다
+static func ray_mesh() -> ArrayMesh:
+	if _ray_mesh != null:
+		return _ray_mesh
+	var verts := PackedVector3Array()
+	var normals := PackedVector3Array()
+	var colors := PackedColorArray()
+	var uvs := PackedVector2Array()
+	var uv2s := PackedVector2Array()
+	var index := PackedInt32Array()
+	for strand in ray_strands():
+		var path: PackedVector3Array = strand[0]
+		var last := path.size() - 1
+		var base := verts.size()
+		for p in path.size():
+			var along := path[mini(p + 1, last)] - path[maxi(p - 1, 0)]
+			for side in [-1.0, 0.0, 1.0]:
+				verts.append(path[p])
+				normals.append(along.normalized())
+				colors.append(Color(strand[3], 0.0, 0.0, 1.0))
+				uvs.append(Vector2(strand[1], strand[2]))
+				uv2s.append(Vector2(float(p) / float(last), side))
+		for p in last:
+			var a := base + p * 3
+			var b := a + 3
+			index.append_array([a, a + 1, b, b, a + 1, b + 1])
+			index.append_array([a + 2, a + 1, b + 2, b + 2, a + 1, b + 1])
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = verts
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_COLOR] = colors
+	arrays[Mesh.ARRAY_TEX_UV] = uvs
+	arrays[Mesh.ARRAY_TEX_UV2] = uv2s
+	arrays[Mesh.ARRAY_INDEX] = index
+	_ray_mesh = ArrayMesh.new()
+	_ray_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return _ray_mesh
+
+
+## 가닥 전부 — [경로(가운데 기준), 시작(초), 걸리는 시간(초), 폭 배율]. 씨앗이 고정이다
+static func ray_strands() -> Array:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 2809280
+	var out: Array = []
+	# 빛살 — 곧게, 위쪽으로 치우쳐 사방으로. 조금씩 어긋나 나간다
+	for i in RAYS:
+		var yaw := TAU * (float(i) + rng.randf_range(-0.35, 0.35)) / float(RAYS)
+		var dir := Vector3(sin(yaw), rng.randf_range(-0.05, 0.8), cos(yaw)).normalized()
+		var length := rng.randf_range(RAY_MIN, RAY_MAX)
+		var path := PackedVector3Array()
+		for p in RAY_SEGMENTS + 1:
+			path.append(dir * lerpf(0.3, length, float(p) / float(RAY_SEGMENTS)))
+		out.append([path, rng.randf_range(0.0, 0.06), rng.randf_range(0.16, 0.28),
+			rng.randf_range(0.5, 1.0)])
+	# 잔금 — 들쭉날쭉하게 굽은 짧은 빛줄기가 폭발 속 여기저기서 번쩍인다
+	for i in CRACKLES:
+		var yaw := rng.randf_range(0.0, TAU)
+		var from := Vector3(sin(yaw), 0.0, cos(yaw)) * rng.randf_range(0.2, 1.2) \
+			+ Vector3.UP * rng.randf_range(0.0, 1.4)
+		var away := Vector3(sin(yaw + rng.randf_range(-0.8, 0.8)), rng.randf_range(-0.3, 0.6),
+			cos(yaw + rng.randf_range(-0.8, 0.8))).normalized()
+		var to := from + away * rng.randf_range(CRACKLE_MIN, CRACKLE_MAX)
+		out.append([LightningFx.trail(from, to, 7, 0.28, rng), rng.randf_range(0.02, 0.2),
+			rng.randf_range(0.1, 0.18), rng.randf_range(0.4, 0.7)])
+	return out
+
+
+## 빛살 끝 — 가장 늦게 나가는 가닥이 다 지나간 뒤
+static func ray_end() -> float:
+	var end := 0.0
+	for strand in ray_strands():
+		end = maxf(end, float(strand[1]) + float(strand[2]) * (1.0 + RAY_TRAIL))
+	return end
 
 
 func _sheet(mat: Material, parent: Node3D) -> MeshInstance3D:

@@ -11,6 +11,8 @@ const FONT := "res://assets/fonts/NotoSansKR-subset.ttf"
 const BAG_TAP_CELL := 17
 
 var _failed := 0
+## 강화 시험의 난수 씨앗 (`_case_enhance_batch`)
+const SEED_ENHANCE := 3
 
 
 func _init() -> void:
@@ -1825,6 +1827,10 @@ func _case_enhance_batch(game: Node, me: Dictionary) -> void:
 	for i in 3:
 		me.bag.append({"id": ref_id, "grade": 1, "enhance": 0, "options": []})
 	me.bag.append({"id": "g1_a", "grade": 1, "enhance": 0, "options": []})  # 같은 등급·다른 아이템
+	# 강화 굴림은 월드 난수(존 이름 씨앗)라 몬스터 배치·순찰이 먼저 쓴 만큼 결과가 바뀐다 —
+	# 2026-09-28 에 무리 반경을 넓히자 4개 중 3개가 깨져 뒤 검사(단일 탭 목록)가 빈 가방을 봤다.
+	# 여기서 씨앗을 고정해 배치와 떼어 놓는다
+	game._transport._world._rng.seed = SEED_ENHANCE
 	pop.tabs["multi"].pressed.emit()
 	await process_frame
 	if not pop.list_panel.visible or not pop.multi_box.visible or pop.one_box.visible:

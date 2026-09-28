@@ -24,6 +24,7 @@ const MODELS = [
   // 몬스터 — 사냥터 20곳이 오우거 5종을 차례로 돌려 쓴다 (monsters.ts 의 TIERS[].look · BOSS_LOOKS)
   'varco_ogre1.glb', 'varco_ogre2.glb', 'varco_ogre3.glb', 'varco_ogre4.glb', 'varco_ogre5.glb',
   'varco_portal.glb', // 차원문 (모든 존의 GATE_SPOT)
+  'prop_tree_a.glb', 'prop_tree_b.glb', // 덤불숲 나무 (scenery.gd 의 `trees`)
   // 마을 NPC 7명 — zones.ts 의 NpcDef.look (rig.gd 의 FILES)
   'npc_merchant.glb', 'npc_smith.glb', 'npc_trainer.glb',
   'npc_villager_sack.glb', 'npc_villager_apron.glb', 'npc_villager_hood.glb', 'npc_villager_old.glb',

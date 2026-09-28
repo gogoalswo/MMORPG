@@ -95,12 +95,15 @@ static func material_for(env: Dictionary, size: float) -> Material:
 ## 풀밭이면 grassLight, 아니면 흙색을 쓰는 것과 같은 규칙이다. 흙은 제 색 그대로다
 ## (`groundTint` 가 회색이라 끌어당기면 흙이 잿빛 돌처럼 된다).
 ## 텍스처가 하나라도 없으면 단색으로 떨어진다
-static func terrain_material(env: Dictionary, layers: Array, splat: Texture2D, splat_half: float) -> Material:
+## `looks` — 지형 레시피가 층마다 덮어쓰는 {층: [목표색, 밝기 배율]} (없으면 존 색 그대로)
+static func terrain_material(env: Dictionary, layers: Array, splat: Texture2D, splat_half: float, looks := {}) -> Material:
 	var targets := {
 		"grass": str(env.get("grassLight", "#82905a")),
 		"stone": str(env.get("groundTint", "#6a665c")),
 		"cobble": str(env.get("groundTint", "#6a665c")),
 	}
+	for kind in looks:
+		targets[kind] = str(looks[kind][0])
 	var mat := ShaderMaterial.new()
 	mat.shader = TERRAIN_SHADER
 	var tiles := Vector4.ONE
@@ -118,7 +121,8 @@ static func terrain_material(env: Dictionary, layers: Array, splat: Texture2D, s
 		mat.set_shader_parameter("albedo%d" % k, load(color_path))
 		mat.set_shader_parameter("normal%d" % k, load(normal_path))
 		mat.set_shader_parameter("mean%d" % k, Color(mean).srgb_to_linear())
-		mat.set_shader_parameter("tint%d" % k, tint_for(str(targets.get(kind, mean)), mean) * ALBEDO)
+		var lift := float(looks[kind][1]) if looks.has(kind) else 1.0
+		mat.set_shader_parameter("tint%d" % k, tint_for(str(targets.get(kind, mean)), mean) * ALBEDO * lift)
 		tiles[k] = maxf(1.0, float(look.get("tile", 6)))
 		roughs[k] = float(look.get("roughness", 0.9))
 	mat.set_shader_parameter("tile", tiles)

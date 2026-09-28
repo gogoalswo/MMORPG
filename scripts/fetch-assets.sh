@@ -72,6 +72,16 @@ fi
 fetch_varco 9af24ed7f19f04fc1b5d5b0c3bef567a portal
 node scripts/shrink-glb-textures.mjs assets-src/models/varco/portal.glb public/assets/models/varco_portal.glb 1024
 
+# 덤불숲 나무 둘 — 사용자가 준 리니지풍 숲 스크린샷의 나무를 잘라 물려 그림을 뽑고
+# (nano-banana-pro, 각 두 장 중 하나) 3D 로 만들었다. 움직이지 않는다 (scenery.gd 의 `trees`)
+# 3D 는 3만 삼각형(몬스터·캐릭터와 같다). Remesh 로 1.1만·1.6만까지 줄여 봤는데
+# (35e33217…, 59eb9f65…) 텍스처가 다시 입혀지며 잎이 구겨진 종이처럼 뭉개지고 뿌리가
+# 사라져서 원본을 쓴다. 화면에는 한 번에 4~6그루만 보인다.
+fetch_varco 4067de9fa75333f5e20722a74990aca6 tree_a   # 뿌리 드러난 고목 — 그림 7af65a69…
+fetch_varco 18c59bf6736a2bcb4b7d5b6d306ee0ab tree_b   # 잎 무성한 나무 — 그림 36783eab…
+node scripts/shrink-glb-textures.mjs assets-src/models/varco/tree_a.glb public/assets/models/prop_tree_a.glb 1024
+node scripts/shrink-glb-textures.mjs assets-src/models/varco/tree_b.glb public/assets/models/prop_tree_b.glb 1024
+
 # 차원문 창 UI 조각 — 같은 워크플로우. 창 바탕·소용돌이 칸·별 칸을 **따로** 받아 고도에서
 # 조립한다 (docs/features/portal-ui.md). 원화 두 장(9fbb5d1f… 9dfeff2c…)은 3D 를 뽑은 그림이라 안 받는다.
 fetch_ui() { # $1=객체 해시  $2=출력 이름

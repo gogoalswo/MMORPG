@@ -3737,11 +3737,15 @@ func _build_zone(zone_id: String) -> void:
 	sun.rotation_degrees = Vector3(-50, -35, 0)
 	_zone_node.add_child(sun)
 
-	# 바닥. 지형이 있는 존(지금은 마을)은 높낮이와 바닥 여러 장을 섞은 메시,
+	# 바닥. 지형이 있는 존(마을 · 덤불숲)은 높낮이와 바닥 여러 장을 섞은 메시,
 	# 없으면 평평한 한 장이다 → docs/features/world-zones.md "지형"
 	_terrain = Terrain.build(zone_id)
 	if _terrain != null:
 		_zone_node.add_child(_terrain.mesh_instance(env))
+		# 풀포기·바위·나무 — 길을 막지 않는 꾸밈 (지금은 덤불숲)
+		var scenery := Scenery.build(zone_id, _terrain, env)
+		if scenery != null:
+			_zone_node.add_child(scenery)
 	else:
 		var ground := MeshInstance3D.new()
 		var plane := PlaneMesh.new()

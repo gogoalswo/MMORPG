@@ -77,6 +77,11 @@ func _run() -> void:
 		await _portal(game)
 		return
 
+	# 존 풍경 — 지형·풀포기·바위·나무 (`scene` 이면 덤불숲, `scene:<존id>` 면 그 존)
+	if skill == "scene" or skill.begins_with("scene:"):
+		await _scene(game, skill.get_slice(":", 1) if skill.contains(":") else "thicket")
+		return
+
 	# 차원문 창 — 이펙트가 아니라 UI 다. HUD 에 안 가리는지, 누른 줄이 눌려 보이는지
 	if skill == "gate":
 		await _gate(game)
@@ -463,6 +468,37 @@ func _hud(game: Node3D) -> void:
 ## 스킬 범위 표시(`SkillFx` 가 아니라 `SkillRange`). **무리 한가운데에서 찍는다** —
 ## 반경·각이 맞는지는 `skill_test.gd` 가 숫자로 보지만, 그게 화면에서 얼마나
 ## 덮는지는 찍어야만 안다 (설계에서 범위가 곧 사냥 속도라서 보는 값이다)
+## 존 풍경을 네 자리(도착 지점 · 차원문 앞 · 무리 · 화면 위쪽 끝)에서 찍어
+## `logs/scene_sheet.png`(2×2, 반 크기) 한 장으로 모은다. 한 장씩은 `logs/scene_N.png`
+const SCENE_SPOTS := [Vector2(0, 0), Vector2(-8, -7), Vector2(5, 5), Vector2(-11, 2)]
+
+
+func _scene(game: Node3D, zone: String) -> void:
+	var world = game._transport._world
+	game._transport.send(&"travel", {"zone": zone})
+	await process_frame
+	var player: Dictionary = world._players[game._transport.my_id()]
+	# 몬스터가 달려와 화면을 가리지 않게 — 풍경만 본다
+	for mob in world._monsters:
+		mob["aggro"] = 0.0
+	var sheet := Image.create(1280, 720, false, Image.FORMAT_RGB8)
+	for k in SCENE_SPOTS.size():
+		player["x"] = SCENE_SPOTS[k].x
+		player["z"] = SCENE_SPOTS[k].y
+		for i in 12:
+			await process_frame
+		await RenderingServer.frame_post_draw
+		var img := root.get_texture().get_image()
+		img.save_png("res://../logs/scene_%d.png" % k)
+		img.convert(Image.FORMAT_RGB8)
+		img.resize(640, 360, Image.INTERPOLATE_BILINEAR)
+		sheet.blit_rect(img, Rect2i(0, 0, 640, 360), Vector2i((k % 2) * 640, (k / 2) * 360))
+		print("logs/scene_%d.png  (%s)" % [k, SCENE_SPOTS[k]])
+	sheet.save_png("res://../logs/scene_sheet.png")
+	print("logs/scene_sheet.png")
+	quit(0)
+
+
 func _range(game: Node3D, skill: String) -> void:
 	var world = game._transport._world
 	game._transport.send(&"travel", {"zone": RANGE_ZONE})

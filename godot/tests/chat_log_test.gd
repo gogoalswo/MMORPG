@@ -1,6 +1,7 @@
 extends SceneTree
 
-## 왼쪽 아래 채팅창(`ChatLog`) — 몬스터를 잡으면 경험치와 장비 획득이 한 줄씩 적히는지 본다.
+## 왼쪽 아래 채팅창(`ChatLog`) — 장비 획득이 한 줄씩 적히는지, **경험치는 안 적히는지** 본다.
+## 경험치는 2026-09-28 부터 오른쪽 아래 알림(`ExpToast`)이 띄운다 → exp_toast_test.gd
 ##
 ## 진짜로 잡는다(`World._hit_monster`) — 보상 이벤트가 화면까지 오는 길을 같이 본다.
 ## 스크린샷을 찍지 않는다. 자리·글자·줄 수는 노드로 읽는다.
@@ -40,7 +41,7 @@ func _run() -> void:
 	_done()
 
 
-## 사냥터에서 한 마리를 잡으면 `경험치 +n` 이 적힌다
+## 사냥터에서 한 마리를 잡아도 채팅창에는 경험치가 **안 적힌다**
 func _case_kill(game: Node3D, chat: ChatLog) -> void:
 	game._transport.send(&"travel", {"zone": "meadow"})
 	for i in 3:
@@ -56,12 +57,11 @@ func _case_kill(game: Node3D, chat: ChatLog) -> void:
 	world._hit_monster(player, mob, 1.0, "")
 	for i in 3:
 		await process_frame
-	var want := "+%d" % int(mob.exp_reward)
 	for pair in chat.lines():
-		if pair[0] == "경험치" and pair[1] == want:
-			print("  잡으니 적힘: 경험치 %s" % want)
+		if pair[0] == "경험치":
+			_fail("채팅창에 경험치가 적혔다 (%s) — 오른쪽 아래 알림으로 옮겼다" % [chat.lines()])
 			return
-	_fail("잡았는데 '경험치 %s' 가 안 적혔다 (%s)" % [want, chat.lines()])
+	print("  잡아도 채팅창에는 경험치가 없다")
 
 
 ## 장비를 얻으면 이름이 적힌다. 골드만 떨어지면 안 적힌다
@@ -91,7 +91,7 @@ func _case_item(game: Node3D, chat: ChatLog) -> void:
 		seen[c.to_html(false)] = true
 	if seen.size() != 7:
 		_fail("등급 글자 색이 %d가지뿐이다" % seen.size())
-	# 경험치 줄이 어느 등급 장비 줄과도 헷갈리면 안 된다. 겹쳐 보였던 금색끼리(영웅 ↔
+	# 청록(순위표의 내 줄)이 어느 등급 색과도 헷갈리면 안 된다. 겹쳐 보였던 금색끼리(영웅 ↔
 	# 옛 경험치 `#e8c14a`)가 0.03 이었다. 청록 ↔ 초월 파랑(0.23)은 찍어 보니 갈려 보였다
 	for g in range(1, 8):
 		var c := ChatLog.grade_text_color(g)
@@ -132,7 +132,7 @@ func _case_stays(chat: ChatLog) -> void:
 func _case_cap(chat: ChatLog) -> void:
 	var count := ChatLog.MAX_LINES + 5
 	for i in count:
-		chat.add_exp(i + 1)
+		chat.add_line("장비 획득", "+%d" % (i + 1), ChatLog.SAY)
 	var shown := chat.lines()
 	if shown.size() != ChatLog.MAX_LINES:
 		_fail("줄이 %d개다 (%d개여야)" % [shown.size(), ChatLog.MAX_LINES])

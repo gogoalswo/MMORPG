@@ -249,8 +249,10 @@ var _mob_swing_until: Dictionary = {}
 const MOB_SWING_FROM := 0.8
 ## 마지막으로 일어난 일 한 줄 (맞았다·레벨 올랐다)
 var _last_event := ""
-## 왼쪽 아래 채팅창 — 경험치·장비 획득을 적는다 (`ChatLog`)
+## 왼쪽 아래 채팅창 — 장비 획득·강화·말을 적는다 (`ChatLog`)
 var _chat: ChatLog
+## 오른쪽 아래, 잠깐 떴다 사라지는 경험치 알림 (`ExpToast`, 2026-09-28)
+var _exp_toast: ExpToast
 var _ui_root: Control
 ## 퀵슬롯 위 한 묶음 — 레벨 배지 안 숫자, 체력 막대와 그 위 숫자, 경험치 퍼센트
 var _level_label: Label
@@ -453,7 +455,7 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 				"  처치!" if payload.get("killed", false) else "",
 			]
 		&"reward":
-			_chat.add_exp(int(payload.get("exp", 0)))
+			_exp_toast.add_exp(int(payload.get("exp", 0)))
 		&"levelUp":
 			_last_event = "레벨 %d 이 되었습니다" % payload.get("level", 0)
 		&"swing":
@@ -637,6 +639,18 @@ func _build_persistent() -> void:
 	_chat.offset_bottom = -(EXP_GAUGE_H + CHAT_MARGIN)
 	_chat.offset_top = _chat.offset_bottom - ChatLog.SIZE.y
 	_chat.offset_right = CHAT_MARGIN + ChatLog.SIZE.x
+
+	# 경험치는 채팅창이 아니라 오른쪽 아래, 경험치 띠 바로 위에 잠깐 떴다 사라진다
+	# (2026-09-28 요청, 받은 스크린샷의 파란 상자 자리) → hud.md "경험치 알림"
+	_exp_toast = ExpToast.new()
+	_ui_root.add_child(_exp_toast)
+	_exp_toast.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE)
+	_exp_toast.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_exp_toast.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_exp_toast.offset_right = -CHAT_MARGIN
+	_exp_toast.offset_left = _exp_toast.offset_right - ExpToast.WIDTH
+	_exp_toast.offset_bottom = -(EXP_GAUGE_H + CHAT_MARGIN)
+	_exp_toast.offset_top = _exp_toast.offset_bottom
 
 	_build_gate_panel()
 	_build_npc_panel()

@@ -475,7 +475,7 @@ func _case_dead() -> void:
 		_fail("죽었는데 스킬이 나갔다")
 
 
-## 스킬 강화 — **던전을 깨면 스킬 경험치가 쌓이고**(`_check_dungeon_clear`, N단계 × 1000),
+## 스킬 강화 — **던전을 깨면 스킬 경험치가 쌓이고**(`Ledger._check_dungeon_clear`, N단계 × 1000),
 ## 스킬창에서 고른 강화에 넣으면(`feed_upgrade`) 모자란 만큼만 들어가 필요 경험치(낙뢰는
 ## 1차 전직 스킬이라 10000)에 닿으면 붙는다. 경험치가 없거나 이미 붙었으면 안 넣는다.
 ## 테스트 단추는 경험치 없이 붙인다.
@@ -489,14 +489,13 @@ func _case_upgrade() -> void:
 	if not me.get("skill_upgrade_exp", {}).is_empty():
 		_fail("스킬 경험치 없이 경험치가 들어갔다 (%s)" % str(me.skill_upgrade_exp))
 	# 사냥터 보스는 안 준다 — 던전 보스만 준다
-	w._check_dungeon_clear(me, {"boss": true})
+	var ledger: Ledger = w._ledger
+	ledger._check_dungeon_clear(me, {"boss": true, "zone": w.zone_id})
 	if int(me.skill_exp) != 0:
 		_fail("던전이 아닌데 스킬 경험치가 들어왔다 (%d)" % int(me.skill_exp))
-	var field_zone := w.zone_id
-	w.zone_id = "raid_03"
-	w._check_dungeon_clear(me, {"boss": false})
-	w._check_dungeon_clear(me, {"boss": true})
-	w.zone_id = field_zone
+	ledger._check_dungeon_clear(me, {"boss": false, "zone": "raid_03"})
+	ledger._check_dungeon_clear(me, {"boss": true, "zone": "raid_03"})
+	ledger.take_events()
 	if int(me.skill_exp) != 3000:
 		_fail("던전 3단계 보스를 잡으면 3000 이어야 하는데 %d" % int(me.skill_exp))
 	w.feed_upgrade("me", "thunder_fall", 0)

@@ -25,6 +25,8 @@
 
 종류는 **세로로 긴 카드 셋을 나란히** 놓는다 (2026-09-23 요청: 세로 네모 셋을 그린
 손그림 + "던전 타입별로 나오게 하고 이미지를 넣어"). 처음엔 줄 셋이었다.
+**2026-09-28 에 받은 그림(다른 게임의 던전 창)대로 카드를 다시 지었다** — 아래 "종류 카드".
+그때 "탭 = 종류, 카드 = 단계" 안도 물었는데 **카드 = 종류 셋 그대로**를 골랐다.
 
 ## 어디
 
@@ -39,6 +41,8 @@
 | `godot/game/gate_panel.gd` | `_add_row` · `_clear_rows` · `_title` — 두 창이 같이 쓴다 |
 | `godot/game/game.gd` | `_menu_cells` 셋째 단추 · `_toggle_dungeon` · `_build_gate_panel`(같은 층에 단다) · `_on_gate_pick`(둘 다 `travel`) |
 | `public/assets/icons/ui_icon_dungeon.png` | 단추 그림 (구운 결과, 커밋한다). 원본 주소는 `scripts/fetch-assets.sh` |
+| `public/assets/icons/dungeon_*.png` · `ui_dungeon_card.png` · `ui_dungeon_crest.png` | 카드 풍경 셋 · 카드 틀 · 위 장식 (2026-09-28) |
+| `godot/tools/shot.gd` | `npm run shot:godot -- dungeon` → `logs/dungeon.png` (카드 셋을 찍는다) |
 | `godot/tests/ui_test.gd` | `_case_dungeon` — 가방 옆인가 · 카드 3장(세로로 긴가 · 나란한가 · 그림 · 화면 안) · 막힌 카드 · 21줄 · 뒤로 · 창 폭 · 글자 · 들어가면 보스 한 마리 |
 
 ## 규칙
@@ -78,40 +82,60 @@
 
 ### 종류 카드 ★
 
-- 창 폭 **920** (`CARDS_WIDTH`) 일 때 카드 한 장이 **약 276 × 505** — 받은 그림처럼
-  세로로 길다. 단계 목록으로 넘어가면 680 으로 돌아온다 (`_set_width`).
-- 카드 = 단추 조각(`ui_button`) 틀 + 위에 그림(`Art`) + 아래 이름·단계 수("20단계" /
-  "준비 중"). 누르면 줄과 같이 금테가 달아오르고 내용이 `ROW_SINK` 만큼 내려앉는다.
-- 카드는 **고도 `Button` 이 직접 누름을 받는다** (`pressed`). 줄처럼 끌기와 가를 일이
-  없어서다 — 셋이 한 화면에 다 들어가 스크롤하지 않는다.
-- 막힌 카드는 내용을 통째로 어둡게(`LOCKED_TINT`) 하고 `disabled` 라 눌리지 않는다.
-- **그림은 `icons/dungeon_<종류 id>.png`** (384²) 를 그림 칸 가운데에 폭을 맞춰 앉힌다
-  (`KEEP_ASPECT_CENTERED`). 꽉 채우면(cover) 세로로 긴 칸에 맞추느라 좌우가 잘려
-  뿔·상자 끝이 날아간다. 그림이 없으면(`sync:godot` 전) `CARD_FALLBACK` 으로 물러선다.
+2026-09-28 요청: 다른 게임의 던전 창 그림 + "던전 UI 아트풍과 배치를 이런식으로 변경하자".
+그 그림의 카드를 **조각으로 조립**했다 (한 장짜리 그림을 붙이지 않는다).
 
-| 카드 | 그림 | 어디서 |
+```
+      ~~<장식>~~       ui_dungeon_crest — 틀 윗변 위로 CREST_RISE(26) 솟는다
+   ┌──────────┐
+   │[20단계]  │     칩 — 닫힌 종류는 "준비 중"
+   │   풍경   │     dungeon_<id> — 틀 높이의 ART_SHARE(66%)까지, 꽉 채움(cover)
+   │ 토벌 던전 │     아래로 판 색(#1b1c17)에 녹는다 (Fade) — 이름이 그 위에 걸친다
+   │ ───◆─── │
+   │권장 Lv.9 ~ 199│
+   │ ◆입장 가능◆│    닫힌 종류는 회색 "준비 중"
+   └──────────┘     ui_dungeon_card (9조각, 여백 34)
+```
+
+- 창 폭 **1200** (`CARDS_WIDTH`) — 받은 그림처럼 화면을 거의 다 쓴다. 카드는 폭
+  **280**(`CARD_W`) 고정으로 가운데에 모인다(높이는 창이 정해 약 510). 단계 목록으로
+  넘어가면 680 으로 돌아온다 (`_set_width`).
+- 카드는 **고도 `Button` 이 직접 누름을 받는다** (`pressed`). 틀은 단추 스타일이 아니라
+  안쪽 `Frame` 판이 그린다 — 장식이 틀 위로 솟아야 해서다. 누르면 `Inner` 가 통째로
+  `PRESS_TINT` 로 달아오르고 `ROW_SINK` 만큼 내려앉는다.
+- 막힌 카드는 `Inner` 를 `LOCKED_TINT` 로 어둡게 하고 `disabled` 라 눌리지 않는다.
+- 받은 그림에 있던 **즐겨찾기 별 · 돋보기 · 초기화 시간 · 기본/충전 시간 · 아래 추천/즐겨찾기/
+  전체 거르개는 넣지 않았다** — 우리 게임에 그 기능이 없다. 칩은 "무접속 모드" 대신 단계 수다.
+- 마름모(◆·✦)는 폰트에 없어 45° 돌린 `ColorRect` 로 그린다 (`_diamond`).
+- 조각이 없으면(`sync:godot` 전) 틀은 코드로 그린 판, 장식은 숨김, 그림은 `CARD_FALLBACK`.
+
+| 조각 | 그림 | 크기 |
 |---|---|---|
-| 토벌 던전 | 뿔 달린 오거 보스 머리 | 바르코 (`dungeon_raid`) — 던전 단추와 **다른 그림**이다 (단추는 아트풍) |
-| 시련의 탑 | 뾰족 지붕 돌탑 · 횃불 · 아치 문 | 바르코 (`dungeon_trial`) |
-| 보물 창고 | 금테 두른 나무 상자 · 자물쇠 · 금화와 보석 | 바르코 (`dungeon_treasure`) |
+| `dungeon_raid` | 무너진 아치 투기장 · 안쪽에 선 뿔 달린 오거 | 288x512 |
+| `dungeon_trial` | 보랏빛 번개를 맞는 뾰족한 첨탑 · 구름 | 288x512 |
+| `dungeon_treasure` | 둥근 금고 문 · 금화 넘치는 상자 · 등불 | 288x512 |
+| `ui_dungeon_card` | 닳은 돌판 · 얇은 청동 테 · 안은 어두운 판 | 231x384 |
+| `ui_dungeon_crest` | 창살 아치 문 + 좌우 청동 덩굴 날개 | 384x98 |
 
-**실사풍이다** (2026-09-26 요청: "던전 아이콘이랑 안에 이미지 실사 느낌으로 교체해").
-그 전에는 아트풍 문서의 아이콘 틀(상아빛 문장)이었고, 탑·상자 둘은 바르코가 끊긴
-세션에서 코드(SVG)로 그렸다 — 그 스크립트(`draw-dungeon-art.mjs`)는 이때 지웠다.
-**카드 썸네일만 실사다.** ★ 던전 단추(`ui_icon_dungeon`)까지 실사로 갈았다가 "아이콘은
-실사로 바꾸지 말고 기존 아이콘이랑 어울리는걸로" 라는 지적을 받고 아트풍 원본으로
-되돌렸다. 아이콘은 [ui-art-style.md](ui-art-style.md) 틀, 창 안의 큰 그림은 실사로 나눈다.
+**전부 바르코 `nano-banana-pro` 로, 받은 그림의 카드 한 장(110x222 JPEG 1.7KB)을 참고로
+물려 뽑았다** (`https://3d.varco.ai/api/objects/3327586ea58f6785f1c2bb9a3bfb794a.jpg` — 다시
+올릴 필요 없다). 풍경은 9:16, 장식은 16:9, 각 두 장 중 고른 것. 프롬프트 요점:
 
-- 프롬프트 틀: `Photorealistic <무엇>, … Cinematic dark fantasy game key art,
-  hyper-detailed realistic textures, dramatic rim light … fully inside the frame with
-  generous empty margin, centered. Isolated on a pure solid black background (#000000),
-  no environment, no text, no border, no frame.` — 참고 그림 없이 `nano-banana-pro`, 1:1, 두 장씩.
-- **검은 단색 배경**으로 뽑아야 `build-item-icons.mjs` 가 가장자리부터 걷어 창 바탕에
-  녹는다. 풍경을 깔면 카드의 세로로 긴 칸에서 네모난 사진 가장자리가 드러난다.
-- 걷힌 배경: 보스 54% · 탑 77% · 상자 42%. 단추는 102x128.
+- 풍경: `Dark fantasy MMORPG dungeon key art, vertical painting, in the mood of the reference
+  card: <무엇>. Muted <색> palette, … highly detailed painterly realism. The art fills the whole
+  frame edge to edge, no card, no frame, no border, no text` — **풍경이라 배경을 걷지 않는다**
+  (`build-item-icons.mjs` 의 `FULL`), 세로 비율 그대로 줄인다(`KEEP_ASPECT`).
+- 틀 · 장식: 아트풍 문서의 "판·칸·테두리류" 틀에 `in the reference card's style` 을 붙이고
+  흰 배경으로 뽑아 걷는다. 틀은 `SINGLE_LAYER`(안쪽 판을 남긴다).
 
-다시 굽기: `bash scripts/fetch-assets.sh && node scripts/build-item-icons.mjs`
-(크기는 `build-item-icons.mjs` 의 `FRAME_SIZE` 에 384) → `npm run sync:godot`.
+**아트풍이 창 안에서 둘로 나뉜다** — 오른쪽 위 던전 단추(`ui_icon_dungeon`)는 여전히
+[ui-art-style.md](ui-art-style.md) 틀(상아빛 문장)이고, 카드는 받은 그림의 결(청동 · 닳은 돌 · 풍경)이다.
+2026-09-26 에 단추까지 실사로 갈았다가 "아이콘은 실사로 바꾸지 말고 기존 아이콘이랑 어울리는걸로"
+라는 지적을 받았다 — **단추는 건드리지 않는다.** 그 전 카드 그림(검은 배경의 보스 머리·탑·상자
+실사 문장)은 이때 풍경으로 갈았다.
+
+다시 굽기: `bash scripts/fetch-assets.sh && node scripts/build-item-icons.mjs` → `npm run sync:godot`.
+확인: `npm run shot:godot -- dungeon` → `logs/dungeon.png`.
 
 ### 창은 차원문 창을 물려받는다 ★
 

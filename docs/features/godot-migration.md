@@ -24,6 +24,7 @@ three.js 웹 클라이언트를 **고도 엔진으로 갈아타는 중**이다. 
 | `godot/world/stats.gd` | ★ `shared/balance.ts`+`gear.ts` 이식본 — 밸런스 설계의 레벨 곡선·피해 공식·몬스터 역산·장비 등급. **아직 판정에 안 쓴다** → [stat-balance.md](stat-balance.md) |
 | `godot/world/skills.gd` | `shared/skills.ts` 의 규칙 이식본 — 배울 수 있나·쿨타임·터지는 반경 |
 | `godot/world/items.gd` | `shared/items.ts` 이식본 — 등급·랜덤옵션·강화·드롭 |
+| `godot/world/ledger.gd` | **장부 판정** — 드롭·경험치·골드·가방·강화·스킬. `World` 는 `_ledger_call` 로만 부른다. 나중에 서버가 같은 파일로 판정한다 → [server.md](server.md) |
 | `godot/world/game_data.gd` | `data/*.json` 로더 |
 | `godot/world/save.gd` | `user://save.json` — 혼자 노는 저장 |
 | `godot/net/transport.gd` | 화면과 판정 사이의 유일한 통로 |
@@ -68,6 +69,10 @@ three.js 웹 클라이언트를 **고도 엔진으로 갈아타는 중**이다. 
 
 그래서 **판정은 GDScript 한 벌**이고, 나중에 붙일 서버는 **고도 헤드리스**다.
 로컬 게임을 만드는 일이 곧 서버 코드를 만드는 일이 된다.
+
+**2026-09-28 에 범위를 줄였다** — 플레이어끼리 만나지 않으니 전투·이동은 기기에 두고,
+서버는 **장부(드롭·경험치·골드·가방·강화·스킬)만** 판정한다. 고도 헤드리스인 것은
+같다 → [server.md](server.md)
 
 ### `shared` 를 둘로 가른다 ★
 
@@ -306,7 +311,7 @@ Q/E 회전과 줌은 아직 안 옮겼다. 웹 쪽에는 있다.
 - 10초마다, 그리고 탭을 닫을 때 남긴다
 - 칸이 바뀌면 `VERSION` 을 올리고 옛 저장은 버린다. 혼자 노는 저장이라 되살릴 값이 없다
 
-서버를 붙이면 이 자리는 서버 DB(`packages/server/src/db.ts`)로 간다.
+서버를 붙이면 장부 칸은 서버 DB 로 가고 기기에는 자리·설정만 남는다 → [server.md](server.md) "저장".
 
 ### 상점·대장간 ★
 
@@ -629,7 +634,8 @@ curl -o D:\MMORPG.bat https://raw.githubusercontent.com/gogoalswo/MMORPG/main/sc
 14. ~~**피격 이펙트** — 섬광·파편·피해 숫자, 맞은 몸 붉히기, 화면 비네트~~ 끝 (2026-09-17)
 15. **스킬 이펙트** — 할퀴기·천붕각·낙뢰·빙주각 끝. 호포각·백호격은 스킬째
     지웠다 (2026-09-23) → [skills.md](skills.md)
-16. **서버** ← 지금 여기. 고도 헤드리스. `Transport` 에 구현을 하나 더 끼운다
+16. **서버** ← 지금 여기. 고도 헤드리스, **장부만 판정**(전투는 기기) —
+    단계는 [server.md](server.md) "단계"
 
 ## 용량
 
@@ -675,7 +681,7 @@ GitHub Pages 가 배포 시각을 ETag 에 넣기 때문이다 (`6aab3f31-25af28
 얻는 게 "10분을 0분으로" 라 하지 않았다.
 5. **모델·애니메이션** — `varco_*.glb` (아래 참고)
 6. **전투 표현 → UI → 이펙트**
-7. **서버** — 고도 헤드리스. `Transport` 에 구현을 하나 더 끼운다
+7. **서버** — 고도 헤드리스, 장부만 판정 → [server.md](server.md)
 
 ## 손댈 때
 

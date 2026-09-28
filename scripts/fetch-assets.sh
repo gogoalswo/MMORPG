@@ -323,9 +323,15 @@ fetch_icon 66d3b2ea079339e5a22b09546c956903 ui_quick_slot  # 퀵슬롯·자동�
 fetch_icon 09d32f50e266215c7ff66542d6d7c016 ui_gate_here   # 지금 서 있는 곳 — 소용돌이
 fetch_icon 2209356ad70f42d8872938bc39ffedd4 ui_gate_go     # 갈 수 있는 곳 — 별
 
-fetch_icon e5157077f125b146e546c1c91b818096 ui_icon_skill  # 오른쪽 위 스킬 (펼친 책 + 룬)
-fetch_icon 7542d36d9687956d7335787965b4f16d ui_icon_bag    # 오른쪽 위 가방 (배낭)
-fetch_icon 106e9eda607b28a595dcf08578270163 ui_icon_dungeon # 가방 옆 던전 — 뿔 달린 보스 머리 (두 장 중 첫째). 아트풍 그대로 둔다
+# 오른쪽 위 메뉴 일곱 장 (2026-09-28 에 전부 갈았다) — 받은 그림(리니지풍 칠한 메뉴 아이콘)을
+# 참고로 물려 뽑았다. 흰 바탕이라 굽는 스크립트가 걷는다. 각 두 장 중 고른 것 (docs/features/hud.md "메뉴 아이콘")
+fetch_icon e67e6b29ac41d7859e2b7cbbeb2b2145 ui_icon_character # 정보 — 붉은 깃 단 기사 투구 (둘째)
+fetch_icon 65b4adf6d471e31fd248ae77d65ceb74 ui_icon_skill     # 스킬 — 룬이 새겨진 가죽 마법서 (둘째)
+fetch_icon a0a0d505a58360bf0183816eae2feb4d ui_icon_enhance   # 강화 — 모루를 내리치는 망치 · 불꽃 (첫째)
+fetch_icon cdb0ab3bc835c81a40b136818fc78b60 ui_icon_crystal   # 크리스탈 — 바위에서 솟은 보랏빛 결정 (첫째)
+fetch_icon d31a3e9b714e59750877554a3f2142c2 ui_icon_bag       # 가방 — 두루마리가 삐져나온 가죽 가방 (첫째)
+fetch_icon e242348eee9e4292219b53cb9b509127 ui_icon_dungeon   # 던전 — 뿔 달린 악마 해골 (둘째)
+fetch_icon 4b111394e9c953eaa58199bb0991e688 ui_icon_design    # 설계 — 톱니 · 두루마리 도면 위 컴퍼스 (첫째)
 # 던전 종류 카드 — 받은 그림(다른 게임의 던전 창)을 참고로 물려 뽑은 풍경 · 틀 · 장식
 # (2026-09-28, docs/features/dungeons.md). 각 두 장 중 고른 것. 풍경은 9:16 이라 배경을 안 걷는다
 fetch_icon 835f847665366f9f3471ae4c32b7863f dungeon_raid     # 토벌 — 무너진 아치 투기장 · 뒤에 선 오거 (첫째)
@@ -336,10 +342,6 @@ fetch_icon bca3ac0f09670fe8e947153580b9216f ui_dungeon_crest # 카드 위 장식
 fetch_icon 9f519882b9a58b99a928564c0fb70efd ui_icon_auto   # 자동사냥 — 검 두 자루가 X자
 # 퀵슬롯 왼쪽 물약 칸 (2026-09-26) — 둥근 유리병 · 코르크 · 붉은 물약. 두 장 중 둘째(정면)
 fetch_icon 81fc643bd0233984e748b4bb3416fcc8 ui_icon_potion
-# 오른쪽 위 메뉴에서 글자로만 나오던 셋 (2026-09-26) — 아이콘류 틀 + 참고 그림. 각 두 장 중 고른 것
-fetch_icon ff246585b896e3f101f79fe2aa6540ad ui_icon_character # 정보 — 기사 투구 정면 (첫째)
-fetch_icon d01c60c00fd277fa99749720c9548453 ui_icon_enhance   # 강화 — 모루를 내리치는 망치 · 불꽃 (둘째)
-fetch_icon 14cbea32b4e936b84e09b6364f0b661a ui_icon_design    # 설계 — 톱니바퀴 위 제도용 컴퍼스 (첫째)
 fetch_icon 74df64ad7717d61a8ba37c600568f827 ui_auto_spin   # 자동사냥 고리 (굵은 화살표 — 얇은 것은 안 보였다)
 fetch_icon 69c32b07ca637a710819a6ba08020abf ui_close       # 모든 창 오른쪽 위 닫기 X
 fetch_icon 029c2be72082608b40dfaf00bebe782a ui_portrait    # 옛 초상 테두리 (미사용 — 상태판을 내리면서 빠졌다)

@@ -11,8 +11,8 @@
 강화 단추는 2026-09-24 에 가방 **왼쪽** 옆에 더했다 (오른쪽 옆은 던전 자리) — 강화 팝업을
 다중 강화 · 전체 목록으로 연다 → [items.md](items.md) "강화". 그림은 모루를 내리치는 망치(`ui_icon_enhance`, 2026-09-26).
 크리스탈 단추는 같은 날 가방 **바로 왼쪽**에 더했다 (강화는 한 칸 왼쪽으로 밀렸다) — 인벤토리·장비
-창과 크리스탈 강화 창을 같이 연다 → [items.md](items.md) "크리스탈". UI 결 그림(`ui_icon_crystal`)이
-아직 없어 가방 아이콘 `crystal.png` 를 쓴다.
+창과 크리스탈 강화 창을 같이 연다 → [items.md](items.md) "크리스탈".
+**메뉴 일곱 단추는 2026-09-28 에 그림을 전부 갈고 아래에 이름 글자를 달았다** → 아래 "메뉴 아이콘".
 
 2026-09-19 에 처음 짓고, **2026-09-20 에 받은 그림(모바일 MMORPG HUD)대로 다시
 지었다.** 그 사이 한 번은 왼쪽 위에 초상과 막대 둘을 세운 상태판이 있었는데,
@@ -38,7 +38,7 @@
 | 파일 | 역할 |
 |---|---|
 | `godot/game/game.gd` | `_build_level_badge` / `_make_bar` / `_refresh_status` — 퀵슬롯 위 묶음 |
-| ″ | `_icon_button` — 오른쪽 위 메뉴 단추 하나 (`_menu_cells` 에 담는다) |
+| ″ | `_icon_button` — 오른쪽 위 메뉴 단추 하나 (`_menu_cells` 에 담는다). `caption` 이면 아이콘 아래 이름 글자(`MENU_CAPTION*`) |
 | ″ | `_build_skill_bar` — 묶음 전체(세로 상자) · 퀵슬롯 4칸 + 자동사냥 칸(`_auto_cell`)과 고리(`_auto_spin`) |
 | ″ | `_refresh_auto` / `_process` — 켜짐 표시와 고리 돌리기, `SpinRing`(그림이 없을 때) |
 | ″ | `_build_potion_cell` · `_refresh_potion` · `_build_potion_panel` · `_potion_step` — **물약 칸**과 설정 창(−/+ · 슬라이더). 아래 "물약 칸" |
@@ -272,9 +272,7 @@ frame.add_child(border)         # 채움 **다음**에 붙여야 위로 온다
 | `ui_bar_fill` | 막대 채움 (직사각 그라데이션) | **굽는 스크립트가 그린다** |
 | `ui_level_badge` | 레벨 배지 (얇은 금색 원 + 어두운 판) | 192 · 한 겹만 걷는다 |
 | `ui_quick_slot` | 퀵슬롯·자동사냥 칸 (얇은 선, 위 모서리 잘림) | 128 · 한 겹만 걷는다 |
-| `ui_icon_skill` | 룬이 떠 있는 책 (상아빛 + 금색) | 128 |
-| `ui_icon_bag` | 배낭 (상아빛 + 금색) | 128 |
-| `ui_icon_dungeon` | 던전 — 뿔 달린 보스 머리, 정면 (상아빛 + 금색) | 128 → [dungeons.md](dungeons.md) |
+| `ui_icon_skill` · `ui_icon_bag` · `ui_icon_dungeon` | 메뉴 — **2026-09-28 에 리니지풍으로 갈았다** → 아래 "메뉴 아이콘" | 128 |
 | `ui_icon_auto` | **검 두 자루가 X자** (상아빛 + 금색) | 128 |
 | `ui_auto_spin` | 굵은 화살표 고리 (얇은 것은 안 보였다) | 192 · 가운데를 뚫는다 |
 | `ui_close` | 창 오른쪽 위 닫기 X | 128 |
@@ -296,6 +294,51 @@ frame.add_child(border)         # 채움 **다음**에 붙여야 위로 온다
   잘린 그림으로 돌린 것을 결과가 이상해진 다음에야 안다.
 - 아이콘 셋(스킬·가방·자동사냥)은 이렇게 물려서 한 번에 결이 맞았다. **프롬프트로
   스타일을 설명하는 것보다 훨씬 빠르다** — 말로 고치다 네 번을 돌렸다.
+
+## 메뉴 아이콘 (2026-09-28) ★★
+
+요청: "UI HUD 버튼을 보면 어떤 버튼인지 텍스트가 없어서 헷갈려. 이런식으로 텍스트 넣도록 변경하고.
+지금 아이콘 마음에 안 들으니까 스크린샷 보고 아트풍 저런식으로 변경해" — 받은 그림은 다른 게임의
+메뉴 넷(상점 돈주머니 · 인벤토리 가방 · 스펠 마법서 · 퀘스트 두루마리)이고, **아이콘 아래에 흰 글자**가 붙어 있다.
+
+**오른쪽 위 메뉴 일곱 장만 이 결이다.** 상아빛 선화 결([ui-art-style.md](ui-art-style.md))이 아니라
+**손으로 칠한 반실사 아이콘** — 낡은 가죽 갈색 · 양피지 · 바랜 금 · 짙은 빨강, 왼쪽 위 빛, 약간 비스듬한 각.
+퀵슬롯 옆 자동사냥(`ui_icon_auto`)·물약 칸·창 안 아이콘은 그대로다 (요청이 HUD 메뉴 단추였다).
+
+| 단추 | 그림 | 이름 |
+|---|---|---|
+| 정보 | 붉은 깃 단 기사 투구 | `ui_icon_character` |
+| 스킬 | 룬이 새겨진 가죽 마법서 | `ui_icon_skill` |
+| 강화 | 모루를 내리치는 망치 · 불꽃 | `ui_icon_enhance` |
+| 크리스탈 | 바위에서 솟은 보랏빛 결정 | `ui_icon_crystal` (**새 이름** — 전엔 아이템 그림 `crystal` 을 빌려 썼다) |
+| 가방 | 두루마리가 삐져나온 가죽 가방 | `ui_icon_bag` |
+| 던전 | 뿔 달린 악마 해골 | `ui_icon_dungeon` |
+| 설계 | 톱니 · 두루마리 도면 위 컴퍼스 | `ui_icon_design` |
+
+- **글자는 그림에 굽지 않고 `Label`(이름 `caption`)로 얹는다.** 칸을 `MENU_CAPTION`(16) 만큼 늘여
+  아이콘 밑에 두고, 아이콘 발치와 `MENU_CAPTION_OVERLAP`(4) 만큼 겹친다 — 받은 그림도 글자가 밑동을
+  조금 덮는다. 14px · 상아(`#eeead7`) · 검은 테 5. 닫기 X 는 같은 `_icon_button` 을 쓰지만 글자를 안 단다.
+- 그림이 없으면(동기화 안 함) 가운데 대신 글자를 띄우던 것은 `caption` 단추에서는 안 띄운다 — 아래 글자가 이미 있다.
+- **참고 그림**: 받은 스크린샷 그대로 올린 것 — `https://3d.varco.ai/api/objects/6c80e88d6bc567159a81261d4b2f02b6.jpg`
+  (238×62, JPEG 45, 2.5KB). 같은 결로 한 장 더 만들 때 이 주소를 `ImageInput` 에 넣는다.
+- **프롬프트** (`<무엇>` 만 간다). 배경은 **흰색**으로 받는다 — 칠한 아이콘은 그늘이 검어서, 검은 바탕이면
+  걷을 때 그늘까지 먹힌다:
+
+  ```
+  Mobile MMORPG HUD menu button icon: <무엇>, meaning '<쓰임>'. MATCH THE REFERENCE IMAGE'S ART STYLE
+  EXACTLY: richly hand-painted, semi-realistic classic Korean fantasy MMORPG menu icon (Lineage style) —
+  detailed painterly rendering, warm muted earthy palette (aged leather brown, parchment beige, worn gold,
+  deep red accents), soft top-left light, a subtle soft dark shadow edge, strong readable silhouette at
+  small size. Slight three-quarter view, centered, fills the frame. One object standing alone — it must
+  NOT sit on any disc, circle, plate, badge, frame or panel. Isolated on a flat pure white background;
+  everything outside the object is pure white, the four corners must be pure white. Ignore the captions
+  in the reference: no text, no letters, no numbers.
+  ```
+
+  `Ignore the captions in the reference` 는 빼지 않는다 — 참고 그림에 한글 글자가 있다.
+- 일곱 장을 각 두 장씩 뽑아 한 번에 결이 맞았다. 고른 것은 `scripts/fetch-assets.sh` 주석에 있다.
+- `ui_test` `_case_status` 가 일곱 단추의 글자(정보·스킬·강화·크리스탈·가방·던전·설계)와 **칸보다 안 넓은지**,
+  그림이 붙었는지를 본다.
 
 ## 설계 재현 창 ★
 

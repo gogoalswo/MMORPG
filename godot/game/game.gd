@@ -1216,17 +1216,26 @@ func _build_gear_window(panel: PanelContainer) -> void:
 		_stat_labels.append(label)
 
 
-## 캐릭터 정보 창 — 가방 창들과 따로 **화면 가운데**에 뜬다 (2026-09-25 요청: "상세 정보창을
-## 따로 띄우고 버튼을 만들어"). 처음엔 장비 창 "상세" 로 상세 창 자리를 번갈아 썼다.
-## 판은 인벤토리 결(`_window_panel`) 그대로다
+## 캐릭터 정보 창 — 가방 창들과 따로 뜬다 (2026-09-25 요청: "상세 정보창을 따로 띄우고
+## 버튼을 만들어"). 처음엔 장비 창 "상세" 로 상세 창 자리를 번갈아 썼다.
+## **채팅창 자리(왼쪽 아래)에 채팅창을 덮고 뜬다** (2026-09-28 요청: "채팅창 위에 나오도록").
+## 그 전엔 화면 가운데였다. 창(627px)이 채팅창 윗자리(506px)에 안 들어가서, 왼쪽·아래 끝을
+## 채팅창에 맞추고 위로 자라게 했다. 판은 인벤토리 결(`_window_panel`) 그대로다
 func _build_char_panel() -> void:
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_ui_root.add_child(center)
+	# 받침은 여닫을 때 `move_to_front` 로 채팅창보다 뒤(= 위에 그려지는) 자식이 되게 하는 몫이다
+	var holder := Control.new()
+	holder.set_anchors_preset(Control.PRESET_FULL_RECT)
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ui_root.add_child(holder)
 	_char_panel = _window_panel()
-	center.add_child(_char_panel)
+	holder.add_child(_char_panel)
 	_build_char_window(_char_panel)
+	_char_panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE)
+	_char_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_char_panel.offset_left = _chat.offset_left
+	_char_panel.offset_bottom = _chat.offset_bottom
+	_char_panel.offset_top = _chat.offset_bottom
+	_char_panel.offset_right = _chat.offset_left
 
 
 ## 캐릭터 정보 창 — 상세 창과 같은 틀(머리 줄 · 가는 줄 · 이름/값 표).

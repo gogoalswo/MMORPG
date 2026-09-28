@@ -1235,12 +1235,15 @@ func _case_char(game: Node3D) -> void:
 	if game._char_grids.size() != game.CHAR_SPLIT.size() + 1:
 		_fail("묶음이 %d개" % game._char_grids.size())
 
-	# 자리 — 화면 가운데, 화면 안
+	# 자리 — 채팅창 자리(왼쪽·아래 끝을 맞춰)에 채팅창을 덮고 뜬다, 화면 안
 	var box: Rect2 = game._char_panel.get_global_rect()
+	var chat_box: Rect2 = game._chat.get_global_rect()
 	if not Rect2(Vector2.ZERO, Vector2(1280, 720)).encloses(box):
 		_fail("정보 창이 화면 밖으로 나갔다: %s" % box)
-	if absf(box.get_center().x - 640.0) > 2.0 or absf(box.get_center().y - 360.0) > 2.0:
-		_fail("정보 창이 화면 가운데가 아니다: %s" % box)
+	if absf(box.position.x - chat_box.position.x) > 2.0 or absf(box.end.y - chat_box.end.y) > 2.0:
+		_fail("정보 창이 채팅창 자리가 아니다: %s / 채팅 %s" % [box, chat_box])
+	if game._char_panel.get_parent().get_index() < game._chat.get_index():
+		_fail("정보 창이 채팅창 아래에 그려진다")
 
 	# 장비를 바꾸면 창을 연 채로 따라간다 (가방을 닫아 둬도)
 	me.equipped = {}

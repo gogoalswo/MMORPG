@@ -1,4 +1,4 @@
-import type { GateDef, ZoneDef } from './zone.ts';
+import { ZONE_SIZE, type GateDef, type ZoneDef } from './zone.ts';
 import { bossIdFor, bossLevel } from './monsters.ts';
 import { DUNGEON_BOSS_SPOT, DUNGEON_ENV } from './dungeons.ts';
 
@@ -54,7 +54,7 @@ export function jobAdvanceZones(gate: () => GateDef): ZoneDef[] {
   return JOB_ADVANCES.map((a) => ({
     id: a.zone,
     name: `${a.tier}차 전직 시험`,
-    size: 66,
+    size: ZONE_SIZE,
     spawns: { default: [0, 0] },
     gate: gate(),
     monsters: [{ kind: a.boss, x: DUNGEON_BOSS_SPOT[0], z: DUNGEON_BOSS_SPOT[1], radius: 3, count: 1, respawnMs: 900000 }],

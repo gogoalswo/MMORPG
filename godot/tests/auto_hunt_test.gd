@@ -82,8 +82,9 @@ func _case_radius_covers_one_pack() -> void:
 			packs[key] = []
 		packs[key].append(mob)
 
-	if packs.size() != 4:
-		_fail("초원 무리를 %d 개로 봤다 (4 이어야 한다)" % packs.size())
+	# 2026-09-28 부터 화면 아래 귀퉁이 무리 하나뿐이다 (world-zones.md)
+	if packs.size() != 1:
+		_fail("초원 무리를 %d 개로 봤다 (1 이어야 한다)" % packs.size())
 		return
 
 	var widest := 0.0
@@ -109,7 +110,8 @@ func _case_radius_covers_one_pack() -> void:
 					continue
 				for mob in packs[other]:
 					nearest_other = minf(nearest_other, _gap(anchor, mob))
-	print("  옆 무리는 최소 %.1f m (반경 %.1f)" % [nearest_other, World.HUNT_RADIUS])
+	if nearest_other < INF:
+		print("  옆 무리는 최소 %.1f m (반경 %.1f)" % [nearest_other, World.HUNT_RADIUS])
 
 
 ## 켜면 **그 자리**가 앵커다. 앵커가 없으면 몬스터를 따라 맵 끝까지 끌려간다

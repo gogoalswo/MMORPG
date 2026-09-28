@@ -1,4 +1,4 @@
-import type { GateDef, ZoneDef } from './zone.ts';
+import { ZONE_SIZE, type GateDef, type ZoneDef } from './zone.ts';
 import { MONSTER_KINDS, bossIdFor, bossLevel } from './monsters.ts';
 
 /**
@@ -37,13 +37,16 @@ export interface DungeonType {
 }
 
 /**
- * 던전 안의 보스 자리 — **화면 위쪽**(북서), 도착 지점에서 22.6.
+ * 던전 안의 보스 자리 — **화면 아래 귀퉁이**(+x, +z), 도착 지점에서 11.3.
  *
- * 카메라가 남동쪽 45°에서 내려다보므로(`camera_rig.gd` 의 `YAW`) 화면 위쪽은 -x·-z
- * 대각선이다. 거리는 사냥터 보스(23)와 비슷하게 두어 보스 인식 범위(무리 반경 3 +
- * 18 = 21) 밖이라, 들어서자마자 달려들지 않고 한 걸음 나가야 싸움이 시작된다.
+ * 카메라가 남동쪽 45°에서 내려다보므로(`camera_rig.gd` 의 `YAW`) 화면 아래는 +x·+z
+ * 대각선이다. 원래 화면 위쪽 (-16, -16) 이었는데 2026-09-28 에 맵을 반(33)으로 줄이고
+ * 차원문을 화면 맨 위(-9, -9)로 옮기면서 사냥터 몬스터와 같은 아래쪽으로 옮겼다 —
+ * 나가려고 문을 밟는 길이 보스 앞이면 안 된다. 반경 3 까지 8 + 3 = 11 로 이동 가능
+ * 영역(±12.5) 안이다. 맵이 작아져 보스 인식 범위(3 + 18 = 21)가 도착 지점까지 닿는다 —
+ * 들어서면 보스가 달려온다.
  */
-export const DUNGEON_BOSS_SPOT: [number, number] = [-16, -16];
+export const DUNGEON_BOSS_SPOT: [number, number] = [8, 8];
 
 export const DUNGEON_ENV: ZoneDef['env'] = {
   skyColor: '#2a2530',
@@ -87,7 +90,7 @@ export function dungeonZones(gate: () => GateDef): ZoneDef[] {
       out.push({
         id: s.zone,
         name: `${type.name} ${s.stage}단계`,
-        size: 66,
+        size: ZONE_SIZE,
         spawns: { default: [0, 0] },
         gate: gate(),
         monsters: [{ kind: s.boss, x: DUNGEON_BOSS_SPOT[0], z: DUNGEON_BOSS_SPOT[1], radius: 3, count: 1, respawnMs: 900000 }],

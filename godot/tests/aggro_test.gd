@@ -8,6 +8,9 @@ extends SceneTree
 ##   godot --headless --path godot --script tests/aggro_test.gd
 
 var _failed := 0
+## 줄 끊김 시험 — 화면 왼쪽 귀퉁이 집에서 오른쪽 귀퉁이까지 31.1m (리쉬 22.2 밖)
+const LEASH_HOME := Vector2(-11.0, 11.0)
+const LEASH_FAR := Vector2(11.0, -11.0)
 
 
 func _init() -> void:
@@ -33,7 +36,8 @@ func _fail(text: String) -> void:
 	_failed += 1
 
 
-## 마을에 시험용 한 마리. 차원문(4,0)에서 멀리 떨어진 자리를 쓴다
+## 마을에 시험용 한 마리. 차원문(-9,-9)에서 떨어진 자리를 쓴다 — 맵이 ±12.5 라
+## 집은 (-6, -3), 사람은 +z 쪽으로 몇 m (2026-09-28 에 맵을 반으로 줄이며 옮겼다)
 func _setup(mob_x: float, mob_z: float, player_x: float, player_z: float) -> Array:
 	var w := World.new()
 	w.open("village")
@@ -52,7 +56,7 @@ func _setup(mob_x: float, mob_z: float, player_x: float, player_z: float) -> Arr
 func _case_idle() -> void:
 	# 어그로(9.1m) 밖이면 쫓지 않는다. **가만히 서 있는 것은 아니다** —
 	# 집 주변을 서성인다 (순찰은 tests/patrol_test.gd 가 따로 본다)
-	var s := _setup(-20.0, 0.0, -20.0, 15.0)
+	var s := _setup(-6.0, -3.0, -6.0, 12.0)
 	var w: World = s[0]
 	var mob: Dictionary = s[2]
 	for i in 30:
@@ -67,13 +71,13 @@ func _case_idle() -> void:
 
 func _case_chase() -> void:
 	# 어그로 안이면 다가온다
-	var s := _setup(-20.0, 0.0, -20.0, 8.0)
+	var s := _setup(-6.0, -3.0, -6.0, 5.0)
 	var w: World = s[0]
 	var mob: Dictionary = s[2]
-	var before: float = absf(mob.z - 8.0)
+	var before: float = absf(mob.z - 5.0)
 	for i in 60:
 		w.step(1.0 / 60.0)
-	var after: float = absf(mob.z - 8.0)
+	var after: float = absf(mob.z - 5.0)
 	if after >= before:
 		_fail("어그로 안인데 안 다가왔다 (%.2f -> %.2f)" % [before, after])
 	else:
@@ -84,7 +88,7 @@ func _case_detour(wall: int) -> void:
 	# 사람과 몬스터 사이를 **기절한 놈**이 막고 있다. 곧장 가면 정면으로 밀려 굳는데
 	# 옆으로 한 칸씩 돌아 사거리까지 와야 한다. wall 이 3 이면 1m 간격으로 세 마리가
 	# 벽처럼 서 있어서 한 칸으로는 안 되고 **같은 쪽으로 여러 칸** 돌아야 한다
-	var s := _setup(-20.0, 0.0, -20.0, 7.0)
+	var s := _setup(-6.0, -3.0, -6.0, 4.0)
 	var w: World = s[0]
 	var mob: Dictionary = s[2]
 	var mobs: Array = w.snapshot().monsters
@@ -92,7 +96,7 @@ func _case_detour(wall: int) -> void:
 	for i in wall:
 		var b := World.make_monster(
 			"wall%d" % i, GameData.monster_kind("mob003"),
-			-20.0 + (i - (wall - 1) / 2.0), 2.5, 10000.0, 0.0
+			-6.0 + (i - (wall - 1) / 2.0), -0.5, 10000.0, 0.0
 		)
 		b.stunned_until = 1 << 40
 		mobs.append(b)
@@ -118,7 +122,7 @@ func _case_attack() -> void:
 	# 사거리(1.9m) 안이면 때린다. **한 대가 아주 작은 것이 설계다** — 몬스터
 	# 공격력은 "여섯 마리가 동시에 때려 15초에 HP 절반" 에서 역산한 값이라,
 	# 1:1 로는 120~150대를 맞아야 죽는다. 무리가 위협이지 한 마리는 아니다
-	var s := _setup(-20.0, 0.0, -20.0, 1.5)
+	var s := _setup(-6.0, -3.0, -6.0, -1.5)
 	var w: World = s[0]
 	var me: Dictionary = s[1]
 	var full: int = me.hp
@@ -140,45 +144,49 @@ func _case_attack() -> void:
 
 
 func _case_leash() -> void:
-	# 집에서 leash(22.2m) 넘게 벗어나면 쫓기를 포기하고 돌아간다
-	var s := _setup(-20.0, 0.0, -20.0, 8.0)
+	# 집에서 leash(22.2m) 넘게 벗어나면 쫓기를 포기하고 돌아간다.
+	# 맵이 ±12.5 라 한 줄로는 22.2 를 못 넘는다 — 대각선 끝과 끝(31.1m)을 쓴다
+	var s := _setup(LEASH_HOME.x, LEASH_HOME.y, LEASH_HOME.x, LEASH_HOME.y - 5.0)
 	var w: World = s[0]
 	var mob: Dictionary = s[2]
-	mob.x = -20.0
-	mob.z = 30.0  # 집에서 30m
+	mob.x = LEASH_FAR.x
+	mob.z = LEASH_FAR.y
+	var before := LEASH_FAR.distance_to(LEASH_HOME)
 	w.step(1.0 / 60.0)
 	if mob.target != "":
 		_fail("줄이 끊겼는데 아직 쫓고 있다")
-	if mob.z >= 30.0:
-		_fail("집 쪽으로 안 돌아갔다 (z %.2f)" % mob.z)
+	if Vector2(mob.x, mob.z).distance_to(LEASH_HOME) >= before:
+		_fail("집 쪽으로 안 돌아갔다 (%.2f, %.2f)" % [mob.x, mob.z])
 
 
 func _case_leash_goes_home() -> void:
 	# 줄이 끊기면 **체력을 채우고 집까지 간다.** 경계에서 한 걸음 돌아오자마자
 	# 다시 쫓으면 앞뒤로 떤다 (2026-09-20 에 지적받았다)
-	var s := _setup(-20.0, 0.0, -20.0, 8.0)
+	var s := _setup(LEASH_HOME.x, LEASH_HOME.y, LEASH_HOME.x, LEASH_HOME.y - 5.0)
 	var w: World = s[0]
 	var me: Dictionary = s[1]
 	var mob: Dictionary = s[2]
-	mob.x = -20.0
-	mob.z = 30.0  # 집에서 30m — 리쉬(22.2) 밖
+	mob.x = LEASH_FAR.x
+	mob.z = LEASH_FAR.y  # 집에서 31.1m — 리쉬(22.2) 밖
+	# 집 반대쪽 2m — 대각선을 따라 (맵 끝 ±12.5 안)
+	var away := (LEASH_FAR - LEASH_HOME).normalized() * 2.0
 	mob.hp = int(mob.max_hp) / 2
 	# 사람은 **집 반대쪽** 2m 에 붙어 따라간다 (어그로 안).
 	# 집 쪽에 두면 쫓아가는 것이 곧 집으로 가는 것이라 떨림이 안 난다
-	me.x = mob.x
-	me.z = mob.z + 2.0
+	me.x = mob.x + away.x
+	me.z = mob.z + away.y
 	w.step(1.0 / 60.0)
 	if int(mob.hp) != int(mob.max_hp):
 		_fail("줄이 끊겼는데 체력을 안 채웠다 (%d/%d)" % [int(mob.hp), int(mob.max_hp)])
 
 	# 집까지 가는 동안 사람은 계속 옆에 붙어 있는다.
 	# **한 번도 멀어지지 않고** 도착해야 한다 — 멀어지면 그게 떠는 것이다
-	var gap := 30.0
+	var gap := LEASH_FAR.distance_to(LEASH_HOME)
 	var backed := 0.0
 	var arrived := -1
 	for i in 600:
-		me.x = mob.x
-		me.z = mob.z + 2.0
+		me.x = mob.x + away.x
+		me.z = mob.z + away.y
 		w.step(1.0 / 60.0)
 		var now_gap := Vector2(mob.x - mob.home_x, mob.z - mob.home_z).length()
 		backed = maxf(backed, now_gap - gap)
@@ -195,7 +203,7 @@ func _case_leash_goes_home() -> void:
 
 
 func _case_death_and_revive() -> void:
-	var s := _setup(-20.0, 0.0, -20.0, 1.5)
+	var s := _setup(-6.0, -3.0, -6.0, -1.5)
 	var w: World = s[0]
 	var me: Dictionary = s[1]
 	me.hp = 1

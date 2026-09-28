@@ -1,5 +1,5 @@
-import type { GroundKind, ZoneDef, ZoneEnv } from './zone.ts';
-import { bossIdFor, monsterIdFor, tierLevels } from './monsters.ts';
+import { ZONE_SIZE, type GroundKind, type ZoneDef, type ZoneEnv } from './zone.ts';
+import { monsterIdFor, tierLevels } from './monsters.ts';
 import { dungeonZones } from './dungeons.ts';
 import { jobAdvanceZones } from './jobAdvance.ts';
 
@@ -21,23 +21,26 @@ import { jobAdvanceZones } from './jobAdvance.ts';
  *
  * **표에서 만든다.** 20개를 손으로 적으면 한 곳만 빠져도 조용히 지나간다.
  *
- * 모든 존을 size 66 (이동 가능 영역 58) 로 맞췄다. 원래 92 — 한 화면에 보이는 지면
- * (16:9 기준 약 56.5 유닛, FOV 30 · 거리 40 · 부각 42)의 1.5배 — 였는데 "맵이 너무
- * 크다" 해서 2/3 로 줄였다 (2026-09-23). 이제 맵이 한 화면과 거의 같다.
+ * 모든 존을 `ZONE_SIZE` 33 (이동 가능 영역 ±12.5) 로 맞췄다. 원래 92 — 한 화면에 보이는
+ * 지면(16:9 기준 약 56.5 유닛, FOV 30 · 거리 40 · 부각 42)의 1.5배 — 였는데 "맵이 너무
+ * 크다" 해서 2/3(62 → 66)로 줄였고 (2026-09-23), 다시 한 변을 반(33)으로 줄였다
+ * (2026-09-28). 이제 맵이 한 화면보다 작다.
+ *
+ * **화면 방향** — 카메라가 남동쪽 45°에서 내려다보므로(`camera_rig.gd` 의 `YAW`) 정사각
+ * 맵이 화면에는 마름모로 선다. 화면 위 = (-x, -z) 귀퉁이, 아래 = (+x, +z), 오른쪽 =
+ * (+x, -z), 왼쪽 = (-x, +z). 아래 "위·아래" 는 전부 화면 기준이다.
  */
 
 /**
- * 차원문 자리 — 모든 존에서 같다.
+ * 차원문 자리 — 모든 존에서 같다. **화면 맨 위 귀퉁이**(-x, -z).
  *
- * 도착 지점(맵 한가운데)에서 동쪽으로 4유닛. 어느 존에 가도 같은 자리에 있어야
- * "나가려면 어디로 가야 하나"를 존마다 다시 찾지 않는다. 스폰을 덮지 않을 만큼
- * 떨어져 있고(반경 2.6), 무리(±16, 반경 13) 가장자리에서 7m 떨어져 있다.
- * 원래 9 였는데 맵을 2/3 로 줄이며 무리가 ±14 로 당겨져 9 에서는 동쪽 두 무리
- * 가장자리와 문이 겹쳐 4 로 당겼다. 무리를 ±16 으로 다시 민 뒤(2026-09-23 "포탈이랑
- * 너무 가깝다")에도 4 에 둔다 — 문과 몬스터 사이를 벌리려고 민 것이라서다.
- * 마을은 NPC 여섯이 전부 서쪽·남쪽에 몰려 있어 이쪽이 비어 있기도 하다.
+ * 2026-09-28 요청 "포탈을 맨 위 방향에 설치해". 몬스터는 화면 아래 귀퉁이에서만 나오니
+ * 문과 몬스터가 맵의 양 끝으로 갈린다. 도착 지점(가운데)에서 12.7 — 이동 가능 영역
+ * 끝(±12.5) 안쪽이고, 문 반경 2.6 이 스폰을 덮지 않는다.
+ * 어느 존에 가도 같은 자리에 있어야 "나가려면 어디로 가야 하나"를 존마다 다시 찾지 않는다.
+ * (이전: (9, 0) → (4, 0) — 네 귀퉁이 무리 사이에 끼워 넣던 자리.)
  */
-const GATE_SPOT: [number, number] = [4, 0];
+const GATE_SPOT: [number, number] = [-9, -9];
 
 /**
  * 차원문 빛 색과 이름.
@@ -115,69 +118,42 @@ function envFor(theme: FieldTheme): ZoneEnv {
 }
 
 /**
- * 보스 자리 — 시계로 6시 방향, 중앙에서 23유닛.
+ * 사냥터 몬스터 — **화면 아래 귀퉁이 무리 하나**, 강한 종 16마리 (2026-09-28).
  *
- * 12시를 -z(북)로 놓고 시계방향으로 잰다. 원래 7시·24유닛이었는데 맵을 줄이며
- * 무리가 네 귀퉁이(±16, 반경 13)를 거의 다 덮어, 무리 원 밖으로 남는 자리가
- * 두 무리 사이 축 위뿐이다. 남쪽 두 무리 원(반경 13)과 보스 원(반경 3)이 안 닿고
- * (중심 간 17.5) 벽(29) 안에 든다.
+ * 전에는 네 귀퉁이(±16)에 무리 넷(약한 종 둘 · 강한 종 둘, 50마리씩 = 200마리)과
+ * 6시 보스 하나가 섰다. 요청이 셋 겹쳤다 — "맵을 반으로" · "아래 방향만 나오도록" ·
+ * "각 맵에 보스 제거". 아래 귀퉁이에 있던 것이 강한 종 무리라 **그 무리만 남기고**,
+ * 반으로 줄인 맵에 50마리가 안 들어가서 마릿수를 줄였다. 약한 종(`tierLevels` 의 앞)
+ * 은 사냥터에 안 나온다 — 셋 중에서 사용자가 골랐다 (약·강 섞기 / 넓이 기준 반 대신).
+ *
+ * - 자리 (6, 6) · 반경 6.5 — 무리 끝이 6 + 6.5 = 12.5 로 **이동 가능 영역 끝에 닿는다.**
+ *   도착 지점(0,0)에서 중심까지 8.5 라 무리 원 밖으로 2m 남는다. 인식 범위는 닿는다 —
+ *   사냥터에 들어서면 몬스터가 달려온다 (66 일 때도 그랬다).
+ * - 16마리 — 씨앗 100개 × 사냥터 20곳의 강한 종으로 `scatterSpawn` 을 돌려 **한 번도
+ *   안 겹치는** 가장 큰 수다 (18 이면 2000번에 7번, 20 이면 21번, 30 은 씨앗 하나에서만
+ *   통과했다). 예전 반경 13 · 50마리도 같은 방식으로 0번이었다 — 같은 여유를 지킨다.
+ *   `zones.test.ts` 의 "무리 안에서 몬스터가 서로 겹치지 않는다" 가 잡는다.
+ *   stat-balance.md 의 단위(한 그룹 50마리)와는 이제 어긋난다.
+ * - 보스는 없다. 보스 종(`boss00`~)은 던전·전직 시험에서만 선다.
  */
-const BOSS_SPOT: [number, number] = [0, 23];
-
-/**
- * 무리 하나의 마릿수와 반경.
- *
- * 밸런스 설계(`docs/features/stat-balance.md`)의 단위가 **한 그룹 50마리**다 —
- * 범위 스킬로 그 50마리를 15초에 정리하고 HP 50% 를 잃는 것이 전 구간의 기준이다.
- * 그래서 무리 하나를 50마리로 놓는다. 존 하나 = 사냥터 하나에 무리 넷 + 보스 하나.
- *
- * 반경 8 에 50마리를 넣으면 `scatterSpawn` 이 빈 자리를 못 찾는다. 한 마리가
- * 차지하는 넓이가 같으려면 반경이 √(50/20) = 1.58 배라야 한다 → 8 × 1.58 ≈ 13.
- * 네 귀퉁이 간격이 32 라 반경 13 끼리는 6m 떨어져 있다.
- */
-const PACK_COUNT = 50;
-const PACK_RADIUS = 13;
-
-/**
- * 무리를 놓을 자리 — 도착 지점과 차원문을 피해 네 귀퉁이에 둔다.
- *
- * ±28 → ±14 로 당겼다가(2026-09-23, 맵 2/3) "포탈이랑 너무 가깝다" 해서 ±16 으로
- * 다시 밀고, 그만큼 맵을 62 → 66 으로 키웠다 (같은 날, 사용자 선택). 반경 13 ·
- * 50마리는 그대로라 무리 바깥 끝이 16 + 13 = 29 로 **이동 가능 영역 끝(±29)에 딱
- * 닿는다.** 더 밀려면 맵을 또 키워야 한다. 그 대가로 전에 지키던 두 가지를 놓았다.
- *
- * 1. 도착 지점(0,0)이 무리의 **반경 + 인식 범위** 밖이 아니다 — 중심까지 22.6 이라
- *    인식 범위(최대 16)가 닿는다. 사냥터에 들어서면 몬스터가 달려온다.
- * 2. 자동 사냥 반경(`world.gd` 의 `HUNT_RADIUS` 27)이 옆 무리까지 닿는다 — 무리 간격이
- *    32 라 "무리 하나는 통째로(≥26) · 옆 무리는 안" 을 동시에 만족하는 반경이 없다.
- *
- * `zones.test.ts` 가 "무리가 영역 안" 과 "도착 지점이 무리 원 안은 아니다" 를 잡는다.
- */
-const PACKS: [number, number][] = [
-  [-16, -16],
-  [16, -16],
-  [-16, 16],
-  [16, 16],
-];
+const PACK_SPOT: [number, number] = [6, 6];
+const PACK_COUNT = 16;
+const PACK_RADIUS = 6.5;
 
 function buildField(theme: FieldTheme, index: number): ZoneDef {
-  const [weak, strong] = tierLevels(index);
+  const strong = tierLevels(index)[1];
 
   // 도착 지점은 맵 한가운데 하나뿐이다. 사슬 포탈이 없어졌으니 "어느 문으로
   // 들어왔나"를 따질 일이 없고, 이름 붙은 스폰(from_west 등)도 같이 사라졌다.
   return {
     id: theme.id,
     name: theme.name,
-    size: 66,
+    size: ZONE_SIZE,
     spawns: { default: [0, 0] },
     gate: gateFor(),
+    // 화면 아래 귀퉁이에 강한 종 무리 하나. 보스는 없다 (위 PACK_SPOT)
     monsters: [
-      // 보스는 사냥터마다 한 마리, 6시 방향에 선다. 15분에 한 번 나온다.
-      { kind: bossIdFor(index), x: BOSS_SPOT[0], z: BOSS_SPOT[1], radius: 3, count: 1, respawnMs: 900000 },
-      { kind: monsterIdFor(weak), x: PACKS[0]![0], z: PACKS[0]![1], radius: PACK_RADIUS, count: PACK_COUNT, respawnMs: 10000 },
-      { kind: monsterIdFor(weak), x: PACKS[1]![0], z: PACKS[1]![1], radius: PACK_RADIUS, count: PACK_COUNT, respawnMs: 10000 },
-      { kind: monsterIdFor(strong), x: PACKS[2]![0], z: PACKS[2]![1], radius: PACK_RADIUS, count: PACK_COUNT, respawnMs: 10000 },
-      { kind: monsterIdFor(strong), x: PACKS[3]![0], z: PACKS[3]![1], radius: PACK_RADIUS, count: PACK_COUNT, respawnMs: 10000 },
+      { kind: monsterIdFor(strong), x: PACK_SPOT[0], z: PACK_SPOT[1], radius: PACK_RADIUS, count: PACK_COUNT, respawnMs: 10000 },
     ],
     env: envFor(theme),
   };
@@ -187,7 +163,7 @@ function buildField(theme: FieldTheme, index: number): ZoneDef {
 const VILLAGE: ZoneDef = {
   id: 'village',
   name: '마을',
-  size: 66,
+  size: ZONE_SIZE,
   spawns: { default: [0, 0] },
   // 사냥터로 나가는 유일한 문. 사냥터에 선 것과 같은 자리·같은 색이다.
   gate: gateFor(),
@@ -196,7 +172,7 @@ const VILLAGE: ZoneDef = {
   // 창(`NpcPanel`), 모델(`merchant`·`smith`·`villager_*`)은 남아 있다 — 줄만 되살리면 선다
   // → docs/features/npc-town.md
   npcs: [
-    // 전직 — 차원문(4, 0) 뒤쪽. 닿는 거리(4.5) 끝에 서도 문(2.6) 밖이다.
+    // 전직 — 화면 아래 귀퉁이 쪽. 문(화면 맨 위 (-9, -9))과 맵 반대편이다.
     // 누르면 다음 전직 버튼이 뜨고, 레벨이 되면 시험(보스)으로 보낸다 (jobAdvance.ts)
     { name: '전직관 레온', job: 'fighter', look: 'trainer', x: 7, z: 7, role: 'jobs', title: '전직' },
   ],

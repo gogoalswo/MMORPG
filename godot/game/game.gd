@@ -3441,6 +3441,8 @@ func _apply_play_mode() -> void:
 			_transport.send(&"testKit", {})
 			# 200레벨로 시작한다 — 한 번만 (`World.grant_test_level`)
 			_transport.send(&"testLevel", {})
+			# 모든 스킬을 배우고 전직도 끝까지 — 한 번만 (`World.grant_test_skills`)
+			_transport.send(&"testSkills", {})
 			_refresh_switches()
 			_set_cheats_open(false)
 		PlayMode.NORMAL:

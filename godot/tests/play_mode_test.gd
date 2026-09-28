@@ -39,7 +39,7 @@ func _run() -> void:
 	await _case(PlayMode.NORMAL)
 	PlayMode.current = ""
 	if _failed == 0:
-		print("  초기화 단추: 두 번에 지움 · 테스트 모드: 무적·쿨타임 0 켬, 목록 접힘, 장비 42종·크리스탈 300·Lv200 · 일반 모드: 전부 끔, 목록 숨김")
+		print("  초기화 단추: 두 번에 지움 · 테스트 모드: 무적·쿨타임 0 켬, 목록 접힘, 장비 42종·크리스탈 300·Lv200·스킬 전부 · 일반 모드: 전부 끔, 목록 숨김")
 	quit(1 if _failed > 0 else 0)
 
 
@@ -64,6 +64,7 @@ func _case(mode: String) -> void:
 	if test:
 		_check_test_kit(me)
 		await _check_test_level(game, me)
+		await _check_test_skills(game, me)
 	# 다음 경우를 위해 되돌린다 — 쿨타임 스위치는 표(static)라 장면을 치워도 남는다
 	Skills.set_switch("cooldownOff", false)
 	game.queue_free()
@@ -103,6 +104,21 @@ func _check_test_level(game: Node3D, me: Dictionary) -> void:
 	var again := int(game._transport.snapshot().players[game._transport.my_id()].get("level", 0))
 	if again != 50:
 		_fail("테스트 모드: 200레벨은 한 번만 줘야 한다 — 50 으로 낮췄는데 Lv%d" % again)
+
+
+## 테스트 모드는 모든 스킬을 배우고 전직도 끝까지 올린 채 시작한다 — 한 번만 (2026-09-28).
+## 액션바에서 빼 둔 뒤 다시 들어와도 빈 칸이 도로 채워지면 안 된다
+func _check_test_skills(game: Node3D, me: Dictionary) -> void:
+	for id in Skills.for_job(str(me.job)):
+		if not (str(id) in me.skills):
+			_fail("테스트 모드: 스킬 %s 를 배운 채 시작해야 한다" % id)
+	if int(me.job_tier) != Skills.job_advances().size():
+		_fail("테스트 모드: 전직이 %d차여야 한다 — %d차" % [Skills.job_advances().size(), int(me.job_tier)])
+	me.skill_bar.clear()
+	game._transport.send(&"testSkills", {})
+	await process_frame
+	if not me.skill_bar.is_empty():
+		_fail("테스트 모드: 스킬은 한 번만 줘야 한다 — 비운 액션바가 %s 로 채워졌다" % [me.skill_bar])
 
 
 ## 테스트 모드 꾸러미 — 모든 장비 등급별로 하나씩(+0), 크리스탈 300개 (2026-09-26)

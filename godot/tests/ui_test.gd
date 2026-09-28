@@ -1648,6 +1648,20 @@ func _case_skills(game: Node3D) -> void:
 			_fail("%s 데미지 줄이 '%s' 여야 하는데 '%s'" % [want[0], want[1], Skills.damage_text(Skills.all()[want[0]])])
 	if not game._skill_cells[ids.size() - 1].get_node("pick").visible:
 		_fail("고른 칸에 테두리가 안 뜬다")
+	# 설명이 한 줄이든 두 줄이든 창이 움직이지 않는다 — 두 줄 기준으로 높이를 잡아 둔다
+	var by_len := ids.duplicate()
+	by_len.sort_custom(func(a, b): return str(Skills.all()[a].description).length() < str(Skills.all()[b].description).length())
+	var tops := []
+	for id in [by_len[0], by_len[by_len.size() - 1]]:
+		game._pick_skill(ids.find(id))
+		await process_frame
+		await process_frame
+		tops.append([game._skill_big.get_global_rect().position.y, game._skill_grid.get_global_rect().position.y, game._skill_desc.get_line_count()])
+	if tops[0][0] != tops[1][0] or tops[0][1] != tops[1][1]:
+		_fail("설명 줄 수(%d → %d)에 따라 스킬창이 움직인다: 큰 아이콘 y %.0f → %.0f, 목록 y %.0f → %.0f" % [tops[0][2], tops[1][2], tops[0][0], tops[1][0], tops[0][1], tops[1][1]])
+	if tops[1][2] > game.SKILL_DESC_LINES:
+		_fail("가장 긴 설명이 %d줄이라 두 줄 기준을 넘는다" % tops[1][2])
+	game._pick_skill(ids.size() - 1)
 	# 배운 것은 레벨 글자를 지우고, 안 배운 것은 "Lv.N 습득"
 	for index in ids.size():
 		var badge: String = game._skill_cells[index].find_child("badge", true, false).text

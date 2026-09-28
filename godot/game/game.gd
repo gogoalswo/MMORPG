@@ -88,6 +88,10 @@ const SKILL_GAP := 10
 ## 스킬창 셋째 칸(강화) 폭
 const UPGRADE_W := 280
 const SKILL_INSET := 5
+## 스킬창 설명 칸이 늘 잡아 두는 줄 수 — 설명 두 줄 + 빈 줄 + 데미지 줄.
+## 설명이 한 줄이든 두 줄이든 칸 높이를 **두 줄 기준**으로 고정한다 (2026-09-28 요청).
+## 칸이 줄 수를 따라 자라면 세 칸을 가운데에 모으는 `CenterContainer` 가 창 전체를 위아래로 밀었다
+const SKILL_DESC_LINES := 4
 ## 퀵슬롯 위 한 묶음 (2026-09-20 요청). 레벨 배지 한 변과 체력 막대 높이다.
 ## **막대 길이는 안 정한다** — 세로 상자가 가장 넓은 자식(퀵슬롯 줄)에 맞춰 준다.
 ## 막대는 **테두리 두께의 두 배보다 높아야 한다** — 34 에 여백 18 을 주었더니
@@ -2978,7 +2982,9 @@ func _build_skill_panel() -> void:
 	# 왼쪽 — 설명
 	var left := VBoxContainer.new()
 	left.custom_minimum_size = Vector2(380, 0)
-	left.add_theme_constant_override("separation", 12)
+	# 8 — 설명을 두 줄 기준으로 잡으면 왼쪽 칸이 창에서 가장 길어져, 12 로는 720 을 11px 넘었다
+	# (그 전에도 두 줄 설명을 고르면 넘었다 — 731px)
+	left.add_theme_constant_override("separation", 8)
 	columns.add_child(left)
 
 	_skill_big = _make_skill_cell(150, "ui_slot", Callable())
@@ -3002,8 +3008,12 @@ func _build_skill_panel() -> void:
 	_skill_desc = Label.new()
 	_skill_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_skill_desc.add_theme_font_size_override("font_size", 20)
-	_skill_desc.custom_minimum_size = Vector2(340, 0)
 	_sub_box(left, true).add_child(_skill_desc)
+	# 트리에 붙은 뒤에 재야 테마 글꼴(`_make_theme`)로 잰다
+	# 줄 간격은 줄 사이에만 들어간다 — N줄이면 N-1번
+	var spacing := _skill_desc.get_theme_constant("line_spacing")
+	var desc_h := (_skill_desc.get_theme_font("font").get_height(20) + spacing) * SKILL_DESC_LINES - spacing
+	_skill_desc.custom_minimum_size = Vector2(340, ceilf(desc_h))
 
 	# 오른쪽 — 고르기와 장착/해제
 	var right := VBoxContainer.new()

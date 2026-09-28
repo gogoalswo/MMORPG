@@ -99,9 +99,10 @@ const MOTE_COUNT := 36
 const MOTE_LIFE := 0.5
 const COLOR_MOTE := Color("#ffe3a0")
 
-## 화면 흔들림 — 낙뢰·빙주각보다 약하다 (땅을 치는 게 아니라 앞으로 쏜다)
-const SHAKE := 0.07
-const SHAKE_TIME := 0.18
+## 화면 흔들림 — 멈췄다가 기가 터져 나가는 순간이라 세게 준다 (2026-09-29 요청: "더 강하게").
+## 처음 0.07m · 0.18초는 가장 약했다. 천붕각(0.14)보다 세고 폭렬권(0.2)보다 조금 약하다
+const SHAKE := 0.18
+const SHAKE_TIME := 0.35
 
 static var _swirl_meshes: Array = []
 static var _streak_mesh: ArrayMesh

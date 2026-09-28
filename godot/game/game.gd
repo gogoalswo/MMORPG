@@ -113,6 +113,9 @@ const MENU_INSET := 3
 ## ("아이콘이랑 글씨가 겹쳐 있는데, 스크린샷처럼 아래에 넣어", 같은 날)
 const MENU_CAPTION_GAP := 1
 const MENU_CAPTION_FONT := 14
+## 가방 단추 오른쪽 위 빨간 점 — 새 장비를 얻었는데 아직 가방을 안 열어 봤다 (2026-09-28 요청
+## "신규 아이템 획득하면 가방에 레드닷 표시해줘"). 아이콘 네모 모서리에 반쯤 걸친다
+const RED_DOT := 14
 ## 창 닫기 X. **모든 창이 오른쪽 위에 이것 하나를 둔다** (2026-09-20 요청)
 const CLOSE_BTN := 44
 ## 창 테두리(PANEL_MARGIN 26)보다 안쪽으로 들여야 모서리 장식에 안 걸친다
@@ -302,6 +305,8 @@ var _auto_reset: Button
 var _auto_shown := ""
 ## 오른쪽 위 메뉴 단추 둘 (스킬·가방)
 var _menu_cells: Array = []
+## 가방 단추의 빨간 점 (`_add_red_dot`). 장비를 얻으면 켜고, 가방을 열면 끈다
+var _bag_dot: Control
 var _skill_panel: PanelContainer
 ## 스킬창. 틀은 한 번 짓고 `_redraw_skills` 가 채운다
 var _skill_big: PanelContainer
@@ -490,6 +495,9 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 					payload.get("gold", 0), Items.get_item(got).get("name", got)
 				]
 				_chat.add_item(str(Items.get_item(got).get("name", got)), int(payload.item.get("grade", 1)))
+				# 가방을 보고 있으면 이미 본 것이다 — 닫혀 있을 때만 점을 켠다
+				if not _bag_panel.visible:
+					_bag_dot.visible = true
 			if int(payload.get("crystal", 0)) > 0:
 				_chat.add_line("재료 획득", Items.stack_name({"id": Items.crystal_id()}), INV_TEXT)
 		&"inventory":
@@ -798,6 +806,7 @@ func _icon_button(
 	cell.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 
 	var inset := MarginContainer.new()
+	inset.name = "inset"
 	inset.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	for side in ["left", "right", "top", "bottom"]:
 		inset.add_theme_constant_override("margin_" + side, MENU_INSET)
@@ -851,6 +860,33 @@ func _icon_button(
 	hit.pressed.connect(on_press)
 	cell.add_child(hit)
 	return cell
+
+
+## 메뉴 단추 아이콘 네모의 오른쪽 위 모서리에 빨간 점을 단다 — 처음엔 숨겨 둔다.
+## 컨테이너 안에서는 자리를 못 잡으니 아이콘 네모(`inset`)를 꽉 채운 빈 `Control` 에 앵커로 붙인다.
+## 글자 줄이 아니라 아이콘에 붙여야 그림 모서리에 뜬다. 짙은 테를 둘러 밝은 그림 위에서도 읽힌다
+func _add_red_dot(cell: Control) -> Control:
+	var holder := Control.new()
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cell.find_child("inset", true, false).add_child(holder)
+
+	var dot := Panel.new()
+	dot.name = "red_dot"
+	dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("#e3342b")
+	style.border_color = Color("#3a0b08")
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(int(RED_DOT * 0.5))
+	dot.add_theme_stylebox_override("panel", style)
+	dot.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	dot.offset_left = -RED_DOT
+	dot.offset_right = 0
+	dot.offset_top = 0
+	dot.offset_bottom = RED_DOT
+	dot.visible = false
+	holder.add_child(dot)
+	return dot
 
 
 ## 고리 그림이 없을 때 대신 도는 화살표 둘. 칸 둘레를 따라 반원씩 긋고
@@ -1818,6 +1854,7 @@ func _toggle_bag() -> void:
 	_crystal_target = {}
 	_bag_drag.forget()
 	if open:
+		_bag_dot.visible = false
 		_redraw_bag()
 
 
@@ -2540,6 +2577,7 @@ func _build_skill_bar() -> void:
 	# 오른쪽 위 메뉴. 2026-09-19 에 글자를 뺐다가 **2026-09-28 에 다시 아래에 달았다** —
 	# 그림만으로는 무엇인지 헷갈린다는 요청 ("이런식으로 텍스트 넣도록"). 그림도 같은 날
 	# 받은 그림(리니지풍 칠한 아이콘)대로 일곱 장 전부 갈았다 (docs/features/hud.md "메뉴 아이콘")
+	var bag_cell := _icon_button("ui_icon_bag", "가방", _toggle_bag, MENU_BTN, true)
 	_menu_cells = [
 		# 캐릭터 정보 — 스킬 왼쪽, 메뉴 맨 앞 (2026-09-25 요청 "상세 정보창을 따로 띄우고
 		# 버튼을 만들어"). 그림은 기사 투구
@@ -2551,7 +2589,7 @@ func _build_skill_bar() -> void:
 		# 크리스탈 강화 — 가방 바로 왼쪽 (2026-09-24 요청 "크리스탈 사용해서 강화하는 ui도 따로
 		# 버튼을 만들고 싶어. 가방 옆에"). 오른쪽 옆은 던전이라 강화를 한 칸 밀었다
 		_icon_button("ui_icon_crystal", "크리스탈", _toggle_crystal, MENU_BTN, true),
-		_icon_button("ui_icon_bag", "가방", _toggle_bag, MENU_BTN, true),
+		bag_cell,
 		# 던전 — 가방 바로 옆 (2026-09-23 요청)
 		_icon_button("ui_icon_dungeon", "던전", _toggle_dungeon, MENU_BTN, true),
 	]
@@ -2565,6 +2603,7 @@ func _build_skill_bar() -> void:
 	]
 	for cell in _menu_cells:
 		menu.add_child(cell)
+	_bag_dot = _add_red_dot(bag_cell)
 	menu.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE, 20)
 	menu.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 

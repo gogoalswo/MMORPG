@@ -90,6 +90,15 @@ func _run() -> void:
 		await RenderingServer.frame_post_draw
 		root.get_texture().get_image().save_png("res://../logs/dungeon.png")
 		print("logs/dungeon.png")
+		# 토벌을 누르면 그 위에 단계 창 — 보상이 많은 5단계를 골라 둔다
+		var dungeon: DungeonPanel = game._dungeon_panel
+		dungeon.card(0).pressed.emit()
+		dungeon._select("raid_05")
+		for i in 8:
+			await process_frame
+		await RenderingServer.frame_post_draw
+		root.get_texture().get_image().save_png("res://../logs/dungeon_stage.png")
+		print("logs/dungeon_stage.png")
 		quit(0)
 		return
 

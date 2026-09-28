@@ -36,6 +36,7 @@ test('격투가 — 할퀴기는 기본, 낙뢰 1차 · 빙주각 2차 · 천붕
   assert.equal(tierOf('thunder_fall'), 1);
   assert.equal(tierOf('frost_pillar'), 2);
   assert.equal(tierOf('sky_breaker'), 3);
+  assert.equal(tierOf('ki_burst'), 4);
   // 요구 레벨이 그 단계의 전직 레벨과 같다 — 스킬창의 "Lv.N" 이 전직 레벨을 가리킨다
   for (const id of JOB_SKILLS.fighter) {
     const tier = tierOf(id);

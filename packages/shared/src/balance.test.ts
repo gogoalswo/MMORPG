@@ -8,6 +8,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { JOB_IDS } from './character.ts';
 import { MONSTER_STATS } from './monsterTable.ts';
+import { GEAR_DROP_MIN_GAP, GEAR_DROP_RATE, GEAR_DROP_TARGET, dropField } from './gear.ts';
+import { KILL_SECONDS } from './balance.ts';
 import {
   CLEAR_TIME,
   DEF_BASE,
@@ -346,6 +348,21 @@ test('성장 곡선 — 만렙까지 2,880시간(120일)이 목표다', () => {
   // 초반 세 구간은 레벨당 2 / 3 / 4.5분 — 경험치 3배를 곱하기 전 시간이다 (실제로는 1/3)
   for (const [level, minutes] of [[1, 2], [11, 3], [21, 4.5]] as Array<[number, number]>) {
     assert.equal(Math.round((levelSeconds(level) / 60) * 10) / 10, minutes, `Lv${level} 분`);
+  }
+});
+
+test('드랍률이 한 마리 4초 기준 공식과 맞는다', () => {
+  // 2026-09-28 지시: "드랍 확률도 한 마리 4초 기준으로 맞춰". `gear.ts` 는 이 파일을
+  // 못 불러서 값을 박아 뒀다 — 성장 곡선·`KILL_SECONDS` 를 바꾸면 여기서 걸린다
+  for (let g = 1; g <= GEAR_DROP_RATE.length; g++) {
+    const f = dropField(g);
+    let kills = 0;
+    for (let level = (f - 1) * 10 + 1; level <= Math.min(f * 10, MAX_LEVEL - 1); level++) {
+      kills += killsPerLevel(level);
+    }
+    const want = Math.min(GEAR_DROP_TARGET[g - 1]! / kills, KILL_SECONDS / GEAR_DROP_MIN_GAP) * 100;
+    const got = GEAR_DROP_RATE[g - 1]!;
+    assert.ok(Math.abs(got / want - 1) < 0.001, `등급 ${g}: ${got}% 인데 공식은 ${want.toPrecision(4)}%`);
   }
 });
 

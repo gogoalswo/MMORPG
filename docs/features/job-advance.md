@@ -31,7 +31,8 @@
 | `packages/shared/src/jobAdvance.test.ts` | 레벨 · 존마다 보스 하나 · 보스 = 전직 레벨 - 1 · 격투가 스킬 단계 · 잠금 |
 | `scripts/export-shared.mjs` | `skills.json` 의 `jobAdvances` 로 내보낸다 |
 | `godot/world/skills.gd` | `tier_of` · `job_advance(tier)` · `job_tier_of_zone` · `unlocked_at` · `can_learn(…, job_tier)` |
-| `godot/world/world.gd` | `player.job_tier` · `_job_state`(NPC 창에 싣는 것) · **`job_advance`**(버튼) · **`_check_job_trial`**(보스 처치 → 전직) · `travel` 이 시험 존을 거른다 · `learn_skill`·`cast` 의 잠금 |
+| `godot/world/world.gd` | `player.job_tier` · `_job_state`(NPC 창에 싣는 것) · **`job_advance`**(버튼) · `travel` 이 시험 존을 거른다 · `cast` 의 잠금 |
+| `godot/world/ledger.gd` | **`_check_job_trial`**(보스 처치 → 전직, `kill` 안에서) · `learn_skill` 의 잠금 → [server.md](server.md) |
 | `godot/world/save.gd` | `job_tier` 저장 (옛 저장은 0) |
 | `godot/net/local_transport.gd` | `jobAdvance` 요청 |
 | **`godot/game/job_panel.gd`** | ★ **전직 창** (`JobPanel`) — 조각으로 조립한다. 아래 "창" |
@@ -44,8 +45,8 @@
 - **버튼은 다음 전직 하나만** 뜬다 — 2차면 "3차 전직". 4차를 마치면 "모든 전직을 마쳤습니다".
 - **버튼이 눌리는지는 World 가 정한다** (`_job_state.ready`). 누르면 `jobAdvance` 요청 —
   NPC 곁인지(`NPC_REACH`) · 레벨 · 다음 단계인지를 `job_advance` 가 **다시 본다.**
-- **전직은 보스를 잡아야 된다.** 시험에 들어가기만 해서는 안 된다. `_kill` →
-  `_check_job_trial` 이 "지금 존이 시험이고 · 잡은 게 보스이고 · 그 시험이 **바로 다음
+- **전직은 보스를 잡아야 된다.** 시험에 들어가기만 해서는 안 된다. `World._kill` →
+  `Ledger.kill` → `_check_job_trial` 이 "지금 존이 시험이고 · 잡은 게 보스이고 · 그 시험이 **바로 다음
   단계**이고 · 레벨이 되는지" 를 보고 `job_tier` 를 올린다. 지난 시험을 다시 잡아도 안 오른다.
 - **시험 존은 전직 NPC 로만 간다.** `travel`(차원문 · 던전 창)은 시험 존을 버린다.
   차원문 목록에도 던전 창에도 없다. **나오는 길은 차원문**이다 (다른 존과 같은 자리).

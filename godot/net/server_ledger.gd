@@ -27,6 +27,8 @@ const TOKEN_PATH := "user://account.json"
 const RETRY_MS := 2000
 
 var url := ""
+## 캐릭터 이름 — hello 에 싣는다. welcome 이 오면 서버가 확정한 이름으로 바뀐다
+var name := ""
 ## 끊긴 뒤 다시 붙기까지 (테스트는 줄인다)
 var retry_ms := RETRY_MS
 ## welcome 을 받았나. 받기 전의 요청은 쌓아 뒀다가 받으면 보낸다
@@ -101,7 +103,7 @@ func poll() -> void:
 		WebSocketPeer.STATE_OPEN:
 			if not _hello_sent:
 				_hello_sent = true
-				_ws.send_text(JSON.stringify({"t": "hello", "token": _load_token()}))
+				_ws.send_text(JSON.stringify({"t": "hello", "token": _load_token(), "name": name}))
 			while _ws.get_available_packet_count() > 0:
 				_on_message(JSON.parse_string(_ws.get_packet().get_string_from_utf8()))
 		WebSocketPeer.STATE_CLOSED:
@@ -134,6 +136,7 @@ func _on_message(raw: Variant) -> void:
 		"welcome":
 			if message.has("token"):
 				_save_token(str(message.token))
+			name = str(message.get("name", name))
 			_welcome(int(message.get("last_req", 0)))
 			welcomed.emit(message.get("ledger", {}))
 			for line in message.get("chat", []):

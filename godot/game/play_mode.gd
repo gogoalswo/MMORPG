@@ -13,3 +13,5 @@ const TEST := "test"
 const NORMAL := "normal"
 
 static var current := ""
+## 시작 화면에서 정한 캐릭터 이름 (`Names` 규칙). 비어 있으면 저장에 있던 이름을 그대로 쓴다
+static var player_name := ""

@@ -67,6 +67,7 @@ func _init(account_store: AccountStore) -> void:
 	# 랭킹은 켤 때 계정 파일을 전부 읽어 세운다 — 그 뒤로는 장부가 바뀔 때마다 그 줄만 고친다
 	for saved in store.all():
 		_board[saved.id] = _board_row(str(saved.id), saved.ledger)
+		_board[saved.id].name = name_of(saved)
 
 
 ## 연결 하나의 상태는 `session` 사전에 둔다 (`server_main` 이 연결마다 하나씩 쥔다)
@@ -102,8 +103,16 @@ func _hello(session: Dictionary, message: Dictionary) -> Dictionary:
 	else:
 		account = _accounts.get_or_add(account.id, account)
 	session["account"] = account
+	# 이름 — **같은 규칙(`Names`)으로 다시 거른다.** 안 맞으면 버리고 있던 이름을 그대로 쓴다.
+	# 들어올 때마다 새 이름을 주면 바꾼다 (시작 화면에서 고칠 수 있다)
+	var wanted := Names.clean(str(message.get("name", "")))
+	if Names.valid(wanted) and str(account.get("name", "")) != wanted:
+		account["name"] = wanted
+		store.write(account)
+		_touch_board(account)
 	var reply := {
 		"t": "welcome",
+		"name": name_of(account),
 		"ledger": Ledger.view(account.ledger),
 		"last_req": int(account.get("last_req", 0)),
 		"chat": _chat_log.duplicate(true),  # 들어오기 전에 오간 말 — 채팅창이 비어 있지 않게
@@ -192,8 +201,9 @@ func _board_row(id: String, p: Dictionary) -> Dictionary:
 ## 장부가 바뀐 계정의 줄만 고친다. 레벨·경험치가 그대로면 다시 줄 세우지 않는다
 func _touch_board(account: Dictionary) -> void:
 	var row := _board_row(str(account.id), account.ledger)
+	row.name = name_of(account)
 	var old: Dictionary = _board.get(account.id, {})
-	if old.get("level") == row.level and old.get("exp") == row.exp:
+	if old.get("level") == row.level and old.get("exp") == row.exp and old.get("name") == row.name:
 		return
 	_board[account.id] = row
 	_board_order.clear()
@@ -231,7 +241,7 @@ func _chat(session: Dictionary, message: Dictionary) -> Dictionary:
 	if bucket.left < 1.0:
 		return _error(null, "chat_limit")
 	bucket.left = float(bucket.left) - 1.0
-	_say({"t": "chat", "from": display_name(str(account.id)), "text": text})
+	_say({"t": "chat", "from": name_of(account), "text": text})
 	return {}
 
 
@@ -253,7 +263,7 @@ func _announce(account: Dictionary, events: Array) -> void:
 	if best < ANNOUNCE_ENHANCE:
 		return
 	var what := ("%s +%d" % [item, best]) if not item.is_empty() else "+%d" % best
-	_say({"t": "chat", "system": true, "text": "%s 님이 %s 강화에 성공했습니다" % [display_name(str(account.id)), what]})
+	_say({"t": "chat", "system": true, "text": "%s 님이 %s 강화에 성공했습니다" % [name_of(account), what]})
 
 
 func _say(line: Dictionary) -> void:
@@ -270,8 +280,13 @@ func take_outbox() -> Array:
 	return out
 
 
-## 채팅에 보이는 이름 — 캐릭터 이름을 짓는 기능이 아직 없어서 계정 id 앞 네 자리로 짓는다.
-## 이름 짓기가 생기면 여기만 바꾼다
+## 채팅·랭킹에 보이는 이름 — 계정의 이름(시작 화면에서 정한 것, `Names` 규칙), 없으면 `display_name`
+static func name_of(account: Dictionary) -> String:
+	var name := str(account.get("name", ""))
+	return name if Names.valid(name) else display_name(str(account.get("id", "")))
+
+
+## 이름이 없는 계정의 이름 — `모험가#` + 계정 id 앞 네 자리 (`#` 이 있어 `Names` 규칙의 이름과 안 겹친다)
 static func display_name(account_id: String) -> String:
 	return "모험가#" + account_id.substr(0, 4).to_upper()
 

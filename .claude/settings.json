@@ -1,0 +1,15 @@
+{
+  "language": "korean",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "printf %s \"{\\\"hookSpecificOutput\\\":{\\\"hookEventName\\\":\\\"UserPromptSubmit\\\",\\\"additionalContext\\\":\\\"항상 한국어로 답변한다 — 답변·질문·표·도구 호출 사이의 진행 설명까지 전부. 코드 식별자·파일명·명령어만 원래 글자 그대로 둔다 (CLAUDE.md 규칙).\\\"}}\""
+          }
+        ]
+      }
+    ]
+  }
+}

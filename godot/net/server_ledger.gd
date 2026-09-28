@@ -17,6 +17,8 @@ signal replied(ledger: Dictionary, events: Array)
 signal failed(reason: String)
 ## 채팅 한 줄 `{from, text}` 또는 알림 `{system: true, text}` — welcome 때는 지난 줄들이 차례로 온다
 signal chat(line: Dictionary)
+## 랭킹 답 `{top: [{rank, name, level, exp}], me: {rank, level, exp}, total}`
+signal ranked(board: Dictionary)
 
 const TOKEN_PATH := "user://account.json"
 const RETRY_MS := 2000
@@ -56,6 +58,14 @@ func say(text: String) -> bool:
 	if not ready or text.strip_edges().is_empty():
 		return false
 	_ws.send_text(JSON.stringify({"t": "chat", "text": text}))
+	return true
+
+
+## 랭킹을 묻는다. 붙어 있지 않으면 false — 답은 `ranked` 로 온다
+func ask_rank() -> bool:
+	if not ready:
+		return false
+	_ws.send_text(JSON.stringify({"t": "rank"}))
 	return true
 
 
@@ -118,6 +128,8 @@ func _on_message(raw: Variant) -> void:
 				chat.emit(line)
 		"chat":
 			chat.emit(message)
+		"rank":
+			ranked.emit(message)
 		"result":
 			_drop(int(message.get("id", 0)))
 			replied.emit(message.get("ledger", {}), message.get("events", []))

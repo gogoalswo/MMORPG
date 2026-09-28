@@ -54,6 +54,22 @@ func find(token: String) -> Dictionary:
 	return Ledger.from_json(parsed)
 
 
+## 저장된 계정 전부 `[{id, ledger}]` — 서버가 켤 때 랭킹을 세우려고 한 번 읽는다
+## (docs/features/server.md "랭킹"). 토큰 확인 없이 읽는다 — 서버 안에서만 쓴다
+func all() -> Array:
+	var out: Array = []
+	var dir := DirAccess.open(_dir)
+	if dir == null:
+		return out
+	for name in dir.get_files():
+		if not name.ends_with(".json") or not _valid_id(name.get_basename()):
+			continue
+		var parsed = JSON.parse_string(FileAccess.get_file_as_string(_dir.path_join(name)))
+		if typeof(parsed) == TYPE_DICTIONARY and int(parsed.get("version", 0)) == VERSION:
+			out.append({"id": name.get_basename(), "ledger": Ledger.from_json(parsed.get("ledger", {}))})
+	return out
+
+
 ## 통째로 쓴다. 임시 파일 → 이름 바꾸기
 func write(account: Dictionary) -> bool:
 	var id := str(account.get("id", ""))

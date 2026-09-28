@@ -42,6 +42,8 @@ const GEAR_CELL := 64
 const DETAIL_ICON := 92
 ## 상세 창 폭
 const DETAIL_W := 300
+## 랭킹 창 표 높이 — 넘치면 창 안에서 굴린다 (위 50명)
+const RANK_LIST_H := 360
 ## 아이템 상세 창(고른 것 · 착용 중 비교)의 폭 · 큰 칸 · 글자. **작게 둔다** —
 ## 두 창을 인벤토리 높이(670) 안에 위아래로 쌓는다 (2026-09-25 요청: "상세 정보창
 ## 크기를 좀 줄여" + 착용 중 장비 비교). 옆으로는 자리가 없다: 1280 폭에 장비·상세·
@@ -354,6 +356,10 @@ var _crystal_panel: PanelContainer
 # 캐릭터 정보 창 — 오른쪽 위 "정보" 단추로 여는 **따로 뜨는 창**. 묶음마다 이름·값 표 하나
 # (`CHAR_SPLIT` + 전투 한 묶음). `_char_last` 는 지난번에 적은 줄 — 같으면 다시 안 짓는다
 var _char_panel: PanelContainer
+## 랭킹 창 — 서버에 붙었을 때만 메뉴에 단추가 선다 (docs/features/server.md "랭킹")
+var _rank_panel: PanelContainer
+var _rank_grid: GridContainer
+var _rank_note: Label
 var _char_head: Label
 var _char_grids: Array = []
 var _char_last := ""
@@ -496,6 +502,8 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 				_redraw_skills()
 		&"chat":
 			_chat.add_chat(str(payload.get("from", "")), str(payload.get("text", "")), bool(payload.get("system", false)))
+		&"rank":
+			_fill_rank(payload)
 		&"notice":
 			_last_event = str(payload.get("text", ""))
 		&"enhanceResult":
@@ -604,7 +612,7 @@ func _build_persistent() -> void:
 	_chat = ChatLog.new()
 	_ui_root.add_child(_chat)
 	# 서버에 붙었을 때만 입력칸이 선다 — 보낸 말은 서버가 방송해서 돌아와야 창에 적힌다
-	_chat.set_online(_transport.can_chat())
+	_chat.set_online(_transport.online())
 	_chat.submitted.connect(func(text: String) -> void: _transport.send(&"chat", {"text": text}))
 	_chat.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE)
 	_chat.grow_vertical = Control.GROW_DIRECTION_BEGIN
@@ -620,6 +628,7 @@ func _build_persistent() -> void:
 	_build_test_switches()
 	_build_bag_panel()
 	_build_char_panel()
+	_build_rank_panel()
 	_build_potion_panel()
 	_build_auto_panel()
 	_build_debug_panel()
@@ -641,6 +650,7 @@ func _build_persistent() -> void:
 	_close_button(_compare_panel, func() -> void: _compare_panel.visible = false, 0)
 	_close_button(_crystal_panel, _close_crystal, 0)
 	_close_button(_char_panel, _toggle_char, 0)
+	_close_button(_rank_panel, _toggle_rank, 0)
 	_close_button(_potion_panel, _toggle_potion_panel, 0)
 	_close_button(_auto_panel, _toggle_auto_panel, 0)
 	_close_button(_skill_panel, _toggle_skills)
@@ -1820,6 +1830,88 @@ func _toggle_gear() -> void:
 
 ## 오른쪽 위 "정보" · 캐릭터 정보 창 X — 여닫는다. **가방 창들과는 번갈아 뜬다** —
 ## 가운데 창이 상세 창 자리(인벤토리 왼쪽)를 덮기 때문이다. 가방·크리스탈 단추도 이 창을 닫는다
+## --- 랭킹 (docs/features/server.md "랭킹") ---
+
+## 랭킹 창 — 정보 창과 같은 틀(창 바탕 · 머리 줄 · 가는 줄 · 표). 값은 서버가 준 그대로 적는다
+func _build_rank_panel() -> void:
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ui_root.add_child(center)
+	_rank_panel = _window_panel()
+	center.add_child(_rank_panel)
+
+	var side := VBoxContainer.new()
+	side.custom_minimum_size = Vector2(DETAIL_W, 0)
+	side.add_theme_constant_override("separation", 8)
+	_rank_panel.add_child(side)
+	_window_title(side, "랭킹", 22)
+	var rule := ColorRect.new()
+	rule.color = INV_RULE
+	rule.custom_minimum_size = Vector2(0, 1)
+	side.add_child(rule)
+
+	# 줄이 많으면 창 안에서 굴린다 — 위 50명이 다 온다
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(0, RANK_LIST_H)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	side.add_child(scroll)
+	_rank_grid = GridContainer.new()
+	_rank_grid.columns = 4
+	_rank_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_rank_grid.add_theme_constant_override("h_separation", 16)
+	_rank_grid.add_theme_constant_override("v_separation", 6)
+	scroll.add_child(_rank_grid)
+
+	var foot := ColorRect.new()
+	foot.color = INV_RULE
+	foot.custom_minimum_size = Vector2(0, 1)
+	side.add_child(foot)
+	_rank_note = _inv_label("", 18, INV_TEXT)
+	side.add_child(_rank_note)
+
+
+func _toggle_rank() -> void:
+	var open := not _rank_panel.visible
+	_rank_panel.visible = open
+	if open:
+		_rank_panel.get_parent().move_to_front()
+		# 열 때마다 새로 묻는다 — 순위는 남이 사냥하는 동안에도 바뀐다
+		_rank_note.text = "불러오는 중…"
+		_transport.send(&"rank", {})
+
+
+## 서버의 답 `{top: [{rank, name, level, exp}], me: {rank, level, exp}, total}` 으로 표를 다시 짓는다.
+## 1~3위는 밝은 금빛, **내 줄**은 청록(채팅창 경험치 색)으로 칠한다. 경험치는 그 레벨의 % 로 적는다
+func _fill_rank(board: Dictionary) -> void:
+	for child in _rank_grid.get_children():
+		child.queue_free()
+	for head in ["순위", "이름", "레벨", "경험치"]:
+		_rank_grid.add_child(_inv_label(head, 16, INV_DIM))
+	var me: Dictionary = board.get("me", {})
+	for row in board.get("top", []):
+		var rank := int(row.get("rank", 0))
+		var tint := INV_TEXT
+		if rank == int(me.get("rank", -1)):
+			tint = ChatLog.EXP
+		elif rank <= 3:
+			tint = INV_GOLD_HI
+		_rank_grid.add_child(_inv_label("%d" % rank, 18, tint))
+		_rank_grid.add_child(_inv_label(str(row.get("name", "")), 18, tint))
+		_rank_grid.add_child(_inv_label("Lv.%d" % int(row.get("level", 1)), 18, tint))
+		_rank_grid.add_child(_inv_label(_rank_exp(int(row.get("level", 1)), int(row.get("exp", 0))), 18, tint))
+	if me.is_empty():
+		_rank_note.text = "아직 순위가 없습니다"
+	else:
+		_rank_note.text = "내 순위  %d위 / %d명 · Lv.%d %s" % [
+			int(me.rank), int(board.get("total", 0)), int(me.level), _rank_exp(int(me.level), int(me.exp))]
+
+
+static func _rank_exp(level: int, exp_now: int) -> String:
+	var need := Combat.exp_to_next(level)
+	return "%.1f%%" % (100.0 * exp_now / need) if need > 0 else "-"
+
+
 func _toggle_char() -> void:
 	var open := not _char_panel.visible
 	if open and _bag_panel.visible:
@@ -2462,6 +2554,12 @@ func _build_skill_bar() -> void:
 		_icon_button("ui_icon_bag", "가방", _toggle_bag, MENU_BTN, true),
 		# 던전 — 가방 바로 옆 (2026-09-23 요청)
 		_icon_button("ui_icon_dungeon", "던전", _toggle_dungeon, MENU_BTN, true),
+	]
+	# 랭킹 — 던전 옆. **서버에 붙었을 때만** 선다 (혼자 노는 판에는 견줄 사람이 없다).
+	# 그림(`ui_icon_rank`)은 아직 없다 — 없으면 아래 글자만 선다
+	if _transport.online():
+		_menu_cells.append(_icon_button("ui_icon_rank", "랭킹", _toggle_rank, MENU_BTN, true))
+	_menu_cells += [
 		# 설계(치트 목록) — 톱니바퀴 위 제도용 컴퍼스
 		_icon_button("ui_icon_design", "설계", _toggle_debug, MENU_BTN, true),
 	]

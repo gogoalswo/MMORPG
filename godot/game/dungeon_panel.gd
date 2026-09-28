@@ -25,9 +25,8 @@ const CARD_W := 300.0
 const CARD_ART := "dungeon_"
 const CARD_FALLBACK := {"raid": "ui_icon_dungeon"}
 const CARD_FALLBACK_ANY := "ui_gate_here"
-## 카드 틀(`ui_dungeon_card`, 231x384) 의 9조각 여백. 안쪽 판이 가장자리에서 26~36px 들어가 있다.
-## **던전 창 전체와 단계 창도 이 틀이다** (2026-09-28 요청: "테두리도 지금이랑 비슷한 톤으로")
-const CARD_MARGIN := 34
+## 카드 틀 여백(`CARD_MARGIN`)·제목·칸 색은 **차원문 창(`GatePanel`)으로 올렸다** (2026-09-28) —
+## 모든 창이 던전 결을 같이 쓰게 되어서다
 ## 전체 화면 틀 안쪽 여백 — 틀의 테(34)보다 조금 안쪽
 const PAGE_PAD := 44
 ## 그림 칸이 틀 가장자리에서 들어간 거리 — 틀의 닳은 테가 그림을 두른다
@@ -37,17 +36,8 @@ const ART_SHARE := 0.66
 ## 카드 위 장식(`ui_dungeon_crest`, 384x98)이 틀 위로 솟는 높이와 장식 높이
 const CREST_RISE := 26
 const CREST_H := 70
-## 그림이 아래로 녹아드는 색 — 틀 안쪽 판 색(#1b1c17)이다
-const CARD_DARK := Color("#1b1c17")
 const CARD_NAME_SIZE := 30
 const CARD_SUB_SIZE := 20
-const CARD_SUB_COLOR := Color("#c9b98a")
-## 맨 아래 "입장 가능" · 구분선 · 고른 단계의 금빛
-const CARD_GOLD := Color("#dfc97a")
-## 제목 글자 — 노란 제목(`TITLE_COLOR`) 대신 카드 이름과 같은 상아빛 (받은 그림의 제목 결)
-const PAGE_TITLE_COLOR := Color("#ece4cc")
-const PAGE_TITLE_SIZE := 32
-const EMBLEM := 44
 ## 막힌 카드는 통째로 이만큼 어둡게
 const LOCKED_TINT := Color(0.5, 0.5, 0.5)
 const OPEN_TEXT := "입장 가능"
@@ -65,9 +55,6 @@ const REWARD_ICON := 52
 const REWARD_FONT := 22
 const ENTER_TEXT := "입장"
 const ENTER_SIZE := Vector2(200, 60)
-## 칸 판 — 받은 그림의 보상 줄처럼 어둡고 테가 가늘다
-const CELL_BG := Color(0.1, 0.1, 0.09, 0.78)
-const CELL_LINE := Color("#3d3729")
 
 ## 지금 펼친 종류 id. 비었으면 단계 창이 닫혀 있다
 var _type := ""
@@ -99,7 +86,7 @@ static func make(frame_box := Callable(), icon := Callable(), item_icon := Calla
 	# **전체 화면이다** (2026-09-28 요청). 틀은 카드와 같은 닳은 돌판이다
 	panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	panel.add_theme_stylebox_override("panel", panel._box("ui_dungeon_card", CARD_MARGIN, PAGE_PAD))
-	panel._restyle_title(panel._title, "던전")
+	panel._restyle_title(panel._title, "던전", "ui_icon_dungeon")
 
 	var column := panel._scroll.get_parent()
 	panel._cards = HBoxContainer.new()
@@ -112,26 +99,6 @@ static func make(frame_box := Callable(), icon := Callable(), item_icon := Calla
 	column.remove_child(panel._scroll)
 	panel._build_stages()
 	return panel
-
-
-## 제목을 받은 그림처럼 — 왼쪽에 던전 문장, 상아빛 글자
-func _restyle_title(label: Label, text: String) -> void:
-	label.text = text
-	label.add_theme_color_override("font_color", PAGE_TITLE_COLOR)
-	label.add_theme_font_size_override("font_size", PAGE_TITLE_SIZE)
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	var emblem := TextureRect.new()
-	emblem.name = "Emblem"
-	emblem.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	emblem.texture = _piece("ui_icon_dungeon")
-	emblem.custom_minimum_size = Vector2(EMBLEM, EMBLEM)
-	emblem.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	emblem.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	emblem.visible = emblem.texture != null
-	var head := label.get_parent()
-	head.add_child(emblem)
-	head.move_child(emblem, label.get_index())
-	(head as BoxContainer).add_theme_constant_override("separation", 12)
 
 
 ## 카드 수·카드 (테스트용)
@@ -360,7 +327,7 @@ func _build_stages() -> void:
 	_stage_title = Label.new()
 	_stage_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(_stage_title)
-	_restyle_title(_stage_title, "")
+	_restyle_title(_stage_title, "", "ui_icon_dungeon")
 	_stage_close = _close_button()
 	_stage_close.name = "StageClose"
 	_stage_close.pressed.connect(_show_stages.bind(""))
@@ -432,11 +399,11 @@ func _build_stages() -> void:
 	_enter.add_theme_color_override("font_pressed_color", CARD_GOLD)
 	_enter.add_theme_color_override("font_hover_color", CARD_GOLD)
 	_enter.add_theme_color_override("font_disabled_color", HERE_COLOR)
-	# 입장은 단추 조각(`ui_button`) 그대로다 — 줄만 평평하게 바꿨다(`_row_box`)
+	# 입장은 단추 조각(`ui_button`) 그대로다 — 줄만 평평하다(`_row_box`)
 	for state in ["normal", "hover", "disabled", "focus"]:
-		_enter.add_theme_stylebox_override(state, super._row_box(false))
-	_enter.add_theme_stylebox_override("pressed", super._row_box(true))
-	_enter.add_theme_stylebox_override("hover_pressed", super._row_box(true))
+		_enter.add_theme_stylebox_override(state, _button_box(false))
+	_enter.add_theme_stylebox_override("pressed", _button_box(true))
+	_enter.add_theme_stylebox_override("hover_pressed", _button_box(true))
 	_enter.pressed.connect(_on_enter)
 	right_col.add_child(_enter)
 
@@ -569,22 +536,6 @@ func _reward_cell(reward: Dictionary) -> Control:
 	label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	row.add_child(label)
 	return cell
-
-
-## 단계 줄 — 받은 그림처럼 **평평한 줄**이다. 둥근 금테 단추(`ui_button`)를 쓰면
-## 목록이 단추 더미로 보였다 (2026-09-28, 찍어서 봤다). 아래에 가는 금 하나,
-## 고른(누른) 줄만 바탕이 밝아지고 왼쪽에 금 막대가 선다. 글자 색은 `_select` 가 맡는다
-func _row_box(pressed: bool) -> StyleBox:
-	var box := StyleBoxFlat.new()
-	box.bg_color = Color(0.86, 0.75, 0.45, 0.14) if pressed else Color(0, 0, 0, 0)
-	box.border_color = CARD_GOLD if pressed else CELL_LINE
-	box.border_width_left = 3 if pressed else 0
-	box.border_width_bottom = 1
-	box.content_margin_left = ROW_PAD_X
-	box.content_margin_right = ROW_PAD_X
-	box.content_margin_top = ROW_PAD
-	box.content_margin_bottom = ROW_PAD
-	return box
 
 
 func _cell_box() -> StyleBox:

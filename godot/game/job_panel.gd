@@ -22,7 +22,10 @@ const WIDTH := 640.0
 const PANEL_MARGIN := 26
 const BUTTON_MARGIN := 28
 const SLOT_MARGIN := 26
-const PAD := 30
+## 틀 안쪽 여백은 틀(`ui_dungeon_card`)이 `STONE_IN` 만큼, 그 안에서 `PAD` 만큼 더 물린다 (합 34).
+## 닫기 X 는 `STONE_IN` 모서리에 붙는다 (game.gd `_close_button(…, 0)`) — 돌판 테(26~36px) 안쪽이다
+const STONE_IN := 30
+const PAD := 4
 ## 단계 점 한 변과 잇는 선 굵기
 const DOT := 30
 const LINE := 3
@@ -34,7 +37,8 @@ const PRESS_TINT := Color(1.45, 1.3, 1.0)
 const SINK := 3
 
 ## 색 — ui-art-style.md 의 표에서 가져왔다
-const TITLE := Color("#e8c14a")
+## 제목은 던전 창처럼 상아빛 (`GatePanel.PAGE_TITLE_COLOR`) — 그 전엔 노란 금색 `#e8c14a`
+const TITLE := Color("#ece4cc")
 const GOLD := Color("#dfc97a")
 const GOLD_DEEP := Color("#86714d")
 const IVORY := Color("#eeead7")
@@ -73,7 +77,8 @@ func _build() -> void:
 	name = "JobPanel"
 	visible = false
 	custom_minimum_size = Vector2(WIDTH, 0)
-	add_theme_stylebox_override("panel", _frame_box.call("ui_panel", PANEL_MARGIN, 0))
+	# **던전 창 결이다** (2026-09-28 요청: "나머지 창들도 던전 UI 아트풍으로") — 그 전엔 얇은 금테(`ui_panel`)
+	add_theme_stylebox_override("panel", _frame_box.call("ui_dungeon_card", GatePanel.CARD_MARGIN, STONE_IN))
 	# 화면 가운데. 앵커로만 잡는다 — 높이는 내용이 정한다
 	set_anchors_preset(Control.PRESET_CENTER)
 	grow_horizontal = Control.GROW_DIRECTION_BOTH
@@ -106,7 +111,8 @@ func _build() -> void:
 
 	# 다음 전직 카드
 	var card := PanelContainer.new()
-	card.add_theme_stylebox_override("panel", _frame_box.call("ui_slot", SLOT_MARGIN, 18))
+	# 던전 단계 창의 칸과 같은 평판 (그 전엔 `ui_slot` 테두리)
+	card.add_theme_stylebox_override("panel", _stone_cell(18))
 	column.add_child(card)
 	var card_row := HBoxContainer.new()
 	card_row.add_theme_constant_override("separation", 22)
@@ -280,6 +286,16 @@ func _button_box(pressed: bool, dim: bool) -> StyleBox:
 	if box is StyleBoxTexture:
 		(box as StyleBoxTexture).modulate_color = \
 			PRESS_TINT if pressed else (Color(0.55, 0.55, 0.55) if dim else Color.WHITE)
+	return box
+
+
+## 던전 창의 칸 — 어두운 판 + 가는 흙금빛 선 (`GatePanel.CELL_BG` · `CELL_LINE`)
+func _stone_cell(content: int) -> StyleBoxFlat:
+	var box := StyleBoxFlat.new()
+	box.bg_color = GatePanel.CELL_BG
+	box.border_color = GatePanel.CELL_LINE
+	box.set_border_width_all(1)
+	box.set_content_margin_all(content)
 	return box
 
 

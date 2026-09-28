@@ -240,18 +240,18 @@
 
   | 무엇 | 지금 | 그 전 (인벤토리 결) |
   |---|---|---|
-  | 창 틀 (`_stone_window`) | 던전 카드 틀 `ui_dungeon_card` 9조각, 안쪽 여백 `STONE_PAD` 30 | `inv_panel`, 18 |
+  | 창 틀 (`_window_panel`) | 던전 카드 틀 `ui_dungeon_card` 9조각, 안쪽 여백 `STONE_PAD` 30 | `inv_panel`, 18 |
   | 제목 (`_stone_title`) | 왼쪽 문장(메뉴 아이콘: 장비 `ui_icon_character` · 인벤토리 `ui_icon_bag` · 크리스탈 `ui_icon_crystal`) + 상아빛 글자 + 밑에 가는 선 | 금빛 글자만 |
   | 칸 · 스탯 상자 (`_stone_cell_box`) | 던전 보상 칸과 같은 평판 (`CELL_BG` + 가는 `CELL_LINE`) | `inv_slot` |
   | 세로 탭 (`_stone_tab_box`) | 던전 단계 줄처럼 — 고른 것만 옅은 금빛 바탕 + 왼쪽 금 막대, 줄마다 아래 선 | `inv_tab_on`/`off` |
-  | 단추 (`_stone_button`) | 입장 단추처럼 둥근 금테 `ui_button` + 금빛 글자 | `inv_button` |
+  | 단추 (`_inv_button`) | 입장 단추처럼 둥근 금테 `ui_button` + 금빛 글자 | `inv_button` |
 
   - **단추 조각은 40px 높이로 한 번 줄여 쓴다** (`_small_button_texture`). ★ 조각이 58px 라 여백
     28 로 늘이면 모서리가 겹치고, 반(20)씩 자르면 둥근 끝이 **뾰족한 육각형**이 됐다 (찍어서 봤다).
   - 상세·비교 창의 머리 줄(등급 이름)은 등급 색 그대로 두고 문장·선을 달지 않았다.
   - 고른 칸 금테(`inv_slot_pick`)와 등급 선(`_grade_box`)은 그대로다.
-  - **캐릭터 정보 · 랭킹 · 물약 설정 · 자동사냥 창은 인벤토리 결 그대로다** — 같은 `_window_panel` ·
-    `_inv_button` 을 쓰지만 가방이 아니라서 건드리지 않았다.
+  - 같은 날 **나머지 창도 던전 결로 옮겨서**(캐릭터 정보 · 랭킹 · 물약 · 자동사냥 · 강화 팝업) 창 틀과
+    단추는 공용 `_window_panel` · `_inv_button` 이 그대로 던전 결을 준다 → [ui-art-style.md](ui-art-style.md) "창은 던전 결".
 - **등급별 그림이 있으면 그것이 먼저다** (`_item_icon`) — 이름이 `<슬롯>_g<등급>`.
   2026-09-23 에 **무기만 등급별 건틀릿 일곱 장**(`weapon_g1`~`weapon_g7`)을 받았다
   (사용자가 바르코에서 만든 것, 등급마다 두 장 중 첫 장 · 일반은 그 워크플로우의

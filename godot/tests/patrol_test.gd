@@ -34,13 +34,14 @@ func _fail(text: String) -> void:
 
 
 ## 마을에 시험용 한 마리. 사람은 어그로(9.1m) 밖에 세워 둔다 —
-## 순찰로 4m 까지 다가와도 아직 밖이다
-func _setup(mob_x: float, mob_z: float, player_z: float = 15.0) -> Array:
+## 순찰로 4m 까지 다가와도 아직 밖이다. 맵이 ±12.5 라(2026-09-28) 집은 (-10, -2),
+## 사람은 같은 x 로 +z 끝(12)에 선다 — 집에서 14m
+func _setup(mob_x: float, mob_z: float, player_z: float = 12.0, player_x: float = -10.0) -> Array:
 	var w := World.new()
 	w.open("village")
 	w.join("me")
 	var me: Dictionary = w.snapshot().players["me"]
-	me.x = -20.0
+	me.x = player_x
 	me.z = player_z
 	var mobs: Array = w.snapshot().monsters
 	mobs.append(World.make_monster(
@@ -60,7 +61,7 @@ func _wake(mob: Dictionary) -> void:
 
 func _case_pick_and_rest() -> void:
 	# 첫 판정에서 목적지를 뽑고 잠시 쉰다 (선 채로 굳어 있지 않다)
-	var s := _setup(-20.0, 0.0)
+	var s := _setup(-10.0, -2.0)
 	var w: World = s[0]
 	var mob: Dictionary = s[2]
 	w.step(1.0 / 60.0)
@@ -86,7 +87,7 @@ func _case_pick_and_rest() -> void:
 
 func _case_walk() -> void:
 	# 쉬는 것이 끝나면 목적지까지 걸어가고, 닿으면 다음 자리를 뽑는다
-	var s := _setup(-20.0, 0.0)
+	var s := _setup(-10.0, -2.0)
 	var w: World = s[0]
 	var mob: Dictionary = s[2]
 	w.step(1.0 / 60.0)
@@ -111,14 +112,14 @@ func _case_walk() -> void:
 		_fail("닿지도 않고 다음 자리를 뽑았다")
 	else:
 		print("  %.2f m 를 %d 프레임에 걸어가 닿고 다시 쉰다" % [
-			goal.distance_to(Vector2(-20.0, 0.0)), walked
+			goal.distance_to(Vector2(-10.0, -2.0)), walked
 		])
 
 
 func _case_inside_radius() -> void:
 	# 여러 다리를 걸어도 집 반경(4m) 안이다. 순찰이 어그로 범위를 넘어가면
 	# "가만히 있었는데 몬스터가 찾아왔다" 가 된다
-	var s := _setup(-20.0, 0.0)
+	var s := _setup(-10.0, -2.0)
 	var w: World = s[0]
 	var mob: Dictionary = s[2]
 	var worst := 0.0
@@ -134,7 +135,7 @@ func _case_inside_radius() -> void:
 
 func _case_aggro_wins() -> void:
 	# 순찰 중에 사람이 어그로 안으로 들어오면 곧바로 쫓는다 (순찰이 막지 않는다)
-	var s := _setup(-20.0, 0.0, 8.0)
+	var s := _setup(-10.0, -2.0, 6.0)
 	var w: World = s[0]
 	var mob: Dictionary = s[2]
 	_wake(mob)
@@ -147,12 +148,12 @@ func _case_aggro_wins() -> void:
 
 func _case_far_from_home() -> void:
 	# 쫓다가 대상을 잃고 멀리 나와 있으면 집 쪽으로 걸어 돌아온다
-	var s := _setup(-20.0, 0.0, 40.0)
+	var s := _setup(-10.0, -2.0, -12.0, 12.0)
 	var w: World = s[0]
 	var mob: Dictionary = s[2]
 	# 집에서 8m — leash(22m) 안이고 순찰 반경(4m) 밖이다.
-	# 사람은 _setup 에서 40m 로 밀어 뒀다 (어그로 안이면 돌아오지 않고 쫓는 게 맞다)
-	mob.z = 8.0
+	# 사람은 _setup 에서 반대쪽 귀퉁이(12, -12)로 밀어 뒀다 (어그로 안이면 돌아오지 않고 쫓는 게 맞다)
+	mob.z = 6.0
 	var before := _home_gap(mob)
 	for i in 30:
 		w.step(1.0 / 60.0)
@@ -164,7 +165,7 @@ func _case_far_from_home() -> void:
 
 func _case_dead() -> void:
 	# 죽은 놈은 서성이지 않는다
-	var s := _setup(-20.0, 0.0)
+	var s := _setup(-10.0, -2.0)
 	var w: World = s[0]
 	var mob: Dictionary = s[2]
 	mob.hp = 0

@@ -9,6 +9,8 @@ extends Control
 ## (시작 화면은 에셋을 안 받은 사람에게도 떠야 한다)
 
 const GAME_SCENE := "res://main.tscn"
+## 편집기에서 디버그로 띄운 창을 보낼 거리 — 모든 모니터의 오른쪽·아래 끝에서 이만큼 더 민다
+const OFFSCREEN_GAP := 4000
 const BG := Color("#0e100f")
 const PANEL := Color("#191a19")
 const GOLD := Color("#b9a46c")
@@ -30,6 +32,7 @@ var _reset_armed := false
 
 
 func _ready() -> void:
+	_hide_debug_window()
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	var path := "res://assets/fonts/NotoSansKR-subset.ttf"
 	theme = Theme.new()
@@ -183,3 +186,20 @@ func choose(mode: String) -> void:
 	var curtain := LoadingScreen.new("테스트 모드" if mode == PlayMode.TEST else "일반 모드")
 	get_tree().root.add_child(curtain)
 	curtain.load_scene(GAME_SCENE)
+
+
+## **편집기에서 디버그 실행(F5)한 게임 창을 모니터 밖으로 보낸다** (2026-09-28 요청: "고도 엔진
+## 디버깅 할 때 오른쪽 아래 화면이 나오는데, 화면에서 아예 안 보이게 멀리 보내").
+## 편집기가 실행할 때 `--position` 을 넘겨서 프로젝트 설정(`initial_position`)은 덮인다 — 그래서
+## 뜬 뒤에 코드로 옮긴다. 디버거가 붙은 PC 실행에서만 한다: `play.bat`·`npm run shot:godot`
+## (디버거 없음)·헤드리스 테스트·폰 원클릭 배포·편집기 Game 탭 임베드는 그대로 둔다
+func _hide_debug_window() -> void:
+	if not EngineDebugger.is_active() or not OS.has_feature("pc"):
+		return
+	if Engine.is_embedded_in_editor() or DisplayServer.get_name() == "headless":
+		return
+	var far := Vector2i.ZERO
+	for i in DisplayServer.get_screen_count():
+		var end := DisplayServer.screen_get_position(i) + DisplayServer.screen_get_size(i)
+		far = Vector2i(maxi(far.x, end.x), maxi(far.y, end.y))
+	get_window().position = far + Vector2i(OFFSCREEN_GAP, OFFSCREEN_GAP)

@@ -2,8 +2,8 @@ extends SceneTree
 
 ## 지형 — 높낮이와 바닥 섞기 (`game/terrain.gd`).
 ##
-## 생김새는 눈으로 봐야 하지만, 발이 땅에 붙는지 · 광장이 평평한지 · 언덕이
-## 끝에 선 캐릭터를 가리지 않는지 · 섞기 그림 끝이 풀인지는 글로 잰다.
+## 생김새는 눈으로 봐야 하지만, 발이 땅에 붙는지 · 광장이 평평한지 · 끝 너머가
+## 이동 끝에서 검게 칠해지는지 · 섞기 그림 끝이 풀인지는 글로 잰다.
 ##
 ##   godot --headless --path godot --script tests/terrain_test.gd
 
@@ -101,21 +101,25 @@ func _case_walkable(t: Terrain) -> void:
 
 
 func _case_rim(t: Terrain) -> void:
-	# 바깥 언덕 — 끝에서 솟고, 가장 가파른 곳도 카메라 시선보다 눕는다
-	var top := t.height_at(Terrain.HALF - 1, 0)
+	# 이동 끝 너머는 검은 바닥 (2026-09-28 "사냥터와 동일하게 마을에서도 이동할 수 없는 영역은
+	# 어둡게") — 검은 선이 판정의 이동 끝과 같아야 누르면 당겨지는 자리와 맞는다
+	var half := Movement.zone_half_size(float(GameData.zone("village").get("size", 66)))
+	var node := t.mesh_instance(GameData.zone("village").get("env", {}))
+	var edge = node.material_override.get_shader_parameter("void_edge")
+	node.free()
+	if edge == null or absf(float(edge) - half) > 0.001:
+		_fail("검은 바닥 선이 %s — 이동 끝(%.1f)과 같아야 한다" % [edge, half])
+	# 언덕은 없다 — 검은 바닥이 솟으면 끝에 선 캐릭터를 가린다
 	var steepest := 0.0
-	var e := float(Terrain.RECIPES.village.rim)
+	var e := half
 	while e < Terrain.HALF - 1:
 		for dir in [Vector2(1, 0), Vector2(-1, 0), Vector2(0, 1), Vector2(0, -1)]:
 			var a := t.height_at(dir.x * e, dir.y * e)
 			var b := t.height_at(dir.x * (e + 1.0), dir.y * (e + 1.0))
 			steepest = maxf(steepest, b - a)
 		e += 1.0
-	print("  바깥 언덕 끝 높이 %.1fm, 가장 가파른 오르막 %.2f" % [top, steepest])
-	if top < 8.0:
-		_fail("바깥 언덕이 %.1fm 뿐 — 마을을 감싸지 못한다" % top)
 	if steepest >= SIGHT_SLOPE:
-		_fail("언덕 오르막 %.2f 가 시선(%.2f)보다 가파르다 — 끝에 선 캐릭터를 가린다" % [steepest, SIGHT_SLOPE])
+		_fail("끝 너머 오르막 %.2f 가 시선(%.2f)보다 가파르다 — 끝에 선 캐릭터를 가린다" % [steepest, SIGHT_SLOPE])
 
 
 func _case_mesh_matches(t: Terrain) -> void:

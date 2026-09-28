@@ -22,7 +22,7 @@
 |---|---|---|---|---|---|
 | 낙뢰 `thunder_fall` | 1번 기절 `stun` | 10000 | 맞은 몬스터 **3초 기절** — 못 움직이고 못 때린다 | 번개가 **붉게** | 붙었다 |
 | 낙뢰 `thunder_fall` | 2번 범위 `wide` | 10000 | **사거리 4 → 6m** (50% 증가) | 가운데 세 번 뒤 **좌우 살짝 옆에 한 번씩 더**, 땅의 흔적 1.5배 | 붙었다 |
-| 할퀴기 `rising_kick` | 1번 부채꼴 `wide` | 1000 | **판정 각 120 → 160°** | 쓸고 가는 호 140 → **180°** (같은 40°만큼 길어진다) | 붙었다 |
+| 할퀴기 `rising_kick` | 1번 위력 `wide` | 1000 | **데미지 30% 증가** (한 대 × 1.3 — 연타 몫에도) | 없음 (그대로) | 붙었다 |
 | 할퀴기 `rising_kick` | 2번 연타 `combo` | 1000 | **다단 히트 3 → 5회** | 긁기 **두 번 더**, 빛이 **보라** | 붙었다 |
 | 천붕각 `sky_breaker` | 1번 진폭 `wide` | 200000 | **범위 6 → 9m · 대상 10 → 15** | 먼지 충격파·금 대신 **모래 토네이도**가 캐릭터를 휘감으며 9m 까지 휙 돈다 | 붙었다 (2차 시안) |
 | 천붕각 `sky_breaker` | 2번 균열 지대 `zone` | 200000 | 시전한 자리에 **3초간 0.5초마다 공격력 100%** (여섯 번 · 처음 40%) | 진흙 띠가 **소용돌이처럼 가운데로 빨려 들고**, 틱마다 조여든다 (웅덩이·알갱이는 걷음) | 붙었다 (3차 시안) |
@@ -45,7 +45,7 @@
 | `packages/shared/src/skills.ts` `SKILL_UPGRADES` · `SKILL_UPGRADE_MAX` · `SKILL_UPGRADE_EXP_BY_TIER` | **강화 표**(스킬·id·이름·효과·`stunMs`)와 **필요 경험치 표** `SKILL_UPGRADE_EXP_BY_TIER`(강화의 `exp` 는 스킬 `tier` 로 채운다). `skills.json` 의 `upgrades` · `upgradeMax` 로 나간다 |
 | `packages/shared/src/dungeons.ts` `DUNGEON_SKILL_EXP_PER_STAGE` | ★ 던전 단계의 **`skillExp`** = 단계 × 1000. `zones.json` 의 `dungeons` 로 나간다 |
 | `packages/shared/src/skills.test.ts` · `zones.test.ts` | 강화가 있는 스킬에 붙나 · 필요 경험치가 전직 단계 표와 맞나 · 스킬마다 둘 이하 / 단계 보상 = 단계 × 1000 |
-| `godot/world/skills.gd` `upgrade` · `upgrades_of` · `stun_ms` · `range_mul` · `upgrade_sum` | 표 읽기. `upgrades_of` 의 순서가 1번·2번. `upgrade_sum` 은 더하는 효과(`arcAdd` · `extraHits`) |
+| `godot/world/skills.gd` `upgrade` · `upgrades_of` · `stun_ms` · `range_mul` · `power_mul` · `upgrade_sum` | 표 읽기. `upgrades_of` 의 순서가 1번·2번. `power_mul` 은 피해 배율(`powerMul`, 곱한다), `upgrade_sum` 은 더하는 효과(`extraHits`) |
 | `godot/world/game_data.gd` `dungeon_stage` | 존 id → 던전 단계(`skillExp` 포함). 던전이 아니면 빈 사전 |
 | `godot/world/ledger.gd` `_check_dungeon_clear` | ★ 던전 보스를 잡으면 `skill_exp` 에 더한다 (`skillExp` 이벤트 · 알림). `Ledger.kill` 에서 전직 시험 확인 다음에 부른다. `skill_exp` 는 장부 칸(`KEYS`)이다 → [server.md](server.md) |
 | `godot/world/ledger.gd` `feed_upgrade` | ★ 스킬창의 넣기 단추 (`feedUpgrade` → `World.feed_upgrade` → 장부) — **판정은 여기서** (직업·번호·이미 붙었나·경험치가 있나 → 모자란 만큼만 빼서 쌓고, 닿으면 붙인다) |
@@ -59,9 +59,9 @@
 | `godot/game/lightning_fx.gd` `PALETTE_RED` · `Strike.paint` | 붉은 번개 |
 | `godot/game/lightning_fx.gd` `SIDE_STRIKES` · `SIDE_GAP` · `WIDE` · `Strike.rest` | 넓은 낙뢰 — 옆 번개 둘과 땅 흔적 배율 |
 | `godot/tests/skill_test.gd` `_case_wide` | 사거리 4 → 6m, 알리는 모양도 6m, 5m 앞의 놈이 강화 뒤에만 맞는다 |
-| `godot/game/skill_fx.gd` `SWEEP_WIDE` · `MESH_ARC` · `COMBO_SLASHES` · `PALETTE_PURPLE` | 강화한 할퀴기 — 긴 호·긁기 둘 더·보라 |
-| `godot/tests/skill_test.gd` `_case_claw_up` | 할퀴기 기본 120°·3타, 부채꼴 160°, 연타 5타, 둘 다 |
-| `godot/tests/skill_fx_test.gd` `_case_upgrades` · `_case_table` | 이펙트가 판정 표와 같은 수(연타 +2 · 부채꼴 +40°)인가, 강화마다 번 수·각·색, 떼면 제자리 |
+| `godot/game/skill_fx.gd` `COMBO_SLASHES` · `PALETTE_PURPLE` | 연타 할퀴기 — 긁기 둘 더·보라 |
+| `godot/tests/skill_test.gd` `_case_claw_up` | 할퀴기 기본 120°·3타, 위력 한 대 × 1.3, 연타 5타, 둘 다 (각은 늘 120°) |
+| `godot/tests/skill_fx_test.gd` `_case_upgrades` · `_case_table` | 이펙트가 판정 표와 같은 수(연타 +2)인가, 강화마다 번 수·색, 위력은 그대로, 떼면 제자리 |
 | `godot/game/quake_fx.gd` `WIDE` · `ZONE_*` · `_ground` | 강화한 천붕각 — 진폭·균열 지대면 먼지 충격파를, 진폭만이면 금도 끈다 |
 | `godot/game/quake_parts.gd` `QuakeParts.Tornado` · `QuakeParts.Mud` | ★ **모래 토네이도**와 **진흙 소용돌이** — 둘 다 띠 메시를 한 번 깔고 셰이더가 돌린다 |
 | `godot/tests/skill_test.gd` `_case_quake_up` | 진폭 9m·15마리, 지대 틱 여섯 번·한 틱 = 공격력 × `zonePower`(표에서 읽는다)·지대 밖으로 나간 놈은 안 맞음 |
@@ -215,21 +215,26 @@
 
 - **기본을 5타에서 3타로 줄였다.** 한 대는 **56% 그대로**다 (사용자 선택) — 기본 합계
   168%, 연타 강화를 붙이면 예전 다섯 번(280%)과 같다. 설명도 "세 번 긁어낸다".
-- **1번 부채꼴** (`arcAdd` 40°) — 판정 각 120 → **160°**. 이펙트는 쓸고 가는 호를 **같은
-  40°만큼** 늘린다(140 → 180°, `SWEEP_WIDE`). 꼬리 각도 같은 비율로 늘린다 — 호만
-  늘리면 긴 호 위로 짧은 점이 지나가 보인다. 머리가 끝까지 가는 시간(0.12초)은 그대로다.
+- **1번 위력** (`powerMul` 1.3) ★ 2026-09-28 **"부채꼴을 제거하고 데미지 30% 증가로 바꿔"**.
+  그 전엔 "부채꼴"(`arcAdd` 40° — 판정 각 120 → 160°, 이펙트 호 140 → 180°)이었다.
+  - 한 대의 공격력에 곱한다(`World._land` 의 `attack`) — 연타 예약도 그 값을 쓰므로
+    **다섯 대 전부** 1.3배다. 기본 합계 168 → 218%, 연타까지 280 → 364%.
+  - **id 는 `wide` 그대로다** — 이미 부채꼴을 붙인 캐릭터는 불러올 때 그대로 위력으로
+    이어진다 (저장은 강화 id 로 남는다). 이름만 보고 `power` 로 바꾸면 그 강화가 사라진다.
+  - **이펙트는 없다** — 긴 호(`SWEEP_WIDE`)와 넓게 깔던 메시(`MESH_ARC` 180°, 52 토막)를
+    걷고 140° · 40 토막으로 돌렸다. 판정 각 칸 `arcAdd` 도 쓰는 강화가 없어 걷었다.
+  - `KillCheck` 는 그 스킬이 넣는 배율 전부에 `powerMul` 을 곱한다 → [server.md](server.md).
 - **2번 연타** (`extraHits` 2) — 3 → **5타**. 예약(`_combos`)이 둘 더 들어간다. 이펙트는
   긁기가 **두 번 더**이고, 빛 두 겹(헤일로·테)이 **보라**(`PALETTE_PURPLE`)가 된다 (사용자
   선택). **흰 심과 닿는 자리의 노란 불꽃은 그대로다.**
-- 둘은 따로 논다 — 부채꼴만이면 청백 긴 호 세 번, 연타만이면 보라 140° 다섯 번.
-- **메시는 여전히 한 번만 깐다.** 넓은 쪽(`MESH_ARC` 180°)까지 깔아 두고, 얼마나 그릴지는
-  셰이더의 `head`/`tail` 이 정한다. 토막은 40 → **52**(3.5° 씩 그대로).
+- 둘은 따로 논다 — 위력만이면 청백 세 번(보기엔 기본과 같다), 연타만이면 보라 다섯 번.
+- **메시는 여전히 한 번만 깐다.** 얼마나 그릴지는 셰이더의 `head`/`tail` 이 정한다.
 - **긁기 다섯을 늘 만들어 두고** 기본일 때 뒤의 둘은 쉬게 한다(`active`). 풀이 한 벌이라
   강화한 할퀴기가 처음 나올 때 새로 만들면 멈칫한다.
 - 이펙트 수는 판정 표와 맞아야 한다 — `skill_fx_test` 의 `_case_table` 이 `hits` ·
-  `extraHits` · `arcAdd` 를 이펙트 상수와 맞춰 본다.
-- **찍어서 봤다** — 머리가 끝까지 간 순간(이펙트 시계 0.13초)을 기본·부채꼴 두 장으로
-  잘라 찍어 호가 양끝으로 더 뻗는 것을, 둘 다 붙인 것은 보라 다섯 줄을 봤다.
+  `extraHits` 를 이펙트 상수와 맞춰 본다.
+- **찍어서 봤다** (부채꼴 시절) — 머리가 끝까지 간 순간(이펙트 시계 0.13초)을 잘라 찍어
+  둘 다 붙인 것은 보라 다섯 줄을 봤다.
   찍어 보기: `npm run shot:godot -- rising_kick+wide+combo@225`.
 - 스킬창 설명의 데미지 줄(`56% * 3연타`)은 **기본값**이다 — 강화는 오른쪽 카드에만 적는다.
 
@@ -342,7 +347,7 @@
 ## 손댈 때
 
 - **피해를 올리는 칸(배율·타수·장판·추가타)을 새로 넣으면 `godot/server/kill_check.gd` 의 `min_ms` 도 고친다** — 서버가 "이보다 빨리 못 잡는다" 를 셈한다. 모르는 칸이 생기면 `server_test` 가 실패해서 알려 준다 → [server.md](server.md)
-- **강화를 더할 때** — `SKILL_UPGRADES` 에 한 줄(`exp` 필수, 효과는 `stunMs` · `rangeMul` · `arcAdd` · `extraHits` · `zoneMs`·`zoneTickMs`·`zonePower` · `followMs`·`followPower` · `stunLook` 중에서) → `npm run export:godot`.
+- **강화를 더할 때** — `SKILL_UPGRADES` 에 한 줄(`exp` 필수, 효과는 `stunMs` · `rangeMul` · `powerMul` · `extraHits` · `zoneMs`·`zoneTickMs`·`zonePower` · `followMs`·`followPower` · `stunLook` 중에서) → `npm run export:godot`.
   효과가 새 종류면 `cast` 에 판정을, `_show_skill` 에 이펙트 분기를 더한다.
   효과 문구(`desc`)는 **카드(280px) 한 줄**에 들어가야 한다.
 - **던전 보상을 바꿀 때** — `DUNGEON_SKILL_EXP_PER_STAGE`(단계당). 단계마다 따로 주려면

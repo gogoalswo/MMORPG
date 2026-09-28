@@ -590,8 +590,9 @@ func _case_wide() -> void:
 	print("  낙뢰 범위: 4m → 6m, 5m 앞의 놈이 강화 뒤에만 맞는다")
 
 
-## 할퀴기 강화 — "부채꼴" 은 판정 각 120 → 160°, "연타" 는 3 → 5타 (2026-09-23).
-## 둘은 따로 논다. 각은 판정이 알리는 모양(`skillRange`)으로, 대 수는 예약으로 본다
+## 할퀴기 강화 — "위력"(`wide`)은 한 대 피해 × 1.3 (2026-09-28, 부채꼴에서 바꿨다),
+## "연타" 는 3 → 5타. 둘은 따로 논다. 각은 늘 120° (알리는 모양 `skillRange`), 대 수와
+## 한 대 피해는 연타 예약(`_combos`)으로 본다 — 첫 대는 치명타가 섞여 흔들린다
 func _case_claw_up() -> void:
 	var s := _setup(1)
 	var w: World = s[0]
@@ -601,7 +602,8 @@ func _case_claw_up() -> void:
 	mob.hp = 999999
 	w.learn_skill("me", "rising_kick")
 	w.set_skill_bar("me", ["rising_kick"])
-	for c in [[[], 120.0, 3], [["wide"], 160.0, 3], [["combo"], 120.0, 5], [["wide", "combo"], 160.0, 5]]:
+	var base := float(me.stats.attack) * float(Skills.get_skill("fighter", "rising_kick").get("power", 1.0))
+	for c in [[[], 3, 1.0], [["wide"], 3, 1.3], [["combo"], 5, 1.0], [["wide", "combo"], 5, 1.3]]:
 		me.skill_upgrades = {"rising_kick": c[0].duplicate()}
 		me.skill_ready_at = {}
 		me.cast_until = 0
@@ -611,11 +613,13 @@ func _case_claw_up() -> void:
 		var shape := _first(w.drain_events(), "skillRange")
 		var arc := rad_to_deg(float(shape.get("arc", 0.0)))
 		var hits := 1 + w._combos.size()
-		if absf(arc - float(c[1])) > 0.5 or hits != int(c[2]):
-			_fail("할퀴기 %s: %.0f° · %d타 (%.0f° · %d타 여야 한다)" % [str(c[0]), arc, hits, c[1], c[2]])
+		var mul := float(w._combos[0].attack) / base if not w._combos.is_empty() else 0.0
+		if absf(arc - 120.0) > 0.5 or hits != int(c[1]) or absf(mul - float(c[2])) > 1e-3:
+			_fail("할퀴기 %s: %.0f° · %d타 · 피해 ×%.2f (120° · %d타 · ×%.2f 여야 한다)" % [
+				str(c[0]), arc, hits, mul, c[1], c[2]])
 	w._combos.clear()
 	me.skill_upgrades = {}
-	print("  할퀴기 강화: 기본 120°·3타, 부채꼴 160°, 연타 5타, 둘 다 160°·5타")
+	print("  할퀴기 강화: 기본 120°·3타, 위력 ×1.3, 연타 5타, 둘 다 ×1.3·5타")
 
 
 ## 천붕각 강화 — "진폭" 은 반경 6 → 9m, "균열 지대" 는 시전한 자리에

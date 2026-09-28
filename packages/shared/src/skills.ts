@@ -533,8 +533,8 @@ export interface SkillUpgradeDef {
   stunMs?: number;
   /** 판정 사거리 배율 (1.5 = 50% 증가). 여럿이면 곱한다 */
   rangeMul?: number;
-  /** 판정 부채꼴 각을 이만큼(rad) 넓힌다. 여럿이면 더한다 */
-  arcAdd?: number;
+  /** 스킬 피해 배율 (1.3 = 30% 증가) — 연타·뒤따르는 한 대에도 얹힌다. 여럿이면 곱한다 */
+  powerMul?: number;
   /** 다단 히트를 이만큼 늘린다 (`hits` 에 더한다). 여럿이면 더한다 */
   extraHits?: number;
   /**
@@ -582,12 +582,14 @@ const UPGRADE_LIST: Omit<SkillUpgradeDef, 'exp'>[] = [
     rangeMul: 1.5,
   },
   {
-    // 이펙트는 쓸고 가는 호가 같은 각만큼 길어진다 (SkillFx.SWEEP_ARC 140 → 180°)
+    // 처음엔 "부채꼴" (판정 각 +40°) 이었다 — 2026-09-28 "부채꼴을 제거하고 데미지 30% 증가로"
+    // 로 바꿨다. **id 는 `wide` 그대로** 둔다 — 이미 붙인 캐릭터의 강화가 저장에서 이어진다.
+    // 이펙트는 바뀌지 않는다 (색·긁기 수는 연타 몫이다)
     id: 'wide',
     skill: 'rising_kick',
-    name: '부채꼴',
-    desc: '부채꼴 각도 40° 증가',
-    arcAdd: (Math.PI * 40) / 180,
+    name: '위력',
+    desc: '데미지 30% 증가',
+    powerMul: 1.3,
   },
   {
     // 이펙트는 긁기가 두 번 늘고 빛이 보라로 바뀐다 (SkillFx.PALETTE_PURPLE)

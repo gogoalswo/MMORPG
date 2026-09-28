@@ -84,6 +84,8 @@ const ICONS = [
   'ui_icon_dungeon.png',
   // 던전 종류 카드 그림 셋 — 토벌(보스 머리) · 시련의 탑 · 보물 창고 (2026-09-23)
   'dungeon_raid.png', 'dungeon_trial.png', 'dungeon_treasure.png',
+  // 던전 카드 틀 · 위 장식 (2026-09-28)
+  'ui_dungeon_card.png', 'ui_dungeon_crest.png',
   // 모든 창의 오른쪽 위 닫기 X (2026-09-20)
   'ui_close.png',
   // 인벤토리 결 — 장비·상세·인벤토리 세 창 (2026-09-23)

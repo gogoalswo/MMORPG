@@ -82,6 +82,17 @@ func _run() -> void:
 		await _gate(game)
 		return
 
+	# 던전 창 — 종류 카드 셋 (2026-09-28, 받은 그림대로 다시 지은 카드)
+	if skill == "dungeon":
+		game._toggle_dungeon()
+		for i in 8:
+			await process_frame
+		await RenderingServer.frame_post_draw
+		root.get_texture().get_image().save_png("res://../logs/dungeon.png")
+		print("logs/dungeon.png")
+		quit(0)
+		return
+
 	# HUD 는 시전할 것이 없다 — 액션바를 채우고 자동사냥을 켠 채로 찍는다
 	# (켜져 있어야 자동사냥 칸에서 고리가 돈다)
 	if skill == "hud":

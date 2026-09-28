@@ -75,17 +75,25 @@ const FRAME_SIZE = {
   'inv_tab_on.png': 96,
   'inv_tab_off.png': 96,
   'inv_button.png': 128,
-  // 던전 종류 카드 그림 (2026-09-23) — 카드의 그림 칸이 약 236px 폭이라 넉넉히
-  'dungeon_raid.png': 384,
-  'dungeon_trial.png': 384,
-  'dungeon_treasure.png': 384,
+  // 던전 종류 카드 (2026-09-28) — 풍경은 세로(9:16)라 긴 변 512 → 288x512.
+  // 틀은 카드(약 280x520)에 9조각으로 늘인다, 장식은 카드 폭에 맞춰 앉힌다
+  'dungeon_raid.png': 512,
+  'dungeon_trial.png': 512,
+  'dungeon_treasure.png': 512,
+  'ui_dungeon_card.png': 384,
+  'ui_dungeon_crest.png': 384,
 };
 /**
  * **배경을 걷지 않는 것.** 스킬 아이콘은 칸을 꽉 채운 그림이라 가장자리가 곧 그림이다.
  * 테두리에서 번지는 채우기를 돌리면 가장자리와 비슷한 색(어두운 연기·하늘)을 따라
  * 그림 속까지 파먹는다. 줄이기만 한다
  */
-const FULL = /^skill_/;
+const FULL = /^(skill_|dungeon_)/;
+/**
+ * **비율을 지켜 줄이는 것.** 던전 카드 풍경은 세로 9:16 이다. 정사각에 담으면(contain)
+ * 좌우에 빈 띠가 붙어 카드 그림 칸을 꽉 채울 수 없다
+ */
+const KEEP_ASPECT = /^dungeon_/;
 /**
  * **알파 경계로 잘라내는 것.** 바르코는 그림 둘레에 배경을 넉넉히 남기는데,
  * 9조각으로 늘여 쓰려면 테가 그림 가장자리에 닿아 있어야 여백을 재기 쉽다.
@@ -118,6 +126,8 @@ const SINGLE_LAYER = new Set([
   // 인벤토리 조각도 같은 사정이다 — 안쪽이 어두운 판이라 두 겹째가 그 판을 먹는다
   'ui_panel.png',
   'ui_subpanel.png',
+  // 던전 카드 틀 — 안쪽이 어두운 판이다 (2026-09-28)
+  'ui_dungeon_card.png',
   'ui_slot.png',
   'ui_tab_on.png',
   'ui_tab_off.png',
@@ -364,6 +374,8 @@ for (const name of readdirSync(SRC).filter((f) => f.endsWith('.png')).sort()) {
       );
       note = ` ${Math.round(box.width * scale)}x${Math.round(box.height * scale)}`;
     }
+  } else if (KEEP_ASPECT.test(name)) {
+    image = image.resize(size, size, { fit: 'inside' });
   } else {
     image = image.resize(size, size, {
       fit: 'contain',

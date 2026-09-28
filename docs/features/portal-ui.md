@@ -13,7 +13,7 @@
 | `godot/game/portal_swirl.gd` | `PortalSwirl` — 아치 구멍에서 **빨려들어가는 소용돌이**. 나선 팔 5개 + 끌려드는 알갱이 + 가운데 빛 |
 | `godot/game/gate_panel.gd` | `GatePanel` — 창(`PanelContainer`). 조각은 가방창과 같은 `ui_panel`·`ui_button`·`ui_close`. 목록은 **끌어서** 내리고 줄 전체가 누르는 자리다(`_on_list_input`·`_row_at`). 고르면 `picked(zone_id)` |
 | `godot/game/dungeon_panel.gd` | **던전 창이 이 창을 물려받는다** — 줄은 `_add_row`, 제목은 `_title`. 여기를 고치면 던전 창도 같이 바뀐다 → [dungeons.md](dungeons.md) |
-| `godot/game/game.gd` | `_gate_tapped`(누름 판정) · `_on_gate_tapped`(문 안이면 열고 멀면 걸어감) · `_open_gate` · `_on_gate_pick`(`travel` 요청) |
+| `godot/game/game.gd` | `_gate_tapped`(누름 판정) · `_on_gate_tapped`(거리와 상관없이 연다 — 창이 뜨는 길은 이것뿐) · `_open_gate` · `_on_gate_pick`(`travel` 요청) |
 | `scripts/build-item-icons.mjs` | 줄 아이콘(`ui_gate_here`·`ui_gate_go`)을 128px 로 굽는다 → `public/assets/icons/` |
 | `scripts/fetch-assets.sh` | 바르코 결과물 주소. 포탈 GLB 는 여기서 1024 JPEG 로 줄여 커밋본을 만든다 |
 | `scripts/sync-godot-assets.mjs` | `MODELS` 에 `varco_portal.glb`, `UI` 에 조각 셋 |
@@ -95,8 +95,11 @@ NinePatchRect (panel.png, 여백 PATCH=12) ─ 앵커: 가로 가운데 WIDTH=52
 - **거리와 상관없이 바로 창이 뜬다** (2026-09-18 요청: "포탈까지 안 걸어가도
   클릭하면 UI 열리게"). 그 전에는 문 밖에서 누르면 문 가운데로 **걸어갔고**,
   들어서야 `gate` 이벤트가 창을 열었다 — 멀리서 한 번 누르고 기다려야 했다.
-- 걸어 들어가는 길은 그대로다. 문 안에 들어서면 `World` 가 `gate` 이벤트를 내고
-  그것도 창을 연다 — 창을 닫고 다시 열려면 문을 한 번 벗어나야 한다(`player.at_gate`).
+- **창은 문을 눌렀을 때만 뜬다** (2026-09-28 요청: "포탈을 클릭 했을 때만 UI가
+  나오도록 수정해. 지금은 충돌하면 UI 나오는데 그 부분 제거해"). 그 전에는 문 안에
+  들어서면 `World` 의 `gate` 이벤트가 창을 열었다 — 지나가다 닿기만 해도 창이 떠서
+  길을 막았다. `World` 는 여전히 `gate` 이벤트를 내지만(`monster_test` 가 본다)
+  `game.gd` 는 그것으로 창을 열지 않는다.
 - 고른 곳은 여전히 `travel` 요청이고 **있는 존인지 `World` 가 다시 본다.**
 
 ### 목록은 끌어서 내린다 ★

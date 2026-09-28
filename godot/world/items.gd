@@ -33,10 +33,6 @@ static func is_material(id: String) -> bool:
 	return not get_material(id).is_empty()
 
 
-## 스킬 경험치북이면 넣는 경험치, 아니면 0 (`SKILL_EXP_BOOKS` → 재료의 `skillExp`)
-static func book_exp(id: String) -> int:
-	return int(get_material(id).get("skillExp", 0))
-
 
 static func crystal_id() -> String:
 	return str(_t().get("crystalId", "crystal"))

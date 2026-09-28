@@ -236,8 +236,11 @@ func join(player_id: String) -> void:
 		"potion_ready_at": int(kept.get("potion_ready_at", 0)),
 		# HP 가 이 % 이하로 떨어지면 저절로 마신다. 0 이면 끔. 저장에 남는다
 		"potion_pct": int(kept.get("potion_pct", _potion_rule("potionAutoDefault", 70))),
-		# 스킬 강화 — `{ 스킬 id: [강화 id, …] }`. 스킬창에서 경험치북으로 채우면 붙는다 (`feed_upgrade`)
+		# 스킬 강화 — `{ 스킬 id: [강화 id, …] }`. 스킬창에서 스킬 경험치로 채우면 붙는다 (`feed_upgrade`)
 		"skill_upgrades": kept.get("skill_upgrades", {}).duplicate(true),
+		# 아직 안 넣은 **스킬 경험치** — 던전을 깨면 쌓이고(`_check_dungeon_clear`) 스킬창에서
+		# 고른 강화에 넣는다. 모든 스킬·강화에 공용이다
+		"skill_exp": int(kept.get("skill_exp", 0)),
 		# 붙기 전까지 쌓인 경험치 — `{ 스킬 id: { 강화 id: 경험치 } }` (`feed_upgrade`)
 		"skill_upgrade_exp": kept.get("skill_upgrade_exp", {}).duplicate(true),
 		# --- 아이템 ---
@@ -1174,6 +1177,8 @@ func restore(player_id: String) -> bool:
 						and not (str(id) in upgraded.get(str(skill_id), [])):
 					progress.get_or_add(str(skill_id), {})[str(id)] = amount
 	player.skill_upgrade_exp = progress
+	# 아직 안 넣은 스킬 경험치 — 없던 칸이라 옛 저장은 0. 옛 경험치북은 표에 없어 가방에서 버려진다
+	player.skill_exp = maxi(0, int(saved.get("skill_exp", 0)))
 	# 물약을 저절로 마시는 기준 — 없던 칸이라 옛 저장은 처음 값으로 읽힌다
 	set_potion_pct(player_id, int(saved.get("potion_pct", player.potion_pct)))
 
@@ -1516,26 +1521,29 @@ func grant_test_level(player_id: String) -> void:
 
 ## --- 스킬 강화 ---
 
-## 스킬창에서 **고른 강화에 경험치북 한 권을 넣는다** — 그 스킬의 `slot` 번째(0 부터)
-## 강화에 `book` 의 경험치가 쌓이고, 필요 경험치(`exp`)에 닿으면 강화가 붙는다
-## (2026-09-23 요청: "어떤 타입을 강화할지 선택해서 경험치를 넣을 수 있으면 좋겠어").
-## **넘친 경험치는 버린다.** 이미 붙었거나 책이 없거나 남의 직업 스킬이면 안 넣는다
-func feed_upgrade(player_id: String, skill_id: String, slot: int, book: String) -> void:
+## 스킬창에서 **고른 강화에 모아 둔 스킬 경험치를 넣는다** — 그 스킬의 `slot` 번째(0 부터)
+## 강화에 **모자란 만큼만** 들어가고(남으면 그대로 남는다), 필요 경험치(`exp`)에 닿으면
+## 강화가 붙는다 (2026-09-23 요청: "어떤 타입을 강화할지 선택해서 경험치를 넣을 수 있으면
+## 좋겠어" · 2026-09-28 에 경험치북 대신 던전 경험치로). 이미 붙었거나 경험치가 없거나
+## 남의 직업 스킬이면 안 넣는다
+func feed_upgrade(player_id: String, skill_id: String, slot: int) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty():
 		return
-	_ledger_call(player, &"feed_upgrade", [skill_id, slot, book])
+	_ledger_call(player, &"feed_upgrade", [skill_id, slot])
 
 
-## 테스트 단추 — 스킬 경험치북을 종류마다 10권씩 넣는다 (던전 드랍 전까지, 사용자 선택)
-func debug_books(player_id: String) -> void:
+## 테스트 단추 — 스킬 경험치를 `DEBUG_SKILL_EXP` 만큼 넣는다 (던전을 안 돌고 강화를 볼 때)
+const DEBUG_SKILL_EXP := 100000
+
+
+func debug_skill_exp(player_id: String) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty():
 		return
-	for book in Skills.exp_books():
-		_give(player, {"id": str(book.id), "count": 10})
-	_inventory_changed(player)
-	_notice("테스트: 스킬 경험치북을 10권씩 넣었다")
+	player.skill_exp = int(player.get("skill_exp", 0)) + DEBUG_SKILL_EXP
+	_events.append({"type": "skillExp", "gain": DEBUG_SKILL_EXP, "total": player.skill_exp})
+	_notice("테스트: 스킬 경험치 +%d" % DEBUG_SKILL_EXP)
 
 
 ## **테스트: 스킬 모두 배우기** (2026-09-26 요청). 전직 스킬은 전직해야 쓰므로(job-advance.md)

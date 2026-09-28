@@ -67,7 +67,16 @@ static func field_order() -> Array:
 	return zones().get("fieldOrder", [])
 
 
-## 던전 종류 셋 — `{id, name, desc, open, stages: [{zone, stage, boss, level}]}`.
+## 던전 종류 셋 — `{id, name, desc, open, stages: [{zone, stage, boss, level, skillExp}]}`.
 ## 표는 shared 의 dungeons.ts 가 만든다 (docs/features/dungeons.md)
 static func dungeons() -> Array:
 	return zones().get("dungeons", [])
+
+
+## 이 존이 던전 단계면 그 단계(`{zone, stage, boss, level, skillExp}`), 아니면 빈 사전
+static func dungeon_stage(zone_id: String) -> Dictionary:
+	for type in dungeons():
+		for stage in type.get("stages", []):
+			if str(stage.get("zone", "")) == zone_id:
+				return stage
+	return {}

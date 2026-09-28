@@ -2,7 +2,7 @@ class_name Ledger
 extends RefCounted
 
 ## 장부 판정 한 벌 — **값이 생기고 없어지는 것**만 여기서 정한다 (docs/features/server.md).
-## 드롭·경험치·레벨·골드·가방·장비·강화·크리스탈·스킬·스킬 강화·전직·한 번 주기.
+## 드롭·경험치·레벨·골드·가방·장비·강화·크리스탈·스킬·스킬 강화·스킬 경험치·전직·한 번 주기.
 ##
 ## 나중에 붙일 서버(고도 헤드리스)가 **이 파일을 그대로** 불러 판정한다. 그래서 여기에는
 ## 자리·체력·몬스터·NPC 거리 같은 **전투 쪽 값을 들이지 않는다** — 그건 기기에만 있다.
@@ -15,7 +15,7 @@ extends RefCounted
 ## 서버가 가질 칸. 여기 없는 칸은 이 파일이 만지지 않는다
 const KEYS := [
 	"job", "job_tier", "level", "exp", "gold", "skills", "skill_points",
-	"skill_upgrades", "skill_upgrade_exp", "bag", "equipped", "granted",
+	"skill_upgrades", "skill_upgrade_exp", "skill_exp", "bag", "equipped", "granted",
 ]
 
 ## 시작 장비로 끼워 주는 부위 (`grant_starter_gear`)
@@ -47,7 +47,7 @@ func _inventory_changed(p: Dictionary) -> void:
 
 ## --- 처치 보상 ---
 
-## 몬스터를 잡았다 → 드롭·골드·경험치·레벨·전직 시험. `target` 은
+## 몬스터를 잡았다 → 드롭·골드·경험치·레벨·전직 시험·던전 클리어. `target` 은
 ## `{level, exp_reward, boss, zone}` — 서버를 붙이면 서버가 제 스폰 명부로 다시 본다
 func kill(p: Dictionary, target: Dictionary) -> void:
 	# 보상을 굴린다. **굴리는 쪽은 언제나 판정하는 쪽이다**
@@ -70,6 +70,7 @@ func kill(p: Dictionary, target: Dictionary) -> void:
 	p.exp = grown.exp
 	events.append({"type": "reward", "exp": gained})
 	_check_job_trial(p, target)
+	_check_dungeon_clear(p, target)
 
 	if grown.level > before:
 		# 체력을 채우는 것은 부르는 쪽이다 — 체력은 장부가 아니다
@@ -99,6 +100,20 @@ func _check_job_trial(p: Dictionary, target: Dictionary) -> void:
 		_notice("%d차 전직! %s 을(를) 배울 수 있습니다" % [tier, ", ".join(names)])
 
 
+## 던전 보스를 잡았다 → 그 단계의 **스킬 경험치**(`skillExp` = 단계 × 1000)가 `skill_exp` 에
+## 쌓인다. 잡을 때마다 받는다 (2026-09-28 요청: "던전 깨면 알아서 경험치를 습득")
+func _check_dungeon_clear(p: Dictionary, target: Dictionary) -> void:
+	if not bool(target.get("boss", false)):
+		return
+	var stage := GameData.dungeon_stage(str(target.get("zone", "")))
+	var gain := int(stage.get("skillExp", 0))
+	if gain <= 0:
+		return
+	p.skill_exp = int(p.get("skill_exp", 0)) + gain
+	events.append({"type": "skillExp", "gain": gain, "total": p.skill_exp})
+	_notice("던전 %d단계 클리어! 스킬 경험치 +%d" % [int(stage.stage), gain])
+
+
 ## --- 스킬 ---
 
 ## 스킬을 배운다. **직업·레벨·포인트를 여기서 다시 본다.**
@@ -126,42 +141,36 @@ func learn_skill(p: Dictionary, skill_id: String) -> void:
 	events.append({"type": "skills", "learned": p.skills.duplicate()})
 
 
-## 스킬창에서 **고른 강화에 경험치북 한 권을 넣는다** — 그 스킬의 `slot` 번째(0 부터)
-## 강화에 `book` 의 경험치가 쌓이고, 필요 경험치(`exp`)에 닿으면 강화가 붙는다
-func feed_upgrade(p: Dictionary, skill_id: String, slot: int, book: String) -> void:
+## 스킬창에서 **고른 강화에 모아 둔 스킬 경험치(`skill_exp`)를 넣는다** — 그 스킬의
+## `slot` 번째(0 부터) 강화에 **모자란 만큼만** 들어가고(남으면 그대로 남는다), 필요
+## 경험치(`exp`)에 닿으면 강화가 붙는다 (2026-09-28 에 경험치북 대신 던전 경험치로)
+func feed_upgrade(p: Dictionary, skill_id: String, slot: int) -> void:
 	var skill := Skills.get_skill(str(p.job), skill_id)
 	var list := Skills.upgrades_of(skill_id)
-	var gain := Items.book_exp(book)
-	if skill.is_empty() or slot < 0 or slot >= list.size() or gain <= 0:
+	if skill.is_empty() or slot < 0 or slot >= list.size():
 		return
 	var upgrade: Dictionary = list[slot]
 	if str(upgrade.id) in p.skill_upgrades.get(skill_id, []):
 		_notice("이미 강화했습니다 — %s %s" % [skill.name, upgrade.name])
 		return
-	var at := -1
-	for index in p.bag.size():
-		if str(p.bag[index].get("id", "")) == book:
-			at = index
-			break
-	if at < 0:
-		_notice("%s 이 없습니다" % Items.stack_name({"id": book}))
+	var pool := int(p.get("skill_exp", 0))
+	if pool <= 0:
+		_notice("스킬 경험치가 없습니다 — 던전을 깨면 얻습니다")
 		return
 
-	var left := int(p.bag[at].get("count", 1)) - 1
-	if left > 0:
-		p.bag[at].count = left
-	else:
-		p.bag.remove_at(at)
 	var need := int(upgrade.get("exp", 1))
 	var progress: Dictionary = p.skill_upgrade_exp.get_or_add(skill_id, {})
-	var now_exp := int(progress.get(str(upgrade.id), 0)) + gain
+	var have := int(progress.get(str(upgrade.id), 0))
+	var gain := mini(pool, need - have)
+	p.skill_exp = pool - gain
+	var now_exp := have + gain
 	if now_exp >= need:
 		add_upgrade(p, skill_id, str(upgrade.id))
 		_notice("%s 강화 완료 — %s" % [skill.name, upgrade.name])
 	else:
 		progress[str(upgrade.id)] = now_exp
 		_notice("%s %s 경험치 %d / %d" % [skill.name, upgrade.name, now_exp, need])
-	_inventory_changed(p)
+	events.append({"type": "skillExp", "gain": -gain, "total": p.skill_exp})
 
 
 func add_upgrade(p: Dictionary, skill_id: String, upgrade_id: String) -> void:

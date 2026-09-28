@@ -509,9 +509,11 @@ export const SKILLS: Record<string, SkillDef> = Object.fromEntries(
 
 /**
  * **스킬 강화** (2026-09-23 요청) — 스킬마다 **둘까지** 붙는다. 스킬창에서 강화
- * 하나를 골라 **스킬 경험치북**(`SKILL_EXP_BOOKS`)으로 경험치를 넣고, `exp` 에
- * 닿으면 붙는다. 경험치북은 모든 스킬·강화에 공용이고 나중에 던전에서 떨어진다.
- * (같은 날 앞 판은 강화마다 강화서 한 장이었다 — "개별로 하지 말고 경험치북으로" 요청.)
+ * 하나를 골라 **스킬 경험치**를 넣고, `exp` 에 닿으면 붙는다. 스킬 경험치는 캐릭터에
+ * 하나로 쌓이고 모든 스킬·강화에 공용이며, **던전을 깨면 저절로 들어온다**
+ * (`dungeons.ts` 의 `skillExp` — 2026-09-28 요청: "하급·중급·상급 나누지 말고 던전 깨면
+ * 알아서 경험치를 습득"). 그 전엔 경험치북 세 종류였고, 그보다 앞 판은 강화마다 강화서
+ * 한 장이었다.
  *
  * 둘은 **따로 붙고 같이 붙을 수도 있다.** 그래서 이펙트도 강화마다 따로 바뀐다 —
  * 기절은 번개 색만, 범위는 크기·줄기 수만 건드려서 둘이 섞여도 서로를 안 덮는다.
@@ -640,26 +642,6 @@ export const SKILL_UPGRADES: SkillUpgradeDef[] = UPGRADE_LIST.map((u) => ({
   ...u,
   exp: SKILL_UPGRADE_EXP_BY_TIER[SKILLS[u.skill]?.tier ?? 0],
 }));
-
-/**
- * **스킬 경험치북** — 쓰면 스킬창에서 고른 강화에 `exp` 만큼 들어간다. 세 종류
- * (사용자 선택: 하급 100 · 중급 500 · 상급 2000. 강화 필요량은 `SKILL_UPGRADE_EXP_BY_TIER`). 가방에는 재료로
- * 들어간다 (`items.ts` 의 `MATERIALS` 가 이 표에서 만든다). **넘친 경험치는 버린다** —
- * 강화가 붙으면 그 강화에는 더 못 넣는다.
- */
-export interface SkillExpBookDef {
-  id: string;
-  name: string;
-  /** 창의 단추에 적는 짧은 이름 */
-  short: string;
-  exp: number;
-}
-
-export const SKILL_EXP_BOOKS: SkillExpBookDef[] = [
-  { id: 'skill_book_1', name: '하급 스킬 경험치북', short: '하급', exp: 100 },
-  { id: 'skill_book_2', name: '중급 스킬 경험치북', short: '중급', exp: 500 },
-  { id: 'skill_book_3', name: '상급 스킬 경험치북', short: '상급', exp: 2000 },
-];
 
 /**
  * 직업별 배울 수 있는 스킬 — 요구 레벨 순.

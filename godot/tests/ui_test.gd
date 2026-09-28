@@ -1412,9 +1412,9 @@ func _case_design_panel(game: Node3D) -> void:
 		_fail("설계 창이 안 닫힌다")
 
 
-## 스킬창 셋째 칸 — 강화 1번·2번 카드와 경험치북 단추 (2026-09-23). 가장 오른쪽 칸이고
-## 창이 화면 안이며, 책이 없으면 단추가 꺼지고, 카드를 골라 책을 누르면 그 강화에
-## 경험치가 쌓이고, 필요 경험치에 닿으면 "강화 완료" 가 된다
+## 스킬창 셋째 칸 — 강화 1번·2번 카드와 넣기 단추 (2026-09-23 · 2026-09-28 에 경험치북 셋을
+## 넣기 하나로). 가장 오른쪽 칸이고 창이 화면 안이며, 스킬 경험치가 없으면 단추가 꺼지고,
+## 카드를 골라 넣기를 누르면 그 강화에 모자란 만큼 들어가 "강화 완료" 가 된다
 func _check_upgrades(game: Node3D, me: Dictionary, panel: Control, screen: Vector2) -> void:
 	var world: World = game._transport._world
 	world.debug_reset_upgrades("me")
@@ -1430,34 +1430,34 @@ func _check_upgrades(game: Node3D, me: Dictionary, panel: Control, screen: Vecto
 		_fail("강화 칸을 더한 스킬창 %s 이 화면 밖이다" % box)
 	if cards[0].card.get_global_rect().position.x <= game._skill_grid.get_global_rect().end.x:
 		_fail("강화 칸이 목록 오른쪽에 있지 않다")
-	var books: Array = Skills.exp_books()
-	var small: Button = game._book_buttons[str(books[0].id)]
-	var big: Button = game._book_buttons[str(books[2].id)]
-	if str(cards[0].name.text) != "기절" or not cards[0].pick.visible or not small.disabled:
-		_fail("낙뢰 1번 강화가 '기절'·골라짐·책 단추 꺼짐이어야 하는데 '%s'·%s·%s" % [
-			cards[0].name.text, cards[0].pick.visible, small.disabled])
+	var feed: Button = game._feed_button
+	me.skill_exp = 0
+	game._redraw_skills()
+	if str(cards[0].name.text) != "기절" or not cards[0].pick.visible or not feed.disabled:
+		_fail("낙뢰 1번 강화가 '기절'·골라짐·넣기 꺼짐이어야 하는데 '%s'·%s·%s" % [
+			cards[0].name.text, cards[0].pick.visible, feed.disabled])
 	if cards[1].hit.disabled or str(cards[1].name.text) != "범위":
 		_fail("낙뢰 2번 강화가 '범위' 로 골라질 수 있어야 하는데 '%s'" % cards[1].name.text)
-	for button in game._book_buttons.values():
-		if button.get_global_rect().end.x > box.end.x or button.get_global_rect().end.y > box.end.y:
-			_fail("경험치북 단추 %s 가 창 밖이다" % button.get_global_rect())
+	if feed.get_global_rect().end.x > box.end.x or feed.get_global_rect().end.y > box.end.y:
+		_fail("넣기 단추 %s 가 창 밖이다" % feed.get_global_rect())
 
-	# 책을 받고 하급 둘 → 200, 상급 다섯 → 완료 (낙뢰는 1차 전직 스킬이라 10000)
-	game._test_button("", 10, 10, &"debugBooks", {}).pressed.emit()
-	if small.disabled or not small.text.ends_with("10권"):
-		_fail("경험치북을 받았는데 단추가 꺼져 있다 ('%s')" % small.text)
-	small.pressed.emit()
-	small.pressed.emit()
-	if str(cards[0].amount.text) != "경험치 200 / 10000" or int(cards[0].bar.value) != 200:
-		_fail("하급 둘을 넣었는데 '%s'" % cards[0].amount.text)
-	for i in 5:
-		big.pressed.emit()
+	# 던전 2단계만큼(2000) 있으면 2000 만 들어가고, 테스트 단추(+10만)로 채우면 완료
+	# (낙뢰는 1차 전직 스킬이라 10000)
+	me.skill_exp = 2000
+	game._redraw_skills()
+	if feed.disabled or not str(game._upgrade_hint.text).begins_with("스킬 경험치 2000"):
+		_fail("스킬 경험치가 있는데 넣기가 꺼져 있거나 안내가 틀리다 ('%s')" % game._upgrade_hint.text)
+	feed.pressed.emit()
+	if str(cards[0].amount.text) != "경험치 2000 / 10000" or int(cards[0].bar.value) != 2000 or not feed.disabled:
+		_fail("2000 을 넣었는데 '%s' · 넣기 꺼짐 %s" % [cards[0].amount.text, feed.disabled])
+	game._test_button("", 10, 10, &"debugSkillExp", {}).pressed.emit()
+	feed.pressed.emit()
 	await process_frame
 	if me.skill_upgrades.get("thunder_fall", []) != ["stun"] or str(cards[0].amount.text) != "강화 완료" \
-			or not big.disabled:
-		_fail("10000 을 넘겼는데 강화가 안 붙었다 (%s · '%s')" % [str(me.skill_upgrades), cards[0].amount.text])
+			or not feed.disabled:
+		_fail("10000 을 채웠는데 강화가 안 붙었다 (%s · '%s')" % [str(me.skill_upgrades), cards[0].amount.text])
 	else:
-		print("  강화 칸: %s · 하급 둘 200 → 상급 다섯으로 '%s'" % [box, cards[0].amount.text])
+		print("  강화 칸: %s · 2000 → +10만으로 '%s' · 남은 %d" % [box, cards[0].amount.text, int(me.skill_exp)])
 	world.debug_reset_upgrades("me")
 
 

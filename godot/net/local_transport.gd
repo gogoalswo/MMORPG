@@ -93,10 +93,9 @@ func send(message: StringName, payload: Dictionary) -> void:
 				MY_ID,
 				str(payload.get("skill", "")),
 				int(payload.get("slot", -1)),
-				str(payload.get("book", "")),
 			)
-		&"debugBooks":
-			_world.debug_books(MY_ID)
+		&"debugSkillExp":
+			_world.debug_skill_exp(MY_ID)
 		&"debugLearnAll":
 			_world.debug_learn_all(MY_ID)
 		&"debugUpgradeAll":

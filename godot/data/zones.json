@@ -32,121 +32,141 @@
           "zone": "raid_01",
           "stage": 1,
           "boss": "boss00",
-          "level": 9
+          "level": 9,
+          "skillExp": 1000
         },
         {
           "zone": "raid_02",
           "stage": 2,
           "boss": "boss01",
-          "level": 19
+          "level": 19,
+          "skillExp": 2000
         },
         {
           "zone": "raid_03",
           "stage": 3,
           "boss": "boss02",
-          "level": 29
+          "level": 29,
+          "skillExp": 3000
         },
         {
           "zone": "raid_04",
           "stage": 4,
           "boss": "boss03",
-          "level": 39
+          "level": 39,
+          "skillExp": 4000
         },
         {
           "zone": "raid_05",
           "stage": 5,
           "boss": "boss04",
-          "level": 49
+          "level": 49,
+          "skillExp": 5000
         },
         {
           "zone": "raid_06",
           "stage": 6,
           "boss": "boss05",
-          "level": 59
+          "level": 59,
+          "skillExp": 6000
         },
         {
           "zone": "raid_07",
           "stage": 7,
           "boss": "boss06",
-          "level": 69
+          "level": 69,
+          "skillExp": 7000
         },
         {
           "zone": "raid_08",
           "stage": 8,
           "boss": "boss07",
-          "level": 79
+          "level": 79,
+          "skillExp": 8000
         },
         {
           "zone": "raid_09",
           "stage": 9,
           "boss": "boss08",
-          "level": 89
+          "level": 89,
+          "skillExp": 9000
         },
         {
           "zone": "raid_10",
           "stage": 10,
           "boss": "boss09",
-          "level": 99
+          "level": 99,
+          "skillExp": 10000
         },
         {
           "zone": "raid_11",
           "stage": 11,
           "boss": "boss10",
-          "level": 109
+          "level": 109,
+          "skillExp": 11000
         },
         {
           "zone": "raid_12",
           "stage": 12,
           "boss": "boss11",
-          "level": 119
+          "level": 119,
+          "skillExp": 12000
         },
         {
           "zone": "raid_13",
           "stage": 13,
           "boss": "boss12",
-          "level": 129
+          "level": 129,
+          "skillExp": 13000
         },
         {
           "zone": "raid_14",
           "stage": 14,
           "boss": "boss13",
-          "level": 139
+          "level": 139,
+          "skillExp": 14000
         },
         {
           "zone": "raid_15",
           "stage": 15,
           "boss": "boss14",
-          "level": 149
+          "level": 149,
+          "skillExp": 15000
         },
         {
           "zone": "raid_16",
           "stage": 16,
           "boss": "boss15",
-          "level": 159
+          "level": 159,
+          "skillExp": 16000
         },
         {
           "zone": "raid_17",
           "stage": 17,
           "boss": "boss16",
-          "level": 169
+          "level": 169,
+          "skillExp": 17000
         },
         {
           "zone": "raid_18",
           "stage": 18,
           "boss": "boss17",
-          "level": 179
+          "level": 179,
+          "skillExp": 18000
         },
         {
           "zone": "raid_19",
           "stage": 19,
           "boss": "boss18",
-          "level": 189
+          "level": 189,
+          "skillExp": 19000
         },
         {
           "zone": "raid_20",
           "stage": 20,
           "boss": "boss19",
-          "level": 199
+          "level": 199,
+          "skillExp": 20000
         }
       ]
     },

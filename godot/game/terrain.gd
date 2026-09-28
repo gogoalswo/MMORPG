@@ -69,6 +69,10 @@ const RECIPES := {
 		"flats": [[-9, -9, 3.0], [0, 0, 2.0]],
 		"patch": 0.55,
 		"shade": 1.0,
+		# 이동 끝 표시 (2026-09-28 "5시 방향을 클릭하는데 왜 못 가" — 끝 너머도 같은 풀밭에
+		# 흙길까지 뻗어 있어 경계가 안 보였다): 끝 너머를 그늘로 · 끝에서 0.6m 턱
+		"edge_dark": 0.9,
+		"bank": 0.6,
 		# 존 색(grassLight #4a5936)은 검은빛이라 이끼 바닥이 흙과 안 갈린다 — 참고 그림의
 		# 짙지만 살아 있는 초록으로 덮어쓴다. shared 존 색은 하늘·다른 곳이 같이 써서 안 건드린다
 		"looks": {"grass": ["#6f8f38", 1.9], "dirt": ["#5e4a30", 1.25]},
@@ -222,6 +226,9 @@ func _weights(x: float, z: float) -> Vector3:
 	var d := _road_dist_at(x, z) + _n01(x, z, 2.5, 37.0) * 0.45
 	var road := (1.0 - smoothstep(w - 0.35, w + 0.35, d)) * (1.0 - stone) * fade
 	var dirt_road := str(_recipe.get("road_layer", "cobble")) == "dirt"
+	# 숲의 흙길은 이동 끝에서 끊는다 — 끝 밖으로 뻗으면 "저기까지 갈 수 있다" 로 읽힌다
+	if dirt_road:
+		road *= 1.0 - smoothstep(float(_recipe.rim) - 1.0, float(_recipe.rim) + 0.5, edge)
 	var cobble := 0.0 if dirt_road else road
 
 	# 흙 — 길섶(밟혀서 풀이 벗겨진 곳), 광장 둘레, 그리고 군데군데 맨땅
@@ -244,7 +251,10 @@ func _shade(x: float, z: float) -> float:
 		return 0.5
 	var big := _n01(x, z, 7.0, 211.0)
 	var small := _n01(x, z, 2.2, 257.0)
-	return clampf(0.5 + (big * 0.75 + small * 0.35) * amount, 0.0, 1.0)
+	var s := clampf(0.5 + (big * 0.75 + small * 0.35) * amount, 0.0, 1.0)
+	# 이동 끝 너머는 숲 그늘 — 갈 수 없는 곳이 한눈에 갈린다
+	var past := smoothstep(float(_recipe.rim), float(_recipe.rim) + 2.5, _edge(x, z) + _n01(x, z, 2.0, 301.0) * 0.6)
+	return lerpf(s, 0.0, past * float(_recipe.get("edge_dark", 0.0)))
 
 
 ## 이 자리의 바닥 섞기 (돌판, 자갈, 흙). 풀은 나머지 — 풀포기·돌을 흩뿌릴 때 본다
@@ -290,6 +300,8 @@ func _bake_heights() -> void:
 			# 바깥 언덕 — 이동 끝에서 0 으로 시작해 점점 가팔라진다. 가장 가파른 곳도
 			# 카메라 시선(42도)보다 한참 눕혀 둬서, 끝에 선 캐릭터를 가리지 않는다
 			var e := maxf(0.0, _edge(x, z) - rim)
+			# 끝 둔덕 — 이동 끝에서 바로 솟는 낮은 턱. 끝이 땅 모양으로도 보이게
+			h += float(_recipe.get("bank", 0.0)) * smoothstep(0.0, 2.5, e)
 			if e > 0.0:
 				var t := e / (HALF - rim)
 				h += rim_top * pow(t, 1.6)

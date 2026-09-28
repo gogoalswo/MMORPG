@@ -31,7 +31,8 @@ const RECIPES := {
 		"tufts": 5200,
 		"tuft_half": 27.0,
 		# 뿌리 쪽 · 잎 끝 색 — 지형의 풀 층(`looks`)과 맞춘다
-		"tuft_colors": ["#26331a", "#86a648"],
+		# 끝 색이 형광 연두(#86a648)였을 때 "눈이 너무 아파" — 채도·밝기를 낮췄다
+		"tuft_colors": ["#26331a", "#6a7f3e"],
 		"rocks": [
 			# 화면 위쪽 두 변(-x · -z) 너머 — 크게
 			[-14.5, -2.0, 2.0, 7, 2.4],
@@ -177,8 +178,9 @@ static func _tuft_placements(recipe: Dictionary, terrain: Terrain, rng: RandomNu
 			bt = maxf(0.25, height_cap(bx, bz, bt))
 			var basis := Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(bt * rng.randf_range(0.9, 1.4), bt, bt * rng.randf_range(0.9, 1.4)))
 			xforms.append(Transform3D(basis, Vector3(bx, terrain.height_at(bx, bz) - 0.03, bz)))
-			# 색 흔들기(r) · 모양 씨앗(g)
-			customs.append(Color(rng.randf(), rng.randf(), 0.0, 0.0))
+			# 색 흔들기(r) · 모양 씨앗(g) · 끝 너머 그늘(b) — 바닥 그늘과 같이 어두워진다
+			var dark := smoothstep(WALK, WALK + 2.5, maxf(absf(bx), absf(bz))) * float(terrain._recipe.get("edge_dark", 0.0))
+			customs.append(Color(rng.randf(), rng.randf(), dark, 0.0))
 	return [xforms, customs]
 
 

@@ -303,6 +303,9 @@ var _invincible_button: Button
 ## 치트(테스트 단추) 목록 묶음과 그것을 여닫는 단추 (2026-09-25 — 왼쪽이 치트로 도배돼 안 보였다)
 var _cheat_column: VBoxContainer
 var _cheat_toggle: Button
+## 테스트 모드 스킬 목록과 그것을 여닫는 단추 (2026-09-28) — 치트 여닫기 단추 오른쪽
+var _skill_list: GridContainer
+var _skill_list_toggle: Button
 ## 자동 사냥 칸. 퀵슬롯 옆에 같은 모양으로 붙는다. 켜짐 표시는 **서버가 준
 ## me.auto** 로만 정한다 — 눌린 것으로 지레 바꾸면 판정이 거절했을 때 화면만
 ## 켜진 채로 남는다
@@ -3416,6 +3419,7 @@ func _build_test_switches() -> void:
 	_cheat_toggle.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_cheat_toggle.offset_top -= lift
 	_cheat_toggle.offset_bottom -= lift
+	_build_skill_list(lift)
 	lift += CHEAT_TOGGLE.y + 6
 	column.offset_top -= lift
 	column.offset_bottom -= lift
@@ -3428,6 +3432,72 @@ const CHEAT_TOGGLE := Vector2(230, 44)
 
 func _toggle_cheats() -> void:
 	_set_cheats_open(not _cheat_column.visible)
+
+
+## **테스트 모드 스킬 목록** (2026-09-28 요청: "테스트 모드에서는 스킬을 목록을 왼쪽에 버튼 만들어서
+## 누르면 사용할 수 있게 만들어"). 치트 여닫기 단추 **오른쪽 옆**에 "스킬 목록" 단추가 서고, 펼치면
+## 그 위로 내 직업 스킬이 두 줄로 선다. 누르면 퀵슬롯 칸과 **같은 요청**(`skill`)을 보낸다 — 판정은
+## World 가 다시 본다 (안 배웠으면 거절). 퀵슬롯 4칸에 없는 스킬도 바로 써 볼 수 있게 한 것이다.
+## 치트 목록 위로 쌓지 않은 까닭 — 펼친 치트 목록이 이미 화면 위로 넘친다 (play-mode.md)
+const SKILL_LIST_TOGGLE := Vector2(150, 44)
+## 목록과 여닫기 단추 사이 틈. 목록 오른쪽 끝이 아래 가운데 묶음(레벨 배지·체력·퀵슬롯, 윗변 y=444)
+## 위로 16px 걸려서 그만큼 더 띄운다 (1280×720 에서 쟀다)
+const SKILL_LIST_GAP := 26
+const SKILL_LIST_CELL := Vector2(160, 52)
+func _build_skill_list(lift: float) -> void:
+	var shift := CHEAT_TOGGLE.x + 6
+	_skill_list_toggle = Button.new()
+	_skill_list_toggle.name = "skillListToggle"
+	_skill_list_toggle.custom_minimum_size = SKILL_LIST_TOGGLE
+	_skill_list_toggle.add_theme_font_size_override("font_size", 18)
+	_skill_list_toggle.pressed.connect(func() -> void: _set_skill_list_open(not _skill_list.visible))
+	_ui_root.add_child(_skill_list_toggle)
+	_skill_list_toggle.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 20)
+	_skill_list_toggle.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_skill_list_toggle.offset_left += shift
+	_skill_list_toggle.offset_right += shift
+	_skill_list_toggle.offset_top -= lift
+	_skill_list_toggle.offset_bottom -= lift
+	_skill_list = GridContainer.new()
+	_skill_list.name = "skillList"
+	_skill_list.columns = 2
+	_skill_list.add_theme_constant_override("h_separation", 6)
+	_skill_list.add_theme_constant_override("v_separation", 6)
+	_ui_root.add_child(_skill_list)
+	_skill_list.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 20)
+	_skill_list.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_skill_list.offset_left += shift
+	_skill_list.offset_right += shift
+	_skill_list.offset_top -= lift + SKILL_LIST_TOGGLE.y + SKILL_LIST_GAP
+	_skill_list.offset_bottom -= lift + SKILL_LIST_TOGGLE.y + SKILL_LIST_GAP
+	_set_skill_list_open(false)
+
+
+## 펼칠 때마다 다시 짓는다 — 직업을 새로 골라도 그 직업 스킬이 뜬다
+func _set_skill_list_open(open: bool) -> void:
+	if open:
+		_fill_skill_list()
+	_skill_list.visible = open
+	_skill_list_toggle.text = "스킬 목록 닫기" if open else "스킬 목록 열기"
+	_skill_list_toggle.modulate = Color.WHITE if open else Color(1, 1, 1, 0.75)
+
+
+func _fill_skill_list() -> void:
+	for child in _skill_list.get_children():
+		_skill_list.remove_child(child)
+		child.queue_free()
+	for id in Skills.for_job(str(_me().get("job", ""))):
+		var button := Button.new()
+		button.name = str(id)
+		button.custom_minimum_size = SKILL_LIST_CELL
+		button.add_theme_font_size_override("font_size", 15)
+		button.add_theme_constant_override("icon_max_width", 36)
+		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		button.icon = _icon("skill_" + str(id))
+		button.text = str(Skills.all().get(id, {}).get("name", id))
+		button.pressed.connect(func() -> void: _transport.send(&"skill", {"skill": str(id)}))
+		_skill_list.add_child(button)
 
 
 func _set_cheats_open(open: bool) -> void:
@@ -3457,6 +3527,8 @@ func _apply_play_mode() -> void:
 		PlayMode.NORMAL:
 			_set_cheats_open(false)
 			_cheat_toggle.visible = false
+			_set_skill_list_open(false)
+			_skill_list_toggle.visible = false
 
 
 func _on_switch_pressed(name: String) -> void:

@@ -28,6 +28,9 @@ extends SceneTree
 
 ## 게임 시간을 몇 배로 늦추나
 const SLOW := 0.08
+## 첫 시전을 제 속도로 다 돌리는 시간(ms). 잔불이 남는 폭렬 찍기는 6초 넘게 떠 있어서,
+## 기본값(2.6초)이면 첫 것이 두 번째와 겹쳐 찍힌다
+const FIRST_WAIT := {"blast_heel": 7000}
 ## 몇 프레임째를 찍나. `SLOW` 를 곱하면 대략 0.03·0.08·0.15·0.22·0.32·0.48초다
 const SHOTS := [2, 5, 9, 14, 20, 30]
 ## 요구 레벨과 포인트를 안 보고 배우게 해 준다 (스킬창을 누를 사람이 없다)
@@ -149,10 +152,11 @@ func _run() -> void:
 	if skill == "idle" or skill == "idle:close":
 		await _idle(game, skill == "idle:close")
 		return
-	# 동작 한 순간 — `pose:Jab:0.1` (클립:초) · 정면 · 옆 · 뒤를 가까이
+	# 동작 한 순간 — `pose:Jab:0.1` (클립:초) · 정면 · 옆 · 뒤를 가까이.
+	# 뛰어오른 순간은 `pose:BlastHeel:0.34:1.6` 처럼 넷째 값(m)만큼 조준을 올린다
 	if skill.begins_with("pose:"):
 		var part := skill.split(":")
-		await _idle(game, true, part[1], float(part[2]))
+		await _idle(game, true, part[1], float(part[2]), float(part[3]) if part.size() > 3 else 0.0)
 		return
 	# 맨주먹 — 무기를 벗기고 손을 가까이 (손가락을 말아 쥔 주먹이 제대로 쥐어졌나)
 	if skill == "hand":
@@ -176,6 +180,8 @@ func _run() -> void:
 	var player: Dictionary = game._transport._world._players[game._transport.my_id()]
 	player["level"] = LEVEL
 	player["skill_points"] = 99
+	# 전직 스킬(낙뢰·빙주각·천붕각·폭렬 찍기)은 전직 단계가 모자라면 못 배운다 — 끝까지 올린다
+	player["job_tier"] = 4
 	# `rising_kick@90` 처럼 붙이면 그 쪽(도)을 보고 쓴다 — 캐릭터 기준 이펙트는
 	# 보는 쪽에 따라 화면에서 모양이 달라서, 한 방향만 찍으면 못 보는 게 있다
 	if "@" in skill:
@@ -200,7 +206,7 @@ func _run() -> void:
 	# 되감아 쓰므로, 한 번 끝난 것이 제대로 되감기는지가 첫 시전보다 중요하다
 	Skills.set_switch("cooldownOff", true)
 	game._transport.send(&"skill", {"skill": skill})
-	var first_end := Time.get_ticks_msec() + 2600
+	var first_end := Time.get_ticks_msec() + int(FIRST_WAIT.get(skill, 2600))
 	while Time.get_ticks_msec() < first_end:
 		await process_frame
 	Engine.time_scale = SLOW
@@ -331,7 +337,7 @@ func _hand(game: Node3D) -> void:
 
 
 ## 대기 자세를 정면과 옆에서 온몸으로 (`npm run shot:godot -- idle`) — 눈높이 카메라라 팔 각도가 그대로 보인다
-func _idle(game: Node3D, close := false, clip := "Idle", at := 0.0) -> void:
+func _idle(game: Node3D, close := false, clip := "Idle", at := 0.0, lift := 0.0) -> void:
 	await process_frame
 	await process_frame
 	game.set_process(false)
@@ -341,7 +347,7 @@ func _idle(game: Node3D, close := false, clip := "Idle", at := 0.0) -> void:
 		rig.set_gear(slot, 0)
 	# 대기는 흘려 보내고, 다른 동작은 그 순간에 세운다
 	rig.play(clip, 1.0 if clip == "Idle" else 0.0, at, true, 0.0)
-	var focus: Vector3 = rig.position + Vector3(0, 0.75 if close else 0.9, 0)
+	var focus: Vector3 = rig.position + Vector3(0, (0.75 if close else 0.9) + lift, 0)
 	var cell := Vector2i(520, 700)
 	var sheet: Image = null
 	for index in 3:

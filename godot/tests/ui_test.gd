@@ -279,6 +279,7 @@ func _run_scene() -> void:
 	await _case_status(game)
 	await _case_potion(game)
 	await _case_auto_priority(game)
+	await _case_bag_dot(game)
 	await _case_bag(game)
 	await _case_char(game)
 	await _case_bag_drag(game)
@@ -709,6 +710,37 @@ func _tap_row(panel: GatePanel, i: int) -> void:
 
 ## 가방·장비 창 — 열리나, 칸이 제대로 깔리나, 골라서 낄 수 있나.
 ## 스크린샷을 찍지 않는다: 칸 수와 칸 안의 글자·그림은 노드로 읽을 수 있다
+## 가방 단추의 빨간 점 (2026-09-28 요청 "신규 아이템 획득하면 가방에 레드닷 표시해줘").
+## 장비를 얻으면 켜지고 · 골드만이면 안 켜지고 · 가방을 열면 꺼지고 · 열어 둔 채 얻으면 안 켜진다
+func _case_bag_dot(game: Node3D) -> void:
+	var dot: Control = game._bag_dot
+	if game._bag_panel.visible:
+		game._toggle_bag()
+	if dot.visible:
+		_fail("아무것도 안 얻었는데 가방에 빨간 점이 떠 있다")
+	game._on_event(&"loot", {"gold": 5})
+	if dot.visible:
+		_fail("골드만 얻었는데 빨간 점이 켜졌다")
+	game._on_event(&"loot", {"gold": 5, "item": {"id": "g3_w", "grade": 3, "enhance": 0}})
+	await process_frame
+	if not dot.visible:
+		_fail("장비를 얻었는데 가방에 빨간 점이 안 켜졌다")
+	# 아이콘 네모의 오른쪽 위 모서리에 있어야 한다 — 글자 줄이나 칸 밖이 아니다
+	var icon_rect: Rect2 = game._menu_cells[4].find_child("inset", true, false).get_global_rect()
+	var dot_rect := dot.get_global_rect()
+	if not icon_rect.encloses(dot_rect) or dot_rect.get_center().x < icon_rect.get_center().x \
+			or dot_rect.get_center().y > icon_rect.get_center().y:
+		_fail("빨간 점(%s)이 가방 아이콘(%s) 오른쪽 위에 없다" % [dot_rect, icon_rect])
+	game._toggle_bag()
+	if dot.visible:
+		_fail("가방을 열었는데 빨간 점이 안 꺼졌다")
+	game._on_event(&"loot", {"gold": 5, "item": {"id": "g3_w", "grade": 3, "enhance": 0}})
+	if dot.visible:
+		_fail("가방을 보고 있는데 빨간 점이 켜졌다")
+	game._toggle_bag()
+	print("  가방 빨간 점: 얻으면 켜지고 열면 꺼진다")
+
+
 func _case_bag(game: Node3D) -> void:
 	var me: Dictionary = game._transport.snapshot().players[game._transport.my_id()]
 

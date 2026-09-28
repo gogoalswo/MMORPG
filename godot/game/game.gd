@@ -106,10 +106,10 @@ const BAR_PAD := 0
 const MENU_BTN := 62
 const MENU_INSET := 3
 ## 메뉴 단추 아래 이름 글자 — 그림만으로는 무엇인지 헷갈린다 (2026-09-28 요청, 받은 그림은
-## 아이콘 아래에 "상점·인벤토리·스펠·퀘스트" 가 붙어 있다). 칸을 이만큼 늘여 아이콘 밑에 얹고,
-## 아이콘 발치와 `MENU_CAPTION_OVERLAP` 만큼 겹친다 — 받은 그림도 글자가 아이콘 밑동을 조금 덮는다
-const MENU_CAPTION := 16
-const MENU_CAPTION_OVERLAP := 4
+## 아이콘 아래에 "상점·인벤토리·스펠·퀘스트" 가 붙어 있다). **아이콘 네모 밑에 세로로 쌓는다** —
+## 처음엔 칸 안에서 아이콘 발치와 4px 겹쳤는데, 글자 줄 높이가 칸보다 커서 아이콘을 덮었다
+## ("아이콘이랑 글씨가 겹쳐 있는데, 스크린샷처럼 아래에 넣어", 같은 날)
+const MENU_CAPTION_GAP := 1
 const MENU_CAPTION_FONT := 14
 ## 창 닫기 X. **모든 창이 오른쪽 위에 이것 하나를 둔다** (2026-09-20 요청)
 const CLOSE_BTN := 44
@@ -779,17 +779,25 @@ func _icon_button(
 	icon_name: String, text: String, on_press: Callable, size: int = MENU_BTN, caption := false
 ) -> PanelContainer:
 	var cell := PanelContainer.new()
-	var below := MENU_CAPTION if caption else 0
-	cell.custom_minimum_size = Vector2(size, size + below)
+	cell.custom_minimum_size = Vector2(size, size)
 	cell.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 
 	var inset := MarginContainer.new()
 	inset.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	for side in ["left", "right", "top", "bottom"]:
 		inset.add_theme_constant_override("margin_" + side, MENU_INSET)
+	# 글자를 달면 아이콘 네모 · 글자를 세로로 쌓는다 — 세로 상자가 글자 줄 높이만큼 칸을 늘여서
+	# 둘이 겹칠 수 없다
+	var stack: VBoxContainer = null
 	if caption:
-		inset.add_theme_constant_override("margin_bottom", MENU_INSET + below - MENU_CAPTION_OVERLAP)
-	cell.add_child(inset)
+		stack = VBoxContainer.new()
+		stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		stack.add_theme_constant_override("separation", MENU_CAPTION_GAP)
+		cell.add_child(stack)
+		inset.custom_minimum_size = Vector2(size, size)
+		stack.add_child(inset)
+	else:
+		cell.add_child(inset)
 
 	var texture := _icon(icon_name)
 	if texture != null:
@@ -808,18 +816,18 @@ func _icon_button(
 		inset.add_child(label)
 
 	if caption:
-		# 칸을 꽉 채우고 아래에 붙인다 — 흰 글자에 검은 테 (받은 그림이 그렇다, 밤 바닥에서도 읽힌다)
+		# 아이콘 네모 **아래** 줄 — 흰 글자에 검은 테 (받은 그림이 그렇다, 밤 바닥에서도 읽힌다)
 		var name_label := Label.new()
 		name_label.name = "caption"
 		name_label.text = text
 		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		name_label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+		name_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 		name_label.add_theme_font_size_override("font_size", MENU_CAPTION_FONT)
 		name_label.add_theme_color_override("font_color", Color("#eeead7"))
 		name_label.add_theme_constant_override("outline_size", 5)
 		name_label.add_theme_color_override("font_outline_color", Color.BLACK)
 		name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		cell.add_child(name_label)
+		stack.add_child(name_label)
 
 	var hit := Button.new()
 	hit.name = "hit"

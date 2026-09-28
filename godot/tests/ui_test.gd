@@ -556,17 +556,17 @@ func _case_status(game: Node3D) -> void:
 	await process_frame
 	if game._crystal_panel.visible or game._bag_panel.visible or game._gear_panel.visible:
 		_fail("크리스탈 단추를 다시 눌렀는데 창이 안 닫혔다")
-	# 강화 — 크리스탈 **바로 왼쪽**. 누르면 강화 팝업이 대상 없이 **다중 강화 · 전체** 목록으로 뜬다
+	# 강화 — 크리스탈 **바로 왼쪽**. 누르면 강화 팝업이 대상 없이 **단일 강화 · 전체** 목록으로 뜬다 (2026-09-28)
 	var enh_rect: Rect2 = game._menu_cells[2].get_global_rect()
 	if absf(cry_rect.position.x - enh_rect.end.x) > 12.0 or absf(enh_rect.position.y - cry_rect.position.y) > 1.0:
 		_fail("강화 단추가 크리스탈 옆이 아니다: 강화 %s · 크리스탈 %s" % [enh_rect, cry_rect])
 	game._menu_cells[2].find_child("hit", true, false).pressed.emit()
 	await process_frame
 	var pop: EnhancePopup = game._enhance
-	if not pop.visible or pop.mode != "multi" or pop.filter != "all" or not pop.list_panel.visible:
-		_fail("가방 옆 강화 단추 — 보임 %s · 탭 %s · 목록 %s · 목록 창 %s" % [pop.visible, pop.mode, pop.filter, pop.list_panel.visible])
+	if not pop.visible or pop.mode != "one" or pop.filter != "all" or not pop.list_panel.visible or not pop.tabs["multi"].disabled:
+		_fail("가방 옆 강화 단추 — 보임 %s · 탭 %s · 목록 %s · 목록 창 %s · 다중 잠김 %s" % [pop.visible, pop.mode, pop.filter, pop.list_panel.visible, pop.tabs["multi"].disabled])
 	else:
-		print("  가방 옆 강화: 다중 강화 · 전체 목록 %d칸" % pop._list_view.size())
+		print("  가방 옆 강화: 단일 강화 · 전체 목록 끼운 것 %d + 가방 %d칸" % [pop._list_worn.size(), pop._list_view.size()])
 	game._menu_cells[2].find_child("hit", true, false).pressed.emit()
 	await process_frame
 	if pop.visible:
@@ -1899,31 +1899,59 @@ func _case_enhance_batch(game: Node, me: Dictionary) -> void:
 	if not pop.go.disabled or not pop.list_panel.visible or pop._list_view.is_empty():
 		_fail("다중 뒤 단일 탭인데 강화 단추 %s · 목록 %s (%d칸)" % [pop.go.disabled, pop.list_panel.visible, pop._list_view.size()])
 	else:
+		# 끼고 있는 것이 목록 앞에 서고 E 가 붙는다 (2026-09-28) — 가방 칸은 그 뒤부터
+		var worn: int = pop._list_worn.size()
+		for k in worn + 1:
+			var mark_on: bool = pop._list_cells[k].get_node("worn").visible
+			if mark_on != (k < worn):
+				_fail("단일 목록 %d 번 칸의 E 가 %s (끼운 것 %d칸)" % [k, mark_on, worn])
+		if worn > 0:
+			pop.toggle_list(0)
+			await process_frame
+			if str(pop.target.get("where", "")) != "equip" or pop.go.disabled or not pop._list_cells[0].get_node("pick").visible:
+				_fail("끼운 장비 칸을 골랐는데 대상 %s · 강화 단추 꺼짐 %s" % [pop.target, pop.go.disabled])
 		var chosen: int = pop._list_view[0]
-		pop.toggle_list(0)
+		pop.toggle_list(worn)
 		await process_frame
-		if int(pop.target.get("index", -1)) != chosen or pop.go.disabled or not pop._list_cells[0].get_node("pick").visible:
-			_fail("단일 목록 첫 칸을 골랐는데 대상 %s · 강화 단추 꺼짐 %s" % [pop.target, pop.go.disabled])
+		if int(pop.target.get("index", -1)) != chosen or pop.go.disabled or not pop._list_cells[worn].get_node("pick").visible:
+			_fail("단일 목록 첫 가방 칸을 골랐는데 대상 %s · 강화 단추 꺼짐 %s" % [pop.target, pop.go.disabled])
 		else:
-			print("  단일 목록: 가방 %d 번을 골라 '%s'" % [chosen, pop.kind.text])
-	# 다중 — **처음 담은 장비가 목록 기준**이다. 대상 없이 열면(오른쪽 위 메뉴) 아직 거를 기준이 없어 전부 보이고,
-	# 하나 담으면 "같은 아이템" · "같은 등급" 이 그것으로 거른다 (2026-09-25 "선택한 장비에 따라서 … 필터링")
+			print("  단일 목록: 끼운 것 %d칸(E) 뒤 가방 %d 번을 골라 '%s'" % [worn, chosen, pop.kind.text])
+	# 대상 없이 열면(오른쪽 위 메뉴) **단일 · 전체** 로 뜨고, 장비를 고르기 전에는 다중 · 같은 아이템 ·
+	# 같은 등급이 잠긴다 (2026-09-28). 고른 장비가 목록 기준이 되어 "같은 아이템" · "같은 등급" 이
+	# 그것으로 거른다 (2026-09-25 "선택한 장비에 따라서 … 필터링")
 	for i in 2:
 		me.bag.append({"id": ref_id, "grade": 1, "enhance": 0, "options": []})
 	pop.open({})
 	pop.pick_mode("multi")
 	pop.pick_filter("item")
 	await process_frame
+	if pop.mode != "one" or pop.filter != "all" or not pop.tabs["multi"].disabled \
+			or not pop.filters["item"].disabled or not pop.filters["grade"].disabled or pop.filters["all"].disabled:
+		_fail("대상 없이 열었는데 탭 %s · 거름 %s · 잠금 다중 %s 같은 아이템 %s 같은 등급 %s" % [pop.mode, pop.filter,
+			pop.tabs["multi"].disabled, pop.filters["item"].disabled, pop.filters["grade"].disabled])
+	if pop.kind.text != "강화할 장비를 선택해 주세요":
+		_fail("대상 없이 연 단일 안내가 '%s'" % pop.kind.text)
+	var shown: Array = pop.filters["all"].get_parent().get_children().map(func(b: Button) -> String: return b.text)
+	if shown != ["전체", "같은 아이템", "같은 등급"]:
+		_fail("목록 탭 순서가 %s" % str(shown))
 	var every := pop._list_view.size()
 	var odd := -1
 	for k in pop._list_view.size():
 		if str(me.bag[pop._list_view[k]].id) == "g1_a":
 			odd = k
 	if odd < 0:
-		_fail("대상 없이 연 다중 목록(%d칸)에 g1_a 가 없다" % every)
+		_fail("대상 없이 연 목록(%d칸)에 g1_a 가 없다" % every)
 	else:
-		pop.toggle_list(odd)
+		pop.toggle_list(pop._list_worn.size() + odd)
 		await process_frame
+		if pop.tabs["multi"].disabled or pop.filters["item"].disabled or pop.filters["grade"].disabled:
+			_fail("g1_a 를 골랐는데 탭이 안 풀렸다")
+		pop.pick_mode("multi")
+		pop.pick_filter("item")
+		await process_frame
+		if pop.picked.size() != 1 or pop._list_worn.size() != 0:
+			_fail("고른 뒤 다중으로 넘어왔는데 담은 것 %s · 끼운 것 %d칸 (다중엔 안 나온다)" % [str(pop.picked), pop._list_worn.size()])
 		var others: Array = pop._list_view.filter(func(at: int) -> bool: return str(me.bag[at].id) != "g1_a")
 		if pop._list_view.is_empty() or not others.is_empty() or pop._list_view.size() >= every:
 			_fail("g1_a 를 담았는데 같은 아이템 목록이 %d칸 (다른 것 %d칸, 전부 %d칸)" % [pop._list_view.size(), others.size(), every])

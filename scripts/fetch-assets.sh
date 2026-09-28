@@ -326,10 +326,13 @@ fetch_icon 2209356ad70f42d8872938bc39ffedd4 ui_gate_go     # 갈 수 있는 곳 
 fetch_icon e5157077f125b146e546c1c91b818096 ui_icon_skill  # 오른쪽 위 스킬 (펼친 책 + 룬)
 fetch_icon 7542d36d9687956d7335787965b4f16d ui_icon_bag    # 오른쪽 위 가방 (배낭)
 fetch_icon 106e9eda607b28a595dcf08578270163 ui_icon_dungeon # 가방 옆 던전 — 뿔 달린 보스 머리 (두 장 중 첫째). 아트풍 그대로 둔다
-# 던전 종류 카드 썸네일만 실사풍 (2026-09-26, docs/features/dungeons.md). 각 두 장 중 고른 것
-fetch_icon 5ba8037d1557db3aaa50724f3773a062 dungeon_raid     # 토벌 — 뿔 달린 오거 보스 머리 (둘째)
-fetch_icon 83ade51b31eaabf39062e899b8b4b39d dungeon_trial    # 시련의 탑 — 뾰족 지붕 돌탑 · 횃불 (둘째)
-fetch_icon 5eb4149d3844a5afb43f514f86b719ab dungeon_treasure # 보물 창고 — 금테 상자 · 자물쇠 · 금화 (첫째)
+# 던전 종류 카드 — 받은 그림(다른 게임의 던전 창)을 참고로 물려 뽑은 풍경 · 틀 · 장식
+# (2026-09-28, docs/features/dungeons.md). 각 두 장 중 고른 것. 풍경은 9:16 이라 배경을 안 걷는다
+fetch_icon 835f847665366f9f3471ae4c32b7863f dungeon_raid     # 토벌 — 무너진 아치 투기장 · 뒤에 선 오거 (첫째)
+fetch_icon ceb2c53d523649a6376b4c204144c8bd dungeon_trial    # 시련의 탑 — 보랏빛 번개 맞는 첨탑 (첫째)
+fetch_icon fa124e9f7d19ee8301a2be5ecab872a4 dungeon_treasure # 보물 창고 — 금고 문 · 상자 · 등불 (둘째)
+fetch_icon 95353ca131109a81562da8c056255962 ui_dungeon_card  # 카드 틀 — 닳은 돌판 · 얇은 청동 테 (둘째)
+fetch_icon bca3ac0f09670fe8e947153580b9216f ui_dungeon_crest # 카드 위 장식 — 창살 아치 문 + 덩굴 날개 (둘째)
 fetch_icon 9f519882b9a58b99a928564c0fb70efd ui_icon_auto   # 자동사냥 — 검 두 자루가 X자
 # 퀵슬롯 왼쪽 물약 칸 (2026-09-26) — 둥근 유리병 · 코르크 · 붉은 물약. 두 장 중 둘째(정면)
 fetch_icon 81fc643bd0233984e748b4bb3416fcc8 ui_icon_potion

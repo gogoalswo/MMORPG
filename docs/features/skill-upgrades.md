@@ -44,7 +44,7 @@
 | `godot/world/skills.gd` `upgrade` · `upgrades_of` · `exp_books` · `stun_ms` · `range_mul` · `upgrade_sum` | 표 읽기. `upgrades_of` 의 순서가 1번·2번. `upgrade_sum` 은 더하는 효과(`arcAdd` · `extraHits`) |
 | `godot/world/items.gd` `book_exp` | 경험치북이면 넣는 경험치 |
 | `godot/world/world.gd` `feed_upgrade` | ★ 스킬창의 경험치북 단추 (`feedUpgrade`) — **판정은 여기서** (직업·번호·이미 붙었나·책이 있나 → 한 권 빼고 쌓고, 닿으면 붙인다) |
-| `godot/world/world.gd` `_add_upgrade` | 강화를 붙이고 그 강화에 쌓이던 경험치를 지운다 — 붙는 길은 전부 여기를 지난다 |
+| `godot/world/ledger.gd` `add_upgrade` | 강화를 붙이고 그 강화에 쌓이던 경험치를 지운다 — 붙는 길은 전부 여기를 지난다 (`feed_upgrade` 도 여기. 치트는 `World._add_upgrade` 로 부른다) |
 | `godot/world/world.gd` `cast` | 붙은 강화를 `skill` 이벤트에 싣고(`upgrades`), 사거리에 배율을 곱하고, 각·대 수를 더하고, 기절·지대를 건다 |
 | `godot/world/world.gd` `_open_zone` · `_run_zones` · `_zones` | ★ **남는 피해 지대** (균열 지대) — 거는 곳과 틱마다 넣는 곳 |
 | `godot/world/world.gd` `_step_monsters` | `stunned_until` 까지 `state = "stun"` 으로 서 있는다 |
@@ -82,7 +82,7 @@
   붙은 강화에는 더 못 넣고(단추가 꺼진다), 다른 강화로 옮겨 가지도 않는다.
 - **가방에서는 경험치북을 안 쓴다** (요청 2). 가방 상세 창에는 보유 수·경험치와
   "스킬창에서 사용" 만 적고 단추는 없다(`-`).
-- 경험치북은 **재료**로 가방 한 칸에 겹친다 (`{ id, count }`, `World._give`) — 크리스탈과
+- 경험치북은 **재료**로 가방 한 칸에 겹친다 (`{ id, count }`, `Ledger.give`) — 크리스탈과
   같은 이유로 장비 표(`ITEMS`)에 넣지 않는다 → [items.md](items.md).
 - **남의 직업 스킬에는 못 넣는다.** 스킬을 **배웠는지는 안 본다** — 강화는 캐릭터에
   남으므로 나중에 배워도 붙어 있다.
@@ -105,7 +105,7 @@
 
 - `skill_upgrades: { 스킬 id: [강화 id…] }` — 붙은 것.
 - `skill_upgrade_exp: { 스킬 id: { 강화 id: 경험치 } }` — **붙기 전까지** 쌓인 것.
-  붙으면 그 줄을 지운다(`_add_upgrade`). 둘로 나눈 것은 옛 저장(붙은 목록만 있던 판)을
+  붙으면 그 줄을 지운다(`add_upgrade`). 둘로 나눈 것은 옛 저장(붙은 목록만 있던 판)을
   그대로 읽기 위해서다.
 - 둘 다 **없던 칸을 더한 것**이라 저장 `VERSION` 을 올리지 않았다 (`granted` 와 같은
   방식). 되살릴 때 **지금 표에 있는 것만**, 경험치는 **아직 안 붙은 것만** 남긴다.

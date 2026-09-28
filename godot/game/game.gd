@@ -62,6 +62,9 @@ const INV_BUTTON := Vector2(76, 40)
 ## (구운 크기에서 잰 값: 창 바탕 테 9 · 모서리 장식 10, 칸·탭 3, 단추 4 — 2026-09-23)
 const INV_PANEL_MARGIN := 12
 const INV_PANEL_PAD := 18
+## 가방 쪽 창을 던전 결로 (2026-09-28) — 틀 안쪽 여백 · 제목 문장 크기
+const STONE_PAD := 30
+const STONE_EMBLEM := 40
 const INV_SLOT_MARGIN := 4
 const INV_PICK_MARGIN := 8
 const INV_TAB_MARGIN := 4
@@ -1095,7 +1098,7 @@ func _build_bag_panel() -> void:
 	row.add_theme_constant_override("separation", WINDOW_GAP)
 	layer.add_child(row)
 
-	_gear_panel = _window_panel()
+	_gear_panel = _stone_window()
 	row.add_child(_gear_panel)
 	_build_gear_window(_gear_panel)
 
@@ -1105,17 +1108,17 @@ func _build_bag_panel() -> void:
 	row.add_child(spacer)
 
 	# 상세 창은 **내용 높이만** 쓴다 (2026-09-25 요청: "크기를 좀 줄여") — 위에 붙인다
-	_detail_panel = _window_panel()
+	_detail_panel = _stone_window()
 	_detail_panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	row.add_child(_detail_panel)
 	_build_detail_window(_detail_panel)
 
 	# 크리스탈 창은 상세 창과 **같은 자리**에 번갈아 뜬다
-	_crystal_panel = _window_panel()
+	_crystal_panel = _stone_window()
 	row.add_child(_crystal_panel)
 	_build_crystal_window(_crystal_panel)
 
-	_bag_panel = _window_panel()
+	_bag_panel = _stone_window()
 	row.add_child(_bag_panel)
 	_build_bag_window(_bag_panel)
 	_build_compare_layer()
@@ -1129,6 +1132,42 @@ func _window_panel() -> PanelContainer:
 		"panel", _inv_box("inv_panel", INV_PANEL_MARGIN, INV_PANEL_PAD, "#161b1a", "#4a3f30")
 	)
 	return panel
+
+
+## 가방 쪽 창(장비 · 상세 · 비교 · 크리스탈 · 인벤토리)의 틀 — **던전 창 결이다**
+## (2026-09-28 요청: "가방 UI도 던전 UI 아트풍으로 바꿔"). 던전 카드 틀(`ui_dungeon_card`)을
+## 9조각으로 깐다. 안쪽 판이 가장자리에서 26~36px 들어가 있어 내용은 `STONE_PAD` 만큼 물린다.
+## 조각이 없으면 인벤토리 결과 같은 색 판. 캐릭터 정보·랭킹·물약·자동사냥 창은 `_window_panel` 그대로다
+func _stone_window() -> PanelContainer:
+	var panel := PanelContainer.new()
+	panel.visible = false
+	panel.add_theme_stylebox_override(
+		"panel",
+		_inv_box("ui_dungeon_card", DungeonPanel.CARD_MARGIN, STONE_PAD, "#1b1c17", "#4a3f30")
+	)
+	return panel
+
+
+## 던전 창 제목 — 왼쪽에 문장(메뉴 아이콘), 상아빛 글자, 밑에 가는 선 (`DungeonPanel._restyle_title`)
+func _stone_title(parent: Node, text: String, size: int, emblem_name: String) -> Label:
+	var title := _window_title(parent, text, size)
+	title.add_theme_color_override("font_color", DungeonPanel.PAGE_TITLE_COLOR)
+	var emblem := TextureRect.new()
+	emblem.name = "Emblem"
+	emblem.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	emblem.texture = _icon(emblem_name)
+	emblem.custom_minimum_size = Vector2(STONE_EMBLEM, STONE_EMBLEM)
+	emblem.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	emblem.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	emblem.visible = emblem.texture != null
+	title.get_parent().add_child(emblem)
+	title.get_parent().move_child(emblem, 0)
+	var line := ColorRect.new()
+	line.color = GatePanel.HEAD_LINE
+	line.custom_minimum_size = Vector2(0, 2)
+	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(line)
+	return title
 
 
 ## 창 머리 줄 — 제목 글자와, 오른쪽 위 X 가 앉을 빈자리
@@ -1161,11 +1200,11 @@ func _build_gear_window(panel: PanelContainer) -> void:
 	side.add_theme_constant_override("separation", 12)
 	panel.add_child(side)
 
-	var title := _window_title(side, "장비", 26)
+	var title := _stone_title(side, "장비", 26, "ui_icon_character")
 	_bag_level = _inv_label("", 20, INV_TEXT)
 	_bag_level.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	title.get_parent().add_child(_bag_level)
-	title.get_parent().move_child(_bag_level, 1)
+	title.get_parent().move_child(_bag_level, title.get_index() + 1)
 
 	# 장착 — 캐릭터를 사이에 두고 세 칸씩. 칸 순서는 데이터가 정한다 (items.json 의 slots)
 	var body := HBoxContainer.new()
@@ -1201,9 +1240,7 @@ func _build_gear_window(panel: PanelContainer) -> void:
 
 	# 스탯 상자 — 여섯 개를 두 줄씩 세 단으로. 바탕은 칸과 같은 움푹한 판이다
 	var box := PanelContainer.new()
-	box.add_theme_stylebox_override(
-		"panel", _inv_box("inv_slot", INV_SLOT_MARGIN, 12, "#111313", "#292d27")
-	)
+	box.add_theme_stylebox_override("panel", _stone_cell_box(12))
 	side.add_child(box)
 	var grid := GridContainer.new()
 	grid.columns = 2
@@ -1305,7 +1342,7 @@ func _build_compare_layer() -> void:
 	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(spacer)
 
-	_compare_panel = _window_panel()
+	_compare_panel = _stone_window()
 	_compare_panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	row.add_child(_compare_panel)
 	_compare_view = _build_item_view(_compare_panel)
@@ -1342,10 +1379,10 @@ func _build_detail_window(panel: PanelContainer) -> void:
 	buttons.alignment = BoxContainer.ALIGNMENT_END
 	buttons.add_theme_constant_override("separation", 8)
 	side.add_child(buttons)
-	_enhance_button = _inv_button("강화", _open_enhance)
+	_enhance_button = _stone_button("강화", _open_enhance)
 	_enhance_button.visible = false
 	buttons.add_child(_enhance_button)
-	_bag_action = _inv_button("-", _on_bag_action)
+	_bag_action = _stone_button("-", _on_bag_action)
 	buttons.add_child(_bag_action)
 
 
@@ -1406,7 +1443,7 @@ func _build_crystal_window(panel: PanelContainer) -> void:
 	side.add_theme_constant_override("separation", 8)
 	panel.add_child(side)
 
-	_window_title(side, "크리스탈 강화", 22)
+	_stone_title(side, "크리스탈 강화", 22, "ui_icon_crystal")
 
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 10)
@@ -1454,7 +1491,7 @@ func _build_crystal_window(panel: PanelContainer) -> void:
 	_crystal_have.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_crystal_have.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	foot.add_child(_crystal_have)
-	_crystal_roll = _inv_button("굴리기", _on_crystal_roll)
+	_crystal_roll = _stone_button("굴리기", _on_crystal_roll)
 	foot.add_child(_crystal_roll)
 
 
@@ -1464,7 +1501,7 @@ func _build_bag_window(panel: PanelContainer) -> void:
 	side.add_theme_constant_override("separation", 10)
 	panel.add_child(side)
 
-	_window_title(side, "인벤토리", 26)
+	_stone_title(side, "인벤토리", 26, "ui_icon_bag")
 
 	var body := HBoxContainer.new()
 	body.add_theme_constant_override("separation", 8)
@@ -1513,8 +1550,8 @@ func _build_bag_window(panel: PanelContainer) -> void:
 	_bag_head.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_bag_head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	foot.add_child(_bag_head)
-	foot.add_child(_inv_button("장비", _toggle_gear))
-	foot.add_child(_inv_button("정렬", _on_bag_sort))
+	foot.add_child(_stone_button("장비", _toggle_gear))
+	foot.add_child(_stone_button("정렬", _on_bag_sort))
 
 	var coins := HBoxContainer.new()
 	coins.add_theme_constant_override("separation", 8)
@@ -1538,6 +1575,46 @@ func _inv_button(text: String, on_press: Callable) -> Button:
 		)
 	button.pressed.connect(on_press)
 	return button
+
+
+## 가방 쪽 창의 단추 — 던전 창의 입장 단추처럼 **둥근 금테 단추 조각(`ui_button`) + 금빛 글자**.
+## 조각은 58px 높이라 40px 단추에 여백 28 로 늘이면 모서리가 겹치고, 반씩 자르면 둥근 끝이
+## 뾰족한 육각형이 된다 (2026-09-28, 찍어서 봤다). 그래서 **조각을 단추 높이로 한 번 줄여**
+## (`_small_button_texture`) 끝의 반원을 그대로 쓴다
+func _stone_button(text: String, on_press: Callable) -> Button:
+	var button := _inv_button(text, on_press)
+	var texture := _small_button_texture()
+	for state in ["normal", "hover", "pressed", "disabled"]:
+		if texture == null:
+			button.add_theme_stylebox_override(state, _inv_box("ui_button", 28, 6, "#1a1a17", "#5a4c34"))
+			continue
+		var box := StyleBoxTexture.new()
+		box.texture = texture
+		for side in [SIDE_LEFT, SIDE_RIGHT]:
+			box.set_texture_margin(side, texture.get_height() / 2.0)
+		box.set_content_margin_all(6)
+		button.add_theme_stylebox_override(state, box)
+	return _gold_text(button, 18)
+
+
+## `ui_button` 을 가방 단추 높이(`INV_BUTTON.y`)로 비율 그대로 줄인 것. 한 번만 만든다.
+## 조각은 무손실 임포트(`compress/mode=0`)라 웹에서도 `get_image` 가 된다
+var _small_button: Texture2D
+func _small_button_texture() -> Texture2D:
+	if _small_button != null:
+		return _small_button
+	var source := _icon("ui_button")
+	if source == null:
+		return null
+	var image := source.get_image()
+	if image == null:
+		return null
+	if image.is_compressed():
+		image.decompress()
+	var height := int(INV_BUTTON.y)
+	image.resize(roundi(image.get_width() * height / float(image.get_height())), height, Image.INTERPOLATE_LANCZOS)
+	_small_button = ImageTexture.create_from_image(image)
+	return _small_button
 
 
 ## `_frame_box` 와 같은데, 그림이 없을 때 **받은 그림의 색으로** 판을 그린다
@@ -1634,9 +1711,8 @@ func _add_icon(parent: Node, name: String, size: int) -> void:
 func _make_cell(on_press: Callable, size: int = CELL) -> PanelContainer:
 	var cell := PanelContainer.new()
 	cell.custom_minimum_size = Vector2(size, size)
-	cell.add_theme_stylebox_override(
-		"panel", _inv_box("inv_slot", INV_SLOT_MARGIN, BAG_CELL_PAD, "#111313", "#292d27")
-	)
+	# 던전 단계 창의 보상 칸과 같은 평판 (2026-09-28 — 가방을 던전 결로)
+	cell.add_theme_stylebox_override("panel", _stone_cell_box(BAG_CELL_PAD))
 
 	var icon := TextureRect.new()
 	icon.name = "icon"
@@ -2062,15 +2138,12 @@ func _redraw_bag() -> void:
 	for index in _tab_buttons.size():
 		var tab: Button = _tab_buttons[index]
 		var on := index == _bag_tab
-		var box := _inv_box(
-			"inv_tab_on" if on else "inv_tab_off", INV_TAB_MARGIN, 4,
-			"#4a4232" if on else "#0e1010", "#c9a95c" if on else "#2c2a24"
-		)
+		# 던전 단계 창의 단계 줄과 같다 — 고른 것만 옅은 금빛 바탕 + 왼쪽 금 막대, 줄마다 아래 선
+		var box := _stone_tab_box(on)
 		for state in ["normal", "hover", "pressed"]:
 			tab.add_theme_stylebox_override(state, box)
-		# 받은 그림처럼 고른 탭은 밝은 금빛, 나머지는 죽인 회색 글자
-		tab.add_theme_color_override("font_color", INV_GOLD_HI if on else INV_DIM)
-		tab.add_theme_color_override("font_hover_color", INV_GOLD_HI if on else INV_TEXT)
+		tab.add_theme_color_override("font_color", DungeonPanel.CARD_GOLD if on else INV_DIM)
+		tab.add_theme_color_override("font_hover_color", DungeonPanel.CARD_GOLD if on else INV_TEXT)
 
 	# 장착 — 아이콘 이름은 슬롯 이름과 같다 (assets/icons/weapon.png …)
 	var slots: Array = Items.slots()
@@ -3454,12 +3527,23 @@ func _caption(text: String) -> Label:
 
 ## 스킬창의 상자 — 던전 단계 창의 보상 칸과 같은 어두운 평판에 가는 흙금빛 선
 ## (`DungeonPanel._cell_box`). 둘레가 넓게 번지는 조각이 아니라 글자가 밖으로 나올 일도 없다
-func _stone_cell_box() -> StyleBox:
+func _stone_cell_box(content: int = 8) -> StyleBox:
 	var box := StyleBoxFlat.new()
 	box.bg_color = DungeonPanel.CELL_BG
 	box.border_color = DungeonPanel.CELL_LINE
 	box.set_border_width_all(1)
-	box.set_content_margin_all(8)
+	box.set_content_margin_all(content)
+	return box
+
+
+## 가방의 세로 탭 — 던전 단계 창의 줄(`DungeonPanel._row_box`)과 같은 모양
+func _stone_tab_box(on: bool) -> StyleBox:
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color(0.86, 0.75, 0.45, 0.14) if on else Color(0, 0, 0, 0)
+	box.border_color = DungeonPanel.CARD_GOLD if on else DungeonPanel.CELL_LINE
+	box.border_width_left = 3 if on else 0
+	box.border_width_bottom = 1
+	box.set_content_margin_all(4)
 	return box
 
 
@@ -3474,11 +3558,11 @@ func _stone_pick_box() -> StyleBox:
 
 
 ## 단추 글자를 던전 창의 입장 단추처럼 금빛으로 (막히면 흐린 회색)
-func _gold_text(button: Button) -> Button:
+func _gold_text(button: Button, size: int = 26) -> Button:
 	for key in ["font_color", "font_pressed_color", "font_hover_color", "font_hover_pressed_color"]:
 		button.add_theme_color_override(key, DungeonPanel.CARD_GOLD)
 	button.add_theme_color_override("font_disabled_color", GatePanel.HERE_COLOR)
-	button.add_theme_font_size_override("font_size", 26)
+	button.add_theme_font_size_override("font_size", size)
 	return button
 
 

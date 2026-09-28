@@ -39,7 +39,7 @@ func _run() -> void:
 	await _case(PlayMode.NORMAL)
 	PlayMode.current = ""
 	if _failed == 0:
-		print("  초기화 단추: 두 번에 지움 · 테스트 모드: 무적·쿨타임 0 켬, 목록 접힘, 장비 42종·크리스탈 300·Lv200·스킬 전부 · 일반 모드: 전부 끔, 목록 숨김")
+		print("  초기화 단추: 두 번에 지움 · 테스트 모드: 무적·쿨타임 0 켬, 목록 접힘, 장비 42종·크리스탈 300·Lv200·스킬 전부·스킬 목록 · 일반 모드: 전부 끔, 목록 숨김")
 	quit(1 if _failed > 0 else 0)
 
 
@@ -64,7 +64,10 @@ func _case(mode: String) -> void:
 	if test:
 		_check_test_kit(me)
 		await _check_test_level(game, me)
+		await _check_skill_list(game, me)
 		await _check_test_skills(game, me)
+	if game._skill_list_toggle.visible != test or game._skill_list.visible:
+		_fail("%s: 스킬 목록 단추가 %s 이어야 하고 목록은 접혀 있어야 한다" % [mode, "보여야" if test else "숨어야"])
 	# 다음 경우를 위해 되돌린다 — 쿨타임 스위치는 표(static)라 장면을 치워도 남는다
 	Skills.set_switch("cooldownOff", false)
 	game.queue_free()
@@ -119,6 +122,42 @@ func _check_test_skills(game: Node3D, me: Dictionary) -> void:
 	await process_frame
 	if not me.skill_bar.is_empty():
 		_fail("테스트 모드: 스킬은 한 번만 줘야 한다 — 비운 액션바가 %s 로 채워졌다" % [me.skill_bar])
+
+
+## 테스트 모드 스킬 목록 (2026-09-28) — 펼치면 내 직업 스킬이 다 뜨고, 퀵슬롯에 없는 것도
+## 누르면 쓰인다. 치트 목록·퀵슬롯·채팅창을 덮지 않는다 (1280×720)
+func _check_skill_list(game: Node3D, me: Dictionary) -> void:
+	game._skill_list_toggle.pressed.emit()
+	await process_frame
+	var ids: Array = Skills.for_job(str(me.job))
+	if not game._skill_list.visible or game._skill_list.get_child_count() != ids.size():
+		_fail("스킬 목록: 펼치면 스킬 %d개가 떠야 한다 — %d개" % [ids.size(), game._skill_list.get_child_count()])
+		return
+	game._set_cheats_open(true)
+	await process_frame
+	# 아래 가운데 묶음 — 퀵슬롯 칸이 아니라 레벨 배지·체력 막대까지 담은 통째로 본다
+	var dock: Control = game._bar_buttons[0]
+	while dock.get_parent() != game._ui_root:
+		dock = dock.get_parent()
+	var others: Array = [game._cheat_column, game._cheat_toggle, game._chat, dock]
+	for rect_of in [game._skill_list, game._skill_list_toggle]:
+		var mine: Rect2 = rect_of.get_global_rect()
+		if mine.position.y < 0:
+			_fail("스킬 목록: %s 가 화면 위로 넘친다 — %s" % [rect_of.name, mine])
+		for other in others:
+			if mine.intersects(other.get_global_rect()):
+				_fail("스킬 목록: %s 가 %s 를 덮는다" % [rect_of.name, other.name])
+	game._set_cheats_open(false)
+	var last := str(ids[-1])
+	if last in me.skill_bar:
+		_fail("스킬 목록: 퀵슬롯에 없는 스킬로 시험해야 한다 — %s 가 퀵슬롯에 있다" % last)
+	var before: int = game._swing_until
+	game._skill_list.get_node(last).pressed.emit()
+	for i in 3:
+		await process_frame
+	if game._swing_until == before:
+		_fail("스킬 목록: %s 를 눌렀는데 쓰이지 않았다" % last)
+	game._skill_list_toggle.pressed.emit()
 
 
 ## 테스트 모드 꾸러미 — 모든 장비 등급별로 하나씩(+0), 크리스탈 300개 (2026-09-26)

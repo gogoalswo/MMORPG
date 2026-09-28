@@ -48,12 +48,20 @@ const CHAT_BURST := 3
 const CHAT_REFILL_MS := 2000.0
 ## 이 단계 이상으로 강화에 성공하면 모두에게 알린다
 const ANNOUNCE_ENHANCE := 7
+## 랭킹 — 계정마다 한 줄 `{id, name, level, exp}`, 줄 세운 것은 장부가 바뀌면 버린다
+var _board := {}
+var _board_order: Array = []
+## 랭킹 창에 싣는 윗줄 수 (내 순위는 따로 싣는다)
+const RANK_TOP := 50
 ## 서버 시계(ms). 테스트는 바꿔 끼워 시간을 앞으로 돌린다
 var clock: Callable = func() -> int: return Time.get_ticks_msec()
 
 
 func _init(account_store: AccountStore) -> void:
 	store = account_store
+	# 랭킹은 켤 때 계정 파일을 전부 읽어 세운다 — 그 뒤로는 장부가 바뀔 때마다 그 줄만 고친다
+	for saved in store.all():
+		_board[saved.id] = _board_row(str(saved.id), saved.ledger)
 
 
 ## 연결 하나의 상태는 `session` 사전에 둔다 (`server_main` 이 연결마다 하나씩 쥔다)
@@ -67,6 +75,8 @@ func handle(session: Dictionary, message: Variant) -> Dictionary:
 			return _op(session, message)
 		"chat":
 			return _chat(session, message)
+		"rank":
+			return _rank(session)
 	return _error(message.get("id"), "unknown_type")
 
 
@@ -81,6 +91,7 @@ func _hello(session: Dictionary, message: Dictionary) -> Dictionary:
 		ledger.take_events()
 		account = store.create(fresh)
 		_accounts[account.id] = account
+		_touch_board(account)
 	else:
 		account = _accounts.get_or_add(account.id, account)
 	session["account"] = account
@@ -143,7 +154,54 @@ func _op(session: Dictionary, message: Dictionary) -> Dictionary:
 	if not store.write(account):
 		return _error(req, "store_failed")
 	_announce(account, reply.events)
+	_touch_board(account)
 	return reply
+
+
+## --- 랭킹 (docs/features/server.md 6단계) ---
+
+## 순위 — **레벨 → 경험치**, 둘이 같으면 계정 id 순(늘 같은 순서가 나오게).
+## 서버가 가진 값으로만 매긴다 — 기기가 보낸 숫자는 없다
+func _rank(session: Dictionary) -> Dictionary:
+	var account: Dictionary = session.get("account", {})
+	if account.is_empty():
+		return _error(null, "no_hello")
+	var order := _sorted_board()
+	var top: Array = []
+	var mine := {}
+	for i in order.size():
+		var row: Dictionary = order[i]
+		if i < RANK_TOP:
+			top.append({"rank": i + 1, "name": row.name, "level": row.level, "exp": row.exp})
+		if row.id == account.id:
+			mine = {"rank": i + 1, "level": row.level, "exp": row.exp}
+	return {"t": "rank", "top": top, "me": mine, "total": order.size()}
+
+
+func _board_row(id: String, p: Dictionary) -> Dictionary:
+	return {"id": id, "name": display_name(id), "level": int(p.get("level", 1)), "exp": int(p.get("exp", 0))}
+
+
+## 장부가 바뀐 계정의 줄만 고친다. 레벨·경험치가 그대로면 다시 줄 세우지 않는다
+func _touch_board(account: Dictionary) -> void:
+	var row := _board_row(str(account.id), account.ledger)
+	var old: Dictionary = _board.get(account.id, {})
+	if old.get("level") == row.level and old.get("exp") == row.exp:
+		return
+	_board[account.id] = row
+	_board_order.clear()
+
+
+func _sorted_board() -> Array:
+	if _board_order.is_empty() and not _board.is_empty():
+		_board_order = _board.values()
+		_board_order.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+			if a.level != b.level:
+				return a.level > b.level
+			if a.exp != b.exp:
+				return a.exp > b.exp
+			return str(a.id) < str(b.id))
+	return _board_order
 
 
 ## --- 채팅 (docs/features/server.md 5단계) ---

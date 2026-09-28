@@ -59,13 +59,15 @@ func _attach(url: String) -> void:
 	# 채팅은 World 를 거치지 않는다 — 장부가 아니라 사람끼리 오가는 말이다
 	_server.chat.connect(func(line: Dictionary) -> void:
 		event.emit(&"chat", line))
+	_server.ranked.connect(func(board: Dictionary) -> void:
+		event.emit(&"rank", board))
 	_world.remote = _server
 	# 지금 존을 알린다 — 이 뒤로는 `World.open` 이 존을 옮길 때마다 알린다
 	_server.request(&"enter", [_world.zone_id])
 	print("서버에 붙는다: %s" % url)
 
 
-func can_chat() -> bool:
+func online() -> bool:
 	return _server != null
 
 
@@ -75,6 +77,11 @@ func send(message: StringName, payload: Dictionary) -> void:
 	if message == &"chat":
 		if _server != null:
 			_server.say(str(payload.get("text", "")))
+		return
+	# 랭킹도 World 를 거치지 않는다 — 서버만 가진 표다
+	if message == &"rank":
+		if _server != null:
+			_server.ask_rank()
 		return
 	match message:
 		&"input":

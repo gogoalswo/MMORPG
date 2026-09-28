@@ -60,6 +60,7 @@ func _run() -> void:
 	_case_kill()
 	_case_lost_reply()
 	_case_chat()
+	_case_rank()
 
 
 ## 새 계정의 장부가 기기에 들어온다 — 시작 장비·첫 선물은 **서버가** 줬다. 숫자는 정수로 온다
@@ -197,3 +198,18 @@ func _case_chat() -> void:
 	other.close()
 	if FileAccess.file_exists(TOKEN + ".other"):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(TOKEN + ".other"))
+
+
+## 랭킹을 실제 웹소켓으로 묻는다
+func _case_rank() -> void:
+	var boards: Array = []
+	_link.ranked.connect(func(board: Dictionary) -> void: boards.append(board))
+	if not _link.ask_rank():
+		_fail("붙어 있는데 ask_rank 가 false")
+		return
+	if not _pump(func() -> bool: return not boards.is_empty()):
+		_fail("랭킹 답이 안 왔다")
+		return
+	var me: Dictionary = boards[0].get("me", {})
+	if int(me.get("rank", 0)) < 1 or int(me.get("level", 0)) != int(_world._players[ME].level):
+		_fail("내 순위 줄이 %s — 레벨은 기기와 같아야 한다" % [me])

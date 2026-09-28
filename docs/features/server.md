@@ -7,7 +7,7 @@
 스킬·전직, 그리고 **드롭**. 그 위에 채팅과 랭킹을 얹는다.
 
 2026-09-28 에 정했다 ("드롭까지 서버에서 판정하는 걸로 가자").
-**5단계(채팅)까지 들어갔다** — 판정은 `ledger.gd`, 서버는 `godot/server/`, 기기는 서버 주소가
+**6단계(랭킹)까지 들어갔다** — 판정은 `ledger.gd`, 서버는 `godot/server/`, 기기는 서버 주소가
 있으면 `ServerLedger` 로 붙는다. **아직 올린 서버가 없어서** 주소는 비어 있고, 화면은 전처럼 혼자 논다.
 아래 "단계" 가 순서다.
 
@@ -172,7 +172,7 @@ godot --headless --path godot --script server/server_main.gd -- --port=8765 --da
 | `server/ledger_server.gd` `_chat` · `_announce` · `take_outbox` | 말을 받아 다듬고 **`outbox`** 에 쌓는다 — 소켓을 모르니 "모두에게 보낼 것" 만 쌓는다 |
 | `server/game_server.gd` `_broadcast` | `outbox` 를 **hello 를 마친** 연결 모두에게 보낸다 |
 | `net/server_ledger.gd` `say` · `chat` 신호 | 말 보내기 · 받기 (welcome 의 지난 줄도 `chat` 으로 흘린다) |
-| `net/local_transport.gd` | `chat` 신호 → 화면 이벤트 `chat`. `send(&"chat")` → `say`. `can_chat()` = 서버에 붙었나 |
+| `net/local_transport.gd` | `chat` 신호 → 화면 이벤트 `chat`. `send(&"chat")` → `say`. `online()` = 서버에 붙었나 |
 | `game/chat_log.gd` `set_online` · `add_chat` · `submitted` | 붙었을 때만 입력칸. 남의 말·알림을 같은 창에 적는다 → [hud.md](hud.md) "채팅창" |
 
 주고받는 것:
@@ -200,6 +200,32 @@ godot --headless --path godot --script server/server_main.gd -- --port=8765 --da
 - **채팅은 쌓아 두었다 보내지 않는다** — 끊겨 있으면 `say` 가 false 로 버린다. 다시 붙었을 때
   한참 전 말이 뒤늦게 가면 엉뚱하다. 장부 요청과 다르다.
 - 채팅은 `World` 를 거치지 않는다 — 장부가 아니라 사람끼리 오가는 말이다.
+
+## 랭킹 (6단계) ★
+
+**레벨 → 경험치** 순 한 줄 세우기. 서버가 가진 값으로만 매긴다 — 기기가 보낸 숫자는 없다.
+2026-09-28 에 들어갔다.
+
+| 파일 | 역할 |
+|---|---|
+| `server/account_store.gd` `all` | 저장된 계정 전부 — 서버가 켤 때 한 번 읽는다 |
+| `server/ledger_server.gd` `_rank` · `_touch_board` · `_sorted_board` | 순위표(`_board`, 계정마다 한 줄)와 줄 세운 것(`_board_order`) |
+| `net/server_ledger.gd` `ask_rank` · `ranked` 신호 | 묻기 · 받기 |
+| `game/game.gd` `_build_rank_panel` · `_toggle_rank` · `_fill_rank` | 랭킹 창. 메뉴 단추는 **서버에 붙었을 때만** 선다 → [hud.md](hud.md) "메뉴 아이콘" |
+
+주고받는 것: `{t:"rank"}` → `{t:"rank", top: [{rank, name, level, exp}], me: {rank, level, exp}, total}`.
+
+- **켤 때 계정 파일을 전부 읽어 순위표를 세운다** — 그 뒤로는 장부 요청이 끝날 때마다(`_op`)
+  그 계정 줄만 고친다. 레벨·경험치가 그대로면 줄 세운 것을 버리지 않는다. 계정당 JSON 파일로
+  간 이유 중 하나가 이것이다 (위 "저장").
+- **같은 레벨이면 경험치(그 레벨 안에서 모은 것)가 많은 쪽**, 그것도 같으면 **계정 id 순** — 늘 같은
+  순서가 나오게. 먼저 도달한 사람을 앞에 두려면 도달 시각을 따로 남겨야 한다 (지금은 없다).
+- **위 50명**(`RANK_TOP`)만 싣고 **내 순위는 따로** 싣는다 — 50위 밖이어도 제 자리는 보인다.
+- 이름은 채팅과 같은 `display_name`.
+- 창은 **열 때마다 새로 묻는다** — 순위는 남이 사냥하는 동안에도 바뀐다. 1~3위는 밝은 금빛,
+  내 줄은 청록(채팅창 경험치 색). 경험치는 그 레벨의 % 로 적는다(`Combat.exp_to_next`). 표가
+  넘치면 창 안에서 굴린다(360px).
+- 처치 수 같은 다른 판은 아직 없다 — 늘리면 `_board_row` 에 값을 더하고 판마다 줄 세운 것을 따로 둔다.
 
 ## 저장
 
@@ -236,7 +262,7 @@ HTTPS/WSS 는 Caddy 가 인증서를 받는다. 동시 접속 수천 명까지�
    `kill` 도 열었다(종류·존만 받고 수치는 표에서) — 붙으면 처치도 서버로 가야 해서~~ 끝 (2026-09-28)
 4. ~~**처치 검증** — 몬스터 명단 · 되살아나기 · 최소 처치 시간 · 전직 시험 입장 조건~~ 끝 (2026-09-28)
 5. ~~**채팅** — 월드 채팅 한 방 + 알림(강화 +7 이상 성공)~~ 끝 (2026-09-28) → 위 "채팅"
-6. **랭킹** — 서버가 가진 값(레벨·경험치·처치 수)으로만 매긴다
+6. ~~**랭킹** — 레벨 → 경험치 순, 위 50명 + 내 순위~~ 끝 (2026-09-28) → 위 "랭킹"
 7. **유료 재화** — 결제 영수증 검증. 출시 직전
 
 ## 손댈 때

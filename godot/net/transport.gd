@@ -23,8 +23,8 @@ func send(_message: StringName, _payload: Dictionary) -> void:
 func snapshot() -> Dictionary:
 	return {}
 
-## 말을 주고받을 수 있나 — 서버에 붙었을 때만. 화면이 채팅 입력칸을 보일지 정한다
-func can_chat() -> bool:
+## 서버에 붙었나. 화면이 채팅 입력칸 · 랭킹 단추를 보일지 정한다
+func online() -> bool:
 	return false
 
 

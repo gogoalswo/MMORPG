@@ -180,6 +180,6 @@ func _case_talk(game: Node3D, chat: ChatLog) -> void:
 		_fail("남이 보낸 BBCode 가 서식으로 읽혔다")
 
 	# 게임은 통로가 채팅을 못 하면 입력칸을 안 세운다 (혼자 노는 판)
-	if game._transport.can_chat():
+	if game._transport.online():
 		_fail("서버 주소가 없는데 통로가 채팅을 한다고 한다")
 	chat.set_online(false)

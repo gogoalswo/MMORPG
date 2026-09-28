@@ -20,6 +20,7 @@ func _init() -> void:
 	_case_known_keys()
 	_case_kill_checks()
 	_case_chat()
+	_case_rank()
 	_case_socket()
 	_wipe()
 
@@ -351,3 +352,47 @@ func _case_chat() -> void:
 	if notices.size() != 2 or not bool(notices[0].get("system", false)) \
 			or not str(notices[0].text).contains("흑철 건틀릿 +7") or not str(notices[1].text).contains("+9"):
 		_fail("강화 알림이 %s" % [notices])
+
+
+## 랭킹 — 레벨 → 경험치 순 · 내 순위 · 위 50명만 · 서버를 다시 켜도 파일에서 다시 세운다
+func _case_rank() -> void:
+	var store := AccountStore.new(DIR)
+	var server := LedgerServer.new(store)
+	if server.handle({}, {"t": "rank"}).get("reason") != "no_hello":
+		_fail("hello 전에 랭킹을 줬다")
+	var who := {}
+	for name in ["a", "b", "c"]:
+		who[name] = {}
+		server.handle(who[name], {"t": "hello"})
+	var set_level := func(name: String, level: int, exp_now: int, req: int) -> void:
+		who[name].account.ledger.level = level
+		who[name].account.ledger.exp = exp_now
+		# 장부 요청이 끝날 때 파일에 남고 순위표가 고쳐진다
+		server.handle(who[name], {"t": "op", "id": req, "op": "sort_bag", "args": []})
+	set_level.call("a", 90, 5, 1)
+	set_level.call("b", 90, 50, 1)
+	set_level.call("c", 80, 999, 1)
+
+	var board := server.handle(who.a, {"t": "rank"})
+	var names: Array = board.get("top", []).slice(0, 3).map(func(r: Dictionary) -> String: return str(r.name))
+	var want: Array = ["b", "a", "c"].map(func(n: String) -> String:
+		return LedgerServer.display_name(str(who[n].account.id)))
+	if names != want:
+		_fail("순위가 %s — 레벨 → 경험치 순이면 %s" % [names, want])
+	if int(board.get("me", {}).get("rank", 0)) != 2 or int(board.get("total", 0)) < 3:
+		_fail("내 순위가 %s · 전체 %s" % [board.get("me"), board.get("total")])
+
+	# 다시 켠 서버 — 파일만 읽고도 같은 순위다
+	var again := LedgerServer.new(store)
+	var fresh_session := {}
+	again.handle(fresh_session, {"t": "hello"})
+	var top: Array = again.handle(fresh_session, {"t": "rank"}).get("top", [])
+	if top.size() < 3 or str(top[0].name) != want[0] or int(top[0].level) != 90:
+		_fail("다시 켠 서버의 1위가 %s" % [top.slice(0, 1)])
+
+	# 위 50명만 싣는다
+	for i in LedgerServer.RANK_TOP:
+		again.handle({}, {"t": "hello"})
+	var many: Dictionary = again.handle(fresh_session, {"t": "rank"})
+	if many.top.size() != LedgerServer.RANK_TOP or int(many.total) <= LedgerServer.RANK_TOP:
+		_fail("윗줄 %d명 · 전체 %d명 — 윗줄은 %d명이어야 한다" % [many.top.size(), many.total, LedgerServer.RANK_TOP])

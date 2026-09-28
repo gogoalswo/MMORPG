@@ -35,7 +35,6 @@ import {
   fieldOf,
   killsPerLevel,
   levelSeconds,
-  planSeconds,
   expToNext,
   meleeAttackers,
   monster,
@@ -324,42 +323,29 @@ test('성장 곡선 — 만렙까지 2,880시간(120일)이 목표다', () => {
   // 2026-09-23 지시대로 2,880 을 불변식으로 지키려 들지는 않는다 — 목표를
   // 바꾸기로 하면 `TARGET_HOURS` 한 줄을 고치면 되고, 여기가 그걸 막지 않는다
   let seconds = 0;
-  for (let level = 1; level < MAX_LEVEL; level++) seconds += planSeconds(level);
+  for (let level = 1; level < MAX_LEVEL; level++) seconds += levelSeconds(level);
   assert.equal(Math.round((seconds / 3600) * 10) / 10, 2880);
-  // **실제로는 2.4배 걸린다** (2026-09-25) — 몬스터 HP 를 서서히 3배로 올리고 킬 수는 그대로
-  // 뒀다(지시: "킬 수 그대로, 느려져도 됨"). 2,880 은 킬 수를 정한 계획 속도의 합이다
-  let actual = 0;
-  for (let level = 1; level < MAX_LEVEL; level++) actual += levelSeconds(level);
-  // 같은 날 몬스터 방어를 피해 50% 감소로 올려 약 11,076시간(3.8배)이 됐다 — 킬 수는 그대로다
-  // 2026-09-26 에 맨몸 공격·방어를 10 → 20 으로 올려 8,184시간(2.8배)으로 줄었다
-  assert.equal(Math.round(actual / 3600), 8184);
 
-  // 문서 7장 표의 "레벨당 킬 수" 열. **2026-09-23 에 다시 뽑았다** — 몬스터 HP 를
-  // 되돌리면서 한 마리가 주는 경험치(HP × 0.2)가 커져 필요 킬 수가 줄었다.
-  // **2026-09-24 에 또 뽑았다** — 공격력 축 배수가 가팔라져 "제 등급 풀셋" 플레이어가
-  // 후반에 더 빨리 잡으므로(Lv100 킬/초 3.13 → 3.85), 총 2,880시간에 맞추느라 Lv31 부터 +16%.
-  // **2026-09-25 에 또 뽑았다** — 장비 공격력 % 를 반으로 내려("공격력이 과하게 강하다. 반으로
-  // 줄여") 잡는 속도가 느려졌고, 레벨당 시간은 목표에 묶여 있어 필요 킬 수가 그만큼 줄었다.
-  // 2026-09-25 에 몬스터 HP 를 서서히 3배로 올렸지만 **킬 수는 그대로다** (`paceKillRate`)
+  // 문서 7장 표의 "레벨당 킬 수" 열 (초반 경험치 3배를 곱하기 전).
+  // **2026-09-28 에 한 마리씩 잡는 기준으로 바꿨다** — 무리 50마리를 15초에 정리하는 속도로
+  // 세던 것을 "같은 레벨 한 마리 4초"(`KILL_SECONDS`)로. 레벨당 시간은 그대로라 킬 수만
+  // 줄었다 (Lv91 19,745 → 1,551마리)
   const want: Array<[number, number]> = [
-    // **2026-09-26 에 또 뽑았다** — 맨몸 공격·방어를 10 → 20 으로 올려 계획 속도가 빨라졌고,
-    // 레벨당 계획 시간은 그대로라 필요 킬 수가 그만큼 늘었다
-    [1, 200],
-    [11, 450],
-    [21, 675],
-    [31, 1733],
-    [91, 19745],
-    [141, 149935],
-    [191, 1138571],
+    [1, 30],
+    [11, 45],
+    [21, 68],
+    [31, 136],
+    [91, 1551],
+    [141, 11776],
+    [191, 89424],
   ];
   for (const [level, kills] of want) {
     assert.equal(Math.round(killsPerLevel(level)), kills, `Lv${level} 킬 수`);
   }
 
-  // 초반 세 구간은 레벨당 2 / 3 / 4.5분 — **계획 시간**이다. 몬스터 방어를 피해 50% 감소로
-  // 올린 뒤(2026-09-25) 실제로는 Lv1 이 2.9분 걸렸고, 맨몸 공격·방어를 20 으로 올린 뒤(2026-09-26) 2.4분이다
+  // 초반 세 구간은 레벨당 2 / 3 / 4.5분 — 경험치 3배를 곱하기 전 시간이다 (실제로는 1/3)
   for (const [level, minutes] of [[1, 2], [11, 3], [21, 4.5]] as Array<[number, number]>) {
-    assert.equal(Math.round((planSeconds(level) / 60) * 10) / 10, minutes, `Lv${level} 분`);
+    assert.equal(Math.round((levelSeconds(level) / 60) * 10) / 10, minutes, `Lv${level} 분`);
   }
 });
 

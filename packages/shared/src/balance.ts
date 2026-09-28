@@ -118,8 +118,6 @@ export const DEF_REDUCE_BY_LEVEL: Array<[level: number, reduce: number]> = [
   [130, 0.77], [140, 0.8], [150, 0.83], [160, 0.86], [170, 0.88], [180, 0.92],
   [190, 0.93], [200, 0.94],
 ];
-/** 필요 킬 수를 셀 때의 몬스터 방어 비율 — **올리기 전 값**이다 (`paceKillRate`) */
-export const PACE_MON_DEF_RATIO = 0.5;
 export const MON_ATTACK_INTERVAL = 1.5;
 export const PLAYER_ATTACK_INTERVAL = 1.0;
 
@@ -517,45 +515,21 @@ export function groupClear(pl: Player, mo: Monster): { casts: number; seconds: n
   return { casts, seconds: casts * pl.interval, hits };
 }
 
-/** 그 레벨 기준 플레이어의 사냥 속도 (마리/초). 그룹 간 대기를 포함한다 */
-export function killRate(level: number): number {
-  const pl = fullPlayer(level);
-  const mo = monster(level);
-  return spawnCount(level) / (groupClear(pl, mo).seconds + GROUP_GAP);
-}
-
 /**
- * 몬스터 HP 를 초반부터 서서히 올린 배율 — Lv1 ×1 → Lv200 ×`HP_RAMP_END` ★ (2026-09-25).
+ * 같은 레벨 몬스터 **한 마리**를 잡는 데 드는 시간(초) ★ (2026-09-28).
  *
- * 지시: "후반부 몬스터 hp를 세 배로 올려" → "초반부터 서서히". 표(`monsterTable.ts`)에는
- * **이미 곱해 구워 뒀다** — 여기 식은 필요 킬 수를 셀 때 그 배율을 **되돌리는 데만** 쓴다.
+ * 지시: "한 번에 여러 마리를 스킬로 때려서 잡는 걸 기준으로 경험치를 설계했는데, 한 마리씩
+ * 잡는 걸로 바꿔야겠어. 동일 스펙의 몬스터의 경우 4초에 한 마리 정도로." 그 전에는 무리
+ * 50마리를 15초에 정리하는 속도(`groupClear`, Lv100 초당 약 3마리)로 킬 수를 셌다 —
+ * 실제로는 한 마리씩 잡으니 레벨당 시간이 설계의 10배 넘게 걸렸다.
+ * 레벨당 **시간** 곡선(2,880시간)은 그대로 두고, 킬 수만 이 속도로 센다.
  */
-export const HP_RAMP_END = 3;
-export function hpRamp(level: number): number {
-  const l = Math.max(1, Math.min(MAX_LEVEL, level));
-  return HP_RAMP_END ** ((l - 1) / (MAX_LEVEL - 1));
-}
-
-/**
- * 필요 킬 수를 정할 때의 사냥 속도 — **HP 를 3배로 올리기 전 속도**다 ★ (2026-09-25).
- *
- * 지시: "킬 수 그대로, 느려져도 됨". 실제 속도(`killRate`)로 세면 총 2,880시간에 맞추려고
- * 킬 수가 줄어서 Lv4→5 필요 경험치가 9% 줄고 Lv30→31 킬 수가 519→391 로 뒤집혔다.
- * 킬 수는 이 속도로 세고, 한 마리 경험치(HP × 0.2)는 올린 HP 를 따른다 — 그래서 실제로는
- * 만렙까지 약 6,900시간(2.4배)이 걸린다 (`levelSeconds` 는 실제 시간이다)
- */
-export function paceKillRate(level: number): number {
-  const pl = fullPlayer(level);
-  const mo = monster(level);
-  // 방어도 올리기 전 값으로 센다 (2026-09-25 지시: "HP 그대로, 더 단단하게") — 킬 수는 그대로다
-  const before = { ...mo, hp: mo.hp / hpRamp(level), df: (mo.df * PACE_MON_DEF_RATIO) / MON_DEF_RATIO };
-  return spawnCount(level) / (groupClear(pl, before).seconds + GROUP_GAP);
-}
+export const KILL_SECONDS = 4;
 
 let killsBaseCache: number | null = null;
 
 /**
- * 사냥터 1 의 레벨당 킬 수 — **목표 총 시간에서 역산한다.**
+ * 사냥터 4 의 레벨당 킬 수 — **목표 총 시간에서 역산한다.**
  *
  * 만렙까지 걸리는 시간을 먼저 정하고(2,880시간) 필요 킬 수를 거기서 뽑는다.
  * 어느 배수를 써도 총 시간은 맞춰지므로, 배수(`KILLS_FIELD_MULT`)는 "Lv31 시점의
@@ -570,7 +544,7 @@ function killsBase(): number {
   }
   let acc = 0;
   for (let level = EARLY_FIELDS * FIELD_SPAN + 1; level < MAX_LEVEL; level++) {
-    acc += KILLS_FIELD_MULT ** (fieldOf(level) - EARLY_FIELDS - 1) / paceKillRate(level);
+    acc += KILLS_FIELD_MULT ** (fieldOf(level) - EARLY_FIELDS - 1) * KILL_SECONDS;
   }
   killsBaseCache = (TARGET_HOURS * 3600 - early) / acc;
   return killsBaseCache;
@@ -579,28 +553,26 @@ function killsBase(): number {
 /**
  * L → L+1 에 필요한 킬 수.
  *
- * **초반(Lv1~30)은 배수로 잡지 않고 레벨당 목표 시간을 직접 정한다** — 스킬이 모자라
- * 사냥 속도가 후반의 1/3 이라 같은 배수를 쓰면 곡선이 망가진다. Lv31 에서 10.4분으로
- * ×2.3 뛰는 단차는 **의도적으로 그 자리에 둔 것**이다: Lv30 에 3번째 스킬이 열리고
+ * **초반(Lv1~30)은 배수로 잡지 않고 레벨당 목표 시간을 직접 정한다** — 사냥터 1 에서
+ * 2분, 사냥터마다 ×1.5. 킬 수는 그 시간 ÷ `KILL_SECONDS` 다. Lv31 에서 단차가
+ * 뛰는 것은 **의도적으로 그 자리에 둔 것**이다: Lv30 에 3번째 스킬이 열리고
  * Lv31 에 등급2 장비가 착용 가능해지므로, 벽이 아니라 "본 게임 시작" 으로 읽힌다.
  */
 export function killsPerLevel(level: number): number {
   const f = fieldOf(level);
   if (f <= EARLY_FIELDS) {
     const targetSec = EARLY_LEVEL_MIN * 60 * EARLY_TIME_MULT ** (f - 1);
-    return targetSec * paceKillRate(level);
+    return targetSec / KILL_SECONDS;
   }
   return killsBase() * KILLS_FIELD_MULT ** (f - EARLY_FIELDS - 1);
 }
 
-/** L → L+1 에 **실제로** 걸리는 시간(초) — 올린 HP 로 잡는 속도 */
+/**
+ * L → L+1 에 걸리는 시간(초) — 한 마리 `KILL_SECONDS` 초. 이것의 합이 2,880시간이다.
+ * 초반(Lv1~30)은 경험치 배수(`expMult`) 때문에 실제로는 이것의 1/3 이다.
+ */
 export function levelSeconds(level: number): number {
-  return killsPerLevel(level) / killRate(level);
-}
-
-/** L → L+1 의 **계획** 시간(초) — 킬 수를 정한 속도(`paceKillRate`). 이것의 합이 2,880시간이다 */
-export function planSeconds(level: number): number {
-  return killsPerLevel(level) / paceKillRate(level);
+  return killsPerLevel(level) * KILL_SECONDS;
 }
 
 /**

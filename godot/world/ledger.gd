@@ -16,6 +16,7 @@ extends RefCounted
 const KEYS := [
 	"job", "job_tier", "level", "exp", "gold", "skills", "skill_points",
 	"skill_upgrades", "skill_upgrade_exp", "skill_exp", "bag", "equipped", "granted",
+	"diamonds",
 ]
 
 ## **첫 선물** — 새 캐릭터가 한 번만 받는 것 `[[표시, 묶음], …]`. 로컬은 `LocalTransport.open` 이,
@@ -41,6 +42,7 @@ static func fresh(job: String) -> Dictionary:
 		"skills": starter, "skill_points": 0,
 		"skill_upgrades": {}, "skill_upgrade_exp": {}, "skill_exp": 0,
 		"bag": [], "equipped": {}, "granted": [],
+		"diamonds": 0,
 	}
 
 
@@ -173,6 +175,18 @@ func _check_dungeon_clear(p: Dictionary, target: Dictionary) -> void:
 	p.skill_exp = int(p.get("skill_exp", 0)) + gain
 	events.append({"type": "skillExp", "gain": gain, "total": p.skill_exp})
 	_notice("던전 %d단계 클리어! 스킬 경험치 +%d" % [int(stage.stage), gain])
+
+
+## --- 유료 재화 (docs/features/server.md "유료 재화") ---
+
+## 다이아를 넣는다. **서버가 결제 영수증을 확인한 뒤에만 부른다** (`LedgerServer._finish_purchase`) —
+## 기기가 부를 수 있는 요청(`LedgerServer.OPS`)에는 없다
+func credit_diamonds(p: Dictionary, amount: int, product: String) -> void:
+	if amount <= 0:
+		return
+	p.diamonds = int(p.get("diamonds", 0)) + amount
+	events.append({"type": "diamonds", "gain": amount, "total": p.diamonds, "product": product})
+	_notice("다이아 %d개를 받았습니다" % amount)
 
 
 ## --- 스킬 ---

@@ -271,6 +271,8 @@ func join(player_id: String) -> void:
 		"equipped": kept.get("equipped", {}).duplicate(true),
 		# 한 번만 주는 것을 받았다는 표시 (`grant_once`) — 저장에 남는다
 		"granted": kept.get("granted", []).duplicate(),
+		# 유료 재화 — 서버가 결제를 확인해야만 는다. 혼자 노는 판에서는 늘 0 이다
+		"diamonds": int(kept.get("diamonds", 0)),
 	}
 	_refresh_stats(_players[player_id])
 

@@ -21,6 +21,8 @@ func _init() -> void:
 	_case_kill_checks()
 	_case_chat()
 	_case_rank()
+	_case_purchase()
+	_case_google_verifier()
 	_case_socket()
 	_wipe()
 
@@ -44,6 +46,11 @@ func _wipe() -> void:
 		return
 	for name in dir.get_files():
 		dir.remove(name)
+	var orders := DirAccess.open(path.path_join("orders"))
+	if orders != null:
+		for name in orders.get_files():
+			orders.remove(name)
+		DirAccess.remove_absolute(path.path_join("orders"))
 	DirAccess.remove_absolute(path)
 
 
@@ -396,3 +403,183 @@ func _case_rank() -> void:
 	var many: Dictionary = again.handle(fresh_session, {"t": "rank"})
 	if many.top.size() != LedgerServer.RANK_TOP or int(many.total) <= LedgerServer.RANK_TOP:
 		_fail("윗줄 %d명 · 전체 %d명 — 윗줄은 %d명이어야 한다" % [many.top.size(), many.total, LedgerServer.RANK_TOP])
+
+
+## 가짜 검증기 — 토큰마다 정해 둔 답을 두 번째 poll 에 준다 (검증이 시간이 걸리는 것처럼)
+class FakeVerifier extends PurchaseVerifier:
+	var answers := {}
+
+	func start(product_id: String, token: String) -> Dictionary:
+		return {"product": product_id, "token": token, "done": false, "ok": false, "reason": "", "left": 2}
+
+	func poll(job: Dictionary) -> void:
+		job.left -= 1
+		if job.left > 0:
+			return
+		var answer: Dictionary = answers.get(job.token, {"ok": false, "reason": "unknown"})
+		job.ok = bool(answer.get("ok", false))
+		job.reason = str(answer.get("reason", ""))
+		job.order_id = str(answer.get("order_id", ""))
+		job.done = true
+
+
+## 결제 — 영수증 한 장에 한 번 · 다른 계정은 못 쓴다 · 거절 · 다시 켜도 기억한다 · 기기는 다이아를 못 넣는다
+func _case_purchase() -> void:
+	var store := AccountStore.new(DIR)
+	var server := LedgerServer.new(store)
+	var a := {}
+	var welcome := server.handle(a, {"t": "hello"})
+	var buy := func(session: Dictionary, product: String, token: String) -> Dictionary:
+		var now := server.handle(session, {"t": "purchase", "product": product, "token": token})
+		if not now.is_empty():
+			return now
+		for i in 5:
+			server.poll_jobs()
+		for pair in server.take_replies():
+			if is_same(pair[0], session):
+				return pair[1]
+		return {"t": "no_reply"}
+
+	if buy.call(a, "dia_100", "good").get("reason") != "store_off":
+		_fail("검증기 없이 결제를 받았다")
+	var fake := FakeVerifier.new()
+	fake.answers = {"good": {"ok": true, "order_id": "GPA.1"}, "bad": {"ok": false, "reason": "canceled"}}
+	server.verifier = fake
+	if buy.call(a, "dia_999", "good").get("reason") != "unknown_product":
+		_fail("표에 없는 상품을 받았다")
+
+	# 검증 중에 같은 영수증을 또 보내면 기다리게 한다
+	server.handle(a, {"t": "purchase", "product": "dia_100", "token": "good"})
+	if server.handle(a, {"t": "purchase", "product": "dia_100", "token": "good"}).get("reason") != "in_progress":
+		_fail("검증 중인 영수증을 또 걸었다")
+	for i in 5:
+		server.poll_jobs()
+	var got: Array = server.take_replies()
+	var want := int(GameData.load_table("store").products.dia_100)
+	if got.size() != 1 or got[0][1].get("t") != "purchased" or int(got[0][1].ledger.diamonds) != want:
+		_fail("결제가 다이아 %d 을 안 넣었다: %s" % [want, got])
+		return
+
+	var again: Dictionary = buy.call(a, "dia_100", "good")
+	if not bool(again.get("already", false)) or int(again.ledger.diamonds) != want:
+		_fail("같은 영수증으로 또 넣었다: %s" % again.get("ledger", {}).get("diamonds"))
+	var b := {}
+	server.handle(b, {"t": "hello"})
+	if buy.call(b, "dia_100", "good").get("reason") != "order_taken":
+		_fail("다른 계정이 남의 영수증으로 받았다")
+	var bad: Dictionary = buy.call(a, "dia_100", "bad")
+	if bad.get("reason") != "purchase_invalid" or bad.get("detail") != "canceled":
+		_fail("취소된 결제가 %s" % bad)
+
+	# 다시 켠 서버도 기억한다 — 파일에 남았다
+	var restarted := LedgerServer.new(store)
+	restarted.verifier = fake
+	var a2 := {}
+	restarted.handle(a2, {"t": "hello", "token": welcome.token})
+	if int(a2.account.ledger.diamonds) != want:
+		_fail("다시 켰더니 다이아가 %s" % a2.account.ledger.diamonds)
+	var after := restarted.handle(a2, {"t": "purchase", "product": "dia_100", "token": "good"})
+	if not bool(after.get("already", false)):
+		_fail("다시 켠 서버가 쓴 영수증을 잊었다: %s" % after)
+
+	# 계정은 썼는데 주문 파일을 쓰기 전에 꺼졌다 — 계정의 표시로 막는다
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(DIR).path_join("orders").path_join("good".sha256_text() + ".json"))
+	var crashed := restarted.handle(a2, {"t": "purchase", "product": "dia_100", "token": "good"})
+	if not bool(crashed.get("already", false)) or int(a2.account.ledger.diamonds) != want:
+		_fail("주문 파일이 없을 때 또 넣었다: %s" % crashed)
+
+	for op in LedgerServer.OPS:
+		if str(op).contains("diamond") or op == "grant_once":
+			_fail("기기가 부를 수 있는 요청에 %s 가 있다 — 다이아는 결제로만 들어온다" % op)
+
+
+## 구글 검증기 — 테스트 안에 **가짜 구글**(토큰 · 영수증)을 띄우고 실제 HTTP 로 묻는다.
+## JWT 서명은 진짜 RSA 키로 만들고 공개키로 풀어 본다
+func _case_google_verifier() -> void:
+	var crypto := Crypto.new()
+	var key := crypto.generate_rsa(2048)
+	var verifier := GooglePlayVerifier.new("com.test.game", {
+		"client_email": "svc@test.iam.gserviceaccount.com", "private_key": key.save_to_string(false)})
+
+	var jwt := verifier.jwt(1000)
+	var parts := jwt.split(".")
+	if parts.size() != 3:
+		_fail("JWT 가 세 조각이 아니다")
+		return
+	var claim = JSON.parse_string(_b64url_text(parts[1]))
+	if typeof(claim) != TYPE_DICTIONARY or claim.get("scope") != GooglePlayVerifier.SCOPE or int(claim.exp) != 4600:
+		_fail("JWT 내용이 %s" % claim)
+	var hashing := HashingContext.new()
+	hashing.start(HashingContext.HASH_SHA256)
+	hashing.update(("%s.%s" % [parts[0], parts[1]]).to_utf8_buffer())
+	if not crypto.verify(HashingContext.HASH_SHA256, hashing.finish(), _b64url_raw(parts[2]), key):
+		_fail("JWT 서명이 공개키로 안 풀린다")
+
+	var google := TCPServer.new()
+	google.listen(0, "127.0.0.1")
+	var base := "http://127.0.0.1:%d" % google.get_local_port()
+	verifier.token_url = base + "/token"
+	verifier.api_base = base
+	var seen := {"token": 0, "auth": true}
+	var jobs := [verifier.start("dia_100", "tok-ok"), verifier.start("dia_100", "tok-cancel")]
+	var conns: Array = []
+	var deadline := Time.get_ticks_msec() + 8000
+	while Time.get_ticks_msec() < deadline and not (jobs[0].done and jobs[1].done):
+		for job in jobs:
+			verifier.poll(job)
+		while google.is_connection_available():
+			conns.append({"peer": google.take_connection(), "buf": PackedByteArray()})
+		for conn in conns.duplicate():
+			var peer: StreamPeerTCP = conn.peer
+			peer.poll()
+			if peer.get_available_bytes() > 0:
+				conn.buf.append_array(peer.get_data(peer.get_available_bytes())[1])
+			var text: String = conn.buf.get_string_from_utf8()
+			if not text.contains("\r\n\r\n"):
+				continue
+			var head := text.get_slice("\r\n\r\n", 0)
+			var length := 0
+			for line in head.split("\r\n"):
+				if line.to_lower().begins_with("content-length:"):
+					length = int(line.get_slice(":", 1).strip_edges())
+			if text.get_slice("\r\n\r\n", 1).to_utf8_buffer().size() < length:
+				continue
+			var answer := {"error": "not found"}
+			var status := "404 Not Found"
+			if head.begins_with("POST /token"):
+				seen.token += 1
+				if text.contains("assertion=") and text.contains("jwt-bearer"):
+					answer = {"access_token": "AT1", "expires_in": 3600}
+					status = "200 OK"
+			elif head.begins_with("GET /androidpublisher/v3/applications/com.test.game/purchases/products/dia_100/tokens/"):
+				if not head.contains("Authorization: Bearer AT1"):
+					seen.auth = false
+				status = "200 OK"
+				answer = {"purchaseState": 0, "consumptionState": 0, "orderId": "GPA.7"} \
+					if head.contains("/tok-ok ") else {"purchaseState": 1, "orderId": "GPA.8"}
+			var body := JSON.stringify(answer).to_utf8_buffer()
+			peer.put_data(("HTTP/1.1 %s\r\nContent-Type: application/json\r\nContent-Length: %d\r\nConnection: close\r\n\r\n" % [status, body.size()]).to_utf8_buffer())
+			peer.put_data(body)
+			conns.erase(conn)
+		OS.delay_msec(5)
+	google.stop()
+	if not (jobs[0].done and jobs[1].done):
+		_fail("구글 검증이 안 끝났다: %s · %s" % [jobs[0].get("reason"), jobs[1].get("reason")])
+		return
+	if not jobs[0].ok or jobs[0].get("order_id") != "GPA.7":
+		_fail("결제된 영수증을 안 받았다: %s" % jobs[0].reason)
+	if jobs[1].ok or jobs[1].reason != "canceled":
+		_fail("취소된 영수증이 %s" % jobs[1].reason)
+	if seen.token != 1 or not seen.auth:
+		_fail("접근 토큰을 %d번 받았다 · 영수증 요청에 토큰이 %s" % [seen.token, "붙었다" if seen.auth else "안 붙었다"])
+
+
+static func _b64url_raw(text: String) -> PackedByteArray:
+	var plain := text.replace("-", "+").replace("_", "/")
+	while plain.length() % 4 != 0:
+		plain += "="
+	return Marshalls.base64_to_raw(plain)
+
+
+static func _b64url_text(text: String) -> String:
+	return _b64url_raw(text).get_string_from_utf8()

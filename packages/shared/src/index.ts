@@ -12,3 +12,4 @@ export * from './zone.ts';
 export * from './zones.ts';
 export * from './dungeons.ts';
 export * from './jobAdvance.ts';
+export * from './store.ts';

@@ -53,6 +53,11 @@ var _board := {}
 var _board_order: Array = []
 ## 랭킹 창에 싣는 윗줄 수 (내 순위는 따로 싣는다)
 const RANK_TOP := 50
+## 결제 검증기 — 없으면 결제를 받지 않는다(`store_off`). 실제 서버는 `GooglePlayVerifier`
+var verifier: PurchaseVerifier = null
+## 검증 중인 결제 `[{session, account, product, key, job}]` 과, 끝난 뒤 **그 연결에만** 보낼 답
+var _jobs: Array = []
+var _replies: Array = []
 ## 서버 시계(ms). 테스트는 바꿔 끼워 시간을 앞으로 돌린다
 var clock: Callable = func() -> int: return Time.get_ticks_msec()
 
@@ -77,6 +82,8 @@ func handle(session: Dictionary, message: Variant) -> Dictionary:
 			return _chat(session, message)
 		"rank":
 			return _rank(session)
+		"purchase":
+			return _purchase(session, message)
 	return _error(message.get("id"), "unknown_type")
 
 
@@ -367,4 +374,82 @@ func _error(id: Variant, reason: String) -> Dictionary:
 	var out := {"t": "error", "reason": reason}
 	if id != null:
 		out["id"] = id
+	return out
+
+
+## --- 유료 재화 (docs/features/server.md "유료 재화") ---
+
+## 결제 영수증 `{t:"purchase", product, token}` — 기기가 구글 플레이에서 산 뒤 구매 토큰을 보낸다.
+## **다이아 개수는 상품 표(`store.json`)에서 찾는다** — 기기가 보낸 개수는 없다.
+## 검증은 시간이 걸려서 여기서는 일감만 걸고 빈 답을 준다 — 끝나면 `poll_jobs` 가 답한다
+func _purchase(session: Dictionary, message: Dictionary) -> Dictionary:
+	var account: Dictionary = session.get("account", {})
+	if account.is_empty():
+		return _error(null, "no_hello")
+	var product := str(message.get("product", ""))
+	var token := str(message.get("token", ""))
+	if not GameData.load_table("store").get("products", {}).has(product):
+		return {"t": "error", "reason": "unknown_product", "product": product}
+	if token.is_empty() or token.length() > 4096:
+		return {"t": "error", "reason": "bad_token", "product": product}
+	var key := token.sha256_text()
+	# **이미 받은 영수증** — 같은 계정이면 받은 것으로 답한다(기기가 이제 소모하면 된다).
+	# 다른 계정이면 거절한다. 계정에 남긴 표시도 본다 — 계정은 썼는데 주문 파일을 쓰기 전에 꺼졌을 때
+	var order := store.find_order(key)
+	if not order.is_empty() or key in account.get("orders", []):
+		if order.is_empty() or str(order.get("account", "")) == str(account.id):
+			return {"t": "purchased", "product": product, "already": true, "diamonds": 0,
+				"ledger": Ledger.view(account.ledger), "events": []}
+		return {"t": "error", "reason": "order_taken", "product": product}
+	for waiting in _jobs:
+		if waiting.key == key:
+			return {"t": "error", "reason": "in_progress", "product": product}
+	if verifier == null:
+		return {"t": "error", "reason": "store_off", "product": product}
+	_jobs.append({"session": session, "account": account, "product": product, "key": key,
+		"job": verifier.start(product, token)})
+	return {}
+
+
+## 검증 일감을 돌린다 — `GameServer.poll` 이 매 프레임 부른다. 끝난 것은 `take_replies` 로 나간다
+func poll_jobs() -> void:
+	for entry in _jobs.duplicate():
+		if verifier != null:
+			verifier.poll(entry.job)
+		if not entry.job.done:
+			continue
+		_jobs.erase(entry)
+		if entry.job.ok:
+			_replies.append([entry.session, _finish_purchase(entry)])
+		else:
+			print("결제 거절 %s %s: %s" % [entry.account.id, entry.product, entry.job.reason])
+			_replies.append([entry.session, {"t": "error", "reason": "purchase_invalid",
+				"product": entry.product, "detail": str(entry.job.reason)}])
+
+
+## 다이아를 넣는다. **계정을 먼저 쓰고(주문 표시 포함) 주문 파일을 뒤에 쓴다** — 사이에 꺼지면
+## 계정의 표시가 두 번 받는 것을 막는다. 반대 순서면 돈만 나가고 다이아가 없는 채로 남을 수 있다
+func _finish_purchase(entry: Dictionary) -> Dictionary:
+	var account: Dictionary = entry.account
+	if not store.find_order(entry.key).is_empty() or entry.key in account.get("orders", []):
+		return {"t": "purchased", "product": entry.product, "already": true, "diamonds": 0,
+			"ledger": Ledger.view(account.ledger), "events": []}
+	var amount := int(GameData.load_table("store").products.get(entry.product, 0))
+	ledger.credit_diamonds(account.ledger, amount, entry.product)
+	var orders: Array = account.get_or_add("orders", [])
+	orders.append(entry.key)
+	var reply := {"t": "purchased", "product": entry.product, "diamonds": amount,
+		"ledger": Ledger.view(account.ledger), "events": ledger.take_events()}.duplicate(true)
+	if not store.write(account):
+		return {"t": "error", "reason": "store_failed", "product": entry.product}
+	store.write_order(entry.key, {"account": account.id, "product": entry.product,
+		"order_id": str(entry.job.get("order_id", "")), "at": int(Time.get_unix_time_from_system())})
+	print("결제 %s %s +%d (%s)" % [account.id, entry.product, amount, entry.job.get("order_id", "")])
+	return reply
+
+
+## 끝난 결제의 답 `[[session, 답], …]` — `GameServer` 가 그 연결에만 보낸다
+func take_replies() -> Array:
+	var out := _replies
+	_replies = []
 	return out

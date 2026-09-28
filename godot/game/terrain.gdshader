@@ -38,7 +38,7 @@ uniform float normal_depth = 1.0;
 uniform vec2 slope_dirt = vec2(0.92, 0.8);
 // 풀빛 얼룩의 양 끝 — 곱하는 색
 uniform vec3 shade_dark = vec3(0.6, 0.66, 0.55);
-uniform vec3 shade_sun = vec3(1.35, 1.4, 0.9);
+uniform vec3 shade_sun = vec3(1.15, 1.18, 0.95);
 
 varying vec3 up_normal;
 

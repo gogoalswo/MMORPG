@@ -470,7 +470,7 @@ func _hud(game: Node3D) -> void:
 ## 덮는지는 찍어야만 안다 (설계에서 범위가 곧 사냥 속도라서 보는 값이다)
 ## 존 풍경을 네 자리(도착 지점 · 차원문 앞 · 무리 · 화면 위쪽 끝)에서 찍어
 ## `logs/scene_sheet.png`(2×2, 반 크기) 한 장으로 모은다. 한 장씩은 `logs/scene_N.png`
-const SCENE_SPOTS := [Vector2(0, 0), Vector2(-8, -7), Vector2(5, 5), Vector2(-11, 2)]
+const SCENE_SPOTS := [Vector2(0, 0), Vector2(-8, -7), Vector2(9, 7), Vector2(-11, 2)]
 
 
 func _scene(game: Node3D, zone: String) -> void:

@@ -610,6 +610,10 @@ func _case_dungeon(game: Node3D) -> void:
 	var screen := panel.get_viewport_rect()
 	if not panel.get_global_rect().is_equal_approx(screen):
 		_fail("던전 창이 전체 화면이 아니다: %s (화면 %s)" % [panel.get_global_rect(), screen])
+	# 틀 가장자리가 반투명이라 뒤에 불투명한 판이 깔려야 한다 — 없으면 화면 끝에 게임이 비친다
+	var back: ColorRect = game.find_child("DungeonBack", true, false)
+	if back == null or not back.visible or back.color.a < 1.0 or not back.get_global_rect().is_equal_approx(screen):
+		_fail("던전 창 뒤에 화면을 다 덮는 불투명한 판이 없다")
 	# 단계 수를 적던 칩은 뺐다 (2026-09-28 요청: "단계 적어놓은 부분 제거해")
 	if seen.contains("20단계"):
 		_fail("카드에 단계 수가 남아 있다")
@@ -666,6 +670,8 @@ func _case_dungeon(game: Node3D) -> void:
 	await process_frame
 	if panel.visible:
 		_fail("입장을 눌렀는데 창이 안 닫혔다")
+	elif back.visible:
+		_fail("던전 창이 닫혔는데 뒤판이 남았다")
 	for i in 3:
 		await process_frame
 	var snap: Dictionary = game._transport.snapshot()

@@ -3516,6 +3516,17 @@ func _build_gate_panel() -> void:
 	_dungeon_panel = DungeonPanel.make(_frame_box, _icon, _item_icon)
 	_dungeon_panel.theme = _ui_root.theme
 	_dungeon_panel.picked.connect(_on_gate_pick)
+	# 던전 창은 전체 화면인데 틀 그림(`ui_dungeon_card`)의 가장자리가 찢긴 종이처럼
+	# 반투명이라 **화면 끝에 게임 배경이 가늘게 비쳤다** (2026-09-28 지적). 창 뒤에
+	# 불투명한 판을 한 장 깐다 — 창과 같이 보이고 같이 사라진다
+	var dungeon_back := ColorRect.new()
+	dungeon_back.name = "DungeonBack"
+	dungeon_back.color = DungeonPanel.CARD_DARK
+	dungeon_back.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dungeon_back.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dungeon_back.visible = false
+	top.add_child(dungeon_back)
+	_dungeon_panel.visibility_changed.connect(func(): dungeon_back.visible = _dungeon_panel.visible)
 	top.add_child(_dungeon_panel)
 
 

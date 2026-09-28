@@ -38,6 +38,7 @@ func _init() -> void:
 	_case_tufts(scenery, zone)
 	_case_rocks(scenery)
 	_case_sight(scenery)
+	_case_void(t)
 	_case_village()
 	scenery.free()
 	_finish()
@@ -108,7 +109,7 @@ func _case_tufts(scenery: Node3D, zone: Dictionary) -> void:
 	print("  풀포기 %d" % tufts.size())
 	if node.multimesh.instance_count != tufts.size():
 		_fail("풀포기 수가 다시 뽑은 것(%d)과 다르다 (%d)" % [tufts.size(), node.multimesh.instance_count])
-	if tufts.size() < 2000:
+	if tufts.size() < 1000:
 		_fail("풀포기가 %d 뿐 — 바닥이 맨땅처럼 보인다" % tufts.size())
 	var gate: Array = zone.get("gate", {}).get("position", [0, 0])
 	var tallest_in := 0.0
@@ -118,6 +119,9 @@ func _case_tufts(scenery: Node3D, zone: Dictionary) -> void:
 		var tall := xf.basis.y.length()
 		if maxf(absf(p.x), absf(p.z)) <= Scenery.WALK:
 			tallest_in = maxf(tallest_in, tall)
+		else:
+			_fail("풀포기가 이동 끝 너머 %s 에 있다 — 검은 바닥 위에 뜬다" % p)
+			break
 		if Vector2(p.x - float(gate[0]), p.z - float(gate[1])).length() < 2.0:
 			at_gate += 1
 	print("  걷는 땅 안 가장 큰 풀포기 %.2fm" % tallest_in)
@@ -143,8 +147,10 @@ func _case_rocks(scenery: Node3D) -> void:
 			var p: Vector3 = child.position
 			if maxf(absf(p.x), absf(p.z)) <= Scenery.WALK:
 				biggest_in = maxf(biggest_in, _height_of(child))
+			else:
+				_fail("바위가 이동 끝 너머 %s 에 있다 — 검은 바닥 위에 뜬다" % p)
 	print("  바위 %d개, 걷는 땅 안 가장 큰 것 %.2fm" % [rocks, biggest_in])
-	if rocks < 20:
+	if rocks < 10:
 		_fail("바위가 %d 개 뿐" % rocks)
 	if biggest_in > ANKLE:
 		_fail("걷는 땅 안 바위가 %.2fm — 판정에 없는 벽처럼 보인다" % biggest_in)
@@ -166,6 +172,16 @@ func _case_sight(scenery: Node3D) -> void:
 			worst = maxf(worst, xf.basis.y.length() - maxf(0.25, past * Scenery.SIGHT))
 	if worst > 0.05:
 		_fail("카메라 쪽 끝 너머 꾸밈이 시선보다 %.2fm 높다 — 끝에 선 캐릭터를 가린다" % worst)
+
+
+func _case_void(t: Terrain) -> void:
+	# 이동 끝 너머는 검은 바닥 (2026-09-28 "해당 위치부터는 그냥 검은색") — 끝이 이동 끝과 같아야
+	# 누르면 끝으로 당겨지는 선과 검은 선이 맞는다
+	var node := t.mesh_instance(GameData.zone(ZONE).get("env", {}))
+	var edge = node.material_override.get_shader_parameter("void_edge")
+	if edge == null or absf(float(edge) - Scenery.WALK) > 0.001:
+		_fail("검은 바닥 선이 %s — 이동 끝(%.1f)과 달라야 할 이유가 없다" % [edge, Scenery.WALK])
+	node.free()
 
 
 func _case_village() -> void:

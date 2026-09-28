@@ -14,12 +14,10 @@ uniform float sway = 0.05;
 
 varying float seed;
 varying float hue;
-varying float shade;
 
 void vertex() {
 	seed = INSTANCE_CUSTOM.g;
 	hue = INSTANCE_CUSTOM.r;
-	shade = INSTANCE_CUSTOM.b;
 	vec3 world = (MODEL_MATRIX * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
 	float w = sin(TIME * 1.4 + world.x * 0.6 + world.z * 0.45) + 0.4 * sin(TIME * 2.3 + world.z);
 	VERTEX.xz += vec2(w, w * 0.6) * sway * UV.y * UV.y;
@@ -53,8 +51,7 @@ void fragment() {
 	}
 	vec3 tip = tip_color * tip_lift * mix(0.85, 1.15, hue);
 	vec3 c = mix(base_color * 0.55, tip, smoothstep(0.0, 0.9, along));
-	// 이동 끝 너머는 숲 그늘 (바닥의 edge_dark 와 같은 곳)
-	ALBEDO = c * mix(1.0, 0.4, shade);
+	ALBEDO = c;
 	ROUGHNESS = 1.0;
 	SPECULAR = 0.1;
 }

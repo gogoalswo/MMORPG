@@ -8,6 +8,7 @@ import {
   SKILL_UNLOCK_ALL,
   SKILL_UPGRADES,
   SKILL_UPGRADE_MAX,
+  SKILL_UPGRADE_EXP_BY_TIER,
   SKILL_EXP_BOOKS,
   canLearn,
   skillForJob,
@@ -178,6 +179,11 @@ test('스킬 강화는 있는 스킬에 붙고, 스킬마다 둘까지이며, �
   for (const upgrade of SKILL_UPGRADES) {
     assert.ok(SKILLS[upgrade.skill], `${upgrade.skill} 이 없다`);
     assert.ok(upgrade.exp > 0, `${upgrade.skill} ${upgrade.id} 의 필요 경험치가 없다`);
+    assert.equal(
+      upgrade.exp,
+      SKILL_UPGRADE_EXP_BY_TIER[SKILLS[upgrade.skill].tier ?? 0],
+      `${upgrade.skill} ${upgrade.id} 의 필요 경험치가 전직 단계 표와 다르다`
+    );
     const ids = (perSkill[upgrade.skill] ??= []);
     assert.ok(!ids.includes(upgrade.id), `${upgrade.skill} 의 ${upgrade.id} 가 겹친다`);
     ids.push(upgrade.id);

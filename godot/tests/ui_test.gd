@@ -1437,21 +1437,22 @@ func _check_upgrades(game: Node3D, me: Dictionary, panel: Control, screen: Vecto
 		if button.get_global_rect().end.x > box.end.x or button.get_global_rect().end.y > box.end.y:
 			_fail("경험치북 단추 %s 가 창 밖이다" % button.get_global_rect())
 
-	# 책을 받고 하급 둘 → 200, 상급 하나 → 완료
+	# 책을 받고 하급 둘 → 200, 상급 다섯 → 완료 (낙뢰는 1차 전직 스킬이라 10000)
 	game._test_button("", 10, 10, &"debugBooks", {}).pressed.emit()
 	if small.disabled or not small.text.ends_with("10권"):
 		_fail("경험치북을 받았는데 단추가 꺼져 있다 ('%s')" % small.text)
 	small.pressed.emit()
 	small.pressed.emit()
-	if str(cards[0].amount.text) != "경험치 200 / 1000" or int(cards[0].bar.value) != 200:
+	if str(cards[0].amount.text) != "경험치 200 / 10000" or int(cards[0].bar.value) != 200:
 		_fail("하급 둘을 넣었는데 '%s'" % cards[0].amount.text)
-	big.pressed.emit()
+	for i in 5:
+		big.pressed.emit()
 	await process_frame
 	if me.skill_upgrades.get("thunder_fall", []) != ["stun"] or str(cards[0].amount.text) != "강화 완료" \
 			or not big.disabled:
-		_fail("1000 을 넘겼는데 강화가 안 붙었다 (%s · '%s')" % [str(me.skill_upgrades), cards[0].amount.text])
+		_fail("10000 을 넘겼는데 강화가 안 붙었다 (%s · '%s')" % [str(me.skill_upgrades), cards[0].amount.text])
 	else:
-		print("  강화 칸: %s · 하급 둘 200 → 상급 하나로 '%s'" % [box, cards[0].amount.text])
+		print("  강화 칸: %s · 하급 둘 200 → 상급 다섯으로 '%s'" % [box, cards[0].amount.text])
 	world.debug_reset_upgrades("me")
 
 

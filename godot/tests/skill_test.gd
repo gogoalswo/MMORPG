@@ -476,7 +476,7 @@ func _case_dead() -> void:
 
 
 ## 스킬 강화 — 스킬창에서 고른 강화에 **경험치북을 넣어**(`feed_upgrade`) 필요
-## 경험치(1000)에 닿으면 붙는다. 책이 없거나 이미 붙었으면 안 넣는다.
+## 경험치(낙뢰는 1차 전직 스킬이라 10000)에 닿으면 붙는다. 책이 없거나 이미 붙었으면 안 넣는다.
 ## 테스트 단추는 경험치북 없이 붙인다.
 ## 낙뢰에 "기절" 이 붙으면 맞은 놈이 3초 동안 **서서 못 때린다** (2026-09-23)
 func _case_upgrade() -> void:
@@ -499,9 +499,13 @@ func _case_upgrade() -> void:
 	var got := int(me.skill_upgrade_exp.get("thunder_fall", {}).get("stun", 0))
 	if got != 800 or not me.skill_upgrades.is_empty():
 		_fail("하급 셋 + 중급 하나면 800 이고 아직 안 붙어야 한다 (%d · %s)" % [got, me.skill_upgrades])
+	for i in 4:
+		w.feed_upgrade("me", "thunder_fall", 0, str(books[2].id))
+	if not me.skill_upgrades.is_empty():
+		_fail("8800 인데 벌써 붙었다 (%s)" % str(me.skill_upgrades))
 	w.feed_upgrade("me", "thunder_fall", 0, str(books[2].id))
 	if me.skill_upgrades.get("thunder_fall", []) != ["stun"] or me.skill_upgrade_exp.has("thunder_fall"):
-		_fail("1000 을 넘겼는데 안 붙었거나 경험치가 남았다 (%s · %s)" % [me.skill_upgrades, me.skill_upgrade_exp])
+		_fail("10000 을 넘겼는데 안 붙었거나 경험치가 남았다 (%s · %s)" % [me.skill_upgrades, me.skill_upgrade_exp])
 	var small_left := 0
 	for stack in me.bag:
 		if str(stack.id) == small:

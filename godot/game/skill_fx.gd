@@ -40,11 +40,6 @@ const CLAW_SPACING := 0.3
 ## 쓸고 가는 각 — 판정(120°)보다 조금 넓게 둬서 끝이 부채꼴 밖까지 흘러야
 ## 부채꼴 끝에 선 놈도 긁힌 것으로 보인다
 const SWEEP_ARC := deg_to_rad(140.0)
-## "부채꼴" 강화가 붙으면 더 쓸고 가는 각 — 판정 각이 40° 넓어지는 만큼 호도 길어진다
-## (2026-09-23 요청: "부채꼴 각도 40도 증가, 이펙트로 그 만큼 길이 증가")
-const SWEEP_WIDE := deg_to_rad(40.0)
-## 메시가 깔린 각 — 넓은 쪽까지 한 번에 깔아 두고, 얼마나 그릴지는 셰이더가 정한다
-const MESH_ARC := SWEEP_ARC + SWEEP_WIDE
 ## 머리가 끝까지 가는 시간. 짧아야 "긁었다" 가 된다
 const SWEEP := 0.12
 ## 꼬리 길이(각). 이보다 길면 원을 그린 것으로, 짧으면 점이 지나간 것으로 보인다
@@ -62,9 +57,9 @@ const TILTS: Array[float] = [-0.34, 0.3, -0.14, 0.4, -0.24]
 ## 번마다 높이를 조금씩 흔든다 — 같은 자리를 다섯 번 지나면 한 줄이 된다
 const LIFTS: Array[float] = [0.05, -0.1, 0.15, -0.02, 0.08]
 
-## 호 전체(`MESH_ARC` 180°)를 몇 토막으로 까나. 머리 끝이 토막 단위로 나아가므로
-## 너무 성기면 끝이 뚝뚝 끊겨 보인다 (52 면 3.5° 씩 — 140° 에 40 토막이던 때와 같다)
-const SEGMENTS := 52
+## 호 전체(`SWEEP_ARC` 140°)를 몇 토막으로 까나. 머리 끝이 토막 단위로 나아가므로
+## 너무 성기면 끝이 뚝뚝 끊겨 보인다 (40 이면 3.5° 씩)
+const SEGMENTS := 40
 
 ## 세 겹 — **폭만 다르고 같은 길**이다 (effect-rules.md 5절). 넓은 청백 빛 +
 ## 밝은 테 + 가는 흰 심. 폭은 초승달의 가장 굵은 자리 기준(m)
@@ -126,24 +121,21 @@ static var _arcs: Array = []
 var _t := 0.0
 var _facing := 0.0
 var _slashes: Array = []
-## 이번에 긁는 수 · 쓸고 가는 각 · 꼬리 각 — 강화에 따라 되감을 때 정한다
+## 이번에 긁는 수 — 강화에 따라 되감을 때 정한다
 var _count := SLASHES
-var _sweep := SWEEP_ARC
-var _trail := TRAIL
 
 
 ## 할퀴기를 띄운다. `at` 은 시전자 발밑(월드 좌표), `facing` 은 보는 쪽(rad).
 ## 풀(`FxPool`)에 쉬는 것이 있으면 되감아 쓴다 — 새로 만들지 않는다.
-## `wide` 면 호가 40° 길고("부채꼴" 강화), `combo` 면 두 번 더 긁고 보라다("연타" 강화).
-## 둘은 따로 논다
-static func claw(parent: Node3D, at: Vector3, facing: float, wide := false, combo := false) -> SkillFx:
+## `combo` 면 두 번 더 긁고 보라다("연타" 강화). 1번 "위력" 은 피해만 키워서 이펙트가 없다
+static func claw(parent: Node3D, at: Vector3, facing: float, combo := false) -> SkillFx:
 	var fx := FxPool.take(parent, &"claw") as SkillFx
 	if fx == null:
 		fx = SkillFx.new()
 		fx.name = "ClawFx"
 		parent.add_child(fx)
 		fx._build()
-	fx._start(at, facing, wide, combo)
+	fx._start(at, facing, combo)
 	return fx
 
 
@@ -186,11 +178,8 @@ func _build() -> void:
 
 
 ## 처음으로 되감는다. **아무것도 만들지 않는다** — 자리·보는 쪽·시각만 넣는다
-func _start(at: Vector3, facing: float, wide := false, combo := false) -> void:
+func _start(at: Vector3, facing: float, combo := false) -> void:
 	_count = SLASHES + (COMBO_SLASHES if combo else 0)
-	_sweep = SWEEP_ARC + (SWEEP_WIDE if wide else 0.0)
-	# 꼬리도 호에 비례해 늘린다 — 호만 늘리면 긴 호 위로 짧은 점이 지나가 보인다
-	_trail = TRAIL * _sweep / SWEEP_ARC
 	var pal: Dictionary = PALETTE_PURPLE if combo else PALETTE_BLUE
 	# **회전은 주지 않는다.** 리본 폭을 월드 시선으로 재므로 좌표도 월드 방향이어야
 	# 한다 — 보는 쪽은 점을 찍을 때 넣는다
@@ -234,8 +223,8 @@ func _draw(slash: Dictionary) -> void:
 		return
 	var sweep := clampf(s / SWEEP, 0.0, 1.0)
 	var fade := clampf((s - SWEEP) / FADE, 0.0, 1.0)
-	var head := -_sweep * 0.5 + _sweep * _ease_out(sweep)
-	var tail := maxf(-_sweep * 0.5, head - _trail)
+	var head := -SWEEP_ARC * 0.5 + SWEEP_ARC * _ease_out(sweep)
+	var tail := maxf(-SWEEP_ARC * 0.5, head - TRAIL)
 	# 다 쓸고 나면 꼬리가 머리 쪽으로 모인다 — 제자리에서 옅어지기만 하면
 	# 호가 한동안 그려져 있어 "그림 한 장" 이 된다
 	if fade > 0.0:
@@ -276,7 +265,7 @@ func _draw(slash: Dictionary) -> void:
 
 ## `i` 번째 긁기의 발톱 자국 셋을 한 메시로 — **게임 전체에서 한 번만** 만든다.
 ## 쓸 때마다 만들었더니 그것만으로 2.8ms(PC) 가 튀었다 (2026-09-23).
-## 호 전체(`MESH_ARC`)를 보는 쪽 0 으로 깔아 두고 폭은 0 이다. 점마다 꼭짓점
+## 호 전체(`SWEEP_ARC`)를 보는 쪽 0 으로 깔아 두고 폭은 0 이다. 점마다 꼭짓점
 ## 셋(바깥 · 가운데 · 바깥)이 같은 자리에 있고, 셰이더가 바깥 둘만 벌린다.
 ## `NORMAL` 에는 폭 방향이 아니라 **호의 진행 방향**을 넣는다 — 폭 방향은 시선에
 ## 달려 있어서 셰이더가 월드에서 구한다
@@ -297,7 +286,7 @@ static func arc_mesh(i: int) -> ArrayMesh:
 		var path := PackedVector3Array()
 		var angles := PackedFloat32Array()
 		for p in SEGMENTS + 1:
-			var a := -MESH_ARC * 0.5 + MESH_ARC * float(p) / float(SEGMENTS)
+			var a := -SWEEP_ARC * 0.5 + SWEEP_ARC * float(p) / float(SEGMENTS)
 			angles.append(a)
 			path.append(local_point(a, radius, side_sign, tilt, lift))
 		var base := verts.size()

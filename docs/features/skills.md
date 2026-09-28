@@ -39,7 +39,7 @@
 | `packages/server/src/ZoneRoom.ts` | `handleLearnSkill` / `handleSetSkillBar` / `handleSkill` / `tryAutoSkill` |
 | **`godot/game/game.gd`** `_build_skill_bar` · `_build_skill_panel` · `_redraw_skills` | ★ **고도 퀵슬롯(HUD 하단 4칸)과 스킬창** — 아래 "스킬창과 퀵슬롯" |
 | `public/assets/icons/skill_<id>.png` · `ui_skill_slot` · `ui_slot_pick` | 바르코로 만든 스킬 아이콘(격투가 6개)과 칸 테두리·고른 칸 테두리. 주소는 `fetch-assets.sh` |
-| **`godot/game/skill_fx.gd`** | ★ **고도 스킬 이펙트** — 할퀴기(`SkillFx.claw`): 발톱 세 가닥 초승달이 앞 120° 를 세 번 쓴다(강화하면 180° · 다섯 번 · 보라). 에셋 없이 코드로, **줄기는 리본 메시**(`LightningFx` 도구를 돌려 쓴다) |
+| **`godot/game/skill_fx.gd`** | ★ **고도 스킬 이펙트** — 할퀴기(`SkillFx.claw`): 발톱 세 가닥 초승달이 앞 120° 를 세 번 쓴다(연타 강화면 다섯 번 · 보라). 에셋 없이 코드로, **줄기는 리본 메시**(`LightningFx` 도구를 돌려 쓴다) |
 | **`godot/game/lightning_fx.gd`** | ★ **낙뢰**(`LightningFx.bolt`) — 번개 세 번 · 갈라지는 땅 · 튀는 파편. **줄기는 리본 메시**(`trail`·`ribbon`), 파편만 파티클 |
 | **`godot/game/quake_fx.gd`** | ★ **천붕각**(`QuakeFx.slam`) — 금 여덟 갈래가 어긋나게 갈라지고 모래 먼지가 충격파로 밀려난다. 금은 한 번 깐 메시를 셰이더가 자라게 한다 |
 | **`godot/game/ice_fx.gd`** | ★ **빙주각**(`IceFx.burst`) — 얼음 기둥 세 겹 고리가 안에서 밖으로 솟았다 땅으로 꺼진다. 기둥은 한 번 깐 메시를 셰이더가 축을 따라 땅에서 밀어 올린다. 금은 천붕각 메시를 얼음 색으로 다시 쓴다 |
@@ -269,7 +269,8 @@
 #### 할퀴기 — 초승달 세 번 (2026-09-23 갈아엎음) ★
 **같은 날 기본을 다섯 번에서 세 번으로 줄였다** — "연타" 강화(+2)가 생겨서다. 한 대는
 0.56 그대로라 기본 합계는 1.68, 연타를 붙이면 아래의 옛 다섯 번(2.8)과 같다. 강화는
-"부채꼴"(판정 160° · 호 180°)과 "연타"(다섯 번 · 보라) 둘이다 → [skill-upgrades.md](skill-upgrades.md).
+"위력"(피해 × 1.3, 이펙트 그대로 — 2026-09-28 까지는 "부채꼴" 이었다)과 "연타"(다섯 번 · 보라)
+둘이다 → [skill-upgrades.md](skill-upgrades.md).
 아래는 다섯 번이던 때 적은 것이라 "다섯" 은 **연타 강화를 붙인 모양**으로 읽는다.
 
 **요청: "한 번에 5번 데미지, 부채꼴 120° 정도."** 참고 그림(사용자 제공)은

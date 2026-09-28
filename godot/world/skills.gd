@@ -54,7 +54,15 @@ static func range_mul(skill_id: String, upgrade_ids: Array) -> float:
 	return out
 
 
-## 붙은 강화들의 **더하는** 값 합 — `arcAdd`(부채꼴 각, rad) · `extraHits`(다단 히트)
+## 붙은 강화들의 스킬 피해 배율. 여럿이면 곱한다 (할퀴기 "위력")
+static func power_mul(skill_id: String, upgrade_ids: Array) -> float:
+	var out := 1.0
+	for id in upgrade_ids:
+		out *= float(upgrade(skill_id, str(id)).get("powerMul", 1.0))
+	return out
+
+
+## 붙은 강화들의 **더하는** 값 합 — `extraHits`(다단 히트)
 static func upgrade_sum(skill_id: String, upgrade_ids: Array, key: String) -> float:
 	var out := 0.0
 	for id in upgrade_ids:

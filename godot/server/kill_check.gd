@@ -26,8 +26,8 @@ const KNOWN_SKILL_KEYS := [
 	"projectile", "range", "reqLevel", "tier",
 ]
 const KNOWN_UPGRADE_KEYS := [
-	"extraHits", "zoneMs", "zoneTickMs", "zonePower", "followPower",  # 셈한다
-	"id", "skill", "name", "desc", "exp", "stunMs", "stunLook", "rangeMul", "arcAdd", "followMs",
+	"extraHits", "zoneMs", "zoneTickMs", "zonePower", "followPower", "powerMul",  # 셈한다
+	"id", "skill", "name", "desc", "exp", "stunMs", "stunLook", "rangeMul", "followMs",
 ]
 
 
@@ -64,6 +64,8 @@ static func min_ms(ledger: Dictionary, kind: Dictionary) -> float:
 				var ticks := float(upgrade.zoneMs) / maxf(1.0, float(upgrade.get("zoneTickMs", 500)))
 				power += float(upgrade.get("zonePower", 1)) * ticks
 				hits += ticks
+		# 위력 강화는 전부에 곱한다 — 지대까지 곱하면 실제보다 크다(넉넉한 쪽이다)
+		power *= Skills.power_mul(str(skill_id), owned)
 		var every := maxf(1.0, float(skill.get("cooldown", 0)) * (1.0 - cut))
 		var cast := power * per_power + hits
 		burst += cast

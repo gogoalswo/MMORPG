@@ -4689,9 +4689,9 @@ func _show_skill(payload: Dictionary) -> void:
 		IceFx.burst(_fx, here, float(me.rot), "shatter" in ice_up, "freeze" in ice_up)
 		_camera.shake(IceFx.SHAKE, IceFx.SHAKE_TIME)
 	else:
-		# 강화 — "부채꼴" 이면 호가 40° 길고, "연타" 면 두 번 더 긁고 보라다 (따로 논다)
+		# 강화 — "연타" 면 두 번 더 긁고 보라다. "위력"(`wide`)은 피해만 키워서 이펙트가 그대로다
 		var claw_up: Array = payload.get("upgrades", [])
-		SkillFx.claw(_fx, here, float(me.rot), "wide" in claw_up, "combo" in claw_up)
+		SkillFx.claw(_fx, here, float(me.rot), "combo" in claw_up)
 
 
 ## 보스 범위 공격 예고 원.

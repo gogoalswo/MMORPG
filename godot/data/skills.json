@@ -378,9 +378,9 @@
     {
       "id": "wide",
       "skill": "rising_kick",
-      "name": "부채꼴",
-      "desc": "부채꼴 각도 40° 증가",
-      "arcAdd": 0.6981317007977318,
+      "name": "위력",
+      "desc": "데미지 30% 증가",
+      "powerMul": 1.3,
       "exp": 1000
     },
     {

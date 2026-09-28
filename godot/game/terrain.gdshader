@@ -3,6 +3,7 @@
 // "바닥" 절과 "지형" 절에 있다.
 //
 // 층: 0 풀(나머지를 채운다) · 1 돌판(R) · 2 자갈(G) · 3 흙(B).
+// 알파 = 풀빛 얼룩 (0.5 그대로 · 0 이끼 낀 그늘 · 1 볕 든 연두) — 숲 바닥용
 // UV 는 월드 미터 그대로 들어온다 — 층마다 제 타일 크기로 나눈다.
 
 shader_type spatial;
@@ -35,6 +36,9 @@ uniform float contrast = 1.0;
 uniform float normal_depth = 1.0;
 // 이만큼 기운 비탈(법선 y)부터 풀이 벗겨져 흙이 드러난다
 uniform vec2 slope_dirt = vec2(0.92, 0.8);
+// 풀빛 얼룩의 양 끝 — 곱하는 색
+uniform vec3 shade_dark = vec3(0.6, 0.66, 0.55);
+uniform vec3 shade_sun = vec3(1.35, 1.4, 0.9);
 
 varying vec3 up_normal;
 
@@ -50,7 +54,10 @@ vec3 layer(sampler2D tex, vec2 uv, vec3 mean, vec3 tint) {
 }
 
 void fragment() {
-	vec3 s = texture(splat, (UV + splat_half) / (2.0 * splat_half)).rgb;
+	vec4 sp = texture(splat, (UV + splat_half) / (2.0 * splat_half));
+	vec3 s = sp.rgb;
+	float m = sp.a * 2.0 - 1.0;
+	vec3 grass_mul = m < 0.0 ? mix(vec3(1.0), shade_dark, -m) : mix(vec3(1.0), shade_sun, m);
 	float w1 = s.r;
 	float w2 = s.g;
 	float w3 = s.b;
@@ -65,7 +72,7 @@ void fragment() {
 	vec2 uv2 = UV / tile.z;
 	vec2 uv3 = UV / tile.w;
 
-	ALBEDO = layer(albedo0, uv0, mean0, tint0) * w0
+	ALBEDO = layer(albedo0, uv0, mean0, tint0) * grass_mul * w0
 		+ layer(albedo1, uv1, mean1, tint1) * w1
 		+ layer(albedo2, uv2, mean2, tint2) * w2
 		+ layer(albedo3, uv3, mean3, tint3) * w3;

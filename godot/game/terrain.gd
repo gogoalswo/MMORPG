@@ -6,7 +6,7 @@ extends RefCounted
 ## 나무·바위·건물처럼 길을 막는 것은 하나도 없고, 높낮이는 그리기만 한다 —
 ## 판정(`World`)은 여전히 평면(x, z)에서 돈다.
 ##
-## 지형이 있는 존은 `RECIPES` 에 적힌 곳뿐이고(지금은 마을), 나머지는 예전처럼
+## 지형이 있는 존은 `RECIPES` 에 적힌 곳뿐이고(마을 · 덤불숲), 나머지는 예전처럼
 ## 평평한 바닥 한 장(`Ground`)이다. 규칙과 수치의 이유는
 ## docs/features/world-zones.md 의 "지형" 절에 있다.
 
@@ -31,6 +31,13 @@ const LAYERS := ["grass", "stone", "cobble", "dirt"]
 ## - `bumps`   : 걸어 다니는 땅의 굴곡 높이(±m). 광장은 평평하게 눌러 둔다
 ## - `rim`     : 이 거리(맵 가운데서 x·z 중 큰 쪽)부터 언덕이 솟는다 — 이동 끝(±12.5)과 같다
 ## - `rim_top` : 메시 끝(64)에서의 언덕 높이
+## 아래는 없어도 된다 (마을은 안 쓴다)
+## - `road_layer`: 길을 칠할 층 — `"cobble"`(기본, 자갈길) · `"dirt"`(숲의 흙길)
+## - `flats`   : [x, z, 반지름] — 굴곡을 눌러 평평하게 둘 자리 (차원문·도착 지점)
+## - `patch`   : 군데군데 맨땅의 양 (기본 0.85)
+## - `shade`   : 풀빛 얼룩 세기 (0~1). 이끼 낀 어두운 데와 볕 든 연두 데가 섞인다 —
+##               풀 한 장이 넓게 깔리면 밋밋해서, 숲 바닥의 얼룩덜룩함을 준다
+## - `looks`   : {층: [목표색, 밝기 배율]} — 존 색 대신 이 층을 이 색으로 끌어당긴다
 const RECIPES := {
 	"village": {
 		"plaza": 12.0,
@@ -44,6 +51,27 @@ const RECIPES := {
 		"bumps": 0.7,
 		"rim": 12.5,
 		"rim_top": 12.0,
+	},
+	# 덤불숲 — 2026-09-28 "제안하는 방식으로 맵 하나 만들어 봐" (참고 그림: 리니지풍
+	# 어두운 숲 바닥). 광장 없이 흙길 하나가 차원문(-9, -9) → 도착 지점 → 무리
+	# (6, 6)로 굽이치고, 한 갈래가 오른쪽 언덕으로 빠진다. 나무·바위·풀포기는 Scenery
+	"thicket": {
+		"plaza": 0.0,
+		"roads": [
+			[[-24, -21], [-15, -14], [-9, -9], [-6, -3], [0, 0], [2, 4], [6, 6], [9, 12], [8, 20], [11, 30]],
+			[[0, 0], [5, -3], [9, -8], [16, -10], [24, -17], [33, -18]],
+		],
+		"road_layer": "dirt",
+		"road_w": 0.9,
+		"bumps": 0.55,
+		"rim": 12.5,
+		"rim_top": 10.0,
+		"flats": [[-9, -9, 3.0], [0, 0, 2.0]],
+		"patch": 0.55,
+		"shade": 1.0,
+		# 존 색(grassLight #4a5936)은 검은빛이라 이끼 바닥이 흙과 안 갈린다 — 참고 그림의
+		# 짙지만 살아 있는 초록으로 덮어쓴다. shared 존 색은 하늘·다른 곳이 같이 써서 안 건드린다
+		"looks": {"grass": ["#6f8f38", 1.9], "dirt": ["#5e4a30", 1.25]},
 	},
 }
 
@@ -123,7 +151,7 @@ func mesh_instance(env: Dictionary) -> MeshInstance3D:
 		_mesh_cache = _mesh()
 		_splat_cache = _splat_texture()
 	node.mesh = _mesh_cache
-	node.material_override = Ground.terrain_material(env, LAYERS, _splat_cache, SPLAT_HALF)
+	node.material_override = Ground.terrain_material(env, LAYERS, _splat_cache, SPLAT_HALF, _recipe.get("looks", {}))
 	return node
 
 
@@ -186,28 +214,56 @@ func _weights(x: float, z: float) -> Vector3:
 
 	var r := Vector2(x, z).length()
 	var plaza_r := float(_recipe.plaza)
-	var stone := 1.0 - smoothstep(plaza_r - 0.8, plaza_r + 0.8, r + _n01(x, z, 4.0, 11.0) * 1.3)
+	var stone := 0.0
+	if plaza_r > 0.0:
+		stone = 1.0 - smoothstep(plaza_r - 0.8, plaza_r + 0.8, r + _n01(x, z, 4.0, 11.0) * 1.3)
 
 	var w := float(_recipe.road_w)
 	var d := _road_dist_at(x, z) + _n01(x, z, 2.5, 37.0) * 0.45
-	var cobble := (1.0 - smoothstep(w - 0.35, w + 0.35, d)) * (1.0 - stone) * fade
+	var road := (1.0 - smoothstep(w - 0.35, w + 0.35, d)) * (1.0 - stone) * fade
+	var dirt_road := str(_recipe.get("road_layer", "cobble")) == "dirt"
+	var cobble := 0.0 if dirt_road else road
 
 	# 흙 — 길섶(밟혀서 풀이 벗겨진 곳), 광장 둘레, 그리고 군데군데 맨땅
 	var shoulder := 1.0 - smoothstep(w + 0.4, w + 2.2, d + _n01(x, z, 3.0, 53.0) * 0.9)
-	var ring := 1.0 - smoothstep(plaza_r + 0.5, plaza_r + 3.5, r + _n01(x, z, 3.0, 71.0) * 1.5)
+	var ring := 0.0
+	if plaza_r > 0.0:
+		ring = 1.0 - smoothstep(plaza_r + 0.5, plaza_r + 3.5, r + _n01(x, z, 3.0, 71.0) * 1.5)
 	var patch := smoothstep(0.28, 0.5, _n01(x, z, 9.0, 97.0))
-	var dirt := clampf(maxf(maxf(shoulder, ring), patch * 0.85), 0.0, 1.0)
-	dirt *= (1.0 - stone - cobble) * fade
+	var dirt := maxf(maxf(shoulder * (0.55 if dirt_road else 1.0), ring), patch * float(_recipe.get("patch", 0.85)))
+	if dirt_road:
+		dirt = maxf(dirt, road)
+	dirt = clampf(dirt, 0.0, 1.0) * (1.0 - stone - cobble) * fade
 	return Vector3(stone, cobble, maxf(dirt, 0.0))
 
 
+## 풀빛 얼룩 (0.5 = 그대로, 0 = 이끼 낀 그늘, 1 = 볕 든 연두). 섞기 그림의 알파에 굽는다
+func _shade(x: float, z: float) -> float:
+	var amount := float(_recipe.get("shade", 0.0))
+	if amount <= 0.0:
+		return 0.5
+	var big := _n01(x, z, 7.0, 211.0)
+	var small := _n01(x, z, 2.2, 257.0)
+	return clampf(0.5 + (big * 0.75 + small * 0.35) * amount, 0.0, 1.0)
+
+
+## 이 자리의 바닥 섞기 (돌판, 자갈, 흙). 풀은 나머지 — 풀포기·돌을 흩뿌릴 때 본다
+func ground_mix(x: float, z: float) -> Vector3:
+	return _weights(x, z)
+
+
+## 가장 가까운 길 가운데선까지(m)
+func road_distance(x: float, z: float) -> float:
+	return _road_dist_at(x, z)
+
+
 func _splat_texture() -> ImageTexture:
-	var img := Image.create(_splat_n, _splat_n, false, Image.FORMAT_RGB8)
+	var img := Image.create(_splat_n, _splat_n, false, Image.FORMAT_RGBA8)
 	for j in _splat_n:
 		for i in _splat_n:
 			var p := _splat_world(i, j)
 			var w := _weights(p.x, p.y)
-			img.set_pixel(i, j, Color(w.x, w.y, w.z))
+			img.set_pixel(i, j, Color(w.x, w.y, w.z, _shade(p.x, p.y)))
 	return ImageTexture.create_from_image(img)
 
 
@@ -225,7 +281,11 @@ func _bake_heights() -> void:
 			var z := j * STEP - HALF
 			# 걸어 다니는 땅 — 완만한 굴곡. 광장은 평평하게, 길은 반쯤 눌러 둔다
 			var h := _n01(x, z, 16.0, 0.0) * bumps
-			h *= smoothstep(plaza_r + 1.0, plaza_r + 7.0, Vector2(x, z).length())
+			if plaza_r > 0.0:
+				h *= smoothstep(plaza_r + 1.0, plaza_r + 7.0, Vector2(x, z).length())
+			for f in _recipe.get("flats", []):
+				var fr := float(f[2])
+				h *= smoothstep(fr, fr + 4.0, Vector2(x - float(f[0]), z - float(f[1])).length())
 			h *= lerpf(0.4, 1.0, smoothstep(w, w + 3.0, _road_dist_at(x, z)))
 			# 바깥 언덕 — 이동 끝에서 0 으로 시작해 점점 가팔라진다. 가장 가파른 곳도
 			# 카메라 시선(42도)보다 한참 눕혀 둬서, 끝에 선 캐릭터를 가리지 않는다

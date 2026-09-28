@@ -353,14 +353,14 @@
       "job": "fighter",
       "cooldown": 10000,
       "range": 6,
-      "delayMs": 500,
-      "castMs": 1300,
+      "delayMs": 420,
+      "castMs": 1200,
       "arc": 6.283185307179586,
       "power": 13,
       "maxTargets": 10,
       "reqLevel": 180,
       "tier": 4,
-      "description": "뛰어올라 뒤꿈치로 땅을 찍어 폭발을 일으키고 잔불을 남긴다."
+      "description": "한 발을 들어 땅을 내리찍어 폭발을 일으키고 잔불을 남긴다."
     }
   },
   "byJob": {

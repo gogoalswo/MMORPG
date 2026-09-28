@@ -126,15 +126,12 @@ uniform vec4 tint : source_color = vec4(1.0);
 uniform float now = 0.0;
 uniform float speed = 26.0;
 uniform float soft = 0.3;
-// 발밑 이만큼(m) 안쪽을 서서히 비운다 — 넓은 금은 갈래가 한가운데서 겹쳐 뭉친다 (폭렬 찍기)
-uniform float inner = 0.0;
 void fragment() {
 	float front = (now - UV2.y) * speed;
 	float shown = clamp((front - UV2.x) / soft, 0.0, 1.0);
-	float core = inner > 0.0 ? smoothstep(inner * 0.35, inner, UV2.x) : 1.0;
 	vec4 t = texture(streak, UV);
 	ALBEDO = tint.rgb * t.rgb;
-	ALPHA = tint.a * t.a * shown * core;
+	ALPHA = tint.a * t.a * shown;
 }
 """
 static var _shaders: Dictionary = {}

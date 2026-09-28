@@ -339,11 +339,11 @@ fetch_icon ceb2c53d523649a6376b4c204144c8bd dungeon_trial    # 시련의 탑 —
 fetch_icon fa124e9f7d19ee8301a2be5ecab872a4 dungeon_treasure # 보물 창고 — 금고 문 · 상자 · 등불 (둘째)
 fetch_icon 95353ca131109a81562da8c056255962 ui_dungeon_card  # 카드 틀 — 닳은 돌판 · 얇은 청동 테 (둘째)
 fetch_icon bca3ac0f09670fe8e947153580b9216f ui_dungeon_crest # 카드 위 장식 — 창살 아치 문 + 덩굴 날개 (둘째)
-fetch_icon 9f519882b9a58b99a928564c0fb70efd ui_icon_auto   # 자동사냥 — 검 두 자루가 X자
+fetch_icon 1d6ec52fc177db8c81682be3655dd08a ui_icon_auto   # 자동사냥 — 검 두 자루가 X자. 2026-09-28 리니지풍 (둘째)
 # 퀵슬롯 왼쪽 물약 칸 (2026-09-26) — 둥근 유리병 · 코르크 · 붉은 물약. 두 장 중 둘째(정면)
-fetch_icon 81fc643bd0233984e748b4bb3416fcc8 ui_icon_potion
+fetch_icon 5557649aca52a51953baa065962e3cd7 ui_icon_potion # 2026-09-28 리니지풍으로 다시 — 둥근 유리병 · 끈 맨 코르크 (둘째)
 fetch_icon 74df64ad7717d61a8ba37c600568f827 ui_auto_spin   # 자동사냥 고리 (굵은 화살표 — 얇은 것은 안 보였다)
-fetch_icon 69c32b07ca637a710819a6ba08020abf ui_close       # 모든 창 오른쪽 위 닫기 X
+fetch_icon ded29ae67c8159023a1ffac24555f939 ui_close       # 모든 창 오른쪽 위 닫기 X — 2026-09-28 리니지풍 청동 막대 X (첫째)
 fetch_icon 029c2be72082608b40dfaf00bebe782a ui_portrait    # 옛 초상 테두리 (미사용 — 상태판을 내리면서 빠졌다)
 
 node scripts/build-item-icons.mjs

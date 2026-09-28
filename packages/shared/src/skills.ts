@@ -524,6 +524,33 @@ const SKILL_LIST: SkillDef[] = [
     tier: 4,
     description: '기를 모아 손바닥으로 내질러 앞을 휩쓴다.',
   },
+  {
+    /**
+     * 주먹으로 내지르면 **맞은 자리에서 흰·금빛 기운이 소용돌이치며 끓어오르다가
+     * 대폭발한다** (`NovaFx.burst`, 2026-09-28 요청 — 사용자가 준 스크린샷: 캐릭터 앞에서
+     * 금빛 소용돌이 호가 겹겹이 솟고 불티가 튄다).
+     *
+     * 판정은 **폭발하는 순간**이다 (`delayMs`) — 주먹이 닿고(0.1초) 기운이 끓는 동안은
+     * 아무도 안 맞고, 터질 때 둘레를 한꺼번에 친다. 그동안 발이 묶인다(천붕각과 같다).
+     * `delayMs` 는 `NovaFx.EXPLODE` 와 같아야 한다 — `nova_fx_test.gd` 가 맞춰 본다.
+     * 폭발은 내 둘레 원(`arc` 2π)이고, 불덩이 끝이 사거리(5m) 안에서 멎는다.
+     * 동작은 새로 짓지 않고 스트레이트(`Cross`)를 쓴다.
+     */
+    id: 'nova_fist',
+    name: '폭렬권',
+    job: 'fighter',
+    cooldown: 12000,
+    delayMs: 750,
+    castMs: 1200,
+    range: 5.0,
+    arc: Math.PI * 2,
+    power: 14.0,
+    maxTargets: 10,
+    // 4차 전직(Lv.180)에 열린다
+    reqLevel: 180,
+    tier: 4,
+    description: '주먹에 기를 실어 내질러 일대를 폭발시킨다.',
+  },
 ];
 
 export const SKILLS: Record<string, SkillDef> = Object.fromEntries(

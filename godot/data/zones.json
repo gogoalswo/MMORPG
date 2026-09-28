@@ -187,7 +187,7 @@
     "village": {
       "id": "village",
       "name": "마을",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -196,8 +196,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -227,7 +227,7 @@
     "meadow": {
       "id": "meadow",
       "name": "초원",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -236,8 +236,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -246,9 +246,9 @@
       "monsters": [
         {
           "kind": "mob008",
-          "x": 6,
-          "z": 6,
-          "radius": 6.5,
+          "x": 16,
+          "z": 16,
+          "radius": 13,
           "count": 16,
           "respawnMs": 10000
         }
@@ -266,7 +266,7 @@
     "thicket": {
       "id": "thicket",
       "name": "덤불숲",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -275,8 +275,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -285,9 +285,9 @@
       "monsters": [
         {
           "kind": "mob018",
-          "x": 6,
-          "z": 6,
-          "radius": 6.5,
+          "x": 16,
+          "z": 16,
+          "radius": 13,
           "count": 16,
           "respawnMs": 10000
         }
@@ -305,7 +305,7 @@
     "canyon": {
       "id": "canyon",
       "name": "메마른 협곡",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -314,8 +314,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -324,9 +324,9 @@
       "monsters": [
         {
           "kind": "mob028",
-          "x": 6,
-          "z": 6,
-          "radius": 6.5,
+          "x": 16,
+          "z": 16,
+          "radius": 13,
           "count": 16,
           "respawnMs": 10000
         }
@@ -344,7 +344,7 @@
     "waste": {
       "id": "waste",
       "name": "잿빛 황야",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -353,8 +353,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -363,9 +363,9 @@
       "monsters": [
         {
           "kind": "mob038",
-          "x": 6,
-          "z": 6,
-          "radius": 6.5,
+          "x": 16,
+          "z": 16,
+          "radius": 13,
           "count": 16,
           "respawnMs": 10000
         }
@@ -383,7 +383,7 @@
     "mire": {
       "id": "mire",
       "name": "안개 늪",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -392,8 +392,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -402,9 +402,9 @@
       "monsters": [
         {
           "kind": "mob048",
-          "x": 6,
-          "z": 6,
-          "radius": 6.5,
+          "x": 16,
+          "z": 16,
+          "radius": 13,
           "count": 16,
           "respawnMs": 10000
         }
@@ -422,7 +422,7 @@
     "frostmoor": {
       "id": "frostmoor",
       "name": "서리 고원",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -431,8 +431,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -441,9 +441,9 @@
       "monsters": [
         {
           "kind": "mob058",
-          "x": 6,
-          "z": 6,
-          "radius": 6.5,
+          "x": 16,
+          "z": 16,
+          "radius": 13,
           "count": 16,
           "respawnMs": 10000
         }
@@ -461,7 +461,7 @@
     "blackwood": {
       "id": "blackwood",
       "name": "검은 삼림",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -470,8 +470,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -480,9 +480,9 @@
       "monsters": [
         {
           "kind": "mob068",
-          "x": 6,
-          "z": 6,
-          "radius": 6.5,
+          "x": 16,
+          "z": 16,
+          "radius": 13,
           "count": 16,
           "respawnMs": 10000
         }
@@ -500,7 +500,7 @@
     "ruins": {
       "id": "ruins",
       "name": "무너진 성터",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -509,8 +509,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -519,9 +519,9 @@
       "monsters": [
         {
           "kind": "mob078",
-          "x": 6,
-          "z": 6,
-          "radius": 6.5,
+          "x": 16,
+          "z": 16,
+          "radius": 13,
           "count": 16,
           "respawnMs": 10000
         }
@@ -539,7 +539,7 @@
     "redsand": {
       "id": "redsand",
       "name": "붉은 사막",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -548,8 +548,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -558,9 +558,9 @@
       "monsters": [
         {
           "kind": "mob088",
-          "x": 6,
-          "z": 6,
-          "radius": 6.5,
+          "x": 16,
+          "z": 16,
+          "radius": 13,
           "count": 16,
           "respawnMs": 10000
         }
@@ -578,7 +578,7 @@
     "saltflat": {
       "id": "saltflat",
       "name": "소금 평원",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -587,8 +587,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -597,9 +597,9 @@
       "monsters": [
         {
           "kind": "mob098",
-          "x": 6,
-          "z": 6,
-          "radius": 6.5,
+          "x": 16,
+          "z": 16,
+          "radius": 13,
           "count": 16,
           "respawnMs": 10000
         }
@@ -617,7 +617,7 @@
     "sulfur": {
       "id": "sulfur",
       "name": "유황 분지",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -626,8 +626,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -636,9 +636,9 @@
       "monsters": [
         {
           "kind": "mob108",
-          "x": 6,
-          "z": 6,
-          "radius": 6.5,
+          "x": 16,
+          "z": 16,
+          "radius": 13,
           "count": 16,
           "respawnMs": 10000
         }
@@ -656,7 +656,7 @@
     "cinder": {
       "id": "cinder",
       "name": "화산재 언덕",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -665,8 +665,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -675,9 +675,9 @@
       "monsters": [
         {
           "kind": "mob118",
-          "x": 6,
-          "z": 6,
-          "radius": 6.5,
+          "x": 16,
+          "z": 16,
+          "radius": 13,
           "count": 16,
           "respawnMs": 10000
         }
@@ -695,7 +695,7 @@
     "glacier": {
       "id": "glacier",
       "name": "얼어붙은 심연",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -704,8 +704,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -714,9 +714,9 @@
       "monsters": [
         {
           "kind": "mob128",
-          "x": 6,
-          "z": 6,
-          "radius": 6.5,
+          "x": 16,
+          "z": 16,
+          "radius": 13,
           "count": 16,
           "respawnMs": 10000
         }
@@ -734,7 +734,7 @@
     "warpwood": {
       "id": "warpwood",
       "name": "뒤틀린 숲",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -743,8 +743,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -753,9 +753,9 @@
       "monsters": [
         {
           "kind": "mob138",
-          "x": 6,
-          "z": 6,
-          "radius": 6.5,
+          "x": 16,
+          "z": 16,
+          "radius": 13,
           "count": 16,
           "respawnMs": 10000
         }
@@ -773,7 +773,7 @@
     "shadowvale": {
       "id": "shadowvale",
       "name": "그림자 계곡",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -782,8 +782,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -792,9 +792,9 @@
       "monsters": [
         {
           "kind": "mob148",
-          "x": 6,
-          "z": 6,
-          "radius": 6.5,
+          "x": 16,
+          "z": 16,
+          "radius": 13,
           "count": 16,
           "respawnMs": 10000
         }
@@ -812,7 +812,7 @@
     "deadcity": {
       "id": "deadcity",
       "name": "폐허 도시",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -821,8 +821,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -831,9 +831,9 @@
       "monsters": [
         {
           "kind": "mob158",
-          "x": 6,
-          "z": 6,
-          "radius": 6.5,
+          "x": 16,
+          "z": 16,
+          "radius": 13,
           "count": 16,
           "respawnMs": 10000
         }
@@ -851,7 +851,7 @@
     "palemoor": {
       "id": "palemoor",
       "name": "빛바랜 고원",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -860,8 +860,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -870,9 +870,9 @@
       "monsters": [
         {
           "kind": "mob168",
-          "x": 6,
-          "z": 6,
-          "radius": 6.5,
+          "x": 16,
+          "z": 16,
+          "radius": 13,
           "count": 16,
           "respawnMs": 10000
         }
@@ -890,7 +890,7 @@
     "rift": {
       "id": "rift",
       "name": "균열 지대",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -899,8 +899,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -909,9 +909,9 @@
       "monsters": [
         {
           "kind": "mob178",
-          "x": 6,
-          "z": 6,
-          "radius": 6.5,
+          "x": 16,
+          "z": 16,
+          "radius": 13,
           "count": 16,
           "respawnMs": 10000
         }
@@ -929,7 +929,7 @@
     "abyssgate": {
       "id": "abyssgate",
       "name": "심연의 문턱",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -938,8 +938,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -948,9 +948,9 @@
       "monsters": [
         {
           "kind": "mob188",
-          "x": 6,
-          "z": 6,
-          "radius": 6.5,
+          "x": 16,
+          "z": 16,
+          "radius": 13,
           "count": 16,
           "respawnMs": 10000
         }
@@ -968,7 +968,7 @@
     "endland": {
       "id": "endland",
       "name": "종말의 대지",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -977,8 +977,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -987,9 +987,9 @@
       "monsters": [
         {
           "kind": "mob198",
-          "x": 6,
-          "z": 6,
-          "radius": 6.5,
+          "x": 16,
+          "z": 16,
+          "radius": 13,
           "count": 16,
           "respawnMs": 10000
         }
@@ -1007,7 +1007,7 @@
     "raid_01": {
       "id": "raid_01",
       "name": "토벌 던전 1단계",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -1016,8 +1016,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -1026,8 +1026,8 @@
       "monsters": [
         {
           "kind": "boss00",
-          "x": 8,
-          "z": 8,
+          "x": 16,
+          "z": 16,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
@@ -1046,7 +1046,7 @@
     "raid_02": {
       "id": "raid_02",
       "name": "토벌 던전 2단계",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -1055,8 +1055,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -1065,8 +1065,8 @@
       "monsters": [
         {
           "kind": "boss01",
-          "x": 8,
-          "z": 8,
+          "x": 16,
+          "z": 16,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
@@ -1085,7 +1085,7 @@
     "raid_03": {
       "id": "raid_03",
       "name": "토벌 던전 3단계",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -1094,8 +1094,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -1104,8 +1104,8 @@
       "monsters": [
         {
           "kind": "boss02",
-          "x": 8,
-          "z": 8,
+          "x": 16,
+          "z": 16,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
@@ -1124,7 +1124,7 @@
     "raid_04": {
       "id": "raid_04",
       "name": "토벌 던전 4단계",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -1133,8 +1133,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -1143,8 +1143,8 @@
       "monsters": [
         {
           "kind": "boss03",
-          "x": 8,
-          "z": 8,
+          "x": 16,
+          "z": 16,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
@@ -1163,7 +1163,7 @@
     "raid_05": {
       "id": "raid_05",
       "name": "토벌 던전 5단계",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -1172,8 +1172,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -1182,8 +1182,8 @@
       "monsters": [
         {
           "kind": "boss04",
-          "x": 8,
-          "z": 8,
+          "x": 16,
+          "z": 16,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
@@ -1202,7 +1202,7 @@
     "raid_06": {
       "id": "raid_06",
       "name": "토벌 던전 6단계",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -1211,8 +1211,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -1221,8 +1221,8 @@
       "monsters": [
         {
           "kind": "boss05",
-          "x": 8,
-          "z": 8,
+          "x": 16,
+          "z": 16,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
@@ -1241,7 +1241,7 @@
     "raid_07": {
       "id": "raid_07",
       "name": "토벌 던전 7단계",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -1250,8 +1250,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -1260,8 +1260,8 @@
       "monsters": [
         {
           "kind": "boss06",
-          "x": 8,
-          "z": 8,
+          "x": 16,
+          "z": 16,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
@@ -1280,7 +1280,7 @@
     "raid_08": {
       "id": "raid_08",
       "name": "토벌 던전 8단계",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -1289,8 +1289,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -1299,8 +1299,8 @@
       "monsters": [
         {
           "kind": "boss07",
-          "x": 8,
-          "z": 8,
+          "x": 16,
+          "z": 16,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
@@ -1319,7 +1319,7 @@
     "raid_09": {
       "id": "raid_09",
       "name": "토벌 던전 9단계",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -1328,8 +1328,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -1338,8 +1338,8 @@
       "monsters": [
         {
           "kind": "boss08",
-          "x": 8,
-          "z": 8,
+          "x": 16,
+          "z": 16,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
@@ -1358,7 +1358,7 @@
     "raid_10": {
       "id": "raid_10",
       "name": "토벌 던전 10단계",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -1367,8 +1367,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -1377,8 +1377,8 @@
       "monsters": [
         {
           "kind": "boss09",
-          "x": 8,
-          "z": 8,
+          "x": 16,
+          "z": 16,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
@@ -1397,7 +1397,7 @@
     "raid_11": {
       "id": "raid_11",
       "name": "토벌 던전 11단계",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -1406,8 +1406,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -1416,8 +1416,8 @@
       "monsters": [
         {
           "kind": "boss10",
-          "x": 8,
-          "z": 8,
+          "x": 16,
+          "z": 16,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
@@ -1436,7 +1436,7 @@
     "raid_12": {
       "id": "raid_12",
       "name": "토벌 던전 12단계",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -1445,8 +1445,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -1455,8 +1455,8 @@
       "monsters": [
         {
           "kind": "boss11",
-          "x": 8,
-          "z": 8,
+          "x": 16,
+          "z": 16,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
@@ -1475,7 +1475,7 @@
     "raid_13": {
       "id": "raid_13",
       "name": "토벌 던전 13단계",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -1484,8 +1484,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -1494,8 +1494,8 @@
       "monsters": [
         {
           "kind": "boss12",
-          "x": 8,
-          "z": 8,
+          "x": 16,
+          "z": 16,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
@@ -1514,7 +1514,7 @@
     "raid_14": {
       "id": "raid_14",
       "name": "토벌 던전 14단계",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -1523,8 +1523,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -1533,8 +1533,8 @@
       "monsters": [
         {
           "kind": "boss13",
-          "x": 8,
-          "z": 8,
+          "x": 16,
+          "z": 16,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
@@ -1553,7 +1553,7 @@
     "raid_15": {
       "id": "raid_15",
       "name": "토벌 던전 15단계",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -1562,8 +1562,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -1572,8 +1572,8 @@
       "monsters": [
         {
           "kind": "boss14",
-          "x": 8,
-          "z": 8,
+          "x": 16,
+          "z": 16,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
@@ -1592,7 +1592,7 @@
     "raid_16": {
       "id": "raid_16",
       "name": "토벌 던전 16단계",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -1601,8 +1601,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -1611,8 +1611,8 @@
       "monsters": [
         {
           "kind": "boss15",
-          "x": 8,
-          "z": 8,
+          "x": 16,
+          "z": 16,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
@@ -1631,7 +1631,7 @@
     "raid_17": {
       "id": "raid_17",
       "name": "토벌 던전 17단계",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -1640,8 +1640,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -1650,8 +1650,8 @@
       "monsters": [
         {
           "kind": "boss16",
-          "x": 8,
-          "z": 8,
+          "x": 16,
+          "z": 16,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
@@ -1670,7 +1670,7 @@
     "raid_18": {
       "id": "raid_18",
       "name": "토벌 던전 18단계",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -1679,8 +1679,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -1689,8 +1689,8 @@
       "monsters": [
         {
           "kind": "boss17",
-          "x": 8,
-          "z": 8,
+          "x": 16,
+          "z": 16,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
@@ -1709,7 +1709,7 @@
     "raid_19": {
       "id": "raid_19",
       "name": "토벌 던전 19단계",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -1718,8 +1718,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -1728,8 +1728,8 @@
       "monsters": [
         {
           "kind": "boss18",
-          "x": 8,
-          "z": 8,
+          "x": 16,
+          "z": 16,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
@@ -1748,7 +1748,7 @@
     "raid_20": {
       "id": "raid_20",
       "name": "토벌 던전 20단계",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -1757,8 +1757,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -1767,8 +1767,8 @@
       "monsters": [
         {
           "kind": "boss19",
-          "x": 8,
-          "z": 8,
+          "x": 16,
+          "z": 16,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
@@ -1787,7 +1787,7 @@
     "job_1": {
       "id": "job_1",
       "name": "1차 전직 시험",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -1796,8 +1796,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -1806,8 +1806,8 @@
       "monsters": [
         {
           "kind": "boss02",
-          "x": 8,
-          "z": 8,
+          "x": 16,
+          "z": 16,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
@@ -1826,7 +1826,7 @@
     "job_2": {
       "id": "job_2",
       "name": "2차 전직 시험",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -1835,8 +1835,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -1845,8 +1845,8 @@
       "monsters": [
         {
           "kind": "boss06",
-          "x": 8,
-          "z": 8,
+          "x": 16,
+          "z": 16,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
@@ -1865,7 +1865,7 @@
     "job_3": {
       "id": "job_3",
       "name": "3차 전직 시험",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -1874,8 +1874,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -1884,8 +1884,8 @@
       "monsters": [
         {
           "kind": "boss11",
-          "x": 8,
-          "z": 8,
+          "x": 16,
+          "z": 16,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000
@@ -1904,7 +1904,7 @@
     "job_4": {
       "id": "job_4",
       "name": "4차 전직 시험",
-      "size": 33,
+      "size": 66,
       "spawns": {
         "default": [
           0,
@@ -1913,8 +1913,8 @@
       },
       "gate": {
         "position": [
-          -9,
-          -9
+          -18,
+          -18
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -1923,8 +1923,8 @@
       "monsters": [
         {
           "kind": "boss17",
-          "x": 8,
-          "z": 8,
+          "x": 16,
+          "z": 16,
           "radius": 3,
           "count": 1,
           "respawnMs": 900000

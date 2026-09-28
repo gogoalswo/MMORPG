@@ -18,11 +18,12 @@ import type { MonsterSpawnDef } from './monsters.ts';
 export const GROUND_KINDS = ['stone', 'grass', 'snow', 'dirt', 'sand', 'cobble', 'lava'] as const;
 
 /**
- * 존 한 변(m) — 마을·사냥터·던전·전직 시험 전부 같다. 이동 가능 영역은 ±(33/2 - 4) = ±12.5.
- * 92 → 62 → 66 (2026-09-23) → **33** (2026-09-28, "맵 크기를 지금의 반으로") — 한 변을 반으로.
+ * 존 한 변(m) — 마을·사냥터·던전·전직 시험 전부 같다. 이동 가능 영역은 ±(66/2 - 4) = ±29.
+ * 92 → 62 → 66 (2026-09-23) → 33 (2026-09-28 오전, "맵 크기를 지금의 반으로") →
+ * **66** (같은 날, "맵 크기를 지금보다 두 배 키우고, 몬스터 간격을 넓혀") — 한 변을 두 배로.
  * → docs/features/world-zones.md
  */
-export const ZONE_SIZE = 33;
+export const ZONE_SIZE = 66;
 export type GroundKind = (typeof GROUND_KINDS)[number];
 
 /**

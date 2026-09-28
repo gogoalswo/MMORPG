@@ -84,15 +84,19 @@ func _run_scene() -> void:
 	if game._hp_bar.value != 70:
 		_fail("체력바가 안 따라온다 (%d)" % game._hp_bar.value)
 
-	# 차원문에 서면 고르는 화면이 뜬다
+	# 차원문에 서기만 해서는 창이 안 뜬다 — 문을 눌러야 뜬다 (2026-09-28)
 	if game._gate_panel.visible:
 		_fail("아직 문에 안 섰는데 화면이 떠 있다")
 	me.x = 4.0
 	me.z = 0.0
 	for i in 3:
 		await process_frame
+	if game._gate_panel.visible:
+		_fail("문에 서기만 했는데 고르는 화면이 떴다 (누를 때만 떠야 한다)")
+	game._on_gate_tapped()
+	await process_frame
 	if not game._gate_panel.visible:
-		_fail("차원문에 섰는데 고르는 화면이 안 떴다")
+		_fail("차원문을 눌렀는데 고르는 화면이 안 떴다")
 	else:
 		# 마을 + 사냥터 20곳 = 21줄. 맨 위(마을)가 지금 서 있는 곳이라 막혀 있다
 		var panel: GatePanel = game._gate_panel

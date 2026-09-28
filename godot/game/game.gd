@@ -507,9 +507,8 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 					int(payload.get("pieces", 0)), int(payload.get("success", 0)), int(payload.get("destroyed", 0))
 				], INV_GOLD_HI if int(payload.get("success", 0)) > 0 else INV_WARN)
 			_enhance.show_result(name, payload)
-		&"gate":
-			# 차원문에 섰다. 어디로 갈지는 사람이 고른다
-			_open_gate()
+		# `gate`(문에 들어섰다)는 창을 열지 않는다 — 창은 문을 눌렀을 때만 뜬다
+		# (2026-09-28 요청: "포탈을 클릭 했을 때만 UI가 나오도록")
 		&"zone":
 			_last_event = "%s 에 도착했습니다" % GameData.zone(str(payload.get("zone", ""))).get("name", "")
 			# 전직 버튼으로 옮겨 가면 창이 남는다 — 새 존에는 그 NPC 가 없다
@@ -3545,7 +3544,7 @@ func _toggle_dungeon() -> void:
 ## 문을 눌렀다. **거리와 상관없이 바로 창을 연다** (2026-09-18 요청: "포탈까지
 ## 안 걸어가도 클릭하면 UI 열리게"). 예전에는 문 밖에서 누르면 문 가운데로
 ## 걸어갔고, 들어서야 `gate` 이벤트가 창을 열었다 — 멀리서 한 번 누르고 기다려야
-## 했다. 걸어가는 길은 그대로 남아 있다: 문 안으로 들어서면 `gate` 이벤트가 연다.
+## 했다. 문 안으로 걸어 들어가도 창은 뜨지 않는다 — **누를 때만 연다** (2026-09-28).
 ## **이동하는 건 여전히 travel 요청이고 World 가 다시 본다**
 func _on_gate_tapped() -> void:
 	_target = Vector3.INF

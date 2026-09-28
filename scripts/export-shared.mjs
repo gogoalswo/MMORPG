@@ -90,6 +90,7 @@ import {
   gradeLevel,
   gradeName,
   GRADE_COLOR,
+  DIAMOND_PRODUCTS,
 } from '../packages/shared/src/index.ts';
 // `index.ts` 가 gear.ts 를 다시 내보내지 않는다 — 설계 표는 직접 가져온다
 import { GEAR_DROP_RATE } from '../packages/shared/src/gear.ts';
@@ -201,6 +202,10 @@ export function buildData() {
       // 등급 이름과 색 (일반 → 태초). 가방 상세 창이 이름을 이 색으로 적는다
       gradeNames: Array.from({ length: MAX_DROP_GRADE }, (_, i) => gradeName(i + 1)),
       gradeColors: GRADE_COLOR,
+    },
+    // 다이아 상품 — 서버가 영수증의 상품 id 로 넣어 줄 개수를 찾는다 (가격은 플레이 콘솔)
+    'store.json': {
+      products: Object.fromEntries(DIAMOND_PRODUCTS.map((p) => [p.id, p.diamonds])),
     },
     'constants.json': {
       tickRate: TICK_RATE,

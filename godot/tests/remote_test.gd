@@ -61,6 +61,7 @@ func _run() -> void:
 	_case_lost_reply()
 	_case_chat()
 	_case_rank()
+	_case_purchase()
 
 
 ## 새 계정의 장부가 기기에 들어온다 — 시작 장비·첫 선물은 **서버가** 줬다. 숫자는 정수로 온다
@@ -166,6 +167,12 @@ func _wipe() -> void:
 		return
 	for name in dir.get_files():
 		dir.remove(name)
+	# 결제 주문 기록 — 남기면 다음 실행에서 같은 영수증이 "다른 계정 것" 으로 막힌다
+	var orders := DirAccess.open(path.path_join("orders"))
+	if orders != null:
+		for name in orders.get_files():
+			orders.remove(name)
+		DirAccess.remove_absolute(path.path_join("orders"))
 	DirAccess.remove_absolute(path)
 
 
@@ -213,3 +220,30 @@ func _case_rank() -> void:
 	var me: Dictionary = boards[0].get("me", {})
 	if int(me.get("rank", 0)) < 1 or int(me.get("level", 0)) != int(_world._players[ME].level):
 		_fail("내 순위 줄이 %s — 레벨은 기기와 같아야 한다" % [me])
+
+
+## 무엇이든 한 번 poll 하면 결제됨으로 끝내는 검증기
+class PassVerifier extends PurchaseVerifier:
+	func start(product_id: String, token: String) -> Dictionary:
+		return {"product": product_id, "token": token, "done": false, "ok": false, "reason": ""}
+
+	func poll(job: Dictionary) -> void:
+		job.ok = true
+		job.order_id = "GPA.remote"
+		job.done = true
+
+
+## 영수증을 실제 웹소켓으로 보낸다 — 늦게 끝나는 검증의 답이 **이 연결로** 와서 다이아가 기기에 든다
+func _case_purchase() -> void:
+	_server.ledger_server.verifier = PassVerifier.new()
+	var results: Array = []
+	_link.purchase_done.connect(func(result: Dictionary) -> void: results.append(result))
+	if not _link.purchase("dia_100", "remote-token"):
+		_fail("붙어 있는데 purchase 가 false")
+		return
+	if not _pump(func() -> bool: return not results.is_empty()):
+		_fail("결제 답이 안 왔다")
+		return
+	var want := int(GameData.load_table("store").products.dia_100)
+	if results[0].get("t") != "purchased" or int(_world._players[ME].diamonds) != want:
+		_fail("결제 답 %s · 기기의 다이아 %s (%d 이어야)" % [results[0].get("t"), _world._players[ME].diamonds, want])

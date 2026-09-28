@@ -19,6 +19,9 @@ signal failed(reason: String)
 signal chat(line: Dictionary)
 ## 랭킹 답 `{top: [{rank, name, level, exp}], me: {rank, level, exp}, total}`
 signal ranked(board: Dictionary)
+## 결제 결과 — `{t:"purchased", product, diamonds, already?}` 이거나 `{t:"error", reason, product}`.
+## **`purchased` 를 받은 뒤에만** 기기가 그 구매를 소모(consume)한다 — 소모해야 같은 상품을 또 산다
+signal purchase_done(result: Dictionary)
 
 const TOKEN_PATH := "user://account.json"
 const RETRY_MS := 2000
@@ -66,6 +69,15 @@ func ask_rank() -> bool:
 	if not ready:
 		return false
 	_ws.send_text(JSON.stringify({"t": "rank"}))
+	return true
+
+
+## 구글 플레이에서 산 것의 영수증(구매 토큰)을 보낸다. 붙어 있지 않으면 false —
+## 기기는 소모하지 않은 구매를 들고 있다가 다시 붙으면 또 보낸다 (서버가 두 번 넣지 않는다)
+func purchase(product: String, token: String) -> bool:
+	if not ready:
+		return false
+	_ws.send_text(JSON.stringify({"t": "purchase", "product": product, "token": token}))
 	return true
 
 
@@ -130,12 +142,17 @@ func _on_message(raw: Variant) -> void:
 			chat.emit(message)
 		"rank":
 			ranked.emit(message)
+		"purchased":
+			replied.emit(message.get("ledger", {}), message.get("events", []))
+			purchase_done.emit(message)
 		"result":
 			_drop(int(message.get("id", 0)))
 			replied.emit(message.get("ledger", {}), message.get("events", []))
 		"error":
 			if message.has("id"):
 				_drop(int(message.id))
+			if message.has("product"):
+				purchase_done.emit(message)
 			failed.emit(str(message.get("reason", "")))
 
 

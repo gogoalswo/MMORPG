@@ -61,6 +61,14 @@ func poll() -> void:
 			WebSocketPeer.STATE_CLOSED:
 				_peers.erase(peer)
 
+	# 결제 검증은 시간이 걸린다 — 끝난 것만 **그 연결에** 답한다. 연결이 끊겼으면 버린다
+	# (기기가 다음에 같은 영수증을 다시 보내면 `already` 로 받는다)
+	ledger_server.poll_jobs()
+	for pair in ledger_server.take_replies():
+		for peer in _peers:
+			if is_same(peer.session, pair[0]) and peer.ws.get_ready_state() == WebSocketPeer.STATE_OPEN:
+				peer.ws.send_text(JSON.stringify(pair[1]))
+
 
 ## 채팅·알림을 **hello 를 마친** 연결 모두에게 보낸다
 func _broadcast(lines: Array) -> void:

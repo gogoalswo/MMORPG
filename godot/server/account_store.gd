@@ -88,6 +88,38 @@ func write(account: Dictionary) -> bool:
 	return DirAccess.rename_absolute(temp, _path(id)) == OK
 
 
+## --- 주문 (docs/features/server.md "유료 재화") ---
+## 구매 토큰 하나 = 파일 하나 (`orders/<토큰의 sha256>.json`) — **어느 계정이든** 같은 영수증으로
+## 두 번 받지 못하게. 토큰 원문은 남기지 않는다
+
+func find_order(key: String) -> Dictionary:
+	if not _valid_order(key) or not FileAccess.file_exists(_order_path(key)):
+		return {}
+	var parsed = JSON.parse_string(FileAccess.get_file_as_string(_order_path(key)))
+	return parsed if typeof(parsed) == TYPE_DICTIONARY else {}
+
+
+func write_order(key: String, order: Dictionary) -> bool:
+	if not _valid_order(key):
+		return false
+	DirAccess.make_dir_recursive_absolute(_dir.path_join("orders"))
+	var temp := _order_path(key) + ".tmp"
+	var file := FileAccess.open(temp, FileAccess.WRITE)
+	if file == null:
+		return false
+	file.store_string(JSON.stringify(order))
+	file.close()
+	return DirAccess.rename_absolute(temp, _order_path(key)) == OK
+
+
+func _order_path(key: String) -> String:
+	return _dir.path_join("orders").path_join(key + ".json")
+
+
+func _valid_order(key: String) -> bool:
+	return key.length() == 64 and key.is_valid_hex_number()
+
+
 func _path(id: String) -> String:
 	return _dir.path_join(id + ".json")
 

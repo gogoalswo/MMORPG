@@ -316,6 +316,21 @@
       "reqLevel": 70,
       "tier": 2,
       "description": "땅을 짓밟아 사방에서 얼음 기둥을 솟구치게 한다."
+    },
+    "nova_fist": {
+      "id": "nova_fist",
+      "name": "폭렬권",
+      "job": "fighter",
+      "cooldown": 12000,
+      "delayMs": 750,
+      "castMs": 1200,
+      "range": 5,
+      "arc": 6.283185307179586,
+      "power": 14,
+      "maxTargets": 10,
+      "reqLevel": 180,
+      "tier": 4,
+      "description": "주먹에 기를 실어 내질러 일대를 폭발시킨다."
     }
   },
   "byJob": {
@@ -323,7 +338,8 @@
       "rising_kick",
       "thunder_fall",
       "frost_pillar",
-      "sky_breaker"
+      "sky_breaker",
+      "nova_fist"
     ],
     "mage": [
       "fireball",

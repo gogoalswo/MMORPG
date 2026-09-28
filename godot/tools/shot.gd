@@ -176,6 +176,8 @@ func _run() -> void:
 	var player: Dictionary = game._transport._world._players[game._transport.my_id()]
 	player["level"] = LEVEL
 	player["skill_points"] = 99
+	# 전직으로 풀리는 스킬도 찍을 수 있게 끝 단계까지 올린다 (전직 잠금은 테스트 스위치와 무관하다)
+	player["job_tier"] = 4
 	# `rising_kick@90` 처럼 붙이면 그 쪽(도)을 보고 쓴다 — 캐릭터 기준 이펙트는
 	# 보는 쪽에 따라 화면에서 모양이 달라서, 한 방향만 찍으면 못 보는 게 있다
 	if "@" in skill:

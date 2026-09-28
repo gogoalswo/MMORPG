@@ -177,7 +177,13 @@ const SWING_CLIPS := ["Jab", "Cross"]
 const SKILL_CLIPS := {
 	"rising_kick": "Claw", "thunder_fall": "Thunder",
 	"sky_breaker": "SkyBreaker", "frost_pillar": "FrostStomp",
+	# 폭렬권은 동작을 새로 짓지 않고 스트레이트를 쓴다 — 0.10초에 주먹이 닿는다
+	"nova_fist": "Cross",
 }
+## 판정은 늦게 떨어지는데 **이펙트는 누르자마자 시작하는** 스킬. 폭렬권은 주먹이
+## 닿는 순간부터 기운이 끓다가 판정 시각(`delayMs`)에 터진다 — 그 시각은 이펙트가
+## 스스로 맞춘다 (`NovaFx.EXPLODE`)
+const EARLY_FX := ["nova_fist"]
 ## 앞 자세에서 동작으로 섞어 넘어가는 시간. 부딪히는 순간이 클립 0.1초 자리라
 ## 길게 섞으면 이펙트보다 주먹이 늦는다
 const MOVE_BLEND := 0.06
@@ -489,7 +495,7 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 				_start_move(SKILL_CLIPS.get(str(payload.get("skill", "")), SWING_CLIPS[0]))
 			# 늦게 떨어지는 스킬(천붕각)은 동작만 먼저 틀고, 이펙트는 판정이 떨어지는 때에 세운다
 			var delay := int(payload.get("delay_ms", 0))
-			if delay > 0:
+			if delay > 0 and not (str(payload.get("skill", "")) in EARLY_FX):
 				get_tree().create_timer(delay / 1000.0).timeout.connect(_show_skill.bind(payload))
 			else:
 				_show_skill(payload)
@@ -4667,7 +4673,7 @@ func _show_skill(payload: Dictionary) -> void:
 	if str(payload.get("id", "")) != _transport.my_id():
 		return
 	var skill := str(payload.get("skill", ""))
-	if not (skill in ["rising_kick", "thunder_fall", "sky_breaker", "frost_pillar"]):
+	if not (skill in ["rising_kick", "thunder_fall", "sky_breaker", "frost_pillar", "nova_fist"]):
 		return
 	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
 	if me.is_empty():
@@ -4688,6 +4694,11 @@ func _show_skill(payload: Dictionary) -> void:
 		var ice_up: Array = payload.get("upgrades", [])
 		IceFx.burst(_fx, here, float(me.rot), "shatter" in ice_up, "freeze" in ice_up)
 		_camera.shake(IceFx.SHAKE, IceFx.SHAKE_TIME)
+	elif skill == "nova_fist":
+		# 누르자마자 띄운다 — 끓다가 `EXPLODE` 에 터진다. 흔들림도 그때다
+		NovaFx.burst(_fx, here, float(me.rot))
+		get_tree().create_timer(NovaFx.EXPLODE).timeout.connect(
+			_camera.shake.bind(NovaFx.SHAKE, NovaFx.SHAKE_TIME))
 	else:
 		# 강화 — "연타" 면 두 번 더 긁고 보라다. "위력"(`wide`)은 피해만 키워서 이펙트가 그대로다
 		var claw_up: Array = payload.get("upgrades", [])

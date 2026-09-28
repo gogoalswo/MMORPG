@@ -618,6 +618,10 @@ func _case_dungeon(game: Node3D) -> void:
 	# 처음엔 1단계가 골라져 있고, 보상(장비 + 크리스탈 + 골드)이 보인다
 	if panel.picked_stage() != "raid_01" or panel.reward_count() < 3:
 		_fail("단계 창을 열면 1단계가 골라지고 보상이 보여야 한다: %s 보상 %d칸" % [panel.picked_stage(), panel.reward_count()])
+	# 맨 앞은 던전 클리어의 스킬 경험치 (1단계 = 1000)
+	var first_reward: Label = panel._rewards.get_child(0).find_children("*", "Label", true, false)[0]
+	if first_reward.text != "스킬 경험치 1000":
+		_fail("보상 맨 앞이 스킬 경험치여야 한다: '%s'" % first_reward.text)
 	seen += panel._stage_title.text + panel.row(0).text + panel.row(19).text + panel.enter_button().text
 	for label in window.find_children("*", "Label", true, false):
 		seen += label.text

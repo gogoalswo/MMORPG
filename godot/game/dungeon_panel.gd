@@ -506,15 +506,21 @@ func _select(zone_id: String) -> void:
 	var name_label := _card_label(str(boss.get("name", "")), CARD_NAME_SIZE - 4, TEXT_COLOR)
 	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_boss.add_child(name_label)
-	for reward in _stage_rewards(level):
+	for reward in _stage_rewards(stage):
 		_rewards.add_child(_reward_cell(reward))
 
 
-## 그 단계 보스가 떨굴 수 있는 것 — **판정(`Items.roll_drop`)이 굴리는 것 그대로다.**
-## 장비는 그 레벨대가 여는 등급(`Items.drop_grades`) × 슬롯 6종, 높은 등급부터.
-## 그 뒤에 크리스탈 · 골드(굴리는 폭). 확률은 적지 않는다 — 받은 그림도 이름뿐이다
-func _stage_rewards(level: int) -> Array:
+## 그 단계 보스가 주는 것 — **판정이 주는 것 그대로다.** 맨 앞은 던전 클리어의
+## **스킬 경험치**(`skillExp`, `ledger.gd` 의 `_check_dungeon_clear`). 그다음 장비는
+## 그 레벨대가 여는 등급(`Items.drop_grades`) × 슬롯 6종, 높은 등급부터
+## (`Items.roll_drop`). 그 뒤에 크리스탈 · 골드(굴리는 폭). 확률은 적지 않는다 —
+## 받은 그림도 이름뿐이다
+func _stage_rewards(stage: Dictionary) -> Array:
 	var out: Array = []
+	var level := int(stage.get("level", 0))
+	var skill_exp := int(stage.get("skillExp", 0))
+	if skill_exp > 0:
+		out.append({"name": "스킬 경험치 %d" % skill_exp, "icon": "ui_icon_skill", "color": CARD_GOLD})
 	var grades := Items.drop_grades(level)
 	grades.sort()
 	grades.reverse()

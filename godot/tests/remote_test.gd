@@ -14,6 +14,7 @@ var _failed := 0
 var _server: GameServer
 var _link: ServerLedger
 var _world: World
+var _skew := 0
 
 
 func _init() -> void:
@@ -45,6 +46,9 @@ func _run() -> void:
 	_link.replied.connect(func(ledger: Dictionary, events: Array) -> void:
 		_world.apply_ledger(ME, ledger, events))
 	_world.remote = _link
+	_link.request(&"enter", [_world.zone_id])  # LocalTransport._attach 가 하는 것과 같다
+	# 서버 시계를 앞당길 수 있게 — 처치는 최소 처치 시간이 지나야 받는다
+	_server.ledger_server.clock = func() -> int: return Time.get_ticks_msec() + _skew
 
 	# 붙기 **전에** 낸 요청은 쌓였다가 welcome 뒤에 간다
 	_world.sort_bag(ME)
@@ -79,6 +83,7 @@ func _case_kill() -> void:
 	var target: Dictionary = _world._monsters[0]
 	var exp_before := int(me.exp)
 	var level_before := int(me.level)
+	_skew += 600000  # 10분 — 어떤 몬스터든 최소 처치 시간이 지났다
 	_world._kill(me, target, Time.get_ticks_msec())
 	if int(me.exp) != exp_before:
 		_fail("서버에 붙었는데 기기가 경험치를 먼저 올렸다")

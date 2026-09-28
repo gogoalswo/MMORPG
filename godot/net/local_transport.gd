@@ -54,6 +54,8 @@ func _attach(url: String) -> void:
 	_server.failed.connect(func(reason: String) -> void:
 		push_warning("서버가 요청을 거절했다: %s" % reason))
 	_world.remote = _server
+	# 지금 존을 알린다 — 이 뒤로는 `World.open` 이 존을 옮길 때마다 알린다
+	_server.request(&"enter", [_world.zone_id])
 	print("서버에 붙는다: %s" % url)
 
 

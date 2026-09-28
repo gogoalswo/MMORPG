@@ -16,6 +16,9 @@ func _init() -> void:
 	_case_store()
 	_case_hello_and_ops()
 	_case_rejects()
+	_case_roster_matches_spawn()
+	_case_known_keys()
+	_case_kill_checks()
 	_case_socket()
 	_wipe()
 
@@ -203,3 +206,93 @@ func _gear(bag: Array) -> int:
 		if not Items.is_material(str(bag[i].get("id", ""))):
 			return i
 	return -1
+
+
+## 서버의 명단(`World.roster`)과 기기가 실제로 놓는 몬스터는 **id·종류가 같아야 한다** — 모든 존
+func _case_roster_matches_spawn() -> void:
+	var w := World.new()
+	for zone in GameData.zones().get("zones", {}):
+		w.open(str(zone))
+		var roster := World.roster(str(zone))
+		if roster.size() != w._monsters.size():
+			_fail("%s 명단 %d마리 · 실제 %d마리" % [zone, roster.size(), w._monsters.size()])
+			continue
+		for monster in w._monsters:
+			var entry: Dictionary = roster.get(str(monster.id), {})
+			if str(entry.get("kind", "")) != str(monster.kind) or float(entry.get("respawn_ms", -1)) != float(monster.respawn_ms):
+				_fail("%s 의 %s 가 명단과 다르다: %s" % [zone, monster.id, entry])
+				break
+
+
+## 스킬·강화 표에 **처치 검증이 모르는 칸**이 생기면 멈춘다 — 피해를 올리는 효과면
+## `KillCheck.min_ms` 가 모르는 채로 정상 처치를 거절한다
+func _case_known_keys() -> void:
+	for skill in Skills.all().values():
+		for key in skill:
+			if not (key in KillCheck.KNOWN_SKILL_KEYS):
+				_fail("스킬 칸 %s 를 KillCheck 가 모른다 — 피해와 관계있으면 min_ms 에 넣고 KNOWN_SKILL_KEYS 에 적는다" % key)
+	for upgrade in GameData.load_table("skills").get("upgrades", []):
+		for key in upgrade:
+			if not (key in KillCheck.KNOWN_UPGRADE_KEYS):
+				_fail("강화 칸 %s 를 KillCheck 가 모른다 — 피해와 관계있으면 min_ms 에 넣고 KNOWN_UPGRADE_KEYS 에 적는다" % key)
+
+
+## 입장 · 명단 · 되살아나기 · 최소 처치 시간 — 서버 시계는 가짜로 돌린다
+func _case_kill_checks() -> void:
+	var server := LedgerServer.new(AccountStore.new(DIR))
+	var now := [100000]
+	server.clock = func() -> int: return now[0]
+	var session := {}
+	server.handle(session, {"t": "hello"})
+	var ledger: Dictionary = session.account.ledger
+	var id := [100]
+	var send := func(op: String, args: Array) -> Dictionary:
+		id[0] += 1
+		return server.handle(session, {"t": "op", "id": id[0], "op": op, "args": args})
+
+	if send.call("kill", [{"kind": "x", "zone": "meadow", "id": "x_0"}]).get("reason") != "no_zone":
+		_fail("존에 들기 전의 처치를 받았다")
+	if send.call("enter", ["없는존"]).get("reason") != "no_zone":
+		_fail("없는 존에 들어갔다")
+	var trial := str(Skills.job_advance(1).get("zone", ""))
+	if send.call("enter", [trial]).get("reason") != "zone_locked":
+		_fail("레벨이 모자란데 전직 시험(%s)에 들어갔다" % trial)
+
+	# 새 캐릭터가 **바로는 못 잡는** 몬스터가 있는 사냥터를 고른다
+	var pick := {}
+	for zone in GameData.zones().get("zones", {}):
+		if Skills.job_tier_of_zone(str(zone)) > 0:
+			continue
+		for mob_id in World.roster(str(zone)):
+			var kind_id := str(World.roster(str(zone))[mob_id].kind)
+			var kind: Dictionary = GameData.load_table("monsters").kinds[kind_id]
+			var need := KillCheck.min_ms(ledger, kind)
+			if need * KillCheck.HEADROOM > KillCheck.SLACK_MS + 1000:
+				pick = {"zone": str(zone), "id": str(mob_id), "kind": kind_id, "need": need}
+				break
+		if not pick.is_empty():
+			break
+	if pick.is_empty():
+		_fail("바로는 못 잡는 몬스터를 못 찾았다 — 검사를 못 한다")
+		return
+	if send.call("enter", [pick.zone]).get("t") != "result":
+		_fail("사냥터 %s 에 못 들어갔다" % pick.zone)
+		return
+	var target := {"kind": pick.kind, "zone": pick.zone, "id": pick.id}
+	if send.call("kill", [target]).get("reason") != "too_fast":
+		_fail("들어오자마자 잡은 %s 를 받았다 (최소 %dms)" % [pick.id, int(pick.need)])
+	if send.call("kill", [{"kind": pick.kind, "zone": "meadow", "id": pick.id}]).get("reason") != "wrong_zone":
+		_fail("다른 존의 처치를 받았다")
+	if send.call("kill", [{"kind": pick.kind, "zone": pick.zone, "id": "없는_0"}]).get("reason") != "not_in_roster":
+		_fail("명단에 없는 id 를 받았다")
+	if send.call("kill", [{"kind": "slime", "zone": pick.zone, "id": pick.id}]).get("reason") != "not_in_roster":
+		_fail("종류가 틀린 처치를 받았다")
+
+	var exp_before := int(ledger.exp)
+	now[0] += int(pick.need) + 1
+	var ok: Dictionary = send.call("kill", [target])
+	if ok.get("t") != "result" or int(ok.ledger.exp) <= exp_before and int(ok.ledger.level) <= 1:
+		_fail("시간이 충분히 지난 처치를 거절했다: %s" % ok.get("reason", ok.get("t")))
+	now[0] += 10
+	if send.call("kill", [target]).get("reason") != "not_respawned":
+		_fail("되살아나기 전에 또 잡은 것을 받았다")

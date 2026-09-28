@@ -145,6 +145,25 @@ func open(id: String) -> void:
 	_combos.clear()
 	_zones.clear()
 	_spawn_monsters()
+	# 서버에 붙어 있으면 어느 존에 들어왔는지 알린다 — 처치 보고를 그 존의 명단에 대 본다
+	if remote != null:
+		remote.request(&"enter", [id])
+
+
+## 존의 **몬스터 명단** `{id: {kind, respawn_ms}}` — 자리 없이 id·종류·되살아나는 시간만.
+## 서버가 처치 보고를 대 보는 표다 (`LedgerServer`). id 는 `_spawn_monsters` 와 **같은 규칙**
+## (`<종류>_<번호>`, 번호는 무리를 건너며 이어진다)이어야 해서 `server_test` 가 둘을 대 본다
+static func roster(zone_id: String) -> Dictionary:
+	var out := {}
+	for pack in GameData.zone(zone_id).get("monsters", []):
+		var kinds: Dictionary = GameData.load_table("monsters").get("kinds", {})
+		if not kinds.has(str(pack.get("kind", ""))):
+			continue
+		for i in int(pack.get("count", 0)):
+			out["%s_%d" % [str(pack.kind), out.size()]] = {
+				"kind": str(pack.kind), "respawn_ms": float(pack.get("respawnMs", 10000)),
+			}
+	return out
 
 
 ## 존이 정한 무리대로 몬스터를 놓는다. 서로 겹치지 않는 자리를 골라 준다.
@@ -684,8 +703,8 @@ func _kill(player: Dictionary, target: Dictionary, now: int) -> void:
 	target.respawn_at = now + int(target.respawn_ms)
 
 	# 보상(드롭·골드·경험치·레벨·전직 시험)은 장부가 굴린다 — `Ledger.kill`.
-	# **종류와 존만 보낸다** — 수치는 장부가 표에서 찾는다 (서버가 기기의 수치를 믿지 않게)
-	_ledger_call(player, &"kill", [{"kind": str(target.kind), "zone": zone_id}])
+	# **종류·존·개체 id 만 보낸다** — 수치는 장부가 표에서 찾고, 서버는 id 를 제 명단에 대 본다
+	_ledger_call(player, &"kill", [{"kind": str(target.kind), "zone": zone_id, "id": str(target.id)}])
 
 
 ## 죽은 몬스터를 제 시간에 되살린다
@@ -2022,8 +2041,14 @@ func _hit_monster(player: Dictionary, target: Dictionary, attack: float, skill_i
 ## 내려보내므로 여기서는 그대로 곱하기만 한다. 생존을 레벨 쪽에 묶어 둬야
 ## 저레벨 캐릭이 고등급 장비를 껴도 상위 사냥터에서 죽어 **게이팅이 자동으로 걸린다**
 func _refresh_stats(player: Dictionary) -> void:
-	var stats := Combat.stats_for(str(player.job), int(player.level))
-	var gear := Items.equipment_stats(player.equipped)
+	player.stats = stats_of(str(player.job), int(player.level), player.equipped)
+	player.hp = mini(int(player.hp), int(player.stats.maxHp))
+
+
+## 스탯 계산 알맹이 — 서버의 처치 검증(`KillCheck`)도 같은 값을 쓴다
+static func stats_of(job: String, level: int, equipped: Dictionary) -> Dictionary:
+	var stats := Combat.stats_for(job, level)
+	var gear := Items.equipment_stats(equipped)
 	# 캐릭터 정보 창이 **기본 → 증가 % → 최종** 을 풀어 적는다 (2026-09-25 요청). 화면이
 	# 공식을 다시 돌리지 않게 곱하기 전 값과 장비 % 합계를 같이 내려보낸다
 	for key in ["attack", "defense", "maxHp"]:
@@ -2044,8 +2069,7 @@ func _refresh_stats(player: Dictionary) -> void:
 	stats["penetration"] = clampf(
 		float(gear.get("penetration", 0.0)), 0.0, float(c.get("penetrationCap", 0.9))
 	)
-	player.stats = stats
-	player.hp = mini(int(player.hp), int(stats.maxHp))
+	return stats
 
 
 ## --- 장부 --- (docs/features/server.md)

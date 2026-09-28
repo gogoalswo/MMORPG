@@ -82,6 +82,8 @@ const ICONS = [
   'ui_icon_character.png', 'ui_icon_enhance.png', 'ui_icon_design.png', 'ui_icon_crystal.png',
   // 던전 단추 — 뿔 달린 보스 머리 (2026-09-23, docs/features/dungeons.md)
   'ui_icon_dungeon.png',
+  // 랭킹 단추 — 월계관 두른 금 트로피 (2026-09-28). 서버에 붙었을 때만 메뉴에 선다
+  'ui_icon_rank.png',
   // 던전 종류 카드 그림 셋 — 토벌(보스 머리) · 시련의 탑 · 보물 창고 (2026-09-23)
   'dungeon_raid.png', 'dungeon_trial.png', 'dungeon_treasure.png',
   // 던전 카드 틀 · 위 장식 (2026-09-28)

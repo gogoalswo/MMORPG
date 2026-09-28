@@ -29,6 +29,10 @@ func _run() -> void:
 		if caption != null and caption.text == "랭킹":
 			_fail("서버 없이 뜬 게임에 랭킹 단추가 있다")
 
+	# 단추는 서버에 붙어야 서지만 그림은 늘 있어야 한다 — sync:godot 을 안 돌렸으면 여기서 멈춘다
+	if game._icon("ui_icon_rank") == null:
+		_fail("랭킹 아이콘(ui_icon_rank)이 없다 — npm run sync:godot 을 돌렸나")
+
 	game._toggle_rank()
 	if not game._rank_panel.visible or not game._rank_note.text.contains("불러오는"):
 		_fail("열면 창이 서고 '불러오는 중' 이어야 한다")

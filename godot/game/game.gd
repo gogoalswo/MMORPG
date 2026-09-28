@@ -2556,7 +2556,7 @@ func _build_skill_bar() -> void:
 		_icon_button("ui_icon_dungeon", "던전", _toggle_dungeon, MENU_BTN, true),
 	]
 	# 랭킹 — 던전 옆. **서버에 붙었을 때만** 선다 (혼자 노는 판에는 견줄 사람이 없다).
-	# 그림(`ui_icon_rank`)은 아직 없다 — 없으면 아래 글자만 선다
+	# 그림은 월계관 두른 금 트로피(`ui_icon_rank`)
 	if _transport.online():
 		_menu_cells.append(_icon_button("ui_icon_rank", "랭킹", _toggle_rank, MENU_BTN, true))
 	_menu_cells += [

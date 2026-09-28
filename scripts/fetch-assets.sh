@@ -342,6 +342,7 @@ fetch_icon cdb0ab3bc835c81a40b136818fc78b60 ui_icon_crystal   # 크리스탈 —
 fetch_icon d31a3e9b714e59750877554a3f2142c2 ui_icon_bag       # 가방 — 두루마리가 삐져나온 가죽 가방 (첫째)
 fetch_icon e242348eee9e4292219b53cb9b509127 ui_icon_dungeon   # 던전 — 뿔 달린 악마 해골 (둘째)
 fetch_icon 4b111394e9c953eaa58199bb0991e688 ui_icon_design    # 설계 — 톱니 · 두루마리 도면 위 컴퍼스 (첫째)
+fetch_icon 94b3d5af5954648cacbeef44021d4020 ui_icon_rank      # 랭킹 — 월계관 두른 금 트로피 · 붉은 리본 (첫째, 2026-09-28)
 # 던전 종류 카드 — 받은 그림(다른 게임의 던전 창)을 참고로 물려 뽑은 풍경 · 틀 · 장식
 # (2026-09-28, docs/features/dungeons.md). 각 두 장 중 고른 것. 풍경은 9:16 이라 배경을 안 걷는다
 fetch_icon 835f847665366f9f3471ae4c32b7863f dungeon_raid     # 토벌 — 무너진 아치 투기장 · 뒤에 선 오거 (첫째)

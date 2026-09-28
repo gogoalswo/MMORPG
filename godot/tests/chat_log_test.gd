@@ -36,6 +36,7 @@ func _run() -> void:
 	_case_place(game, chat)
 	await _case_stays(chat)
 	_case_cap(chat)
+	_case_talk(game, chat)
 	_done()
 
 
@@ -150,3 +151,35 @@ func _done() -> void:
 	else:
 		print("채팅창: %d개 실패" % _failed)
 		quit(1)
+
+
+## 서버 채팅 (docs/features/server.md 5단계) — 혼자 노는 판에는 입력칸이 없다. 붙으면 선다.
+## 남이 보낸 말은 **글자 그대로** 적힌다(BBCode 로 읽으면 남의 채팅창 모양을 바꿀 수 있다)
+func _case_talk(game: Node3D, chat: ChatLog) -> void:
+	if chat.is_online() or chat._input.visible:
+		_fail("서버에 안 붙었는데 입력칸이 보인다")
+	chat.set_online(true)
+	if not chat._input.visible or chat._input.mouse_filter == Control.MOUSE_FILTER_IGNORE:
+		_fail("붙었는데 입력칸이 안 보이거나 터치를 안 받는다")
+	if chat.mouse_filter != Control.MOUSE_FILTER_IGNORE:
+		_fail("입력칸을 달았더니 창 전체가 터치를 먹는다 — 창 뒤로 못 걷는다")
+
+	var sent: Array = []
+	chat.submitted.connect(func(text: String) -> void: sent.append(text))
+	chat._on_submit("  안녕하세요  ")
+	chat._on_submit("   ")
+	if sent != ["안녕하세요"] or not chat._input.text.is_empty():
+		_fail("보낸 말이 %s — 앞뒤 공백을 자르고 빈 말은 안 보내고 칸을 비워야 한다" % [sent])
+
+	chat.add_chat("모험가#AB12", "[b]굵게[/b] [color=red]빨강[/color]")
+	chat.add_chat("", "모험가#AB12 님이 +7 강화에 성공했습니다", true)
+	var last: Array = chat.lines().slice(-2)
+	if last[0] != ["모험가#AB12", "[b]굵게[/b] [color=red]빨강[/color]"] or last[1][0] != "알림":
+		_fail("채팅 줄이 %s" % [last])
+	if not chat._text.get_parsed_text().contains("[b]굵게[/b]"):
+		_fail("남이 보낸 BBCode 가 서식으로 읽혔다")
+
+	# 게임은 통로가 채팅을 못 하면 입력칸을 안 세운다 (혼자 노는 판)
+	if game._transport.can_chat():
+		_fail("서버 주소가 없는데 통로가 채팅을 한다고 한다")
+	chat.set_online(false)

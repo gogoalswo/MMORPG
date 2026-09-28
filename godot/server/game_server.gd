@@ -55,6 +55,17 @@ func poll() -> void:
 				while ws.get_available_packet_count() > 0:
 					var text := ws.get_packet().get_string_from_utf8()
 					var reply := ledger_server.handle(peer.session, JSON.parse_string(text))
-					ws.send_text(JSON.stringify(reply))
+					if not reply.is_empty():  # 채팅은 따로 답하지 않는다 — 방송으로 돌아온다
+						ws.send_text(JSON.stringify(reply))
+					_broadcast(ledger_server.take_outbox())
 			WebSocketPeer.STATE_CLOSED:
 				_peers.erase(peer)
+
+
+## 채팅·알림을 **hello 를 마친** 연결 모두에게 보낸다
+func _broadcast(lines: Array) -> void:
+	for line in lines:
+		var text := JSON.stringify(line)
+		for peer in _peers:
+			if peer.session.has("account") and peer.ws.get_ready_state() == WebSocketPeer.STATE_OPEN:
+				peer.ws.send_text(text)

@@ -59,6 +59,7 @@ func _run() -> void:
 	_case_welcome()
 	_case_kill()
 	_case_lost_reply()
+	_case_chat()
 
 
 ## 새 계정의 장부가 기기에 들어온다 — 시작 장비·첫 선물은 **서버가** 줬다. 숫자는 정수로 온다
@@ -165,3 +166,34 @@ func _wipe() -> void:
 	for name in dir.get_files():
 		dir.remove(name)
 	DirAccess.remove_absolute(path)
+
+
+## 두 기기가 실제 웹소켓으로 말을 주고받는다 — 보낸 사람에게도 방송으로 돌아온다
+func _case_chat() -> void:
+	var other := ServerLedger.new("ws://127.0.0.1:%d" % _server.port(), TOKEN + ".other")
+	var heard_me: Array = []
+	var heard_other: Array = []
+	_link.chat.connect(func(line: Dictionary) -> void: heard_me.append(line))
+	other.chat.connect(func(line: Dictionary) -> void: heard_other.append(line))
+	var deadline := Time.get_ticks_msec() + 3000
+	while not other.ready and Time.get_ticks_msec() < deadline:
+		_server.poll()
+		_link.poll()
+		other.poll()
+		OS.delay_msec(5)
+	heard_other.clear()  # welcome 의 지난 줄은 빼고 본다
+	if not _link.say("반갑습니다"):
+		_fail("붙어 있는데 say 가 false")
+	deadline = Time.get_ticks_msec() + 3000
+	while (heard_me.is_empty() or heard_other.is_empty()) and Time.get_ticks_msec() < deadline:
+		_server.poll()
+		_link.poll()
+		other.poll()
+		OS.delay_msec(5)
+	if heard_other.is_empty() or str(heard_other[-1].text) != "반갑습니다":
+		_fail("다른 기기가 말을 못 받았다: %s" % [heard_other])
+	if heard_me.is_empty() or str(heard_me[-1].from) != str(heard_other[-1].get("from", "?")):
+		_fail("보낸 기기에 제 말이 안 돌아왔다: %s" % [heard_me])
+	other.close()
+	if FileAccess.file_exists(TOKEN + ".other"):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(TOKEN + ".other"))

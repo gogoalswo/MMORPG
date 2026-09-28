@@ -52,15 +52,29 @@ func _attach(url: String) -> void:
 	_server.replied.connect(func(ledger: Dictionary, events: Array) -> void:
 		_world.apply_ledger(MY_ID, ledger, events))
 	_server.failed.connect(func(reason: String) -> void:
+		if reason == "chat_limit":
+			event.emit(&"chat", {"system": true, "text": "말을 너무 빨리 보냈습니다 — 잠시 뒤에 다시"})
+			return
 		push_warning("서버가 요청을 거절했다: %s" % reason))
+	# 채팅은 World 를 거치지 않는다 — 장부가 아니라 사람끼리 오가는 말이다
+	_server.chat.connect(func(line: Dictionary) -> void:
+		event.emit(&"chat", line))
 	_world.remote = _server
 	# 지금 존을 알린다 — 이 뒤로는 `World.open` 이 존을 옮길 때마다 알린다
 	_server.request(&"enter", [_world.zone_id])
 	print("서버에 붙는다: %s" % url)
 
 
+func can_chat() -> bool:
+	return _server != null
+
+
 func send(message: StringName, payload: Dictionary) -> void:
 	if _world == null:
+		return
+	if message == &"chat":
+		if _server != null:
+			_server.say(str(payload.get("text", "")))
 		return
 	match message:
 		&"input":

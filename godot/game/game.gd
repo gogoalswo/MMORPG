@@ -494,6 +494,8 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 		&"skillBar":
 			if _skill_panel.visible:
 				_redraw_skills()
+		&"chat":
+			_chat.add_chat(str(payload.get("from", "")), str(payload.get("text", "")), bool(payload.get("system", false)))
 		&"notice":
 			_last_event = str(payload.get("text", ""))
 		&"enhanceResult":
@@ -601,6 +603,9 @@ func _build_persistent() -> void:
 	# (`_build_test_switches`) → hud.md "채팅창"
 	_chat = ChatLog.new()
 	_ui_root.add_child(_chat)
+	# 서버에 붙었을 때만 입력칸이 선다 — 보낸 말은 서버가 방송해서 돌아와야 창에 적힌다
+	_chat.set_online(_transport.can_chat())
+	_chat.submitted.connect(func(text: String) -> void: _transport.send(&"chat", {"text": text}))
 	_chat.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE)
 	_chat.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_chat.offset_left = CHAT_MARGIN

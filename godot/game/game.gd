@@ -303,11 +303,11 @@ var _skill_state: Label
 var _skill_desc: Label
 ## 스킬창 셋째 칸 — 강화 1번·2번 카드 (`_make_upgrade_card` 가 채우는 사전)
 var _upgrade_cards: Array = []
-## 경험치북을 넣을 강화 번호 (0 부터). 카드를 눌러 고른다
+## 스킬 경험치를 넣을 강화 번호 (0 부터). 카드를 눌러 고른다
 var _upgrade_slot := 0
-## 경험치북 id → 단추
-var _book_buttons: Dictionary = {}
-## "기절 에 경험치 넣기"
+## 모아 둔 스킬 경험치를 고른 강화에 넣는 단추 (`feedUpgrade`)
+var _feed_button: Button
+## "스킬 경험치 12000 — 기절에 넣기"
 var _upgrade_hint: Label
 var _skill_equip: Button
 var _skill_unequip: Button
@@ -2088,10 +2088,6 @@ func _show_material_detail(stack: Dictionary) -> void:
 	_detail_kind.add_theme_color_override("font_color", INV_DIM)
 	_detail_state.text = "보유 중"
 	_fill_cell(_detail_icon, stack, "", _item_icon(stack))
-	var material := Items.get_material(str(stack.get("id", "")))
-	if int(material.get("skillExp", 0)) > 0:
-		_show_book_detail(stack, material)
-		return
 	_fill_detail_rows([
 		["보유 수량", "%d" % int(stack.get("count", 1))],
 		["쓰임", "2차 옵션 굴리기"],
@@ -2099,20 +2095,6 @@ func _show_material_detail(stack: Dictionary) -> void:
 	# "사용" 을 누르면 크리스탈 창이 뜬다 (2026-09-23 요청)
 	_bag_action.text = "사용"
 	_bag_action.disabled = int(stack.get("count", 1)) <= 0
-	_show_cell_action()
-
-
-## 스킬 경험치북 — **가방에서는 안 쓴다.** 스킬창의 강화 칸에서 강화를 골라 넣는다
-## (2026-09-23 요청: "인벤토리에서 사용하지 말고 그쪽에서"). 여기서는 보여 주기만 한다
-func _show_book_detail(stack: Dictionary, material: Dictionary) -> void:
-	_detail_kind.text = "스킬 경험치북"
-	_fill_detail_rows([
-		["보유 수량", "%d" % int(stack.get("count", 1))],
-		["경험치", "+%d" % int(material.get("skillExp", 0))],
-	])
-	_detail_state.text = "스킬창에서 사용"
-	_bag_action.text = "-"
-	_bag_action.disabled = true
 	_show_cell_action()
 
 
@@ -2265,9 +2247,6 @@ func _picked_stack() -> Dictionary:
 func _on_bag_action() -> void:
 	var stack := _picked_stack()
 	if stack.is_empty():
-		return
-	# 경험치북은 가방에서 안 쓴다 — 스킬창에서 쓴다
-	if Items.book_exp(str(stack.get("id", ""))) > 0:
 		return
 	# 크리스탈 "사용" — 상세 창 자리에 크리스탈 창을 띄운다. 대상은 칸을 눌러 고른다
 	if Items.is_material(str(stack.get("id", ""))):
@@ -2866,20 +2845,14 @@ func _build_upgrade_column(columns: HBoxContainer) -> void:
 	for slot in int(GameData.load_table("skills").get("upgradeMax", 2)):
 		column.add_child(_make_upgrade_card(slot))
 
-	# 경험치북 — 고른 강화에 한 권씩 넣는다
+	# 모아 둔 스킬 경험치(던전 클리어로 쌓인다)를 고른 강화에 모자란 만큼 넣는다.
+	# 예전엔 경험치북 세 단추(하급·중급·상급)였다 — 2026-09-28 에 하나로 합쳤다
 	_upgrade_hint = _inv_label("", 17, INV_DIM)
 	column.add_child(_upgrade_hint)
-	var books := HBoxContainer.new()
-	books.add_theme_constant_override("separation", 8)
-	column.add_child(books)
-	_book_buttons.clear()
-	for book in Skills.exp_books():
-		var button := _make_button("", _on_book_pressed.bind(str(book.id)))
-		button.custom_minimum_size = Vector2((UPGRADE_W - 16) / 3.0, 70)
-		# 18 이면 "상급 +2000" 이 둥근 테에 닿는다 (찍어서 봤다)
-		button.add_theme_font_size_override("font_size", 16)
-		books.add_child(button)
-		_book_buttons[str(book.id)] = button
+	_feed_button = _make_button("넣기", _on_feed_pressed)
+	_feed_button.custom_minimum_size = Vector2(UPGRADE_W, 70)
+	_feed_button.add_theme_font_size_override("font_size", 20)
+	column.add_child(_feed_button)
 
 
 ## 강화 카드 하나 — 번호 · 이름 · 효과 · 경험치 막대 · `320 / 1000`.
@@ -2972,33 +2945,27 @@ func _redraw_upgrades(me: Dictionary) -> void:
 		bar.value = got
 		card.amount.text = "강화 완료" if done else "경험치 %d / %d" % [got, need]
 
-	# 경험치북 단추 — 고른 강화가 없거나 이미 붙었으면 다 꺼진다
+	# 넣기 단추 — 고른 강화가 없거나 이미 붙었거나 모아 둔 경험치가 없으면 꺼진다
 	var target: Dictionary = list[_upgrade_slot] if _upgrade_slot < list.size() else {}
 	var open := not target.is_empty() and not (str(target.id) in have)
+	var pool := int(me.get("skill_exp", 0))
 	if target.is_empty():
-		_upgrade_hint.text = "넣을 강화가 없다"
+		_upgrade_hint.text = "스킬 경험치 %d — 넣을 강화가 없다" % pool
 	elif not open:
-		_upgrade_hint.text = "%s — 강화 완료" % target.name
+		_upgrade_hint.text = "스킬 경험치 %d — %s 강화 완료" % [pool, target.name]
 	else:
-		_upgrade_hint.text = "%s에 경험치 넣기" % target.name
-	for book in Skills.exp_books():
-		var count := 0
-		for stack in me.get("bag", []):
-			if str(stack.get("id", "")) == str(book.id):
-				count += int(stack.get("count", 1))
-		var button: Button = _book_buttons[str(book.id)]
-		button.text = "%s +%d\n%d권" % [book.short, int(book.exp), count]
-		button.disabled = not open or count <= 0
+		_upgrade_hint.text = "스킬 경험치 %d — %s에 넣기" % [pool, target.name]
+	_feed_button.disabled = not open or pool <= 0
 
 
-## 카드를 누르면 그 강화를 고른다 — 경험치북이 그쪽으로 들어간다
+## 카드를 누르면 그 강화를 고른다 — 넣기 단추가 그쪽으로 넣는다
 func _on_upgrade_pressed(slot: int) -> void:
 	_upgrade_slot = slot
 	_redraw_skills()
 
 
-func _on_book_pressed(book: String) -> void:
-	_transport.send(&"feedUpgrade", {"skill": _skill_pick, "slot": _upgrade_slot, "book": book})
+func _on_feed_pressed() -> void:
+	_transport.send(&"feedUpgrade", {"skill": _skill_pick, "slot": _upgrade_slot})
 	_redraw_skills()
 
 
@@ -3080,12 +3047,12 @@ func _build_test_switches() -> void:
 	var reset := _test_button("테스트: 강화 초기화", 230, 18, &"debugResetUpgrades", {})
 	column.add_child(reset)
 	column.move_child(reset, 0)
-	# 경험치북 — 종류마다 10권 (던전 드랍 전까지 얻을 길이 이것뿐이다, 사용자 선택)
+	# 스킬 경험치 +10만 — 던전을 안 돌고 강화를 볼 때 (`World.debug_skill_exp`)
 	# 스킬 모두 배우기 — 전직도 끝까지 올린다 (2026-09-26 요청, `World.debug_learn_all`).
-	# 목록이 이미 화면 위로 넘치므로 **줄을 늘리지 않고** 경험치북과 한 줄에 반씩 놓는다
+	# 목록이 이미 화면 위로 넘치므로 **줄을 늘리지 않고** 스킬 경험치와 한 줄에 반씩 놓는다
 	var book_row := HBoxContainer.new()
 	book_row.add_theme_constant_override("separation", 6)
-	book_row.add_child(_test_button("경험치북 +10", 112, 16, &"debugBooks", {}))
+	book_row.add_child(_test_button("스킬 경험치\n+10만", 112, 16, &"debugSkillExp", {}))
 	var learn_all := _test_button("스킬 모두\n배우기", 112, 16, &"debugLearnAll", {})
 	learn_all.name = "learnAll"
 	book_row.add_child(learn_all)

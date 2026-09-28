@@ -2,10 +2,10 @@
 
 ## 무엇
 
-스킬마다 **강화가 둘까지**(1번·2번) 붙는다. **스킬창의 강화 칸**에서 강화 하나를 골라
-**스킬 경험치북**으로 경험치를 넣고, 필요 경험치(**스킬의 전직 단계로 정한다** — 아래 표)에 닿으면 붙는다. 한 번
-붙으면 계속 남는다(저장된다). 경험치북은 나중에 **던전에서 떨어진다** — 그 전까지는
-테스트 단추로 얻는다.
+스킬마다 **강화가 둘까지**(1번·2번) 붙는다. **던전을 깨면 스킬 경험치가 저절로 쌓이고**
+(N단계 × 1000), **스킬창의 강화 칸**에서 강화 하나를 골라 **[넣기]** 로 그 경험치를 넣는다.
+필요 경험치(**스킬의 전직 단계로 정한다** — 아래 표)에 닿으면 붙는다. 한 번 붙으면 계속
+남는다(저장된다).
 
 요청 흐름 (전부 2026-09-23):
 1. "각 스킬별로 두 개씩 강화가 가능하게 … 스킬 강화서를 먹어서 사용하면 강화" →
@@ -13,7 +13,10 @@
 2. "스킬창에서 스킬 강화하는 ui 만들어. 인벤토리에서 사용하지 말고" → 스킬창 강화 칸.
 3. **"스킬 강화를 개별로 하지 말고 스킬 강화 경험치북들 만들고 해당 경험치로 강화 …
    어떤 타입을 강화할지 선택해서 경험치를 넣을 수 있으면 … 특정 경험치에 도달하면
-   스킬 강화 되도록"** → 지금 판. 강화서는 없앴다.
+   스킬 강화 되도록"** → 경험치북 세 종류(하급 100 · 중급 500 · 상급 2000). 강화서는 없앴다.
+4. **"하급, 중급, 상급 이렇게 나누지 말고, 던전 깨면 알아서 경험치를 습득하는 방식으로 해.
+   1단계는 1000 … 2단계는 2000, 3단계는 3000"** (2026-09-28) → **지금 판.** 경험치북은
+   없앴고, 넣는 곳은 사용자가 "모아 두고 골라 넣기" 를 골랐다. 옛 책은 "그냥 없애기".
 
 | 스킬 | 강화 | 필요 경험치 | 효과 | 이펙트 | 상태 |
 |---|---|---|---|---|---|
@@ -26,32 +29,33 @@
 | 빙주각 `frost_pillar` | 1번 파쇄 `shatter` | 50000 | **1.1초 뒤 그때 범위 안에 있는 놈 전부**에게 한 대의 80% 를 한 번 더 | 기둥이 땅으로 꺼지는 대신 **그 자리에서 부서져** 조각이 크게 터지고, 섬광·빛이 한 번 더 | 붙었다 (1차 시안) |
 | 빙주각 `frost_pillar` | 2번 빙결 `freeze` | 50000 | 맞은 놈을 **2초 얼린다** (못 움직이고 못 때림 — 기절 판정) | 맞은 몸이 **얼음빛으로 굳고**(덧칠 + 동작 멈춤), 기둥이 짙은 청색 | 붙었다 (1차 시안) |
 
-| 경험치북 (`SKILL_EXP_BOOKS`) | id | 경험치 |
-|---|---|---|
-| 하급 스킬 경험치북 | `skill_book_1` | 100 |
-| 중급 스킬 경험치북 | `skill_book_2` | 500 |
-| 상급 스킬 경험치북 | `skill_book_3` | 2000 |
+| 던전 토벌 N단계 클리어 | 스킬 경험치 |
+|---|---|
+| 1단계 | 1,000 |
+| 2단계 | 2,000 |
+| … | … |
+| 20단계 | 20,000 |
 
-세 종류·수치는 사용자가 골랐다. **모든 스킬·강화에 공용**이다.
+**모든 스킬·강화에 공용**이다 (캐릭터에 `skill_exp` 하나로 쌓인다).
 
 ## 어디
 
 | 파일 | 역할 |
 |---|---|
-| `packages/shared/src/skills.ts` `SKILL_UPGRADES` · `SKILL_UPGRADE_MAX` · `SKILL_UPGRADE_EXP_BY_TIER` · `SKILL_EXP_BOOKS` | **강화 표**(스킬·id·이름·효과·`stunMs`)와 **필요 경험치 표** `SKILL_UPGRADE_EXP_BY_TIER`(강화의 `exp` 는 스킬 `tier` 로 채운다), **경험치북 표**. `skills.json` 의 `upgrades` · `upgradeMax` · `expBooks` 로 나간다 |
-| `packages/shared/src/items.ts` `MATERIALS` | 경험치북을 **경험치북 표에서 만든다** — 재료, `skillExp` 칸 |
-| `packages/shared/src/skills.test.ts` | 강화가 있는 스킬에 붙나 · 필요 경험치가 전직 단계 표와 맞나 · 스킬마다 둘 이하 · 경험치북이 재료에 있나 |
-| `godot/world/skills.gd` `upgrade` · `upgrades_of` · `exp_books` · `stun_ms` · `range_mul` · `upgrade_sum` | 표 읽기. `upgrades_of` 의 순서가 1번·2번. `upgrade_sum` 은 더하는 효과(`arcAdd` · `extraHits`) |
-| `godot/world/items.gd` `book_exp` | 경험치북이면 넣는 경험치 |
-| `godot/world/world.gd` `feed_upgrade` | ★ 스킬창의 경험치북 단추 (`feedUpgrade`) — **판정은 여기서** (직업·번호·이미 붙었나·책이 있나 → 한 권 빼고 쌓고, 닿으면 붙인다) |
+| `packages/shared/src/skills.ts` `SKILL_UPGRADES` · `SKILL_UPGRADE_MAX` · `SKILL_UPGRADE_EXP_BY_TIER` | **강화 표**(스킬·id·이름·효과·`stunMs`)와 **필요 경험치 표** `SKILL_UPGRADE_EXP_BY_TIER`(강화의 `exp` 는 스킬 `tier` 로 채운다). `skills.json` 의 `upgrades` · `upgradeMax` 로 나간다 |
+| `packages/shared/src/dungeons.ts` `DUNGEON_SKILL_EXP_PER_STAGE` | ★ 던전 단계의 **`skillExp`** = 단계 × 1000. `zones.json` 의 `dungeons` 로 나간다 |
+| `packages/shared/src/skills.test.ts` · `zones.test.ts` | 강화가 있는 스킬에 붙나 · 필요 경험치가 전직 단계 표와 맞나 · 스킬마다 둘 이하 / 단계 보상 = 단계 × 1000 |
+| `godot/world/skills.gd` `upgrade` · `upgrades_of` · `stun_ms` · `range_mul` · `upgrade_sum` | 표 읽기. `upgrades_of` 의 순서가 1번·2번. `upgrade_sum` 은 더하는 효과(`arcAdd` · `extraHits`) |
+| `godot/world/game_data.gd` `dungeon_stage` | 존 id → 던전 단계(`skillExp` 포함). 던전이 아니면 빈 사전 |
+| `godot/world/world.gd` `_check_dungeon_clear` | ★ 던전 보스를 잡으면 `skill_exp` 에 더한다 (`skillExp` 이벤트 · 알림). 처치 보상 자리에서 전직 시험 확인 다음에 부른다 |
+| `godot/world/world.gd` `feed_upgrade` | ★ 스킬창의 넣기 단추 (`feedUpgrade`) — **판정은 여기서** (직업·번호·이미 붙었나·경험치가 있나 → 모자란 만큼만 빼서 쌓고, 닿으면 붙인다) |
 | `godot/world/world.gd` `_add_upgrade` | 강화를 붙이고 그 강화에 쌓이던 경험치를 지운다 — 붙는 길은 전부 여기를 지난다 |
 | `godot/world/world.gd` `cast` | 붙은 강화를 `skill` 이벤트에 싣고(`upgrades`), 사거리에 배율을 곱하고, 각·대 수를 더하고, 기절·지대를 건다 |
 | `godot/world/world.gd` `_open_zone` · `_run_zones` · `_zones` | ★ **남는 피해 지대** (균열 지대) — 거는 곳과 틱마다 넣는 곳 |
 | `godot/world/world.gd` `_step_monsters` | `stunned_until` 까지 `state = "stun"` 으로 서 있는다 |
-| `godot/world/world.gd` `debug_books` · `debug_upgrade_all` · `debug_reset_upgrades` | 테스트 단추 넷 |
-| `godot/world/save.gd` | `skill_upgrades` · `skill_upgrade_exp` 칸 |
-| `godot/game/game.gd` `_build_upgrade_column` · `_make_upgrade_card` · `_redraw_upgrades` · `_on_upgrade_pressed` · `_on_book_pressed` | ★ **스킬창 셋째 칸** — 강화 카드 둘 + 경험치북 단추 셋 |
-| `godot/game/game.gd` `_show_book_detail` | 가방 상세 창 — 보여 주기만 한다 (단추 없음) |
+| `godot/world/world.gd` `debug_skill_exp` · `debug_upgrade_all` · `debug_reset_upgrades` | 테스트 단추 넷 |
+| `godot/world/save.gd` | `skill_upgrades` · `skill_upgrade_exp` · `skill_exp` 칸 |
+| `godot/game/game.gd` `_build_upgrade_column` · `_make_upgrade_card` · `_redraw_upgrades` · `_on_upgrade_pressed` · `_on_feed_pressed` | ★ **스킬창 셋째 칸** — 강화 카드 둘 + 안내 한 줄(`스킬 경험치 N — 기절에 넣기`) + 넣기 단추(`_feed_button`) |
 | `godot/game/lightning_fx.gd` `PALETTE_RED` · `Strike.paint` | 붉은 번개 |
 | `godot/game/lightning_fx.gd` `SIDE_STRIKES` · `SIDE_GAP` · `WIDE` · `Strike.rest` | 넓은 낙뢰 — 옆 번개 둘과 땅 흔적 배율 |
 | `godot/tests/skill_test.gd` `_case_wide` | 사거리 4 → 6m, 알리는 모양도 6m, 5m 앞의 놈이 강화 뒤에만 맞는다 |
@@ -76,14 +80,15 @@
 
 ### 경험치를 넣어 강화한다 ★★
 
-- **스킬창에서 카드를 눌러 강화를 고르고**(금테, 처음엔 1번), 아래 **경험치북 단추**
-  (`하급 +100 / 10권`)를 누르면 **한 권**이 고른 강화에 들어간다.
-- 쌓인 경험치가 그 강화의 `exp` 에 닿으면 **바로 붙는다.** **넘친 경험치는 버린다** —
-  붙은 강화에는 더 못 넣고(단추가 꺼진다), 다른 강화로 옮겨 가지도 않는다.
-- **가방에서는 경험치북을 안 쓴다** (요청 2). 가방 상세 창에는 보유 수·경험치와
-  "스킬창에서 사용" 만 적고 단추는 없다(`-`).
-- 경험치북은 **재료**로 가방 한 칸에 겹친다 (`{ id, count }`, `World._give`) — 크리스탈과
-  같은 이유로 장비 표(`ITEMS`)에 넣지 않는다 → [items.md](items.md).
+- **던전 보스를 잡으면** 그 단계의 `skillExp`(단계 × 1000)가 캐릭터의 `skill_exp` 에
+  더해진다 (`_check_dungeon_clear`). **잡을 때마다** 받는다 — 보스가 다시 서면(15분,
+  나갔다 들어오면 바로) 또 받는다. 사냥터 보스·전직 시험 보스는 안 준다(던전 존이 아니다).
+- **스킬창에서 카드를 눌러 강화를 고르고**(금테, 처음엔 1번), 아래 **[넣기]** 를 누르면
+  모아 둔 경험치가 고른 강화에 **모자란 만큼만** 들어간다 — 남는 것은 `skill_exp` 에 그대로
+  남아 다른 강화에 쓴다. (경험치북 판은 넘친 만큼 버렸다.)
+- 쌓인 경험치가 그 강화의 `exp` 에 닿으면 **바로 붙는다.** 붙은 강화에는 더 못 넣는다
+  (단추가 꺼진다). 경험치가 0 이어도 꺼진다.
+- 가방에는 아무것도 안 들어온다 — 스킬 경험치는 물건이 아니라 캐릭터의 수치다.
 - **남의 직업 스킬에는 못 넣는다.** 스킬을 **배웠는지는 안 본다** — 강화는 캐릭터에
   남으므로 나중에 배워도 붙어 있다.
 - 필요 경험치는 **스킬의 전직 단계(`tier`)로 정한다** — `SKILL_UPGRADE_EXP_BY_TIER`
@@ -99,7 +104,10 @@
 
   강화 표(`UPGRADE_LIST`)에는 적지 않고 `SKILL_UPGRADES` 를 만들 때 채운다 — 같은
   스킬의 두 강화는 늘 같은 값이다. 고도는 `skills.json` 의 `exp` 를 그대로 읽는다.
-  상급 경험치북(2000)으로 4차 강화 하나에 500권이 든다 — 책 수치는 그대로 뒀다.
+- **밸런스** (2026-09-28 에 계산해서 사용자에게 보였다) — 전직 레벨에 맞는 단계를 돈다고
+  치면(N단계 보스 Lv.`N×10−1`) 강화 하나에 드는 클리어 수는 기본 1 · 1차(3단계) 4 ·
+  2차(7단계) 8 · 3차(12단계) 17 · 4차(18단계) 56. 4차만 크게 뛴다 — 비용은 5배인데
+  보상은 1000씩 는다. 길면 4차 비용을 50만으로 낮추면 28회다 (아직 안 바꿨다).
 
 ### 저장 ★
 
@@ -107,10 +115,12 @@
 - `skill_upgrade_exp: { 스킬 id: { 강화 id: 경험치 } }` — **붙기 전까지** 쌓인 것.
   붙으면 그 줄을 지운다(`_add_upgrade`). 둘로 나눈 것은 옛 저장(붙은 목록만 있던 판)을
   그대로 읽기 위해서다.
+- `skill_exp: 정수` — 아직 안 넣은 스킬 경험치 (2026-09-28).
 - 둘 다 **없던 칸을 더한 것**이라 저장 `VERSION` 을 올리지 않았다 (`granted` 와 같은
   방식). 되살릴 때 **지금 표에 있는 것만**, 경험치는 **아직 안 붙은 것만** 남긴다.
-- 앞 판의 강화서(`scroll_thunder_fall_stun`)는 재료 표에서 빠졌다 — 가방에 남아 있으면
-  불러올 때 버려진다 (`_restore_stack` 이 모르는 id 를 버린다).
+- 앞 판의 강화서(`scroll_thunder_fall_stun`)와 경험치북(`skill_book_1~3`)은 재료 표에서
+  빠졌다 — 가방에 남아 있으면 불러올 때 **돌려주지 않고** 버려진다 (`_restore_stack` 이
+  모르는 id 를 버린다. 경험치북은 사용자가 "그냥 없애기" 를 골랐다).
 
 ### 스킬창 강화 칸 ★★
 
@@ -134,7 +144,7 @@
   고를 수 없다.
 - 카드는 스킬 칸처럼 **겉에 투명 단추(`hit`)를 덮고**, 고른 카드에 고른 칸 테두리
   (`_pick_box`)를 두른다.
-- 경험치북 단추 글자는 **16** 이다 — 18 이면 "상급 +2000" 이 둥근 테에 닿았다 (찍어서 봤다).
+- 넣기 단추는 카드 폭(280) 하나를 다 쓴다. 경험치북 판에는 단추 셋이 폭을 나눴다.
 - 막대는 `ProgressBar` 에 코드 스타일(어두운 판 + 흐린 금 테, 채움 `#e8c14a` = 경험치
   글자색)을 입혔다. 새 조각은 없다 → [ui-art-style.md](ui-art-style.md).
 - **창을 열면 맨 앞으로 올린다** (`move_to_front`). 넓어진 창이 왼쪽 테스트 단추 줄
@@ -319,11 +329,12 @@
 
 ### 테스트 단추 (왼쪽 아래 테스트 줄)
 
-- **"테스트: 경험치북 +10"** — 경험치북을 **종류마다 10권** 넣는다 (`debugBooks`, 사용자 선택).
+- **"스킬 경험치 +10만"** — 스킬 경험치를 `World.DEBUG_SKILL_EXP`(100000) 넣는다
+  (`debugSkillExp`). 경험치북 +10 단추 자리를 그대로 쓴다.
 - **"전체 1번 강화" · "전체 2번 강화"** — 이 직업의 **모든 스킬에 그 번호 강화를
-  경험치북 없이** 붙인다 (`debugUpgradeAll`). 그 번호가 없는 스킬은 건너뛴다.
-- **"테스트: 강화 초기화"** — 붙은 강화와 쌓인 경험치를 전부 지운다. 쓴 경험치북은
-  돌려주지 않는다 (`debugResetUpgrades`).
+  경험치 없이** 붙인다 (`debugUpgradeAll`). 그 번호가 없는 스킬은 건너뛴다.
+- **"테스트: 강화 초기화"** — 붙은 강화와 강화마다 쌓인 경험치를 전부 지운다. 넣은
+  스킬 경험치는 돌려주지 않는다 (`debugResetUpgrades`).
 - 줄이 위로 자라서 전체 1번·2번은 **한 줄에 반씩** 놓았다 (`_test_button`).
 
 ## 손댈 때
@@ -331,17 +342,16 @@
 - **강화를 더할 때** — `SKILL_UPGRADES` 에 한 줄(`exp` 필수, 효과는 `stunMs` · `rangeMul` · `arcAdd` · `extraHits` · `zoneMs`·`zoneTickMs`·`zonePower` · `followMs`·`followPower` · `stunLook` 중에서) → `npm run export:godot`.
   효과가 새 종류면 `cast` 에 판정을, `_show_skill` 에 이펙트 분기를 더한다.
   효과 문구(`desc`)는 **카드(280px) 한 줄**에 들어가야 한다.
-- **경험치북 수치를 바꿀 때** — `SKILL_EXP_BOOKS` 한 줄. 종류를 넷 이상으로 늘리면
-  단추 줄(폭 280 을 셋으로 나눴다)을 다시 본다.
+- **던전 보상을 바꿀 때** — `DUNGEON_SKILL_EXP_PER_STAGE`(단계당). 단계마다 따로 주려면
+  `RAID_STAGES` 의 `skillExp` 를 고치고 `zones.test.ts` 의 "단계 × 1000" 검사도 고친다.
+  새 던전 종류(시련의 탑 · 보물 창고)를 열면 그 단계에도 `skillExp` 를 채운다.
 - **이펙트를 바꿀 때** — [effect-rules.md](effect-rules.md) 를 먼저 읽고, 바꾸면
   `npm run shot:godot` 으로 찍어 본다.
-- **던전 드랍을 붙일 때** — 떨굴 id 는 `SKILL_EXP_BOOKS` 에서 고른다. 테스트 단추는
-  그때 걷을지 묻는다.
 - 옛 Colyseus 서버(`ZoneRoom.ts`)에는 안 붙였다.
 
 ## 관련
 
 - [skills.md](skills.md) — 스킬 표, 스킬창, 낙뢰 이펙트
-- [items.md](items.md) — 재료(크리스탈·경험치북), 가방 겹치기
-- [dungeons.md](dungeons.md) — 경험치북이 떨어질 곳
+- [items.md](items.md) — 재료(크리스탈), 가방 겹치기
+- [dungeons.md](dungeons.md) — 스킬 경험치를 주는 곳
 - [effect-rules.md](effect-rules.md)

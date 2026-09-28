@@ -1,5 +1,4 @@
 import type { JobId } from './character.ts';
-import { SKILL_EXP_BOOKS } from './skills.ts';
 
 /**
  * 아이템과 드롭.
@@ -512,8 +511,6 @@ export interface MaterialDef {
   name: string;
   /** 상세 창에 적는 한 줄 */
   desc: string;
-  /** 스킬 경험치북이면 넣는 경험치 (`SKILL_EXP_BOOKS`). 스킬창에서 쓴다 */
-  skillExp?: number;
 }
 
 export const CRYSTAL_ID = 'crystal';
@@ -524,13 +521,8 @@ export const MATERIALS: Record<string, MaterialDef> = {
     name: '크리스탈',
     desc: '장비의 2차 옵션을 다시 굴린다',
   },
-  // 스킬 경험치북 — 경험치북 표에서 만든다. 모든 스킬 강화에 공용 (2026-09-23)
-  ...Object.fromEntries(
-    SKILL_EXP_BOOKS.map((book) => [
-      book.id,
-      { id: book.id, name: book.name, desc: `스킬 강화 경험치 +${book.exp}`, skillExp: book.exp },
-    ])
-  ),
+  // 스킬 경험치북(skill_book_1~3)은 2026-09-28 에 없앴다 — 던전 클리어로 스킬 경험치가
+  // 바로 쌓인다 (dungeons.ts 의 skillExp). 옛 저장의 책은 불러올 때 버려진다
 };
 
 export function getMaterial(id: string): MaterialDef | null {

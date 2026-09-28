@@ -26,6 +26,8 @@ export interface DungeonStage {
   stage: number;
   boss: string;
   level: number;
+  /** 깨면(보스를 잡으면) 들어오는 **스킬 경험치** — 단계 × `DUNGEON_SKILL_EXP_PER_STAGE` */
+  skillExp: number;
 }
 
 export interface DungeonType {
@@ -58,6 +60,14 @@ export const DUNGEON_ENV: ZoneDef['env'] = {
   groundTint: '#4a4550',
 };
 
+/**
+ * **던전 클리어 보상 — 스킬 경험치.** N단계를 깨면 N × 1000 (2026-09-28 요청:
+ * "1단계는 1000, 2단계는 2000, 3단계는 3000"). 캐릭터에 하나로 쌓이고 스킬창에서
+ * 골라 강화에 넣는다 → [skill-upgrades.md]. 잡을 때마다 들어온다 — 보스가 다시 서면
+ * (15분 · 나갔다 들어오면 바로) 또 받는다
+ */
+export const DUNGEON_SKILL_EXP_PER_STAGE = 1000;
+
 const raidZoneId = (stage: number) => `raid_${String(stage).padStart(2, '0')}`;
 
 /** 보스 수 = 사냥터 수. 사냥터를 늘리면 보스가 늘고 단계도 따라 는다 */
@@ -68,6 +78,7 @@ const RAID_STAGES: DungeonStage[] = Array.from({ length: BOSS_COUNT }, (_, i) =>
   stage: i + 1,
   boss: bossIdFor(i),
   level: bossLevel(i),
+  skillExp: (i + 1) * DUNGEON_SKILL_EXP_PER_STAGE,
 }));
 
 export const DUNGEON_TYPES: DungeonType[] = [

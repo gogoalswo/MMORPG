@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FIELD_ORDER, START_ZONE, ZONES, getSpawn, getZone } from './zones.ts';
-import { DUNGEON_TYPES, DUNGEON_ZONES } from './dungeons.ts';
+import { DUNGEON_SKILL_EXP_PER_STAGE, DUNGEON_TYPES, DUNGEON_ZONES } from './dungeons.ts';
 import { JOB_ADVANCES } from './jobAdvance.ts';
 import { MONSTER_KINDS } from './monsters.ts';
 import { GROUND_KINDS } from './zone.ts';
@@ -109,6 +109,8 @@ test('던전 — 종류 셋, 열린 종류는 단계마다 보스 한 마리', (
       assert.equal(kind.level, s.level);
       // 단계가 오를수록 보스가 세진다
       assert.ok(s.level > previous, `${s.zone}: 앞 단계보다 낮은 레벨`);
+      // 클리어 보상 = 단계 × 1000 (skill-upgrades.md)
+      assert.equal(s.skillExp, s.stage * DUNGEON_SKILL_EXP_PER_STAGE, `${s.zone}: 스킬 경험치`);
       previous = s.level;
       // 사냥터 창으로 가는 곳과 섞이면 차원문 목록이 던전까지 늘어난다
       assert.ok(!FIELD_ORDER.includes(s.zone));

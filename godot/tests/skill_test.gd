@@ -475,49 +475,49 @@ func _case_dead() -> void:
 		_fail("죽었는데 스킬이 나갔다")
 
 
-## 스킬 강화 — 스킬창에서 고른 강화에 **경험치북을 넣어**(`feed_upgrade`) 필요
-## 경험치(낙뢰는 1차 전직 스킬이라 10000)에 닿으면 붙는다. 책이 없거나 이미 붙었으면 안 넣는다.
-## 테스트 단추는 경험치북 없이 붙인다.
+## 스킬 강화 — **던전을 깨면 스킬 경험치가 쌓이고**(`_check_dungeon_clear`, N단계 × 1000),
+## 스킬창에서 고른 강화에 넣으면(`feed_upgrade`) 모자란 만큼만 들어가 필요 경험치(낙뢰는
+## 1차 전직 스킬이라 10000)에 닿으면 붙는다. 경험치가 없거나 이미 붙었으면 안 넣는다.
+## 테스트 단추는 경험치 없이 붙인다.
 ## 낙뢰에 "기절" 이 붙으면 맞은 놈이 3초 동안 **서서 못 때린다** (2026-09-23)
 func _case_upgrade() -> void:
 	var s := _setup()
 	var w: World = s[0]
 	var me: Dictionary = s[1]
 	var mob: Dictionary = s[2][0]
-	var books: Array = Skills.exp_books()
-	if books.size() != 3:
-		_fail("경험치북이 세 종류여야 하는데 %d" % books.size())
-		return
-	var small := str(books[0].id)
-	w.feed_upgrade("me", "thunder_fall", 0, small)
+	w.feed_upgrade("me", "thunder_fall", 0)
 	if not me.get("skill_upgrade_exp", {}).is_empty():
-		_fail("경험치북 없이 경험치가 들어갔다 (%s)" % str(me.skill_upgrade_exp))
-	w.debug_books("me")
-	for i in 3:
-		w.feed_upgrade("me", "thunder_fall", 0, small)
-	w.feed_upgrade("me", "thunder_fall", 0, str(books[1].id))
+		_fail("스킬 경험치 없이 경험치가 들어갔다 (%s)" % str(me.skill_upgrade_exp))
+	# 사냥터 보스는 안 준다 — 던전 보스만 준다
+	w._check_dungeon_clear(me, {"boss": true})
+	if int(me.skill_exp) != 0:
+		_fail("던전이 아닌데 스킬 경험치가 들어왔다 (%d)" % int(me.skill_exp))
+	var field_zone := w.zone_id
+	w.zone_id = "raid_03"
+	w._check_dungeon_clear(me, {"boss": false})
+	w._check_dungeon_clear(me, {"boss": true})
+	w.zone_id = field_zone
+	if int(me.skill_exp) != 3000:
+		_fail("던전 3단계 보스를 잡으면 3000 이어야 하는데 %d" % int(me.skill_exp))
+	w.feed_upgrade("me", "thunder_fall", 0)
 	var got := int(me.skill_upgrade_exp.get("thunder_fall", {}).get("stun", 0))
-	if got != 800 or not me.skill_upgrades.is_empty():
-		_fail("하급 셋 + 중급 하나면 800 이고 아직 안 붙어야 한다 (%d · %s)" % [got, me.skill_upgrades])
-	for i in 4:
-		w.feed_upgrade("me", "thunder_fall", 0, str(books[2].id))
-	if not me.skill_upgrades.is_empty():
-		_fail("8800 인데 벌써 붙었다 (%s)" % str(me.skill_upgrades))
-	w.feed_upgrade("me", "thunder_fall", 0, str(books[2].id))
+	if got != 3000 or int(me.skill_exp) != 0 or not me.skill_upgrades.is_empty():
+		_fail("3000 을 넣으면 3000 · 남은 0 · 아직 안 붙어야 한다 (%d · %d · %s)" % [
+			got, int(me.skill_exp), me.skill_upgrades])
+	w.debug_skill_exp("me")
+	w.feed_upgrade("me", "thunder_fall", 0)
 	if me.skill_upgrades.get("thunder_fall", []) != ["stun"] or me.skill_upgrade_exp.has("thunder_fall"):
-		_fail("10000 을 넘겼는데 안 붙었거나 경험치가 남았다 (%s · %s)" % [me.skill_upgrades, me.skill_upgrade_exp])
-	var small_left := 0
-	for stack in me.bag:
-		if str(stack.id) == small:
-			small_left = int(stack.count)
-	w.feed_upgrade("me", "thunder_fall", 0, small)
-	w.feed_upgrade("me", "thunder_fall", 5, small)
-	for stack in me.bag:
-		if str(stack.id) == small and int(stack.count) != small_left:
-			_fail("이미 붙은 강화(또는 없는 번호)에 경험치북이 쓰였다")
-	# 테스트 단추 — 책 없이 모든 스킬의 1번이 붙고, 초기화하면 다 떨어진다
+		_fail("10000 을 채웠는데 안 붙었거나 경험치가 남았다 (%s · %s)" % [me.skill_upgrades, me.skill_upgrade_exp])
+	var pool_left := World.DEBUG_SKILL_EXP - 7000
+	if int(me.skill_exp) != pool_left:
+		_fail("모자란 7000 만 빠져야 하는데 남은 게 %d" % int(me.skill_exp))
+	w.feed_upgrade("me", "thunder_fall", 0)
+	w.feed_upgrade("me", "thunder_fall", 5)
+	if int(me.skill_exp) != pool_left:
+		_fail("이미 붙은 강화(또는 없는 번호)에 스킬 경험치가 쓰였다")
+	# 테스트 단추 — 경험치 없이 모든 스킬의 1번이 붙고, 초기화하면 다 떨어진다
 	w.debug_reset_upgrades("me")
-	w.feed_upgrade("me", "thunder_fall", 0, small)
+	w.feed_upgrade("me", "thunder_fall", 0)
 	w.debug_upgrade_all("me", 0)
 	if me.skill_upgrades.get("thunder_fall", []) != ["stun"] or me.skill_upgrade_exp.has("thunder_fall"):
 		_fail("'전체 1번 강화' 가 기절을 안 붙였거나 쌓인 경험치가 남았다 (%s)" % str(me.skill_upgrades))

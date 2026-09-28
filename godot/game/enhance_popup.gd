@@ -220,7 +220,7 @@ func _build_left() -> void:
 	side.add_theme_constant_override("separation", 8)
 	panel.add_child(side)
 
-	_game._window_title(side, "장비 강화", 22)
+	_game._stone_title(side, "장비 강화", 22, "ui_icon_enhance")
 
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 6)

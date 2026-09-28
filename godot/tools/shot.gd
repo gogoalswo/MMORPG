@@ -169,7 +169,7 @@ func _run() -> void:
 		return
 
 	# 창은 열어 놓고 한 장만 찍는다 — 움직이는 것이 없다
-	if skill == "bag" or skill == "skills":
+	if skill == "bag" or skill == "skills" or skill in WINDOW_TOGGLES:
 		await _window(game, skill)
 		return
 
@@ -633,13 +633,22 @@ func _job(game: Node3D) -> void:
 	quit(0)
 
 
+## 단추 하나로 여는 창들 (`npm run shot:godot -- char` …). 던전 결로 옮긴 틀을 보려고 더했다 (2026-09-28)
+const WINDOW_TOGGLES := {
+	"char": "_toggle_char", "rank": "_toggle_rank", "potion": "_toggle_potion_panel",
+	"auto": "_toggle_auto_panel", "debug": "_toggle_debug",
+}
+
+
 ## 가방창·스킬창. 조각(판·칸·탭·단추)을 갈아 끼웠을 때 테가 뭉개지지 않는지
 ## 눈으로 본다 — 글자가 상자 밖으로 나오는 것은 수치로 안 잡힌다 (2026-09-19 경험)
 func _window(game: Node3D, which: String) -> void:
 	var player: Dictionary = game._transport._world._players[game._transport.my_id()]
 	player["level"] = LEVEL
 	player["skill_points"] = 99
-	if which == "skills":
+	if which in WINDOW_TOGGLES:
+		game.call(WINDOW_TOGGLES[which])
+	elif which == "skills":
 		for skill in Skills.for_job(str(player.get("job", "fighter"))).slice(0, 4):
 			game._transport.send(&"learnSkill", {"skill": skill})
 		# 강화 칸이 비어 보이지 않도록 낙뢰를 고르고 스킬 경험치를 쥐여 준 뒤 300 을 넣어 둔다

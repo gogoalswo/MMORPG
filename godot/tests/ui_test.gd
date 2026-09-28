@@ -112,9 +112,10 @@ func _run_scene() -> void:
 		elif panel.row(0).icon == panel.row(1).icon:
 			_fail("서 있는 곳과 갈 곳의 칸 아이콘이 같다")
 		elif not (panel.get_theme_stylebox("panel") is StyleBoxTexture):
-			_fail("창 바탕이 조각(ui_panel)이 아니다 — npm run sync:godot 을 돌렸나")
-		elif not (panel.row(1).get_theme_stylebox("normal") is StyleBoxTexture):
-			_fail("줄 틀이 조각(ui_button)이 아니다 — 다른 창과 결이 달라진다")
+			_fail("창 바탕이 조각(ui_dungeon_card)이 아니다 — npm run sync:godot 을 돌렸나")
+		# 줄은 던전 단계 창과 같은 평평한 줄이다 (2026-09-28 — 모든 창을 던전 결로)
+		elif not (panel.row(1).get_theme_stylebox("normal") is StyleBoxFlat):
+			_fail("줄 틀이 던전 창의 평평한 줄이 아니다 — 던전 창과 결이 달라진다")
 		# 앵커로만 자리를 잡는다 — 화면 가운데에 있어야 한다
 		var mid := panel.get_global_rect().get_center().x
 		if absf(mid - game.get_viewport().get_visible_rect().size.x * 0.5) > 2.0:

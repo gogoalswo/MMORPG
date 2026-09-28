@@ -589,8 +589,8 @@ func _case_dungeon(game: Node3D) -> void:
 	var font: Font = load(FONT)
 	var seen := ""
 	await process_frame
-	if panel.card_count() != 3 or panel._scroll.visible:
-		_fail("던전 종류가 카드 3장이어야 하는데 %d장 (목록 보임 %s)" % [panel.card_count(), panel._scroll.visible])
+	if panel.card_count() != 3 or panel.stages_open():
+		_fail("던전 종류가 카드 3장이어야 하는데 %d장 (단계 창 %s)" % [panel.card_count(), panel.stages_open()])
 		return
 	if panel.card(0).disabled or not panel.card(1).disabled or not panel.card(2).disabled:
 		_fail("토벌만 열리고 나머지 둘은 막혀야 한다")
@@ -606,36 +606,66 @@ func _case_dungeon(game: Node3D) -> void:
 		for label in panel.card(i).find_children("*", "Label", true, false):
 			seen += label.text
 	print("  던전 카드: %s 창 %s" % [panel.card(0).size, panel.size])
-	if panel.get_global_rect().end.x > panel.get_viewport_rect().size.x:
-		_fail("카드 창이 화면 밖으로 넘친다: %s" % panel.get_global_rect())
+	# **전체 화면이다** (2026-09-28 요청)
+	var screen := panel.get_viewport_rect()
+	if not panel.get_global_rect().is_equal_approx(screen):
+		_fail("던전 창이 전체 화면이 아니다: %s (화면 %s)" % [panel.get_global_rect(), screen])
+	# 단계 수를 적던 칩은 뺐다 (2026-09-28 요청: "단계 적어놓은 부분 제거해")
+	if seen.contains("20단계"):
+		_fail("카드에 단계 수가 남아 있다")
 	# 막힌 카드는 눌러도 아무 일이 없다
 	await _tap_card(panel, 1)
-	if panel.card_count() != 3 or panel._scroll.visible:
-		_fail("준비 중인 종류를 눌렀는데 화면이 바뀌었다")
-	# 토벌을 누르면 단계 목록 — "뒤로" + 20단계
+	if panel.stages_open():
+		_fail("준비 중인 종류를 눌렀는데 단계 창이 떴다")
+	# 토벌을 누르면 **던전 창 위에** 단계 창 — 던전 창은 닫히지 않는다
 	await _tap_card(panel, 0)
-	if panel.row_count() != 21:
-		_fail("토벌 던전 단계 목록이 21줄(뒤로 + 20)이어야 하는데 %d줄" % panel.row_count())
+	if not panel.stages_open() or not panel.visible or not panel._cards.visible:
+		_fail("토벌을 누르면 던전 창은 그대로 두고 그 위에 단계 창이 떠야 한다")
 		return
-	seen += panel._title.text + panel.row(0).text + panel.row(20).text
-	print("  던전 창: 종류 3 → '%s' %d줄, 첫 단계 '%s'" % [panel._title.text, panel.row_count(), panel.row(1).text])
-	# 한 줄에 들어가야 한다 — 넘치면 줄이 창을 밀어 넓힌다
-	if panel.size.x > DungeonPanel.DUNGEON_WIDTH + 1.0:
-		_fail("단계 줄이 창 폭을 넘겨 창이 %.0fpx 로 넓어졌다" % panel.size.x)
-	await _tap_row(panel, 0)
-	if not panel._cards.visible or panel.card_count() != 3:
-		_fail("뒤로를 눌렀는데 종류 카드로 안 돌아갔다")
+	if panel.row_count() != 20:
+		_fail("토벌 던전 단계 목록이 20줄이어야 하는데 %d줄" % panel.row_count())
+		return
+	await process_frame
+	var window: Control = panel.find_child("StageWindow", true, false)
+	if not screen.encloses(window.get_global_rect()):
+		_fail("단계 창이 화면 밖으로 넘친다: %s" % window.get_global_rect())
+	# 처음엔 1단계가 골라져 있고, 보상(장비 + 크리스탈 + 골드)이 보인다
+	if panel.picked_stage() != "raid_01" or panel.reward_count() < 3:
+		_fail("단계 창을 열면 1단계가 골라지고 보상이 보여야 한다: %s 보상 %d칸" % [panel.picked_stage(), panel.reward_count()])
+	# 맨 앞은 던전 클리어의 스킬 경험치 (1단계 = 1000)
+	var first_reward: Label = panel._rewards.get_child(0).find_children("*", "Label", true, false)[0]
+	if first_reward.text != "스킬 경험치 1000":
+		_fail("보상 맨 앞이 스킬 경험치여야 한다: '%s'" % first_reward.text)
+	seen += panel._stage_title.text + panel.row(0).text + panel.row(19).text + panel.enter_button().text
+	for label in window.find_children("*", "Label", true, false):
+		seen += label.text
+	print("  단계 창: '%s' %d줄, 1단계 보상 %d칸" % [panel._stage_title.text, panel.row_count(), panel.reward_count()])
+	# 단계를 누르면 **고르기만** 한다 — 떠나지 않는다
+	await _tap_row(panel, 4)
+	if not panel.visible or panel.picked_stage() != "raid_05":
+		_fail("5단계를 눌렀으면 창은 그대로이고 5단계가 골라져야 한다: %s" % panel.picked_stage())
+	elif panel.reward_count() <= 8:
+		_fail("5단계는 두 등급(1·2)이 나와 보상이 1단계보다 많아야 한다: %d칸" % panel.reward_count())
+	# X 는 단계 창만 닫는다 — 던전 카드로 돌아간다
+	panel.close_button().pressed.emit()
+	await process_frame
+	if panel.stages_open() or not panel.visible:
+		_fail("단계 창 X 를 누르면 단계 창만 닫혀야 한다")
 	var missing := ""
 	for ch in seen:
-		if ch != " " and not font.has_char(ch.unicode_at(0)):
+		if ch != " " and ch != "\n" and not font.has_char(ch.unicode_at(0)):
 			missing += ch
 	if missing != "":
 		_fail("던전 창 글자가 폰트에 없다: %s" % missing)
-	# 1단계로 들어간다 — 보스 한 마리뿐이다
+	# 1단계를 골라 "입장" — 보스 한 마리뿐이다
 	await _tap_card(panel, 0)
-	await _tap_row(panel, 1)
+	await _tap_row(panel, 0)
+	if not panel.visible:
+		_fail("단계를 눌렀는데 창이 닫혔다 — 입장 단추로만 떠나야 한다")
+	panel.enter_button().pressed.emit()
+	await process_frame
 	if panel.visible:
-		_fail("단계를 골랐는데 창이 안 닫혔다")
+		_fail("입장을 눌렀는데 창이 안 닫혔다")
 	for i in 3:
 		await process_frame
 	var snap: Dictionary = game._transport.snapshot()

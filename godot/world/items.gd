@@ -485,9 +485,8 @@ static func roll_grade(roll: float, monster_level: int) -> int:
 ## **떨어지는 장비는 잡은 사람이 쓸 수 있는 것만 고른다** — 못 쓰는 무기가
 ## 가방을 채우면 정리하는 게 일이 된다
 static func roll_drop(monster_level: int, job: String, rng: RandomNumberGenerator) -> Dictionary:
-	var base := 2.0 + monster_level * 1.5
 	# ±30% 흔들어 매번 같은 숫자가 나오지 않게 한다
-	var gold := maxi(1, roundi(base * (0.7 + rng.randf() * 0.6)))
+	var gold := maxi(1, roundi(gold_base(monster_level) * (0.7 + rng.randf() * 0.6)))
 
 	# 크리스탈은 장비와 **따로** 굴린다. 순서는 골드 → 장비 → (슬롯 → 등급 → 옵션) → 크리스탈
 	# — `items.ts` 와 같은 순서라야 같은 씨앗에서 같은 것이 나온다
@@ -497,6 +496,17 @@ static func roll_drop(monster_level: int, job: String, rng: RandomNumberGenerato
 	if rng.randf() < crystal_drop_chance():
 		drop["crystal"] = 1
 	return drop
+
+
+## 처치 골드의 가운데 값. `roll_drop` 이 ±30% 흔든다
+static func gold_base(monster_level: int) -> float:
+	return 2.0 + monster_level * 1.5
+
+
+## 처치 골드가 나올 수 있는 폭 (가장 적게, 가장 많이) — 던전 단계 창의 보상 칸이 보인다
+static func gold_range(monster_level: int) -> Vector2i:
+	var base := gold_base(monster_level)
+	return Vector2i(maxi(1, roundi(base * 0.7)), maxi(1, roundi(base * 1.3)))
 
 
 static func _roll_gear_drop(monster_level: int, rng: RandomNumberGenerator) -> Dictionary:

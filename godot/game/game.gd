@@ -3512,7 +3512,8 @@ func _build_gate_panel() -> void:
 	top.add_child(_gate_panel)
 
 	# 던전 창도 같은 층이다 — 틀·줄·끌기를 차원문 창에서 물려받는다
-	_dungeon_panel = DungeonPanel.make(_frame_box, _icon)
+	# 단계 창의 보상 칸이 가방과 같은 물건 그림을 쓴다
+	_dungeon_panel = DungeonPanel.make(_frame_box, _icon, _item_icon)
 	_dungeon_panel.theme = _ui_root.theme
 	_dungeon_panel.picked.connect(_on_gate_pick)
 	top.add_child(_dungeon_panel)

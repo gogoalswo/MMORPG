@@ -11,6 +11,8 @@ const FONT := "res://assets/fonts/NotoSansKR-subset.ttf"
 const BAG_TAP_CELL := 17
 
 var _failed := 0
+## 강화 시험의 난수 씨앗 (`_case_enhance_batch`)
+const SEED_ENHANCE := 3
 
 
 func _init() -> void:
@@ -112,9 +114,10 @@ func _run_scene() -> void:
 		elif panel.row(0).icon == panel.row(1).icon:
 			_fail("서 있는 곳과 갈 곳의 칸 아이콘이 같다")
 		elif not (panel.get_theme_stylebox("panel") is StyleBoxTexture):
-			_fail("창 바탕이 조각(ui_panel)이 아니다 — npm run sync:godot 을 돌렸나")
-		elif not (panel.row(1).get_theme_stylebox("normal") is StyleBoxTexture):
-			_fail("줄 틀이 조각(ui_button)이 아니다 — 다른 창과 결이 달라진다")
+			_fail("창 바탕이 조각(ui_dungeon_card)이 아니다 — npm run sync:godot 을 돌렸나")
+		# 줄은 던전 단계 창과 같은 평평한 줄이다 (2026-09-28 — 모든 창을 던전 결로)
+		elif not (panel.row(1).get_theme_stylebox("normal") is StyleBoxFlat):
+			_fail("줄 틀이 던전 창의 평평한 줄이 아니다 — 던전 창과 결이 달라진다")
 		# 앵커로만 자리를 잡는다 — 화면 가운데에 있어야 한다
 		var mid := panel.get_global_rect().get_center().x
 		if absf(mid - game.get_viewport().get_visible_rect().size.x * 0.5) > 2.0:
@@ -210,8 +213,8 @@ func _run_scene() -> void:
 		_fail("자동사냥 칸을 눌렀는데 안 켜졌다")
 	elif not game._auto_spin.visible:
 		_fail("켜졌는데 화살표 고리가 안 보인다")
-	elif not game._marker.visible:
-		_fail("켜졌는데 사냥 자리 표시가 없다")
+	elif game._marker.visible:
+		_fail("켜졌는데 발 밑에 고리가 떴다 — 앵커는 그리지 않는다 (클릭 이펙트로 읽힌다)")
 	else:
 		print("  자동사냥 켜짐 — 앵커 (%.1f, %.1f)" % [me.auto_x, me.auto_z])
 
@@ -1825,6 +1828,10 @@ func _case_enhance_batch(game: Node, me: Dictionary) -> void:
 	for i in 3:
 		me.bag.append({"id": ref_id, "grade": 1, "enhance": 0, "options": []})
 	me.bag.append({"id": "g1_a", "grade": 1, "enhance": 0, "options": []})  # 같은 등급·다른 아이템
+	# 강화 굴림은 월드 난수(존 이름 씨앗)라 몬스터 배치·순찰이 먼저 쓴 만큼 결과가 바뀐다 —
+	# 2026-09-28 에 무리 반경을 넓히자 4개 중 3개가 깨져 뒤 검사(단일 탭 목록)가 빈 가방을 봤다.
+	# 여기서 씨앗을 고정해 배치와 떼어 놓는다
+	game._transport._world._rng.seed = SEED_ENHANCE
 	pop.tabs["multi"].pressed.emit()
 	await process_frame
 	if not pop.list_panel.visible or not pop.multi_box.visible or pop.one_box.visible:

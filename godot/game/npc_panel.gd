@@ -24,7 +24,10 @@ const LIST_H := 330.0
 const PANEL_MARGIN := 26
 const BUTTON_MARGIN := 28
 const SLOT_MARGIN := 26
-const PAD := 30
+## 틀 안쪽 여백은 틀(`ui_dungeon_card`)이 `STONE_IN` 만큼, 그 안에서 `PAD` 만큼 더 물린다 (합 34).
+## 닫기 X 는 `STONE_IN` 모서리에 붙는다 (game.gd `_close_button(…, 0)`) — 돌판 테(26~36px) 안쪽이다
+const STONE_IN := 30
+const PAD := 4
 const ROW_H := 72
 const ROW_GAP := 6
 const ICON := 54
@@ -33,7 +36,8 @@ const TAB := Vector2(116, 48)
 const PRESS_TINT := Color(1.45, 1.3, 1.0)
 
 ## 색 — ui-art-style.md 의 표 (전직 창과 같다)
-const TITLE := Color("#e8c14a")
+## 제목은 던전 창처럼 상아빛 (`GatePanel.PAGE_TITLE_COLOR`) — 그 전엔 노란 금색 `#e8c14a`
+const TITLE := Color("#ece4cc")
 const GOLD := Color("#dfc97a")
 const GOLD_HI := Color("#f1dc9c")
 const IVORY := Color("#eeead7")
@@ -81,7 +85,8 @@ func _build() -> void:
 	name = "NpcPanel"
 	visible = false
 	custom_minimum_size = Vector2(WIDTH, 0)
-	add_theme_stylebox_override("panel", _frame_box.call("ui_panel", PANEL_MARGIN, 0))
+	# **던전 창 결이다** (2026-09-28 요청: "나머지 창들도 던전 UI 아트풍으로") — 그 전엔 얇은 금테(`ui_panel`)
+	add_theme_stylebox_override("panel", _frame_box.call("ui_dungeon_card", GatePanel.CARD_MARGIN, STONE_IN))
 	set_anchors_preset(Control.PRESET_CENTER)
 	grow_horizontal = Control.GROW_DIRECTION_BOTH
 	grow_vertical = Control.GROW_DIRECTION_BOTH
@@ -122,7 +127,13 @@ func _build() -> void:
 
 	# 목록 — 어두운 칸 안에서 끌어 내린다
 	var box := PanelContainer.new()
-	box.add_theme_stylebox_override("panel", _frame_box.call("ui_slot", SLOT_MARGIN, 10))
+	# 던전 단계 창의 칸과 같은 평판 (그 전엔 `ui_slot` 테두리)
+	var cell := StyleBoxFlat.new()
+	cell.bg_color = GatePanel.CELL_BG
+	cell.border_color = GatePanel.CELL_LINE
+	cell.set_border_width_all(1)
+	cell.set_content_margin_all(10)
+	box.add_theme_stylebox_override("panel", cell)
 	column.add_child(box)
 	_scroll = ScrollContainer.new()
 	_scroll.name = "scroll"

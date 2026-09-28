@@ -317,6 +317,36 @@
       "tier": 2,
       "description": "땅을 짓밟아 사방에서 얼음 기둥을 솟구치게 한다."
     },
+    "ki_burst": {
+      "id": "ki_burst",
+      "name": "파천장",
+      "job": "fighter",
+      "cooldown": 10000,
+      "delayMs": 420,
+      "castMs": 1200,
+      "range": 6,
+      "arc": 1.7453292519943295,
+      "power": 12,
+      "maxTargets": 8,
+      "reqLevel": 180,
+      "tier": 4,
+      "description": "기를 모아 손바닥으로 내질러 앞을 휩쓴다."
+    },
+    "nova_fist": {
+      "id": "nova_fist",
+      "name": "폭렬권",
+      "job": "fighter",
+      "cooldown": 12000,
+      "delayMs": 750,
+      "castMs": 1200,
+      "range": 5,
+      "arc": 6.283185307179586,
+      "power": 14,
+      "maxTargets": 10,
+      "reqLevel": 180,
+      "tier": 4,
+      "description": "주먹에 기를 실어 내질러 일대를 폭발시킨다."
+    },
     "blast_heel": {
       "id": "blast_heel",
       "name": "폭렬 찍기",
@@ -339,6 +369,8 @@
       "thunder_fall",
       "frost_pillar",
       "sky_breaker",
+      "ki_burst",
+      "nova_fist",
       "blast_heel"
     ],
     "mage": [

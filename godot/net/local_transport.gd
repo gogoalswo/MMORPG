@@ -133,6 +133,8 @@ func send(message: StringName, payload: Dictionary) -> void:
 			_world.grant_test_kit(MY_ID)
 		&"testLevel":
 			_world.grant_test_level(MY_ID)
+		&"testSkills":
+			_world.grant_test_skills(MY_ID)
 		&"debugCrystals":
 			_world.debug_crystals(MY_ID, int(payload.get("count", 30)))
 		&"debugLevel":

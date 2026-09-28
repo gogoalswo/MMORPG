@@ -57,18 +57,12 @@ const WINDOW_GAP := 8
 ## 인벤토리 오른쪽 세로 탭 한 개, 단추 한 개
 const INV_TAB := Vector2(64, 58)
 const INV_BUTTON := Vector2(76, 40)
-## 인벤토리 결 조각(`inv_*`)의 9조각 여백 — 그림에서 테가 차지하는 두께다.
-## 창 바탕은 안쪽 여백(`INV_PANEL_PAD`)을 따로 준다
-## (구운 크기에서 잰 값: 창 바탕 테 9 · 모서리 장식 10, 칸·탭 3, 단추 4 — 2026-09-23)
-const INV_PANEL_MARGIN := 12
-const INV_PANEL_PAD := 18
-## 가방 쪽 창을 던전 결로 (2026-09-28) — 틀 안쪽 여백 · 제목 문장 크기
+## 창을 던전 결로 (2026-09-28) — 틀 안쪽 여백 · 제목 문장 크기.
+## 인벤토리 결 조각(`inv_panel`·`inv_slot`·`inv_tab_*`·`inv_button`)은 이때부터 안 쓴다 — 고른 칸 금테만 남았다
 const STONE_PAD := 30
 const STONE_EMBLEM := 40
-const INV_SLOT_MARGIN := 4
+## 고른 칸 금테(`inv_slot_pick`)의 9조각 여백 (구운 크기에서 잰 값, 2026-09-23)
 const INV_PICK_MARGIN := 8
-const INV_TAB_MARGIN := 4
-const INV_BUTTON_MARGIN := 6
 ## 인벤토리 결의 글자색 — 받은 그림에서 뽑았다 (2026-09-23)
 const INV_GOLD := Color("#ceb474")
 const INV_GOLD_HI := Color("#f1dc9c")
@@ -177,8 +171,16 @@ const SWING_CLIPS := ["Jab", "Cross"]
 const SKILL_CLIPS := {
 	"rising_kick": "Claw", "thunder_fall": "Thunder",
 	"sky_breaker": "SkyBreaker", "frost_pillar": "FrostStomp",
+	# 파천장 — 주먹을 내질러 0.2초 멈췄다가 기가 나간다
+	"ki_burst": "KiBurst",
+	# 폭렬권 — 0.10초에 주먹을 뻗고 버티다가 0.77초에 두 팔을 펼쳐 기를 터뜨린다
+	"nova_fist": "NovaFist",
 	"blast_heel": "BlastHeel",
 }
+## 판정은 늦게 떨어지는데 **이펙트는 누르자마자 시작하는** 스킬. 폭렬권은 주먹이
+## 닿는 순간부터 기운이 끓다가 판정 시각(`delayMs`)에 터진다 — 그 시각은 이펙트가
+## 스스로 맞춘다 (`NovaFx.EXPLODE`)
+const EARLY_FX := ["nova_fist"]
 ## 앞 자세에서 동작으로 섞어 넘어가는 시간. 부딪히는 순간이 클립 0.1초 자리라
 ## 길게 섞으면 이펙트보다 주먹이 늦는다
 const MOVE_BLEND := 0.06
@@ -490,7 +492,7 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 				_start_move(SKILL_CLIPS.get(str(payload.get("skill", "")), SWING_CLIPS[0]))
 			# 늦게 떨어지는 스킬(천붕각)은 동작만 먼저 틀고, 이펙트는 판정이 떨어지는 때에 세운다
 			var delay := int(payload.get("delay_ms", 0))
-			if delay > 0:
+			if delay > 0 and not (str(payload.get("skill", "")) in EARLY_FX):
 				get_tree().create_timer(delay / 1000.0).timeout.connect(_show_skill.bind(payload))
 			else:
 				_show_skill(payload)
@@ -685,7 +687,7 @@ func _build_persistent() -> void:
 	_close_button(_rank_panel, _toggle_rank, 0)
 	_close_button(_potion_panel, _toggle_potion_panel, 0)
 	_close_button(_auto_panel, _toggle_auto_panel, 0)
-	_close_button(_npc_panel, func() -> void: _npc_panel.visible = false)
+	_close_button(_npc_panel, func() -> void: _npc_panel.visible = false, 0)
 
 
 ## 레벨 배지와 경험치 — **퀵슬롯 위 묶음의 맨 윗 두 줄**이다 (2026-09-20 요청,
@@ -982,7 +984,7 @@ func _build_debug_panel() -> void:
 
 	_debug_panel = PanelContainer.new()
 	_debug_panel.visible = false
-	_debug_panel.add_theme_stylebox_override("panel", _frame_box("ui_panel", PANEL_MARGIN, 16))
+	_debug_panel.add_theme_stylebox_override("panel", _frame_box("ui_dungeon_card", GatePanel.CARD_MARGIN, 16))
 	center.add_child(_debug_panel)
 
 	var pad := MarginContainer.new()
@@ -1117,7 +1119,7 @@ func _build_bag_panel() -> void:
 	row.add_theme_constant_override("separation", WINDOW_GAP)
 	layer.add_child(row)
 
-	_gear_panel = _stone_window()
+	_gear_panel = _window_panel()
 	row.add_child(_gear_panel)
 	_build_gear_window(_gear_panel)
 
@@ -1127,37 +1129,27 @@ func _build_bag_panel() -> void:
 	row.add_child(spacer)
 
 	# 상세 창은 **내용 높이만** 쓴다 (2026-09-25 요청: "크기를 좀 줄여") — 위에 붙인다
-	_detail_panel = _stone_window()
+	_detail_panel = _window_panel()
 	_detail_panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	row.add_child(_detail_panel)
 	_build_detail_window(_detail_panel)
 
 	# 크리스탈 창은 상세 창과 **같은 자리**에 번갈아 뜬다
-	_crystal_panel = _stone_window()
+	_crystal_panel = _window_panel()
 	row.add_child(_crystal_panel)
 	_build_crystal_window(_crystal_panel)
 
-	_bag_panel = _stone_window()
+	_bag_panel = _window_panel()
 	row.add_child(_bag_panel)
 	_build_bag_window(_bag_panel)
 	_build_compare_layer()
 
 
-## 창 하나 — 바르코로 뽑은 창 바탕(`inv_panel`)을 9조각으로 깐다
+## 창 하나의 틀 — **던전 창 결이다.** 던전 카드 틀(`ui_dungeon_card`)을 9조각으로 깐다.
+## 2026-09-28 에 가방 창("가방 UI도 던전 UI 아트풍으로"), 이어서 나머지 창("나머지 창들도")을
+## 이리로 옮겼다 — 그 전엔 인벤토리 결 창 바탕(`inv_panel`). 안쪽 판이 가장자리에서 26~36px
+## 들어가 있어 내용은 `STONE_PAD` 만큼 물린다. 조각이 없으면 같은 색으로 그린 판
 func _window_panel() -> PanelContainer:
-	var panel := PanelContainer.new()
-	panel.visible = false
-	panel.add_theme_stylebox_override(
-		"panel", _inv_box("inv_panel", INV_PANEL_MARGIN, INV_PANEL_PAD, "#161b1a", "#4a3f30")
-	)
-	return panel
-
-
-## 가방 쪽 창(장비 · 상세 · 비교 · 크리스탈 · 인벤토리)의 틀 — **던전 창 결이다**
-## (2026-09-28 요청: "가방 UI도 던전 UI 아트풍으로 바꿔"). 던전 카드 틀(`ui_dungeon_card`)을
-## 9조각으로 깐다. 안쪽 판이 가장자리에서 26~36px 들어가 있어 내용은 `STONE_PAD` 만큼 물린다.
-## 조각이 없으면 인벤토리 결과 같은 색 판. 캐릭터 정보·랭킹·물약·자동사냥 창은 `_window_panel` 그대로다
-func _stone_window() -> PanelContainer:
 	var panel := PanelContainer.new()
 	panel.visible = false
 	panel.add_theme_stylebox_override(
@@ -1306,11 +1298,11 @@ func _build_char_window(panel: PanelContainer) -> void:
 	side.add_theme_constant_override("separation", 8)
 	panel.add_child(side)
 
-	var title := _window_title(side, "캐릭터 정보", 22)
+	var title := _stone_title(side, "캐릭터 정보", 22, "ui_icon_character")
 	_char_head = _inv_label("", 20, INV_TEXT)
 	_char_head.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	title.get_parent().add_child(_char_head)
-	title.get_parent().move_child(_char_head, 1)
+	title.get_parent().move_child(_char_head, title.get_index() + 1)
 
 	_char_grids.clear()
 	for index in CHAR_SPLIT.size() + 1:
@@ -1361,7 +1353,7 @@ func _build_compare_layer() -> void:
 	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(spacer)
 
-	_compare_panel = _stone_window()
+	_compare_panel = _window_panel()
 	_compare_panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	row.add_child(_compare_panel)
 	_compare_view = _build_item_view(_compare_panel)
@@ -1398,10 +1390,10 @@ func _build_detail_window(panel: PanelContainer) -> void:
 	buttons.alignment = BoxContainer.ALIGNMENT_END
 	buttons.add_theme_constant_override("separation", 8)
 	side.add_child(buttons)
-	_enhance_button = _stone_button("강화", _open_enhance)
+	_enhance_button = _inv_button("강화", _open_enhance)
 	_enhance_button.visible = false
 	buttons.add_child(_enhance_button)
-	_bag_action = _stone_button("-", _on_bag_action)
+	_bag_action = _inv_button("-", _on_bag_action)
 	buttons.add_child(_bag_action)
 
 
@@ -1510,7 +1502,7 @@ func _build_crystal_window(panel: PanelContainer) -> void:
 	_crystal_have.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_crystal_have.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	foot.add_child(_crystal_have)
-	_crystal_roll = _stone_button("굴리기", _on_crystal_roll)
+	_crystal_roll = _inv_button("굴리기", _on_crystal_roll)
 	foot.add_child(_crystal_roll)
 
 
@@ -1569,8 +1561,8 @@ func _build_bag_window(panel: PanelContainer) -> void:
 	_bag_head.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_bag_head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	foot.add_child(_bag_head)
-	foot.add_child(_stone_button("장비", _toggle_gear))
-	foot.add_child(_stone_button("정렬", _on_bag_sort))
+	foot.add_child(_inv_button("장비", _toggle_gear))
+	foot.add_child(_inv_button("정렬", _on_bag_sort))
 
 	var coins := HBoxContainer.new()
 	coins.add_theme_constant_override("separation", 8)
@@ -1581,27 +1573,16 @@ func _build_bag_window(panel: PanelContainer) -> void:
 	coins.add_child(_bag_gold)
 
 
-## 인벤토리 결의 단추 (정렬·장비·장착). 그림이 없으면 코드로 그린 판
+## 창 안의 작은 단추 (정렬·장비·장착·물약 ±·자동사냥 위/아래 …) — 던전 창의 입장 단추처럼
+## **둥근 금테 단추 조각(`ui_button`) + 금빛 글자** (2026-09-28, 그 전엔 인벤토리 결 `inv_button`).
+## 조각은 58px 높이라 40px 단추에 여백 28 로 늘이면 모서리가 겹치고, 반씩 자르면 둥근 끝이
+## 뾰족한 육각형이 된다 (찍어서 봤다). 그래서 **조각을 단추 높이로 한 번 줄여**
+## (`_small_button_texture`) 끝의 반원을 그대로 쓴다
 func _inv_button(text: String, on_press: Callable) -> Button:
 	var button := Button.new()
 	button.text = text
 	button.custom_minimum_size = INV_BUTTON
-	button.add_theme_font_size_override("font_size", 18)
-	button.add_theme_color_override("font_color", INV_TEXT)
-	for state in ["normal", "hover", "pressed", "disabled"]:
-		button.add_theme_stylebox_override(
-			state, _inv_box("inv_button", INV_BUTTON_MARGIN, 6, "#1a1a17", "#5a4c34")
-		)
 	button.pressed.connect(on_press)
-	return button
-
-
-## 가방 쪽 창의 단추 — 던전 창의 입장 단추처럼 **둥근 금테 단추 조각(`ui_button`) + 금빛 글자**.
-## 조각은 58px 높이라 40px 단추에 여백 28 로 늘이면 모서리가 겹치고, 반씩 자르면 둥근 끝이
-## 뾰족한 육각형이 된다 (2026-09-28, 찍어서 봤다). 그래서 **조각을 단추 높이로 한 번 줄여**
-## (`_small_button_texture`) 끝의 반원을 그대로 쓴다
-func _stone_button(text: String, on_press: Callable) -> Button:
-	var button := _inv_button(text, on_press)
 	var texture := _small_button_texture()
 	for state in ["normal", "hover", "pressed", "disabled"]:
 		if texture == null:
@@ -1987,7 +1968,7 @@ func _build_rank_panel() -> void:
 	side.custom_minimum_size = Vector2(DETAIL_W, 0)
 	side.add_theme_constant_override("separation", 8)
 	_rank_panel.add_child(side)
-	_window_title(side, "랭킹", 22)
+	_stone_title(side, "랭킹", 22, "ui_icon_rank")
 	var rule := ColorRect.new()
 	rule.color = INV_RULE
 	rule.custom_minimum_size = Vector2(0, 1)
@@ -3469,6 +3450,8 @@ func _apply_play_mode() -> void:
 			_transport.send(&"testKit", {})
 			# 200레벨로 시작한다 — 한 번만 (`World.grant_test_level`)
 			_transport.send(&"testLevel", {})
+			# 모든 스킬을 배우고 전직도 끝까지 — 한 번만 (`World.grant_test_skills`)
+			_transport.send(&"testSkills", {})
 			_refresh_switches()
 			_set_cheats_open(false)
 		PlayMode.NORMAL:
@@ -3806,7 +3789,7 @@ func _build_npc_panel() -> void:
 	# 한글 폰트는 _ui_root 의 테마에 있다 — 다른 층이라 직접 물려준다
 	_job_panel.theme = _ui_root.theme
 	top.add_child(_job_panel)
-	_close_button(_job_panel, func() -> void: _job_panel.visible = false)
+	_close_button(_job_panel, func() -> void: _job_panel.visible = false, 0)
 	_job_panel.advance.connect(func() -> void:
 		_transport.send(&"jobAdvance", {})
 		_job_panel.visible = false
@@ -4668,7 +4651,7 @@ func _show_skill(payload: Dictionary) -> void:
 	if str(payload.get("id", "")) != _transport.my_id():
 		return
 	var skill := str(payload.get("skill", ""))
-	if not (skill in ["rising_kick", "thunder_fall", "sky_breaker", "frost_pillar", "blast_heel"]):
+	if not (skill in ["rising_kick", "thunder_fall", "sky_breaker", "frost_pillar", "ki_burst", "nova_fist", "blast_heel"]):
 		return
 	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
 	if me.is_empty():
@@ -4689,6 +4672,14 @@ func _show_skill(payload: Dictionary) -> void:
 		var ice_up: Array = payload.get("upgrades", [])
 		IceFx.burst(_fx, here, float(me.rot), "shatter" in ice_up, "freeze" in ice_up)
 		_camera.shake(IceFx.SHAKE, IceFx.SHAKE_TIME)
+	elif skill == "ki_burst":
+		KiFx.burst(_fx, here, float(me.rot))
+		_camera.shake(KiFx.SHAKE, KiFx.SHAKE_TIME)
+	elif skill == "nova_fist":
+		# 누르자마자 띄운다 — 끓다가 `EXPLODE` 에 터진다. 흔들림도 그때다
+		NovaFx.burst(_fx, here, float(me.rot))
+		get_tree().create_timer(NovaFx.EXPLODE).timeout.connect(
+			_camera.shake.bind(NovaFx.SHAKE, NovaFx.SHAKE_TIME))
 	elif skill == "blast_heel":
 		BlastFx.blast(_fx, here, float(me.rot))
 		_camera.shake(BlastFx.SHAKE, BlastFx.SHAKE_TIME)
@@ -4841,7 +4832,7 @@ func _build_potion_panel() -> void:
 	side.custom_minimum_size = Vector2(300, 0)
 	side.add_theme_constant_override("separation", 12)
 	_potion_panel.add_child(side)
-	_window_title(side, "물약 설정", 20)
+	_stone_title(side, "물약 설정", 20, "ui_icon_potion")
 	side.add_child(_inv_label("HP 가 이만큼 떨어지면 물약을 저절로 마신다", 14, INV_TEXT))
 
 	var row := HBoxContainer.new()
@@ -4917,7 +4908,7 @@ func _build_auto_panel() -> void:
 	side.custom_minimum_size = Vector2(380, 0)
 	side.add_theme_constant_override("separation", 12)
 	_auto_panel.add_child(side)
-	_window_title(side, "자동사냥 스킬 순서", 20)
+	_stone_title(side, "자동사냥 스킬 순서", 20, "ui_icon_auto")
 	side.add_child(_inv_label("위에 있는 스킬부터 쓴다", 14, INV_TEXT))
 	side.add_child(_inv_label("쿨타임이 돌고 사거리 안에 든 첫 스킬이 나간다", 12, INV_GOLD))
 	_auto_rows = VBoxContainer.new()
@@ -5021,10 +5012,9 @@ func _flash_ready(cell: PanelContainer) -> void:
 ## 자동 사냥 버튼 글자와 사냥 자리 표시. **상태는 스냅샷(me.auto)만 보고 그린다** —
 ## 누른 것으로 지레 바꾸면 판정이 거절했을 때 화면만 켜진 채로 남는다.
 ##
-## 사람이 몰고 있지 않을 때만 파란 고리가 **앵커**(사냥하며 서성이는 중심)를
-## 가리킨다. 어디를 중심으로 도는지 안 보이면 왜 저기서 멈추는지 알 수 없다.
-## 조작 중에는 같은 고리가 "눌러 둔 자리"라 건드리지 않는다 — 한 고리가 두 가지를
-## 가리키면 걸어가는 도중에 표시가 발밑으로 튄다 (앵커가 따라오기 때문이다)
+## 파란 고리는 **눌러 둔 자리만** 가리킨다. 자동 사냥의 앵커는 그리지 않는다
+## (2026-09-28 요청) — 켜는 순간 발 밑에 떠서 클릭 이펙트로 읽혔고, 마을처럼
+## 잡을 것이 없는 곳에서는 고리만 뜬 채 서 있는 것처럼 보였다
 func _refresh_auto(me: Dictionary) -> void:
 	if _auto_panel.visible:
 		_redraw_auto_panel(me)
@@ -5039,11 +5029,7 @@ func _refresh_auto(me: Dictionary) -> void:
 	_auto_cell.find_child("badge", true, false).text = "자동사냥"
 	if _target != Vector3.INF or _target_mob != "":
 		return
-	if on:
-		_marker.position = Vector3(float(me.get("auto_x", 0.0)), 0.05, float(me.get("auto_z", 0.0)))
-		_marker.visible = true
-	else:
-		_marker.visible = false
+	_marker.visible = false
 
 
 func _tick_aoe() -> void:

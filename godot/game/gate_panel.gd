@@ -54,6 +54,25 @@ const CLOSE_BTN := 44
 ## 제목 금색·가르는 금 — 경험치 막대와 같은 금색이다
 const TITLE_COLOR := Color("#e8c14a")
 const HEAD_LINE := Color("#4a412b")
+
+## ── 던전 결 (2026-09-28) ── 던전 창에서 굳힌 결을 **모든 창이 같이 쓴다** ("나머지 창들도 던전 UI
+## 아트풍으로"). 던전 창이 이 창을 물려받으므로 여기에 둔다 → docs/features/ui-art-style.md "던전 결"
+## 카드 틀(`ui_dungeon_card`, 231x384) 의 9조각 여백. 안쪽 판이 가장자리에서 26~36px 들어가 있다
+const CARD_MARGIN := 34
+## 틀 안쪽 판 색(#1b1c17) — 창 뒤에 까는 불투명한 판, 풍경이 녹아드는 색
+const CARD_DARK := Color("#1b1c17")
+## 칸 제목 · 부제의 옅은 금빛
+const CARD_SUB_COLOR := Color("#c9b98a")
+## 고른 줄 · 단추 글자 · 구분선의 금빛
+const CARD_GOLD := Color("#dfc97a")
+## 제목 글자 — 노란 제목(`TITLE_COLOR`) 대신 상아빛 (받은 던전 그림의 제목 결)
+const PAGE_TITLE_COLOR := Color("#ece4cc")
+const PAGE_TITLE_SIZE := 32
+## 제목 왼쪽 문장 한 변
+const EMBLEM := 44
+## 칸 판 — 어둡고 테가 가늘다
+const CELL_BG := Color(0.1, 0.1, 0.09, 0.78)
+const CELL_LINE := Color("#3d3729")
 ## 끌기로 치는 최소 거리(px). 이만큼 움직이면 고르기가 아니라 스크롤이다
 const DEADZONE := 14
 ## 스크롤 막대 굵기 — 손가락으로 집을 수 있어야 한다 (기본은 폰에서 너무 가늘다)
@@ -101,8 +120,8 @@ func _build() -> void:
 	offset_top = 0.0
 	offset_bottom = 0.0
 
-	# 가방창·스킬창과 같은 판이다
-	add_theme_stylebox_override("panel", _box("ui_panel", PANEL_MARGIN, PAD))
+	# 던전 창과 같은 닳은 돌판이다 (2026-09-28). 안쪽 판이 테에서 26~36px 들어가 있어 조금 더 물린다
+	add_theme_stylebox_override("panel", _box("ui_dungeon_card", CARD_MARGIN, PAD + 4))
 	# 줄 아이콘 — 다른 UI 와 같은 결의 조각이다 (상아빛 문장, 판 없음).
 	# 파란 타일(`assets/ui/gate_*.png`)을 쓰다가 **금빛 창과 결이 달라** 다시 뽑았다
 	# (2026-09-21) → docs/features/ui-art-style.md
@@ -116,11 +135,9 @@ func _build() -> void:
 	var head := HBoxContainer.new()
 	column.add_child(head)
 	_title = Label.new()
-	_title.text = "차원문"
-	_title.add_theme_color_override("font_color", TITLE_COLOR)
-	_title.add_theme_font_size_override("font_size", FONT_SIZE + 4)
 	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(_title)
+	_restyle_title(_title, "차원문", "ui_gate_go")
 	# 닫기는 다른 창과 같은 X 조각이다 (그림이 없으면 글자 X)
 	var close := Button.new()
 	close.name = "Close"
@@ -305,9 +322,45 @@ func _press(row: Button) -> void:
 		_held.add_theme_stylebox_override("normal", _row_box(true))
 
 
-## 줄 한 칸의 틀 — 단추 조각(`ui_button`) 그대로다. 누른 줄은 **밝게 달아오르고
-## 내용이 `ROW_SINK` 만큼 내려앉는다.** 조각이 없으면 코드로 그린 틀로 물러선다
+## 목록 줄 — 던전 단계 창처럼 **평평한 줄**이다 (2026-09-28 에 차원문 창도 이리로). 둥근 금테
+## 단추(`ui_button`)를 쓰면 목록이 단추 더미로 보였다 (던전 창에서 찍어서 봤다). 아래에 가는
+## 선 하나, 고른(누른) 줄만 바탕이 밝아지고 왼쪽에 금 막대가 선다
 func _row_box(pressed: bool) -> StyleBox:
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color(0.86, 0.75, 0.45, 0.14) if pressed else Color(0, 0, 0, 0)
+	box.border_color = CARD_GOLD if pressed else CELL_LINE
+	box.border_width_left = 3 if pressed else 0
+	box.border_width_bottom = 1
+	box.content_margin_left = ROW_PAD_X
+	box.content_margin_right = ROW_PAD_X
+	box.content_margin_top = ROW_PAD
+	box.content_margin_bottom = ROW_PAD
+	return box
+
+
+## 제목을 던전 결로 — 왼쪽에 문장(`emblem_name`), 상아빛 글자
+func _restyle_title(label: Label, text: String, emblem_name: String) -> void:
+	label.text = text
+	label.add_theme_color_override("font_color", PAGE_TITLE_COLOR)
+	label.add_theme_font_size_override("font_size", PAGE_TITLE_SIZE)
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	var emblem := TextureRect.new()
+	emblem.name = "Emblem"
+	emblem.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	emblem.texture = _piece(emblem_name)
+	emblem.custom_minimum_size = Vector2(EMBLEM, EMBLEM)
+	emblem.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	emblem.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	emblem.visible = emblem.texture != null
+	var head := label.get_parent()
+	head.add_child(emblem)
+	head.move_child(emblem, label.get_index())
+	(head as BoxContainer).add_theme_constant_override("separation", 12)
+
+
+## 단추 한 칸의 틀 — 단추 조각(`ui_button`) 그대로다 (던전 창의 입장 단추). 누르면 **밝게
+## 달아오르고 내용이 `ROW_SINK` 만큼 내려앉는다.** 조각이 없으면 코드로 그린 틀로 물러선다
+func _button_box(pressed: bool) -> StyleBox:
 	var box := _box("ui_button", BUTTON_MARGIN, ROW_PAD)
 	box.content_margin_left = ROW_PAD_X
 	box.content_margin_right = ROW_PAD_X

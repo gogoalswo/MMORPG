@@ -43,6 +43,10 @@ npm run blender -- --python-expr "import bpy; print(bpy.app.version_string)"
 
 ## 설치는 어떻게 되나
 
+**윈도우(Git Bash)** 에서는 리눅스 tar 가 안 돈다. `scripts/blender.sh` 가 윈도우면 휴대용 zip
+(`blender-4.5.14-windows-x64.zip`, 약 390MB)을 `~/blender-win` 에 풀어 그 `blender.exe` 를 쓴다
+(2026-09-29 — 폭렬권 동작을 짓다가 붙였다. 가상 디스플레이 없이 `--background` 로 돈다).
+
 찾는 순서는 `$BLENDER` → `~/blender-bin/blender` → `PATH`. 셋 다 없으면
 `download.blender.org` 에서 휴대용 tar(380MB)를 `~/blender-bin` 에 푼다.
 **처음 한 번 약 30초**이고, 그 세션에서는 다시 받지 않는다.

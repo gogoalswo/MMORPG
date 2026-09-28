@@ -557,6 +557,20 @@ godot --headless --path godot --import          # 에셋 임포트
 godot --headless --path godot --script check.gd # 상태를 글로 찍는다
 ```
 
+### 편집기 디버그 실행(F5) 창은 모니터 밖으로 보낸다 ★ (2026-09-28)
+
+편집기에서 F5 로 띄운 게임 창이 모니터 오른쪽 아래에 떠서 가렸다 ("화면에서 아예 안 보이게
+멀리 보내"). `start_screen.gd` 의 `_hide_debug_window` 가 뜨자마자 **모든 모니터의 오른쪽·아래
+끝 + `OFFSCREEN_GAP`(4000px)** 으로 옮긴다.
+
+- 프로젝트 설정(`display/window/size/initial_position`)으로는 안 된다 — 편집기가 실행할 때
+  `--position` 을 넘겨 덮는다. 그래서 뜬 뒤에 코드로 옮긴다.
+- **디버거가 붙은 PC 실행에서만** 한다(`EngineDebugger.is_active()` + `pc`). `play.bat`·
+  `npm run shot:godot`(디버거 없음), 헤드리스 테스트, 폰 원클릭 배포, 편집기 Game 탭 임베드
+  (`Engine.is_embedded_in_editor()`)는 그대로 뜬다.
+- 첫 장면(`start.tscn`)에서만 한다 — F6 으로 `main.tscn` 을 바로 띄우면 옮기지 않는다.
+- 다시 보이게 하려면 `_ready` 첫 줄의 `_hide_debug_window()` 를 지운다.
+
 ### PC 에서 플레이한다 ★ (`scripts/play.bat`)
 
 브라우저 배포(캐시 10분)나 APK 를 기다리지 않고 **PC 에서 바로 실제 플레이**할 때 쓴다.

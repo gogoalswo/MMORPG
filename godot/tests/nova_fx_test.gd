@@ -69,10 +69,10 @@ func _case_reach() -> void:
 	for strand in NovaFx.strands():
 		starts[snappedf(float(strand[1]), 0.01)] = true
 		for p: Vector3 in strand[0]:
-			var at := p + Vector3(0.0, 0.0, NovaFx.AHEAD)
+			var at := p * NovaFx.SIZE + Vector3(0.0, 0.0, NovaFx.AHEAD)
 			far = maxf(far, Vector2(at.x, at.z).length())
-			if p.y + NovaFx.CORE_Y < -0.3:
-				_fail("가닥이 땅속(%.2fm)으로 파고든다" % (p.y + NovaFx.CORE_Y))
+			if p.y * NovaFx.SIZE + NovaFx.CORE_Y < -0.3:
+				_fail("가닥이 땅속(%.2fm)으로 파고든다" % (p.y * NovaFx.SIZE + NovaFx.CORE_Y))
 				return
 	if far > reach:
 		_fail("호·빛살 끝이 %.2fm 까지 닿는다 — 사거리 %.1fm 밖" % [far, reach])

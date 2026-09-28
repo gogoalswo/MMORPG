@@ -192,6 +192,33 @@ FROST_STOMP = pose(GUARD,
                    rh=(-0.31, -0.15, 0.42), rhPole=(-1, 0.3, 0))
 FROST_HOLD = pose(FROST_STOMP, hips=(0.0, 0.0, -0.135), spine=(17, 0, 0))
 
+# 폭렬권 — 오른 스트레이트를 뻗은 채 **기가 모이는 동안 버티다가**(왼손이 오른팔을 받치고
+# 점점 낮게 웅크리며 떤다), 터지는 순간 **두 팔을 위로 활짝 펼치고 가슴을 젖혀** 기를
+# 터뜨린다 (2026-09-29 요청: "모아질 때 주먹을 내지르고 있다가 터질 때 기를 터트리는").
+# 터지는 키가 이펙트의 `NovaFx.EXPLODE`(0.75) · 스킬 표의 `delayMs` 와 맞는다
+NOVA_PUNCH = pose(GUARD,
+                  hips=(0.0, -0.05, -0.07), hipsR=(0, 0, 18),
+                  spine=(12, 0, 16), head=(-6, 0, -30),
+                  rh=(-0.01, -0.49, 0.80), rhPole=(-1, 0, -0.6),
+                  lh=(0.04, -0.28, 0.74), lhPole=(1, 0, -0.6),
+                  lf=(0.12, -0.20, 0.078), rf=(-0.11, 0.14, 0.078), rfYaw=-10)
+NOVA_BRACE = pose(NOVA_PUNCH, hips=(0.0, -0.06, -0.12), spine=(18, 0, 16), head=(-10, 0, -28),
+                  rh=(-0.01, -0.50, 0.78), lh=(0.04, -0.30, 0.72))
+# 떨림 — 버티는 자세에서 몸과 주먹을 조금씩 흔든다 (두 프레임마다 번갈아)
+NOVA_SHAKE = pose(NOVA_BRACE, hips=(0.0, -0.07, -0.13), spine=(20, 0, 13),
+                  rh=(0.01, -0.51, 0.79), lh=(0.05, -0.31, 0.73))
+NOVA_BURST = pose(GUARD,
+                  hips=(0.0, 0.0, -0.06), hipsR=(0, 0, 0),
+                  spine=(-16, 0, 0), head=(-20, 0, 0),
+                  lh=(0.40, -0.10, 1.00), lhPole=(1, 0.3, -0.8),
+                  rh=(-0.40, -0.10, 1.00), rhPole=(-1, 0.3, -0.8),
+                  lf=(0.17, -0.12, 0.078), lfPole=(0.4, -1, 0),
+                  rf=(-0.17, 0.08, 0.078), rfPole=(-0.4, -1, 0), rfYaw=-15)
+NOVA_BURST_HOLD = pose(NOVA_BURST, spine=(-19, 0, 0),
+                       lh=(0.42, -0.08, 1.03), rh=(-0.42, -0.08, 1.03))
+NOVA_SETTLE = pose(NOVA_BURST, hips=(0.0, 0.0, -0.05), spine=(-6, 0, 0), head=(-8, 0, 0),
+                   lh=(0.34, -0.12, 0.80), rh=(-0.34, -0.12, 0.80))
+
 # 피격 — 맞은 순간 머리와 상체가 뒤로 젖혀지고 몸이 뒤로 밀리며, 두 팔을 얼굴 앞으로
 # 모아 막는다. 발은 그대로 버틴다 (2026-09-24 요청: "피격 받았을 때 모션도 넣어").
 # 짧아야 한다 — 몬스터 여럿에게 맞으면 계속 겹쳐 튼다
@@ -207,6 +234,13 @@ HIT_DEEP = pose(HIT_SNAP, hips=(0.0, 0.05, -0.06), spine=(-20, 0, 8), head=(-22,
 CLIPS = {
     "Hit": [(0.0, GUARD, "LINEAR"), (0.06, HIT_SNAP, "BEZIER"), (0.16, HIT_DEEP, "BEZIER"),
             (0.45, GUARD, "BEZIER")],
+    # 0.10 에 뻗고 0.70 까지 버티며 떨다가 0.77 에 터뜨린다 — 길이 1.2 = 스킬 표의 `castMs`
+    "NovaFist": [(0.0, GUARD, "LINEAR"), (0.10, NOVA_PUNCH, "BEZIER"),
+                 (0.20, NOVA_PUNCH, "BEZIER"), (0.50, NOVA_BRACE, "LINEAR"),
+                 (0.567, NOVA_SHAKE, "LINEAR"), (0.633, NOVA_BRACE, "LINEAR"),
+                 (0.70, NOVA_SHAKE, "LINEAR"), (0.77, NOVA_BURST, "BEZIER"),
+                 (0.90, NOVA_BURST_HOLD, "BEZIER"), (1.02, NOVA_SETTLE, "BEZIER"),
+                 (1.2, "IDLE", "BEZIER")],
     "Jab": [(0.0, GUARD, "LINEAR"), (0.09, JAB, "BEZIER"), (0.18, JAB, "BEZIER"),
             (0.40, GUARD, "BEZIER"), (0.60, GUARD, "BEZIER")],
     "Cross": [(0.0, GUARD, "LINEAR"), (0.10, CROSS, "BEZIER"), (0.20, CROSS, "BEZIER"),

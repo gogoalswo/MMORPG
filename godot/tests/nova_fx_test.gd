@@ -45,6 +45,11 @@ func _case_table() -> void:
 		_fail("판정은 %.2f초에 떨어지는데 폭발은 %.2f초다" % [delay, NovaFx.EXPLODE])
 	if NovaFx.IMPACT >= NovaFx.EXPLODE:
 		_fail("주먹이 닿기 전에 터진다")
+	# 동작(`NovaFist`, 블렌더) 길이 = 스킬 표의 `castMs` — 그동안 다른 스킬이 막힌다
+	var game: Node3D = root.get_node("Game")
+	var clip: float = game._player.clip_length("NovaFist") if game._player != null else 0.0
+	if absf(clip - float(skill.get("castMs", 0)) / 1000.0) > 0.05:
+		_fail("동작 NovaFist 가 %.2f초인데 castMs 는 %d 다" % [clip, int(skill.get("castMs", 0))])
 	if absf(float(skill.get("arc", 0.0)) - TAU) > 1e-3:
 		_fail("폭발은 사방인데 판정이 부채꼴이다")
 

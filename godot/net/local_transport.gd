@@ -32,6 +32,9 @@ func open(zone_id: String) -> void:
 	var restored := _world.restore(MY_ID)
 	if restored:
 		print("저장에서 이어서 시작: %s" % _world.zone_id)
+	# 시작 화면에서 정한 이름 — 비었으면 저장에 있던 것을 그대로 쓴다 (docs/features/play-mode.md "이름")
+	if not PlayMode.player_name.is_empty():
+		_world.set_name(MY_ID, PlayMode.player_name)
 	# **테스트 모드는 서버에 안 붙는다** — 치트가 기기에서 장부를 바꾸는데 서버 답이 덮어 버린다
 	var url := server_url()
 	if not url.is_empty() and PlayMode.current == PlayMode.NORMAL:
@@ -47,8 +50,11 @@ func open(zone_id: String) -> void:
 
 func _attach(url: String) -> void:
 	_server = ServerLedger.new(url)
+	# 이름을 hello 에 싣는다 — 서버가 같은 규칙(`Names`)으로 다시 거르고 확정한 이름을 welcome 으로 준다
+	_server.name = str(_world.snapshot().get("players", {}).get(MY_ID, {}).get("name", ""))
 	_server.welcomed.connect(func(ledger: Dictionary) -> void:
-		_world.apply_ledger(MY_ID, ledger, []))
+		_world.apply_ledger(MY_ID, ledger, [])
+		_world.set_name(MY_ID, _server.name))
 	_server.replied.connect(func(ledger: Dictionary, events: Array) -> void:
 		_world.apply_ledger(MY_ID, ledger, events))
 	_server.failed.connect(func(reason: String) -> void:

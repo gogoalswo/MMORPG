@@ -66,7 +66,8 @@ func all() -> Array:
 			continue
 		var parsed = JSON.parse_string(FileAccess.get_file_as_string(_dir.path_join(name)))
 		if typeof(parsed) == TYPE_DICTIONARY and int(parsed.get("version", 0)) == VERSION:
-			out.append({"id": name.get_basename(), "ledger": Ledger.from_json(parsed.get("ledger", {}))})
+			out.append({"id": name.get_basename(), "name": str(parsed.get("name", "")),
+				"ledger": Ledger.from_json(parsed.get("ledger", {}))})
 	return out
 
 

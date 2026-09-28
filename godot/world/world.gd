@@ -271,6 +271,8 @@ func join(player_id: String) -> void:
 		"equipped": kept.get("equipped", {}).duplicate(true),
 		# 한 번만 주는 것을 받았다는 표시 (`grant_once`) — 저장에 남는다
 		"granted": kept.get("granted", []).duplicate(),
+		# 캐릭터 이름 (`Names` 규칙). 시작 화면이 정하고(`set_name`) 저장에 남는다. 판정에는 안 쓴다
+		"name": str(kept.get("name", "")),
 		# 유료 재화 — 서버가 결제를 확인해야만 는다. 혼자 노는 판에서는 늘 0 이다
 		"diamonds": int(kept.get("diamonds", 0)),
 	}
@@ -1174,6 +1176,7 @@ func restore(player_id: String) -> bool:
 	# 자동 사냥 스킬 순서 — 없던 칸이라 옛 저장은 빈 목록(쿨타임 긴 순)으로 읽힌다
 	set_auto_priority(player_id, saved.get("auto_priority", []))
 	player.granted = saved.get("granted", []).duplicate()
+	player.name = str(saved.get("name", "")) if Names.valid(str(saved.get("name", ""))) else ""
 	# 강화도 **지금 표에 있는 것만** 되살린다 — 없던 칸이라 옛 저장은 빈 사전이다
 	var upgraded: Dictionary = {}
 	var raw_upgrades = saved.get("skill_upgrades", {})
@@ -1469,6 +1472,13 @@ func debug_fill_bag(player_id: String) -> void:
 
 ## 한 번만 준다 — 받았으면 `granted` 에 `key` 가 남아 다음 접속에는 안 준다.
 ## 2026-09-23 요청 "가방에 30개 넣어" 로 크리스탈 30개를 이걸로 준다 (`LocalTransport.open`)
+## 캐릭터 이름을 정한다 — 규칙(`Names`)에 안 맞으면 그대로 둔다. 서버에 붙으면 서버가 다시 거른다
+func set_name(player_id: String, name: String) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if not player.is_empty() and Names.valid(name):
+		player.name = name
+
+
 func grant_once(player_id: String, key: String, stack: Dictionary) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty():

@@ -18,6 +18,10 @@ const DIM := Color("#948c7a")
 
 var test_button: Button
 var normal_button: Button
+## 이름 입력칸 — **모드 단추가 곧 로그인**이다. 비워 두고 누르면 무작위로 지어 들어간다
+## (2026-09-28 요청: "아무것도 입력 안 하고 로그인 누르면 랜덤하게 이름 아무거나 지어서")
+var name_input: LineEdit
+var _name_note: Label
 ## 저장 초기화 — **두 번 눌러야 지운다** (2026-09-26 요청: "초기화 버튼을 만들어서 초기화 시켜").
 ## 모드가 저장 하나를 같이 써서, 테스트 모드에서 치트로 올린 100레벨이 일반 모드에 그대로 떴다
 var reset_button: Button
@@ -52,6 +56,7 @@ func _ready() -> void:
 	title.add_theme_color_override("font_color", GOLD_HI)
 	column.add_child(title)
 
+	column.add_child(_name_row())
 	test_button = _mode_button("테스트 모드", "무적 · 스킬 쿨타임 0", PlayMode.TEST)
 	column.add_child(test_button)
 	normal_button = _mode_button("일반 모드", "캐릭터만 만들어 시작", PlayMode.NORMAL)
@@ -63,6 +68,52 @@ func _ready() -> void:
 	_reset_note = reset_button.get_child(0).get_child(1)
 	column.add_child(reset_button)
 	_show_reset(false)
+
+
+## 이름 줄 — 입력칸과 그 아래 알림 한 줄. 지난번 이름(저장)이 미리 채워진다
+func _name_row() -> VBoxContainer:
+	var row := VBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	name_input = LineEdit.new()
+	name_input.custom_minimum_size = Vector2(420, 64)
+	name_input.max_length = Names.MAX_LEN
+	name_input.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_input.placeholder_text = "이름 (비우면 아무렇게나 짓습니다)"
+	name_input.text = str(Save.read().get("name", ""))
+	name_input.add_theme_font_size_override("font_size", 28)
+	name_input.add_theme_color_override("font_color", TEXT)
+	name_input.add_theme_color_override("font_placeholder_color", DIM)
+	for state in ["normal", "focus"]:
+		var box := StyleBoxFlat.new()
+		box.bg_color = PANEL
+		box.border_color = GOLD_HI if state == "focus" else GOLD
+		box.set_border_width_all(1)
+		box.set_corner_radius_all(3)
+		box.set_content_margin_all(8)
+		name_input.add_theme_stylebox_override(state, box)
+	row.add_child(name_input)
+	_name_note = Label.new()
+	_name_note.text = "한글·영문·숫자 %d~%d자" % [Names.MIN_LEN, Names.MAX_LEN]
+	_name_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_name_note.add_theme_font_size_override("font_size", 18)
+	_name_note.add_theme_color_override("font_color", DIM)
+	row.add_child(_name_note)
+	return row
+
+
+## 들어갈 이름 — 비었으면 무작위로 짓는다. 규칙에 안 맞으면 빈 글자(들어가지 않는다)
+func resolve_name() -> String:
+	var name := Names.clean(name_input.text)
+	if name.is_empty():
+		name = Names.random()
+		name_input.text = name
+		return name
+	var why := Names.why_invalid(name)
+	if not why.is_empty():
+		_name_note.text = why
+		_name_note.add_theme_color_override("font_color", Color("#d9644f"))
+		return ""
+	return name
 
 
 ## 두 줄짜리 단추 — 위는 모드 이름, 아래는 무엇이 켜지는지. 글자는 Label 로 얹는다
@@ -101,6 +152,7 @@ func _on_reset() -> void:
 		_reset_note.add_theme_color_override("font_color", GOLD_HI)
 		return
 	Save.clear()
+	name_input.text = ""  # 이름도 캐릭터와 같이 지운다
 	_reset_armed = false
 	_show_reset(true)
 
@@ -120,6 +172,10 @@ func _show_reset(cleared: bool) -> void:
 ## 고른 모드를 적고, 로딩 막(`LoadingScreen`)을 덮은 채 게임으로 넘어간다.
 ## 막은 루트에 달아서 장면이 바뀌어도 남고, 게임이 자리 잡으면 페이드 아웃으로 걷힌다
 func choose(mode: String) -> void:
+	var name := resolve_name()
+	if name.is_empty():
+		return  # 이름이 규칙에 안 맞는다 — 알림을 보고 고친다
+	PlayMode.player_name = name
 	PlayMode.current = mode
 	test_button.disabled = true
 	normal_button.disabled = true

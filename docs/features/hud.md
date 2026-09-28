@@ -301,7 +301,38 @@ frame.add_child(border)         # 채움 **다음**에 붙여야 위로 온다
 지금 아이콘 마음에 안 들으니까 스크린샷 보고 아트풍 저런식으로 변경해" — 받은 그림은 다른 게임의
 메뉴 넷(상점 돈주머니 · 인벤토리 가방 · 스펠 마법서 · 퀘스트 두루마리)이고, **아이콘 아래에 흰 글자**가 붙어 있다.
 
-**오른쪽 위 메뉴 일곱 장만 이 결이다.** 상아빛 선화 결([ui-art-style.md](ui-art-style.md))이 아니라
+### 지금은 청동 문장 결 (같은 날 두 번째로 갈았다) ★★
+
+요청: 다른 게임의 메뉴 아이콘 판(변신 · 혈맹 · 랭킹 · 던전 · 몬스터도감 …) 그림 + "HUD의 아이콘들을
+이런 아트풍을 원하는거야. 지금은 너무 다른 것 같아." — 아래의 **칠한 가죽·양피지 결에서 한 번 더 갈았다.**
+**바랜 청동·금을 새긴 금속 문장**, 거의 한 색(갈색 도는 청동)이고 **작은 색 포인트 하나**(붉은·푸른 보석,
+보라 결정, 붉은 물약)만 있다. 정면, 판·원판 없음.
+
+- 갈린 것: 메뉴 여덟 장(정보 · 스킬 · 강화 · 크리스탈 · 가방 · 던전 · 설계 · 랭킹) + 자동사냥 + 물약.
+  **닫기 X(`ui_close`)는 그대로**다 (가는 금빛 막대라 결이 이미 가깝다).
+- **참고 그림**: 받은 판의 윗부분(아이콘 세 줄)을 170px JPEG 35(2.0KB)로 줄여 올린 것 —
+  `https://3d.varco.ai/api/objects/0e1d54254853852286fe67f37ff1c36b.jpg`. 같은 결로 한 장 더 만들 때 이것을 물린다.
+- **프롬프트** (`<무엇>` · `<쓰임>` · `<포인트>` 만 간다), 1:1, `nano-banana-pro`, 두 장씩:
+
+  ```
+  Mobile MMORPG HUD menu icon: <무엇>, meaning '<쓰임>'. MATCH THE REFERENCE IMAGE'S ART STYLE EXACTLY:
+  an engraved antique metal emblem — aged bronze and worn dull gold in brown-sepia tones, finely sculpted
+  relief detail, soft metallic highlights and dark engraved recesses, mostly monochrome bronze with at most
+  one small colored accent (<포인트>). Straight-on front view, centered, bold readable silhouette at small
+  size, fills the frame. One emblem standing alone — it must NOT sit on any disc, circle, plate, badge,
+  frame or panel. Isolated on a flat pure white background; everything outside the emblem is pure white,
+  the four corners must be pure white. Ignore the captions and the dark background in the reference:
+  no text, no letters, no numbers.
+  ```
+
+  `Ignore … the dark background in the reference` 는 빼지 않는다 — 참고 그림 바탕이 어두워서 안 쓰면
+  바탕째 그려 온다. 흰 바탕이라 굽는 스크립트가 걷는다(기본 설정 그대로).
+- 한 번에 결이 맞았다. **강화는 둘째를 골랐다 — 첫째는 모루 뒤에 원판이 붙어 나왔다.**
+  고른 것은 `scripts/fetch-assets.sh` 주석에 있다.
+
+아래는 그 전(같은 날 첫 번째) 결의 기록이다 — 프롬프트를 되살리지 않는다.
+
+**오른쪽 위 메뉴 일곱 장만 이 결이었다.** 상아빛 선화 결([ui-art-style.md](ui-art-style.md))이 아니라
 **손으로 칠한 반실사 아이콘** — 낡은 가죽 갈색 · 양피지 · 바랜 금 · 짙은 빨강, 왼쪽 위 빛, 약간 비스듬한 각.
 같은 날 "앞으로 기준 + HUD 나머지" 로 넓혀서 **자동사냥(`ui_icon_auto`) · 물약(`ui_icon_potion`) ·
 창 닫기 X(`ui_close`)** 도 같은 참고 그림 · 같은 틀로 다시 뽑았다. 창 안 아이콘(차원문 줄 등)은 아직 옛 결이다.
@@ -310,16 +341,20 @@ frame.add_child(border)         # 채움 **다음**에 붙여야 위로 온다
   `https://3d.varco.ai/api/objects/ad3bd8cdbd5081ca5e380dbb42a3d9e4.jpg`)을 참고로 물려 다시 뽑았다.
   프롬프트에 `NO border, NO outline frame, NO rim, NO enamel inlay` 와 `THIN ... NOT thick` 를 넣는다.
 
+지금(청동 문장 결) 그림:
+
 | 단추 | 그림 | 이름 |
 |---|---|---|
 | 정보 | 붉은 깃 단 기사 투구 | `ui_icon_character` |
-| 스킬 | 룬이 새겨진 가죽 마법서 | `ui_icon_skill` |
-| 강화 | 모루를 내리치는 망치 · 불꽃 | `ui_icon_enhance` |
-| 크리스탈 | 바위에서 솟은 보랏빛 결정 | `ui_icon_crystal` (**새 이름** — 전엔 아이템 그림 `crystal` 을 빌려 썼다) |
-| 가방 | 두루마리가 삐져나온 가죽 가방 | `ui_icon_bag` |
+| 스킬 | 푸른 룬이 새겨진 금속 표지 마법서 | `ui_icon_skill` |
+| 강화 | 모루를 내리치는 망치 · 불티 | `ui_icon_enhance` |
+| 크리스탈 | 청동 받침에 박힌 보랏빛 결정 | `ui_icon_crystal` (**새 이름** — 전엔 아이템 그림 `crystal` 을 빌려 썼다) |
+| 가방 | 버클 달린 가방 · 붉은 보석 | `ui_icon_bag` |
 | 던전 | 뿔 달린 악마 해골 | `ui_icon_dungeon` |
-| 설계 | 톱니 · 두루마리 도면 위 컴퍼스 | `ui_icon_design` |
-| 랭킹 | 월계관 두른 금 트로피 · 붉은 리본 | `ui_icon_rank` |
+| 설계 | 톱니 위 컴퍼스 · 푸른 보석 | `ui_icon_design` |
+| 랭킹 | 월계관 두른 트로피 · 붉은 보석 | `ui_icon_rank` |
+| 자동사냥 | 검 두 자루가 X자 · 붉은 보석 | `ui_icon_auto` |
+| 물약 | 청동 세공 둥근 병 · 붉은 물약 | `ui_icon_potion` |
 
 - **랭킹 단추는 서버에 붙었을 때만 선다** (던전과 설계 사이, 2026-09-28) — 혼자 노는 판에는 견줄 사람이
   없다. 그래서 GitHub Pages 화면에는 안 보인다. 그림은 위 참고 그림 · 같은 프롬프트 틀로 두 장 뽑아

@@ -333,16 +333,17 @@ fetch_icon 66d3b2ea079339e5a22b09546c956903 ui_quick_slot  # 퀵슬롯·자동�
 fetch_icon 09d32f50e266215c7ff66542d6d7c016 ui_gate_here   # 지금 서 있는 곳 — 소용돌이
 fetch_icon 2209356ad70f42d8872938bc39ffedd4 ui_gate_go     # 갈 수 있는 곳 — 별
 
-# 오른쪽 위 메뉴 일곱 장 (2026-09-28 에 전부 갈았다) — 받은 그림(리니지풍 칠한 메뉴 아이콘)을
-# 참고로 물려 뽑았다. 흰 바탕이라 굽는 스크립트가 걷는다. 각 두 장 중 고른 것 (docs/features/hud.md "메뉴 아이콘")
-fetch_icon e67e6b29ac41d7859e2b7cbbeb2b2145 ui_icon_character # 정보 — 붉은 깃 단 기사 투구 (둘째)
-fetch_icon 65b4adf6d471e31fd248ae77d65ceb74 ui_icon_skill     # 스킬 — 룬이 새겨진 가죽 마법서 (둘째)
-fetch_icon a0a0d505a58360bf0183816eae2feb4d ui_icon_enhance   # 강화 — 모루를 내리치는 망치 · 불꽃 (첫째)
-fetch_icon cdb0ab3bc835c81a40b136818fc78b60 ui_icon_crystal   # 크리스탈 — 바위에서 솟은 보랏빛 결정 (첫째)
-fetch_icon d31a3e9b714e59750877554a3f2142c2 ui_icon_bag       # 가방 — 두루마리가 삐져나온 가죽 가방 (첫째)
-fetch_icon e242348eee9e4292219b53cb9b509127 ui_icon_dungeon   # 던전 — 뿔 달린 악마 해골 (둘째)
-fetch_icon 4b111394e9c953eaa58199bb0991e688 ui_icon_design    # 설계 — 톱니 · 두루마리 도면 위 컴퍼스 (첫째)
-fetch_icon 94b3d5af5954648cacbeef44021d4020 ui_icon_rank      # 랭킹 — 월계관 두른 금 트로피 · 붉은 리본 (첫째, 2026-09-28)
+# 오른쪽 위 메뉴 여덟 장 + 자동사냥 · 물약 — 2026-09-28 에 두 번 갈았다. 지금은 **청동 문장 결**
+# (받은 그림: 바랜 청동·금을 새긴 문장 + 작은 붉은·푸른·보라 포인트)을 참고로 물려 뽑은 것이다.
+# 흰 바탕이라 굽는 스크립트가 걷는다. 각 두 장 중 고른 것 (docs/features/hud.md "메뉴 아이콘")
+fetch_icon 06a9ecb57bedc3b9c6aaa7563fadc1f2 ui_icon_character # 정보 — 붉은 깃 단 기사 투구 (첫째). 2026-09-28 청동 문장 결
+fetch_icon b55318d12e9411340e2816ffc3231327 ui_icon_skill     # 스킬 — 푸른 룬이 새겨진 금속 표지 마법서 (둘째). 2026-09-28 청동 문장 결
+fetch_icon 87761d5bbbee4da29105c49636c6a92b ui_icon_enhance   # 강화 — 모루를 내리치는 망치 · 불티 (둘째 — 첫째는 뒤에 원판). 2026-09-28 청동 문장 결
+fetch_icon 8281289d332c5f9ef3fbeb201f66a658 ui_icon_crystal   # 크리스탈 — 청동 받침에 박힌 보랏빛 결정 (둘째). 2026-09-28 청동 문장 결
+fetch_icon 0e5aee517a197368e18c01d4773a0277 ui_icon_bag       # 가방 — 버클 달린 가방 · 붉은 보석 (첫째). 2026-09-28 청동 문장 결
+fetch_icon 816bc186a1aa948ed25b033551a6796b ui_icon_dungeon   # 던전 — 뿔 달린 악마 해골 (첫째). 2026-09-28 청동 문장 결
+fetch_icon 8f015382ca28b68c6c41e9a465d9fd5c ui_icon_design    # 설계 — 톱니 위 컴퍼스 · 푸른 보석 (첫째). 2026-09-28 청동 문장 결
+fetch_icon 983070589a1c86df94bf5a5a15899a71 ui_icon_rank      # 랭킹 — 월계관 두른 트로피 · 붉은 보석 (첫째). 2026-09-28 청동 문장 결
 # 던전 종류 카드 — 받은 그림(다른 게임의 던전 창)을 참고로 물려 뽑은 풍경 · 틀 · 장식
 # (2026-09-28, docs/features/dungeons.md). 각 두 장 중 고른 것. 풍경은 9:16 이라 배경을 안 걷는다
 fetch_icon 835f847665366f9f3471ae4c32b7863f dungeon_raid     # 토벌 — 무너진 아치 투기장 · 뒤에 선 오거 (첫째)
@@ -350,9 +351,9 @@ fetch_icon ceb2c53d523649a6376b4c204144c8bd dungeon_trial    # 시련의 탑 —
 fetch_icon fa124e9f7d19ee8301a2be5ecab872a4 dungeon_treasure # 보물 창고 — 금고 문 · 상자 · 등불 (둘째)
 fetch_icon 95353ca131109a81562da8c056255962 ui_dungeon_card  # 카드 틀 — 닳은 돌판 · 얇은 청동 테 (둘째)
 fetch_icon bca3ac0f09670fe8e947153580b9216f ui_dungeon_crest # 카드 위 장식 — 창살 아치 문 + 덩굴 날개 (둘째)
-fetch_icon 1d6ec52fc177db8c81682be3655dd08a ui_icon_auto   # 자동사냥 — 검 두 자루가 X자. 2026-09-28 리니지풍 (둘째)
+fetch_icon d2942228957c0d7bcab9c3e8e56fa7ca ui_icon_auto   # 자동사냥 — 검 두 자루가 X자 · 붉은 보석 (첫째). 2026-09-28 청동 문장 결
 # 퀵슬롯 왼쪽 물약 칸 (2026-09-26) — 둥근 유리병 · 코르크 · 붉은 물약. 두 장 중 둘째(정면)
-fetch_icon 5557649aca52a51953baa065962e3cd7 ui_icon_potion # 2026-09-28 리니지풍으로 다시 — 둥근 유리병 · 끈 맨 코르크 (둘째)
+fetch_icon d626c5d54054f3b34512a71cddf31d94 ui_icon_potion # 물약 — 청동 세공 둥근 병 · 붉은 물약 (첫째). 2026-09-28 청동 문장 결
 fetch_icon 74df64ad7717d61a8ba37c600568f827 ui_auto_spin   # 자동사냥 고리 (굵은 화살표 — 얇은 것은 안 보였다)
 fetch_icon a1f540037c955a3489456f778db80665 ui_close       # 모든 창 오른쪽 위 닫기 X — 2026-09-28 가는 금빛 막대 X, 테두리 없음 (둘째, 사용자 참고 그림)
 fetch_icon 029c2be72082608b40dfaf00bebe782a ui_portrait    # 옛 초상 테두리 (미사용 — 상태판을 내리면서 빠졌다)

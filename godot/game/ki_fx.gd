@@ -34,7 +34,9 @@ const SWIRL_DELAY := 0.04
 const TRAVEL := 0.55
 const DRAW := 0.2
 const HOLD := 0.08
-const FADE := 0.26
+## 사그라드는 시간. 0.26 은 "한번에 너무 팍 사라진다" 였다 (2026-09-29) — 모양은 두고 알파만
+## 천천히 뺀다 (`_draw_swirl`)
+const FADE := 0.6
 ## 띠가 한 번에 보이는 길이 (나선 전체를 1 로 친다)
 const SWIRL_TRAIL := 0.8
 ## 도는 양(rad) — 앞으로 가는 동안
@@ -89,11 +91,11 @@ const FLASH_LIFE := 0.22
 const COLOR_FLASH := Color(1.0, 0.93, 0.72)
 
 const DUST_COUNT := 28
-const DUST_LIFE := 1.0
+const DUST_LIFE := 1.4
 const COLOR_DUST := Color(0.93, 0.86, 0.7)
 ## 기운 뭉치 — 참고 그림의 소용돌이 속 흰 덩어리. 빛이라 가산이다
 const AURA_COUNT := 16
-const AURA_LIFE := 0.6
+const AURA_LIFE := 0.9
 const COLOR_AURA := Color(1.0, 0.94, 0.78)
 const MOTE_COUNT := 36
 const MOTE_LIFE := 0.5
@@ -256,9 +258,11 @@ func _draw_swirl(swirl: Dictionary) -> void:
 	var tail := maxf(0.0, head - SWIRL_TRAIL)
 	var fade := clampf((s - DRAW - HOLD) / FADE, 0.0, 1.0)
 	# 사그라들 때 꼬리가 머리 쪽으로 모인다 — 제자리에서 옅어지기만 하면 "그림 한 장" 이 된다
+	# 꼬리를 조금만 모은다 — 0.85 까지 말아 넣었더니 띠가 줄어들며 한꺼번에 꺼져 보였다.
+	# 알파는 스무스스텝이라 천천히 빠지기 시작해 끝에서 길게 남는다 (스르륵)
 	if fade > 0.0:
-		tail = lerpf(tail, head, SkillFx._ease_out(fade) * 0.85)
-	var alpha := 1.0 - fade * fade
+		tail = lerpf(tail, head, SkillFx._ease_out(fade) * 0.3)
+	var alpha := 1.0 - smoothstep(0.0, 1.0, fade)
 	node.visible = alpha > 0.01 and head - tail > 0.01
 	if not node.visible:
 		return
@@ -427,7 +431,7 @@ func _make_dust() -> CPUParticles3D:
 	e.angular_velocity_max = 60.0
 	e.scale_amount_curve = LightningFx.grow_curve(2.0)
 	e.color = COLOR_DUST
-	e.color_ramp = LightningFx.fade_ramp(COLOR_DUST, 0.45)
+	e.color_ramp = soft_ramp(COLOR_DUST, 0.45)
 	var mat := LightningFx.mote(COLOR_DUST)
 	# 색은 입자 색으로만 — 재질 색까지 두면 두 번 곱해져 진흙색이 된다 (천붕각에서 배웠다)
 	mat.albedo_color = Color.WHITE
@@ -465,12 +469,25 @@ func _make_aura() -> CPUParticles3D:
 	e.scale_amount_curve = LightningFx.grow_curve(2.2)
 	e.color = COLOR_AURA
 	# 가산이라 겹치면 하얗게 탄다 — 0.55 에서 소용돌이를 덮는 흰 공이 됐다 (2차 시안)
-	e.color_ramp = LightningFx.fade_ramp(COLOR_AURA, 0.2)
+	e.color_ramp = soft_ramp(COLOR_AURA, 0.2)
 	var mat := LightningFx.mote(COLOR_AURA, true)
 	mat.albedo_color = Color.WHITE
 	mat.albedo_texture = FxTex.puff()
 	e.material_override = mat
 	return e
+
+
+## 뭉치·먼지가 사라지는 곡선 — **일찍부터 천천히** 빠진다. `LightningFx.fade_ramp` 는 수명의
+## 55% 까지 제 진하기로 있다가 끝에서 꺼져서 "팍" 사라졌다 (2026-09-29)
+static func soft_ramp(color: Color, peak: float) -> Gradient:
+	var ramp := Gradient.new()
+	ramp.set_color(0, Color(color.r, color.g, color.b, peak))
+	ramp.set_offset(1, 0.25)
+	ramp.set_color(1, Color(color.r, color.g, color.b, peak))
+	ramp.add_point(0.6, Color(color.r, color.g, color.b, peak * 0.45))
+	ramp.add_point(0.85, Color(color.r, color.g, color.b, peak * 0.12))
+	ramp.add_point(1.0, Color(color.r, color.g, color.b, 0.0))
+	return ramp
 
 
 ## 금빛 알갱이 — 손바닥에서 앞 부채꼴로 튄다. 빛이라 가산이다

@@ -661,7 +661,6 @@ func _build_persistent() -> void:
 	_close_button(_rank_panel, _toggle_rank, 0)
 	_close_button(_potion_panel, _toggle_potion_panel, 0)
 	_close_button(_auto_panel, _toggle_auto_panel, 0)
-	_close_button(_skill_panel, _toggle_skills)
 	_close_button(_npc_panel, func() -> void: _npc_panel.visible = false)
 
 
@@ -2903,24 +2902,69 @@ func _fill_skill_cell(cell: PanelContainer, id: String, empty_text: String) -> v
 ## (둘 다 World 가 다시 본다 — 레벨이 모자라면 배우기가 거절되고 장착도 걸러진다).
 ## 틀은 한 번 짓고 `_redraw_skills` 가 내용만 채운다
 func _build_skill_panel() -> void:
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_ui_root.add_child(center)
+	# **던전 창과 같은 결이다** (2026-09-28 요청: "스킬 UI도 던전 UI와 비슷한 아트풍으로").
+	# 전체 화면 · 닳은 돌판 틀(`ui_dungeon_card`) · 왼쪽 위 문장 + 상아빛 제목 · 제목 밑 선.
+	# 틀 가장자리가 반투명이라 던전 창처럼 뒤에 불투명한 판을 깐다 (`DungeonBack` 과 같은 까닭)
+	var holder := Control.new()
+	holder.name = "SkillLayer"
+	holder.set_anchors_preset(Control.PRESET_FULL_RECT)
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ui_root.add_child(holder)
+	var back := ColorRect.new()
+	back.name = "SkillBack"
+	back.color = DungeonPanel.CARD_DARK
+	back.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	back.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	back.visible = false
+	holder.add_child(back)
 
 	_skill_panel = PanelContainer.new()
 	_skill_panel.visible = false
-	_skill_panel.add_theme_stylebox_override("panel", _frame_box("ui_panel", PANEL_MARGIN, 16))
-	center.add_child(_skill_panel)
+	_skill_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_skill_panel.add_theme_stylebox_override(
+		"panel", _frame_box("ui_dungeon_card", DungeonPanel.CARD_MARGIN, DungeonPanel.PAGE_PAD)
+	)
+	_skill_panel.visibility_changed.connect(func(): back.visible = _skill_panel.visible)
+	holder.add_child(_skill_panel)
 
-	var pad := MarginContainer.new()
-	for side in ["left", "right", "top", "bottom"]:
-		pad.add_theme_constant_override("margin_" + side, 28)
-	_skill_panel.add_child(pad)
+	var page := VBoxContainer.new()
+	page.add_theme_constant_override("separation", 12)
+	_skill_panel.add_child(page)
 
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 12)
+	page.add_child(head)
+	var emblem := TextureRect.new()
+	emblem.name = "Emblem"
+	emblem.texture = _icon("ui_icon_skill")
+	emblem.custom_minimum_size = Vector2(DungeonPanel.EMBLEM, DungeonPanel.EMBLEM)
+	emblem.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	emblem.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	emblem.visible = emblem.texture != null
+	head.add_child(emblem)
+	var title := Label.new()
+	title.text = "스킬"
+	title.add_theme_font_size_override("font_size", DungeonPanel.PAGE_TITLE_SIZE)
+	title.add_theme_color_override("font_color", DungeonPanel.PAGE_TITLE_COLOR)
+	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(title)
+	var close := _icon_button("ui_close", "X", _toggle_skills, CLOSE_BTN)
+	close.name = "close"
+	head.add_child(close)
+	var line := ColorRect.new()
+	line.color = GatePanel.HEAD_LINE
+	line.custom_minimum_size = Vector2(0, 2)
+	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	page.add_child(line)
+
+	# 세 칸은 가운데에 모은다 — 화면이 넓어도 칸이 벌어지지 않게
+	var middle := CenterContainer.new()
+	middle.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	page.add_child(middle)
 	var columns := HBoxContainer.new()
 	columns.add_theme_constant_override("separation", 26)
-	pad.add_child(columns)
+	middle.add_child(columns)
 
 	# 왼쪽 — 설명
 	var left := VBoxContainer.new()
@@ -2934,6 +2978,7 @@ func _build_skill_panel() -> void:
 	_skill_name = Label.new()
 	_skill_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_skill_name.add_theme_font_size_override("font_size", 30)
+	_skill_name.add_theme_color_override("font_color", DungeonPanel.PAGE_TITLE_COLOR)
 	left.add_child(_skill_name)
 
 	_skill_info = Label.new()
@@ -2955,14 +3000,6 @@ func _build_skill_panel() -> void:
 	var right := VBoxContainer.new()
 	right.add_theme_constant_override("separation", 12)
 	columns.add_child(right)
-
-	var head := HBoxContainer.new()
-	right.add_child(head)
-	var title := Label.new()
-	title.text = "스킬"
-	title.add_theme_font_size_override("font_size", 30)
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	head.add_child(title)
 
 	right.add_child(_caption("장착 중"))
 	var slots := HBoxContainer.new()
@@ -2994,9 +3031,9 @@ func _build_skill_panel() -> void:
 	buttons.alignment = BoxContainer.ALIGNMENT_END
 	buttons.add_theme_constant_override("separation", 12)
 	right.add_child(buttons)
-	_skill_unequip = _make_button("해제", _on_skill_unequip)
+	_skill_unequip = _gold_text(_make_button("해제", _on_skill_unequip))
 	buttons.add_child(_skill_unequip)
-	_skill_equip = _make_button("장착", _on_skill_equip)
+	_skill_equip = _gold_text(_make_button("장착", _on_skill_equip))
 	buttons.add_child(_skill_equip)
 
 	_build_upgrade_column(columns)
@@ -3011,17 +3048,14 @@ func _build_skill_panel() -> void:
 ## 막대와 `320 / 1000` 이 있고, 다 차면 "강화 완료" 로 바뀐다.
 ##
 ## 설명 칸 아래에 줄로 넣지 않고 칸을 하나 더 세웠다 — 창이 이미 580px 라 더하면
-## 720 을 넘는다. 옆으로는 1234px 로 1280 안에 든다. 조각은 설명 칸과 같은
-## `ui_slot` 테두리·고른 칸 테두리(`_pick_box`)·`ui_button` 이고 새 조각은 없다
+## 720 을 넘는다. 옆으로는 1234px 로 1280 안에 든다. 카드는 설명 칸과 같은 던전 결 평판
+## (`_stone_cell_box`), 고른 카드는 금 막대(`_stone_pick_box`), 단추는 `ui_button` — 새 조각은 없다
 func _build_upgrade_column(columns: HBoxContainer) -> void:
 	var column := VBoxContainer.new()
 	column.custom_minimum_size = Vector2(UPGRADE_W, 0)
 	column.add_theme_constant_override("separation", 10)
 	columns.add_child(column)
-	var title := Label.new()
-	title.text = "강화"
-	title.add_theme_font_size_override("font_size", 30)
-	column.add_child(title)
+	column.add_child(_caption("강화"))
 
 	_upgrade_cards.clear()
 	for slot in int(GameData.load_table("skills").get("upgradeMax", 2)):
@@ -3031,7 +3065,7 @@ func _build_upgrade_column(columns: HBoxContainer) -> void:
 	# 예전엔 경험치북 세 단추(하급·중급·상급)였다 — 2026-09-28 에 하나로 합쳤다
 	_upgrade_hint = _inv_label("", 17, INV_DIM)
 	column.add_child(_upgrade_hint)
-	_feed_button = _make_button("넣기", _on_feed_pressed)
+	_feed_button = _gold_text(_make_button("넣기", _on_feed_pressed))
 	_feed_button.custom_minimum_size = Vector2(UPGRADE_W, 70)
 	_feed_button.add_theme_font_size_override("font_size", 20)
 	column.add_child(_feed_button)
@@ -3041,7 +3075,7 @@ func _build_upgrade_column(columns: HBoxContainer) -> void:
 ## 스킬 칸처럼 **겉에 투명 단추(`hit`)를 덮어** 카드 어디를 눌러도 고른다
 func _make_upgrade_card(slot: int) -> PanelContainer:
 	var card := PanelContainer.new()
-	card.add_theme_stylebox_override("panel", _frame_box("ui_slot", 26, 10))
+	card.add_theme_stylebox_override("panel", _stone_cell_box())
 	var pad := MarginContainer.new()
 	pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	for side in ["left", "right", "top", "bottom"]:
@@ -3081,7 +3115,7 @@ func _make_upgrade_card(slot: int) -> PanelContainer:
 	pick.name = "pick"
 	pick.visible = false
 	pick.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	pick.add_theme_stylebox_override("panel", _pick_box())
+	pick.add_theme_stylebox_override("panel", _stone_pick_box())
 	card.add_child(pick)
 	var hit := Button.new()
 	hit.flat = true
@@ -3376,11 +3410,11 @@ func _refresh_switches() -> void:
 ##
 ## **`ui_subpanel` 을 쓰지 않는다.** ★ 그 그림은 가운데에 얇은 판이 있고 둘레가 넓은
 ## 빛번짐이라, 9조각으로 늘이면 판은 글자보다 작게, 빛번짐만 상자 크기로 그려진다 —
-## 능력·설명 글자가 상자 밖으로 삐져나와 보였다 (2026-09-19). 테가 그림 가장자리에
-## 붙어 있는 `ui_slot` 은 어떤 크기로 늘여도 테가 상자 끝에 온다
+## 능력·설명 글자가 상자 밖으로 삐져나와 보였다 (2026-09-19). 2026-09-28 부터는 조각 대신
+## 던전 단계 창의 칸과 같은 코드 평판(`_stone_cell_box`)이다 — 테가 늘 상자 끝에 온다
 func _sub_box(parent: Node, fill: bool) -> VBoxContainer:
 	var box := PanelContainer.new()
-	box.add_theme_stylebox_override("panel", _frame_box("ui_slot", 26, 10))
+	box.add_theme_stylebox_override("panel", _stone_cell_box())
 	if fill:
 		box.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	parent.add_child(box)
@@ -3397,9 +3431,39 @@ func _sub_box(parent: Node, fill: bool) -> VBoxContainer:
 func _caption(text: String) -> Label:
 	var label := Label.new()
 	label.text = text
-	label.add_theme_font_size_override("font_size", 20)
-	label.add_theme_color_override("font_color", Color(0.72, 0.8, 0.92))
+	label.add_theme_font_size_override("font_size", 22)
+	label.add_theme_color_override("font_color", DungeonPanel.CARD_SUB_COLOR)
 	return label
+
+
+## 스킬창의 상자 — 던전 단계 창의 보상 칸과 같은 어두운 평판에 가는 흙금빛 선
+## (`DungeonPanel._cell_box`). 둘레가 넓게 번지는 조각이 아니라 글자가 밖으로 나올 일도 없다
+func _stone_cell_box() -> StyleBox:
+	var box := StyleBoxFlat.new()
+	box.bg_color = DungeonPanel.CELL_BG
+	box.border_color = DungeonPanel.CELL_LINE
+	box.set_border_width_all(1)
+	box.set_content_margin_all(8)
+	return box
+
+
+## 고른 강화 카드 — 던전 단계 창의 고른 줄처럼 옅은 금빛 바탕 + 왼쪽 금 막대
+func _stone_pick_box() -> StyleBox:
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color(0.86, 0.75, 0.45, 0.14)
+	box.border_color = DungeonPanel.CARD_GOLD
+	box.set_border_width_all(1)
+	box.border_width_left = 4
+	return box
+
+
+## 단추 글자를 던전 창의 입장 단추처럼 금빛으로 (막히면 흐린 회색)
+func _gold_text(button: Button) -> Button:
+	for key in ["font_color", "font_pressed_color", "font_hover_color", "font_hover_pressed_color"]:
+		button.add_theme_color_override(key, DungeonPanel.CARD_GOLD)
+	button.add_theme_color_override("font_disabled_color", GatePanel.HERE_COLOR)
+	button.add_theme_font_size_override("font_size", 26)
+	return button
 
 
 func _toggle_skills() -> void:

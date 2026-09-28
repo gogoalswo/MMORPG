@@ -179,6 +179,7 @@ func _check_moves(game: Node3D) -> void:
 		[&"swing", {"id": me, "root_ms": 400}, "Jab"],
 		[&"skill", {"id": me, "skill": "frost_pillar", "root_ms": 400}, "FrostStomp"],
 		[&"skill", {"id": me, "skill": "thunder_fall", "root_ms": 400}, "Thunder"],
+		[&"skill", {"id": me, "skill": "nova_fist", "root_ms": 750, "delay_ms": 750}, "NovaFist"],
 	]
 	for c in cases:
 		game._on_event(c[0], c[1])

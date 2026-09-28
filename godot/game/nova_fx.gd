@@ -7,7 +7,7 @@ extends Node3D
 ## 겹겹이 솟고, 가운데가 하얗게 달아오르고, 금가루 불티가 흩날린다).
 ##
 ## 시간 순서 (시전부터 초):
-## - `IMPACT`(0.10) — 스트레이트(`Cross`)가 닿는 순간. 주먹 자리에 섬광이 튄다.
+## - `IMPACT`(0.10) — 주먹을 뻗는 순간(`NovaFist`). 주먹 자리에 섬광이 튄다.
 ## - `IMPACT` ~ `EXPLODE` — **끓는다.** 가운데 빛무리가 부풀며 떨리고, 흰·금빛
 ##   소용돌이 호(`GATHER_ARCS`)가 가운데를 감아 돌며 위로 솟고, 금가루가 흩날린다.
 ## - `EXPLODE`(0.75) — **대폭발.** 판정도 이때다(스킬 표의 `delayMs`). 큰 섬광,
@@ -26,7 +26,8 @@ extends Node3D
 ## **판정을 하지 않는다.** `World` 가 낸 `skill` 이벤트를 받아 그리기만 한다.
 ## 끝나면 스스로 풀로 돌아간다 (`FxPool`).
 
-## 주먹이 닿는 시각 — `Cross` 가 0.10초에 뻗는다 (characters-and-animation.md)
+## 주먹이 닿는 시각 — `NovaFist` 가 0.10초에 뻗는다 (characters-and-animation.md).
+## 동작은 0.70초까지 뻗은 채 버티다가 0.77초에 두 팔을 펼친다 — `EXPLODE` 와 같이 고친다
 const IMPACT := 0.10
 ## 터지는 시각 = 스킬 표의 `delayMs`(750ms). **둘은 같이 고친다** (`nova_fx_test.gd`)
 const EXPLODE := 0.75

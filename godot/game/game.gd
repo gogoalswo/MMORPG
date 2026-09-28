@@ -173,8 +173,8 @@ const SKILL_CLIPS := {
 	"sky_breaker": "SkyBreaker", "frost_pillar": "FrostStomp",
 	# 파천장은 동작을 새로 짓지 않았다 — 앞으로 내지르는 스트레이트를 쓴다
 	"ki_burst": "Cross",
-	# 폭렬권도 동작을 새로 짓지 않고 스트레이트를 쓴다 — 0.10초에 주먹이 닿는다
-	"nova_fist": "Cross",
+	# 폭렬권 — 0.10초에 주먹을 뻗고 버티다가 0.77초에 두 팔을 펼쳐 기를 터뜨린다
+	"nova_fist": "NovaFist",
 }
 ## 판정은 늦게 떨어지는데 **이펙트는 누르자마자 시작하는** 스킬. 폭렬권은 주먹이
 ## 닿는 순간부터 기운이 끓다가 판정 시각(`delayMs`)에 터진다 — 그 시각은 이펙트가

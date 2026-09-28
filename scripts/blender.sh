@@ -14,10 +14,24 @@ cd "$(dirname "$0")/.."
 VERSION=4.5.14   # LTS. 올릴 때는 docs/features/blender.md 도 같이 고친다
 DIR="$HOME/blender-bin"
 
+# 윈도우(Git Bash)는 휴대용 zip 을 따로 푼다 — 리눅스 tar 는 윈도우에서 안 돈다 (2026-09-29)
+WIN_DIR="$HOME/blender-win"
+WIN_EXE="$WIN_DIR/blender-$VERSION-windows-x64/blender.exe"
+
 BLENDER="${BLENDER:-}"
-for candidate in "$BLENDER" "$DIR/blender" "$(command -v blender || true)"; do
+for candidate in "$BLENDER" "$WIN_EXE" "$DIR/blender" "$(command -v blender || true)"; do
   [ -n "$candidate" ] && [ -x "$candidate" ] && BLENDER="$candidate" && break
 done
+
+case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) windows=1 ;; *) windows=0 ;; esac
+if [ "$windows" = 1 ] && { [ -z "$BLENDER" ] || [ ! -x "$BLENDER" ]; }; then
+  echo "블렌더 $VERSION 을 $WIN_DIR 에 받는다 (처음 한 번, 약 390MB)" >&2
+  url="https://download.blender.org/release/Blender${VERSION%.*}/blender-$VERSION-windows-x64.zip"
+  mkdir -p "$WIN_DIR"
+  curl -fsSL -o "$WIN_DIR/b.zip" "$url" || { echo "받기 실패: $url" >&2; exit 1; }
+  unzip -q "$WIN_DIR/b.zip" -d "$WIN_DIR" && rm -f "$WIN_DIR/b.zip" || { echo "풀기 실패" >&2; exit 1; }
+  BLENDER="$WIN_EXE"
+fi
 
 if [ -z "$BLENDER" ] || [ ! -x "$BLENDER" ]; then
   echo "블렌더 $VERSION 을 $DIR 에 받는다 (처음 한 번)" >&2

@@ -777,7 +777,11 @@ func _case_bag(game: Node3D) -> void:
 			var want := str(stat_names[index])
 			if not str(stat_labels[index].text).begins_with(want):
 				_fail("%d번째 스탯이 '%s' 여야 하는데 '%s'" % [index, want, stat_labels[index].text])
-			wrote += stat_labels[index].text + "  "
+			# 장비 몫이 0% 인 줄은 숨는다 (2026-09-28 요청)
+			if stat_labels[index].visible == str(stat_labels[index].text).ends_with(" +0%"):
+				_fail("'%s' 줄이 %s" % [stat_labels[index].text, "보인다" if stat_labels[index].visible else "숨었다"])
+			if stat_labels[index].visible:
+				wrote += stat_labels[index].text + "  "
 		print("  스탯 상자: %s" % wrote.strip_edges())
 
 	# 탭 — 네 개, 고른 것만 바뀐다 (재료 탭은 제작과 함께 없앴다)

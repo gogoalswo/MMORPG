@@ -2071,6 +2071,9 @@ static func stats_of(job: String, level: int, equipped: Dictionary) -> Dictionar
 	stats.maxHp = maxi(1, roundi(float(stats.maxHp) * (1.0 + float(gear.maxHp) / 100.0)))
 	# **상한이 없다** ★ (2026-09-23 지시: "상한 없애."). 치확 100% 면 늘 치명타,
 	# 공속은 `cooldown / (1 + 공속)` 이라 얼마든 올라가도 0 으로 안 나뉜다.
+	# 가방 옆 장비 창은 **장비 몫만** 적는다 (2026-09-28 요청) — 더하기 전 장비 합계를 같이 내린다
+	for key in ["crit", "critDamage", "attackSpeed"]:
+		stats["gear_" + key] = float(gear[key])
 	stats.crit = maxf(float(stats.crit) + gear.crit, 0.0)
 	stats.critDamage += gear.critDamage
 	stats.attackSpeed = maxf(float(stats.attackSpeed) + gear.attackSpeed, 0.0)

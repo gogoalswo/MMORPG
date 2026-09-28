@@ -2035,16 +2035,16 @@ func _redraw_bag() -> void:
 			slot if worn.is_empty() else _item_icon(worn)
 		)
 
-	# 스탯 여섯 — 상태바에 안 나오는 것까지 한자리에 모은다
+	# 스탯 여섯 — **장착한 장비가 올려 주는 몫만** 적는다 (2026-09-28 요청). 맨몸 값·최종 값은
+	# 캐릭터 정보 창(`_redraw_char`)이 풀어 적는다. 값은 판정이 내려준 `gear_*` 그대로다
 	var stats: Dictionary = me.get("stats", {})
-	var shown := [
-		"공격력 %d" % int(stats.get("attack", 0)),
-		"방어력 %d" % int(stats.get("defense", 0)),
-		"체력 %d" % int(stats.get("maxHp", 0)),
-		"치명타 %.0f%%" % (float(stats.get("crit", 0.0)) * 100.0),
-		"치명타 피해 %.0f%%" % (float(stats.get("critDamage", 0.0)) * 100.0),
-		"공격 속도 +%.0f%%" % (float(stats.get("attackSpeed", 0.0)) * 100.0),
-	]
+	var shown := []
+	for index in STAT_NAMES.size():
+		var key := str(["attack", "defense", "maxHp", "crit", "critDamage", "attackSpeed"][index])
+		var gear := float(stats.get("gear_" + key, 0.0))
+		# 치명타 피해만 `_bonus_text` 의 비율 목록에 없다 — 같은 모양(+N%)으로 ×100 해 적는다
+		var text := _bonus_text("crit" if key == "critDamage" else key, gear)
+		shown.append("%s %s" % [STAT_NAMES[index], text])
 	for index in _stat_labels.size():
 		_stat_labels[index].text = str(shown[index])
 

@@ -38,6 +38,16 @@ var _accounts := {}
 ## 계정마다 지금 사냥 중인 존 — `{zone, entered_at, roster, killed: {몬스터 id: 잡은 시각}}`.
 ## 메모리에만 둔다 (서버를 다시 켜면 다음 `enter` 부터 다시 센다)
 var _hunts := {}
+## 채팅 — 붙은 사람 모두에게 보낼 것(`take_outbox`), 최근 줄(welcome 에 싣는다), 도배 막기 통
+var outbox: Array = []
+var _chat_log: Array = []
+var _chat_buckets := {}
+const CHAT_MAX_LEN := 100
+const CHAT_HISTORY := 30
+const CHAT_BURST := 3
+const CHAT_REFILL_MS := 2000.0
+## 이 단계 이상으로 강화에 성공하면 모두에게 알린다
+const ANNOUNCE_ENHANCE := 7
 ## 서버 시계(ms). 테스트는 바꿔 끼워 시간을 앞으로 돌린다
 var clock: Callable = func() -> int: return Time.get_ticks_msec()
 
@@ -55,6 +65,8 @@ func handle(session: Dictionary, message: Variant) -> Dictionary:
 			return _hello(session, message)
 		"op":
 			return _op(session, message)
+		"chat":
+			return _chat(session, message)
 	return _error(message.get("id"), "unknown_type")
 
 
@@ -76,6 +88,7 @@ func _hello(session: Dictionary, message: Dictionary) -> Dictionary:
 		"t": "welcome",
 		"ledger": Ledger.view(account.ledger),
 		"last_req": int(account.get("last_req", 0)),
+		"chat": _chat_log.duplicate(true),  # 들어오기 전에 오간 말 — 채팅창이 비어 있지 않게
 	}
 	if account.has("token"):
 		reply["token"] = account.token  # 새로 만든 계정만 — 기기가 받아 둔다
@@ -129,7 +142,83 @@ func _op(session: Dictionary, message: Dictionary) -> Dictionary:
 	account["last_reply"] = reply
 	if not store.write(account):
 		return _error(req, "store_failed")
+	_announce(account, reply.events)
 	return reply
+
+
+## --- 채팅 (docs/features/server.md 5단계) ---
+
+## 말 한 줄. 받으면 **붙은 사람 모두에게**(`outbox`) 뿌리고 보낸 사람에게는 따로 답하지 않는다 —
+## 제 말도 방송으로 돌아와 채팅창에 적힌다. 이름은 **서버가 붙인다**(`display_name`) — 기기가
+## 보낸 이름을 믿으면 남의 이름으로 말할 수 있다
+func _chat(session: Dictionary, message: Dictionary) -> Dictionary:
+	var account: Dictionary = session.get("account", {})
+	if account.is_empty():
+		return _error(null, "no_hello")
+	var text := _clean(str(message.get("text", "")))
+	if text.is_empty():
+		return _error(null, "chat_empty")
+	# 도배 막기 — 연달아 `CHAT_BURST` 번, 그 뒤로는 `CHAT_REFILL_MS` 마다 한 번씩 찬다
+	var now := int(clock.call())
+	var bucket: Dictionary = _chat_buckets.get_or_add(account.id, {"left": float(CHAT_BURST), "at": now})
+	bucket.left = minf(float(CHAT_BURST), float(bucket.left) + float(now - int(bucket.at)) / CHAT_REFILL_MS)
+	bucket.at = now
+	if bucket.left < 1.0:
+		return _error(null, "chat_limit")
+	bucket.left = float(bucket.left) - 1.0
+	_say({"t": "chat", "from": display_name(str(account.id)), "text": text})
+	return {}
+
+
+## 알림 — 누가 무엇을 해냈다. 강화 +`ANNOUNCE_ENHANCE` 이상 성공만 알린다
+func _announce(account: Dictionary, events: Array) -> void:
+	var best := 0
+	var item := ""
+	for event in events:
+		match str(event.get("type", "")):
+			"enhanceResult":
+				if str(event.get("result", "")) == "success" and int(event.get("level", 0)) > best:
+					best = int(event.level)
+					item = str(event.get("name", ""))
+			"enhanceBatch":
+				for entry in event.get("results", []):
+					if int(entry.get("success", 0)) > 0 and int(entry.get("from", 0)) + 1 > best:
+						best = int(entry.from) + 1
+						item = ""
+	if best < ANNOUNCE_ENHANCE:
+		return
+	var what := ("%s +%d" % [item, best]) if not item.is_empty() else "+%d" % best
+	_say({"t": "chat", "system": true, "text": "%s 님이 %s 강화에 성공했습니다" % [display_name(str(account.id)), what]})
+
+
+func _say(line: Dictionary) -> void:
+	outbox.append(line)
+	_chat_log.append(line)
+	while _chat_log.size() > CHAT_HISTORY:
+		_chat_log.remove_at(0)
+
+
+## 방송할 것을 가져간다 (`GameServer` 가 붙은 사람 모두에게 보낸다)
+func take_outbox() -> Array:
+	var out := outbox
+	outbox = []
+	return out
+
+
+## 채팅에 보이는 이름 — 캐릭터 이름을 짓는 기능이 아직 없어서 계정 id 앞 네 자리로 짓는다.
+## 이름 짓기가 생기면 여기만 바꾼다
+static func display_name(account_id: String) -> String:
+	return "모험가#" + account_id.substr(0, 4).to_upper()
+
+
+## 줄바꿈·제어 문자를 빼고 앞뒤 공백을 자르고 `CHAT_MAX_LEN` 자에서 자른다
+static func _clean(raw: String) -> String:
+	var out := ""
+	for i in raw.length():
+		var code := raw.unicode_at(i)
+		if code >= 32 and code != 127:
+			out += raw[i]
+	return out.strip_edges().left(CHAT_MAX_LEN)
 
 
 ## JSON 은 숫자를 전부 실수로 준다 — 모양대로 바꾸고, 안 맞으면 null

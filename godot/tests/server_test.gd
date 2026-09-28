@@ -19,6 +19,7 @@ func _init() -> void:
 	_case_roster_matches_spawn()
 	_case_known_keys()
 	_case_kill_checks()
+	_case_chat()
 	_case_socket()
 	_wipe()
 
@@ -296,3 +297,57 @@ func _case_kill_checks() -> void:
 	now[0] += 10
 	if send.call("kill", [target]).get("reason") != "not_respawned":
 		_fail("되살아나기 전에 또 잡은 것을 받았다")
+
+
+## 채팅 — 모두에게 뿌리기 · 서버가 붙이는 이름 · 제어 문자 · 도배 막기 · 지난 줄 · 강화 알림
+func _case_chat() -> void:
+	var server := LedgerServer.new(AccountStore.new(DIR))
+	var now := [0]
+	server.clock = func() -> int: return now[0]
+	if server.handle({}, {"t": "chat", "text": "누구"}).get("reason") != "no_hello":
+		_fail("hello 전에 말을 받았다")
+	var a := {}
+	server.handle(a, {"t": "hello"})
+	var name := LedgerServer.display_name(str(a.account.id))
+
+	var reply := server.handle(a, {"t": "chat", "text": "  안녕\n하세요\u0007  ", "from": "운영자"})
+	var out := server.take_outbox()
+	if not reply.is_empty() or out.size() != 1:
+		_fail("말 한 줄이 방송 한 줄이 아니다: 답 %s · 방송 %s" % [reply, out])
+		return
+	if out[0].text != "안녕하세요" or out[0].from != name:
+		_fail("방송된 줄이 %s — 제어 문자를 빼고 이름은 서버가 붙여야 한다(%s)" % [out[0], name])
+	if server.handle(a, {"t": "chat", "text": " \n "}).get("reason") != "chat_empty":
+		_fail("빈 말을 받았다")
+	var long := "가".repeat(LedgerServer.CHAT_MAX_LEN + 50)
+	server.handle(a, {"t": "chat", "text": long})
+	if str(server.take_outbox()[0].text).length() != LedgerServer.CHAT_MAX_LEN:
+		_fail("긴 말을 %d 자에서 안 잘랐다" % LedgerServer.CHAT_MAX_LEN)
+
+	# 연달아 세 번까지 — 네 번째는 막히고, 시간이 지나면 다시 된다
+	server.handle(a, {"t": "chat", "text": "셋"})
+	if server.handle(a, {"t": "chat", "text": "넷"}).get("reason") != "chat_limit":
+		_fail("도배를 안 막았다")
+	now[0] += int(LedgerServer.CHAT_REFILL_MS)
+	if not server.handle(a, {"t": "chat", "text": "다시"}).is_empty():
+		_fail("기다린 뒤에도 막혔다")
+	server.take_outbox()
+
+	# 나중에 들어온 사람은 지난 줄을 welcome 으로 받는다
+	var b := {}
+	var welcome := server.handle(b, {"t": "hello"})
+	var texts: Array = welcome.get("chat", []).map(func(l: Dictionary) -> String: return str(l.text))
+	if not ("안녕하세요" in texts and "다시" in texts):
+		_fail("welcome 에 지난 줄이 없다: %s" % [texts])
+
+	# 강화 알림 — +7 이상 성공만
+	server._announce(a.account, [{"type": "enhanceResult", "result": "success", "level": 6, "name": "검"}])
+	server._announce(a.account, [{"type": "enhanceResult", "result": "destroy", "level": 9, "name": "검"}])
+	if not server.take_outbox().is_empty():
+		_fail("+6 성공이나 실패를 알렸다")
+	server._announce(a.account, [{"type": "enhanceResult", "result": "success", "level": 7, "name": "흑철 건틀릿"}])
+	server._announce(a.account, [{"type": "enhanceBatch", "results": [{"from": 8, "success": 1}, {"from": 3, "success": 2}]}])
+	var notices := server.take_outbox()
+	if notices.size() != 2 or not bool(notices[0].get("system", false)) \
+			or not str(notices[0].text).contains("흑철 건틀릿 +7") or not str(notices[1].text).contains("+9"):
+		_fail("강화 알림이 %s" % [notices])

@@ -15,6 +15,8 @@ extends RefCounted
 signal welcomed(ledger: Dictionary)
 signal replied(ledger: Dictionary, events: Array)
 signal failed(reason: String)
+## 채팅 한 줄 `{from, text}` 또는 알림 `{system: true, text}` — welcome 때는 지난 줄들이 차례로 온다
+signal chat(line: Dictionary)
 
 const TOKEN_PATH := "user://account.json"
 const RETRY_MS := 2000
@@ -46,6 +48,15 @@ func request(op: StringName, args: Array) -> void:
 	_pending.append(entry)
 	if ready:
 		_send(entry)
+
+
+## 말 한 줄을 보낸다. 붙어 있지 않으면 버리고 false — 채팅은 쌓아 두었다 보내지 않는다
+## (다시 붙었을 때 한참 전 말이 뒤늦게 가면 엉뚱하다). 이름은 서버가 붙인다
+func say(text: String) -> bool:
+	if not ready or text.strip_edges().is_empty():
+		return false
+	_ws.send_text(JSON.stringify({"t": "chat", "text": text}))
+	return true
 
 
 ## 아직 답을 못 받은 요청 수 (테스트·로딩 표시가 본다)
@@ -103,6 +114,10 @@ func _on_message(raw: Variant) -> void:
 				_save_token(str(message.token))
 			_welcome(int(message.get("last_req", 0)))
 			welcomed.emit(message.get("ledger", {}))
+			for line in message.get("chat", []):
+				chat.emit(line)
+		"chat":
+			chat.emit(message)
 		"result":
 			_drop(int(message.get("id", 0)))
 			replied.emit(message.get("ledger", {}), message.get("events", []))

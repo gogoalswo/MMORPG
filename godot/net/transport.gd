@@ -23,6 +23,11 @@ func send(_message: StringName, _payload: Dictionary) -> void:
 func snapshot() -> Dictionary:
 	return {}
 
+## 말을 주고받을 수 있나 — 서버에 붙었을 때만. 화면이 채팅 입력칸을 보일지 정한다
+func can_chat() -> bool:
+	return false
+
+
 ## 내 캐릭터 id
 func my_id() -> String:
 	return ""

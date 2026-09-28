@@ -15,9 +15,12 @@ extends PanelContainer
 ## `StyleBoxFlat` 으로 그린다. 글자는 `RichTextLabel` 로 얹는다 — 한 줄 안에서
 ## 머리말과 값의 색이 달라서다.
 ##
-## **입력을 받지 않는다.** 혼자 하는 판이라 말 걸 사람이 없어서 입력칸이 없고,
-## 창을 눌러도 밑의 땅이 눌린다(이동) — 창 뒤로 걸어가지 못하면 안 된다.
-## 서버가 붙어 말을 주고받게 되면 입력칸과 스크롤을 단다.
+## **창은 입력을 받지 않는다** — 창을 눌러도 밑의 땅이 눌린다(이동). 창 뒤로 걸어가지 못하면 안 된다.
+## **서버에 붙었을 때만** 맨 아래에 입력칸이 선다(`set_online`) — 혼자 노는 판에는 말 걸 사람이 없다.
+## 입력칸만 터치를 받는다. 남의 말(`add_chat`)과 알림도 같은 창에 적힌다 (docs/features/server.md 5단계).
+
+## 말 한 줄을 보냈다 (Enter · 폰 키보드의 완료)
+signal submitted(text: String)
 
 ## 창이 들고 있는 줄 수. 넘으면 오래된 것부터 지운다
 const MAX_LINES := 50
@@ -35,10 +38,18 @@ const HEAD := Color("#eeead7", 0.7)
 ## 금색과 나란히 서면 구분이 안 됐다 (2026-09-23). 흰빛은 고급(옅은 회청)과 가까웠다.
 ## 청록은 등급 일곱 색(흙·회청·초록·금·보라·파랑·빨강) 어디에도 없다
 const EXP := Color("#62e0cc")
+## 남이 한 말 — 상아빛 그대로 (머리말 자리에 이름)
+const SAY := Color("#eeead7")
+## 알림(강화 성공 같은 것) — 고른 탭·밝은 강조의 금빛
+const NOTICE := Color("#e3d092")
+## 입력칸 높이와 한 줄 최대 글자 (서버도 100자에서 자른다 — `LedgerServer.CHAT_MAX_LEN`)
+const INPUT_HEIGHT := 30
+const INPUT_MAX := 100
 
 ## [[머리말, 값], ...] — 창에 적힌 줄 (테스트가 읽는다)
 var _lines: Array = []
 var _text: RichTextLabel
+var _input: LineEdit
 
 
 func _init() -> void:
@@ -60,7 +71,60 @@ func _init() -> void:
 	_text.add_theme_font_size_override("normal_font_size", FONT_SIZE)
 	_text.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.7))
 	_text.add_theme_constant_override("outline_size", 4)
-	add_child(_text)
+	_text.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var column := VBoxContainer.new()
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_theme_constant_override("separation", 6)
+	add_child(column)
+	column.add_child(_text)
+
+	# 입력칸 — 같은 결(어두운 판 + 얇은 금테 + 상아빛 글자). 서버에 붙기 전에는 숨긴다
+	_input = LineEdit.new()
+	_input.visible = false
+	_input.max_length = INPUT_MAX
+	_input.placeholder_text = "말하기"
+	_input.custom_minimum_size = Vector2(0, INPUT_HEIGHT)
+	_input.add_theme_font_size_override("font_size", FONT_SIZE)
+	_input.add_theme_color_override("font_color", SAY)
+	_input.add_theme_color_override("font_placeholder_color", Color(SAY, 0.4))
+	var field := StyleBoxFlat.new()
+	field.bg_color = Color(0.098, 0.102, 0.098, 0.9)
+	field.border_color = BORDER
+	field.set_border_width_all(1)
+	field.set_content_margin_all(4)
+	field.content_margin_left = 8
+	_input.add_theme_stylebox_override("normal", field)
+	var focus := field.duplicate()
+	focus.border_color = Color("#dfc97a")
+	_input.add_theme_stylebox_override("focus", focus)
+	_input.text_submitted.connect(_on_submit)
+	column.add_child(_input)
+
+
+## 서버에 붙었나 — 붙었을 때만 입력칸을 보인다
+func set_online(on: bool) -> void:
+	_input.visible = on
+
+
+func is_online() -> bool:
+	return _input.visible
+
+
+## 남이 한 말 · 알림 한 줄. 말은 **글자 그대로** 적는다(`add_text` — BBCode 로 읽지 않는다)
+func add_chat(from: String, text: String, system := false) -> void:
+	if system:
+		add_line("알림", text, NOTICE)
+	else:
+		add_line(from, text, SAY)
+
+
+func _on_submit(text: String) -> void:
+	var said := text.strip_edges()
+	_input.clear()
+	# 보내면 입력칸에서 손을 뗀다 — 폰 키보드가 내려가고 단축키(1~4)가 다시 먹는다
+	_input.release_focus()
+	if not said.is_empty():
+		submitted.emit(said)
 
 
 ## 경험치 한 줄

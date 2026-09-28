@@ -91,6 +91,8 @@
 
 - 테스트 단추를 더하면 `_build_test_switches` 의 `column` 에 넣는다 — 그래야 같이 접힌다.
 - 테스트 모드에서 켤 것·줄 것을 늘리면 `_apply_play_mode` 와 `play_mode_test` 를 같이 고친다.
+- **테스트 모드는 서버에 붙지 않는다** — 서버 주소가 있어도 일반 모드만 붙는다(`LocalTransport.open`).
+  치트가 기기에서 장부를 바꾸는데 서버 답이 덮어 버리기 때문이다 → [server.md](server.md)
 
 ## 관련
 

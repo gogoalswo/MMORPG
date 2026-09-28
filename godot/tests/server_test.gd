@@ -92,14 +92,14 @@ func _case_hello_and_ops() -> void:
 
 	# 벗기 → 팔기. 판 값은 다시 보내도 한 번만 들어온다
 	var off := server.handle(session, {"t": "op", "id": 1, "op": "unequip", "args": ["weapon"]})
-	if off.get("t") != "result" or off.ledger.bag.size() != 1:
+	if off.get("t") != "result" or _gear(off.ledger.bag) < 0:
 		_fail("unequip 이 가방에 안 넣었다: %s" % off)
 		return
-	var sold := server.handle(session, {"t": "op", "id": 2, "op": "sell", "args": [0]})
+	var sold := server.handle(session, {"t": "op", "id": 2, "op": "sell", "args": [_gear(off.ledger.bag)]})
 	var gold := int(sold.ledger.gold)
-	if gold <= 0 or not sold.ledger.bag.is_empty():
+	if gold <= 0 or _gear(sold.ledger.bag) >= 0:
 		_fail("sell 이 골드를 안 줬다: %s" % sold.ledger)
-	var again := server.handle(session, {"t": "op", "id": 2, "op": "sell", "args": [0]})
+	var again := server.handle(session, {"t": "op", "id": 2, "op": "sell", "args": [_gear(off.ledger.bag)]})
 	if int(again.get("ledger", {}).get("gold", -1)) != gold:
 		_fail("같은 요청 번호를 두 번 판정했다 — 골드 %s → %s" % [gold, again.get("ledger", {}).get("gold")])
 
@@ -115,15 +115,15 @@ func _case_hello_and_ops() -> void:
 	# 남겨 둔 답은 **그때 값**이다 — 뒤에 바뀐 장부가 스며들면 안 된다
 	# (장부는 `Ledger.view` 가 복사한다. 이벤트의 inventory 가 가방을 그대로 가리키는 게 샌다)
 	var kept := JSON.stringify(sold)
-	server.handle(session, {"t": "op", "id": 3, "op": "unequip", "args": ["armor"]})
+	var armor := server.handle(session, {"t": "op", "id": 3, "op": "unequip", "args": ["armor"]})
 	if JSON.stringify(sold) != kept:
 		_fail("보낸 답(이벤트)이 나중 변경을 따라 바뀌었다")
 
 	# 같은 토큰으로 **두 번 붙어도 장부는 하나다** — 한쪽에서 판 것을 다른 쪽이 또 못 판다
 	var twin := {}
 	server.handle(twin, {"t": "hello", "token": welcome.token})
-	var first := server.handle(session, {"t": "op", "id": 4, "op": "sell", "args": [0]})
-	var second := server.handle(twin, {"t": "op", "id": 5, "op": "sell", "args": [0]})
+	var first := server.handle(session, {"t": "op", "id": 4, "op": "sell", "args": [_gear(armor.ledger.bag)]})
+	var second := server.handle(twin, {"t": "op", "id": 5, "op": "sell", "args": [_gear(armor.ledger.bag)]})
 	# 사본을 따로 들면 양쪽 골드가 똑같이 한 번씩만 늘어서 골드로는 못 잡는다 — **팔렸는지**를 본다
 	if first.events.is_empty() or not second.events.is_empty():
 		_fail("두 연결에서 같은 갑옷을 두 번 팔았다 — %s · %s" % [first.events, second.events])
@@ -141,7 +141,7 @@ func _case_rejects() -> void:
 			_fail("%s → %s 이어야 하는데 %s" % [pair[0], pair[1], reply])
 	server.handle(session, {"t": "hello"})
 	cases = [
-		[{"t": "op", "id": 1, "op": "kill", "args": [{}]}, "unknown_op"],
+		[{"t": "op", "id": 1, "op": "kill", "args": ["wolf"]}, "bad_args"],
 		[{"t": "op", "id": 2, "op": "grant_once", "args": ["x", {"id": "crystal", "count": 999}]}, "unknown_op"],
 		[{"t": "op", "id": 3, "op": "equip", "args": ["0"]}, "bad_args"],
 		[{"t": "op", "id": 4, "op": "equip", "args": []}, "bad_args"],
@@ -195,3 +195,11 @@ func _exchange(server: GameServer, client: WebSocketPeer, message: Dictionary) -
 				return parsed if typeof(parsed) == TYPE_DICTIONARY else {}
 		OS.delay_msec(5)
 	return {"t": "timeout"}
+
+
+## 가방에서 첫 장비 칸 번호 (재료 — 첫 선물 크리스탈 — 는 건너뛴다). 없으면 -1
+func _gear(bag: Array) -> int:
+	for i in bag.size():
+		if not Items.is_material(str(bag[i].get("id", ""))):
+			return i
+	return -1

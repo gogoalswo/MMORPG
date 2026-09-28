@@ -51,7 +51,7 @@ func find(token: String) -> Dictionary:
 	if str(parsed.get("secret_hash", "")) != parts[1].sha256_text():
 		return {}
 	parsed.erase("version")
-	return parsed
+	return Ledger.from_json(parsed)
 
 
 ## 통째로 쓴다. 임시 파일 → 이름 바꾸기

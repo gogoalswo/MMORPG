@@ -28,6 +28,10 @@ var _rng := RandomNumberGenerator.new()
 ## 장부 판정(드롭·경험치·가방·강화·스킬) — `_ledger_call` 로만 부른다 (docs/features/server.md).
 ## 굴림은 `_rng` 를 같이 쓴다 — 테스트가 그 씨앗으로 결과를 고정한다
 var _ledger := Ledger.new(_rng)
+## **서버에 붙어 있으면** 장부 요청을 이리로 보낸다 (`ServerLedger` — `request(op, args)`).
+## null 이면 `_ledger` 가 이 자리에서 판정한다 (테스트 모드 · 서버 주소가 없을 때).
+## 서버의 답은 `apply_ledger` 로 돌아온다
+var remote: Object = null
 ## 밖으로 내보낼 일들 (맞았다·죽었다·레벨 올랐다). Transport 가 비워 간다
 var _events: Array = []
 ## 아직 안 들어간 연타 (`hits` 가 2 이상인 스킬의 둘째 대부터).
@@ -680,11 +684,8 @@ func _kill(player: Dictionary, target: Dictionary, now: int) -> void:
 	target.respawn_at = now + int(target.respawn_ms)
 
 	# 보상(드롭·골드·경험치·레벨·전직 시험)은 장부가 굴린다 — `Ledger.kill`.
-	# 서버를 붙이면 서버가 제 스폰 명부로 이 처치를 다시 본다
-	_ledger_call(player, &"kill", [{
-		"level": int(target.level), "exp_reward": float(target.exp_reward),
-		"boss": bool(target.get("boss", false)), "zone": zone_id,
-	}])
+	# **종류와 존만 보낸다** — 수치는 장부가 표에서 찾는다 (서버가 기기의 수치를 믿지 않게)
+	_ledger_call(player, &"kill", [{"kind": str(target.kind), "zone": zone_id}])
 
 
 ## 죽은 몬스터를 제 시간에 되살린다
@@ -2054,9 +2055,29 @@ func _refresh_stats(player: Dictionary) -> void:
 ## 그래서 **장부를 바꾸는 코드를 World 에 새로 넣지 않는다** (`ledger.gd` 에 넣는다).
 ## 스탯은 늘 다시 만든다 — 장비·레벨이 그대로면 같은 값이 나온다
 func _ledger_call(player: Dictionary, op: StringName, args: Array = []) -> void:
+	if remote != null:
+		# 기기는 판정하지 않는다 — 답이 오면 `apply_ledger` 가 장부를 통째로 덮는다
+		remote.request(op, args)
+		return
 	var before := int(player.level)
 	_ledger.callv(op, [player] + args)
-	_events.append_array(_ledger.take_events())
+	_after_ledger(player, before, _ledger.take_events())
+
+
+## 서버의 답 — **장부 칸을 통째로 덮는다.** 기기가 먼저 바꿔 둔 것이 없으니 되돌릴 것도 없다
+func apply_ledger(player_id: String, ledger: Dictionary, events: Array) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	var before := int(player.level)
+	for key in Ledger.KEYS:
+		if ledger.has(key):
+			player[key] = ledger[key]
+	_after_ledger(player, before, events)
+
+
+func _after_ledger(player: Dictionary, before: int, events: Array) -> void:
+	_events.append_array(events)
 	_refresh_stats(player)
 	# 레벨이 오르면 체력을 채운다 — 체력은 장부가 아니라 전투 쪽 값이다
 	if int(player.level) > before:

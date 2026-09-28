@@ -18,6 +18,13 @@ const KEYS := [
 	"skill_upgrades", "skill_upgrade_exp", "skill_exp", "bag", "equipped", "granted",
 ]
 
+## **첫 선물** — 새 캐릭터가 한 번만 받는 것 `[[표시, 묶음], …]`. 로컬은 `LocalTransport.open` 이,
+## 서버는 계정을 만들 때 준다 — 서버는 기기의 `grant_once` 를 받지 않으니 목록이 한 곳이어야 한다.
+## 크리스탈 30개: 드랍이 0.01% 라 주워서는 시험해 볼 수 없다 (2026-09-23 요청 "가방에 30개 넣어")
+static func welcome_gifts() -> Array:
+	return [["crystal30", {"id": Items.crystal_id(), "count": 30}]]
+
+
 ## 시작 장비로 끼워 주는 부위 (`grant_starter_gear`)
 const STARTER_SLOTS := ["weapon", "armor"]
 
@@ -35,6 +42,26 @@ static func fresh(job: String) -> Dictionary:
 		"skill_upgrades": {}, "skill_upgrade_exp": {}, "skill_exp": 0,
 		"bag": [], "equipped": {}, "granted": [],
 	}
+
+
+## JSON 을 거친 장부를 되돌린다 — JSON 은 숫자를 전부 실수로 준다(`3` → `3.0`).
+## **정수인 실수는 정수로** 바꾼다. 강화 `+3.0` 이나 `grade == 2` 비교가 어긋나지 않게.
+## 서버가 계정 파일을 읽을 때, 기기가 서버 답을 받을 때 쓴다
+static func from_json(value: Variant) -> Variant:
+	match typeof(value):
+		TYPE_FLOAT:
+			return int(value) if value == floorf(value) and absf(value) < 9.0e15 else value
+		TYPE_ARRAY:
+			var list: Array = []
+			for each in value:
+				list.append(from_json(each))
+			return list
+		TYPE_DICTIONARY:
+			var out := {}
+			for key in value:
+				out[key] = from_json(value[key])
+			return out
+	return value
 
 
 ## 장부 칸만 **복사해** 떼어 낸다 — 서버가 기기에 내려보내는 것. 복사라서 나중에 장부가
@@ -72,9 +99,18 @@ func _inventory_changed(p: Dictionary) -> void:
 
 ## --- 처치 보상 ---
 
-## 몬스터를 잡았다 → 드롭·골드·경험치·레벨·전직 시험·던전 클리어. `target` 은
-## `{level, exp_reward, boss, zone}` — 서버를 붙이면 서버가 제 스폰 명부로 다시 본다
+## 몬스터를 잡았다 → 드롭·골드·경험치·레벨·전직 시험·던전 클리어. `target` 은 `{kind, zone}` —
+## **레벨·경험치·보스 여부는 여기서 표로 찾는다.** 기기가 수치를 보내면 서버가 그 값을 믿어야 한다.
+## 이 처치가 정말 있었는지(스폰 명부 · 최소 처치 시간)는 드롭 판정 단계에서 본다
 func kill(p: Dictionary, target: Dictionary) -> void:
+	var kinds: Dictionary = GameData.load_table("monsters").get("kinds", {})
+	var kind: Dictionary = kinds.get(str(target.get("kind", "")), {})
+	if kind.is_empty():
+		return
+	target = {
+		"level": int(kind.get("level", 1)), "exp_reward": float(kind.get("expReward", 0)),
+		"boss": bool(kind.get("boss", false)), "zone": str(target.get("zone", "")),
+	}
 	# 보상을 굴린다. **굴리는 쪽은 언제나 판정하는 쪽이다**
 	var loot := Items.roll_drop(int(target.level), str(p.job), rng)
 	p.gold = int(p.gold) + int(loot.gold)

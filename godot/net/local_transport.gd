@@ -10,21 +10,51 @@ extends Transport
 const MY_ID := "me"
 
 var _world: World
+## 서버에 붙었으면 장부는 여기로 간다 (docs/features/server.md 3단계). null 이면 혼자 논다
+var _server: ServerLedger = null
+
+
+## 서버 주소 — 명령줄 `-- --server=ws://…` 이 먼저, 없으면 프로젝트 설정 `mmorpg/server_url`.
+## **비어 있으면 서버 없이 논다** — GitHub Pages 화면은 서버가 없어서 비워 둔다
+static func server_url() -> String:
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--server="):
+			return arg.trim_prefix("--server=")
+	return str(ProjectSettings.get_setting("mmorpg/server_url", ""))
 
 
 func open(zone_id: String) -> void:
 	_world = World.new()
 	_world.open(zone_id)
 	_world.join(MY_ID)
-	# 저장한 것이 있으면 그 자리에서 이어서 시작한다
-	if _world.restore(MY_ID):
+	# 저장한 것이 있으면 그 자리에서 이어서 시작한다 (서버에 붙으면 장부 칸은 welcome 이 덮는다 —
+	# 자리·설정만 여기서 온다)
+	var restored := _world.restore(MY_ID)
+	if restored:
 		print("저장에서 이어서 시작: %s" % _world.zone_id)
-	else:
+	# **테스트 모드는 서버에 안 붙는다** — 치트가 기기에서 장부를 바꾸는데 서버 답이 덮어 버린다
+	var url := server_url()
+	if not url.is_empty() and PlayMode.current == PlayMode.NORMAL:
+		_attach(url)
+		return  # 시작 장비·첫 선물은 서버가 계정을 만들 때 준다
+	if not restored:
 		# 새 캐릭터 — 일반 등급 무기·갑옷을 끼워서 시작한다 (2026-09-26 요청)
 		_world.grant_starter_gear(MY_ID)
-	# 크리스탈 30개 — 한 번만 (2026-09-23 요청 "가방에 30개 넣어"). 드랍이 0.01% 라
-	# 주워서는 시험해 볼 수 없다. 받았다는 표시가 저장에 남는다
-	_world.grant_once(MY_ID, "crystal30", {"id": Items.crystal_id(), "count": 30})
+	# 첫 선물(크리스탈 30개) — 한 번만. 받았다는 표시가 저장에 남는다 (`Ledger.welcome_gifts`)
+	for gift in Ledger.welcome_gifts():
+		_world.grant_once(MY_ID, str(gift[0]), gift[1])
+
+
+func _attach(url: String) -> void:
+	_server = ServerLedger.new(url)
+	_server.welcomed.connect(func(ledger: Dictionary) -> void:
+		_world.apply_ledger(MY_ID, ledger, []))
+	_server.replied.connect(func(ledger: Dictionary, events: Array) -> void:
+		_world.apply_ledger(MY_ID, ledger, events))
+	_server.failed.connect(func(reason: String) -> void:
+		push_warning("서버가 요청을 거절했다: %s" % reason))
+	_world.remote = _server
+	print("서버에 붙는다: %s" % url)
 
 
 func send(message: StringName, payload: Dictionary) -> void:
@@ -137,6 +167,8 @@ func my_id() -> String:
 func _process(delta: float) -> void:
 	if _world == null:
 		return
+	if _server != null:
+		_server.poll()
 	_world.step(delta)
 	# 판정이 낸 일들을 화면으로 흘린다. 서버를 붙이면 이 자리가 소켓이 된다
 	for e in _world.drain_events():

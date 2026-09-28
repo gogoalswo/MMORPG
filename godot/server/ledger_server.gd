@@ -11,10 +11,12 @@ extends RefCounted
 ## 판정은 `Ledger`(`world/ledger.gd`) — 기기와 **같은 파일**이다.
 
 ## 기기가 부를 수 있는 장부 요청과 인자 모양. 여기 없는 것은 받지 않는다.
-##   s = 글자 · i = 정수 · k = 가방 번호(정수) 또는 슬롯(글자) · a = 정수 목록
-## **`kill` 은 아직 없다** — 처치 보고는 스폰 명부로 다시 봐야 해서 드롭 판정 단계에서 연다.
+##   s = 글자 · i = 정수 · k = 가방 번호(정수) 또는 슬롯(글자) · a = 정수 목록 · t = 처치 `{kind, zone}`
+## `kill` 은 **종류와 존만** 받는다 — 레벨·경험치·보스 여부는 `Ledger.kill` 이 표에서 찾는다.
+## 그 처치가 정말 있었는지(스폰 명부 · 최소 처치 시간)는 4단계에서 본다 — 그때까지는 믿는다.
 ## `grant_once` 는 끝까지 없다 — 기기가 "이걸 줘" 라고 할 수 있게 되면 끝이다
 const OPS := {
+	"kill": "t",
 	"learn_skill": "s",
 	"feed_upgrade": "si",
 	"equip": "i",
@@ -56,6 +58,8 @@ func _hello(session: Dictionary, message: Dictionary) -> Dictionary:
 	if account.is_empty():
 		var fresh := Ledger.fresh(World.DEFAULT_JOB)
 		ledger.grant_starter_gear(fresh)
+		for gift in Ledger.welcome_gifts():
+			ledger.grant_once(fresh, str(gift[0]), gift[1])
 		ledger.take_events()
 		account = store.create(fresh)
 		_accounts[account.id] = account
@@ -132,6 +136,10 @@ func _args(shape: String, raw: Variant) -> Variant:
 					out.append(int(value))
 				else:
 					return null
+			"t":
+				if typeof(value) != TYPE_DICTIONARY:
+					return null
+				out.append({"kind": str(value.get("kind", "")), "zone": str(value.get("zone", ""))})
 			"a":
 				if typeof(value) != TYPE_ARRAY:
 					return null

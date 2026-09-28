@@ -339,7 +339,7 @@
       "cooldown": 12000,
       "delayMs": 750,
       "castMs": 1200,
-      "range": 5,
+      "range": 7.5,
       "arc": 6.283185307179586,
       "power": 14,
       "maxTargets": 10,

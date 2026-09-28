@@ -537,7 +537,8 @@ const SKILL_LIST: SkillDef[] = [
      * 판정은 **폭발하는 순간**이다 (`delayMs`) — 주먹이 닿고(0.1초) 기운이 끓는 동안은
      * 아무도 안 맞고, 터질 때 둘레를 한꺼번에 친다. 그동안 발이 묶인다(천붕각과 같다).
      * `delayMs` 는 `NovaFx.EXPLODE` 와 같아야 한다 — `nova_fx_test.gd` 가 맞춰 본다.
-     * 폭발은 내 둘레 원(`arc` 2π)이고, 불덩이 끝이 사거리(5m) 안에서 멎는다.
+     * 폭발은 내 둘레 원(`arc` 2π)이고, 불덩이 끝이 사거리 안에서 멎는다. 사거리는 5m 였다가
+     * 이펙트를 1.5배로 키우며(2026-09-29 요청, `NovaFx.SIZE`) 7.5m 로 같이 넓혔다.
      * 동작은 `NovaFist`(블렌더) — 주먹을 뻗고 버티다 0.77초에 두 팔을 펼쳐 터뜨린다.
      * 클립 길이(1.2초)가 `castMs` 다.
      */
@@ -547,7 +548,7 @@ const SKILL_LIST: SkillDef[] = [
     cooldown: 12000,
     delayMs: 750,
     castMs: 1200,
-    range: 5.0,
+    range: 7.5,
     arc: Math.PI * 2,
     power: 14.0,
     maxTargets: 10,

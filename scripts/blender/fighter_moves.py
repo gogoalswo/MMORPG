@@ -204,9 +204,22 @@ NOVA_PUNCH = pose(GUARD,
                   lf=(0.12, -0.20, 0.078), rf=(-0.11, 0.14, 0.078), rfYaw=-10)
 NOVA_BRACE = pose(NOVA_PUNCH, hips=(0.0, -0.06, -0.12), spine=(18, 0, 16), head=(-10, 0, -28),
                   rh=(-0.01, -0.50, 0.78), lh=(0.04, -0.30, 0.72))
-# 떨림 — 버티는 자세에서 몸과 주먹을 조금씩 흔든다 (두 프레임마다 번갈아)
-NOVA_SHAKE = pose(NOVA_BRACE, hips=(0.0, -0.07, -0.13), spine=(20, 0, 13),
-                  rh=(0.01, -0.51, 0.79), lh=(0.05, -0.31, 0.73))
+# 떨림 — 버티는 자세에서 몸과 주먹을 **좌우로 번갈아** 흔든다 (두 프레임마다). 터질 때가
+# 가까울수록 세진다. 처음엔 1~2cm 로 네 번이라 안 보였다 (2026-09-29 "떨림을 더 크게")
+NOVA_SHAKES = 7
+
+
+def nova_shake(i):
+    s = (1 if i % 2 == 0 else -1) * (0.5 + 0.5 * i / (NOVA_SHAKES - 1))
+    b = NOVA_BRACE
+    return pose(b,
+                hips=(b["hips"][0] + 0.015 * s, b["hips"][1], b["hips"][2] - 0.01 * abs(s)),
+                spine=(b["spine"][0] + 3 * s, b["spine"][1], b["spine"][2] - 4 * s),
+                head=(b["head"][0] + 3 * s, b["head"][1], b["head"][2] + 4 * s),
+                rh=(b["rh"][0] + 0.03 * s, b["rh"][1], b["rh"][2] + 0.02 * s),
+                lh=(b["lh"][0] + 0.025 * s, b["lh"][1], b["lh"][2] - 0.015 * s))
+
+
 NOVA_BURST = pose(GUARD,
                   hips=(0.0, 0.0, -0.06), hipsR=(0, 0, 0),
                   spine=(-16, 0, 0), head=(-20, 0, 0),
@@ -287,9 +300,9 @@ CLIPS = {
             (0.45, GUARD, "BEZIER")],
     # 0.10 에 뻗고 0.70 까지 버티며 떨다가 0.77 에 터뜨린다 — 길이 1.2 = 스킬 표의 `castMs`
     "NovaFist": [(0.0, GUARD, "LINEAR"), (0.10, NOVA_PUNCH, "BEZIER"),
-                 (0.20, NOVA_PUNCH, "BEZIER"), (0.50, NOVA_BRACE, "LINEAR"),
-                 (0.567, NOVA_SHAKE, "LINEAR"), (0.633, NOVA_BRACE, "LINEAR"),
-                 (0.70, NOVA_SHAKE, "LINEAR"), (0.77, NOVA_BURST, "BEZIER"),
+                 (0.20, NOVA_PUNCH, "BEZIER")]
+                + [((9 + 2 * i) / FPS, nova_shake(i), "LINEAR") for i in range(NOVA_SHAKES)]
+                + [(0.77, NOVA_BURST, "BEZIER"),
                  (0.90, NOVA_BURST_HOLD, "BEZIER"), (1.02, NOVA_SETTLE, "BEZIER"),
                  (1.2, "IDLE", "BEZIER")],
     "Jab": [(0.0, GUARD, "LINEAR"), (0.09, JAB, "BEZIER"), (0.18, JAB, "BEZIER"),

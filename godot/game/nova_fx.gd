@@ -26,6 +26,11 @@ extends Node3D
 ## **판정을 하지 않는다.** `World` 가 낸 `skill` 이벤트를 받아 그리기만 한다.
 ## 끝나면 스스로 풀로 돌아간다 (`FxPool`).
 
+## **이펙트 전체 크기 배율** (2026-09-29 요청: "이펙트를 지금보다 1.5배 키워"). 아래 크기(m)·
+## 속도는 1배 기준이고, 쓰는 자리에서 곱한다 — 방출기는 속도·감속·중력을 같이 곱해야 **같은
+## 시간에 그만큼 멀리** 간다(`_grow`). 주먹 자리(`AHEAD`·`CORE_Y`)는 동작과 맞물려 곱하지 않는다.
+## 판정 사거리(스킬 표 `range`)도 같이 넓혔다 (5 → 7.5m) — `nova_fx_test.gd` 가 잰다
+const SIZE := 1.5
 ## 주먹이 닿는 시각 — `NovaFist` 가 0.10초에 뻗는다 (characters-and-animation.md).
 ## 동작은 0.70초까지 뻗은 채 버티다가 0.77초에 두 팔을 펼친다 — `EXPLODE` 와 같이 고친다
 const IMPACT := 0.10
@@ -197,26 +202,26 @@ static func span() -> float:
 
 ## 불덩이가 가운데에서 가장 멀리 가는 거리(m) — 멎는 거리 + 다 부푼 반지름
 static func fire_reach() -> float:
-	return FIRE_SPEED_MAX * FIRE_SPEED_MAX / (2.0 * FIRE_DAMP) + FIRE_SIZE * 2.2 * 0.5
+	return (FIRE_SPEED_MAX * FIRE_SPEED_MAX / (2.0 * FIRE_DAMP) + FIRE_SIZE * 2.2 * 0.5) * SIZE
 
 
 ## 흙먼지가 가운데에서 가장 멀리 가는 거리(m)
 static func dust_reach() -> float:
-	return DUST_SPEED_MAX * DUST_SPEED_MAX / (2.0 * DUST_DAMP) + DUST_SIZE * 2.0 * 0.5
+	return (DUST_SPEED_MAX * DUST_SPEED_MAX / (2.0 * DUST_DAMP) + DUST_SIZE * 2.0 * 0.5) * SIZE
 
 
 ## 노드를 만든다 — 한 번만. 되감기는 `_start`
 func _build() -> void:
 	var core_at := Vector3(0.0, CORE_Y, AHEAD)
-	_halo = _sheet(swirl_material(HALO_WIDTH, COLOR_HALO))
+	_halo = _sheet(swirl_material(HALO_WIDTH * SIZE, COLOR_HALO))
 	_halo.mesh = swirl_mesh()
 	_halo.position = core_at
 	# 셰이더가 폭을 벌리므로 경계 상자를 넉넉히 — 안 그러면 비껴 볼 때 통째로 잘린다
-	_halo.extra_cull_margin = 3.0
-	_core = _sheet(swirl_material(CORE_WIDTH, COLOR_CORE))
+	_halo.extra_cull_margin = 3.0 * SIZE
+	_core = _sheet(swirl_material(CORE_WIDTH * SIZE, COLOR_CORE))
 	_core.mesh = _halo.mesh
 	_core.position = core_at
-	_core.extra_cull_margin = 3.0
+	_core.extra_cull_margin = 3.0 * SIZE
 
 	_orb = _sheet(LightningFx.flare(COLOR_ORB))
 	var orb := QuadMesh.new()
@@ -225,19 +230,19 @@ func _build() -> void:
 	_orb.position = core_at
 	_flash = _sheet(LightningFx.flare(COLOR_FLASH))
 	var flash := QuadMesh.new()
-	flash.size = Vector2(FLASH_SIZE, FLASH_SIZE)
+	flash.size = Vector2.ONE * FLASH_SIZE * SIZE
 	_flash.mesh = flash
 	_flash.position = core_at
 
 	_scorch = _sheet(LightningFx.stain(COLOR_SCORCH))
 	var mark := PlaneMesh.new()
-	mark.size = Vector2(MARK_SIZE, MARK_SIZE)
+	mark.size = Vector2.ONE * MARK_SIZE * SIZE
 	_scorch.mesh = mark
 	_scorch.position = Vector3(0.0, GROUND, AHEAD)
 
 	_light = OmniLight3D.new()
 	_light.position = core_at
-	_light.omni_range = LIGHT_RANGE
+	_light.omni_range = LIGHT_RANGE * SIZE
 	_light.light_color = COLOR_LIGHT
 	add_child(_light)
 
@@ -248,6 +253,7 @@ func _build() -> void:
 	_smoke = _smoke_emitter()
 	_dust = _dust_emitter()
 	for e in _emitters():
+		_grow(e)
 		e.emitting = false
 		add_child(e)
 	_dust.position = Vector3(0.0, 0.25, AHEAD)
@@ -311,7 +317,7 @@ func _show() -> void:
 		orb_alpha = 0.8 * (1.0 - k)
 	_orb.visible = orb_alpha > 0.0
 	if _orb.visible:
-		_orb.scale = Vector3.ONE * orb_size
+		_orb.scale = Vector3.ONE * orb_size * SIZE
 		_orb.material_override.albedo_color = Color(COLOR_ORB.r, COLOR_ORB.g, COLOR_ORB.b, orb_alpha)
 
 	# 터지는 섬광 — 퍼지지 않고 제자리에서 사그라든다 (규칙 3절)
@@ -365,6 +371,18 @@ static func _emitter(count: int, life: float, explosive: float, radius: float) -
 	e.direction = Vector3.UP
 	e.spread = 180.0
 	return e
+
+
+## 방출기를 `SIZE` 배로 — 나오는 구 · 알갱이 크기 · 속도 · 감속 · 중력을 같이 곱한다.
+## 속도와 감속을 같이 곱하면 궤적이 시간은 그대로 거리만 `SIZE` 배가 된다
+static func _grow(e: CPUParticles3D) -> void:
+	e.emission_sphere_radius *= SIZE
+	(e.mesh as QuadMesh).size *= SIZE
+	e.initial_velocity_min *= SIZE
+	e.initial_velocity_max *= SIZE
+	e.damping_min *= SIZE
+	e.damping_max *= SIZE
+	e.gravity *= SIZE
 
 
 static func _dot(size: float) -> QuadMesh:
@@ -539,6 +557,9 @@ static func swirl_mesh() -> ArrayMesh:
 	var index := PackedInt32Array()
 	for strand in strands():
 		var path: PackedVector3Array = strand[0]
+		# 폭은 재질(`width`)이 `SIZE` 배로 벌린다 — 여기서는 자리만
+		for p in path.size():
+			path[p] *= SIZE
 		var last := path.size() - 1
 		var base := verts.size()
 		for p in path.size():

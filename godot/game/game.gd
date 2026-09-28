@@ -2458,15 +2458,13 @@ func _open_enhance() -> void:
 	})
 
 
-## 오른쪽 위 "강화" — 대상 없이 강화 팝업을 연다. 고른 장비가 없으니 **다중 강화 탭의
-## "전체" 목록**으로 연다 — 거기서 담아 강화한다. 한 개만 두드리려면 한 칸만 담으면 된다
+## 오른쪽 위 "강화" — 대상 없이 강화 팝업을 연다. **"단일 강화" · "전체" 목록**으로 열고
+## 장비부터 고르게 한다 — 고르기 전에는 다른 탭이 잠겨 있다 (2026-09-28. 그 전엔 다중 · 전체로 열었다)
 func _toggle_enhance() -> void:
 	if _enhance.visible:
 		_enhance.close()
 		return
 	_enhance.open({})
-	_enhance.pick_mode("multi")
-	_enhance.pick_filter("all")
 
 
 ## 강화 팝업이 한 개를 두드린 뒤 — **고른 칸은 결과를 따라간다.** 부서졌거나 일괄로 가방이

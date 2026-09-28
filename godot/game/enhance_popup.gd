@@ -11,17 +11,20 @@ extends Control
 ## 4. "한 단계씩 연출 넣어" → 자동은 타이머가 한 단계씩 보내고 "중지" 로 멈춘다
 ## 5. 리니지M "다중 강화" 그림 + "다중강화 ui를 이런식으로" → 지금 모양
 ##
-##   ┌ 장비 강화 ────────────── X ┐ ┌ 같은 아이템 │ 같은 등급 │ 전체 ┐
+##   ┌ 장비 강화 ────────────── X ┐ ┌ 전체 │ 같은 아이템 │ 같은 등급 ┐
 ##   │ [단일 강화] [다중 강화]      │ │ ▢ ▢ ▢ ▢                         │
 ##   │ 안내 · 담은 칸 7×2            │ │ ▢ ▢ ▢ ▢   ← 누르면 왼쪽에 담긴다 │
 ##   │ 강화 정보 표                  │ │ …                               │
 ##   │ ≫+1≫+2≫ … ≫+9  ← 목표        │ │ 담은 것 3/14   [모두 담기][비우기]│
 ##   │ 결과 한 줄        [다중 강화] │ └─────────────────────────────────┘
-##   └──────────────────────────────┘   (오른쪽 창은 다중 강화 탭에서만)
+##   └──────────────────────────────┘   (오른쪽 창은 두 탭이 같이 쓴다)
 ##
+## **처음은 늘 "단일 강화" · "전체"** 다 (2026-09-28). 대상 없이 열면 장비부터 고른다 —
+## 목록에서 하나를 누르기 전에는 "다중 강화" · "같은 아이템" · "같은 등급" 이 잠긴다 (거를 기준이 없다).
 ## 단일 강화 — 연 장비 하나. "강화" 는 한 단계, "자동 강화" 는 목표까지 한 단계씩.
+## 끼고 있는 것도 목록 앞에 나오고, 칸 왼쪽 위에 **E** 가 붙는다.
 ## 다중 강화 — 오른쪽 목록에서 담은 칸들을 **목표까지 한 바퀴씩**(칸마다 한 번) 되풀이한다.
-## 끼고 있는 것은 목록에 안 나온다 (판정도 가방 번호만 받는다).
+## 다중 목록에는 끼고 있는 것이 안 나온다 (판정도 가방 번호만 받는다).
 ## 요청: enhanceItem {where, key} · enhanceMany {indices, cap}. **한 요청 = 한 번**이라
 ## "중지" 가 그 자리에서 정말 멈춘다. 판정이 돌려준 새 가방 번호(`picked`)로 담은 칸을 이어 간다.
 ##
@@ -31,7 +34,8 @@ extends Control
 
 const TABS := ["one", "multi"]
 const TAB_TEXT := {"one": "단일 강화", "multi": "다중 강화"}
-const FILTERS := ["item", "grade", "all"]
+## 2026-09-28 "탭 순서를 전체, 같은 아이템, 같은 등급 순서로"
+const FILTERS := ["all", "item", "grade"]
 const FILTER_TEXT := {"item": "같은 아이템", "grade": "같은 등급", "all": "전체"}
 ## 왼쪽 창 안쪽 폭 — 화살표 아홉 개와 담은 칸 일곱이 한 줄에 들어간다
 const WIDTH := 440
@@ -86,8 +90,11 @@ var target: Dictionary = {}
 var ref: Dictionary = {}
 ## 다중 강화에 담은 칸 — 가방 번호. 판정의 `picked` 로 이어 간다
 var picked: Array = []
-## 오른쪽 목록 칸 k 가 가리키는 가방 번호
+## 오른쪽 목록 칸 k 가 가리키는 가방 번호. 끼고 있는 것(`_list_worn`)이 그 앞에 선다 —
+## 칸 k 는 끼운 수보다 작으면 `_list_worn[k]`, 아니면 `_list_view[k - 끼운 수]`
 var _list_view: Array = []
+## 목록 앞에 선 끼고 있는 장비의 슬롯 번호 (`Items.slots()` 순서). 단일 강화에서만 채운다
+var _list_worn: Array = []
 var _list_cells: Array = []
 
 var _game  # game.gd — class_name 이 없어서 이름 없이 든다
@@ -346,13 +353,14 @@ func _build_list() -> void:
 	list_foot_buttons = [all, clear]
 
 
-## 연다 — `where_index` 는 {where, index}. 탭은 "단일 강화", 목표는 한 단계 위
+## 연다 — `where_index` 는 {where, index} (비었으면 대상 없이). 탭은 **"단일 강화" · "전체"**,
+## 목표는 한 단계 위. 대상 없이 열면 목록에서 장비부터 고른다 — 그 전에는 다른 탭이 잠겨 있다
 func open(where_index: Dictionary) -> void:
 	target = where_index.duplicate()
 	var stack := _stack()
 	ref = _ref_of(stack)
 	mode = "one"
-	filter = "item"
+	filter = "all"
 	picked = []
 	_waiting = false
 	goal = mini(int(stack.get("enhance", 0)) + 1, Items.max_enhance())
@@ -383,6 +391,8 @@ func _compact() -> void:
 
 
 func pick_mode(key: String) -> void:
+	if _locked(key):
+		return
 	_compact()
 	mode = key
 	result.text = ""
@@ -394,8 +404,16 @@ func pick_mode(key: String) -> void:
 
 
 func pick_filter(key: String) -> void:
+	if _locked(key):
+		return
 	filter = key
 	redraw()
+
+
+## 탭이 잠겼나 — **장비를 하나 고르기 전에는** "전체" · "단일 강화" 만 산다 (2026-09-28
+## "전체 탭에서 아이템을 먼저 클릭해야 다른 탭들 잠금이 풀리도록"). 기준(`ref`)이 곧 고른 장비다
+func _locked(key: String) -> bool:
+	return ref.is_empty() and key in ["multi", "item", "grade"]
 
 
 func set_goal(level: int) -> void:
@@ -411,11 +429,14 @@ func set_goal(level: int) -> void:
 ## 목록 칸 k 를 누르면 — 단일은 그것을 대상으로 고르고, 다중은 담고(담긴 것이면 뺀다).
 ## **처음 담은 것이 목록 기준**이 된다 — "같은 아이템" · "같은 등급" 이 그것으로 거른다
 func toggle_list(k: int) -> void:
-	if running or k >= _list_view.size():
+	if running or k >= _list_worn.size() + _list_view.size():
 		return
-	var at: int = _list_view[k]
+	if k < _list_worn.size():
+		_choose({"where": "equip", "index": int(_list_worn[k])})
+		return
+	var at: int = _list_view[k - _list_worn.size()]
 	if mode == "one":
-		_choose(at)
+		_choose({"where": "bag", "index": at})
 		return
 	_compact()
 	if picked.has(at):
@@ -430,10 +451,10 @@ func toggle_list(k: int) -> void:
 	redraw()
 
 
-## 단일 — 목록에서 고른 가방 칸을 대상으로 삼는다. 목표는 한 단계 위.
+## 단일 — 목록에서 고른 칸(가방 번호 또는 끼운 슬롯 번호)을 대상으로 삼는다. 목표는 한 단계 위.
 ## 게임의 고른 칸(상세 창)은 비운다 — 대상이 바뀌었는데 두드린 결과를 옛 칸에 따라가게 하면 어긋난다
-func _choose(at: int) -> void:
-	target = {"where": "bag", "index": at}
+func _choose(where_index: Dictionary) -> void:
+	target = where_index
 	var stack := _stack()
 	ref = _ref_of(stack)
 	goal = mini(int(stack.get("enhance", 0)) + 1, Items.max_enhance())
@@ -496,8 +517,11 @@ func _stack() -> Dictionary:
 
 
 func _bag() -> Array:
-	var me: Dictionary = _game._transport.snapshot().get("players", {}).get(_game._transport.my_id(), {})
-	return me.get("bag", [])
+	return _me().get("bag", [])
+
+
+func _me() -> Dictionary:
+	return _game._transport.snapshot().get("players", {}).get(_game._transport.my_id(), {})
 
 
 ## 가방 번호 at 이 다중 강화에 들 수 있나 — 장비이고 목표 아래
@@ -521,6 +545,9 @@ func _picked_pieces(below: bool = false) -> int:
 
 ## 팝업을 채운다. 탭 불빛 · 목표 띠 · 단일/다중 · 단추 · 도는 동안의 잠금
 func redraw() -> void:
+	# 기준이 풀렸으면(다 빼고 비웠다) 거르는 탭도 "전체" 로 돌아간다 — 잠긴 탭이 켜진 채 남지 않게
+	if _locked(filter):
+		filter = "all"
 	_light(tabs, mode)
 	_light(filters, filter)
 	# 도는 동안은 목표를 다시 재지 않는다 — 단일은 바닥이 "지금 + 1" 이라 오를 때마다
@@ -544,9 +571,11 @@ func redraw() -> void:
 		_redraw_one()
 	else:
 		_redraw_multi()
-	# 도는 동안은 "중지" 하나만 산다
+	# 도는 동안은 "중지" 하나만 산다. 장비를 고르기 전에는 다른 탭이 잠긴다 (`_locked`)
 	for key in tabs:
-		tabs[key].disabled = running
+		tabs[key].disabled = running or (key != mode and _locked(key))
+	for key in filters:
+		filters[key].disabled = _locked(key)
 	go.disabled = go.disabled or running
 	if running:
 		run_button.text = "중지"
@@ -568,8 +597,13 @@ func _redraw_one() -> void:
 	var item := Items.get_item(str(stack.get("id", "")))
 	run_button.text = "자동 강화  →  +%d" % goal
 	if item.is_empty():
-		kind.text = "부서졌습니다" if not target.is_empty() else "대상이 없습니다"
-		kind.add_theme_color_override("font_color", _game.INV_WARN)
+		# 대상 없이 열었으면(오른쪽 위 메뉴) 고르라고 안내한다 — 붉은 경고가 아니다
+		if target.is_empty():
+			title_line.text = ""
+			kind.text = "강화할 장비를 선택해 주세요"
+		else:
+			kind.text = "부서졌습니다"
+			kind.add_theme_color_override("font_color", _game.INV_WARN)
 		_game._fill_cell(icon, {}, "", "")
 		_game._fill_detail_rows([], info)
 		go.disabled = true
@@ -648,34 +682,79 @@ func _redraw_multi() -> void:
 
 ## 오른쪽 목록을 채운다. 칸은 모자라면 더 짓고 남으면 감춘다 (가방 200칸을 매번 새로 짓지 않는다).
 ## 기준(`ref`)이 비었으면 — 아직 아무것도 안 골랐으면 — 어느 탭이든 전부 보인다.
-## 단일은 목표와 상관없이 더 오를 수 있는 것을 다 보인다 (목표는 고른 뒤에 정한다)
+## 단일은 목표와 상관없이 더 오를 수 있는 것을 다 보인다 (목표는 고른 뒤에 정한다).
+## **단일은 끼고 있는 것을 앞에 세우고 왼쪽 위에 E** 를 붙인다 (2026-09-28 "장착중인 아이템도
+## 목록에 나오도록"). 다중은 안 세운다 — 판정(`enhance_many`)이 가방 번호만 받는다
 func _redraw_list(bag: Array) -> void:
 	_list_view = []
+	_list_worn = []
 	var how := filter if not ref.is_empty() else "all"
 	var cap := goal if mode == "multi" else Items.max_enhance()
+	var ref_id := str(ref.get("id", ""))
+	var ref_grade := int(ref.get("grade", 1))
+	var worn: Array = []  # 칸 순서대로의 스택 — 끼운 것 뒤에 가방
+	if mode == "one":
+		var slots: Array = Items.slots()
+		var equipped: Dictionary = _me().get("equipped", {})
+		for n in slots.size():
+			var stack: Dictionary = equipped.get(str(slots[n]), {})
+			if Items.batch_match(stack, how, ref_id, ref_grade, cap):
+				_list_worn.append(n)
+				worn.append(stack)
 	for at in bag.size():
-		if Items.batch_match(bag[at], how, str(ref.get("id", "")), int(ref.get("grade", 1)), cap):
+		if Items.batch_match(bag[at], how, ref_id, ref_grade, cap):
 			_list_view.append(at)
-	while _list_cells.size() < _list_view.size():
+	var total := _list_worn.size() + _list_view.size()
+	while _list_cells.size() < total:
 		var cell: PanelContainer = _game._make_cell(toggle_list.bind(_list_cells.size()), LIST_CELL)
+		_worn_mark(cell)
 		list_grid.add_child(cell)
 		_list_cells.append(cell)
 	for k in _list_cells.size():
 		var cell: PanelContainer = _list_cells[k]
-		cell.visible = k < _list_view.size()
+		cell.visible = k < total
 		if not cell.visible:
 			continue
-		var stack: Dictionary = bag[_list_view[k]]
+		var is_worn := k < _list_worn.size()
+		var at: int = _list_worn[k] if is_worn else _list_view[k - _list_worn.size()]
+		var stack: Dictionary = worn[k] if is_worn else bag[at]
 		_game._fill_cell(cell, stack, "", _game._item_icon(stack))
+		cell.get_node("worn").visible = is_worn
 		if mode == "one":
-			cell.get_node("pick").visible = str(target.get("where", "")) == "bag" \
-					and int(target.get("index", -1)) == _list_view[k]
+			cell.get_node("pick").visible = str(target.get("where", "")) == ("equip" if is_worn else "bag") \
+					and int(target.get("index", -1)) == at
 		else:
-			cell.get_node("pick").visible = picked.has(_list_view[k])
+			cell.get_node("pick").visible = picked.has(at)
 	if mode == "one":
 		list_head.text = "강화할 장비를 고르세요"
 	else:
 		list_head.text = "담은 것 %d/%d" % [picked.size(), MULTI_MAX]
+
+
+## 목록 칸 왼쪽 위의 **E** — 끼고 있는 장비. 어두운 판 + 얇은 금테에 글자는 `Label` 로 얹는다
+## (ui-art-style). 칸(PanelContainer)은 자식을 칸 전체에 깔아서, 빈 틀 위에 앵커로 앉힌다
+func _worn_mark(cell: PanelContainer) -> void:
+	var holder := Control.new()
+	holder.name = "worn"
+	holder.visible = false
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cell.add_child(holder)
+	var mark := Label.new()
+	mark.text = "E"
+	mark.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	mark.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	mark.add_theme_font_size_override("font_size", 13)
+	mark.add_theme_color_override("font_color", _game.INV_GOLD_HI)
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color("#191a19")
+	box.border_color = Color("#b9a46c")
+	box.set_border_width_all(1)
+	box.set_corner_radius_all(2)
+	mark.add_theme_stylebox_override("normal", box)
+	mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	mark.position = Vector2(4, 4)
+	mark.size = Vector2(18, 18)
+	holder.add_child(mark)
 
 
 func _percent(odds: float) -> String:

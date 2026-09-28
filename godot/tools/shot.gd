@@ -468,9 +468,9 @@ func _hud(game: Node3D) -> void:
 ## 스킬 범위 표시(`SkillFx` 가 아니라 `SkillRange`). **무리 한가운데에서 찍는다** —
 ## 반경·각이 맞는지는 `skill_test.gd` 가 숫자로 보지만, 그게 화면에서 얼마나
 ## 덮는지는 찍어야만 안다 (설계에서 범위가 곧 사냥 속도라서 보는 값이다)
-## 존 풍경을 네 자리(도착 지점 · 차원문 앞 · 무리 · 화면 위쪽 끝)에서 찍어
+## 존 풍경을 네 자리(도착 지점 · 차원문 앞 · 오른쪽 끝 · 왼쪽 끝)에서 찍어
 ## `logs/scene_sheet.png`(2×2, 반 크기) 한 장으로 모은다. 한 장씩은 `logs/scene_N.png`
-const SCENE_SPOTS := [Vector2(0, 0), Vector2(-8, -7), Vector2(9, 7), Vector2(-11, 2)]
+const SCENE_SPOTS := [Vector2(0, 0), Vector2(-8, -7), Vector2(11, -6), Vector2(-11, 2)]
 
 
 func _scene(game: Node3D, zone: String) -> void:

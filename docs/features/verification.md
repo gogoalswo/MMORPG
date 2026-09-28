@@ -173,7 +173,7 @@ npm run shot:godot -- sky_breaker 8,27,54,108,243,432   # 찍을 프레임을 �
 npm run shot:godot -- rising_kick@225 # @각도(도, 0 = +Z) — 그 쪽을 보고 쓴다. 캐릭터 기준 이펙트는
                                       # 보는 쪽마다 화면 모양이 달라 두세 방향을 찍어 본다 (225 = 화면 위)
 npm run shot:godot -- portal         # 차원문 소용돌이 (스킬이 아니라 늘 켜진 이펙트)
-npm run shot:godot -- scene          # 존 풍경 — 덤불숲 네 자리(도착·문·무리·위쪽 끝) → logs/scene_sheet.png (2×2)
+npm run shot:godot -- scene          # 존 풍경 — 덤불숲 네 자리(도착·문·오른쪽 끝·왼쪽 끝) → logs/scene_sheet.png (2×2)
                                      # `scene:<존id>` 면 그 존. 몬스터 인식을 꺼서 풍경만 본다 (world-zones.md "덤불숲")
 npm run shot:godot -- fist           # 주먹 기운 등급 1~7(+9) 을 가까이 — 4열 판 한 장 (logs/shot_sheet.png)
 npm run shot:godot -- fist:enhance   # 강화 단계별 주먹 오로라 — 희귀·태초 +5~+9

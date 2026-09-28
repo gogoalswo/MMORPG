@@ -21,6 +21,8 @@ const WALK := 12.5
 ## 카메라 시선 기울기(피치 42도). 카메라 쪽 끝(+x · +z) 너머의 것은 끝에 선 캐릭터를
 ## 가리지 않게 이 기울기 아래로 눕힌다 — 높이 ≤ (끝까지 거리) × 이 값
 const SIGHT := 0.9
+## 풀포기를 이동 끝에서 이만큼 안쪽까지만 심는다 (포기 반폭 ≈ 0.3~0.4m)
+const EDGE_GAP := 0.35
 
 ## 존별 꾸밈. 좌표는 판정과 같은 (x, z) 미터다.
 ## - `tufts`      : 풀포기 수. `tuft_half` 안에 흩뿌린다 (카메라가 끝에 서도 화면 밖까지)
@@ -28,31 +30,27 @@ const SIGHT := 0.9
 ## - `trees`      : 나무 자리 [x, z, 높이(m), 방향(도)]. 모델은 `tree_models` 를 돌려 쓴다
 const RECIPES := {
 	"thicket": {
-		"tufts": 5200,
-		"tuft_half": 27.0,
+		"tufts": 1600,
+		"tuft_half": 12.5,
 		# 뿌리 쪽 · 잎 끝 색 — 지형의 풀 층(`looks`)과 맞춘다
 		# 끝 색이 형광 연두(#86a648)였을 때 "눈이 너무 아파" — 채도·밝기를 낮췄다
 		"tuft_colors": ["#26331a", "#6a7f3e"],
+		# 이동 끝 너머는 검은 바닥이라(terrain `void`) 풀·돌은 끝 안에만 둔다 — 걷는 땅 안이니
+		# 전부 발목 높이다. 끝 너머에 두던 큰 바위 무더기는 뺐다 (검은 바닥 위에 떠 보인다)
 		"rocks": [
-			# 화면 위쪽 두 변(-x · -z) 너머 — 크게
-			[-14.5, -2.0, 2.0, 7, 2.4],
-			[-3.0, -14.5, 2.0, 6, 2.1],
-			[-15.0, 9.0, 1.6, 5, 1.7],
-			[9.0, -15.0, 1.8, 6, 2.0],
-			[-18.0, -13.0, 2.5, 6, 2.6],
-			# 걷는 땅 안 — 발목 높이 돌
 			[-6.0, 7.0, 1.2, 4, 0.45],
 			[9.5, -3.5, 1.0, 3, 0.4],
 			[-3.5, -9.5, 0.9, 3, 0.4],
-			# 카메라 쪽 두 변(+x · +z) 너머 — 낮게
-			[14.5, 3.0, 1.2, 4, 0.5],
-			[2.0, 14.5, 1.4, 4, 0.5],
+			[-10.5, -1.5, 1.1, 4, 0.45],
+			[-1.5, -11.0, 1.0, 3, 0.4],
+			[3.0, 10.5, 0.9, 3, 0.35],
 		],
+		# 나무는 화면 위쪽 두 변(-x · -z)의 **끝선에 걸쳐** 선다 — 줄기는 검은 쪽(끝에서 0.6m),
+		# 가지는 숲 위로 드리운다. 카메라 쪽 두 변(+x · +z)에는 없다 (끝에 선 캐릭터 앞이라)
 		"trees": [
-			[-15.0, -8.5, 7.5, 20], [-17.5, 1.5, 8.5, 110], [-14.5, 6.0, 6.5, 250],
-			[-8.0, -15.5, 8.0, 70], [1.5, -17.0, 7.0, 160], [6.5, -14.5, 7.5, 300],
-			[-21.0, -18.0, 9.0, 200], [-23.0, -5.0, 9.5, 40], [-6.0, -22.0, 9.0, 340],
-			[13.0, -19.5, 8.0, 90], [-19.5, 12.5, 7.5, 180],
+			[-13.1, -7.5, 7.5, 20], [-13.1, -1.0, 8.5, 110], [-13.1, 5.5, 7.0, 250], [-13.3, 11.0, 6.5, 180],
+			[-5.0, -13.1, 8.0, 70], [1.5, -13.1, 7.0, 160], [8.0, -13.1, 7.5, 300],
+			[-13.6, -13.6, 9.0, 200],
 		],
 		"tree_models": ["prop_tree_a", "prop_tree_b"],
 	},
@@ -154,6 +152,9 @@ static func _tuft_placements(recipe: Dictionary, terrain: Terrain, rng: RandomNu
 			continue
 		if terrain.ground_mix(x, z).z > 0.5 and rng.randf() < 0.75:
 			continue
+		# 끝 너머는 검은 바닥 — 잎이 선을 넘어 검은 데로 삐져나가지 않게 조금 안쪽까지만
+		if maxf(absf(x), absf(z)) > WALK - EDGE_GAP:
+			continue
 		var skip := false
 		for f in flats:
 			if Vector2(x - float(f[0]), z - float(f[1])).length() < float(f[2]) * 0.8:
@@ -177,10 +178,11 @@ static func _tuft_placements(recipe: Dictionary, terrain: Terrain, rng: RandomNu
 				bt = minf(bt, 0.7)
 			bt = maxf(0.25, height_cap(bx, bz, bt))
 			var basis := Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(bt * rng.randf_range(0.9, 1.4), bt, bt * rng.randf_range(0.9, 1.4)))
+			if maxf(absf(bx), absf(bz)) > WALK - EDGE_GAP:
+				continue
 			xforms.append(Transform3D(basis, Vector3(bx, terrain.height_at(bx, bz) - 0.03, bz)))
-			# 색 흔들기(r) · 모양 씨앗(g) · 끝 너머 그늘(b) — 바닥 그늘과 같이 어두워진다
-			var dark := smoothstep(WALK, WALK + 2.5, maxf(absf(bx), absf(bz))) * float(terrain._recipe.get("edge_dark", 0.0))
-			customs.append(Color(rng.randf(), rng.randf(), dark, 0.0))
+			# 색 흔들기(r) · 모양 씨앗(g)
+			customs.append(Color(rng.randf(), rng.randf(), 0.0, 0.0))
 	return [xforms, customs]
 
 

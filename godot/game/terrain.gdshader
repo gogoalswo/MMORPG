@@ -39,6 +39,8 @@ uniform vec2 slope_dirt = vec2(0.92, 0.8);
 // 풀빛 얼룩의 양 끝 — 곱하는 색
 uniform vec3 shade_dark = vec3(0.6, 0.66, 0.55);
 uniform vec3 shade_sun = vec3(1.15, 1.18, 0.95);
+// 0 보다 크면 이 거리(맵 가운데서 x·z 중 큰 쪽) 너머는 검은 바닥 — 이동 끝 밖
+uniform float void_edge = 0.0;
 
 varying vec3 up_normal;
 
@@ -83,4 +85,11 @@ void fragment() {
 	NORMAL_MAP_DEPTH = normal_depth;
 	ROUGHNESS = dot(rough, vec4(w0, w1, w2, w3));
 	METALLIC = 0.0;
+	if (void_edge > 0.0) {
+		// 선을 또렷하게 — 몇 cm 만 부드럽게 넘겨 계단(깨짐)만 막는다
+		float out_ = smoothstep(void_edge, void_edge + 0.06, max(abs(UV.x), abs(UV.y)));
+		ALBEDO *= 1.0 - out_;
+		SPECULAR = 0.5 * (1.0 - out_);
+		ROUGHNESS = mix(ROUGHNESS, 1.0, out_);
+	}
 }

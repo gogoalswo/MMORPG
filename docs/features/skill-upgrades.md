@@ -339,6 +339,7 @@
 
 ## 손댈 때
 
+- **피해를 올리는 칸(배율·타수·장판·추가타)을 새로 넣으면 `godot/server/kill_check.gd` 의 `min_ms` 도 고친다** — 서버가 "이보다 빨리 못 잡는다" 를 셈한다. 모르는 칸이 생기면 `server_test` 가 실패해서 알려 준다 → [server.md](server.md)
 - **강화를 더할 때** — `SKILL_UPGRADES` 에 한 줄(`exp` 필수, 효과는 `stunMs` · `rangeMul` · `arcAdd` · `extraHits` · `zoneMs`·`zoneTickMs`·`zonePower` · `followMs`·`followPower` · `stunLook` 중에서) → `npm run export:godot`.
   효과가 새 종류면 `cast` 에 판정을, `_show_skill` 에 이펙트 분기를 더한다.
   효과 문구(`desc`)는 **카드(280px) 한 줄**에 들어가야 한다.

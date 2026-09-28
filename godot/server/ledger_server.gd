@@ -16,6 +16,7 @@ extends RefCounted
 ## 그 처치가 정말 있었는지(스폰 명부 · 최소 처치 시간)는 4단계에서 본다 — 그때까지는 믿는다.
 ## `grant_once` 는 끝까지 없다 — 기기가 "이걸 줘" 라고 할 수 있게 되면 끝이다
 const OPS := {
+	"enter": "s",
 	"kill": "t",
 	"learn_skill": "s",
 	"feed_upgrade": "si",
@@ -34,6 +35,11 @@ var ledger := Ledger.new()
 ## 한 번이라도 들어온 계정은 **메모리에 하나만** 둔다 (id → 계정). 같은 토큰으로 두 번 붙어도
 ## 두 연결이 같은 사전을 만진다 — 따로 읽으면 양쪽에서 같은 물건을 팔아 복사할 수 있다
 var _accounts := {}
+## 계정마다 지금 사냥 중인 존 — `{zone, entered_at, roster, killed: {몬스터 id: 잡은 시각}}`.
+## 메모리에만 둔다 (서버를 다시 켜면 다음 `enter` 부터 다시 센다)
+var _hunts := {}
+## 서버 시계(ms). 테스트는 바꿔 끼워 시간을 앞으로 돌린다
+var clock: Callable = func() -> int: return Time.get_ticks_msec()
 
 
 func _init(account_store: AccountStore) -> void:
@@ -100,7 +106,20 @@ func _op(session: Dictionary, message: Dictionary) -> Dictionary:
 	if args == null:
 		return _error(req, "bad_args")
 
-	ledger.callv(op, [account.ledger] + args)
+	match op:
+		"enter":
+			var locked := _enter(account, str(args[0]))
+			if not locked.is_empty():
+				return _error(req, locked)
+		"kill":
+			var why := _check_kill(account, args[0])
+			if not why.is_empty():
+				# **이상치는 기록만 한다** — 제재는 사람이 한다. 보상만 안 준다
+				print("처치 거절 %s %s: %s" % [account.id, why, JSON.stringify(args[0])])
+				return _error(req, why)
+			ledger.callv(op, [account.ledger] + args)
+		_:
+			ledger.callv(op, [account.ledger] + args)
 	var reply := {
 		"t": "result", "id": req,
 		"ledger": Ledger.view(account.ledger),
@@ -139,7 +158,10 @@ func _args(shape: String, raw: Variant) -> Variant:
 			"t":
 				if typeof(value) != TYPE_DICTIONARY:
 					return null
-				out.append({"kind": str(value.get("kind", "")), "zone": str(value.get("zone", ""))})
+				out.append({
+					"kind": str(value.get("kind", "")), "zone": str(value.get("zone", "")),
+					"id": str(value.get("id", "")),
+				})
 			"a":
 				if typeof(value) != TYPE_ARRAY:
 					return null
@@ -150,6 +172,44 @@ func _args(shape: String, raw: Variant) -> Variant:
 					list.append(int(each))
 				out.append(list)
 	return out
+
+
+## 존에 들어왔다. **게임에 있는 입장 규칙만 본다** — 전직 시험은 바로 다음 단계이고 레벨이 될 때만.
+## 일반 사냥터·던전은 막는 규칙이 없다 (`World.travel`). 들어올 때마다 명단을 새로 센다 —
+## 기기도 존을 다시 열면 몬스터를 새로 놓는다
+func _enter(account: Dictionary, zone: String) -> String:
+	if not GameData.zones().get("zones", {}).has(zone):
+		return "no_zone"
+	var tier := Skills.job_tier_of_zone(zone)
+	if tier > 0:
+		var p: Dictionary = account.ledger
+		if tier != int(p.get("job_tier", 0)) + 1 or int(p.level) < int(Skills.job_advance(tier).get("level", 0)):
+			return "zone_locked"
+	_hunts[account.id] = {"zone": zone, "entered_at": int(clock.call()), "roster": World.roster(zone), "killed": {}}
+	return ""
+
+
+## 처치 보고를 대 본다 (docs/features/server.md "처치 보고를 어떻게 믿나"). 되면 빈 글자
+func _check_kill(account: Dictionary, target: Dictionary) -> String:
+	var hunt: Dictionary = _hunts.get(account.id, {})
+	if hunt.is_empty():
+		return "no_zone"
+	if str(target.zone) != str(hunt.zone):
+		return "wrong_zone"
+	var entry: Dictionary = hunt.roster.get(str(target.id), {})
+	if entry.is_empty() or str(entry.kind) != str(target.kind):
+		return "not_in_roster"
+	var now := int(clock.call())
+	var available := float(hunt.entered_at)
+	if hunt.killed.has(target.id):
+		available = float(hunt.killed[target.id]) + float(entry.respawn_ms)
+		if now + KillCheck.SLACK_MS < available:
+			return "not_respawned"
+	var kind: Dictionary = GameData.load_table("monsters").get("kinds", {}).get(str(target.kind), {})
+	if not KillCheck.allows(now - available, KillCheck.min_ms(account.ledger, kind)):
+		return "too_fast"
+	hunt.killed[target.id] = now
+	return ""
 
 
 func _is_number(value: Variant) -> bool:

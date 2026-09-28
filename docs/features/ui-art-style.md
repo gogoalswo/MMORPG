@@ -29,8 +29,8 @@ HUD 와 스킬창·NPC 창이 이것으로 되어 있고, **앞으로 만드는 
 - **참고 그림**(받은 스크린샷 그대로): `https://3d.varco.ai/api/objects/6c80e88d6bc567159a81261d4b2f02b6.jpg`
   — `ImageInput` 에 넣어 물린다. 한글 글자가 들어 있어서 프롬프트에 `Ignore the captions in the reference` 를 넣는다.
 - **프롬프트 틀**은 [hud.md](hud.md) "메뉴 아이콘" 에 있다 (`<무엇>` · `<쓰임>` 만 간다).
-- 이 결로 만든 것: 오른쪽 위 메뉴 일곱 장 (2026-09-28). HUD 나머지(자동사냥 · 물약 · 닫기 X)도
-  같은 날 이 결로 옮기기로 했다.
+- 이 결로 만든 것: 오른쪽 위 메뉴 일곱 장, 이어서 HUD 나머지 셋 — 자동사냥(`ui_icon_auto`) ·
+  물약(`ui_icon_potion`) · 창 닫기 X(`ui_close`) (모두 2026-09-28). HUD 아이콘은 이제 전부 이 결이다.
 
 여기까지 오는 데 네 바퀴가 걸렸다. 지적받은 것을 순서대로 적어 둔다 —
 **다시 만들 때 같은 길을 또 돌지 않으려고** 남기는 문서다.
@@ -132,7 +132,7 @@ Everything around the emblem is flat pure black. No text, no letters.
   node -e "
   const sharp=require('sharp');
   Promise.all([
-    sharp('public/assets/icons/ui_icon_auto.png').resize(64,64,{fit:'contain',background:{r:0,g:0,b:0,alpha:0}}).toBuffer(),
+    sharp('public/assets/icons/ui_gate_here.png').resize(64,64,{fit:'contain',background:{r:0,g:0,b:0,alpha:0}}).toBuffer(),
     sharp('public/assets/icons/ui_gate_go.png').resize(64,64,{fit:'contain',background:{r:0,g:0,b:0,alpha:0}}).toBuffer(),
   ]).then(([a,b])=>sharp({create:{width:136,height:72,channels:3,background:{r:26,g:24,b:22}}})
     .composite([{input:a,left:4,top:4},{input:b,left:68,top:4}])

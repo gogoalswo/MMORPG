@@ -16,6 +16,13 @@ import type { MonsterSpawnDef } from './monsters.ts';
  * docs/ASSETS.md). 사냥터 20곳이 이 중 여섯을 나눠 쓰고, 돌판은 마을이 쓴다.
  */
 export const GROUND_KINDS = ['stone', 'grass', 'snow', 'dirt', 'sand', 'cobble', 'lava'] as const;
+
+/**
+ * 존 한 변(m) — 마을·사냥터·던전·전직 시험 전부 같다. 이동 가능 영역은 ±(33/2 - 4) = ±12.5.
+ * 92 → 62 → 66 (2026-09-23) → **33** (2026-09-28, "맵 크기를 지금의 반으로") — 한 변을 반으로.
+ * → docs/features/world-zones.md
+ */
+export const ZONE_SIZE = 33;
 export type GroundKind = (typeof GROUND_KINDS)[number];
 
 /**

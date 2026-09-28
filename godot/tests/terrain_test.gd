@@ -79,10 +79,11 @@ func _case_walkable(t: Terrain) -> void:
 	var lo := 1e6
 	var hi := -1e6
 	var steepest := 0.0
-	var x := -29.0
-	while x <= 29.0:
-		var z := -29.0
-		while z <= 29.0:
+	var e := float(Terrain.RECIPES.village.rim)
+	var x := -e
+	while x <= e:
+		var z := -e
+		while z <= e:
 			var h := t.height_at(x, z)
 			lo = minf(lo, h)
 			hi = maxf(hi, h)
@@ -103,7 +104,7 @@ func _case_rim(t: Terrain) -> void:
 	# 바깥 언덕 — 끝에서 솟고, 가장 가파른 곳도 카메라 시선보다 눕는다
 	var top := t.height_at(Terrain.HALF - 1, 0)
 	var steepest := 0.0
-	var e := 29.0
+	var e := float(Terrain.RECIPES.village.rim)
 	while e < Terrain.HALF - 1:
 		for dir in [Vector2(1, 0), Vector2(-1, 0), Vector2(0, 1), Vector2(0, -1)]:
 			var a := t.height_at(dir.x * e, dir.y * e)

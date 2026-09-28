@@ -87,8 +87,12 @@ func _run_scene() -> void:
 	# 차원문에 서면 고르는 화면이 뜬다
 	if game._gate_panel.visible:
 		_fail("아직 문에 안 섰는데 화면이 떠 있다")
-	me.x = 4.0
-	me.z = 0.0
+	# 문 자리는 존 데이터에서 읽는다 — 2026-09-28 에 (4, 0) 에서 화면 맨 위(-9, -9)로 옮겼다
+	var gate_at: Array = GameData.zone("village").get("gate", {}).get("position", [0, 0])
+	var gx := float(gate_at[0])
+	var gz := float(gate_at[1])
+	me.x = gx
+	me.z = gz
 	for i in 3:
 		await process_frame
 	if not game._gate_panel.visible:
@@ -153,13 +157,14 @@ func _run_scene() -> void:
 	# 문 아치를 누르면 창이 열린다 — **멀리 서 있어도 바로** 열린다
 	# (2026-09-18 요청: "포탈까지 안 걸어가도 클릭하면 UI 열리게")
 	game._gate_panel.close_panel()
-	me.x = 25.0
-	me.z = 25.0
+	# 도착 지점 — 문에서 12.7m (맵이 ±12.5 라 더 멀리는 못 선다)
+	me.x = 0.0
+	me.z = 0.0
 	for i in 3:
 		await process_frame
 	# 누르는 곳은 **소용돌이 원판뿐**이다 (2026-09-18: "지금 너무 넓어").
 	# 소용돌이는 문 반지름 2.6 기준 높이 2.44, 반지름 1.14 짜리 판이다
-	var swirl := Vector3(4.0, 2.6 * 2.0 * PortalSwirl.CENTER, 0.0)
+	var swirl := Vector3(gx, 2.6 * 2.0 * PortalSwirl.CENTER, gz)
 	var on_swirl: Vector2 = game._camera.unproject_position(swirl)
 	if not game._gate_tapped(on_swirl):
 		_fail("소용돌이를 눌렀는데 문으로 안 잡힌다 (%s)" % on_swirl)
@@ -170,11 +175,11 @@ func _run_scene() -> void:
 		elif game._marker.visible:
 			_fail("문을 눌렀는데 창 대신 걸어가는 표시가 떴다")
 	# 아치 돌기둥 꼭대기와 받침은 이제 문이 아니다
-	if game._gate_tapped(game._camera.unproject_position(Vector3(4.0, 4.8, 0.0))):
+	if game._gate_tapped(game._camera.unproject_position(Vector3(gx, 4.8, gz))):
 		_fail("아치 꼭대기가 아직 문으로 잡힌다 — 판이 너무 넓다")
-	if game._gate_tapped(game._camera.unproject_position(Vector3(4.0, 0.1, 0.0))):
+	if game._gate_tapped(game._camera.unproject_position(Vector3(gx, 0.1, gz))):
 		_fail("문 발치(받침)가 아직 문으로 잡힌다")
-	if game._gate_tapped(game._camera.unproject_position(Vector3(-9.0, 0.0, 0.0))):
+	if game._gate_tapped(game._camera.unproject_position(Vector3(gx + 13.0, 0.0, gz))):
 		_fail("문에서 먼 땅이 문으로 잡힌다")
 	if ResourceLoader.exists(Portal.MODEL):
 		print("  차원문 모델: 있음, 소용돌이를 누르면 창")

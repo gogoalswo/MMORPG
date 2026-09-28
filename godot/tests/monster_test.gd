@@ -48,10 +48,10 @@ func _case_village_empty() -> void:
 
 
 func _case_meadow_count() -> void:
-	# 보스 1 + 무리 4개 x 50 (밸런스 설계의 "한 그룹 50마리")
+	# 화면 아래 귀퉁이 무리 하나 x 16, 보스 없음 (2026-09-28 — world-zones.md)
 	var count := _mobs(_world("meadow")).size()
-	if count != 201:
-		_fail("초원 몬스터가 201이어야 하는데 %d" % count)
+	if count != 16:
+		_fail("초원 몬스터가 16이어야 하는데 %d" % count)
 
 
 func _case_no_overlap() -> void:
@@ -144,7 +144,7 @@ func _case_gate() -> void:
 	w.travel("me", "meadow")
 	if w.zone_id != "meadow":
 		_fail("고른 곳으로 안 갔다 (%s)" % w.zone_id)
-	elif _mobs(w).size() != 201:
+	elif _mobs(w).size() != 16:
 		_fail("옮긴 존에 몬스터가 안 났다")
 	else:
 		print("  차원문 알림 -> 골라서 %s, 몬스터 %d마리" % [w.zone_id, _mobs(w).size()])

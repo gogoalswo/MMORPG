@@ -16,20 +16,22 @@ extends Node3D
 ##
 ## 띠는 전부 **할퀴기 셰이더**(`SkillFx.CLAW_SHADER`)를 쓴다 — 메시는 게임 전체에서 한 번만
 ## 깔고, 셰이더가 `head`·`tail` 사이만 벌린다. 방향은 캐릭터 기준이다(루트를 보는 쪽으로 돌린다).
-## 판정 사거리(4m) 안에서 끝난다 — `REACH`.
+## 판정 사거리(6m) 안에서 끝난다 — `REACH`. 거리는 2026-09-29 에 1.5배로 늘렸다 (요청).
+## 이펙트는 판정 시각(스킬 표의 `delayMs`)에 선다 — 주먹을 내지르고 0.2초 멈춘 뒤다.
 
 ## 손바닥 높이 · 몸 앞 거리 (발밑 기준)
 const HEIGHT := 1.15
 const PALM := 0.55
-## 가장 먼 것이 닿는 곳 (발밑에서 앞으로). 판정 사거리 4m 안
-const REACH := 3.8
+## 가장 먼 것이 닿는 곳 (발밑에서 앞으로). 판정 사거리 6m 안 (처음 3.8m 의 1.5배)
+const REACH := 5.7
 
 ## 소용돌이 — 여덟 개가 `SWIRL_GAP` 씩 늦게 나온다
 const SWIRLS := 12
 const SWIRL_GAP := 0.025
 const SWIRL_DELAY := 0.04
 ## 앞으로 나가는 시간 · 그리는 시간 · 머무는 시간 · 사그라드는 시간
-const TRAVEL := 0.42
+## 거리를 1.5배로 늘리며 0.42 → 0.55 — 같은 시간이면 너무 빨라 한 번에 튄다
+const TRAVEL := 0.55
 const DRAW := 0.2
 const HOLD := 0.08
 const FADE := 0.26
@@ -40,7 +42,7 @@ const SPIN := 1.3
 const SWIRL_SEGMENTS := 48
 ## 소용돌이마다: 멈추는 거리(발밑에서 앞으로) · 감는 각 · 판 기울기 · 시작 각 · 도는 쪽
 ## 나선은 제 반지름의 `SWIRL_DEPTH` 배만큼 앞으로 깊다 — 가장 먼 것도 끝이 3.9m 다 (사거리 4m)
-const SWIRL_Z: Array[float] = [1.4, 2.6, 1.9, 3.1, 1.6, 2.8, 2.2, 3.3, 1.2, 2.4, 2.95, 1.75]
+const SWIRL_Z: Array[float] = [2.1, 3.9, 2.85, 4.65, 2.4, 4.2, 3.3, 4.95, 1.8, 3.6, 4.4, 2.6]
 const SWIRL_SWEEP: Array[float] = [4.2, 3.6, 4.6, 3.9, 3.4, 4.4, 3.8, 4.0, 3.2, 4.5, 3.7, 4.1]
 const SWIRL_TILT: Array[float] = [0.12, -0.18, 0.22, -0.08, 0.3, -0.26, 0.05, 0.16, -0.3, 0.2, -0.12, 0.26]
 const SWIRL_ROLL: Array[float] = [0.0, 2.4, 4.8, 1.1, 3.5, 5.9, 2.0, 4.1, 5.3, 0.7, 3.0, 1.6]
@@ -72,7 +74,7 @@ const STREAKS := 56
 const STREAK_SEGMENTS := 16
 const STREAK_DELAY := 0.03
 ## 토막이 선 끝까지 달리는 시간
-const STREAK_TIME := 0.55
+const STREAK_TIME := 0.7
 ## 토막 길이 (선 하나를 1 로 친다)
 const STREAK_TRAIL := 0.4
 ## 선마다 늦게 출발하는 폭 (선 길이 단위)
@@ -331,8 +333,8 @@ static func streak_mesh() -> ArrayMesh:
 		var yaw := rng.randf_range(-0.65, 0.65)
 		var pitch := rng.randf_range(-0.28, 0.32)
 		var dir := Vector3(sin(yaw) * cos(pitch), sin(pitch), cos(yaw) * cos(pitch))
-		var start := dir * rng.randf_range(0.2, 0.9)
-		var length := minf(rng.randf_range(1.6, 3.0), (REACH - PALM - start.z) / dir.z)
+		var start := dir * rng.randf_range(0.3, 1.35)
+		var length := minf(rng.randf_range(2.4, 4.5), (REACH - PALM - start.z) / dir.z)
 		var offset := rng.randf_range(0.0, STREAK_STAGGER)
 		var path := PackedVector3Array()
 		var param := PackedFloat32Array()
@@ -407,14 +409,14 @@ func _make_dust() -> CPUParticles3D:
 	var quad := QuadMesh.new()
 	quad.size = Vector2(1.2, 1.2)
 	e.mesh = quad
-	e.position = Vector3(0.0, 0.3, 1.2)
+	e.position = Vector3(0.0, 0.3, 1.8)
 	e.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
-	e.emission_box_extents = Vector3(0.5, 0.2, 0.6)
+	e.emission_box_extents = Vector3(0.5, 0.2, 0.9)
 	e.direction = Vector3(0.0, 0.35, 1.0)
 	e.spread = 30.0
-	# 멈추는 거리 = 속도² / (2 × 감속) — 가장 빠른 것도 사거리 안(발밑에서 3.8m 쯤)에서 선다
-	e.initial_velocity_min = 1.5
-	e.initial_velocity_max = 3.5
+	# 멈추는 거리 = 속도² / (2 × 감속) — 가장 빠른 것도 사거리 안(발밑에서 5.8m 쯤)에서 선다
+	e.initial_velocity_min = 2.0
+	e.initial_velocity_max = 4.3
 	e.damping_min = 3.0
 	e.damping_max = 4.0
 	e.gravity = Vector3(0.0, 0.3, 0.0)
@@ -450,9 +452,9 @@ func _make_aura() -> CPUParticles3D:
 	e.emission_sphere_radius = 0.2
 	e.direction = Vector3(0.0, 0.0, 1.0)
 	e.spread = 22.0
-	# 멈추는 거리 = 속도² / (2 × 감속) ≈ 2.9m — 손바닥(0.55m)에서 사거리 안
-	e.initial_velocity_min = 3.0
-	e.initial_velocity_max = 6.0
+	# 멈추는 거리 = 속도² / (2 × 감속) ≈ 4.5m — 손바닥(0.55m)에서 사거리 안
+	e.initial_velocity_min = 4.0
+	e.initial_velocity_max = 7.4
 	e.damping_min = 6.0
 	e.damping_max = 7.0
 	e.angle_min = -180.0
@@ -485,8 +487,8 @@ func _make_motes() -> CPUParticles3D:
 	e.emission_sphere_radius = 0.15
 	e.direction = Vector3(0.0, 0.1, 1.0)
 	e.spread = 28.0
-	e.initial_velocity_min = 3.0
-	e.initial_velocity_max = 7.0
+	e.initial_velocity_min = 4.0
+	e.initial_velocity_max = 9.0
 	e.damping_min = 8.0
 	e.damping_max = 10.0
 	e.scale_amount_curve = LightningFx.fade_curve()

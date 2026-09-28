@@ -46,6 +46,9 @@ npm run blender -- --python-expr "import bpy; print(bpy.app.version_string)"
 찾는 순서는 `$BLENDER` → `~/blender-bin/blender` → `PATH`. 셋 다 없으면
 `download.blender.org` 에서 휴대용 tar(380MB)를 `~/blender-bin` 에 푼다.
 **처음 한 번 약 30초**이고, 그 세션에서는 다시 받지 않는다.
+**윈도(Git Bash)에서는 윈도판 zip 을 받아 `~/blender-bin/blender.exe` 로 쓴다** (2026-09-29) —
+리눅스판 tar 는 윈도에서 심볼릭 링크를 못 풀어 "풀기 실패" 로 멈췄다. 가상 디스플레이 없이
+그냥 돈다.
 
 클라우드 세션은 컨테이너가 매번 새로 뜨므로 세션마다 한 번씩 받는다. 매번 0초로 하려면
 환경 설정의 **Setup script** 에 아래 줄을 넣는다 (고도도 그렇게 깔려 있다).

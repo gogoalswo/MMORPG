@@ -15,19 +15,32 @@ VERSION=4.5.14   # LTS. 올릴 때는 docs/features/blender.md 도 같이 고친
 DIR="$HOME/blender-bin"
 
 BLENDER="${BLENDER:-}"
-for candidate in "$BLENDER" "$DIR/blender" "$(command -v blender || true)"; do
+# 윈도(Git Bash)에서는 윈도판 zip 을 받는다 — 리눅스판 tar 는 심볼릭 링크를 못 풀어 실패했다 (2026-09-29)
+case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) WINDOWS=1 ;; *) WINDOWS= ;; esac
+for candidate in "$BLENDER" "$DIR/blender.exe" "$DIR/blender" "$(command -v blender || true)"; do
   [ -n "$candidate" ] && [ -x "$candidate" ] && BLENDER="$candidate" && break
 done
 
 if [ -z "$BLENDER" ] || [ ! -x "$BLENDER" ]; then
   echo "블렌더 $VERSION 을 $DIR 에 받는다 (처음 한 번)" >&2
-  url="https://download.blender.org/release/Blender${VERSION%.*}/blender-$VERSION-linux-x64.tar.xz"
-  tmp="$(mktemp)"
-  curl -fsSL -o "$tmp" "$url" || { echo "받기 실패: $url" >&2; rm -f "$tmp"; exit 1; }
-  mkdir -p "$DIR"
-  tar -xJf "$tmp" -C "$DIR" --strip-components=1 || { echo "풀기 실패" >&2; rm -f "$tmp"; exit 1; }
-  rm -f "$tmp"
-  BLENDER="$DIR/blender"
+  if [ -n "$WINDOWS" ]; then
+    url="https://download.blender.org/release/Blender${VERSION%.*}/blender-$VERSION-windows-x64.zip"
+    tmp="$(mktemp -d)"
+    curl -fsSL -o "$tmp/b.zip" "$url" || { echo "받기 실패: $url" >&2; rm -rf "$tmp"; exit 1; }
+    unzip -q "$tmp/b.zip" -d "$tmp" || { echo "풀기 실패" >&2; rm -rf "$tmp"; exit 1; }
+    rm -rf "$DIR"
+    mv "$tmp/blender-$VERSION-windows-x64" "$DIR"
+    rm -rf "$tmp"
+    BLENDER="$DIR/blender.exe"
+  else
+    url="https://download.blender.org/release/Blender${VERSION%.*}/blender-$VERSION-linux-x64.tar.xz"
+    tmp="$(mktemp)"
+    curl -fsSL -o "$tmp" "$url" || { echo "받기 실패: $url" >&2; rm -f "$tmp"; exit 1; }
+    mkdir -p "$DIR"
+    tar -xJf "$tmp" -C "$DIR" --strip-components=1 || { echo "풀기 실패" >&2; rm -f "$tmp"; exit 1; }
+    rm -f "$tmp"
+    BLENDER="$DIR/blender"
+  fi
 fi
 
 if command -v xvfb-run >/dev/null; then

@@ -171,8 +171,8 @@ const SWING_CLIPS := ["Jab", "Cross"]
 const SKILL_CLIPS := {
 	"rising_kick": "Claw", "thunder_fall": "Thunder",
 	"sky_breaker": "SkyBreaker", "frost_pillar": "FrostStomp",
-	# 파천장은 동작을 새로 짓지 않았다 — 앞으로 내지르는 스트레이트를 쓴다
-	"ki_burst": "Cross",
+	# 파천장 — 주먹을 내질러 0.2초 멈췄다가 기가 나간다
+	"ki_burst": "KiBurst",
 	# 폭렬권도 동작을 새로 짓지 않고 스트레이트를 쓴다 — 0.10초에 주먹이 닿는다
 	"nova_fist": "Cross",
 }

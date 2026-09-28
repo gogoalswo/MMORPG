@@ -21,6 +21,31 @@ const KEYS := [
 ## 시작 장비로 끼워 주는 부위 (`grant_starter_gear`)
 const STARTER_SLOTS := ["weapon", "armor"]
 
+
+## **새 계정의 장부** — 서버가 계정을 만들 때 쓴다. `World.join` 의 새 캐릭터 기본값과
+## 같아야 한다 (`server_test` 가 둘을 대 본다). 시작 장비는 따로 `grant_starter_gear` 로 준다.
+## 첫 스킬을 배운 채 시작한다 — 1레벨은 스킬 포인트가 0 이라 안 주면 아무것도 못 쓴다
+static func fresh(job: String) -> Dictionary:
+	var starter: Array = []
+	for id in Skills.for_job(job).slice(0, 1):
+		starter.append(str(id))
+	return {
+		"job": job, "job_tier": 0, "level": 1, "exp": 0, "gold": 0,
+		"skills": starter, "skill_points": 0,
+		"skill_upgrades": {}, "skill_upgrade_exp": {}, "skill_exp": 0,
+		"bag": [], "equipped": {}, "granted": [],
+	}
+
+
+## 장부 칸만 **복사해** 떼어 낸다 — 서버가 기기에 내려보내는 것. 복사라서 나중에 장부가
+## 바뀌어도 이미 보낸(남겨 둔) 답은 그대로다
+static func view(p: Dictionary) -> Dictionary:
+	var out := {}
+	for key in KEYS:
+		var value = p.get(key)
+		out[key] = value.duplicate(true) if value is Array or value is Dictionary else value
+	return out
+
 ## 드롭·옵션·강화를 굴린다. **굴리는 쪽은 언제나 판정하는 쪽이다.**
 ## 로컬에서는 `World._rng` 를 같이 쓴다 — 테스트가 그 씨앗으로 결과를 고정한다
 var rng: RandomNumberGenerator

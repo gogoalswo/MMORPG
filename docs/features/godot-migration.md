@@ -24,6 +24,7 @@ three.js 웹 클라이언트를 **고도 엔진으로 갈아타는 중**이다. 
 | `godot/world/stats.gd` | ★ `shared/balance.ts`+`gear.ts` 이식본 — 밸런스 설계의 레벨 곡선·피해 공식·몬스터 역산·장비 등급. **아직 판정에 안 쓴다** → [stat-balance.md](stat-balance.md) |
 | `godot/world/skills.gd` | `shared/skills.ts` 의 규칙 이식본 — 배울 수 있나·쿨타임·터지는 반경 |
 | `godot/world/items.gd` | `shared/items.ts` 이식본 — 등급·랜덤옵션·강화·드롭 |
+| `godot/server/` | **서버**(고도 헤드리스) — 웹소켓 · 게스트 계정 · 계정당 JSON 파일 · `ledger.gd` 로 판정. 기기는 아직 안 붙는다 → [server.md](server.md) |
 | `godot/world/ledger.gd` | **장부 판정** — 드롭·경험치·골드·가방·강화·스킬. `World` 는 `_ledger_call` 로만 부른다. 나중에 서버가 같은 파일로 판정한다 → [server.md](server.md) |
 | `godot/world/game_data.gd` | `data/*.json` 로더 |
 | `godot/world/save.gd` | `user://save.json` — 혼자 노는 저장 |

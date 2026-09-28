@@ -343,7 +343,7 @@ fetch_icon 1d6ec52fc177db8c81682be3655dd08a ui_icon_auto   # 자동사냥 — �
 # 퀵슬롯 왼쪽 물약 칸 (2026-09-26) — 둥근 유리병 · 코르크 · 붉은 물약. 두 장 중 둘째(정면)
 fetch_icon 5557649aca52a51953baa065962e3cd7 ui_icon_potion # 2026-09-28 리니지풍으로 다시 — 둥근 유리병 · 끈 맨 코르크 (둘째)
 fetch_icon 74df64ad7717d61a8ba37c600568f827 ui_auto_spin   # 자동사냥 고리 (굵은 화살표 — 얇은 것은 안 보였다)
-fetch_icon ded29ae67c8159023a1ffac24555f939 ui_close       # 모든 창 오른쪽 위 닫기 X — 2026-09-28 리니지풍 청동 막대 X (첫째)
+fetch_icon a1f540037c955a3489456f778db80665 ui_close       # 모든 창 오른쪽 위 닫기 X — 2026-09-28 가는 금빛 막대 X, 테두리 없음 (둘째, 사용자 참고 그림)
 fetch_icon 029c2be72082608b40dfaf00bebe782a ui_portrait    # 옛 초상 테두리 (미사용 — 상태판을 내리면서 빠졌다)
 
 node scripts/build-item-icons.mjs

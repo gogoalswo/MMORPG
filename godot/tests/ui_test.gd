@@ -519,8 +519,12 @@ func _case_status(game: Node3D) -> void:
 		var width := font.get_string_size(caption.text, HORIZONTAL_ALIGNMENT_LEFT, -1, caption.get_theme_font_size("font_size")).x
 		if width > cell.size.x:
 			_fail("메뉴 글자 '%s' 가 칸보다 넓다: %.0f > %.0f" % [caption.text, width, cell.size.x])
-		if cell.find_children("*", "TextureRect", true, false).is_empty():
+		var pics := cell.find_children("*", "TextureRect", true, false)
+		if pics.is_empty():
 			_fail("메뉴 단추 '%s' 에 그림이 없다 — npm run sync:godot 을 돌렸나" % names[i])
+		# 글자는 아이콘 **아래** 줄이다 — 겹치면 안 된다 (2026-09-28 지적 "아이콘이랑 글씨가 겹쳐 있는데")
+		elif caption.get_global_rect().position.y < (pics[0] as Control).get_global_rect().end.y:
+			_fail("메뉴 글자 '%s' 가 아이콘과 겹친다: 글자 %s · 아이콘 %s" % [names[i], caption.get_global_rect(), (pics[0] as Control).get_global_rect()])
 
 	# 눌러서 창이 열린다
 	game._menu_cells[1].find_child("hit", true, false).pressed.emit()

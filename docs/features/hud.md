@@ -38,7 +38,7 @@
 | 파일 | 역할 |
 |---|---|
 | `godot/game/game.gd` | `_build_level_badge` / `_make_bar` / `_refresh_status` — 퀵슬롯 위 묶음 |
-| ″ | `_icon_button` — 오른쪽 위 메뉴 단추 하나 (`_menu_cells` 에 담는다). `caption` 이면 아이콘 아래 이름 글자(`MENU_CAPTION*`) |
+| ″ | `_icon_button` — 오른쪽 위 메뉴 단추 하나 (`_menu_cells` 에 담는다). `caption` 이면 아이콘 네모 · 이름 글자를 세로로 쌓는다(`MENU_CAPTION_*`) |
 | ″ | `_build_skill_bar` — 묶음 전체(세로 상자) · 퀵슬롯 4칸 + 자동사냥 칸(`_auto_cell`)과 고리(`_auto_spin`) |
 | ″ | `_refresh_auto` / `_process` — 켜짐 표시와 고리 돌리기, `SpinRing`(그림이 없을 때) |
 | ″ | `_build_potion_cell` · `_refresh_potion` · `_build_potion_panel` · `_potion_step` — **물약 칸**과 설정 창(−/+ · 슬라이더). 아래 "물약 칸" |
@@ -315,9 +315,13 @@ frame.add_child(border)         # 채움 **다음**에 붙여야 위로 온다
 | 던전 | 뿔 달린 악마 해골 | `ui_icon_dungeon` |
 | 설계 | 톱니 · 두루마리 도면 위 컴퍼스 | `ui_icon_design` |
 
-- **글자는 그림에 굽지 않고 `Label`(이름 `caption`)로 얹는다.** 칸을 `MENU_CAPTION`(16) 만큼 늘여
-  아이콘 밑에 두고, 아이콘 발치와 `MENU_CAPTION_OVERLAP`(4) 만큼 겹친다 — 받은 그림도 글자가 밑동을
-  조금 덮는다. 14px · 상아(`#eeead7`) · 검은 테 5. 닫기 X 는 같은 `_icon_button` 을 쓰지만 글자를 안 단다.
+- **글자는 그림에 굽지 않고 `Label`(이름 `caption`)로 얹는다.** 칸 안을 `VBoxContainer` 로 나눠
+  **아이콘 네모(62) 아래 줄**에 둔다 (간격 `MENU_CAPTION_GAP` 1). 14px · 상아(`#eeead7`) · 검은 테 5.
+  닫기 X 는 같은 `_icon_button` 을 쓰지만 글자를 안 단다.
+  - ★ 처음엔 칸을 16px 늘이고 아이콘 발치와 4px 겹치게 했는데, 14px 글자의 줄 높이가 16 을 넘어
+    **글자가 아이콘을 덮었다** ("아이콘이랑 글씨가 겹쳐 있는데, 스크린샷처럼 아래에 넣어", 같은 날).
+    세로 상자는 글자 줄 높이만큼 칸을 알아서 늘이므로 겹칠 수가 없다. `ui_test` 가 글자 위끝이
+    아이콘 아래끝보다 아래인지 본다.
 - 그림이 없으면(동기화 안 함) 가운데 대신 글자를 띄우던 것은 `caption` 단추에서는 안 띄운다 — 아래 글자가 이미 있다.
 - **참고 그림**: 받은 스크린샷 그대로 올린 것 — `https://3d.varco.ai/api/objects/6c80e88d6bc567159a81261d4b2f02b6.jpg`
   (238×62, JPEG 45, 2.5KB). 같은 결로 한 장 더 만들 때 이 주소를 `ImageInput` 에 넣는다.

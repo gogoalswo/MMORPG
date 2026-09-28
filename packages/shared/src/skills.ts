@@ -555,14 +555,20 @@ export interface SkillUpgradeDef {
 /** 스킬 하나에 붙는 강화 수 */
 export const SKILL_UPGRADE_MAX = 2;
 
-export const SKILL_UPGRADES: SkillUpgradeDef[] = [
+/**
+ * **강화 필요 경험치 — 스킬의 전직 단계(`tier`)로 정한다** (2026-09-28 요청: 1000 고정에서
+ * 기본 1000 · 1차 1만 · 2차 5만 · 3차 20만 · 4차 100만). 강화 표에 손으로 적지 않고
+ * 여기서 채운다 — 같은 스킬의 두 강화는 늘 같은 값이다
+ */
+export const SKILL_UPGRADE_EXP_BY_TIER = [1000, 10000, 50000, 200000, 1000000];
+
+const UPGRADE_LIST: Omit<SkillUpgradeDef, 'exp'>[] = [
   {
     id: 'stun',
     skill: 'thunder_fall',
     name: '기절',
     // 상세 창(300px)의 한 줄에 들어가야 한다 — 색이 바뀌는 것은 적지 않는다
     desc: '맞은 적 3초 기절',
-    exp: 1000,
     stunMs: 3000,
   },
   {
@@ -571,7 +577,6 @@ export const SKILL_UPGRADES: SkillUpgradeDef[] = [
     skill: 'thunder_fall',
     name: '범위',
     desc: '범위 50% 증가',
-    exp: 1000,
     rangeMul: 1.5,
   },
   {
@@ -580,7 +585,6 @@ export const SKILL_UPGRADES: SkillUpgradeDef[] = [
     skill: 'rising_kick',
     name: '부채꼴',
     desc: '부채꼴 각도 40° 증가',
-    exp: 1000,
     arcAdd: (Math.PI * 40) / 180,
   },
   {
@@ -589,7 +593,6 @@ export const SKILL_UPGRADES: SkillUpgradeDef[] = [
     skill: 'rising_kick',
     name: '연타',
     desc: '다단 히트 2회 증가',
-    exp: 1000,
     extraHits: 2,
   },
   {
@@ -599,7 +602,6 @@ export const SKILL_UPGRADES: SkillUpgradeDef[] = [
     name: '진폭',
     // "대상 +5" 도 있었는데 명수 상한을 없애면서 뺐다 (2026-09-24)
     desc: '범위 50% 증가',
-    exp: 1000,
     rangeMul: 1.5,
   },
   {
@@ -609,7 +611,6 @@ export const SKILL_UPGRADES: SkillUpgradeDef[] = [
     name: '균열 지대',
     // 처음엔 40% 였다 — "너무 약해" 로 100% 로 올렸다 (2026-09-24)
     desc: '3초간 0.5초마다 100% 피해',
-    exp: 1000,
     zoneMs: 3000,
     zoneTickMs: 500,
     zonePower: 1.0,
@@ -621,7 +622,6 @@ export const SKILL_UPGRADES: SkillUpgradeDef[] = [
     skill: 'frost_pillar',
     name: '파쇄',
     desc: '부서지며 80% 한 번 더',
-    exp: 1000,
     followMs: 1100,
     followPower: 0.8,
   },
@@ -631,15 +631,19 @@ export const SKILL_UPGRADES: SkillUpgradeDef[] = [
     skill: 'frost_pillar',
     name: '빙결',
     desc: '맞은 적 2초 빙결',
-    exp: 1000,
     stunMs: 2000,
     stunLook: 'ice',
   },
 ];
 
+export const SKILL_UPGRADES: SkillUpgradeDef[] = UPGRADE_LIST.map((u) => ({
+  ...u,
+  exp: SKILL_UPGRADE_EXP_BY_TIER[SKILLS[u.skill]?.tier ?? 0],
+}));
+
 /**
  * **스킬 경험치북** — 쓰면 스킬창에서 고른 강화에 `exp` 만큼 들어간다. 세 종류
- * (사용자 선택: 하급 100 · 중급 500 · 상급 2000, 강화 하나에 1000). 가방에는 재료로
+ * (사용자 선택: 하급 100 · 중급 500 · 상급 2000. 강화 필요량은 `SKILL_UPGRADE_EXP_BY_TIER`). 가방에는 재료로
  * 들어간다 (`items.ts` 의 `MATERIALS` 가 이 표에서 만든다). **넘친 경험치는 버린다** —
  * 강화가 붙으면 그 강화에는 더 못 넣는다.
  */

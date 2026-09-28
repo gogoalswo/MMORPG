@@ -2082,8 +2082,16 @@ func _redraw_bag() -> void:
 		# 치명타 피해만 `_bonus_text` 의 비율 목록에 없다 — 같은 모양(+N%)으로 ×100 해 적는다
 		var text := _bonus_text("crit" if key == "critDamage" else key, gear)
 		shown.append("%s %s" % [STAT_NAMES[index], text])
+	# **0% 인 줄은 숨긴다** (같은 날 요청) — 격자가 숨은 칸을 건너뛰어 남은 줄이 앞으로 당겨진다.
+	# 하나도 안 남으면(맨몸) 빈 판이 남지 않게 상자째 숨긴다
+	var any := false
 	for index in _stat_labels.size():
-		_stat_labels[index].text = str(shown[index])
+		var label: Label = _stat_labels[index]
+		label.text = str(shown[index])
+		label.visible = not label.text.ends_with(" +0%")
+		any = any or label.visible
+	if not _stat_labels.is_empty():
+		_stat_labels[0].get_parent().get_parent().visible = any
 
 	# 가방 — 탭으로 거른 것만. 보이는 칸이 가방 몇 번째인지 적어 둔다
 	_bag_view.clear()

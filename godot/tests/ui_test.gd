@@ -496,20 +496,30 @@ func _case_status(game: Node3D) -> void:
 		_fail("경험치 글자가 띠 가운데가 아니다: %s" % exp_rect)
 
 	# 오른쪽 위 메뉴 — 화면 안, 묶음과 안 겹침.
-	# 스킬·가방·던전·설계(디버그) 넷이다 — 설계 재현 창은 문서 9장 5번의 디버그 수단이다
-	# 정보 · 스킬 · 강화 · 크리스탈 · 가방 · 던전 · 설계 (강화·크리스탈은 2026-09-24 에 가방 왼쪽에,
-	# 정보는 2026-09-25 에 맨 앞에 더했다)
-	if game._menu_cells.size() != 7:
-		_fail("오른쪽 위 단추가 7개여야 하는데 %d개" % game._menu_cells.size())
+	# 정보 · 스킬 · 강화 · 크리스탈 · 가방 · 던전 (강화·크리스탈은 2026-09-24 에 가방 왼쪽에,
+	# 정보는 2026-09-25 에 맨 앞에 더했다). 설계는 2026-09-28 에 오른쪽 맨 아래로 뺐다 — 아래에서 본다
+	if game._menu_cells.size() != 6:
+		_fail("오른쪽 위 단추가 6개여야 하는데 %d개" % game._menu_cells.size())
 		return
+	# 설계 단추 — 오른쪽 맨 아래 모서리에 붙고, 알파 0 이라 안 보이지만 누르면 창이 열린다
+	var design_rect: Rect2 = game._design_cell.get_global_rect()
+	if absf(design_rect.end.x - screen.x) > 1.0 or absf(design_rect.end.y - screen.y) > 1.0:
+		_fail("설계 단추가 오른쪽 맨 아래에 안 붙었다: %s (화면 %s)" % [design_rect, screen])
+	if game._design_cell.modulate.a != 0.0:
+		_fail("설계 단추가 보인다 — 알파가 0 이어야 한다: %s" % game._design_cell.modulate.a)
+	game._design_cell.find_child("hit", true, false).pressed.emit()
+	await process_frame
+	if not game._debug_panel.visible:
+		_fail("숨긴 설계 단추를 눌렀는데 설계 창이 안 열렸다")
+	game._toggle_debug()
 	var skill_rect: Rect2 = game._menu_cells[1].get_global_rect()
 	var bag_rect: Rect2 = game._menu_cells[4].get_global_rect()
 	if bag_rect.end.x > screen.x or skill_rect.position.y < 0.0 or bag_rect.position.y > 120.0:
 		_fail("메뉴 단추가 오른쪽 위에 안 붙었다: %s / %s" % [skill_rect, bag_rect])
 	if skill_rect.intersects(hp_rect) or skill_rect.intersects(badge):
 		_fail("메뉴 단추가 퀵슬롯 위 묶음과 겹친다")
-	# 아이콘 아래 이름 글자 (2026-09-28 요청) — 일곱 단추 모두, 칸 안에서 안 잘리고 아이콘 아래에 붙는다
-	var names := ["정보", "스킬", "강화", "크리스탈", "가방", "던전", "설계"]
+	# 아이콘 아래 이름 글자 (2026-09-28 요청) — 여섯 단추 모두, 칸 안에서 안 잘리고 아이콘 아래에 붙는다
+	var names := ["정보", "스킬", "강화", "크리스탈", "가방", "던전"]
 	for i in names.size():
 		var cell: Control = game._menu_cells[i]
 		var caption: Label = cell.find_child("caption", true, false)

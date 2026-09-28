@@ -1884,9 +1884,9 @@ func _land(player: Dictionary, skill: Dictionary, skill_id: String, upgrades: Ar
 		origin = {"x": aim.x, "z": aim.z}
 		reach = Skills.blast_radius(skill)
 
-	var attack := float(stats.attack) * float(skill.get("power", 1.0))
-	# 부채꼴 강화는 각을 넓힌다 — 한 바퀴를 넘지는 않는다
-	var arc := minf(TAU, float(skill.arc) + Skills.upgrade_sum(skill_id, upgrades, "arcAdd"))
+	# 위력 강화는 한 대를 키운다 — 연타·뒤따르는 한 대도 이 값에서 나간다
+	var attack := float(stats.attack) * float(skill.get("power", 1.0)) * Skills.power_mul(skill_id, upgrades)
+	var arc := float(skill.arc)
 	# **범위에 들어온 놈은 전부 맞는다** — 명수 상한이 없다 (2026-09-24 지시:
 	# "스킬 범위에 들어오면 모두 피격되게. 명수 제한 없애"). `maxTargets` 는 이제
 	# 때리느냐(0 은 회복기)와 단일기 착탄 반경(`Skills.blast_radius`)만 가른다

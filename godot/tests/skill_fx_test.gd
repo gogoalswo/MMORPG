@@ -1,8 +1,8 @@
 extends SceneTree
 
 ## 할퀴기 스킬 이펙트 — **초승달 세 번**이 앞 120° 를 번갈아 쓸고, 제 시간에
-## 사라지는지 본다. 강화("부채꼴" · "연타")가 붙으면 호가 길어지고 두 번 더 긁고
-## 보라가 되는지도 본다 (`_case_upgrades`).
+## 사라지는지 본다. "연타" 가 붙으면 두 번 더 긁고 보라가 되는지, "위력" 은 이펙트가
+## 그대로인지도 본다 (`_case_upgrades`).
 ##
 ## 모양의 **수치**(몇 번 · 몇 가닥 · 앞쪽인가 · 번갈아 도나 · 몇 px 인가 · 판정과
 ## 박자가 같은가 · 치웠나)는 노드로 읽는다. **생김새는 찍어서 본다** —
@@ -47,21 +47,15 @@ func _case_table() -> void:
 	var kick := Skills.get_skill("fighter", "rising_kick")
 	if int(kick.get("hits", 1)) != SkillFx.SLASHES:
 		_fail("판정은 %d타인데 이펙트는 %d번 긁는다" % [int(kick.get("hits", 1)), SkillFx.SLASHES])
-	# 강화도 판정 표와 같아야 한다 — 연타 +2 · 부채꼴 +40°
+	# 강화도 판정 표와 같아야 한다 — 연타 +2
 	var combo := Skills.upgrade("rising_kick", "combo")
-	var wide := Skills.upgrade("rising_kick", "wide")
 	if int(combo.get("extraHits", 0)) != SkillFx.COMBO_SLASHES:
 		_fail("연타 강화는 +%d타인데 이펙트는 +%d번" % [int(combo.get("extraHits", 0)), SkillFx.COMBO_SLASHES])
-	if absf(float(wide.get("arcAdd", 0.0)) - SkillFx.SWEEP_WIDE) > 1e-4:
-		_fail("부채꼴 강화는 +%.0f° 인데 이펙트는 +%.0f°" % [
-			rad_to_deg(float(wide.get("arcAdd", 0.0))), rad_to_deg(SkillFx.SWEEP_WIDE)])
 	if roundi(SkillFx.GAP * 1000.0) != int(kick.get("hitGap", 0)):
 		_fail("판정 간격 %dms 와 이펙트 간격 %.0fms 가 다르다" % [
 			int(kick.get("hitGap", 0)), SkillFx.GAP * 1000.0
 		])
-	# 쓸고 가는 각은 판정 부채꼴보다 넓어야 끝에 선 놈도 긁힌 것으로 보인다 (강화 뒤에도)
-	if SkillFx.SWEEP_ARC + SkillFx.SWEEP_WIDE < float(kick.arc) + float(wide.get("arcAdd", 0.0)):
-		_fail("부채꼴 강화 뒤 이펙트가 판정보다 좁다")
+	# 쓸고 가는 각은 판정 부채꼴보다 넓어야 끝에 선 놈도 긁힌 것으로 보인다
 	if SkillFx.SWEEP_ARC < float(kick.arc):
 		_fail("이펙트가 %.0f° 만 쓴다 — 판정 부채꼴 %.0f° 보다 좁다" % [
 			rad_to_deg(SkillFx.SWEEP_ARC), rad_to_deg(float(kick.arc))
@@ -214,14 +208,14 @@ func _active(fx: SkillFx) -> Array:
 	return fx._slashes.filter(func(s): return bool(s.active))
 
 
-## **강화** — "부채꼴" 이면 호가 180° (140 + 40), "연타" 면 다섯 번에 보라, 둘은 따로 논다.
-## 풀이 한 벌이라 **떼면 도로 세 번·청백·140°** 여야 한다
+## **강화** — "연타" 면 다섯 번에 보라, "위력"(`wide`)은 이펙트가 그대로다.
+## 풀이 한 벌이라 **떼면 도로 세 번·청백** 이어야 한다
 func _case_upgrades(game: Node3D) -> void:
 	var cases := [
-		[["wide"], 3, 180.0, false],
-		[["combo"], 5, 140.0, true],
-		[["wide", "combo"], 5, 180.0, true],
-		[[], 3, 140.0, false],
+		[["wide"], 3, false],
+		[["combo"], 5, true],
+		[["wide", "combo"], 5, true],
+		[[], 3, false],
 	]
 	for c in cases:
 		game._on_event(&"skill", {
@@ -234,14 +228,11 @@ func _case_upgrades(game: Node3D) -> void:
 			return
 		var halo: Color = _active(fx)[0].layers[0].color
 		var purple := halo.r > halo.g + 0.1
-		if _active(fx).size() != c[1] or absf(rad_to_deg(fx._sweep) - c[2]) > 0.5 or purple != c[3]:
-			_fail("%s: %d번 · %.0f° · 보라 %s (%d번 · %.0f° · 보라 %s 여야 한다)" % [
-				str(c[0]), _active(fx).size(), rad_to_deg(fx._sweep), purple, c[1], c[2], c[3]])
+		if _active(fx).size() != c[1] or purple != c[2]:
+			_fail("%s: %d번 · 보라 %s (%d번 · 보라 %s 여야 한다)" % [
+				str(c[0]), _active(fx).size(), purple, c[1], c[2]])
 		else:
-			print("  할퀴기 강화 %s: %d번 · %.0f° · %s" % [str(c[0]), c[1], c[2], "보라" if purple else "청백"])
-		# 긴 호도 메시 끝을 넘지 않는다 — 넘으면 머리가 메시 밖에서 멈춰 짧게 보인다
-		if fx._sweep > SkillFx.MESH_ARC + 1e-4:
-			_fail("쓸고 가는 각이 메시(%.0f°)보다 넓다" % rad_to_deg(SkillFx.MESH_ARC))
+			print("  할퀴기 강화 %s: %d번 · %s" % [str(c[0]), c[1], "보라" if purple else "청백"])
 		while _newest(game) != null:
 			await process_frame
 

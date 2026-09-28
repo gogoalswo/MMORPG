@@ -24,7 +24,8 @@
 | `packages/server/src/ZoneRoom.ts` | 굴리는 자리 — `handleNpcBuy` / `handleNpcEnhance` / 드롭 |
 | `packages/server/src/db.ts` | `toStack` / `withOptions` — 저장값 복원과 마이그레이션 |
 | `godot/world/items.gd` | 고도 이식본 — 드롭·상점·옵션·옛 id 옮기기 · 차수(`option_tiers`·`roll_tier_options`) · 재료(`get_material`·`stack_name`) |
-| `godot/world/world.gd` | `use_crystal` — 크리스탈 쓰기 · `_give` — 재료 겹치기 · `enhance_item` · `enhance_many`(고른 가방 번호 · `cap`) — 강화 (한 요청 = 한 번) |
+| `godot/world/ledger.gd` | **판정 알맹이** — `use_crystal` 크리스탈 쓰기 · `give` 재료 겹치기 · `enhance` · `enhance_many`(고른 가방 번호 · `cap`) — 강화 (한 요청 = 한 번) · `buy`/`sell` · 드롭(`kill`) → [server.md](server.md) |
+| `godot/world/world.gd` | 같은 이름의 요청 입구(`use_crystal` · `enhance_item` · `enhance_many` · `npc_*`) — NPC 거리만 보고 `_ledger_call` 로 넘긴다 |
 | `godot/game/enhance_popup.gd` | 강화 팝업 — 단일 강화 · 다중 강화(리니지M 식: 목록에서 담기 · 목표 화살표 띠) |
 | `godot/tests/enhance_test.gd` | 강화 확률·겹친 칸·끼운 것·자동·일괄 |
 | `godot/tests/crystal_test.gd` | 차수 표·크리스탈 드랍률·겹치기·쓰기·저장 |
@@ -170,15 +171,14 @@
   크리스탈 결과가 1차에 따라 달라져 "무엇이 나올 수 있나" 를 설명하기 어렵다.
 - 능력치는 1·2·3차를 **다 더한다** (`stackStats` / `stack_stats`).
 
-**스킬 경험치북** (2026-09-23) — 재료다. 하급·중급·상급(100·500·2000) 셋을 경험치북 표
-(`SKILL_EXP_BOOKS`)에서 `MATERIALS` 로 만든다 (`skillExp` 칸). **가방에서는 안 쓰고**
-스킬창의 강화 칸에서 고른 강화에 넣는다. (같은 날 앞 판의 강화서는 없앴다.)
+**스킬 경험치북**은 2026-09-28 에 없앴다 — 재료 표에서 빠졌고, 스킬 경험치는 던전을 깨면
+캐릭터에 바로 쌓인다(물건이 아니다). 옛 저장의 책은 불러올 때 버려진다
 → [skill-upgrades.md](skill-upgrades.md).
 
 **크리스탈**
 - **재료**다 — 장비 표(`ITEMS`, 42종)에 넣지 않고 `MATERIALS` 에 따로 둔다. 넣으면
   슬롯·등급·능력치를 묻는 자리마다 "장비가 아니면" 을 걸어야 한다.
-- 가방에는 `{ id: "crystal", count }` 로 **한 칸에 겹친다** (`World._give`). 이미 칸이
+- 가방에는 `{ id: "crystal", count }` 로 **한 칸에 겹친다** (`Ledger.give`). 이미 칸이
   있으면 가방이 꽉 차도 들어간다. 정렬하면 장비 뒤로 간다. 상점·대장간 목록에는 안 뜬다.
 - **드랍 — 킬당 0.01%** (1만 마리에 하나, `CRYSTAL_DROP_CHANCE = 0.0001`. 2026-09-23 지시 — 처음엔 1% 였다). 장비와 **따로** 굴린다.
   굴리는 순서는 골드 → 장비 → (슬롯 → 등급 → 옵션) → 크리스탈이고 `items.ts` 와
@@ -340,7 +340,7 @@
     다중은 `enhanceBatch {pieces, success, destroyed, reached, picked}` 한 개다.
   - 요청은 `enhanceItem {where, key}` → `World.enhance_item` (고도). **NPC 가 필요 없고**
     가방에 든 것·끼고 있는 것 둘 다 된다 (크리스탈과 같은 이유). 대장간 `npc_enhance` 도
-    같은 알맹이 `_enhance` 를 탄다.
+    같은 알맹이 `Ledger.enhance` 를 탄다.
   - **겹친 칸은 한 개만 떼어서** 두드린다. 성공하면 뗀 것이 원래 칸 바로 뒤에 서고, 실패하면
     개수만 준다 — 전에는 칸이 통째로 오르거나 사라졌다.
   - 끼운 것이 부서지면 슬롯이 비고 능력치를 다시 잰다.

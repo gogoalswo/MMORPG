@@ -63,6 +63,18 @@ func _case_round_trip() -> void:
 	back.restore("me")
 	if back.snapshot().players["me"].skill_upgrade_exp != {"thunder_fall": {"stun": 300}}:
 		_fail("쌓인 경험치 300 이 안 돌아왔다 (%s)" % str(back.snapshot().players["me"].skill_upgrade_exp))
+	# 안 넣은 스킬 경험치(던전 클리어)는 남고, 옛 경험치북(2026-09-28 에 없앴다)은 버려진다
+	me.skill_exp = 12000
+	me.bag.append({"id": "skill_book_3", "count": 4})
+	w.save("me")
+	back.restore("me")
+	var back_me: Dictionary = back.snapshot().players["me"]
+	if int(back_me.skill_exp) != 12000:
+		_fail("스킬 경험치 12000 이 %d 로 돌아왔다" % int(back_me.skill_exp))
+	for stack in back_me.bag:
+		if str(stack.get("id", "")).begins_with("skill_book"):
+			_fail("옛 경험치북이 가방에 남았다 (%s)" % str(stack))
+	me.bag.pop_back()
 
 	var saved := Save.read()
 	if saved.is_empty():

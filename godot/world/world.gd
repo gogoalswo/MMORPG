@@ -25,6 +25,9 @@ var _grid: Dictionary = {}
 const NEAR := 4.0
 ## 스폰을 매번 같은 자리에 놓는다. 자리를 정하는 건 언제나 판정하는 쪽이다
 var _rng := RandomNumberGenerator.new()
+## 장부 판정(드롭·경험치·가방·강화·스킬) — `_ledger_call` 로만 부른다 (docs/features/server.md).
+## 굴림은 `_rng` 를 같이 쓴다 — 테스트가 그 씨앗으로 결과를 고정한다
+var _ledger := Ledger.new(_rng)
 ## 밖으로 내보낼 일들 (맞았다·죽었다·레벨 올랐다). Transport 가 비워 간다
 var _events: Array = []
 ## 아직 안 들어간 연타 (`hits` 가 2 이상인 스킬의 둘째 대부터).
@@ -233,8 +236,11 @@ func join(player_id: String) -> void:
 		"potion_ready_at": int(kept.get("potion_ready_at", 0)),
 		# HP 가 이 % 이하로 떨어지면 저절로 마신다. 0 이면 끔. 저장에 남는다
 		"potion_pct": int(kept.get("potion_pct", _potion_rule("potionAutoDefault", 70))),
-		# 스킬 강화 — `{ 스킬 id: [강화 id, …] }`. 스킬창에서 경험치북으로 채우면 붙는다 (`feed_upgrade`)
+		# 스킬 강화 — `{ 스킬 id: [강화 id, …] }`. 스킬창에서 스킬 경험치로 채우면 붙는다 (`feed_upgrade`)
 		"skill_upgrades": kept.get("skill_upgrades", {}).duplicate(true),
+		# 아직 안 넣은 **스킬 경험치** — 던전을 깨면 쌓이고(`_check_dungeon_clear`) 스킬창에서
+		# 고른 강화에 넣는다. 모든 스킬·강화에 공용이다
+		"skill_exp": int(kept.get("skill_exp", 0)),
 		# 붙기 전까지 쌓인 경험치 — `{ 스킬 id: { 강화 id: 경험치 } }` (`feed_upgrade`)
 		"skill_upgrade_exp": kept.get("skill_upgrade_exp", {}).duplicate(true),
 		# --- 아이템 ---
@@ -673,34 +679,12 @@ func _walk_auto(
 func _kill(player: Dictionary, target: Dictionary, now: int) -> void:
 	target.respawn_at = now + int(target.respawn_ms)
 
-	# 보상을 굴린다. **굴리는 쪽은 언제나 판정하는 쪽이다**
-	var loot := Items.roll_drop(int(target.level), str(player.job), _rng)
-	player.gold = int(player.gold) + int(loot.gold)
-	var event := {"type": "loot", "gold": loot.gold}
-	if loot.has("item") and _give(player, loot.item):
-		event["item"] = loot.item
-	# 크리스탈은 장비와 따로 떨어진다 — 가방에서는 한 칸에 겹친다
-	if loot.has("crystal"):
-		var crystal := {"id": Items.crystal_id(), "count": int(loot.crystal)}
-		if _give(player, crystal):
-			event["crystal"] = int(loot.crystal)
-	_events.append(event)
-
-	var gained := Combat.exp_reward(int(target.level), int(player.level), float(target.exp_reward))
-	var before := int(player.level)
-	var grown := Combat.apply_exp(before, int(player.exp), gained)
-	player.level = grown.level
-	player.exp = grown.exp
-	_events.append({"type": "reward", "exp": gained})
-	_check_job_trial(player, target)
-
-	if grown.level > before:
-		# 레벨이 오르면 스탯을 다시 만들고 체력을 채운다
-		_refresh_stats(player)
-		player.hp = player.stats.maxHp
-		var per_level := int(GameData.combat().get("skillPointPerLevel", 1))
-		player.skill_points = int(player.skill_points) + (grown.level - before) * per_level
-		_events.append({"type": "levelUp", "level": grown.level})
+	# 보상(드롭·골드·경험치·레벨·전직 시험)은 장부가 굴린다 — `Ledger.kill`.
+	# 서버를 붙이면 서버가 제 스폰 명부로 이 처치를 다시 본다
+	_ledger_call(player, &"kill", [{
+		"level": int(target.level), "exp_reward": float(target.exp_reward),
+		"boss": bool(target.get("boss", false)), "zone": zone_id,
+	}])
 
 
 ## 죽은 몬스터를 제 시간에 되살린다
@@ -1193,6 +1177,8 @@ func restore(player_id: String) -> bool:
 						and not (str(id) in upgraded.get(str(skill_id), [])):
 					progress.get_or_add(str(skill_id), {})[str(id)] = amount
 	player.skill_upgrade_exp = progress
+	# 아직 안 넣은 스킬 경험치 — 없던 칸이라 옛 저장은 0. 옛 경험치북은 표에 없어 가방에서 버려진다
+	player.skill_exp = maxi(0, int(saved.get("skill_exp", 0)))
 	# 물약을 저절로 마시는 기준 — 없던 칸이라 옛 저장은 처음 값으로 읽힌다
 	set_potion_pct(player_id, int(saved.get("potion_pct", player.potion_pct)))
 
@@ -1295,7 +1281,7 @@ func _job_state(player: Dictionary) -> Dictionary:
 
 
 ## 전직 버튼. **NPC 곁인지 · 레벨이 되는지 · 다음 단계인지를 여기서 다시 본다** —
-## 되면 그 단계의 시험(보스 한 마리)으로 옮긴다. 전직은 보스를 잡아야 된다 (`_check_job_trial`)
+## 되면 그 단계의 시험(보스 한 마리)으로 옮긴다. 전직은 보스를 잡아야 된다 (`Ledger._check_job_trial`)
 func job_advance(player_id: String) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty() or bool(player.dead) or not _npc_near(player, "jobs"):
@@ -1311,27 +1297,6 @@ func job_advance(player_id: String) -> void:
 	_notice("%d차 전직 시험 — 보스를 처치하세요" % int(next.tier))
 
 
-## 전직 시험에서 보스를 잡았다 → **그 단계가 바로 다음 단계일 때만** 전직한다.
-## 지난 시험을 다시 잡거나(이미 전직) 건너뛴 시험은 아무 일 없다
-func _check_job_trial(player: Dictionary, target: Dictionary) -> void:
-	var tier := Skills.job_tier_of_zone(zone_id)
-	if tier == 0 or not bool(target.get("boss", false)):
-		return
-	if tier != int(player.get("job_tier", 0)) + 1:
-		return
-	if int(player.level) < int(Skills.job_advance(tier).get("level", 0)):
-		return
-	player.job_tier = tier
-	var names: Array = []
-	for id in Skills.unlocked_at(str(player.job), tier):
-		names.append(str(Skills.all().get(id, {}).get("name", id)))
-	_events.append({"type": "jobAdvanced", "tier": tier, "skills": names})
-	if names.is_empty():
-		_notice("%d차 전직을 마쳤습니다" % tier)
-	else:
-		_notice("%d차 전직! %s 을(를) 배울 수 있습니다" % [tier, ", ".join(names)])
-
-
 ## 기본 공격이 닿는 정면 각도(라디안). 등 뒤의 적은 맞지 않는다
 func _attack_arc() -> float:
 	return float(GameData.combat().get("attackArc", PI * 0.6))
@@ -1342,27 +1307,7 @@ func learn_skill(player_id: String, skill_id: String) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty():
 		return
-	var skill := Skills.get_skill(str(player.job), skill_id)
-	if skill.is_empty():
-		_events.append({"type": "notice", "text": "쓸 수 없는 스킬입니다"})
-		return
-	if skill_id in player.skills:
-		return
-	var tier := Skills.tier_of(skill)
-	if tier > int(player.get("job_tier", 0)):
-		_notice("%d차 전직 후 배웁니다" % tier)
-		return
-	if not Skills.can_learn(skill, str(player.job), int(player.level), int(player.job_tier)):
-		_events.append({"type": "notice", "text": "%d레벨에 배웁니다" % int(skill.get("reqLevel", 1))})
-		return
-	var cost := Skills.point_cost()
-	if int(player.skill_points) < cost:
-		_events.append({"type": "notice", "text": "스킬 포인트가 모자랍니다"})
-		return
-
-	player.skill_points = int(player.skill_points) - cost
-	player.skills.append(skill_id)
-	_events.append({"type": "skills", "learned": player.skills.duplicate()})
+	_ledger_call(player, &"learn_skill", [skill_id])
 
 
 ## 테스트 스위치(쿨타임 0 · 레벨 잠금 해제)를 켜고 끈다. 이름은 Skills.SWITCHES 만 받는다
@@ -1504,42 +1449,23 @@ func debug_fill_bag(player_id: String) -> void:
 ## 2026-09-23 요청 "가방에 30개 넣어" 로 크리스탈 30개를 이걸로 준다 (`LocalTransport.open`)
 func grant_once(player_id: String, key: String, stack: Dictionary) -> void:
 	var player: Dictionary = _players.get(player_id, {})
-	if player.is_empty() or key in player.get("granted", []):
+	if player.is_empty():
 		return
-	if not _give(player, stack.duplicate(true)):
-		return  # 가방이 꽉 찼으면 다음 접속에 다시 준다
-	player.granted.append(key)
-	_inventory_changed(player)
-	_notice("%s %d개를 가방에 넣었다" % [Items.stack_name(stack), int(stack.get("count", 1))])
+	_ledger_call(player, &"grant_once", [key, stack])
 
 
 ## **시작 장비** — 새 캐릭터에게 일반(1등급) 무기와 갑옷을 **끼운 채로** 준다 (2026-09-26 요청:
 ## "처음 캐릭터 생성시 일반 등급 무기랑 갑옷 지급해"). 부르는 쪽(`LocalTransport.open`)이
 ## **저장이 없을 때만** 부른다 — 이미 키우던 캐릭터에게는 안 준다. `granted` 의 `starterGear`
 ## 로 한 번만 준다. +0 이고 옵션은 드랍처럼 1등급대로 굴린다. 그 부위에 이미 낀 게 있으면 가방으로
-const STARTER_SLOTS := ["weapon", "armor"]
-
 func grant_starter_gear(player_id: String) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty() or "starterGear" in player.get("granted", []):
 		return
-	for slot in STARTER_SLOTS:
-		var item := Items.get_item(Items.item_id(1, slot))
-		if item.is_empty():
-			continue
-		var stack := {
-			"id": str(item.id), "grade": 1, "enhance": 0,
-			"options": Items.roll_options(item, 1, _rng),
-		}
-		if player.equipped.get(slot, {}).is_empty():
-			player.equipped[slot] = stack
-		elif not _give(player, stack):
-			return  # 가방이 꽉 찼으면 다음 접속에 다시 준다
-	player.granted.append("starterGear")
-	_refresh_stats(player)
+	_ledger_call(player, &"grant_starter_gear")
 	# 갑옷만큼 최대 HP 가 늘었다 — 새 캐릭터는 가득 찬 채로 시작한다
-	player.hp = int(player.stats.maxHp)
-	_inventory_changed(player)
+	if "starterGear" in player.granted:
+		player.hp = int(player.stats.maxHp)
 
 
 ## **테스트 모드 꾸러미** — 모든 장비를 등급별로 하나씩(등급 7 × 부위 6 = 42개, 전부 +0)과
@@ -1595,58 +1521,29 @@ func grant_test_level(player_id: String) -> void:
 
 ## --- 스킬 강화 ---
 
-## 스킬창에서 **고른 강화에 경험치북 한 권을 넣는다** — 그 스킬의 `slot` 번째(0 부터)
-## 강화에 `book` 의 경험치가 쌓이고, 필요 경험치(`exp`)에 닿으면 강화가 붙는다
-## (2026-09-23 요청: "어떤 타입을 강화할지 선택해서 경험치를 넣을 수 있으면 좋겠어").
-## **넘친 경험치는 버린다.** 이미 붙었거나 책이 없거나 남의 직업 스킬이면 안 넣는다
-func feed_upgrade(player_id: String, skill_id: String, slot: int, book: String) -> void:
+## 스킬창에서 **고른 강화에 모아 둔 스킬 경험치를 넣는다** — 그 스킬의 `slot` 번째(0 부터)
+## 강화에 **모자란 만큼만** 들어가고(남으면 그대로 남는다), 필요 경험치(`exp`)에 닿으면
+## 강화가 붙는다 (2026-09-23 요청: "어떤 타입을 강화할지 선택해서 경험치를 넣을 수 있으면
+## 좋겠어" · 2026-09-28 에 경험치북 대신 던전 경험치로). 이미 붙었거나 경험치가 없거나
+## 남의 직업 스킬이면 안 넣는다
+func feed_upgrade(player_id: String, skill_id: String, slot: int) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty():
 		return
-	var skill := Skills.get_skill(str(player.job), skill_id)
-	var list := Skills.upgrades_of(skill_id)
-	var gain := Items.book_exp(book)
-	if skill.is_empty() or slot < 0 or slot >= list.size() or gain <= 0:
-		return
-	var upgrade: Dictionary = list[slot]
-	if str(upgrade.id) in player.skill_upgrades.get(skill_id, []):
-		_notice("이미 강화했습니다 — %s %s" % [skill.name, upgrade.name])
-		return
-	var at := -1
-	for index in player.bag.size():
-		if str(player.bag[index].get("id", "")) == book:
-			at = index
-			break
-	if at < 0:
-		_notice("%s 이 없습니다" % Items.stack_name({"id": book}))
-		return
-
-	var left := int(player.bag[at].get("count", 1)) - 1
-	if left > 0:
-		player.bag[at].count = left
-	else:
-		player.bag.remove_at(at)
-	var need := int(upgrade.get("exp", 1))
-	var progress: Dictionary = player.skill_upgrade_exp.get_or_add(skill_id, {})
-	var now_exp := int(progress.get(str(upgrade.id), 0)) + gain
-	if now_exp >= need:
-		_add_upgrade(player, skill_id, str(upgrade.id))
-		_notice("%s 강화 완료 — %s" % [skill.name, upgrade.name])
-	else:
-		progress[str(upgrade.id)] = now_exp
-		_notice("%s %s 경험치 %d / %d" % [skill.name, upgrade.name, now_exp, need])
-	_inventory_changed(player)
+	_ledger_call(player, &"feed_upgrade", [skill_id, slot])
 
 
-## 테스트 단추 — 스킬 경험치북을 종류마다 10권씩 넣는다 (던전 드랍 전까지, 사용자 선택)
-func debug_books(player_id: String) -> void:
+## 테스트 단추 — 스킬 경험치를 `DEBUG_SKILL_EXP` 만큼 넣는다 (던전을 안 돌고 강화를 볼 때)
+const DEBUG_SKILL_EXP := 100000
+
+
+func debug_skill_exp(player_id: String) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty():
 		return
-	for book in Skills.exp_books():
-		_give(player, {"id": str(book.id), "count": 10})
-	_inventory_changed(player)
-	_notice("테스트: 스킬 경험치북을 10권씩 넣었다")
+	player.skill_exp = int(player.get("skill_exp", 0)) + DEBUG_SKILL_EXP
+	_events.append({"type": "skillExp", "gain": DEBUG_SKILL_EXP, "total": player.skill_exp})
+	_notice("테스트: 스킬 경험치 +%d" % DEBUG_SKILL_EXP)
 
 
 ## **테스트: 스킬 모두 배우기** (2026-09-26 요청). 전직 스킬은 전직해야 쓰므로(job-advance.md)
@@ -1673,13 +1570,7 @@ func debug_learn_all(player_id: String) -> void:
 
 ## 강화를 붙이고, 그 강화에 쌓이던 경험치를 지운다 (붙은 뒤에는 더 못 넣는다)
 func _add_upgrade(player: Dictionary, skill_id: String, upgrade_id: String) -> void:
-	var have: Array = player.skill_upgrades.get_or_add(skill_id, [])
-	if not (upgrade_id in have):
-		have.append(upgrade_id)
-	var progress: Dictionary = player.skill_upgrade_exp.get(skill_id, {})
-	progress.erase(upgrade_id)
-	if progress.is_empty():
-		player.skill_upgrade_exp.erase(skill_id)
+	_ledger.add_upgrade(player, skill_id, upgrade_id)
 
 
 ## 테스트 단추 — 이 직업의 **모든 스킬에 `slot` 번째 강화를 경험치북 없이** 붙인다
@@ -2156,127 +2047,61 @@ func _refresh_stats(player: Dictionary) -> void:
 	player.hp = mini(int(player.hp), int(stats.maxHp))
 
 
-## 가방에 넣는다. 꽉 찼으면 못 넣는다
+## --- 장부 --- (docs/features/server.md)
+
+## **장부를 바꾸는 단 하나의 길.** 판정은 `Ledger`(`ledger.gd`)가 하고, 여기서는 그 결과를
+## 화면으로 흘리고 스탯을 다시 만든다. 서버를 붙이면 이 자리가 요청을 서버로 보낸다 —
+## 그래서 **장부를 바꾸는 코드를 World 에 새로 넣지 않는다** (`ledger.gd` 에 넣는다).
+## 스탯은 늘 다시 만든다 — 장비·레벨이 그대로면 같은 값이 나온다
+func _ledger_call(player: Dictionary, op: StringName, args: Array = []) -> void:
+	var before := int(player.level)
+	_ledger.callv(op, [player] + args)
+	_events.append_array(_ledger.take_events())
+	_refresh_stats(player)
+	# 레벨이 오르면 체력을 채운다 — 체력은 장부가 아니라 전투 쪽 값이다
+	if int(player.level) > before:
+		player.hp = int(player.stats.maxHp)
+
+
+## 가방에 넣는다 — 치트·테스트가 쓰는 지름길. 판정은 `Ledger.give`
 func _give(player: Dictionary, stack: Dictionary) -> bool:
-	# 재료는 **이미 있는 칸에 겹친다** — 크리스탈이 칸을 하나씩 먹으면 가방이 금방 찬다
-	if Items.is_material(str(stack.get("id", ""))):
-		for held in player.bag:
-			if str(held.get("id", "")) == str(stack.id):
-				held.count = int(held.get("count", 1)) + int(stack.get("count", 1))
-				return true
-	if player.bag.size() >= Items.bag_size():
-		_events.append({"type": "notice", "text": "가방이 가득 찼습니다"})
-		return false
-	player.bag.append(stack)
-	return true
+	var ok := _ledger.give(player, stack)
+	_events.append_array(_ledger.take_events())
+	return ok
 
 
-## 가방의 물건을 낀다. **낄 수 있는지 여기서 다시 본다**
+## 가방의 물건을 낀다 (`Ledger.equip`)
 func equip(player_id: String, index: int) -> void:
 	var player: Dictionary = _players.get(player_id, {})
-	if player.is_empty() or index < 0 or index >= player.bag.size():
+	if player.is_empty():
 		return
-	var stack: Dictionary = player.bag[index]
-	var item := Items.get_item(str(stack.id))
-	if not Items.can_equip(item, str(player.job), int(player.level)):
-		_events.append({"type": "notice", "text": "낄 수 없는 장비입니다"})
-		return
-
-	var slot := str(item.slot)
-	player.bag.remove_at(index)
-	# 끼고 있던 것은 가방으로 돌아간다
-	var before: Dictionary = player.equipped.get(slot, {})
-	if not before.is_empty():
-		player.bag.append(before)
-	player.equipped[slot] = stack
-
-	_refresh_stats(player)
-	_events.append({"type": "inventory", "bag": player.bag, "equipped": player.equipped})
+	_ledger_call(player, &"equip", [index])
 
 
-## 가방을 정렬한다 — 높은 등급이 앞, 같은 등급이면 슬롯 순서(무기 → 반지),
-## 그다음 강화가 높은 것. 순서만 바뀌고 물건은 그대로다
+## 가방을 정렬한다 (`Ledger.sort_bag`)
 func sort_bag(player_id: String) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty():
 		return
-	var order: Array = Items.slots()
-	player.bag.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		# 재료는 장비 뒤로 — 장비끼리의 순서를 흐트러뜨리지 않는다
-		var ma := Items.is_material(str(a.get("id", "")))
-		var mb := Items.is_material(str(b.get("id", "")))
-		if ma != mb:
-			return mb
-		if int(a.get("grade", 1)) != int(b.get("grade", 1)):
-			return int(a.get("grade", 1)) > int(b.get("grade", 1))
-		var sa := order.find(str(Items.get_item(str(a.get("id", ""))).get("slot", "")))
-		var sb := order.find(str(Items.get_item(str(b.get("id", ""))).get("slot", "")))
-		if sa != sb:
-			return sa < sb
-		if int(a.get("enhance", 0)) != int(b.get("enhance", 0)):
-			return int(a.get("enhance", 0)) > int(b.get("enhance", 0))
-		return str(a.get("id", "")) < str(b.get("id", ""))
-	)
-	_events.append({"type": "inventory", "bag": player.bag, "equipped": player.equipped})
+	_ledger_call(player, &"sort_bag")
 
 
 func unequip(player_id: String, slot: String) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty():
 		return
-	var stack: Dictionary = player.equipped.get(slot, {})
-	if stack.is_empty():
-		return
-	if not _give(player, stack):
-		return  # 가방이 꽉 찼으면 벗지 않는다 — 벗다가 잃으면 안 된다
-	player.equipped.erase(slot)
-	_refresh_stats(player)
-	_events.append({"type": "inventory", "bag": player.bag, "equipped": player.equipped})
+	_ledger_call(player, &"unequip", [slot])
 
 
 ## --- 크리스탈 ---
 
-## 크리스탈로 **2차 옵션을 통째로 다시 굴린다** (2026-09-23). 처음 쓰면 붙고, 다시 쓰면
-## 바뀐다. 가방(`where = "bag"`, `key` = 가방 번호)과 끼고 있는 것(`"equip"`, `key` = 슬롯)
-## 둘 다 된다 — 끼고 있는 걸 벗어야 굴릴 수 있으면 번거롭기만 하다.
-## NPC 가 필요 없다. **굴림은 판정하는 쪽이 한다**
+## 크리스탈로 **2차 옵션을 통째로 다시 굴린다** (`Ledger.use_crystal`). 가방(`where = "bag"`,
+## `key` = 가방 번호)과 끼고 있는 것(`"equip"`, `key` = 슬롯) 둘 다 된다. NPC 가 필요 없다
 func use_crystal(player_id: String, where: String, key: Variant) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty():
 		return
-	var target: Dictionary = {}
-	if where == "equip":
-		target = player.equipped.get(str(key), {})
-	elif where == "bag" and int(key) >= 0 and int(key) < player.bag.size():
-		target = player.bag[int(key)]
-	var item := Items.get_item(str(target.get("id", "")))
-	if item.is_empty():
-		return  # 장비에만 붙는다
-
-	var crystal := -1
-	for index in player.bag.size():
-		if str(player.bag[index].get("id", "")) == Items.crystal_id():
-			crystal = index
-			break
-	if crystal < 0:
-		_notice("크리스탈이 없습니다")
-		return
-
-	# 먼저 굴리고 나서 크리스탈을 뺀다 — 빼다가 칸이 비면 가방 번호가 당겨진다
-	target.options2 = Items.roll_tier_options(2, int(target.get("grade", 1)), _rng)
-	var left := int(player.bag[crystal].get("count", 1)) - 1
-	if left > 0:
-		player.bag[crystal].count = left
-	else:
-		player.bag.remove_at(crystal)
-	if where == "equip":
-		_refresh_stats(player)
-
-	var lines: Array = []
-	for option in target.options2:
-		lines.append(Items.describe_option(option))
-	_notice("%s 2차 옵션 — %s" % [item.name, ", ".join(lines)])
-	_inventory_changed(player)
+	_ledger_call(player, &"use_crystal", [where, key])
 
 
 ## 그 역할의 NPC 가 닿는 거리에 있나. **살 때마다 다시 잰다** —
@@ -2300,50 +2125,19 @@ func _inventory_changed(player: Dictionary) -> void:
 
 ## --- 상점 ---
 
-## 산다. **파는 목록에 있는 것만** — 화면이 보낸 id 를 믿지 않는다
+## 산다 (`Ledger.buy`). **NPC 곁인지는 여기서** — 자리는 기기에만 있다
 func npc_buy(player_id: String, item_id: String) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty() or not _npc_near(player, "shop"):
 		return
-	if not (item_id in Items.shop_stock(str(player.job), int(player.level))):
-		return
-	var item := Items.get_item(item_id)
-	if item.is_empty():
-		return
-
-	var price := int(item.price)
-	if int(player.gold) < price:
-		_notice("골드가 %d 모자랍니다" % (price - int(player.gold)))
-		return
-	if player.bag.size() >= Items.bag_size():
-		_notice("가방이 가득 찼습니다")
-		return
-
-	player.gold = int(player.gold) - price
-	# 옵션은 **판정하는 쪽이 굴린다.** 물건이 생기는 자리마다 굴려야 빠지는 곳이 없다
-	player.bag.append({
-		"id": item_id, "grade": 1, "enhance": 0, "options": Items.roll_options(item, 1, _rng)
-	})
-	_notice("%s 구입 — %d G" % [item.name, price])
-	_inventory_changed(player)
+	_ledger_call(player, &"buy", [item_id])
 
 
 func npc_sell(player_id: String, index: int) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty() or not _npc_near(player, "shop"):
 		return
-	if index < 0 or index >= player.bag.size():
-		return
-	var stack: Dictionary = player.bag[index]
-	var item := Items.get_item(str(stack.id))
-	if item.is_empty():
-		return
-
-	var price := Items.sell_price(item, int(stack.get("grade", 1)))
-	player.bag.remove_at(index)
-	player.gold = int(player.gold) + price
-	_notice("%s 판매 — %d G" % [item.name, price])
-	_inventory_changed(player)
+	_ledger_call(player, &"sell", [index])
 
 
 ## --- 대장간 ---
@@ -2355,167 +2149,22 @@ func npc_enhance(player_id: String, index: int) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty() or not _npc_near(player, "smith"):
 		return
-	_enhance(player, "bag", index)
+	_ledger_call(player, &"enhance", ["bag", index])
 
 
-## 상세 창의 "강화" — **NPC 없이** 가방에 든 것과 끼고 있는 것 둘 다 두드린다.
-## where 는 "bag"(가방 번호) · "equip"(슬롯 이름). 확률은 설계표(90% → 10%),
-## 실패하면 무조건 파괴다 → docs/features/stat-balance.md 4장.
+## 상세 창의 "강화" — **NPC 없이** 가방에 든 것과 끼고 있는 것 둘 다 두드린다 (`Ledger.enhance`).
 ## **한 요청 = 한 번.** 자동 강화는 팝업이 한 번씩 되풀이해 보낸다 — 한 단계씩 보여 주고
 ## 중간에 멈출 수 있어야 해서다 (2026-09-24 "한 단계씩 연출 넣어")
 func enhance_item(player_id: String, where: String, key: Variant) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty():
 		return
-	_enhance(player, where, key)
+	_ledger_call(player, &"enhance", [where, key])
 
 
-## +level 에서 한 번 굴린다. 비용을 떼고 "success" · "keep" · "destroy", 모자라면 "short"
-func _roll_once(player: Dictionary, item: Dictionary, level: int) -> String:
-	var cost := Items.enhance_cost(item, level)
-	if int(player.gold) < cost:
-		return "short"
-	player.gold = int(player.gold) - cost
-	return Items.roll_enhance(level, _rng.randf())
-
-
-## 한 번 두드린다. **겹친 칸이면 한 개만 떼어서** 두드린다 — 통째로 두드리면 파괴 한 번에
-## 여러 개가 사라지고, 성공 한 번에 여러 개가 오른다. 뗀 것은 성공하면 원래 칸 바로 뒤에 선다
-func _enhance(player: Dictionary, where: String, key: Variant) -> void:
-	var stack: Dictionary = {}
-	if where == "equip":
-		stack = player.equipped.get(str(key), {})
-	elif where == "bag" and int(key) >= 0 and int(key) < player.bag.size():
-		stack = player.bag[int(key)]
-	var item := Items.get_item(str(stack.get("id", "")))
-	if item.is_empty():
-		return  # 장비만 두드린다
-
-	var level := int(stack.get("enhance", 0))
-	if not Items.can_enhance(level):
-		_notice("더 두드릴 수 없습니다")
-		return
-	var result := _roll_once(player, item, level)
-	if result == "short":
-		_notice("골드가 %d 모자랍니다" % (Items.enhance_cost(item, level) - int(player.gold)))
-		return
-
-	var count := int(stack.get("count", 1)) if where == "bag" else 1  # 끼운 것은 늘 하나
-	match result:
-		"success":
-			if count > 1:
-				stack.count = count - 1
-				var one := stack.duplicate(true)
-				one.erase("count")
-				one.enhance = level + 1
-				player.bag.insert(int(key) + 1, one)
-			else:
-				stack.enhance = level + 1
-			_notice("%s +%d 성공" % [item.name, level + 1])
-		"keep":
-			_notice("%s +%d 유지" % [item.name, level])
-		"destroy":
-			if count > 1:
-				stack.count = count - 1
-			elif where == "equip":
-				player.equipped.erase(str(key))
-			else:
-				player.bag.remove_at(int(key))
-			_notice("%s +%d 강화 실패 — 부서졌습니다" % [item.name, level])
-	if where == "equip":
-		_refresh_stats(player)
-	var after := level + 1 if result == "success" else level
-	_events.append({
-		"type": "enhanceResult", "result": result, "level": after, "from": level, "name": str(item.name),
-	})
-	_inventory_changed(player)
-
-
-## 다중 강화 — 가방에서 **고른 칸들**(`indices`, 가방 번호)을 **한 개씩 한 번** 두드린다
-## (2026-09-24 요청: 리니지M "다중 강화" 그림 — 오른쪽 목록에서 골라 왼쪽 칸에 담는다).
-## `cap` 을 주면 +cap 아래인 칸만 든다 — 팝업은 목표를 cap 으로 넣어 한 바퀴씩 되풀이한다.
-## 끼고 있는 것은 고를 수 없다 (가방 번호만 받는다) — 한 번에 여럿을 부수는 요청이 몸에 걸친
-## 것까지 걸면 되돌릴 수 없다. 겹친 칸은 한 개씩 따로 굴리고, 남은 것은 **끝난 단계끼리 다시
-## 겹쳐** 원래 자리에 선다. 가방 번호가 흔들리므로 **남은 칸의 새 번호(`picked`)** 를 돌려준다 —
-## 팝업은 그것으로 담은 칸을 이어 간다
+## 다중 강화 — 가방에서 고른 칸들을 한 개씩 한 번 두드린다 (`Ledger.enhance_many`)
 func enhance_many(player_id: String, indices: Array, cap: int = -1) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty():
 		return
-	var limit := clampi(cap, 1, Items.max_enhance()) if cap > 0 else Items.max_enhance()
-	# 목표에 이미 닿은 칸도 받는다 — 두드리지는 않고 **새 번호만 따라가게** 한다
-	# (팝업은 칸 자리를 그대로 두고 칸마다 연출한다)
-	var chosen: Array = []
-	var live := 0
-	for value in indices:
-		var at := int(value)
-		if at < 0 or at >= player.bag.size() or chosen.has(at):
-			continue
-		var stack: Dictionary = player.bag[at]
-		if Items.get_item(str(stack.get("id", ""))).is_empty():
-			continue
-		chosen.append(at)
-		if int(stack.get("enhance", 0)) < limit:
-			live += 1
-	if live == 0:
-		_notice("강화할 장비가 없습니다")
-		return
-	chosen.sort()
-	chosen.reverse()  # 뒤에서부터 — 앞 칸 번호가 안 밀린다
-	var total := {"pieces": 0, "success": 0, "destroyed": 0}
-	var reached := {}  # 끝난 단계 → 남은 개수
-	# 칸마다 {at: 원래 번호, from, to: [새 번호], success, destroyed} — 팝업이 칸별로 연출한다
-	var results: Array = []
-	for i in chosen:
-		var stack: Dictionary = player.bag[i]
-		var item := Items.get_item(str(stack.id))
-		var start := int(stack.get("enhance", 0))
-		var entry := {"at": i, "from": start, "to": [i], "success": 0, "destroyed": 0}
-		if start >= limit:
-			results.append(entry)
-			continue
-		var kept := {}
-		for n in int(stack.get("count", 1)):
-			var result := _roll_once(player, item, start)
-			if result == "short":
-				kept[start] = int(kept.get(start, 0)) + 1
-				continue
-			total.pieces += 1
-			if result == "destroy":
-				total.destroyed += 1
-				entry.destroyed += 1
-				continue
-			var at := start + 1 if result == "success" else start
-			if result == "success":
-				total.success += 1
-				entry.success += 1
-			kept[at] = int(kept.get(at, 0)) + 1
-		player.bag.remove_at(i)
-		var levels := kept.keys()
-		levels.sort()
-		levels.reverse()  # 같은 자리에 높은 것부터 끼우면 낮은 것이 앞에 선다
-		for at in levels:
-			var one := stack.duplicate(true)
-			one.enhance = int(at)
-			one.erase("count")
-			if int(kept[at]) > 1:
-				one.count = int(kept[at])
-			player.bag.insert(i, one)
-			reached[int(at)] = int(reached.get(int(at), 0)) + int(kept[at])
-		# 먼저 적은 번호(i 뒤)는 한 칸이 levels.size() 칸이 된 만큼 밀린다
-		var grow := levels.size() - 1
-		for done in results:
-			done.to = (done.to as Array).map(func(v: int) -> int: return v + grow)
-		entry.to = range(i, i + levels.size())
-		results.append(entry)
-	var picked: Array = []  # 남은 칸의 새 가방 번호
-	for done in results:
-		picked.append_array(done.to)
-	picked.sort()
-	_notice("다중 강화 %d개 — 성공 %d · 파괴 %d" % [total.pieces, total.success, total.destroyed])
-	_events.append({
-		"type": "enhanceBatch", "cap": limit, "picked": picked, "results": results,
-		"pieces": total.pieces, "success": total.success, "destroyed": total.destroyed,
-		"reached": reached,
-	})
-	_inventory_changed(player)
+	_ledger_call(player, &"enhance_many", [indices, cap])

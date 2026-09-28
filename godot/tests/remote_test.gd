@@ -167,6 +167,12 @@ func _wipe() -> void:
 		return
 	for name in dir.get_files():
 		dir.remove(name)
+	# 결제 주문 기록 — 남기면 다음 실행에서 같은 영수증이 "다른 계정 것" 으로 막힌다
+	var orders := DirAccess.open(path.path_join("orders"))
+	if orders != null:
+		for name in orders.get_files():
+			orders.remove(name)
+		DirAccess.remove_absolute(path.path_join("orders"))
 	DirAccess.remove_absolute(path)
 
 

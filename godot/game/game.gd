@@ -105,6 +105,12 @@ const BAR_PAD := 0
 ## **테두리가 없다** — 받은 그림이 그렇다 (2026-09-20). 그래서 아이콘을 거의 꽉 채운다
 const MENU_BTN := 62
 const MENU_INSET := 3
+## 메뉴 단추 아래 이름 글자 — 그림만으로는 무엇인지 헷갈린다 (2026-09-28 요청, 받은 그림은
+## 아이콘 아래에 "상점·인벤토리·스펠·퀘스트" 가 붙어 있다). 칸을 이만큼 늘여 아이콘 밑에 얹고,
+## 아이콘 발치와 `MENU_CAPTION_OVERLAP` 만큼 겹친다 — 받은 그림도 글자가 아이콘 밑동을 조금 덮는다
+const MENU_CAPTION := 16
+const MENU_CAPTION_OVERLAP := 4
+const MENU_CAPTION_FONT := 14
 ## 창 닫기 X. **모든 창이 오른쪽 위에 이것 하나를 둔다** (2026-09-20 요청)
 const CLOSE_BTN := 44
 ## 창 테두리(PANEL_MARGIN 26)보다 안쪽으로 들여야 모서리 장식에 안 걸친다
@@ -767,18 +773,22 @@ func _make_bar(height: int, tint: Color, font: int) -> Dictionary:
 
 ## 오른쪽 위 메뉴 단추 하나 — **테두리 없이 심볼만** 얹고 누르는 자리를 덮는다
 ## (2026-09-20 지적: 받은 그림의 메뉴는 테가 없는 선화 아이콘이다).
-## 심볼이 없으면 글자가 대신 나온다
+## 심볼이 없으면 글자가 대신 나온다. `caption` 이면 아이콘 **아래에** 이름을 늘 얹는다
+## (메뉴 단추 — `MENU_CAPTION`). 닫기 X 는 글자를 안 단다
 func _icon_button(
-	icon_name: String, text: String, on_press: Callable, size: int = MENU_BTN
+	icon_name: String, text: String, on_press: Callable, size: int = MENU_BTN, caption := false
 ) -> PanelContainer:
 	var cell := PanelContainer.new()
-	cell.custom_minimum_size = Vector2(size, size)
+	var below := MENU_CAPTION if caption else 0
+	cell.custom_minimum_size = Vector2(size, size + below)
 	cell.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 
 	var inset := MarginContainer.new()
 	inset.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	for side in ["left", "right", "top", "bottom"]:
 		inset.add_theme_constant_override("margin_" + side, MENU_INSET)
+	if caption:
+		inset.add_theme_constant_override("margin_bottom", MENU_INSET + below - MENU_CAPTION_OVERLAP)
 	cell.add_child(inset)
 
 	var texture := _icon(icon_name)
@@ -789,13 +799,27 @@ func _icon_button(
 		rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		inset.add_child(rect)
-	else:
+	elif not caption:
 		var label := Label.new()
 		label.text = text
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		inset.add_child(label)
+
+	if caption:
+		# 칸을 꽉 채우고 아래에 붙인다 — 흰 글자에 검은 테 (받은 그림이 그렇다, 밤 바닥에서도 읽힌다)
+		var name_label := Label.new()
+		name_label.name = "caption"
+		name_label.text = text
+		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		name_label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+		name_label.add_theme_font_size_override("font_size", MENU_CAPTION_FONT)
+		name_label.add_theme_color_override("font_color", Color("#eeead7"))
+		name_label.add_theme_constant_override("outline_size", 5)
+		name_label.add_theme_color_override("font_outline_color", Color.BLACK)
+		name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		cell.add_child(name_label)
 
 	var hit := Button.new()
 	hit.name = "hit"
@@ -2408,25 +2432,25 @@ func _build_skill_bar() -> void:
 	menu.add_theme_constant_override("separation", 6)
 	_ui_root.add_child(menu)
 
-	# 오른쪽 위 — 스킬·가방. 아이콘만 남기고 글자를 뺐다 (2026-09-19 요청).
-	# 무엇인지는 그림으로 알린다 — 그림이 없으면 글자가 대신 나온다
+	# 오른쪽 위 메뉴. 2026-09-19 에 글자를 뺐다가 **2026-09-28 에 다시 아래에 달았다** —
+	# 그림만으로는 무엇인지 헷갈린다는 요청 ("이런식으로 텍스트 넣도록"). 그림도 같은 날
+	# 받은 그림(리니지풍 칠한 아이콘)대로 일곱 장 전부 갈았다 (docs/features/hud.md "메뉴 아이콘")
 	_menu_cells = [
 		# 캐릭터 정보 — 스킬 왼쪽, 메뉴 맨 앞 (2026-09-25 요청 "상세 정보창을 따로 띄우고
-		# 버튼을 만들어"). 그림은 기사 투구 (2026-09-26)
-		_icon_button("ui_icon_character", "정보", _toggle_char),
-		_icon_button("ui_icon_skill", "스킬", _toggle_skills),
+		# 버튼을 만들어"). 그림은 기사 투구
+		_icon_button("ui_icon_character", "정보", _toggle_char, MENU_BTN, true),
+		_icon_button("ui_icon_skill", "스킬", _toggle_skills, MENU_BTN, true),
 		# 강화 — 가방 왼쪽 옆 (2026-09-24 요청 "가방 ui 옆에 강화 ui 버튼 만들어").
-		# 오른쪽 옆은 던전 자리다. 그림은 모루를 내리치는 망치 (2026-09-26)
-		_icon_button("ui_icon_enhance", "강화", _toggle_enhance),
+		# 오른쪽 옆은 던전 자리다. 그림은 모루를 내리치는 망치
+		_icon_button("ui_icon_enhance", "강화", _toggle_enhance, MENU_BTN, true),
 		# 크리스탈 강화 — 가방 바로 왼쪽 (2026-09-24 요청 "크리스탈 사용해서 강화하는 ui도 따로
-		# 버튼을 만들고 싶어. 가방 옆에"). 오른쪽 옆은 던전이라 강화를 한 칸 밀었다.
-		# UI 결 그림(`ui_icon_crystal`)이 아직 없어 가방 아이콘 `crystal.png` 를 쓴다
-		_icon_button("crystal", "크리스탈", _toggle_crystal),
-		_icon_button("ui_icon_bag", "가방", _toggle_bag),
+		# 버튼을 만들고 싶어. 가방 옆에"). 오른쪽 옆은 던전이라 강화를 한 칸 밀었다
+		_icon_button("ui_icon_crystal", "크리스탈", _toggle_crystal, MENU_BTN, true),
+		_icon_button("ui_icon_bag", "가방", _toggle_bag, MENU_BTN, true),
 		# 던전 — 가방 바로 옆 (2026-09-23 요청)
-		_icon_button("ui_icon_dungeon", "던전", _toggle_dungeon),
-		# 설계(치트 목록) — 톱니바퀴 위 제도용 컴퍼스 (2026-09-26)
-		_icon_button("ui_icon_design", "설계", _toggle_debug),
+		_icon_button("ui_icon_dungeon", "던전", _toggle_dungeon, MENU_BTN, true),
+		# 설계(치트 목록) — 톱니바퀴 위 제도용 컴퍼스
+		_icon_button("ui_icon_design", "설계", _toggle_debug, MENU_BTN, true),
 	]
 	for cell in _menu_cells:
 		menu.add_child(cell)

@@ -507,6 +507,20 @@ func _case_status(game: Node3D) -> void:
 		_fail("메뉴 단추가 오른쪽 위에 안 붙었다: %s / %s" % [skill_rect, bag_rect])
 	if skill_rect.intersects(hp_rect) or skill_rect.intersects(badge):
 		_fail("메뉴 단추가 퀵슬롯 위 묶음과 겹친다")
+	# 아이콘 아래 이름 글자 (2026-09-28 요청) — 일곱 단추 모두, 칸 안에서 안 잘리고 아이콘 아래에 붙는다
+	var names := ["정보", "스킬", "강화", "크리스탈", "가방", "던전", "설계"]
+	for i in names.size():
+		var cell: Control = game._menu_cells[i]
+		var caption: Label = cell.find_child("caption", true, false)
+		if caption == null or caption.text != names[i]:
+			_fail("메뉴 단추 %d 아래 글자가 '%s' 가 아니다: %s" % [i, names[i], caption.text if caption else "없음"])
+			continue
+		var font: Font = caption.get_theme_font("font")
+		var width := font.get_string_size(caption.text, HORIZONTAL_ALIGNMENT_LEFT, -1, caption.get_theme_font_size("font_size")).x
+		if width > cell.size.x:
+			_fail("메뉴 글자 '%s' 가 칸보다 넓다: %.0f > %.0f" % [caption.text, width, cell.size.x])
+		if cell.find_children("*", "TextureRect", true, false).is_empty():
+			_fail("메뉴 단추 '%s' 에 그림이 없다 — npm run sync:godot 을 돌렸나" % names[i])
 
 	# 눌러서 창이 열린다
 	game._menu_cells[1].find_child("hit", true, false).pressed.emit()
@@ -526,7 +540,7 @@ func _case_status(game: Node3D) -> void:
 	if absf(bag_rect.position.x - cry_rect.end.x) > 12.0 or absf(cry_rect.position.y - bag_rect.position.y) > 1.0:
 		_fail("크리스탈 단추가 가방 옆이 아니다: 크리스탈 %s · 가방 %s" % [cry_rect, bag_rect])
 	if game._menu_cells[3].find_children("*", "TextureRect", true, false).is_empty():
-		_fail("크리스탈 단추에 그림이 없다 — npm run sync:godot 을 돌렸나 (crystal)")
+		_fail("크리스탈 단추에 그림이 없다 — npm run sync:godot 을 돌렸나 (ui_icon_crystal)")
 	game._menu_cells[3].find_child("hit", true, false).pressed.emit()
 	await process_frame
 	if not (game._crystal_panel.visible and game._bag_panel.visible and game._gear_panel.visible) or game._detail_panel.visible:

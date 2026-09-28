@@ -88,6 +88,9 @@ Everything around the emblem is flat pure black. No text, no letters.
 **말로 설명하지 말고 그림을 물린다.** 말로 고치다 네 바퀴를 돌았고, 그림을 물리니
 한 번에 맞았다.
 
+- **오른쪽 위 메뉴 일곱 장은 2026-09-28 에 이 결에서 빠졌다** — 받은 그림대로 리니지풍 칠한
+  아이콘 + 아래 글자로 갈았다 → [hud.md](hud.md) "메뉴 아이콘". 그래서 `ui_icon_bag` 은 더 이상
+  이 결의 본보기가 아니다 (아래 다시 만드는 명령은 가방 대신 차원문 별 `ui_gate_go` 를 쓴다).
 - 지금 결의 참고 그림(X자 검 · 배낭 아이콘 두 장을 어두운 바탕에 붙인 것)은
   **이미 바르코에 올라가 있다. 다시 올릴 필요 없이 이 주소를 `ImageInput` 에 넣으면 된다:**
 
@@ -97,7 +100,7 @@ Everything around the emblem is flat pure black. No text, no letters.
 
 - 이 주소를 그대로 물려 만든 것: 차원문 창의 줄 아이콘 둘
   (`ui_gate_here` 소용돌이 · `ui_gate_go` 별, 2026-09-21), 오른쪽 위 메뉴 셋
-  (`ui_icon_character` 투구 · `ui_icon_enhance` 모루 · `ui_icon_design` 컴퍼스, 2026-09-26). **한 번에 맞았다** —
+  (`ui_icon_character` 투구 · `ui_icon_enhance` 모루 · `ui_icon_design` 컴퍼스, 2026-09-26 — 셋 다 2026-09-28 에 리니지풍으로 갈렸다). **한 번에 맞았다** —
   프롬프트는 아래 "아이콘류" 틀에서 `<무엇>` 만 갈았다 ([portal-ui.md](portal-ui.md)).
 - 새로 만들어야 하면 **지금 쓰는 아이콘으로 다시 만든다.**
 
@@ -106,7 +109,7 @@ Everything around the emblem is flat pure black. No text, no letters.
   const sharp=require('sharp');
   Promise.all([
     sharp('public/assets/icons/ui_icon_auto.png').resize(64,64,{fit:'contain',background:{r:0,g:0,b:0,alpha:0}}).toBuffer(),
-    sharp('public/assets/icons/ui_icon_bag.png').resize(64,64,{fit:'contain',background:{r:0,g:0,b:0,alpha:0}}).toBuffer(),
+    sharp('public/assets/icons/ui_gate_go.png').resize(64,64,{fit:'contain',background:{r:0,g:0,b:0,alpha:0}}).toBuffer(),
   ]).then(([a,b])=>sharp({create:{width:136,height:72,channels:3,background:{r:26,g:24,b:22}}})
     .composite([{input:a,left:4,top:4},{input:b,left:68,top:4}])
     .jpeg({quality:40}).toFile('/tmp/ref.jpg'));
@@ -210,6 +213,9 @@ HUD·스킬창·NPC 창은 위의 "얇은 금테" 그대로다.
 - 검사는 `ui_test.gd` 가 한다 — 오른쪽 위인지, 창 안에 있는지, 눌러서 닫히는지.
 
 ## 아직 안 맞춘 것
+
+- 오른쪽 위 메뉴 일곱 장은 리니지풍(칠한 반실사)이고, 퀵슬롯 옆 자동사냥·창 안 아이콘은 상아빛 결이다.
+  나머지도 그쪽으로 옮길지는 안 정했다 → [hud.md](hud.md) "메뉴 아이콘".
 
 - 스킬창·NPC 창은 얇은 금테 결이다. 인벤토리 결로 맞출지는 안 정했다.
 - 상점·대장간 창(`npc_panel.gd`)과 전직 창(`job_panel.gd`)은 2026-09-26 에 이 결로 다시

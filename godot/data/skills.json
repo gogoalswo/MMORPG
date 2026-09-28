@@ -316,6 +316,20 @@
       "reqLevel": 70,
       "tier": 2,
       "description": "땅을 짓밟아 사방에서 얼음 기둥을 솟구치게 한다."
+    },
+    "ki_burst": {
+      "id": "ki_burst",
+      "name": "파천장",
+      "job": "fighter",
+      "cooldown": 10000,
+      "castMs": 600,
+      "range": 4,
+      "arc": 1.7453292519943295,
+      "power": 12,
+      "maxTargets": 8,
+      "reqLevel": 180,
+      "tier": 4,
+      "description": "기를 모아 손바닥으로 내질러 앞을 휩쓴다."
     }
   },
   "byJob": {
@@ -323,7 +337,8 @@
       "rising_kick",
       "thunder_fall",
       "frost_pillar",
-      "sky_breaker"
+      "sky_breaker",
+      "ki_burst"
     ],
     "mage": [
       "fireball",

@@ -501,6 +501,29 @@ const SKILL_LIST: SkillDef[] = [
     tier: 2,
     description: '땅을 짓밟아 사방에서 얼음 기둥을 솟구치게 한다.',
   },
+  {
+    /**
+     * 손바닥을 앞으로 내질러 **기를 앞으로 쏟아낸다** (`KiFx.burst`, 2026-09-28 요청 —
+     * 사용자가 준 스크린샷: 흰·금빛 소용돌이 호가 겹겹이 앞으로 휘몰아치고 빛살이 튄다).
+     * 앞으로 뻗는 한 방향기라 **격투가 근접 규칙대로 사거리 4m** 다 — 투사체가 없으니
+     * 그보다 길면 `skills.test.ts` 에 걸린다. 이펙트도 4m 안에서 끝난다.
+     * 동작은 새로 짓지 않고 스트레이트(`Cross`, 0.6초)를 쓴다.
+     */
+    id: 'ki_burst',
+    name: '파천장',
+    job: 'fighter',
+    cooldown: 10000,
+    castMs: 600,
+    range: 4.0,
+    // 앞 100° 부채꼴 — 소용돌이가 퍼지는 폭
+    arc: (Math.PI * 5) / 9,
+    power: 12.0,
+    maxTargets: 8,
+    // 4차 전직(Lv.180)에 열린다
+    reqLevel: 180,
+    tier: 4,
+    description: '기를 모아 손바닥으로 내질러 앞을 휩쓴다.',
+  },
 ];
 
 export const SKILLS: Record<string, SkillDef> = Object.fromEntries(

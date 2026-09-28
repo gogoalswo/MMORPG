@@ -171,6 +171,8 @@ const SWING_CLIPS := ["Jab", "Cross"]
 const SKILL_CLIPS := {
 	"rising_kick": "Claw", "thunder_fall": "Thunder",
 	"sky_breaker": "SkyBreaker", "frost_pillar": "FrostStomp",
+	# 파천장은 동작을 새로 짓지 않았다 — 앞으로 내지르는 스트레이트를 쓴다
+	"ki_burst": "Cross",
 }
 ## 앞 자세에서 동작으로 섞어 넘어가는 시간. 부딪히는 순간이 클립 0.1초 자리라
 ## 길게 섞으면 이펙트보다 주먹이 늦는다
@@ -4642,7 +4644,7 @@ func _show_skill(payload: Dictionary) -> void:
 	if str(payload.get("id", "")) != _transport.my_id():
 		return
 	var skill := str(payload.get("skill", ""))
-	if not (skill in ["rising_kick", "thunder_fall", "sky_breaker", "frost_pillar"]):
+	if not (skill in ["rising_kick", "thunder_fall", "sky_breaker", "frost_pillar", "ki_burst"]):
 		return
 	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
 	if me.is_empty():
@@ -4663,6 +4665,9 @@ func _show_skill(payload: Dictionary) -> void:
 		var ice_up: Array = payload.get("upgrades", [])
 		IceFx.burst(_fx, here, float(me.rot), "shatter" in ice_up, "freeze" in ice_up)
 		_camera.shake(IceFx.SHAKE, IceFx.SHAKE_TIME)
+	elif skill == "ki_burst":
+		KiFx.burst(_fx, here, float(me.rot))
+		_camera.shake(KiFx.SHAKE, KiFx.SHAKE_TIME)
 	else:
 		# 강화 — "연타" 면 두 번 더 긁고 보라다. "위력"(`wide`)은 피해만 키워서 이펙트가 그대로다
 		var claw_up: Array = payload.get("upgrades", [])

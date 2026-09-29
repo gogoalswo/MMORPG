@@ -4753,7 +4753,10 @@ func _show_skill(payload: Dictionary) -> void:
 		get_tree().create_timer(NovaFx.EXPLODE).timeout.connect(
 			_camera.shake.bind(NovaFx.SHAKE, NovaFx.SHAKE_TIME))
 	elif skill == "blast_heel":
-		BlastFx.blast(_fx, here, float(me.rot))
+		# 폭발 기둥은 **타겟 자리**에 선다 — 판정이 누르는 순간 정해 실어 보낸 자리
+		var tx := float(payload.get("tx", me.x))
+		var tz := float(payload.get("tz", me.z))
+		BlastFx.blast(_fx, Vector3(tx, _ground_y(tx, tz), tz), float(me.rot))
 		_camera.shake(BlastFx.SHAKE, BlastFx.SHAKE_TIME)
 	else:
 		# 강화 — "연타" 면 두 번 더 긁고 보라다. "위력"(`wide`)은 피해만 키워서 이펙트가 그대로다

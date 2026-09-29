@@ -144,3 +144,32 @@ static func flame(size := 96) -> ImageTexture:
 	var tex := ImageTexture.create_from_image(img)
 	_cache[key] = tex
 	return tex
+
+
+## **불기둥.** 세로로 곧게 서서 가운데가 진하고 좌우로 흐려지며, 위 끝 3할에서만 옅어져
+## 사라진다. 세로 잡음 줄무늬로 불길이 치솟는 결을 낸다. 불꽃 혀(`flame`)를 기둥에 썼더니
+## 위로 너무 빨리 옅어져 **기둥이 아니라 짧은 불덩이**였다 (2026-09-29 폭렬 찍기 캡처)
+static func pillar(size := 96) -> ImageTexture:
+	var key := "pillar_%d" % size
+	if _cache.has(key):
+		return _cache[key]
+	var noise := FastNoiseLite.new()
+	noise.seed = 20260929
+	noise.frequency = 0.08
+	var img := Image.create(size, size, false, Image.FORMAT_RGBA8)
+	var mid := float(size - 1) * 0.5
+	for y in size:
+		# v: 0 = 위 · 1 = 밑동
+		var v := float(y) / float(size - 1)
+		# 밑동도 흐린다 — 반만 흐렸더니 밑동이 **칼로 자른 듯 평평하게** 끊겼다 (2차 캡처)
+		var vertical := smoothstep(0.0, 0.3, v) * (1.0 - smoothstep(0.86, 1.0, v))
+		for x in size:
+			var d := absf(float(x) - mid) / mid
+			# 줄무늬 — 가로로 촘촘하고 세로로 길게 늘인 잡음
+			var n := noise.get_noise_2d(float(x) * 1.6, float(y) * 0.25) * 0.5 + 0.5
+			var across := 1.0 - smoothstep(0.25 + n * 0.3, 1.0, d)
+			var a := across * vertical * lerpf(0.6, 1.0, n)
+			img.set_pixel(x, y, Color(1.0, 1.0, 1.0, clampf(a, 0.0, 1.0)))
+	var tex := ImageTexture.create_from_image(img)
+	_cache[key] = tex
+	return tex

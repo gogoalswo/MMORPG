@@ -154,7 +154,8 @@ const WIDE_TOLERANCE = new Set([
   'ui_slot_pick.png',
   'ui_tab_on.png',
   'ui_tab_off.png',
-  'ui_button.png',
+  // ui_button 은 뺐다 (2026-09-29) — 청록 돌판 모서리의 **옅게 긁힌 자국**이 흰 배경과
+  // 가까워 넓은 폭으로 걷으면 같이 걷혔다 (찍어서 봤다). 기본 폭이면 남는다
   'ui_figure.png',
 ]);
 

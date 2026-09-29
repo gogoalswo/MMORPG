@@ -156,10 +156,30 @@ export const EARLY_TIME_MULT = 1.5;
  * 곱하기 **전** 값으로 세므로, 레벨당 킬 수·시간이 1/3 이 된다.
  */
 export const EARLY_EXP_MULT = 3;
+/**
+ * Lv31~ 몬스터가 주는 경험치 × 이 값 ★ (2026-09-29 지시: "메마른 협곡까지 경험치는 그대로
+ * 두고 … 배수를 x2로 올려"). `EARLY_EXP_MULT` 와 같은 규칙이라 레벨당 킬 수·시간이 1/2 이 된다.
+ */
+export const LATE_EXP_MULT = 2;
+/**
+ * Lv31~ 의 **기준 경험치**(배수 전) 앵커 — 잿빛 황야 첫 몬스터(Lv33)가 이 값이 되게
+ * `EXP_COEF` 를 키운다 (2026-09-29 지시: "잿빛황야 경험치 기준을 50으로 설정하고 나머지
+ * 사냥터도 그 기준에 맞춰서"). 배수와 달리 `expToNext` 에도 같이 붙으므로 **속도는 안 바뀌고**
+ * 보이는 숫자만 커진다 — 협곡 Lv28 의 85 에서 잿빛 황야 Lv33 의 100(50 × 2)으로 이어진다.
+ */
+export const LATE_EXP_ANCHOR = 50;
+export const LATE_EXP_ANCHOR_LEVEL = EARLY_FIELDS * FIELD_SPAN + 3;
+/** Lv31~ 기준 경험치 배율 ≈ 1.524 (Lv33 HP 164 × 0.2 = 32.8 → 50) */
+export const LATE_EXP_BOOST = LATE_EXP_ANCHOR / (MONSTER_STATS[LATE_EXP_ANCHOR_LEVEL - 1]![0] * EXP_COEF);
 
-/** 그 레벨 몬스터 경험치에 곱하는 배수 — 초반(Lv1~30)만 `EARLY_EXP_MULT` */
+/** 그 레벨 몬스터 경험치에 곱하는 배수 — 초반(Lv1~30) `EARLY_EXP_MULT`, 그 뒤 `LATE_EXP_MULT` */
 export function expMult(level: number): number {
-  return level <= EARLY_FIELDS * FIELD_SPAN ? EARLY_EXP_MULT : 1;
+  return level <= EARLY_FIELDS * FIELD_SPAN ? EARLY_EXP_MULT : LATE_EXP_MULT;
+}
+
+/** 기준 경험치 배율 — 초반(Lv1~30)은 1, 그 뒤 `LATE_EXP_BOOST`. `expToNext` 에도 붙는다 */
+export function expBoost(level: number): number {
+  return level <= EARLY_FIELDS * FIELD_SPAN ? 1 : LATE_EXP_BOOST;
 }
 
 /**
@@ -438,7 +458,7 @@ export function monster(level: number, role: MonsterRole = 'normal'): Monster {
     atk: atk * r.atk,
     df,
     interval: MON_ATTACK_INTERVAL,
-    exp: hp * r.hp * EXP_COEF * expMult(level),
+    exp: hp * r.hp * EXP_COEF * expBoost(level) * expMult(level),
   };
 }
 
@@ -608,9 +628,12 @@ export function balanceTable() {
     clearTime: CLEAR_TIME,
     hpLossPerClear: HP_LOSS_PER_CLEAR,
     expCoef: EXP_COEF,
-    // 초반(Lv1 ~ earlyExpTop) 몬스터 경험치 배수 — 고도 `stats.gd` 의 `monster` 가 같이 곱한다
+    // 초반(Lv1 ~ earlyExpTop) 몬스터 경험치 배수, 그 뒤는 lateExpMult × lateExpBoost
+    // — 고도 `stats.gd` 의 `monster` 가 같이 곱한다
     earlyExpMult: EARLY_EXP_MULT,
     earlyExpTop: EARLY_FIELDS * FIELD_SPAN,
+    lateExpMult: LATE_EXP_MULT,
+    lateExpBoost: LATE_EXP_BOOST,
     jobs: JOB_IDS,
     jobMult: JOB_MULT,
     roleMult: ROLE_MULT,

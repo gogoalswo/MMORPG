@@ -4494,6 +4494,16 @@ func _am_dead() -> bool:
 func _send_input(delta: float) -> void:
 	if _zone_node == null or _am_dead():
 		return
+	# 키보드가 쥐고 있으면 그게 먼저다. 누른 목표·쫓던 놈은 내려놓는다 — 골라 둔 놈은 그대로
+	var keys := _key_dir()
+	if keys != Vector2.ZERO:
+		_target_mob = ""
+		_target = Vector3.INF
+		_holding = false
+		_stuck_at = Vector3.INF
+		_marker.visible = false
+		_move(keys, delta)
+		return
 	if _target_mob != "":
 		_chase_and_hit(delta)
 		return
@@ -4514,6 +4524,22 @@ func _send_input(delta: float) -> void:
 		_marker.visible = false
 		return
 	_move(to.normalized(), delta)
+
+
+## WASD 로 걸을 방향 (x, z). **화면 기준**이다 — W 는 화면 위쪽, D 는 화면 오른쪽.
+## 카메라가 대각선으로 보므로 세계 축(±x, ±z)이 아니라 카메라 방향을 바닥에 눕혀 쓴다.
+## 채팅 칸에 글을 쓰는 중이면 움직이지 않는다
+func _key_dir() -> Vector2:
+	if _camera == null or get_viewport().gui_get_focus_owner() is LineEdit:
+		return Vector2.ZERO
+	var up := int(Input.is_physical_key_pressed(KEY_W)) - int(Input.is_physical_key_pressed(KEY_S))
+	var right := int(Input.is_physical_key_pressed(KEY_D)) - int(Input.is_physical_key_pressed(KEY_A))
+	if up == 0 and right == 0:
+		return Vector2.ZERO
+	var basis := _camera.global_transform.basis
+	var fwd := Vector2(-basis.z.x, -basis.z.z).normalized()
+	var side := Vector2(basis.x.x, basis.x.z).normalized()
+	return (fwd * up + side * right).normalized()
 
 
 ## 걷는데 발이 안 나가나. **막힌 채 이동 입력을 계속 보내면 자동 사냥이 영영 쉰다** —

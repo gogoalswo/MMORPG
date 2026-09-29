@@ -245,8 +245,11 @@ func _run_scene() -> void:
 	await process_frame
 
 	var me: Dictionary = game._transport.snapshot().players[game._transport.my_id()]
-	me.x = 5.0
-	me.z = 7.0
+	# 전직관 옆에 선다 — 자리는 표에서 읽는다 (_village 와 같다)
+	for npc in game._transport.snapshot().npcs:
+		if str(npc.get("name", "")) == NPC:
+			me.x = float(npc.x) - 2.0
+			me.z = float(npc.z)
 	me.level = 70
 	me.job_tier = 1
 	game._transport.send(&"npc", {"name": NPC})

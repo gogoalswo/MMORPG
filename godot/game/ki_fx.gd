@@ -117,12 +117,13 @@ const SHAKE_TIME := 0.35
 ## 연파 — 두 번째 파도가 나가는 때(초). 강화 표의 `followMs` 와 같다
 const TWIN_DELAY := 0.3
 ## 두 번째 파도는 푸른 빛 — 금빛 3겹(`SWIRL_LAYERS`)과 같은 폭, 색만 바꾼다. 흰 심은 그대로
+## 1차 찍기(헤일로 0.35·0.62·1.0 · 가운데 0.72·0.88·1.0)는 가산이 겹쳐 거의 흰색이었다 — 짙게 했다
 const PALETTE_TWIN := [
-	Color(0.35, 0.62, 1.0, 0.4),
-	Color(0.72, 0.88, 1.0, 0.8),
-	Color(1.0, 1.0, 1.0, 1.0),
+	Color(0.12, 0.42, 1.0, 0.6),
+	Color(0.38, 0.66, 1.0, 0.85),
+	Color(0.9, 0.96, 1.0, 1.0),
 ]
-const STREAK_TWIN := [Color(0.5, 0.75, 1.0, 0.5), Color(1.0, 1.0, 1.0, 1.0)]
+const STREAK_TWIN := [Color(0.25, 0.55, 1.0, 0.6), Color(0.9, 0.96, 1.0, 1.0)]
 const COLOR_FLASH_TWIN := Color(0.75, 0.88, 1.0)
 const COLOR_AURA_TWIN := Color(0.8, 0.9, 1.0)
 const COLOR_MOTE_TWIN := Color("#a8d4ff")
@@ -142,11 +143,12 @@ const GATHER_FADE := 0.12
 ## 터지는 빛살이 닿는 곳 — 강화 표의 `followRadius`(2.5m) 안
 const BLAST_RADIUS := 2.4
 const BLAST_RAYS := 44
-const BLAST_RAY_TIME := 0.38
-const BLAST_RAY_TRAIL := 0.45
+## 1차 찍기(폭 0.16 · 0.05, 0.38초)는 빛살이 실처럼 가늘어 "빛 덩이" 로만 보였다 — 굵고 길게
+const BLAST_RAY_TIME := 0.5
+const BLAST_RAY_TRAIL := 0.55
 const BLAST_LAYERS := [
-	[0.16, Color(1.0, 0.8, 0.42, 0.55)],
-	[0.05, Color(1.0, 1.0, 1.0, 1.0)],
+	[0.34, Color(1.0, 0.78, 0.38, 0.6)],
+	[0.1, Color(1.0, 1.0, 1.0, 1.0)],
 ]
 const BLAST_FLASH_SIZE := 3.4
 const BLAST_FLASH_LIFE := 0.3
@@ -729,7 +731,8 @@ func _make_blast_aura() -> CPUParticles3D:
 	e.damping_max = 10.0
 	e.scale_amount_curve = LightningFx.grow_curve(2.4)
 	e.color = COLOR_AURA
-	e.color_ramp = soft_ramp(COLOR_AURA, 0.3)
+	# 빛살이 보이게 옅게 — 진하면 섬광과 겹쳐 하얀 공이 된다
+	e.color_ramp = soft_ramp(COLOR_AURA, 0.18)
 	var mat := LightningFx.mote(COLOR_AURA, true)
 	mat.albedo_color = Color.WHITE
 	mat.albedo_texture = FxTex.puff()

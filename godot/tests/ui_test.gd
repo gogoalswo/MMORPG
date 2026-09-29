@@ -606,6 +606,14 @@ func _case_status(game: Node3D) -> void:
 		_fail("가방 옆 강화 단추 — 보임 %s · 탭 %s · 목록 %s · 목록 창 %s · 다중 잠김 %s" % [pop.visible, pop.mode, pop.filter, pop.list_panel.visible, pop.tabs["multi"].disabled])
 	else:
 		print("  가방 옆 강화: 단일 강화 · 전체 목록 끼운 것 %d + 가방 %d칸" % [pop._list_worn.size(), pop._list_view.size()])
+	# 고르기 전에 잠긴 단추는 **회색** — disabled 조각이 normal 과 다르고, 목표 띠도 꺼진다 (2026-09-29)
+	for button: Button in [pop.go, pop.run_button, pop.tabs["multi"], pop.filters["item"]]:
+		var off := button.get_theme_stylebox("disabled") as StyleBoxTexture
+		var on := button.get_theme_stylebox("normal") as StyleBoxTexture
+		if not button.disabled or (off != null and on != null and off.texture == on.texture):
+			_fail("장비 고르기 전 '%s' — 꺼짐 %s · 회색 조각 아님" % [button.text, button.disabled])
+	if not pop.chevrons[0].off:
+		_fail("장비 고르기 전인데 목표 띠 +1 이 켜져 있다")
 	game._menu_cells[2].find_child("hit", true, false).pressed.emit()
 	await process_frame
 	if pop.visible:

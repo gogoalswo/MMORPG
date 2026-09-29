@@ -209,6 +209,7 @@ func _draw_tabs() -> void:
 		var box := _tag_box(PRESS_TINT if on else Color(0.55, 0.55, 0.55))
 		for state in ["normal", "hover", "pressed", "focus"]:
 			tab.add_theme_stylebox_override(state, box)
+		ButtonFx.attach(tab)
 		tab.pressed.connect(func() -> void:
 			_tab = str(key)
 			_scroll.scroll_vertical = 0

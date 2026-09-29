@@ -40,6 +40,14 @@ const SOURCES = {
 /** 밝기를 높이로 볼 때의 기울기 배율. 돌판·자갈은 틈이 깊고, 눈·모래는 얕다 */
 const BUMP = { stone: 6, grass: 3, snow: 4, dirt: 4, sand: 3, cobble: 7, lava: 5, soil: 3 };
 
+/**
+ * 색 밝기 배율(sRGB 값에 곱한다). 흙(soil)은 원본이 아주 어두워(평균 #221b14) 셰이더에서
+ * 28배로 밝혀 썼더니, **웹 빌드의 GPU 압축이 어두운 색을 거칠게 뭉갠 오차까지 28배로 불어나**
+ * 밝은 회보라 얼룩이 됐다 (2026-09-29, 데스크톱 렌더에서는 멀쩡했다). 텍스처를 밝게 구워
+ * 압축 전 값을 키우고 셰이더 배율을 작게 둔다
+ */
+const GAIN = { soil: 2.6 };
+
 /** 인자로 종류를 주면 그것만 굽는다 — 원본이 한 장만 있을 때 (`node … soil`) */
 const ONLY = process.argv.slice(2);
 
@@ -102,6 +110,10 @@ for (const [kind, file] of Object.entries(SOURCES).filter(([k]) => ONLY.length =
       normal[o + 2] = Math.round(((1 / len) * 0.5 + 0.5) * 255);
     }
   }
+
+  // 밝기 배율 — 노멀을 만든 **뒤** 색에만 곱한다(요철 세기는 그대로)
+  const gain = GAIN[kind] ?? 1;
+  if (gain !== 1) for (let i = 0; i < color.length; i += 1) color[i] = Math.min(255, Math.round(color[i] * gain));
 
   const raw = { raw: { width: size, height: size, channels: 3 } };
   await sharp(Buffer.from(color), raw).jpeg({ quality: 90, chromaSubsampling: '4:4:4' }).toFile(`${OUT_DIR}/ground_${kind}_color.jpg`);

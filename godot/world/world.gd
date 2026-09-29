@@ -937,6 +937,10 @@ func _respawn(now: int) -> void:
 		monster.respawn_at = 0
 		monster.stunned_until = 0
 		monster.pull_until = 0
+		# **죽기 전 대상을 잊는다** (2026-09-29). 안 비우면 대상 유지 조건이 "리쉬 안" 이라
+		# 어그로(3m) 밖에 선 죽인 사람에게 되살아나자마자 달려간다
+		monster.target = ""
+		monster.state = "idle"
 		# 죽은 자리에서 다시 선다. 집에서 멀면 다음 틱의 리쉬 검사가 도로 켠다
 		monster.leashing = false
 

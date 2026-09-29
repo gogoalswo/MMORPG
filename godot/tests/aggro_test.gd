@@ -16,6 +16,7 @@ const LEASH_FAR := Vector2(11.0, -11.0)
 func _init() -> void:
 	_case_idle()
 	_case_chase()
+	_case_retaliate()
 	_case_detour(1)
 	_case_detour(3)
 	_case_attack()
@@ -54,7 +55,7 @@ func _setup(mob_x: float, mob_z: float, player_x: float, player_z: float) -> Arr
 
 
 func _case_idle() -> void:
-	# 어그로(9.1m) 밖이면 쫓지 않는다. **가만히 서 있는 것은 아니다** —
+	# 어그로(7m) 밖이면 쫓지 않는다. **가만히 서 있는 것은 아니다** —
 	# 집 주변을 서성인다 (순찰은 tests/patrol_test.gd 가 따로 본다)
 	var s := _setup(-6.0, -3.0, -6.0, 12.0)
 	var w: World = s[0]
@@ -70,14 +71,14 @@ func _case_idle() -> void:
 
 
 func _case_chase() -> void:
-	# 어그로 안이면 다가온다
-	var s := _setup(-6.0, -3.0, -6.0, 5.0)
+	# 어그로(3m) 안이면 다가온다
+	var s := _setup(-6.0, -3.0, -6.0, -0.5)
 	var w: World = s[0]
 	var mob: Dictionary = s[2]
-	var before: float = absf(mob.z - 5.0)
+	var before: float = absf(mob.z + 0.5)
 	for i in 60:
 		w.step(1.0 / 60.0)
-	var after: float = absf(mob.z - 5.0)
+	var after: float = absf(mob.z + 0.5)
 	if after >= before:
 		_fail("어그로 안인데 안 다가왔다 (%.2f -> %.2f)" % [before, after])
 	else:
@@ -91,6 +92,8 @@ func _case_detour(wall: int) -> void:
 	var s := _setup(-6.0, -3.0, -6.0, 4.0)
 	var w: World = s[0]
 	var mob: Dictionary = s[2]
+	# 여기는 우회만 본다 — 어그로를 3m 로 좁힌 뒤(2026-09-29)로는 7m 밖 사람을 못 알아채니 넓혀 둔다
+	mob.aggro = 9.0
 	var mobs: Array = w.snapshot().monsters
 	var blockers: Array = []
 	for i in wall:
@@ -234,3 +237,25 @@ func _case_death_and_revive() -> void:
 		_fail("마을이 아니라 %s 에서 살아났다" % w.zone_id)
 	else:
 		print("  죽음 -> 부활: 마을에서 hp %d/%d" % [after.hp, after.stats.maxHp])
+
+
+func _case_retaliate() -> void:
+	# 어그로(3m) 밖에서 때려도 **맞은 놈은 때린 사람을 쫓는다** (2026-09-29).
+	# 없으면 멀리서 쏘는 동안 가만히 서서 맞는다
+	var s := _setup(-6.0, -3.0, -6.0, 6.0)
+	var w: World = s[0]
+	var me: Dictionary = s[1]
+	var mob: Dictionary = s[2]
+	w._hit_monster(me, mob, 1.0, "")
+	if int(mob.hp) <= 0:
+		_fail("반격 시험인데 한 대에 죽었다")
+		return
+	var before := absf(mob.z - 6.0)
+	for i in 60:
+		w.step(1.0 / 60.0)
+	if mob.target != "me":
+		_fail("맞았는데 때린 사람을 안 잡았다 (대상 '%s')" % mob.target)
+	elif absf(mob.z - 6.0) >= before:
+		_fail("맞았는데 안 다가왔다")
+	else:
+		print("  9m 밖에서 맞고 쫓아온다 (%.2f m -> %.2f m)" % [before, absf(mob.z - 6.0)])

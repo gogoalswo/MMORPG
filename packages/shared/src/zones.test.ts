@@ -128,19 +128,24 @@ test('없는 스폰 이름은 default 로 떨어진다', () => {
 // 문은 밟아야 열린다. 겹치거나 밖에 놓이면 예외가 나지 않고 "안 열린다" 로만
 // 나타나서, 문을 못 찾은 건지 코드가 안 도는 건지 구분이 안 된다.
 
-test('차원문이 모든 존에 있다', () => {
-  // 걸어 들어가는 포탈이 없으므로, 문이 없는 존은 들어가면 죽는 것 말고는
-  // 나올 방법이 없는 방이 된다.
-  const without = Object.values(ZONES).filter((z) => !z.gate);
+test('차원문이 사냥터 말고는 모든 존에 있다', () => {
+  // 걸어 들어가는 포탈이 없으므로, 마을에 문이 없으면 사냥터로 나갈 길이 없다.
+  // 사냥터는 문을 뺐다 (2026-09-29 요청 "사냥터에 들어가면 포탈을 제거해") — 나올 때는
+  // HUD 위쪽 "마을가기" 단추를 쓴다. 던전·전직 시험은 그대로 둔다
+  const fields = new Set<string>(FIELD_ORDER);
+  const without = Object.values(ZONES).filter((z) => !z.gate && !fields.has(z.id));
   assert.deepEqual(without.map((z) => z.id), [], '차원문이 없는 존이 있다');
+  const withGate = FIELD_ORDER.filter((id) => getZone(id).gate);
+  assert.deepEqual(withGate, [], '사냥터에 차원문이 남아 있다');
 });
 
 test('차원문이 모든 존에서 같은 색이고, 자리는 마을만 한가운데다', () => {
-  // 존마다 다르면 "나가려면 어디로" 를 매번 다시 찾는다. 마을만은 맵 한가운데다 (2026-09-29 요청)
-  assert.deepEqual(ZONES[START_ZONE]!.gate.position, [0, 0]);
-  const gates = Object.values(ZONES).map((z) => z.gate);
+  // 존마다 다르면 "나가려면 어디로" 를 매번 다시 찾는다. 마을만은 맵 한가운데다 (2026-09-29 요청).
+  // 사냥터에는 문이 없다 (위 검사)
+  assert.deepEqual(ZONES[START_ZONE]!.gate!.position, [0, 0]);
+  const gates = Object.values(ZONES).flatMap((z) => (z.gate ? [z.gate] : []));
   const first = gates[0]!;
-  const outside = Object.values(ZONES).filter((z) => z.id !== START_ZONE).map((z) => z.gate);
+  const outside = Object.values(ZONES).flatMap((z) => (z.id !== START_ZONE && z.gate ? [z.gate] : []));
   for (const gate of outside) assert.deepEqual(gate.position, outside[0]!.position);
   for (const gate of gates) {
     assert.equal(gate.radius, first.radius);
@@ -188,7 +193,7 @@ test('차원문 목록의 사냥터가 전부 default 스폰을 가진다', () =
     const [x, z] = getSpawn(zone, 'default');
     // 도착 지점이 무리 원 안이면 몬스터 사이에 떨어진다. 인식 범위(반경 + aggroRange)
     // 밖까지는 안 본다 — 맵을 2/3 로 줄이며(2026-09-23) 무리가 ±14 로 붙어서, 도착하면
-    // 몬스터가 알아채는 것을 받아들였다 (docs/features/world-zones.md "무리 자리")
+    // 몬스터가 알아채는 것을 받아들였다 (docs/features/world-zones.md "몬스터 자리")
     for (const pack of zone.monsters ?? []) {
       const d = Math.hypot(pack.x - x, pack.z - z);
       const kind = MONSTER_KINDS[pack.kind];
@@ -197,6 +202,37 @@ test('차원문 목록의 사냥터가 전부 default 스폰을 가진다', () =
         d > pack.radius,
         `${zoneId}: 도착 지점이 ${kind.name} 무리 안이다 (${d.toFixed(1)}m)`
       );
+    }
+  }
+});
+
+test('사냥터 몬스터가 한 번에 한 마리씩 붙는다', () => {
+  /**
+   * "여러 마리가 한 번에 붙지 않도록 듬성듬성" (2026-09-29, docs/features/world-zones.md "몬스터 자리").
+   * 한 놈 옆에 붙어 싸울 때 이웃은 순찰로 다가와도 어그로 밖이어야 하고,
+   * 도착 지점도 누구의 어그로·순찰 범위 안이 아니어야 한다.
+   * 순찰 반경은 godot/world/world.gd 의 PATROL_RADIUS, 근접 사거리는 강한 종의 attackRange 보다 넉넉히.
+   */
+  const PATROL = 1;
+  const MELEE = 2.5;
+  for (const zoneId of FIELD_ORDER) {
+    const zone = getZone(zoneId);
+    const mobs = zone.monsters ?? [];
+    const [sx, sz] = getSpawn(zone, 'default');
+    for (const [i, a] of mobs.entries()) {
+      const aggro = MONSTER_KINDS[a.kind]!.aggroRange;
+      assert.equal(a.count, 1, `${zoneId}: 한 자리에 한 마리`);
+      assert.ok(
+        Math.hypot(a.x - sx, a.z - sz) > aggro + PATROL + 1,
+        `${zoneId}: (${a.x}, ${a.z}) 가 도착 지점을 알아챈다`
+      );
+      for (const b of mobs.slice(i + 1)) {
+        const d = Math.hypot(a.x - b.x, a.z - b.z);
+        assert.ok(
+          d - PATROL * 2 - MELEE > aggro,
+          `${zoneId}: (${a.x}, ${a.z}) 와 (${b.x}, ${b.z}) 가 ${d.toFixed(1)}m — 같이 끌린다`
+        );
+      }
     }
   }
 });

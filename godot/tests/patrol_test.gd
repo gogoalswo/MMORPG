@@ -135,7 +135,7 @@ func _case_inside_radius() -> void:
 
 func _case_aggro_wins() -> void:
 	# 순찰 중에 사람이 어그로 안으로 들어오면 곧바로 쫓는다 (순찰이 막지 않는다)
-	var s := _setup(-10.0, -2.0, 6.0)
+	var s := _setup(-10.0, -2.0, 0.0)
 	var w: World = s[0]
 	var mob: Dictionary = s[2]
 	_wake(mob)

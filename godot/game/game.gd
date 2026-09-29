@@ -107,6 +107,8 @@ const BAR_PAD := 0
 ## 오른쪽 위 메뉴 단추 (스킬·가방). 엄지로 누르니 퀵슬롯과 비슷한 크기다.
 ## **테두리가 없다** — 받은 그림이 그렇다 (2026-09-20). 그래서 아이콘을 거의 꽉 채운다
 const MENU_BTN := 62
+## HUD 위쪽 가운데 "마을가기" 단추 크기
+const HOME_BUTTON_SIZE := Vector2(140, 48)
 const MENU_INSET := 3
 ## 메뉴 단추 아래 이름 글자 — 그림만으로는 무엇인지 헷갈린다 (2026-09-28 요청, 받은 그림은
 ## 아이콘 아래에 "상점·인벤토리·스펠·퀘스트" 가 붙어 있다). **아이콘 네모 밑에 세로로 쌓는다** —
@@ -327,6 +329,8 @@ var _menu_cells: Array = []
 var _bag_dot: Control
 ## 설계 창 단추 — 오른쪽 맨 아래, 알파 0 (안 보이지만 눌린다)
 var _design_cell: Control
+## HUD 위쪽 가운데 "마을가기" — 마을 밖에서만 선다 (`_refresh_home_button`)
+var _home_button: Button
 var _skill_panel: PanelContainer
 ## 스킬창. 틀은 한 번 짓고 `_redraw_skills` 가 채운다
 var _skill_big: PanelContainer
@@ -2702,6 +2706,20 @@ func _build_skill_bar() -> void:
 	menu.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE, 20)
 	menu.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 
+	# 마을가기 — **위쪽 가운데** (2026-09-29 요청: "사냥터에 들어가면 포탈을 제거해. HUD 윗 부분에
+	# 마을가기 버튼을 만들어서 마을 갈 수 있는 기능 만들어"). 사냥터에 차원문이 없어져서 나오는 길이
+	# 이것뿐이다. 왼쪽 위는 상태 글자 줄, 오른쪽 위는 메뉴라 가운데가 비어 있다.
+	# 단추 조각(`ui_button`) + 글자 — 그림이 없으면 `_frame_box` 가 코드로 그린 판을 준다
+	_home_button = _make_button("마을가기", _go_village)
+	_home_button.name = "home"
+	_home_button.custom_minimum_size = HOME_BUTTON_SIZE
+	_home_button.focus_mode = Control.FOCUS_NONE
+	_home_button.add_theme_font_size_override("font_size", 20)
+	_ui_root.add_child(_home_button)
+	_home_button.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP, Control.PRESET_MODE_MINSIZE, 20)
+	_home_button.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_refresh_home_button()
+
 	# 설계(치트 목록) — 메뉴에서 빼서 **화면 오른쪽 맨 아래 모서리**에 숨겨 둔다 (2026-09-28 요청:
 	# "설계 버튼을 오른쪽 맨 아래로 위치 변경하고, 아이콘이랑 텍스트 안 보이게 알파0으로").
 	# `modulate` 알파 0 이라 그림·글자는 안 보이지만 누름(hit)은 그대로 받는다
@@ -3961,6 +3979,17 @@ func _on_gate_tapped() -> void:
 	_open_gate()
 
 
+## "마을가기" — 마을 밖에서만 보인다. 존을 지을 때마다 다시 본다
+func _refresh_home_button() -> void:
+	if _home_button != null:
+		_home_button.visible = _shown_zone != "" and _shown_zone != GameData.start_zone()
+
+
+## "마을가기" 단추 — 차원문 창에서 마을을 고른 것과 같은 `travel` 요청이다 (World 가 다시 본다)
+func _go_village() -> void:
+	_on_gate_pick(GameData.start_zone())
+
+
 ## 차원문 창과 던전 창이 같이 쓴다 — 둘 다 결국 `travel` 요청이고 World 가 다시 본다
 func _on_gate_pick(zone_id: String) -> void:
 	_gate_panel.visible = false
@@ -4001,6 +4030,7 @@ func _build_zone(zone_id: String) -> void:
 	_zone_node = Node3D.new()
 	add_child(_zone_node)
 	_shown_zone = zone_id
+	_refresh_home_button()
 	# 이펙트 셰이더를 미리 굽는다 — 스킬을 처음 쓸 때 멈칫하지 않게 (한 게임에 한 번)
 	if _camera != null:
 		FxWarm.run(self, _camera, _ui_root.theme.default_font if _ui_root != null and _ui_root.theme != null else null)

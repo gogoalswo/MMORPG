@@ -48,10 +48,11 @@ func _case_village_empty() -> void:
 
 
 func _case_meadow_count() -> void:
-	# 화면 아래 귀퉁이 무리 하나 x 16, 보스 없음 (2026-09-28 — world-zones.md)
+	# 맵 전체에 한 마리씩(자리마다 count 1), 보스 없음 (2026-09-29 — world-zones.md "몬스터 자리").
+	# 자리 수는 생성기(`fieldSpots`)가 정하므로 존 데이터에서 센다
 	var count := _mobs(_world("meadow")).size()
-	if count != 16:
-		_fail("초원 몬스터가 16이어야 하는데 %d" % count)
+	if count != _spots("meadow") or count < 30:
+		_fail("초원 몬스터가 %d (자리 %d, 30 이상이어야 한다)" % [count, _spots("meadow")])
 
 
 func _case_no_overlap() -> void:
@@ -144,7 +145,7 @@ func _case_gate() -> void:
 	w.travel("me", "meadow")
 	if w.zone_id != "meadow":
 		_fail("고른 곳으로 안 갔다 (%s)" % w.zone_id)
-	elif _mobs(w).size() != 16:
+	elif _mobs(w).size() != _spots("meadow"):
 		_fail("옮긴 존에 몬스터가 안 났다")
 	else:
 		print("  차원문 알림 -> 골라서 %s, 몬스터 %d마리" % [w.zone_id, _mobs(w).size()])
@@ -153,3 +154,11 @@ func _case_gate() -> void:
 	w.travel("me", "없는곳")
 	if w.zone_id != "meadow":
 		_fail("없는 존으로 옮겨졌다")
+
+
+## 존 데이터에 적힌 마릿수 (자리마다 count 를 더한다)
+func _spots(zone_id: String) -> int:
+	var total := 0
+	for pack in GameData.zone(zone_id).get("monsters", []):
+		total += int(pack.get("count", 0))
+	return total

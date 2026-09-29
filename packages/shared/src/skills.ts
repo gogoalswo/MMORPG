@@ -83,6 +83,12 @@ export interface SkillDef {
    * 전직 레벨·보스는 `jobAdvance.ts` → [job-advance.md]
    */
   tier?: number;
+  /**
+   * **숨김** — 직업 스킬 목록(`JOB_SKILLS`)에서 뺀다. 스킬창·전직 해금·"스킬 전부" 치트가 전부
+   * 그 목록을 보므로 어디에도 안 뜬다. 판정·이펙트 데이터는 남겨 둬서 끄면 곧바로 돌아온다
+   * (2026-09-29 요청: "낙뢰와 빙주각은 일단 스킬 숨김 처리해놔")
+   */
+  hidden?: boolean;
   description: string;
 }
 
@@ -472,9 +478,10 @@ const SKILL_LIST: SkillDef[] = [
     arc: Math.PI * 2,
     power: 4.5,
     maxTargets: 4,
-    // 1차 전직(Lv.30)에 열린다
+    // 1차 전직(Lv.30)에 열렸다 — 지금은 숨김 (2026-09-29, 1차는 파천장)
     reqLevel: 30,
     tier: 1,
+    hidden: true,
     description: '번개를 세 번 내리꽂아 땅을 가른다.',
   },
   {
@@ -496,9 +503,10 @@ const SKILL_LIST: SkillDef[] = [
     arc: Math.PI * 2,
     power: 7.0,
     maxTargets: 8,
-    // 2차 전직(Lv.70)에 열린다
+    // 2차 전직(Lv.70)에 열렸다 — 지금은 숨김 (2026-09-29, 2차는 무적파쇄권)
     reqLevel: 70,
     tier: 2,
+    hidden: true,
     description: '땅을 짓밟아 사방에서 얼음 기둥을 솟구치게 한다.',
   },
   {
@@ -523,9 +531,9 @@ const SKILL_LIST: SkillDef[] = [
     arc: (Math.PI * 5) / 9,
     power: 12.0,
     maxTargets: 8,
-    // 4차 전직(Lv.180)에 열린다
-    reqLevel: 180,
-    tier: 4,
+    // 1차 전직(Lv.30)에 열린다 (2026-09-29 요청: "1레벨 할퀴기 · 30 파천장 · 70 무적파쇄권 · 120 폭렬권")
+    reqLevel: 30,
+    tier: 1,
     description: '기를 모아 손바닥으로 내질러 앞을 휩쓴다.',
   },
   {
@@ -552,9 +560,9 @@ const SKILL_LIST: SkillDef[] = [
     arc: Math.PI * 2,
     power: 14.0,
     maxTargets: 10,
-    // 4차 전직(Lv.180)에 열린다
-    reqLevel: 180,
-    tier: 4,
+    // 3차 전직(Lv.120)에 열린다 (2026-09-29 재배치)
+    reqLevel: 120,
+    tier: 3,
     description: '주먹에 기를 실어 내질러 일대를 폭발시킨다.',
   },
   {
@@ -578,9 +586,9 @@ const SKILL_LIST: SkillDef[] = [
     arc: Math.PI,
     power: 16.0,
     maxTargets: 10,
-    // 4차 전직(Lv.180)에 열린다
-    reqLevel: 180,
-    tier: 4,
+    // 2차 전직(Lv.70)에 열린다 (2026-09-29 재배치)
+    reqLevel: 70,
+    tier: 2,
     description: '기마 자세로 기를 모았다가 주먹을 내질러 앞을 산산이 부순다.',
   },
 ];
@@ -741,7 +749,7 @@ export const JOB_SKILLS: Record<JobId, string[]> = {
 };
 
 function skillsOf(job: JobId): string[] {
-  return SKILL_LIST.filter((s) => s.job === job)
+  return SKILL_LIST.filter((s) => s.job === job && !s.hidden)
     .sort((a, b) => a.reqLevel - b.reqLevel)
     .map((s) => s.id);
 }

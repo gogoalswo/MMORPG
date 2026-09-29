@@ -577,7 +577,8 @@ func _case_wide() -> void:
 	w.set_skill_bar("me", ["thunder_fall"])
 	for wide in [false, true]:
 		if wide:
-			w.debug_upgrade_all("me", 1)
+			# 낙뢰는 숨김이라(2026-09-29) "전체 강화" 치트가 안 붙인다 — 직접 붙인다
+			me.skill_upgrades = {"thunder_fall": ["wide"]}
 		me.skill_ready_at = {}
 		me.cast_until = 0
 		me.rot = PI / 2.0

@@ -30,13 +30,16 @@ test('전직 NPC 가 마을에 있다', () => {
   assert.equal(npcs.filter((n) => n.role === 'jobs').length, 1);
 });
 
-test('격투가 — 할퀴기는 기본, 낙뢰 1차 · 빙주각 2차 · 천붕각 3차', () => {
+test('격투가 — 할퀴기는 기본, 파천장 1차 · 무적파쇄권 2차 · 폭렬권 3차 (낙뢰·빙주각 숨김)', () => {
   const tierOf = (id: string) => SKILLS[id]!.tier ?? 0;
   assert.equal(tierOf('rising_kick'), 0);
-  assert.equal(tierOf('thunder_fall'), 1);
-  assert.equal(tierOf('frost_pillar'), 2);
+  assert.equal(tierOf('ki_burst'), 1);
+  assert.equal(tierOf('crush_fist'), 2);
+  assert.equal(tierOf('nova_fist'), 3);
   assert.equal(tierOf('sky_breaker'), 3);
-  assert.equal(tierOf('ki_burst'), 4);
+  // 숨긴 스킬은 목록에 없다 — 스킬창·전직 해금·치트가 전부 이 목록을 본다
+  assert.ok(!JOB_SKILLS.fighter.includes('thunder_fall'));
+  assert.ok(!JOB_SKILLS.fighter.includes('frost_pillar'));
   // 요구 레벨이 그 단계의 전직 레벨과 같다 — 스킬창의 "Lv.N" 이 전직 레벨을 가리킨다
   for (const id of JOB_SKILLS.fighter) {
     const tier = tierOf(id);
@@ -45,7 +48,7 @@ test('격투가 — 할퀴기는 기본, 낙뢰 1차 · 빙주각 2차 · 천붕
 });
 
 test('전직이 모자라면 레벨이 넉넉해도 못 배운다', () => {
-  const thunder = SKILLS.thunder_fall!;
+  const thunder = SKILLS.ki_burst!;
   assert.equal(canLearn(thunder, 'fighter', 200, 0), false);
   assert.equal(canLearn(thunder, 'fighter', 200, 1), true);
   assert.equal(canLearn(SKILLS.rising_kick!, 'fighter', 1, 0), true);

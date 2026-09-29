@@ -15,6 +15,10 @@ import {
   DEF_BASE,
   EXP_COEF,
   EARLY_EXP_MULT,
+  LATE_EXP_MULT,
+  LATE_EXP_ANCHOR,
+  LATE_EXP_ANCHOR_LEVEL,
+  expBoost,
   expMult,
   HP_LOSS_PER_CLEAR,
   JOB_MULT,
@@ -235,13 +239,17 @@ test('역할 배수 — 보스는 설계 보류라 임시값이다', () => {
 
 test('경험치는 몬스터 HP 에 정비례한다', () => {
   // 지수 1.0 — 아래 사냥터를 손해로 만들고, 위쪽 한계는 경험치가 아니라 사망이 정한다
-  // 초반(Lv1~30)만 `expMult` 배(2026-09-26 지시로 3배)를 더 얹는다
+  // 초반(Lv1~30)은 `expMult` 배(2026-09-26 지시로 3배), 그 뒤는 기준을 `expBoost` 배로 올리고
+  // `expMult` 배(2026-09-29 지시로 2배)를 얹는다
   for (const level of [1, 30, 31, 60, 200]) {
     const m = monster(level);
-    assert.ok(Math.abs(m.exp - m.hp * EXP_COEF * expMult(level)) < 1e-9, `Lv${level}`);
+    assert.ok(Math.abs(m.exp - m.hp * EXP_COEF * expBoost(level) * expMult(level)) < 1e-9, `Lv${level}`);
   }
   assert.equal(expMult(30), EARLY_EXP_MULT);
-  assert.equal(expMult(31), 1);
+  assert.equal(expBoost(30), 1);
+  assert.equal(expMult(31), LATE_EXP_MULT);
+  // 잿빛 황야 첫 몬스터(Lv33)의 기준 경험치가 50 — 배수까지 얹으면 100
+  assert.ok(Math.abs(monster(LATE_EXP_ANCHOR_LEVEL).exp / LATE_EXP_MULT - LATE_EXP_ANCHOR) < 1e-9);
 });
 
 test('스킬 해금 단계에 그룹 크기가 묶인다', () => {

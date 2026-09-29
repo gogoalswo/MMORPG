@@ -126,10 +126,14 @@ class Chevron extends Control:
 	const DARK := Color("#221f1a")
 	const DARK_EDGE := Color("#4a4234")
 	const DONE := Color("#5c4a2a")
+	const OFF := Color("#2e2e2c")
+	const OFF_EDGE := Color("#4c4b48")
 	var level := 1
 	var lit := false
 	## 이미 지난 단계(단일 강화의 지금 단계 이하) — 흐리고 눌리지 않는다
 	var done := false
+	## 장비를 고르기 전 — 회색이고 눌리지 않는다 (단추들과 같이 잠긴다)
+	var off := false
 
 	func _init(n: int) -> void:
 		level = n
@@ -139,7 +143,7 @@ class Chevron extends Control:
 
 	func _gui_input(event: InputEvent) -> void:
 		var mouse := event as InputEventMouseButton
-		if mouse != null and mouse.pressed and mouse.button_index == MOUSE_BUTTON_LEFT and not done:
+		if mouse != null and mouse.pressed and mouse.button_index == MOUSE_BUTTON_LEFT and not done and not off:
 			chosen.emit(level)
 			accept_event()
 
@@ -151,16 +155,16 @@ class Chevron extends Control:
 			Vector2(0, 0), Vector2(w - notch, 0), Vector2(w, h * 0.5),
 			Vector2(w - notch, h), Vector2(0, h), Vector2(notch, h * 0.5),
 		])
-		var fill := DONE if done else (LIT if lit else DARK)
+		var fill := OFF if off else (DONE if done else (LIT if lit else DARK))
 		draw_colored_polygon(points, fill)
 		var edge := points.duplicate()
 		edge.append(points[0])
-		draw_polyline(edge, LIT_EDGE if lit else DARK_EDGE, 1.5, true)
+		draw_polyline(edge, OFF_EDGE if off else (LIT_EDGE if lit else DARK_EDGE), 1.5, true)
 		var font := get_theme_default_font()
 		var text := "+%d" % level
 		var font_size := 16
 		var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
-		var ink := Color("#2b1a08") if lit and not done else Color("#948c7a")
+		var ink := Color("#6e6c67") if off else (Color("#2b1a08") if lit and not done else Color("#948c7a"))
 		draw_string(
 			font, Vector2((w - width) * 0.5 + notch * 0.25, h * 0.5 + font_size * 0.36),
 			text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, ink
@@ -226,7 +230,7 @@ func _build_left() -> void:
 	row.add_theme_constant_override("separation", 6)
 	side.add_child(row)
 	for key in TABS:
-		var tab: Button = _game._inv_button(TAB_TEXT[key], pick_mode.bind(key))
+		var tab: Button = _button(TAB_TEXT[key], pick_mode.bind(key))
 		tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(tab)
 		tabs[key] = tab
@@ -303,12 +307,62 @@ func _build_left() -> void:
 	foot.alignment = BoxContainer.ALIGNMENT_END
 	foot.add_theme_constant_override("separation", 8)
 	side.add_child(foot)
-	go = _game._inv_button("강화", press)
+	go = _button("강화", press)
 	go.custom_minimum_size.x = 110
 	foot.add_child(go)
-	run_button = _game._inv_button("자동 강화", press_run)
+	run_button = _button("자동 강화", press_run)
 	run_button.custom_minimum_size.x = GO_WIDTH
 	foot.add_child(run_button)
+
+
+## 팝업 단추 — `_inv_button` 에 **잠긴 모습(회색)** 을 더한다. `_inv_button` 은 disabled 도
+## normal 과 같은 청록 조각이라, 장비를 고르기 전에 "강화" · "자동 강화" · 잠긴 탭이 눌릴 것처럼
+## 보였다 (2026-09-29 "아이템 선택을 안 하면 활성화 안 되는 버튼들은 회색 음영 처리해").
+## 조각을 흑백으로 한 벌 떠서 disabled 에만 씌운다 — 켜진 단추는 그대로다
+func _button(text: String, on_press: Callable) -> Button:
+	var button: Button = _game._inv_button(text, on_press)
+	var box: StyleBox = button.get_theme_stylebox("disabled").duplicate()
+	var textured := box as StyleBoxTexture
+	var flat := box as StyleBoxFlat
+	if textured != null:
+		var grey := _grey(textured.texture)
+		if grey != null:
+			textured.texture = grey
+		else:
+			textured.modulate_color = OFF_TINT
+	elif flat != null:
+		flat.bg_color = Color("#3a3a38")
+		flat.border_color = Color("#1c1c1b")
+	button.add_theme_stylebox_override("disabled", box)
+	button.add_theme_color_override("font_disabled_color", OFF_TEXT)
+	return button
+
+
+## 잠긴 단추 글자 · (흑백을 못 뜰 때) 조각에 곱하는 빛
+const OFF_TEXT := Color("#8c8a84")
+const OFF_TINT := Color(0.5, 0.5, 0.5)
+var _greys := {}
+
+## 조각의 흑백 한 벌 — 밝기만 남기고 조금 어둡게. 조각마다 한 번만 뜬다
+func _grey(texture: Texture2D) -> Texture2D:
+	if texture == null:
+		return null
+	if _greys.has(texture):
+		return _greys[texture]
+	var image := texture.get_image()
+	if image == null:
+		return null
+	if image.is_compressed():
+		image.decompress()
+	image.convert(Image.FORMAT_RGBA8)
+	for y in image.get_height():
+		for x in image.get_width():
+			var c := image.get_pixel(x, y)
+			var l := c.get_luminance() * 0.75
+			image.set_pixel(x, y, Color(l, l, l, c.a))
+	var grey := ImageTexture.create_from_image(image)
+	_greys[texture] = grey
+	return grey
 
 
 ## 오른쪽 목록 — 걸러 보는 탭 셋 · 장비 칸(끌어서 내린다) · 담은 수와 모두 담기·비우기
@@ -321,7 +375,7 @@ func _build_list() -> void:
 	row.add_theme_constant_override("separation", 6)
 	side.add_child(row)
 	for key in FILTERS:
-		var tab: Button = _game._inv_button(FILTER_TEXT[key], pick_filter.bind(key))
+		var tab: Button = _button(FILTER_TEXT[key], pick_filter.bind(key))
 		tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(tab)
 		filters[key] = tab
@@ -345,10 +399,10 @@ func _build_list() -> void:
 	list_head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	list_head.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	foot.add_child(list_head)
-	var all: Button = _game._inv_button("모두 담기", pick_all)
+	var all: Button = _button("모두 담기", pick_all)
 	all.custom_minimum_size.x = 100
 	foot.add_child(all)
-	var clear: Button = _game._inv_button("비우기", clear_picked)
+	var clear: Button = _button("비우기", clear_picked)
 	foot.add_child(clear)
 	list_foot_buttons = [all, clear]
 
@@ -558,6 +612,7 @@ func redraw() -> void:
 	for chevron in chevrons:
 		chevron.lit = chevron.level <= goal
 		chevron.done = mode == "one" and chevron.level <= now
+		chevron.off = mode == "one" and Items.get_item(str(_stack().get("id", ""))).is_empty()
 		chevron.queue_redraw()
 	one_box.visible = mode == "one"
 	multi_box.visible = mode == "multi"

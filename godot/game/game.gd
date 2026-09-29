@@ -4787,10 +4787,16 @@ func _show_skill(payload: Dictionary) -> void:
 		KiFx.burst(_fx, here, float(me.rot))
 		_camera.shake(KiFx.SHAKE, KiFx.SHAKE_TIME)
 	elif skill == "nova_fist":
-		# 누르자마자 띄운다 — 끓다가 `EXPLODE` 에 터진다. 흔들림도 그때다
-		NovaFx.burst(_fx, here, float(me.rot))
+		# 누르자마자 띄운다 — 끓다가 `EXPLODE` 에 터진다. 흔들림도 그때다.
+		# 강화 — "과부하" 면 굵고 흰 폭발, "연쇄 폭발" 이면 `CHAIN` 초 뒤 작게 한 번 더 (따로 논다)
+		var nova_up: Array = payload.get("upgrades", [])
+		var chain := "chain" in nova_up
+		NovaFx.burst(_fx, here, float(me.rot), "overload" in nova_up, chain)
 		get_tree().create_timer(NovaFx.EXPLODE).timeout.connect(
 			_camera.shake.bind(NovaFx.SHAKE, NovaFx.SHAKE_TIME))
+		if chain:
+			get_tree().create_timer(NovaFx.EXPLODE + NovaFx.CHAIN).timeout.connect(
+				_camera.shake.bind(NovaFx.CHAIN_SHAKE, NovaFx.SHAKE_TIME))
 	elif skill == "crush_fist":
 		# 누르자마자 띄운다 — 기를 모으다가 `PUNCH` 에 터진다. 흔들림도 그때다
 		CrushFx.burst(_fx, here, float(me.rot))

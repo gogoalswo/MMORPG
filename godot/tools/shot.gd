@@ -222,8 +222,13 @@ func _run() -> void:
 			img.save_png("res://../logs/shot_%02d.png" % frame)
 			sheet = _add_to_sheet(sheet, img, taken)
 			taken += 1
-			print("logs/shot_%02d.png  (게임 시간 %.2f초)" % [
-				frame, float(Time.get_ticks_msec() - began) * 0.001 * SLOW])
+			# 이펙트 시계(`_t`)도 같이 — 벽시계로 셈한 게임 시간은 프레임이 느려 몇 배 크게 나온다
+			var clock := -1.0
+			for n in game._fx.get_children():
+				if FxPool.busy(n) and "_t" in n:
+					clock = maxf(clock, float(n._t))
+			print("logs/shot_%02d.png  (게임 시간 %.2f초 · 이펙트 %.2f초)" % [
+				frame, float(Time.get_ticks_msec() - began) * 0.001 * SLOW, clock])
 	sheet.resize(int(sheet.get_width() * 0.6), int(sheet.get_height() * 0.6), Image.INTERPOLATE_BILINEAR)
 	sheet.save_png("res://../logs/shot_sheet.png")
 	print("logs/shot_sheet.png  (가운데를 잘라 3열로 붙인 것)")

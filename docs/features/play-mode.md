@@ -9,6 +9,11 @@
 | 테스트 모드 | **무적 · 스킬 쿨타임 0 · 장비 42개(+0)와 크리스탈 300개** | 접힌 채 시작 — 채팅창 위 **"치트 목록 열기"** 단추로 편다. 그 오른쪽 옆에 **"스킬 목록 열기"** |
 | 일반 모드 | 없음 (캐릭터만 만들어 시작) | 목록도 여닫기 단추도 안 보인다 |
 
+**테스트 모드는 오른쪽 아래 구석의 작은 "테스트" 단추로만 들어간다** (2026-09-29 요청: "오른쪽
+아래 버튼 눌러야 테스트 모드 들어가도록 변경하고, 현재 보이는 테스트 모드 버튼은 제거해").
+가운데 열에는 이름 · 일반 모드 · 저장 초기화만 남는다. 구석 단추는 앵커(`PRESET_BOTTOM_RIGHT`,
+여백 16)로 붙어 해상도가 바뀌어도 구석에 있다 — `start_screen.gd` `_corner_test_button`.
+
 같은 날 요청으로 **치트 목록을 단추 하나로 접고 편다** — 단추 열 개가 왼쪽을 다 덮었다.
 
 **펼친 목록은 1280×720 에서 이미 위로 87px 넘친다** (맨 위 범위 표시 줄·단추가 잘린다).
@@ -26,7 +31,7 @@
 
 | 파일 | 역할 |
 |---|---|
-| `godot/start.tscn` · `godot/game/start_screen.gd` | 시작 화면. 모드 단추 둘(누르면 `PlayMode.current` 에 적고 `main.tscn` 으로), 저장 초기화 단추(`_on_reset` → `Save.clear`) |
+| `godot/start.tscn` · `godot/game/start_screen.gd` | 시작 화면. 가운데 일반 모드 단추 · 오른쪽 아래 구석 테스트 단추(`_corner_test_button`) — 누르면 `PlayMode.current` 에 적고 `main.tscn` 으로. 저장 초기화 단추(`_on_reset` → `Save.clear`) |
 | `godot/game/loading_screen.gd` | `LoadingScreen` — 로딩 막. 루트에 달린 `CanvasLayer`(층 100)라 장면을 바꿔도 남는다 |
 | `godot/game/play_mode.gd` | `PlayMode` — 고른 모드(`static var current`). 장면을 바꿔도 남는다 |
 | `godot/game/game.gd` `_apply_play_mode` | 모드를 건다 — 테스트면 `invincible` · `testSwitch cooldownOff` 를 보낸다 |

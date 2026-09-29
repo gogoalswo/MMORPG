@@ -37,8 +37,9 @@ func _fail(text: String) -> void:
 func _case_textures() -> void:
 	# 일곱 장을 전부 넣는다 — 존마다 받으면 존 구성이 비동기가 된다
 	var kinds: Array = GameData.zones().get("groundKinds", [])
-	if kinds.size() != 7:
-		_fail("바닥 종류가 7종이어야 하는데 %d종" % kinds.size())
+	# 7장 + 덤불숲 흙(soil, 2026-09-29)
+	if kinds.size() != 8:
+		_fail("바닥 종류가 8종이어야 하는데 %d종" % kinds.size())
 	var missing: Array = []
 	for kind in kinds:
 		for suffix in ["color", "normal"]:

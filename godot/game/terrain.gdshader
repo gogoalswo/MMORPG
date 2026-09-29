@@ -41,6 +41,9 @@ uniform vec3 shade_dark = vec3(0.6, 0.66, 0.55);
 uniform vec3 shade_sun = vec3(1.15, 1.18, 0.95);
 // 0 보다 크면 이 거리(맵 가운데서 x·z 중 큰 쪽) 너머는 검은 바닥 — 이동 끝 밖
 uniform float void_edge = 0.0;
+// 반사 세기 (기본 0.5 = 고도 기본값). 덤불숲 흙은 0 — 어두운 흙에 하늘빛 반사가 덮이면
+// 무늬 없는 회색 판이 된다 (2026-09-29, 화면 #262626 · 밝기 0.13~0.17 이었다)
+uniform float specular = 0.5;
 
 varying vec3 up_normal;
 
@@ -85,11 +88,12 @@ void fragment() {
 	NORMAL_MAP_DEPTH = normal_depth;
 	ROUGHNESS = dot(rough, vec4(w0, w1, w2, w3));
 	METALLIC = 0.0;
+	SPECULAR = specular;
 	if (void_edge > 0.0) {
 		// 선을 또렷하게 — 몇 cm 만 부드럽게 넘겨 계단(깨짐)만 막는다
 		float out_ = smoothstep(void_edge, void_edge + 0.06, max(abs(UV.x), abs(UV.y)));
 		ALBEDO *= 1.0 - out_;
-		SPECULAR = 0.5 * (1.0 - out_);
+		SPECULAR = specular * (1.0 - out_);
 		ROUGHNESS = mix(ROUGHNESS, 1.0, out_);
 	}
 }

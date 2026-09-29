@@ -116,6 +116,54 @@ func _case_real() -> void:
 	elif not missing.is_empty():
 		_fail("움직임이 없는 청록 단추 %d개: %s" % [missing.size(), missing.slice(0, 6)])
 	print("  청록 단추 %d개 모두 움직임이 붙음" % found)
+	await _case_hud(game)
+
+
+## HUD 아이콘 — 메뉴 · 퀵슬롯 · 자동사냥 · 물약. 투명한 hit 이 누름을 받고 **칸이** 움직인다.
+## 숨긴 설계 칸(`modulate.a = 0`)은 클릭해도 숨은 채다
+func _case_hud(game: Node3D) -> void:
+	var cells: Array = game._menu_cells.duplicate()
+	cells.append_array(game._bar_buttons)
+	cells.append(game._auto_cell)
+	cells.append(game._potion_cell)
+	var bare: Array = []
+	for cell in cells:
+		var hit: Button = cell.get_node_or_null("hit")
+		if hit == null or not hit.has_meta(&"button_fx"):
+			bare.append(str(cell.name))
+	if not bare.is_empty():
+		_fail("움직임이 없는 HUD 칸: %s" % [bare])
+
+	var cell: Control = game._bar_buttons[0]
+	var hit: Button = cell.get_node("hit")
+	hit.button_down.emit()
+	await _wait(ButtonFx.PRESS_SEC + 0.1)
+	if not is_equal_approx(cell.scale.x, ButtonFx.PRESS_SCALE):
+		_fail("퀵슬롯을 누르니 칸이 %.3f 배다" % cell.scale.x)
+	hit.button_up.emit()
+	hit.pressed.emit()
+	await process_frame
+	await process_frame
+	if cell.modulate.r <= 1.0:
+		_fail("퀵슬롯을 클릭했는데 칸이 밝아지지 않았다 (%s)" % cell.modulate)
+	await _wait(ButtonFx.CLICK_UP_SEC + ButtonFx.CLICK_DOWN_SEC + ButtonFx.FLASH_SEC)
+	if not cell.scale.is_equal_approx(Vector2.ONE) or not cell.modulate.is_equal_approx(Color.WHITE):
+		_fail("퀵슬롯 클릭 뒤 %s 배 · %s 색으로 남았다" % [cell.scale, cell.modulate])
+
+	var design: Control = game._design_cell
+	var was: float = design.modulate.a
+	var design_hit: Button = design.get_node("hit")
+	design_hit.button_down.emit()
+	design_hit.button_up.emit()
+	design_hit.pressed.emit()
+	await process_frame
+	await process_frame
+	if not is_equal_approx(design.modulate.a, was):
+		_fail("숨긴 설계 칸을 클릭하니 알파가 %.2f → %.2f" % [was, design.modulate.a])
+	await _wait(ButtonFx.FLASH_SEC + 0.1)
+	if not is_equal_approx(design.modulate.a, was):
+		_fail("숨긴 설계 칸이 클릭 뒤 알파 %.2f 로 남았다 (%.2f 여야)" % [design.modulate.a, was])
+	print("  HUD 칸 %d개 — 누르면 칸이 줄고 클릭하면 번쩍, 숨긴 칸은 숨은 채" % cells.size())
 
 
 func _done() -> void:

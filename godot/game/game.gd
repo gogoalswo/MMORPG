@@ -902,6 +902,8 @@ func _icon_button(
 	hit.tooltip_text = text
 	hit.pressed.connect(on_press)
 	cell.add_child(hit)
+	# 누름은 투명한 hit 이 받고, 움직이는 건 아이콘·글자가 든 칸이다 (`ButtonFx`)
+	ButtonFx.attach(hit, cell)
 	return cell
 
 
@@ -2779,6 +2781,7 @@ func _cell_setting(name: String, on_press: Callable) -> Button:
 		box.set_content_margin_all(2)
 		setting.add_theme_stylebox_override(state, box)
 	setting.pressed.connect(on_press)
+	ButtonFx.attach(setting)
 	return setting
 
 
@@ -2907,6 +2910,8 @@ func _make_skill_cell(size: int, frame: String, on_press: Callable, margin: int 
 	hit.flat = true
 	if on_press.is_valid():
 		hit.pressed.connect(on_press)
+		# 퀵슬롯·자동사냥·물약 칸 — 칸째 줄었다 튄다 (`ButtonFx`)
+		ButtonFx.attach(hit, cell)
 	else:
 		hit.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cell.add_child(hit)

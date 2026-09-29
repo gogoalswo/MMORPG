@@ -66,7 +66,7 @@ export const GROUND_LOOKS: Record<GroundKind, GroundLook> = {
   cobble: { tile: 8, blend: 0, roughness: 0.8, mean: '#746b5c', glow: 0 },
   lava: { tile: 12, blend: 0, roughness: 0.9, mean: '#3e3837', glow: 1 },
   // 덤불숲 흙 (2026-09-29) — 어두운 흙에 잔알갱이. 참고 스크린샷의 알갱이 크기에 맞춰 4m
-  soil: { tile: 4, blend: 0.45, roughness: 0.95, mean: '#221b14', glow: 0 },
+  soil: { tile: 4, blend: 0.45, roughness: 0.95, mean: '#594734', glow: 0 },
 };
 
 /**

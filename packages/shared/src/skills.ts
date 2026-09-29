@@ -523,14 +523,15 @@ const SKILL_LIST: SkillDef[] = [
     id: 'ki_burst',
     name: '파천장',
     job: 'fighter',
-    cooldown: 10000,
+    // 5초 · 500% (2026-09-29 요청 — 처음엔 10초 · 1200% 였다)
+    cooldown: 5000,
     // 주먹이 0.22초에 다 뻗고 0.42초까지 멈췄다가 판정·이펙트가 나간다 (클립의 키와 같이 고친다)
     delayMs: 420,
     castMs: 1200,
     range: 6.0,
     // 앞 100° 부채꼴 — 소용돌이가 퍼지는 폭
     arc: (Math.PI * 5) / 9,
-    power: 12.0,
+    power: 5.0,
     maxTargets: 8,
     // 1차 전직(Lv.30)에 열린다 (2026-09-29 요청: "1레벨 할퀴기 · 30 파천장 · 70 무적파쇄권 · 120 폭렬권")
     reqLevel: 30,
@@ -554,13 +555,14 @@ const SKILL_LIST: SkillDef[] = [
     id: 'nova_fist',
     name: '폭렬권',
     job: 'fighter',
-    cooldown: 12000,
+    // 10초 (2026-09-29 요청 — 처음엔 12초)
+    cooldown: 10000,
     delayMs: 750,
     castMs: 1200,
     range: 7.5,
     arc: Math.PI * 2,
-    // 1000% (2026-09-29 요청 — 처음엔 1400% 였다). 강화 "과부하" 가 +300%, "연쇄 폭발" 이 이 값의 50%
-    power: 10.0,
+    // 1500% (2026-09-29 요청 — 1400 → 1000 → 1500%). 강화 "과부하" 가 +500%, "연쇄 폭발" 이 이 값의 50%
+    power: 15.0,
     maxTargets: 10,
     // 3차 전직(Lv.120)에 열린다 (2026-09-29 재배치)
     reqLevel: 120,
@@ -581,12 +583,13 @@ const SKILL_LIST: SkillDef[] = [
     id: 'crush_fist',
     name: '무적파쇄권',
     job: 'fighter',
-    cooldown: 14000,
+    // 7초 · 1000% (2026-09-29 요청 — 처음엔 14초 · 1600% 였다)
+    cooldown: 7000,
     delayMs: 600,
     castMs: 1300,
     range: 5.5,
     arc: Math.PI,
-    power: 16.0,
+    power: 10.0,
     maxTargets: 10,
     // 2차 전직(Lv.70)에 열린다 (2026-09-29 재배치)
     reqLevel: 70,
@@ -765,17 +768,18 @@ const UPGRADE_LIST: Omit<SkillUpgradeDef, 'exp'>[] = [
     stunMs: 2000,
   },
   {
-    // 2026-09-29 요청: "과부하는 데미지 300% 추가". 기본이 1000% 라 × 1.3 = 1300% 다 —
-    // 기본 `power` 를 바꾸면 이 배율도 같이 본다. 이펙트는 소용돌이·섬광이 굵고 하얘진다 (NovaFx.OVER_*)
+    // 2026-09-29 요청: "과부하 스킬 강화를 데미지 500%로" (처음엔 300%). 기본이 1500% 라
+    // × 20/15 = 2000% 다 — 기본 `power` 를 바꾸면 이 배율도 같이 본다.
+    // 이펙트는 소용돌이·섬광이 굵고 하얘진다 (NovaFx.OVER_*)
     id: 'overload',
     skill: 'nova_fist',
     name: '과부하',
-    desc: '데미지 300% 추가',
-    powerMul: 1.3,
+    desc: '데미지 500% 추가',
+    powerMul: 20 / 15,
   },
   {
     // 2026-09-29 요청: "폭렬권 데미지의 50% 데미지 한번 더". 폭발 1초 뒤 **그때 범위 안에 있는
-    // 놈 전부**에게 (빙주각 파쇄와 같은 판정). 과부하가 붙으면 1300% 의 50% 다.
+    // 놈 전부**에게 (빙주각 파쇄와 같은 판정). 과부하가 붙으면 2000% 의 50% 다.
     // 이펙트는 같은 자리에서 작은 2차 폭발 (NovaFx.CHAIN — 이 `followMs` 와 같아야 한다)
     id: 'chain',
     skill: 'nova_fist',

@@ -150,10 +150,10 @@ func _case_upgrades(game: Node3D) -> void:
 	if over.is_empty() or chain.is_empty():
 		_fail("폭렬권 강화(과부하·연쇄 폭발)가 표에 없다")
 		return
-	if absf(power - 10.0) > 1e-4:
-		_fail("폭렬권 기본이 %d%% 다 — 1000%% 여야 한다" % int(power * 100.0))
-	if absf(power * float(over.get("powerMul", 1.0)) - power - 3.0) > 1e-4:
-		_fail("과부하가 300%% 추가가 아니다 (× %.2f)" % float(over.get("powerMul", 1.0)))
+	if absf(power - 15.0) > 1e-4:
+		_fail("폭렬권 기본이 %d%% 다 — 1500%% 여야 한다" % int(power * 100.0))
+	if absf(power * float(over.get("powerMul", 1.0)) - power - 5.0) > 1e-4:
+		_fail("과부하가 500%% 추가가 아니다 (× %.2f)" % float(over.get("powerMul", 1.0)))
 	if absf(float(chain.get("followPower", 0.0)) - 0.5) > 1e-4:
 		_fail("연쇄 폭발이 50%% 가 아니다")
 	if absf(float(chain.get("followMs", 0)) / 1000.0 - NovaFx.CHAIN) > 0.02:

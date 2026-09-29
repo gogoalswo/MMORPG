@@ -23,6 +23,7 @@ func _init() -> void:
 	_case_skill_faces_body()
 	_case_patrol_when_empty()
 	_case_outside_radius()
+	_case_rescan_nearer()
 	_case_off_stops()
 	_case_dead()
 	_case_manual_wins()
@@ -247,6 +248,8 @@ func _case_skill_faces_body() -> void:
 		me.job_tier = 3
 		w.set_auto("me", true)
 		me.auto_target = "A"
+		# 방금 A 를 골랐다 — 안 잡으면 첫 틱에 다시 훑어 더 가까운 B 로 갈아탄다 (`HUNT_RESCAN_MS`)
+		me.auto_scan_at = Time.get_ticks_msec() + World.HUNT_RESCAN_MS
 		me.rot = PI / 2.0
 		w.drain_events()
 		if manual:
@@ -368,6 +371,37 @@ func _case_outside_radius() -> void:
 	# 서성이기는 하지만 순찰 반경 밖으로는 안 나간다 (=그놈에게 걸어가지 않았다)
 	if Vector2(me.x, me.z).length() > World.HUNT_PATROL_RADIUS + 1e-3:
 		_fail("반경 밖의 놈 쪽으로 걸어갔다 (%.2f, %.2f)" % [me.x, me.z])
+
+
+## 멀리 있는 놈을 쫓는 사이 옆에 새 놈이 나오면, **1초(`HUNT_RESCAN_MS`)마다 다시 훑어**
+## 가까운 놈으로 갈아탄다. 그 전에는 대상을 안 바꾼다 (매 틱 바꾸면 떨린다)
+func _case_rescan_nearer() -> void:
+	var s := _setup(15.0, 0.0)
+	var w: World = s[0]
+	var me: Dictionary = s[1]
+	var far: Dictionary = s[2]
+	w.set_auto("me", true)
+	w.step(1.0 / 60.0)
+	if str(me.auto_target) != str(far.id):
+		_fail("먼 놈을 안 잡았다 (%s)" % me.auto_target)
+		return
+	if int(me.auto_scan_at) <= Time.get_ticks_msec():
+		_fail("다음 훑을 시각을 안 잡았다")
+
+	# 옆에 새 놈이 나왔다
+	var near := World.make_monster(
+		"near", GameData.monster_kind("mob003"), me.x - 2.0, me.z, 10000.0, 0.0
+	)
+	w.snapshot().monsters.append(near)
+	w.step(1.0 / 60.0)
+	if str(me.auto_target) != str(far.id):
+		_fail("1초가 안 됐는데 대상을 바꿨다 (%s)" % me.auto_target)
+
+	# 1초가 지났다
+	me.auto_scan_at = 0
+	w.step(1.0 / 60.0)
+	if str(me.auto_target) != str(near.id):
+		_fail("1초 뒤에도 가까운 놈(%.1f m)으로 안 갈아탔다 (%s)" % [_gap(me, near), me.auto_target])
 
 
 ## 끄면 그 자리에 선다

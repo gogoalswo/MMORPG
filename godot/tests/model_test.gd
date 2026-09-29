@@ -58,8 +58,8 @@ func _case_fighter() -> void:
 			_fail("격투가에 %s 동작이 없다 — add-clips.mjs 를 돌렸나" % clip)
 			continue
 		var anim: Animation = rig._anim.get_animation(clip)
-		# 천붕각은 5.4m 를 뛰어올라 1.45초다
-		if anim.length < 0.4 or anim.length > 1.6:
+		# 천붕각은 5.4m 를 뛰어올라 1.45초다. 무적파쇄권은 1초 기를 모았다가 내질러 1.8초다
+		if anim.length < 0.4 or anim.length > 2.0:
 			_fail("%s 가 %.2f초 — 평타·스킬 동작은 1초 남짓이어야 한다" % [clip, anim.length])
 		if anim.get_track_count() != idle_tracks:
 			_fail("%s 트랙 %d 개, 대기는 %d 개" % [clip, anim.get_track_count(), idle_tracks])
@@ -180,6 +180,7 @@ func _check_moves(game: Node3D) -> void:
 		[&"skill", {"id": me, "skill": "frost_pillar", "root_ms": 400}, "FrostStomp"],
 		[&"skill", {"id": me, "skill": "thunder_fall", "root_ms": 400}, "Thunder"],
 		[&"skill", {"id": me, "skill": "nova_fist", "root_ms": 750, "delay_ms": 750}, "NovaFist"],
+		[&"skill", {"id": me, "skill": "crush_fist", "root_ms": 1080, "delay_ms": 1080}, "CrushFist"],
 		[&"lunge", {"id": me, "ms": 600, "speed": 1.5}, "FlyingKick"],
 	]
 	for c in cases:

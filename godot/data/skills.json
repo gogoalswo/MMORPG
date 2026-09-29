@@ -346,6 +346,21 @@
       "reqLevel": 180,
       "tier": 4,
       "description": "주먹에 기를 실어 내질러 일대를 폭발시킨다."
+    },
+    "crush_fist": {
+      "id": "crush_fist",
+      "name": "무적파쇄권",
+      "job": "fighter",
+      "cooldown": 14000,
+      "delayMs": 1080,
+      "castMs": 1800,
+      "range": 4,
+      "arc": 3.141592653589793,
+      "power": 16,
+      "maxTargets": 10,
+      "reqLevel": 180,
+      "tier": 4,
+      "description": "기마 자세로 기를 모았다가 주먹을 내질러 앞을 산산이 부순다."
     }
   },
   "byJob": {
@@ -355,7 +370,8 @@
       "frost_pillar",
       "sky_breaker",
       "ki_burst",
-      "nova_fist"
+      "nova_fist",
+      "crush_fist"
     ],
     "mage": [
       "fireball",

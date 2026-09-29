@@ -175,11 +175,14 @@ const SKILL_CLIPS := {
 	"ki_burst": "KiBurst",
 	# 폭렬권 — 0.10초에 주먹을 뻗고 버티다가 0.77초에 두 팔을 펼쳐 기를 터뜨린다
 	"nova_fist": "NovaFist",
+	# 무적파쇄권 — 기마 자세로 1초 떨며 기를 모으고 1.08초에 오른주먹을 내지른다
+	"crush_fist": "CrushFist",
 }
 ## 판정은 늦게 떨어지는데 **이펙트는 누르자마자 시작하는** 스킬. 폭렬권은 주먹이
 ## 닿는 순간부터 기운이 끓다가 판정 시각(`delayMs`)에 터진다 — 그 시각은 이펙트가
 ## 스스로 맞춘다 (`NovaFx.EXPLODE`)
-const EARLY_FX := ["nova_fist"]
+## 무적파쇄권도 같다 — 기를 모으는 1초 동안 이펙트가 돌다가 `CrushFx.PUNCH` 에 터진다
+const EARLY_FX := ["nova_fist", "crush_fist"]
 ## 앞 자세에서 동작으로 섞어 넘어가는 시간. 부딪히는 순간이 클립 0.1초 자리라
 ## 길게 섞으면 이펙트보다 주먹이 늦는다
 const MOVE_BLEND := 0.06
@@ -4727,7 +4730,7 @@ func _show_skill(payload: Dictionary) -> void:
 	if str(payload.get("id", "")) != _transport.my_id():
 		return
 	var skill := str(payload.get("skill", ""))
-	if not (skill in ["rising_kick", "thunder_fall", "sky_breaker", "frost_pillar", "ki_burst", "nova_fist"]):
+	if not (skill in ["rising_kick", "thunder_fall", "sky_breaker", "frost_pillar", "ki_burst", "nova_fist", "crush_fist"]):
 		return
 	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
 	if me.is_empty():
@@ -4756,6 +4759,11 @@ func _show_skill(payload: Dictionary) -> void:
 		NovaFx.burst(_fx, here, float(me.rot))
 		get_tree().create_timer(NovaFx.EXPLODE).timeout.connect(
 			_camera.shake.bind(NovaFx.SHAKE, NovaFx.SHAKE_TIME))
+	elif skill == "crush_fist":
+		# 누르자마자 띄운다 — 기를 모으다가 `PUNCH` 에 터진다. 흔들림도 그때다
+		CrushFx.burst(_fx, here, float(me.rot))
+		get_tree().create_timer(CrushFx.PUNCH).timeout.connect(
+			_camera.shake.bind(CrushFx.SHAKE, CrushFx.SHAKE_TIME))
 	else:
 		# 강화 — "연타" 면 두 번 더 긁고 보라다. "위력"(`wide`)은 피해만 키워서 이펙트가 그대로다
 		var claw_up: Array = payload.get("upgrades", [])

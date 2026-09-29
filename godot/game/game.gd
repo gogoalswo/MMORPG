@@ -4069,10 +4069,6 @@ func _build_zone(zone_id: String) -> void:
 	_terrain = Terrain.build(zone_id)
 	if _terrain != null:
 		_zone_node.add_child(_terrain.mesh_instance(env))
-		# 풀포기·바위·나무 — 길을 막지 않는 꾸밈 (지금은 덤불숲)
-		var scenery := Scenery.build(zone_id, _terrain, env)
-		if scenery != null:
-			_zone_node.add_child(scenery)
 	else:
 		var ground := MeshInstance3D.new()
 		var plane := PlaneMesh.new()

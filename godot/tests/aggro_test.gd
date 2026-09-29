@@ -23,6 +23,7 @@ func _init() -> void:
 	_case_leash()
 	_case_leash_goes_home()
 	_case_death_and_revive()
+	_case_respawn_forgets()
 
 	if _failed == 0:
 		print("어그로: 전부 통과")
@@ -237,6 +238,28 @@ func _case_death_and_revive() -> void:
 		_fail("마을이 아니라 %s 에서 살아났다" % w.zone_id)
 	else:
 		print("  죽음 -> 부활: 마을에서 hp %d/%d" % [after.hp, after.stats.maxHp])
+
+
+func _case_respawn_forgets() -> void:
+	# **되살아난 놈은 죽기 전 대상을 잊는다** (2026-09-29). 안 잊으면 어그로(3m) 밖인데도
+	# 리쉬 안이라는 이유로 죽인 사람에게 곧장 달려온다
+	var s := _setup(-6.0, -3.0, -6.0, 6.0)
+	var w: World = s[0]
+	var me: Dictionary = s[1]
+	var mob: Dictionary = s[2]
+	mob.target = "me"
+	mob.hp = 1
+	w._hit_monster(me, mob, 1.0, "")
+	if int(mob.hp) > 0:
+		_fail("되살아남 시험인데 안 죽었다")
+		return
+	mob.respawn_at = 1
+	for i in 60:
+		w.step(1.0 / 60.0)
+	if int(mob.hp) <= 0:
+		_fail("되살아나지 않았다")
+	elif mob.target != "":
+		_fail("되살아났는데 어그로 밖의 '%s' 를 쫓는다" % mob.target)
 
 
 func _case_retaliate() -> void:

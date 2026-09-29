@@ -4784,8 +4784,17 @@ func _show_skill(payload: Dictionary) -> void:
 		IceFx.burst(_fx, here, float(me.rot), "shatter" in ice_up, "freeze" in ice_up)
 		_camera.shake(IceFx.SHAKE, IceFx.SHAKE_TIME)
 	elif skill == "ki_burst":
-		KiFx.burst(_fx, here, float(me.rot))
+		# 강화 — "기폭" 이면 소용돌이가 앞 한 점으로 모여 터지고, "연파" 면 푸른 파도가 한 번
+		# 더 나간다 (따로 논다 — 기폭은 첫 파도만). 흔들림도 터질 때·두 번째 파도에 한 번씩
+		var ki_up: Array = payload.get("upgrades", [])
+		var ki_rot := float(me.rot)
+		KiFx.burst(_fx, here, ki_rot, false, "detonate" in ki_up)
 		_camera.shake(KiFx.SHAKE, KiFx.SHAKE_TIME)
+		if "twin" in ki_up:
+			get_tree().create_timer(KiFx.TWIN_DELAY).timeout.connect(_ki_twin.bind(here, ki_rot))
+		if "detonate" in ki_up:
+			get_tree().create_timer(KiFx.DETONATE_AT).timeout.connect(
+				_camera.shake.bind(KiFx.BLAST_SHAKE, KiFx.BLAST_SHAKE_TIME))
 	elif skill == "nova_fist":
 		# 누르자마자 띄운다 — 끓다가 `EXPLODE` 에 터진다. 흔들림도 그때다.
 		# 강화 — "과부하" 면 굵고 흰 폭발, "연쇄 폭발" 이면 `CHAIN` 초 뒤 작게 한 번 더 (따로 논다)
@@ -4806,6 +4815,15 @@ func _show_skill(payload: Dictionary) -> void:
 		# 강화 — "연타" 면 두 번 더 긁고 보라다. "위력"(`wide`)은 피해만 키워서 이펙트가 그대로다
 		var claw_up: Array = payload.get("upgrades", [])
 		SkillFx.claw(_fx, here, float(me.rot), "combo" in claw_up)
+
+
+## 파천장 "연파" 의 두 번째 파도 — 첫 파도와 같은 자리·보는 쪽에서 푸르게 (`_show_skill`).
+## 그 사이 존을 옮겼으면 띄우지 않는다
+func _ki_twin(at: Vector3, facing: float) -> void:
+	if _fx == null or not is_instance_valid(_fx):
+		return
+	KiFx.burst(_fx, at, facing, true)
+	_camera.shake(KiFx.TWIN_SHAKE, KiFx.SHAKE_TIME)
 
 
 ## 보스 범위 공격 예고 원.

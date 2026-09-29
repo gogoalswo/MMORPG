@@ -18,6 +18,14 @@ extends Node3D
 ## 깔고, 셰이더가 `head`·`tail` 사이만 벌린다. 방향은 캐릭터 기준이다(루트를 보는 쪽으로 돌린다).
 ## 판정 사거리(6m) 안에서 끝난다 — `REACH`. 거리는 2026-09-29 에 1.5배로 늘렸다 (요청).
 ## 이펙트는 판정 시각(스킬 표의 `delayMs`)에 선다 — 주먹을 내지르고 0.2초 멈춘 뒤다.
+##
+## **강화** (2026-09-29 요청 "연파, 기폭 넣자" — 이펙트는 추천한 대로):
+## - **연파**(`twin`) — `TWIN_DELAY` 뒤 **푸른 소용돌이**가 한 번 더 나간다. 같은 이펙트를 푸른
+##   빛(`PALETTE_TWIN`)으로 하나 더 띄운다 (`game.gd` 가 띄운다 — 풀에 둘이 있다).
+## - **기폭**(`detonate`) — 소용돌이가 앞으로 나간 뒤 흩어지지 않고 `DETONATE_Z` 한 점으로
+##   **말려 들었다가**(`GATHER`) `DETONATE_AT` 에 **터진다** — 섬광 · 사방으로 뻗는 빛살 ·
+##   기운 뭉치 · 불티 · 바닥 먼지. 퍼지는 고리는 쓰지 않는다 (규칙 3절).
+## 시각·자리는 강화 표(`followMs` · `followAhead` · `followRadius`)와 같다 — `ki_fx_test` 가 맞춰 본다.
 
 ## 손바닥 높이 · 몸 앞 거리 (발밑 기준)
 const HEIGHT := 1.15
@@ -106,8 +114,57 @@ const COLOR_MOTE := Color("#ffe3a0")
 const SHAKE := 0.18
 const SHAKE_TIME := 0.35
 
+## 연파 — 두 번째 파도가 나가는 때(초). 강화 표의 `followMs` 와 같다
+const TWIN_DELAY := 0.3
+## 두 번째 파도는 푸른 빛 — 금빛 3겹(`SWIRL_LAYERS`)과 같은 폭, 색만 바꾼다. 흰 심은 그대로
+## 1차 찍기(헤일로 0.35·0.62·1.0 · 가운데 0.72·0.88·1.0)는 가산이 겹쳐 거의 흰색이었다 — 짙게 했다
+const PALETTE_TWIN := [
+	Color(0.12, 0.42, 1.0, 0.6),
+	Color(0.38, 0.66, 1.0, 0.85),
+	Color(0.9, 0.96, 1.0, 1.0),
+]
+const STREAK_TWIN := [Color(0.25, 0.55, 1.0, 0.6), Color(0.9, 0.96, 1.0, 1.0)]
+const COLOR_FLASH_TWIN := Color(0.75, 0.88, 1.0)
+const COLOR_AURA_TWIN := Color(0.8, 0.9, 1.0)
+const COLOR_MOTE_TWIN := Color("#a8d4ff")
+## 두 번째 파도의 흔들림은 첫 파도보다 약하다
+const TWIN_SHAKE := 0.1
+
+## 기폭 — 터지는 때(초, 이펙트 시작부터) · 자리(발밑에서 앞으로 m). 강화 표의 `followMs` · `followAhead`
+const DETONATE_AT := 0.9
+const DETONATE_Z := 4.5
+## 터지기 전 소용돌이가 한 점으로 말려 드는 동안(초) — 먼 것도 다 나간 뒤(0.77초)부터 모인다
+const GATHER := 0.3
+## 모인 소용돌이의 크기(원래 반지름에 곱한다) · 모이며 더 도는 양(rad)
+const GATHER_SCALE := 0.18
+const GATHER_SPIN := 7.0
+## 터진 뒤 소용돌이가 꺼지는 시간 — 섬광에 묻힌다
+const GATHER_FADE := 0.12
+## 터지는 빛살이 닿는 곳 — 강화 표의 `followRadius`(2.5m) 안
+const BLAST_RADIUS := 2.4
+const BLAST_RAYS := 44
+## 1차 찍기(폭 0.16 · 0.05, 0.38초)는 빛살이 실처럼 가늘어 "빛 덩이" 로만 보였다 — 굵고 길게
+const BLAST_RAY_TIME := 0.5
+const BLAST_RAY_TRAIL := 0.55
+const BLAST_LAYERS := [
+	[0.34, Color(1.0, 0.78, 0.38, 0.6)],
+	[0.1, Color(1.0, 1.0, 1.0, 1.0)],
+]
+const BLAST_FLASH_SIZE := 3.4
+const BLAST_FLASH_LIFE := 0.3
+const BLAST_AURA_COUNT := 14
+const BLAST_AURA_LIFE := 0.8
+const BLAST_MOTE_COUNT := 48
+const BLAST_MOTE_LIFE := 0.6
+const BLAST_DUST_COUNT := 20
+const BLAST_DUST_LIFE := 1.2
+## 터질 때 흔들림 — 첫 파도(0.18)보다 조금 세다
+const BLAST_SHAKE := 0.22
+const BLAST_SHAKE_TIME := 0.3
+
 static var _swirl_meshes: Array = []
 static var _streak_mesh: ArrayMesh
+static var _blast_mesh: ArrayMesh
 static var _ink_shader: Shader
 
 var _t := 0.0
@@ -120,25 +177,45 @@ var _flash: MeshInstance3D
 var _dust: CPUParticles3D
 var _motes: CPUParticles3D
 var _aura: CPUParticles3D
+## 이번 것이 연파의 푸른 파도인가 · 기폭이 붙었나 · 벌써 터졌나
+var _twin := false
+var _detonate := false
+var _blasted := false
+## 기폭 — 터지는 자리(루트 기준, 손바닥 높이) 아래 빛살·섬광·방출기
+var _blast: Node3D
+var _blast_rays: Array = []
+var _blast_flash: MeshInstance3D
+var _blast_aura: CPUParticles3D
+var _blast_motes: CPUParticles3D
+var _blast_dust: CPUParticles3D
+## 방출기 색 — 금빛 · 푸른 빛 (연파면 `_start` 가 바꿔 낀다)
+var _aura_ramps: Array = []
+var _mote_ramps: Array = []
 
 
 ## 파천장을 띄운다. `at` 은 시전자 발밑(월드 좌표), `facing` 은 보는 쪽(rad).
+## `twin` 이면 연파의 푸른 파도, `detonate` 면 소용돌이가 모여 터진다 (강화).
 ## 풀(`FxPool`)에 쉬는 것이 있으면 되감아 쓴다 — 새로 만들지 않는다
-static func burst(parent: Node3D, at: Vector3, facing: float) -> KiFx:
+static func burst(parent: Node3D, at: Vector3, facing: float,
+		twin := false, detonate := false) -> KiFx:
 	var fx := FxPool.take(parent, &"ki") as KiFx
 	if fx == null:
 		fx = KiFx.new()
 		fx.name = "KiFx"
 		parent.add_child(fx)
 		fx._build()
-	fx._start(at, facing)
+	fx._start(at, facing, twin, detonate)
 	return fx
 
 
-## 끝나는 시각(초) — 마지막 소용돌이가 사그라들고 먼지가 가라앉을 때
-static func span() -> float:
+## 끝나는 시각(초) — 마지막 소용돌이가 사그라들고 먼지가 가라앉을 때.
+## 기폭이면 터진 뒤 먼지가 가라앉을 때까지다
+static func span(detonate := false) -> float:
 	var swirl := SWIRL_DELAY + float(SWIRLS - 1) * SWIRL_GAP + DRAW + HOLD + FADE
-	return maxf(maxf(swirl, STREAK_DELAY + STREAK_TIME), DUST_LIFE + 0.05)
+	var end := maxf(maxf(swirl, STREAK_DELAY + STREAK_TIME), DUST_LIFE + 0.05)
+	if detonate:
+		end = maxf(end, DETONATE_AT + maxf(BLAST_DUST_LIFE, BLAST_AURA_LIFE) + 0.05)
+	return end
 
 
 ## 소용돌이가 멈추는 자리의 반지름 — 앞으로 갈수록 넓어지는 원뿔
@@ -179,6 +256,37 @@ func _build() -> void:
 	_palm.add_child(_motes)
 	_aura = _make_aura()
 	_palm.add_child(_aura)
+	_aura_ramps = [_aura.color_ramp, soft_ramp(COLOR_AURA_TWIN, 0.2)]
+	_mote_ramps = [_motes.color_ramp, LightningFx.fade_ramp(COLOR_MOTE_TWIN)]
+	_build_blast()
+
+
+## 기폭 — 터지는 자리에 빛살 두 겹 · 섬광 · 방출기 셋. 한 번만 만든다
+func _build_blast() -> void:
+	_blast = Node3D.new()
+	_blast.position = Vector3(0.0, HEIGHT, DETONATE_Z)
+	add_child(_blast)
+	for layer in BLAST_LAYERS:
+		var mesh := MeshInstance3D.new()
+		mesh.mesh = blast_mesh()
+		mesh.material_override = SkillFx.claw_material(layer[0], layer[1])
+		mesh.extra_cull_margin = 1.0
+		mesh.visible = false
+		_blast.add_child(mesh)
+		_blast_rays.append({"node": mesh, "color": layer[1]})
+	_blast_flash = MeshInstance3D.new()
+	var quad := QuadMesh.new()
+	quad.size = Vector2(BLAST_FLASH_SIZE, BLAST_FLASH_SIZE)
+	_blast_flash.mesh = quad
+	_blast_flash.material_override = LightningFx.flare(COLOR_FLASH)
+	_blast_flash.visible = false
+	_blast.add_child(_blast_flash)
+	_blast_aura = _make_blast_aura()
+	_blast.add_child(_blast_aura)
+	_blast_motes = _make_blast_motes()
+	_blast.add_child(_blast_motes)
+	_blast_dust = _make_blast_dust()
+	_blast.add_child(_blast_dust)
 
 
 ## 나선 하나를 겹 수만큼 — 겹은 같은 메시를 쓰고 재질(폭·색)만 다르다
@@ -196,19 +304,38 @@ func _swirl_node(i: int, materials: Array, ink: bool) -> Dictionary:
 	var colors: Array = []
 	for mat: ShaderMaterial in materials:
 		colors.append(mat.get_shader_parameter(&"tint"))
+	# 연파의 푸른 파도 — 먹선은 그대로 검다
+	var twin_colors: Array = colors if ink else PALETTE_TWIN
 	return {
-		"node": node, "materials": materials, "colors": colors, "index": i, "ink": ink,
+		"node": node, "materials": materials, "colors": colors, "twin_colors": twin_colors,
+		"index": i, "ink": ink,
 		# 먹선은 바로 곁 소용돌이보다 한 박자 늦다 — 흰 빛을 뒤따라 감긴다
 		"delay": SWIRL_DELAY + float(i) * SWIRL_GAP + (0.05 if ink else 0.0),
 	}
 
 
 ## 처음으로 되감는다. **아무것도 만들지 않는다** — 자리·보는 쪽·시각만 넣는다
-func _start(at: Vector3, facing: float) -> void:
+func _start(at: Vector3, facing: float, twin := false, detonate := false) -> void:
 	position = at
 	# 방향은 캐릭터 기준 — 루트를 보는 쪽으로 돌리면 +Z 가 정면이다
 	rotation = Vector3(0.0, facing, 0.0)
 	_t = 0.0
+	_twin = twin
+	_detonate = detonate
+	_blasted = false
+	var flash_mat: StandardMaterial3D = _flash.material_override
+	flash_mat.albedo_color = COLOR_FLASH_TWIN if twin else COLOR_FLASH
+	# 입자 색과 곡선 색이 곱해진다 — 둘 다 바꿔야 푸르다
+	_aura.color = COLOR_AURA_TWIN if twin else COLOR_AURA
+	_aura.color_ramp = _aura_ramps[1 if twin else 0]
+	_motes.color = COLOR_MOTE_TWIN if twin else COLOR_MOTE
+	_motes.color_ramp = _mote_ramps[1 if twin else 0]
+	for ray in _blast_rays:
+		(ray.node as MeshInstance3D).visible = false
+	_blast_flash.visible = false
+	# 기폭의 방출기는 터질 때 켠다 (`_draw_blast`)
+	for e: CPUParticles3D in [_blast_aura, _blast_motes, _blast_dust]:
+		e.emitting = false
 	for swirl in _swirls:
 		(swirl.node as Node3D).visible = false
 	for streak in _streaks:
@@ -226,7 +353,9 @@ func _process(delta: float) -> void:
 		_draw_swirl(swirl)
 	_draw_streaks()
 	_draw_flash()
-	if _t >= span():
+	if _detonate:
+		_draw_blast()
+	if _t >= span(_detonate):
 		finish()
 
 
@@ -250,13 +379,25 @@ func _draw_swirl(swirl: Dictionary) -> void:
 	if bool(swirl.ink):
 		radius *= INK_SCALE
 		roll += INK_ROLL
-	node.position = Vector3(0.0, 0.0, lerpf(0.0, stop - PALM, e))
+	var spot := Vector3(0.0, 0.0, lerpf(0.0, stop - PALM, e))
+	# 기폭 — 다 나간 소용돌이가 터지는 자리로 **말려 든다**: 한 점으로 모이며 작아지고 빨리 돈다
+	var gather := 0.0
+	if _detonate:
+		gather = clampf((_t - (DETONATE_AT - GATHER)) / GATHER, 0.0, 1.0)
+		gather *= gather
+		spot = spot.lerp(Vector3(0.0, 0.0, DETONATE_Z - PALM), gather)
+		radius *= lerpf(1.0, GATHER_SCALE, gather)
+		roll += SWIRL_SPIN[i] * GATHER_SPIN * gather
+	node.position = spot
 	node.scale = Vector3.ONE * radius
 	node.rotation = Vector3(SWIRL_TILT[i], 0.0, roll)
 
 	var head := SkillFx._ease_out(clampf(s / DRAW, 0.0, 1.0))
 	var tail := maxf(0.0, head - SWIRL_TRAIL)
 	var fade := clampf((s - DRAW - HOLD) / FADE, 0.0, 1.0)
+	# 기폭이면 흩어지지 않고 모인다 — 사그라들지 않다가 터지는 순간 섬광 속에서 꺼진다
+	if _detonate:
+		fade = clampf((_t - DETONATE_AT) / GATHER_FADE, 0.0, 1.0)
 	# 사그라들 때 꼬리가 머리 쪽으로 모인다 — 제자리에서 옅어지기만 하면 "그림 한 장" 이 된다
 	# 꼬리를 조금만 모은다 — 0.85 까지 말아 넣었더니 띠가 줄어들며 한꺼번에 꺼져 보였다.
 	# 알파는 스무스스텝이라 천천히 빠지기 시작해 끝에서 길게 남는다 (스르륵)
@@ -268,7 +409,7 @@ func _draw_swirl(swirl: Dictionary) -> void:
 		return
 	for k in swirl.materials.size():
 		var mat: ShaderMaterial = swirl.materials[k]
-		var c: Color = swirl.colors[k]
+		var c: Color = swirl.twin_colors[k] if _twin else swirl.colors[k]
 		mat.set_shader_parameter(&"head", head)
 		mat.set_shader_parameter(&"tail", tail)
 		mat.set_shader_parameter(&"tint", Color(c.r, c.g, c.b, c.a * alpha))
@@ -288,6 +429,8 @@ func _draw_streaks() -> void:
 			continue
 		var mat: ShaderMaterial = node.material_override
 		var c: Color = streak.color
+		if _twin:
+			c = STREAK_TWIN[_streaks.find(streak)]
 		mat.set_shader_parameter(&"head", head)
 		mat.set_shader_parameter(&"tail", tail)
 		mat.set_shader_parameter(&"tint", Color(c.r, c.g, c.b, c.a * (1.0 - p * p)))
@@ -298,7 +441,35 @@ func _draw_flash() -> void:
 	var f := clampf(_t / FLASH_LIFE, 0.0, 1.0)
 	_flash.visible = f < 1.0
 	var mat: StandardMaterial3D = _flash.material_override
-	mat.albedo_color = Color(COLOR_FLASH.r, COLOR_FLASH.g, COLOR_FLASH.b, 1.0 - f)
+	var c := COLOR_FLASH_TWIN if _twin else COLOR_FLASH
+	mat.albedo_color = Color(c.r, c.g, c.b, 1.0 - f)
+
+
+## 기폭 — `DETONATE_AT` 에 방출기를 켜고, 섬광이 제자리에서 사그라들고 빛살이 사방으로 달린다
+func _draw_blast() -> void:
+	var s := _t - DETONATE_AT
+	if s < 0.0:
+		return
+	if not _blasted:
+		_blasted = true
+		for e: CPUParticles3D in [_blast_aura, _blast_motes, _blast_dust]:
+			e.restart()
+	var f := clampf(s / BLAST_FLASH_LIFE, 0.0, 1.0)
+	_blast_flash.visible = f < 1.0
+	var flash_mat: StandardMaterial3D = _blast_flash.material_override
+	flash_mat.albedo_color = Color(COLOR_FLASH.r, COLOR_FLASH.g, COLOR_FLASH.b, 1.0 - f * f)
+	var p := clampf(s / BLAST_RAY_TIME, 0.0, 1.0)
+	var head := (1.0 + BLAST_RAY_TRAIL) * SkillFx._ease_out(p)
+	for ray in _blast_rays:
+		var node: MeshInstance3D = ray.node
+		node.visible = p < 1.0
+		if not node.visible:
+			continue
+		var mat: ShaderMaterial = node.material_override
+		var c: Color = ray.color
+		mat.set_shader_parameter(&"head", head)
+		mat.set_shader_parameter(&"tail", head - BLAST_RAY_TRAIL)
+		mat.set_shader_parameter(&"tint", Color(c.r, c.g, c.b, c.a * (1.0 - p * p)))
 
 
 ## `i` 번째 나선 — **게임 전체에서 한 번만** 만든다. 반지름 1 기준으로 앞축(+Z)을 감으며
@@ -352,6 +523,35 @@ static func streak_mesh() -> ArrayMesh:
 		scales.append(rng.randf_range(0.6, 1.2))
 	_streak_mesh = strip_mesh(paths, params, scales)
 	return _streak_mesh
+
+
+## 기폭의 빛살 마흔넷을 한 메시로 — 터지는 자리에서 **사방으로**(옆으로 넓게, 위아래로 좁게)
+## 뻗는다. 끝이 `BLAST_RADIUS` 안이다 (판정 반경 안)
+static func blast_mesh() -> ArrayMesh:
+	if _blast_mesh != null:
+		return _blast_mesh
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 11
+	var paths: Array = []
+	var params: Array = []
+	var scales: Array = []
+	for n in BLAST_RAYS:
+		var yaw := TAU * (float(n) + rng.randf_range(-0.4, 0.4)) / float(BLAST_RAYS)
+		var pitch := rng.randf_range(-0.45, 0.75)
+		var dir := Vector3(sin(yaw) * cos(pitch), sin(pitch), cos(yaw) * cos(pitch))
+		var start := rng.randf_range(0.1, 0.35)
+		var length := rng.randf_range(0.55, 1.0) * BLAST_RADIUS - start
+		var path := PackedVector3Array()
+		var param := PackedFloat32Array()
+		for p in STREAK_SEGMENTS + 1:
+			var v := float(p) / float(STREAK_SEGMENTS)
+			path.append(dir * (start + length * v))
+			param.append(v)
+		paths.append(path)
+		params.append(param)
+		scales.append(rng.randf_range(0.7, 1.3))
+	_blast_mesh = strip_mesh(paths, params, scales)
+	return _blast_mesh
 
 
 ## 폭 0 인 띠 여럿을 한 메시로 (할퀴기 셰이더 규격)
@@ -513,4 +713,93 @@ func _make_motes() -> CPUParticles3D:
 	e.color = COLOR_MOTE
 	e.color_ramp = LightningFx.fade_ramp(COLOR_MOTE)
 	e.material_override = LightningFx.mote(COLOR_MOTE, true)
+	return e
+
+
+## 기폭의 기운 뭉치 — 터지는 자리에서 사방으로 부풀며 밀려난다. 빛이라 가산이다.
+## 되감아 쓰는 1회용이라 한꺼번에 내보낸다(`explosiveness` 1.0) · 그림자를 끈다 (규칙 3절)
+func _make_blast_aura() -> CPUParticles3D:
+	var e := _blast_emitter(BLAST_AURA_COUNT, BLAST_AURA_LIFE, 1.3)
+	e.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	e.emission_sphere_radius = 0.3
+	e.direction = Vector3(0.0, 0.2, 0.0)
+	e.spread = 180.0
+	# 멈추는 거리 = 속도² / (2 × 감속) ≈ 1.6m — 판정 반경(2.5m) 안에서 선다
+	e.initial_velocity_min = 3.0
+	e.initial_velocity_max = 5.5
+	e.damping_min = 8.0
+	e.damping_max = 10.0
+	e.scale_amount_curve = LightningFx.grow_curve(2.4)
+	e.color = COLOR_AURA
+	# 빛살이 보이게 옅게 — 진하면 섬광과 겹쳐 하얀 공이 된다
+	e.color_ramp = soft_ramp(COLOR_AURA, 0.18)
+	var mat := LightningFx.mote(COLOR_AURA, true)
+	mat.albedo_color = Color.WHITE
+	mat.albedo_texture = FxTex.puff()
+	e.material_override = mat
+	return e
+
+
+## 기폭의 불티 — 금빛 알갱이가 사방으로 튄다
+func _make_blast_motes() -> CPUParticles3D:
+	var e := _blast_emitter(BLAST_MOTE_COUNT, BLAST_MOTE_LIFE, 0.1)
+	e.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	e.emission_sphere_radius = 0.2
+	e.direction = Vector3(0.0, 0.3, 0.0)
+	e.spread = 180.0
+	e.initial_velocity_min = 5.0
+	e.initial_velocity_max = 10.0
+	e.damping_min = 10.0
+	e.damping_max = 12.0
+	e.scale_amount_curve = LightningFx.fade_curve()
+	e.color = COLOR_MOTE
+	e.color_ramp = LightningFx.fade_ramp(COLOR_MOTE)
+	e.material_override = LightningFx.mote(COLOR_MOTE, true)
+	return e
+
+
+## 기폭의 바닥 먼지 — 터지는 자리 아래 땅에서 옆으로 밀려난다. 흙이라 알파다
+func _make_blast_dust() -> CPUParticles3D:
+	var e := _blast_emitter(BLAST_DUST_COUNT, BLAST_DUST_LIFE, 1.3)
+	e.position = Vector3(0.0, 0.3 - HEIGHT, 0.0)
+	e.emission_shape = CPUParticles3D.EMISSION_SHAPE_RING
+	e.emission_ring_axis = Vector3.UP
+	e.emission_ring_radius = 0.6
+	e.emission_ring_inner_radius = 0.2
+	e.emission_ring_height = 0.1
+	e.direction = Vector3(0.0, 0.15, 0.0)
+	e.spread = 180.0
+	e.flatness = 0.85
+	e.initial_velocity_min = 2.0
+	e.initial_velocity_max = 3.6
+	e.damping_min = 3.0
+	e.damping_max = 3.6
+	e.gravity = Vector3(0.0, 0.3, 0.0)
+	e.scale_amount_curve = LightningFx.grow_curve(2.0)
+	e.color = COLOR_DUST
+	e.color_ramp = soft_ramp(COLOR_DUST, 0.4)
+	var mat := LightningFx.mote(COLOR_DUST)
+	mat.albedo_color = Color.WHITE
+	mat.albedo_texture = FxTex.puff()
+	mat.proximity_fade_enabled = true
+	mat.proximity_fade_distance = 1.2
+	e.material_override = mat
+	return e
+
+
+func _blast_emitter(amount: int, life: float, size: float) -> CPUParticles3D:
+	var e := CPUParticles3D.new()
+	e.amount = amount
+	e.lifetime = life
+	e.one_shot = true
+	e.explosiveness = 1.0
+	e.emitting = false
+	e.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var quad := QuadMesh.new()
+	quad.size = Vector2(size, size)
+	e.mesh = quad
+	e.angle_min = -180.0
+	e.angle_max = 180.0
+	e.angular_velocity_min = -90.0
+	e.angular_velocity_max = 90.0
 	return e

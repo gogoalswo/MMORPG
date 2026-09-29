@@ -642,6 +642,16 @@ export interface SkillUpgradeDef {
    */
   followMs?: number;
   followPower?: number;
+  /**
+   * 뒤따르는 한 대를 **앞으로 옮겨** 터뜨린다 — 시전 순간 보던 쪽으로 이만큼(m) 나간 자리가
+   * 중심이다 (파천장 "기폭": 소용돌이가 모여 터지는 곳). 없으면 스킬 판정과 같은 자리다
+   */
+  followAhead?: number;
+  /**
+   * 뒤따르는 한 대의 **반경**(m) — 있으면 그 자리 둘레 원으로 다시 고른다. 없으면 스킬 판정과
+   * 같은 모양이다 (부채꼴 스킬이면 시전 순간 보던 쪽 부채꼴 — 파천장 "연파")
+   */
+  followRadius?: number;
   /** 기절이 **어떻게 보이나** — `ice` 면 몸이 얼음빛으로 굳는다 (빙주각 "빙결") */
   stunLook?: 'ice';
   /**
@@ -773,6 +783,28 @@ const UPGRADE_LIST: Omit<SkillUpgradeDef, 'exp'>[] = [
     desc: '1초 뒤 50% 한 번 더 폭발',
     followMs: 1000,
     followPower: 0.5,
+  },
+  {
+    // 2026-09-29 요청 ("연파, 기폭 넣자"). 이펙트는 0.3초 뒤 **푸른 소용돌이**가 한 번 더
+    // 나간다 (KiFx.TWIN_DELAY · PALETTE_TWIN). 모양은 첫 파도와 같은 부채꼴이다
+    id: 'twin',
+    skill: 'ki_burst',
+    name: '연파',
+    desc: '0.3초 뒤 60% 한 번 더',
+    followMs: 300,
+    followPower: 0.6,
+  },
+  {
+    // 이펙트는 소용돌이가 앞 4.5m 한 점으로 말려 들었다가 터진다 (KiFx.DETONATE_AT · DETONATE_Z).
+    // 반경 2.5m 라 7m 까지 닿는다 — 사거리(6m)보다 멀지만 터지는 것이 눈에 보인다
+    id: 'detonate',
+    skill: 'ki_burst',
+    name: '기폭',
+    desc: '끝에서 터져 80% 한 번 더',
+    followMs: 900,
+    followPower: 0.8,
+    followAhead: 4.5,
+    followRadius: 2.5,
   },
 ];
 

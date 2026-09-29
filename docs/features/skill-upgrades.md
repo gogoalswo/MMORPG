@@ -32,6 +32,8 @@
 | 무적파쇄권 `crush_fist` | 2번 기절 `stun` | 50000 | 맞은 놈 **2초 기절** | 없음 | 붙었다 |
 | 폭렬권 `nova_fist` | 1번 과부하 `overload` | 200000 | **데미지 300% 추가** (1000 → 1300%, `powerMul` 1.3) | 소용돌이·호·빛살이 **1.35배 굵고 희게**, 섬광 1.3배 · 빛 1.5배 | 붙었다 (1차 시안) |
 | 폭렬권 `nova_fist` | 2번 연쇄 폭발 `chain` | 200000 | 폭발 **1초 뒤** 그때 범위 안 전부에게 **폭렬권 데미지의 50%** 한 번 더 | 같은 자리에서 **0.7배 2차 폭발** — 호·빛살(30° 돌려서)·섬광·빛·불티·불덩이, 화면 살짝 흔들림 | 붙었다 (1차 시안) |
+| 파천장 `ki_burst` | 1번 연파 `twin` | 10000 | **0.3초 뒤 같은 부채꼴에 한 대의 60%** 를 한 번 더 (시전 순간 보던 쪽) | **푸른 소용돌이**가 한 번 더 나간다 | 붙었다 (1차 시안) |
+| 파천장 `ki_burst` | 2번 기폭 `detonate` | 10000 | **0.9초 뒤 앞 4.5m 둘레 2.5m 원에 한 대의 80%** | 소용돌이가 흩어지지 않고 앞 4.5m 한 점으로 **말려 들었다가 터진다** | 붙었다 (1차 시안) |
 
 | 던전 토벌 N단계 클리어 | 스킬 경험치 |
 |---|---|
@@ -74,6 +76,11 @@
 | `godot/world/world.gd` `_pull_in` · `PULL_AHEAD` · `PULL_SPREAD` | ★ **끌어당기기** (무적파쇄권 흡인) — 반경 안의 놈마다 `pull_*` 를 달면 `_step_monsters` 가 옮긴다 |
 | `godot/tests/skill_test.gd` `_case_crush_up` | 흡인: 뒤 8.5m 놈이 0.5초 끌려 앞 반원에 들고 터질 때 맞음 · 11m 는 그대로 / 기절 2초 |
 | `godot/tests/skill_test.gd` `_case_ice_up` | 파쇄 예약 하나·1.1초 뒤·공격 × 위력 × 0.8, 빙결 2초·`stun_look` ice |
+| `godot/world/world.gd` `_land` · `_pick_targets(…, facing)` | ★ **뒤따르는 한 대의 모양** — 판정과 같은 모양(부채꼴이면 시전 순간 자리·보던 쪽), `followAhead`·`followRadius` 가 있으면 앞으로 옮긴 원 (파천장) |
+| `godot/game/ki_fx.gd` `TWIN_DELAY` · `PALETTE_TWIN` · `DETONATE_*` · `GATHER*` · `BLAST_*` · `_draw_blast` | 강화한 파천장 — 푸른 두 번째 파도, 모였다 터지는 기폭 |
+| `godot/game/game.gd` `_ki_twin` | 연파의 두 번째 파도를 `TWIN_DELAY` 뒤에 띄운다 (풀에 파천장이 둘 — `FxPool.PREFILL`) |
+| `godot/tests/skill_test.gd` `_case_ki_up` | 연파 300ms · 60% · 등을 돌려도 시전 때 부채꼴, 기폭 900ms · 80% · 앞 4.5m 원(사거리 밖 6.8m 도 맞음) |
+| `godot/tests/ki_fx_test.gd` `_case_upgrade_table` · `_case_upgraded` | 이펙트 시각·자리가 판정 표와 같나, 빛살이 반경 안, 쏘면 금빛(기폭) + 푸른 파도가 서고 첫 것만 터지나 |
 | `godot/tests/ice_fx_test.gd` `_case_upgrades` | 파쇄 시각이 판정 `followMs` 와 같나, 파쇄면 빨리 빠지고 조각이 터지나, 빙결이면 짙은 청색, 없으면 제자리 |
 | `godot/tests/quake_fx_test.gd` `_case_upgrades` | 진폭 토네이도가 9m 까지·먼지 충격파·금 없음, 지대 소용돌이가 판정 반경(6·9m)·틱마다 여섯 번 조여듦·끝나면 사라짐·먼지 충격파·흙 알갱이 없음, 판정 표와 시간이 같나 |
 | `godot/tests/lightning_fx_test.gd` `_case_wide` | 다섯 번 · 옆 번개가 캐릭터 좌우 1.9m · 차례로 · 땅 흔적 1.5배 · 색 그대로 · 떼면 세 번 |
@@ -103,7 +110,7 @@
   | 스킬 | 필요 경험치 | 지금 스킬 |
   |---|---|---|
   | 기본 (`tier` 0) | 1,000 | 할퀴기 |
-  | 1차 전직 | 10,000 | 낙뢰 |
+  | 1차 전직 | 10,000 | 파천장 (낙뢰는 숨김) |
   | 2차 전직 | 50,000 | 빙주각 · 무적파쇄권 |
   | 3차 전직 | 200,000 | 천붕각 |
   | 4차 전직 | 1,000,000 | (아직 없다) |
@@ -357,6 +364,39 @@
 - **2번 기절** (`stunMs` 2000) — 낙뢰 기절과 같은 판정이다. **주먹이 닿는 순간**(`delayMs` 600)부터 2초다
   (판정이 그때라서). 색·모양 바꿈은 없다 — 멈춰 서 있는 것으로만 보인다.
 
+### 파천장 강화 ★ (2026-09-29)
+
+"파천장 스킬 강화 추천 해줘" 에 밀쳐내기·연파·기폭·기 순환·관통을 제안했고, 사용자가
+**"연파, 기폭 넣자. 이펙트는 추천한 내용으로"** 로 정했다. 참고 그림은 없다 — 제안할 때 말로 적은 모양이다.
+
+- **둘 다 "뒤따르는 한 대"(`followMs`·`followPower`)다** — 빙주각 파쇄와 같은 장치(`_zones` 에 한 번만
+  터지는 지대)를 쓰고, **다시 고르는 모양**만 넓혔다:
+  - 모양은 **판정과 같다** — 부채꼴 스킬이면 **시전 순간의 자리·보던 쪽** 부채꼴이다 (`_pick_targets` 의
+    `facing`). 그 사이 몸을 돌려도 안 바뀐다. 전에는 늘 원(`TAU`)으로 골랐다 — 빙주각은 원이라 같다.
+  - `followAhead`·`followRadius` 가 있으면 **보던 쪽으로 옮긴 자리의 원**이다.
+- **1번 연파** (`followMs` 300 · `followPower` 0.6) — 0.3초 뒤 같은 부채꼴(100° · 6m)에 한 대의 60%.
+  이펙트는 **푸른 두 번째 파도** — 같은 이펙트를 푸른 빛(`KiFx.PALETTE_TWIN` · 흰 심·먹선은 그대로)으로
+  하나 더 띄운다(`game.gd` `_ki_twin`). 흔들림은 약하게(`TWIN_SHAKE`) 한 번 더. 두 파도가 겹치므로
+  풀에 파천장을 **둘** 둔다(`FxPool.PREFILL`).
+- **2번 기폭** (`followMs` 900 · `followPower` 0.8 · `followAhead` 4.5 · `followRadius` 2.5) — 0.9초 뒤
+  앞 4.5m 둘레 2.5m 원에 한 대의 80%. **7m 까지 닿는다** — 사거리(6m)보다 멀지만 터지는 것이 눈에 보인다
+  (격투가 근접 규칙이 막으려는 "안 보이는데 멀리서 맞는" 게 아니다).
+  - 이펙트: 소용돌이가 사그라들지 않고 0.6초부터 앞 4.5m 한 점으로 **말려 든다**(`GATHER` 0.3초 —
+    작아지고 더 빨리 돈다). 0.9초에 **터진다** — 섬광(3.4m, 제자리에서 사그라듦) · 사방 빛살 44줄
+    (`blast_mesh`, 2.4m 안) · 기운 뭉치 · 금빛 불티 · 바닥 먼지(알파). 퍼지는 고리는 없다.
+    흔들림 한 번 더(`BLAST_SHAKE`).
+  - 방출기는 되감는 1회용이라 `explosiveness` 1.0 · 그림자 끔 (effect-rules 3절).
+- 둘은 따로 논다 — 기폭은 **첫 파도만** 터진다. 둘 다 붙으면 금빛 파도가 모여 터지는 사이 푸른 파도가 지나간다.
+- **찍어서 봤다** (`npm run shot:godot -- ki_burst+twin+detonate@90 82,120`) — 1차 찍기에서 푸른 파도가
+  가산으로 겹쳐 **거의 흰색**이었고, 기폭 빛살(폭 0.16)이 가늘어 **빛 덩이**로만 보였다 → 푸른색을 짙게,
+  빛살을 굵고(0.34 · 0.1) 길게(0.5초), 기운 뭉치를 옅게(0.18) 했다.
+  - ★ 클라우드(소프트웨어 렌더, 1fps)에서는 **프레임당 게임 시간이 약 0.0116초**다 — 고도가 프레임
+    간격을 벽시계대로 안 늘린다. `shot.gd` 가 적는 "게임 시간" 은 벽시계 × `SLOW` 라 **틀린 값**이다.
+    파천장은 판정 0.42초 뒤에 서므로 프레임 36 이전에는 아무것도 안 보인다. 첫 파도 0.3초 ≈ 프레임 60,
+    기폭 터짐 ≈ 프레임 116 이다.
+- 서버 처치 검증(`KillCheck.min_ms`)이 뒤따르는 한 대를 **한 대(`power`) × `followPower`** 로 센다 —
+  그 전엔 `followPower` 만 더해서 스킬 배율만큼 작게 셌다 (빙주각 파쇄도 같이 바로잡혔다).
+
 ### 테스트 단추 (왼쪽 아래 테스트 줄)
 
 - **"스킬 경험치 +10만"** — 스킬 경험치를 `World.DEBUG_SKILL_EXP`(100000) 넣는다
@@ -399,7 +439,7 @@
 ## 손댈 때
 
 - **피해를 올리는 칸(배율·타수·장판·추가타)을 새로 넣으면 `godot/server/kill_check.gd` 의 `min_ms` 도 고친다** — 서버가 "이보다 빨리 못 잡는다" 를 셈한다. 모르는 칸이 생기면 `server_test` 가 실패해서 알려 준다 → [server.md](server.md)
-- **강화를 더할 때** — `SKILL_UPGRADES` 에 한 줄(`exp` 필수, 효과는 `stunMs` · `rangeMul` · `powerMul` · `extraHits` · `zoneMs`·`zoneTickMs`·`zonePower` · `followMs`·`followPower` · `stunLook` · `pullRadius`·`pullMs` 중에서) → `npm run export:godot`.
+- **강화를 더할 때** — `SKILL_UPGRADES` 에 한 줄(`exp` 필수, 효과는 `stunMs` · `rangeMul` · `powerMul` · `extraHits` · `zoneMs`·`zoneTickMs`·`zonePower` · `followMs`·`followPower` · `followAhead`·`followRadius` · `stunLook` · `pullRadius`·`pullMs` 중에서) → `npm run export:godot`.
   효과가 새 종류면 `cast` 에 판정을, `_show_skill` 에 이펙트 분기를 더한다.
   효과 문구(`desc`)는 **카드(280px) 한 줄**에 들어가야 한다.
 - **던전 보상을 바꿀 때** — `DUNGEON_SKILL_EXP_PER_STAGE`(단계당). 단계마다 따로 주려면

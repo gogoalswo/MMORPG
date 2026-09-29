@@ -508,6 +508,26 @@
       "followMs": 1000,
       "followPower": 0.5,
       "exp": 200000
+    },
+    {
+      "id": "twin",
+      "skill": "ki_burst",
+      "name": "연파",
+      "desc": "0.3초 뒤 60% 한 번 더",
+      "followMs": 300,
+      "followPower": 0.6,
+      "exp": 10000
+    },
+    {
+      "id": "detonate",
+      "skill": "ki_burst",
+      "name": "기폭",
+      "desc": "끝에서 터져 80% 한 번 더",
+      "followMs": 900,
+      "followPower": 0.8,
+      "followAhead": 4.5,
+      "followRadius": 2.5,
+      "exp": 10000
     }
   ],
   "upgradeMax": 2,

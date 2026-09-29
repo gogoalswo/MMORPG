@@ -304,7 +304,49 @@ frame.add_child(border)         # 채움 **다음**에 붙여야 위로 온다
 지금 아이콘 마음에 안 들으니까 스크린샷 보고 아트풍 저런식으로 변경해" — 받은 그림은 다른 게임의
 메뉴 넷(상점 돈주머니 · 인벤토리 가방 · 스펠 마법서 · 퀘스트 두루마리)이고, **아이콘 아래에 흰 글자**가 붙어 있다.
 
-### 지금은 청동 문장 결 (같은 날 두 번째로 갈았다) ★★
+### 지금은 칠한 반실사 결 (2026-09-29, 세 번째) ★★
+
+요청: 다른 게임의 HUD 아이콘 넷(세력 탑 · 커뮤니티 사람들 · 랭킹 트로피 · PVP북 엇갈린 검) 그림 +
+"HUD 아이콘이 내가 원하는 아트풍이 아니야. 스크린샷 참고해서 다시 만들어봐" — 아래의 **청동 문장 결을 갈았다.**
+청동 결은 세공이 빽빽하고 거의 한 색이라 작게 보면 뭉개졌다. 받은 그림은 **단순한 실루엣에 제 색을 부드럽게 칠한
+반실사** — 돌은 회색, 가죽은 갈색, 금은 금빛, 칼날은 은빛. 왼쪽 위 빛, 약간 비스듬한 각, 판·원판 없음.
+
+- 갈린 것: 메뉴 여덟 장 + 자동사냥 + 물약 (청동 결과 같은 열 장). **닫기 X(`ui_close`)는 그대로**다.
+- **참고 그림**: 받은 스크린샷 그대로(245×56, JPEG 45, 1.9KB) —
+  `https://3d.varco.ai/api/objects/7cb46959217839da3aa126a3a6a909eb.jpg`. 같은 결로 한 장 더 만들 때 이것을 물린다.
+- **프롬프트** (`<무엇>` · `<쓰임>` 만 간다. 해골·X 검처럼 정면인 것은 `Slight three-quarter view` 를 `Front view` 로),
+  1:1, `nano-banana-pro`, 두 장씩:
+
+  ```
+  Mobile MMORPG HUD menu icon: <무엇>, meaning '<쓰임>'. MATCH THE REFERENCE IMAGE'S ART STYLE EXACTLY
+  (its castle tower, group of people, trophy and crossed swords): a softly hand-painted semi-realistic game
+  icon in natural material colors — weathered grey stone, warm brown wood and leather, soft polished gold,
+  pale silver steel — with gentle warm light from the upper left, smooth soft shading and a clean, simple,
+  bold silhouette with little fine detail. NOT an engraved bronze relief, NOT monochrome sepia, NOT ornate
+  filigree. Slight three-quarter view, centered, fills the frame, readable at 60 pixels. One object standing
+  alone — it must NOT sit on any disc, circle, plate, badge, frame or panel. Isolated on a flat pure white
+  background; everything outside the object is pure white, the four corners must be pure white. Ignore the
+  captions and the dark background in the reference: no text, no letters, no numbers.
+  ```
+
+  `NOT an engraved bronze relief, NOT monochrome sepia` 는 빼지 않는다 — 앞 결(청동 문장)로 되돌아가지 않게 막는 문구다.
+- 한 번에 결이 맞았다. **"demon skull" 은 뿔 달린 짐승 해골로 나온다** — 던전 그림으로 쓸 만해서 정면인 둘째를 골랐다.
+  고른 것은 `scripts/fetch-assets.sh` 주석에 있다.
+
+| 단추 | 그림 | 이름 |
+|---|---|---|
+| 정보 | 붉은 깃 단 은빛 기사 투구 | `ui_icon_character` |
+| 스킬 | 푸른 룬이 빛나는 가죽 마법서 | `ui_icon_skill` |
+| 강화 | 모루를 내리치는 망치 · 불티 | `ui_icon_enhance` |
+| 크리스탈 | 회색 바위에서 솟은 보랏빛 결정 | `ui_icon_crystal` |
+| 가방 | 놋쇠 버클 가죽 배낭 | `ui_icon_bag` |
+| 던전 | 굽은 뿔 해골 (정면) | `ui_icon_dungeon` |
+| 설계 | 두루마리 도면 위 놋쇠 컴퍼스 | `ui_icon_design` |
+| 랭킹 | 받침 달린 금 트로피 | `ui_icon_rank` |
+| 자동사냥 | 금 코등이 은빛 장검 둘이 X자 | `ui_icon_auto` |
+| 물약 | 코르크 막은 둥근 병 · 붉은 물약 | `ui_icon_potion` |
+
+### 그 전: 청동 문장 결 (2026-09-28 두 번째) — 프롬프트를 되살리지 않는다
 
 요청: 다른 게임의 메뉴 아이콘 판(변신 · 혈맹 · 랭킹 · 던전 · 몬스터도감 …) 그림 + "HUD의 아이콘들을
 이런 아트풍을 원하는거야. 지금은 너무 다른 것 같아." — 아래의 **칠한 가죽·양피지 결에서 한 번 더 갈았다.**
@@ -344,7 +386,7 @@ frame.add_child(border)         # 채움 **다음**에 붙여야 위로 온다
   `https://3d.varco.ai/api/objects/ad3bd8cdbd5081ca5e380dbb42a3d9e4.jpg`)을 참고로 물려 다시 뽑았다.
   프롬프트에 `NO border, NO outline frame, NO rim, NO enamel inlay` 와 `THIN ... NOT thick` 를 넣는다.
 
-지금(청동 문장 결) 그림:
+그때(청동 문장 결) 그림 — 지금 그림은 위 "칠한 반실사 결" 표:
 
 | 단추 | 그림 | 이름 |
 |---|---|---|
@@ -360,8 +402,8 @@ frame.add_child(border)         # 채움 **다음**에 붙여야 위로 온다
 | 물약 | 청동 세공 둥근 병 · 붉은 물약 | `ui_icon_potion` |
 
 - **랭킹 단추는 서버에 붙었을 때만 선다** (던전 옆, 메뉴 맨 끝, 2026-09-28) — 혼자 노는 판에는 견줄 사람이
-  없다. 그래서 GitHub Pages 화면에는 안 보인다. 그림은 위 참고 그림 · 같은 프롬프트 틀로 두 장 뽑아
-  첫째를 골랐다 (2026-09-28 — 틀을 더 꽉 채우고 월계관이 굵어 62px 에서도 읽힌다) → [server.md](server.md) "랭킹"
+  없다. 그래서 GitHub Pages 화면에는 안 보인다. 그림은 2026-09-29 에 칠한 반실사 결로 갈았다(받침 달린 금 트로피)
+  → [server.md](server.md) "랭킹"
 
 - **글자는 그림에 굽지 않고 `Label`(이름 `caption`)로 얹는다.** 칸 안을 `VBoxContainer` 로 나눠
   **아이콘 네모(62) 아래 줄**에 둔다 (간격 `MENU_CAPTION_GAP` 1). 14px · 상아(`#eeead7`) · 검은 테 5.

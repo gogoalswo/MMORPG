@@ -330,17 +330,17 @@ fetch_icon 66d3b2ea079339e5a22b09546c956903 ui_quick_slot  # 퀵슬롯·자동�
 fetch_icon 09d32f50e266215c7ff66542d6d7c016 ui_gate_here   # 지금 서 있는 곳 — 소용돌이
 fetch_icon 2209356ad70f42d8872938bc39ffedd4 ui_gate_go     # 갈 수 있는 곳 — 별
 
-# 오른쪽 위 메뉴 여덟 장 + 자동사냥 · 물약 — 2026-09-28 에 두 번 갈았다. 지금은 **청동 문장 결**
-# (받은 그림: 바랜 청동·금을 새긴 문장 + 작은 붉은·푸른·보라 포인트)을 참고로 물려 뽑은 것이다.
+# 오른쪽 위 메뉴 여덟 장 + 자동사냥 · 물약 — 2026-09-28 에 두 번, 2026-09-29 에 한 번 더 갈았다. 지금은 **칠한 반실사 결**
+# (받은 그림: 세력 탑 · 커뮤니티 · 랭킹 트로피 · PVP 검 — 제 색으로 부드럽게 칠한 것)을 참고로 물려 뽑은 것이다.
 # 흰 바탕이라 굽는 스크립트가 걷는다. 각 두 장 중 고른 것 (docs/features/hud.md "메뉴 아이콘")
-fetch_icon 06a9ecb57bedc3b9c6aaa7563fadc1f2 ui_icon_character # 정보 — 붉은 깃 단 기사 투구 (첫째). 2026-09-28 청동 문장 결
-fetch_icon b55318d12e9411340e2816ffc3231327 ui_icon_skill     # 스킬 — 푸른 룬이 새겨진 금속 표지 마법서 (둘째). 2026-09-28 청동 문장 결
-fetch_icon 87761d5bbbee4da29105c49636c6a92b ui_icon_enhance   # 강화 — 모루를 내리치는 망치 · 불티 (둘째 — 첫째는 뒤에 원판). 2026-09-28 청동 문장 결
-fetch_icon 8281289d332c5f9ef3fbeb201f66a658 ui_icon_crystal   # 크리스탈 — 청동 받침에 박힌 보랏빛 결정 (둘째). 2026-09-28 청동 문장 결
-fetch_icon 0e5aee517a197368e18c01d4773a0277 ui_icon_bag       # 가방 — 버클 달린 가방 · 붉은 보석 (첫째). 2026-09-28 청동 문장 결
-fetch_icon 816bc186a1aa948ed25b033551a6796b ui_icon_dungeon   # 던전 — 뿔 달린 악마 해골 (첫째). 2026-09-28 청동 문장 결
-fetch_icon 8f015382ca28b68c6c41e9a465d9fd5c ui_icon_design    # 설계 — 톱니 위 컴퍼스 · 푸른 보석 (첫째). 2026-09-28 청동 문장 결
-fetch_icon 983070589a1c86df94bf5a5a15899a71 ui_icon_rank      # 랭킹 — 월계관 두른 트로피 · 붉은 보석 (첫째). 2026-09-28 청동 문장 결
+fetch_icon f22e1750c93fb9a4c059dd74cd4155cc ui_icon_character # 정보 — 붉은 깃 단 은빛 기사 투구 (둘째). 2026-09-29 칠한 반실사 결
+fetch_icon 065c28d6d6915cc53b0fdd05e6cf8b9a ui_icon_skill     # 스킬 — 푸른 룬이 빛나는 가죽 마법서 (첫째). 2026-09-29 칠한 반실사 결
+fetch_icon 8dc5163b2f764c5976a6b29ed1cc69da ui_icon_enhance   # 강화 — 모루를 내리치는 망치 · 불티 (첫째). 2026-09-29 칠한 반실사 결
+fetch_icon e5c4daa171d2694c857db95a430d863b ui_icon_crystal   # 크리스탈 — 회색 바위에서 솟은 보랏빛 결정 (첫째). 2026-09-29 칠한 반실사 결
+fetch_icon 0c0d9e1cf5bd0ba8c5ec9dd587c7faac ui_icon_bag       # 가방 — 놋쇠 버클 가죽 배낭 (첫째). 2026-09-29 칠한 반실사 결
+fetch_icon f56a6e2c812577deebdd4fadd62ab249 ui_icon_dungeon   # 던전 — 굽은 뿔 해골 (둘째 — 정면). 2026-09-29 칠한 반실사 결
+fetch_icon 38ff39f041848393d5df52d1b2d99ec4 ui_icon_design    # 설계 — 두루마리 도면 위 놋쇠 컴퍼스 (첫째). 2026-09-29 칠한 반실사 결
+fetch_icon 1acabdb27a564d8fc7f73f6285ebbe2d ui_icon_rank      # 랭킹 — 받침 달린 금 트로피 (첫째). 2026-09-29 칠한 반실사 결
 # 던전 종류 카드 — 받은 그림(다른 게임의 던전 창)을 참고로 물려 뽑은 풍경 · 틀 · 장식
 # (2026-09-28, docs/features/dungeons.md). 각 두 장 중 고른 것. 풍경은 9:16 이라 배경을 안 걷는다
 fetch_icon 835f847665366f9f3471ae4c32b7863f dungeon_raid     # 토벌 — 무너진 아치 투기장 · 뒤에 선 오거 (첫째)
@@ -348,9 +348,9 @@ fetch_icon ceb2c53d523649a6376b4c204144c8bd dungeon_trial    # 시련의 탑 —
 fetch_icon fa124e9f7d19ee8301a2be5ecab872a4 dungeon_treasure # 보물 창고 — 금고 문 · 상자 · 등불 (둘째)
 fetch_icon 95353ca131109a81562da8c056255962 ui_dungeon_card  # 카드 틀 — 닳은 돌판 · 얇은 청동 테 (둘째)
 fetch_icon bca3ac0f09670fe8e947153580b9216f ui_dungeon_crest # 카드 위 장식 — 창살 아치 문 + 덩굴 날개 (둘째)
-fetch_icon d2942228957c0d7bcab9c3e8e56fa7ca ui_icon_auto   # 자동사냥 — 검 두 자루가 X자 · 붉은 보석 (첫째). 2026-09-28 청동 문장 결
+fetch_icon 5184256a0421fd9817458183a8063a36 ui_icon_auto   # 자동사냥 — 금 코등이 은빛 장검 둘이 X자 (첫째). 2026-09-29 칠한 반실사 결
 # 퀵슬롯 왼쪽 물약 칸 (2026-09-26) — 둥근 유리병 · 코르크 · 붉은 물약. 두 장 중 둘째(정면)
-fetch_icon d626c5d54054f3b34512a71cddf31d94 ui_icon_potion # 물약 — 청동 세공 둥근 병 · 붉은 물약 (첫째). 2026-09-28 청동 문장 결
+fetch_icon b4d3db225d7725e15c27db72fe34ef89 ui_icon_potion # 물약 — 코르크 막은 둥근 병 · 붉은 물약 (첫째). 2026-09-29 칠한 반실사 결
 fetch_icon 74df64ad7717d61a8ba37c600568f827 ui_auto_spin   # 자동사냥 고리 (굵은 화살표 — 얇은 것은 안 보였다)
 fetch_icon a1f540037c955a3489456f778db80665 ui_close       # 모든 창 오른쪽 위 닫기 X — 2026-09-28 가는 금빛 막대 X, 테두리 없음 (둘째, 사용자 참고 그림)
 fetch_icon 029c2be72082608b40dfaf00bebe782a ui_portrait    # 옛 초상 테두리 (미사용 — 상태판을 내리면서 빠졌다)

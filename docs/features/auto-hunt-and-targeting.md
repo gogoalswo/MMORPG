@@ -211,7 +211,7 @@ tryAutoSkill(...) || (거리 <= attackRange && handleAttack(...))
 
 | 파일 | 역할 |
 |---|---|
-| `godot/world/world.gd` | `set_auto` / `_drive_auto` / `_pick_hunt_target` / `_walk_auto` / `_auto_strike` / `_auto_cast` / `set_auto_priority` / `strike` / `_patrol_auto` / `_take_manual` / `_anchor_here` / **`_lunge` · `_run_lunges` · `_skill_ready`**(날라차기), 상수 `HUNT_*` · `MANUAL_HOLD_MS` · `LUNGE_*` |
+| `godot/world/world.gd` | `set_auto` / `_drive_auto` / `_pick_hunt_target` / `_walk_auto` / `_auto_strike` / `_auto_cast` / `set_auto_priority` / `strike` / `_patrol_auto` / `_take_manual` / `_anchor_here` / **`_lunge` · `_run_lunges`**(날라차기), 상수 `HUNT_*` · `MANUAL_HOLD_MS` · `LUNGE_*` |
 | `godot/world/skills.gd` | `Skills.auto_order` — 스킬을 볼 순서 (판정과 설정 창이 같이 쓴다) |
 | `godot/world/save.gd` | `auto_priority` 저장 |
 | `godot/net/local_transport.gd` | 메시지 `autoHunt {on}` · `strike {id}` · `autoPriority {ids}` |
@@ -417,14 +417,17 @@ tryAutoSkill(...) || (거리 <= attackRange && handleAttack(...))
 
 - **끝은 벽시계가 아니라 `step` 의 시간으로 본다.** 헤드리스 테스트는 프레임만 돌려 벽시계가 거의
   안 가서, 벽시계로 재면 날다 멈춘 채 테스트가 끝난다.
-- **자동 사냥은 돌아온 스킬이 있으면 날지 않는다**(`_skill_ready`) — 걸어 붙어 스킬부터 쓴다.
-  날라차기도 평타라, 날면 스킬보다 평타가 먼저 나가 "스킬 먼저" 가 깨진다.
+- **자동 사냥은 거리로 가린다** (2026-09-29 "거리 기준으로 체크해. 스킬 거리가 안 닿으면 날라차기
+  먼저"). 사거리가 닿는 스킬이 있으면 그 자리에서 스킬, **안 닿으면 돌아온 스킬이 있어도 날라차기
+  먼저** 하고 착지(경직 300ms) 뒤 그 스킬을 쓴다. 따로 볼 것 없이 `_auto_cast` 가 사거리로 거른
+  뒤에 `_lunge` 를 부른다. 처음엔 "돌아온 스킬이 있으면 걸어 붙기" 였다(`_skill_ready`, 지웠다) —
+  사거리 3 짜리 할퀴기 하나 때문에 10m 를 걸어갔다.
 - 끈 사람이 눌러 쫓으면 화면이 사거리 밖에서도 `strike` 를 보낸다. 판정은 멀면 날고, 사거리
   안이면 친다. **그 사이(2.2~4m)는 아무것도 안 한다** — 화면이 걸어서 붙인다. 치면 헛휘둘러 발이 묶인다.
 - 화면은 `lunge {id, ms, speed}` 을 받고 `FlyingKick` 을 **`speed` 배속으로** 튼다 — 클립에서 발이
   닿는 키(0.45초 · `LUNGE_HIT_S`)가 도착에 오게 판정이 정해 준다. `ms`(나는 시간 + 착지) 동안은
   달리기로 끊기지 않는다(`_swing_until`). 동작은 [characters-and-animation.md](characters-and-animation.md) 의 "블렌더 동작".
-- 확인: `godot/tests/lunge_test.gd` (날아 붙어 차기 · 대상 따라가기 · 가까우면/너무 멀면/원거리면 안 난다 · 자동 사냥).
+- 확인: `godot/tests/lunge_test.gd` (날아 붙어 차기 · 대상 따라가기 · 가까우면/너무 멀면/원거리면 안 난다 · 자동 사냥 · 스킬이 안 닿으면 날라차기 → 스킬 · 닿으면 스킬).
 
 ### 아직 없는 것
 

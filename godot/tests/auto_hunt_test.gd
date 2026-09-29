@@ -178,6 +178,10 @@ func _case_casts_skills() -> void:
 				cast_at = _gap(me, mob)
 		if cast_at >= 0.0:
 			break
+		# 스킬(사거리 3)이 안 닿는 10m 라 먼저 날아 붙는다(`_lunge`). 착지 경직(300ms)은
+		# 벽시계라, 내려앉았으면 풀릴 때까지 기다린다
+		if int(me.rooted_until) > Time.get_ticks_msec() and not me.has("lunge"):
+			OS.delay_msec(World.LUNGE_LAND_MS + 50)
 
 	if cast_at < 0.0:
 		_fail("600 프레임 동안 액션바의 스킬을 한 번도 안 썼다")
@@ -316,12 +320,19 @@ func _case_click_casts_skills() -> void:
 			w.strike("me", str(mob.id))
 			w.step(1.0 / 60.0)
 			for e in w.drain_events():
+				# 켠 사람은 스킬(사거리 3)이 안 닿아 먼저 날아 붙는다 — 그 뒤 첫 수를 본다
+				if auto and e.type == "lunge":
+					continue
 				if first == "" and (e.type == "swing" or e.type == "skill" or e.type == "lunge"):
 					first = str(e.type)
 			if first != "":
 				break
+			# 착지 경직(300ms)은 벽시계다. 내려앉았으면 풀릴 때까지 기다린다
+			if auto and int(me.rooted_until) > Time.get_ticks_msec() and not me.has("lunge"):
+				OS.delay_msec(World.LUNGE_LAND_MS + 50)
 
-		# 끈 사람은 평타다 — 10m 밖이라 날아 차며 붙는다 (`World._lunge`, lunge_test.gd)
+		# 끈 사람은 평타다 — 10m 밖이라 날아 차며 붙는다 (`World._lunge`, lunge_test.gd).
+		# 켠 사람은 날아 붙은 뒤 스킬부터
 		var want := "skill" if auto else "lunge"
 		if first != want:
 			_fail("눌러 쫓기(자동 %s): 첫 수가 %s 여야 하는데 %s" % [auto, want, first if first != "" else "없음"])

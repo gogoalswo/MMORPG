@@ -32,6 +32,10 @@ func _run() -> void:
 	await process_frame
 	if start.test_button == null or start.normal_button == null:
 		_fail("시작 화면에 모드 단추가 없다")
+	# 테스트 모드는 가운데 열이 아니라 오른쪽 아래 구석 단추로만 들어간다 (2026-09-29)
+	elif start.test_button.get_parent() != start \
+			or start.test_button.anchor_left != 1.0 or start.test_button.anchor_top != 1.0:
+		_fail("테스트 모드 단추가 오른쪽 아래 구석에 없다")
 	start.queue_free()
 	await _case_reset()
 

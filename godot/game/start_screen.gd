@@ -1,6 +1,7 @@
 extends Control
 
 ## 게임을 켜면 처음 뜨는 화면 — **테스트 모드 / 일반 모드** 를 고른다 (2026-09-25 요청).
+## 테스트 모드는 오른쪽 아래 구석 단추로만 들어간다 (2026-09-29, `_corner_test_button`).
 ## 고르면 `PlayMode.current` 에 적고 로딩 막(`loading_screen.gd`)을 덮은 채 `main.tscn` 으로
 ## 넘어간다. 무적·쿨타임을 켜는 건
 ## 게임 쪽(`game.gd` 의 `_apply_play_mode`)이 한다 — 여기는 고르기만 한다.
@@ -60,8 +61,6 @@ func _ready() -> void:
 	column.add_child(title)
 
 	column.add_child(_name_row())
-	test_button = _mode_button("테스트 모드", "무적 · 스킬 쿨타임 0", PlayMode.TEST)
-	column.add_child(test_button)
 	normal_button = _mode_button("일반 모드", "캐릭터만 만들어 시작", PlayMode.NORMAL)
 	column.add_child(normal_button)
 	reset_button = _mode_button("저장 초기화", "", "")
@@ -71,6 +70,31 @@ func _ready() -> void:
 	_reset_note = reset_button.get_child(0).get_child(1)
 	column.add_child(reset_button)
 	_show_reset(false)
+	add_child(_corner_test_button())
+
+
+## **테스트 모드는 오른쪽 아래 구석의 작은 단추로만 들어간다** (2026-09-29 요청: "오른쪽 아래
+## 버튼 눌러야 테스트 모드 들어가도록 변경하고, 현재 보이는 테스트 모드 버튼은 제거해").
+## 가운데 열에는 일반 모드만 남는다. 해상도가 바뀌어도 구석에 붙도록 앵커로 자리를 잡는다
+func _corner_test_button() -> Button:
+	test_button = Button.new()
+	test_button.text = "테스트"
+	test_button.custom_minimum_size = Vector2(96, 44)
+	test_button.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, 16)
+	test_button.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	test_button.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	test_button.add_theme_font_size_override("font_size", 18)
+	test_button.add_theme_color_override("font_color", DIM)
+	test_button.add_theme_color_override("font_hover_color", TEXT)
+	for state in ["normal", "hover", "pressed", "focus"]:
+		var box := StyleBoxFlat.new()
+		box.bg_color = PANEL if state != "pressed" else PANEL.lightened(0.08)
+		box.border_color = GOLD_HI if state == "hover" else GOLD.darkened(0.4)
+		box.set_border_width_all(1)
+		box.set_corner_radius_all(3)
+		test_button.add_theme_stylebox_override(state, box)
+	test_button.pressed.connect(choose.bind(PlayMode.TEST))
+	return test_button
 
 
 ## 이름 줄 — 입력칸과 그 아래 알림 한 줄. 지난번 이름(저장)이 미리 채워진다

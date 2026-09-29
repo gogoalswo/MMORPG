@@ -331,16 +331,16 @@ fetch_icon 09d32f50e266215c7ff66542d6d7c016 ui_gate_here   # 지금 서 있는 �
 fetch_icon 2209356ad70f42d8872938bc39ffedd4 ui_gate_go     # 갈 수 있는 곳 — 별
 
 # 오른쪽 위 메뉴 여덟 장 + 자동사냥 · 물약 — 2026-09-28 에 두 번, 2026-09-29 에 한 번 더 갈았다. 지금은 **칠한 반실사 결**
-# (받은 그림: 세력 탑 · 커뮤니티 · 랭킹 트로피 · PVP 검 — 제 색으로 부드럽게 칠한 것)을 참고로 물려 뽑은 것이다.
+# (받은 그림: 세력 탑 · 커뮤니티 · 랭킹 트로피 · PVP 검)을 참고로 뽑고, 같은 그림 + 팔레트 띠를 물려 세피아 단색조로 다시 칠한 것이다.
 # 흰 바탕이라 굽는 스크립트가 걷는다. 각 두 장 중 고른 것 (docs/features/hud.md "메뉴 아이콘")
-fetch_icon f22e1750c93fb9a4c059dd74cd4155cc ui_icon_character # 정보 — 붉은 깃 단 은빛 기사 투구 (둘째). 2026-09-29 칠한 반실사 결
-fetch_icon 065c28d6d6915cc53b0fdd05e6cf8b9a ui_icon_skill     # 스킬 — 푸른 룬이 빛나는 가죽 마법서 (첫째). 2026-09-29 칠한 반실사 결
-fetch_icon 8dc5163b2f764c5976a6b29ed1cc69da ui_icon_enhance   # 강화 — 모루를 내리치는 망치 · 불티 (첫째). 2026-09-29 칠한 반실사 결
-fetch_icon e5c4daa171d2694c857db95a430d863b ui_icon_crystal   # 크리스탈 — 회색 바위에서 솟은 보랏빛 결정 (첫째). 2026-09-29 칠한 반실사 결
-fetch_icon 0c0d9e1cf5bd0ba8c5ec9dd587c7faac ui_icon_bag       # 가방 — 놋쇠 버클 가죽 배낭 (첫째). 2026-09-29 칠한 반실사 결
-fetch_icon f56a6e2c812577deebdd4fadd62ab249 ui_icon_dungeon   # 던전 — 굽은 뿔 해골 (둘째 — 정면). 2026-09-29 칠한 반실사 결
-fetch_icon 38ff39f041848393d5df52d1b2d99ec4 ui_icon_design    # 설계 — 두루마리 도면 위 놋쇠 컴퍼스 (첫째). 2026-09-29 칠한 반실사 결
-fetch_icon 1acabdb27a564d8fc7f73f6285ebbe2d ui_icon_rank      # 랭킹 — 받침 달린 금 트로피 (첫째). 2026-09-29 칠한 반실사 결
+fetch_icon 4f8b2b3d2d0bd1653bf94ef515f05dfa ui_icon_character # 정보 — 깃 단 기사 투구 (둘째). 2026-09-29 세피아 단색조
+fetch_icon 88ed30ca07ae8540039dc73b53aebd0c ui_icon_skill     # 스킬 — 룬 새긴 가죽 마법서 (첫째). 2026-09-29 세피아 단색조
+fetch_icon de42ffab755beb593e6d3cb05702ee74 ui_icon_enhance   # 강화 — 모루를 내리치는 망치 · 불티 (둘째). 2026-09-29 세피아 단색조
+fetch_icon 84ed0d2f4f913a7df644fda63885cfe6 ui_icon_crystal   # 크리스탈 — 바위에서 솟은 결정 (첫째). 2026-09-29 세피아 단색조
+fetch_icon fba999f3e828debccb1109e84189d3a0 ui_icon_bag       # 가방 — 버클 가죽 배낭 (첫째). 2026-09-29 세피아 단색조
+fetch_icon b0fdcd1b136eb9d57dcdd1f50b279da5 ui_icon_dungeon   # 던전 — 굽은 뿔 해골 정면 (첫째). 2026-09-29 세피아 단색조
+fetch_icon 60019ed8187ff0cff607c9aa023849f4 ui_icon_design    # 설계 — 두루마리 도면 위 컴퍼스 (첫째). 2026-09-29 세피아 단색조
+fetch_icon 0cd496bab7dbf9e3e1b78144b25a235c ui_icon_rank      # 랭킹 — 받침 달린 트로피 (첫째). 2026-09-29 세피아 단색조
 # 던전 종류 카드 — 받은 그림(다른 게임의 던전 창)을 참고로 물려 뽑은 풍경 · 틀 · 장식
 # (2026-09-28, docs/features/dungeons.md). 각 두 장 중 고른 것. 풍경은 9:16 이라 배경을 안 걷는다
 fetch_icon 835f847665366f9f3471ae4c32b7863f dungeon_raid     # 토벌 — 무너진 아치 투기장 · 뒤에 선 오거 (첫째)
@@ -348,9 +348,9 @@ fetch_icon ceb2c53d523649a6376b4c204144c8bd dungeon_trial    # 시련의 탑 —
 fetch_icon fa124e9f7d19ee8301a2be5ecab872a4 dungeon_treasure # 보물 창고 — 금고 문 · 상자 · 등불 (둘째)
 fetch_icon 95353ca131109a81562da8c056255962 ui_dungeon_card  # 카드 틀 — 닳은 돌판 · 얇은 청동 테 (둘째)
 fetch_icon bca3ac0f09670fe8e947153580b9216f ui_dungeon_crest # 카드 위 장식 — 창살 아치 문 + 덩굴 날개 (둘째)
-fetch_icon 5184256a0421fd9817458183a8063a36 ui_icon_auto   # 자동사냥 — 금 코등이 은빛 장검 둘이 X자 (첫째). 2026-09-29 칠한 반실사 결
+fetch_icon de205ddb9c9c707aee2bc13ddf899583 ui_icon_auto   # 자동사냥 — 장검 둘이 X자 (둘째). 2026-09-29 세피아 단색조
 # 퀵슬롯 왼쪽 물약 칸 (2026-09-26) — 둥근 유리병 · 코르크 · 붉은 물약. 두 장 중 둘째(정면)
-fetch_icon b4d3db225d7725e15c27db72fe34ef89 ui_icon_potion # 물약 — 코르크 막은 둥근 병 · 붉은 물약 (첫째). 2026-09-29 칠한 반실사 결
+fetch_icon f8f07a89fa5ce6f3ec05891260aca292 ui_icon_potion # 물약 — 코르크 막은 둥근 병 (둘째). 2026-09-29 세피아 단색조
 fetch_icon 74df64ad7717d61a8ba37c600568f827 ui_auto_spin   # 자동사냥 고리 (굵은 화살표 — 얇은 것은 안 보였다)
 fetch_icon a1f540037c955a3489456f778db80665 ui_close       # 모든 창 오른쪽 위 닫기 X — 2026-09-28 가는 금빛 막대 X, 테두리 없음 (둘째, 사용자 참고 그림)
 fetch_icon 029c2be72082608b40dfaf00bebe782a ui_portrait    # 옛 초상 테두리 (미사용 — 상태판을 내리면서 빠졌다)

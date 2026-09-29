@@ -308,8 +308,8 @@ frame.add_child(border)         # 채움 **다음**에 붙여야 위로 온다
 
 요청: 다른 게임의 HUD 아이콘 넷(세력 탑 · 커뮤니티 사람들 · 랭킹 트로피 · PVP북 엇갈린 검) 그림 +
 "HUD 아이콘이 내가 원하는 아트풍이 아니야. 스크린샷 참고해서 다시 만들어봐" — 아래의 **청동 문장 결을 갈았다.**
-청동 결은 세공이 빽빽하고 거의 한 색이라 작게 보면 뭉개졌다. 받은 그림은 **단순한 실루엣에 제 색을 부드럽게 칠한
-반실사** — 돌은 회색, 가죽은 갈색, 금은 금빛, 칼날은 은빛. 왼쪽 위 빛, 약간 비스듬한 각, 판·원판 없음.
+청동 결은 세공이 빽빽해서 작게 보면 뭉개졌다. 받은 그림은 **단순한 실루엣을 부드럽게 칠한 반실사**이고,
+**색은 네 장 모두 상아·카키·바랜 놋쇠 한 줄기**다(아래 "색은 한 줄기"). 왼쪽 위 빛, 약간 비스듬한 각, 판·원판 없음.
 
 - 갈린 것: 메뉴 여덟 장 + 자동사냥 + 물약 (청동 결과 같은 열 장). **닫기 X(`ui_close`)는 그대로**다.
 - **참고 그림**: 받은 스크린샷 그대로(245×56, JPEG 45, 1.9KB) —
@@ -330,21 +330,53 @@ frame.add_child(border)         # 채움 **다음**에 붙여야 위로 온다
   ```
 
   `NOT an engraved bronze relief, NOT monochrome sepia` 는 빼지 않는다 — 앞 결(청동 문장)로 되돌아가지 않게 막는 문구다.
-- 한 번에 결이 맞았다. **"demon skull" 은 뿔 달린 짐승 해골로 나온다** — 던전 그림으로 쓸 만해서 정면인 둘째를 골랐다.
+- **"demon skull" 은 뿔 달린 짐승 해골로 나온다** — 던전 그림으로 쓸 만해서 정면인 것을 골랐다.
   고른 것은 `scripts/fetch-assets.sh` 주석에 있다.
+
+#### 색은 한 줄기 — 세피아 단색조 ★★ (같은 날 고침)
+
+위 프롬프트로 뽑은 첫 판은 **"아트 느낌을 보면 색감이 통일되어 있자나. 지금은 색감이 전혀 달라"** 는 지적을 받았다.
+`natural material colors` 라고 시켰더니 아이콘마다 제 색(파란 룬 · 보라 결정 · 빨간 가방·물약 · 번쩍이는 금)이 나왔다.
+받은 그림은 **네 장이 전부 상아·카키·바랜 놋쇠 한 줄기**이고, 색은 탑 깃발 청록 · 칼자루 보석 같은 **점 하나**뿐이다.
+
+- **팔레트** (받은 그림의 아이콘 픽셀을 밝기 5·20·40·60·80·95·99% 에서 뽑은 값):
+  `#24170a` · `#504330` · `#6a5b47` · `#847965` · `#a59a82` · `#c2baa5` · `#ddd0b3`.
+  띠로 만들어 올린 것: `https://3d.varco.ai/api/objects/ba3adc8e23e0f960db7f48563bb129da.png` (140×20, 176B).
+- **고친 방법**: 모양은 그대로 두고 `EditImage` 로 색만 다시 칠했다 — 원본(첫 판에서 고른 것) + 참고 그림 두 장
+  (받은 스크린샷, 팔레트 띠) + 아래 지시문, `nano-banana-pro`, 두 장씩. 두 장 중 **팔레트와 색 거리가 작은 쪽**을
+  골랐다 (7 분위 RGB 거리 평균 20~33).
+- **새 아이콘은 처음부터 같은 줄기로 뽑는다** — 위 `GenerateImage` 프롬프트의 `in natural material colors — …` 를
+  아래 지시문의 팔레트 문장(`ONE unified, muted sepia palette … no bright red, no saturated blue …`)으로 바꾸고
+  팔레트 띠를 두 번째 참고 그림으로 물린다. 안 하면 또 제각각 색이 나온다.
+
+  ```
+  Recolor this game icon so its colors match the first reference image EXACTLY (the castle tower, group of
+  people, trophy and crossed swords). Those reference icons all share ONE unified, muted sepia palette, shown
+  as swatches in the second reference image: dark umber shadows (#24170a, #504330), khaki-taupe midtones
+  (#6a5b47, #847965), pale parchment-ivory highlights (#a59a82, #c2baa5, #ddd0b3) — like aged bone and pale
+  worn brass, low saturation, soft matte paint. Repaint the WHOLE object using only these tones: no bright
+  red, no saturated blue, no purple, no orange, no vivid yellow gold, no pure white highlights. At most one
+  tiny accent spot of muted teal or deep dull red (like the small gems on the reference swords), covering
+  less than 3% of the icon. Keep the exact same object, shape, pose, composition, size and soft painted
+  shading — change only the colors. Keep the flat pure white background; everything outside the object and
+  the four corners stay pure white. Do not copy the swatches, captions or dark background of the references.
+  No text, no letters.
+  ```
+
+그림 (전부 위 팔레트 한 줄기 — 색 이름을 따로 적지 않는다):
 
 | 단추 | 그림 | 이름 |
 |---|---|---|
-| 정보 | 붉은 깃 단 은빛 기사 투구 | `ui_icon_character` |
-| 스킬 | 푸른 룬이 빛나는 가죽 마법서 | `ui_icon_skill` |
+| 정보 | 깃 단 기사 투구 | `ui_icon_character` |
+| 스킬 | 룬 새긴 가죽 마법서 | `ui_icon_skill` |
 | 강화 | 모루를 내리치는 망치 · 불티 | `ui_icon_enhance` |
-| 크리스탈 | 회색 바위에서 솟은 보랏빛 결정 | `ui_icon_crystal` |
-| 가방 | 놋쇠 버클 가죽 배낭 | `ui_icon_bag` |
+| 크리스탈 | 바위에서 솟은 결정 | `ui_icon_crystal` |
+| 가방 | 버클 가죽 배낭 | `ui_icon_bag` |
 | 던전 | 굽은 뿔 해골 (정면) | `ui_icon_dungeon` |
-| 설계 | 두루마리 도면 위 놋쇠 컴퍼스 | `ui_icon_design` |
-| 랭킹 | 받침 달린 금 트로피 | `ui_icon_rank` |
-| 자동사냥 | 금 코등이 은빛 장검 둘이 X자 | `ui_icon_auto` |
-| 물약 | 코르크 막은 둥근 병 · 붉은 물약 | `ui_icon_potion` |
+| 설계 | 두루마리 도면 위 컴퍼스 | `ui_icon_design` |
+| 랭킹 | 받침 달린 트로피 | `ui_icon_rank` |
+| 자동사냥 | 장검 둘이 X자 | `ui_icon_auto` |
+| 물약 | 코르크 막은 둥근 병 | `ui_icon_potion` |
 
 ### 그 전: 청동 문장 결 (2026-09-28 두 번째) — 프롬프트를 되살리지 않는다
 

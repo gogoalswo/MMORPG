@@ -84,6 +84,10 @@ const SKILL_COLUMNS := 4
 const SKILL_GAP := 10
 ## 스킬창 셋째 칸(강화) 폭
 const UPGRADE_W := 280
+## 강화 설명 글자 크기 — 카드 안(`UPGRADE_W` − 여백 24)에 한 줄로 안 들어가면 한 단계씩 줄인다
+## (`UPGRADE_DESC_MIN` 까지). "기를 폭발시켜 80% 데미지 추가 타격" 이 18 에서 256px 을 넘었다 (2026-09-29)
+const UPGRADE_DESC_SIZE := 18
+const UPGRADE_DESC_MIN := 14
 const SKILL_INSET := 5
 ## 스킬창 설명 칸이 늘 잡아 두는 줄 수 — 설명 두 줄 + 빈 줄 + 데미지 줄.
 ## 설명이 한 줄이든 두 줄이든 칸 높이를 **두 줄 기준**으로 고정한다 (2026-09-28 요청).
@@ -3205,6 +3209,16 @@ func _build_upgrade_column(columns: HBoxContainer) -> void:
 
 ## 강화 카드 하나 — 번호 · 이름 · 효과 · 경험치 막대 · `320 / 1000`.
 ## 스킬 칸처럼 **겉에 투명 단추(`hit`)를 덮어** 카드 어디를 눌러도 고른다
+## 강화 설명을 카드 한 줄에 맞춘다 — 넘치면 글자를 줄인다 (늘 18 로 두면 카드가 밀려 넓어진다)
+func _fit_upgrade_desc(label: Label) -> void:
+	var font := label.get_theme_font("font")
+	var room := float(UPGRADE_W - 24)
+	var size := UPGRADE_DESC_SIZE
+	while size > UPGRADE_DESC_MIN and font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x > room:
+		size -= 1
+	label.add_theme_font_size_override("font_size", size)
+
+
 func _make_upgrade_card(slot: int) -> PanelContainer:
 	var card := PanelContainer.new()
 	card.add_theme_stylebox_override("panel", _stone_cell_box())
@@ -3278,6 +3292,7 @@ func _redraw_upgrades(me: Dictionary) -> void:
 			card.name.text = "없음"
 			card.name.add_theme_color_override("font_color", INV_DIM)
 			card.effect.text = "아직 없는 강화"
+			_fit_upgrade_desc(card.effect)
 			bar.visible = false
 			card.amount.text = ""
 			continue
@@ -3288,6 +3303,7 @@ func _redraw_upgrades(me: Dictionary) -> void:
 		card.name.text = str(upgrade.name)
 		card.name.add_theme_color_override("font_color", INV_GOLD_HI if done else INV_TEXT)
 		card.effect.text = str(upgrade.get("desc", ""))
+		_fit_upgrade_desc(card.effect)
 		bar.visible = true
 		bar.max_value = need
 		bar.value = got

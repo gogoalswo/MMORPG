@@ -231,34 +231,6 @@ NOVA_BURST_HOLD = pose(NOVA_BURST, spine=(-19, 0, 0),
                        lh=(0.42, -0.08, 1.03), rh=(-0.42, -0.08, 1.03))
 NOVA_SETTLE = pose(NOVA_BURST, hips=(0.0, 0.0, -0.05), spine=(-6, 0, 0), head=(-8, 0, 0),
                    lh=(0.34, -0.12, 0.80), rh=(-0.34, -0.12, 0.80))
-# 폭렬 찍기 — **다리를 넓게 벌려 무릎을 굽히고 두 팔을 비스듬히 아래로 벌린 자세**에서 시작해
-# (2026-09-28 사용자가 그려 준 막대 그림), 몸을 왼발로 옮기며 **오른발을 옆으로 높이 들었다가
-# 바닥으로 쾅 내려찍는다** — 스모의 시코처럼. **찍는 자리는 앞으로 반 걸음**(오른발 앞)이고
-# 폭발이 바로 그 발 자리에서 터진다 (2026-09-29 요청: "위치도 발 위치에 맞춰서 터트리고, 발도
-# 해당 위치로 내려 찍도록" — `BlastFx.FOOT` 가 이 발 자리다, 같이 고친다). 뛰지 않는다 (처음엔 뛰어올라 뒤꿈치로 찍었는데
-# "점프해서 찍지 말고" 로 바꿨다). 발이 땅에 닿는 0.42초가 판정·폭발이다 (`skills.ts` 의
-# `delayMs` 420 — 같이 고친다). 찍으면서 더 낮게 주저앉고 두 손을 땅 쪽으로 누른다
-BLAST_READY = pose(GUARD,
-                   hips=(0.0, 0.0, -0.10), hipsR=(0, 0, 0),
-                   spine=(6, 0, 0), head=(-6, 0, 0),
-                   lh=(0.42, -0.04, 0.60), lhPole=(1, 0.2, -0.4),
-                   rh=(-0.42, -0.04, 0.60), rhPole=(-1, 0.2, -0.4),
-                   lf=(0.22, -0.02, 0.078), lfPole=(1, -1, 0), lfYaw=25,
-                   rf=(-0.22, 0.02, 0.078), rfPole=(-1, -1, 0), rfYaw=-25)
-BLAST_LIFT = pose(BLAST_READY,
-                  hips=(0.06, 0.0, -0.05), spine=(2, 0, 0), head=(-4, 0, 0),
-                  lh=(0.46, -0.02, 0.84), lhPole=(1, 0.2, -0.6),
-                  rh=(-0.44, -0.02, 0.86), rhPole=(-1, 0.2, -0.6),
-                  lf=(0.20, -0.02, 0.078), lfPole=(1, -1, 0), lfYaw=25,
-                  rf=(-0.24, -0.14, 0.44), rfPole=(-0.8, -1, 0.4), rfYaw=-20, rfPitch=10)
-BLAST_TOP = pose(BLAST_LIFT, rf=(-0.24, -0.16, 0.47), lh=(0.47, -0.02, 0.87), rh=(-0.45, -0.02, 0.89))
-BLAST_SLAM = pose(BLAST_READY,
-                  hips=(0.0, -0.02, -0.17), spine=(16, 0, 0), head=(-16, 0, 0),
-                  lh=(0.40, -0.12, 0.42), lhPole=(1, 0.5, 0),
-                  rh=(-0.40, -0.12, 0.42), rhPole=(-1, 0.5, 0),
-                  rf=(-0.16, -0.24, 0.078), rfPole=(-0.5, -1, 0), rfYaw=-15)
-BLAST_RECOIL = pose(BLAST_SLAM, hips=(0.0, -0.02, -0.19), spine=(20, 0, 0))
-BLAST_SETTLE = pose(BLAST_SLAM, hips=(0.0, -0.02, -0.165), spine=(14, 0, 0))
 
 # 피격 — 맞은 순간 머리와 상체가 뒤로 젖혀지고 몸이 뒤로 밀리며, 두 팔을 얼굴 앞으로
 # 모아 막는다. 발은 그대로 버틴다 (2026-09-24 요청: "피격 받았을 때 모션도 넣어").
@@ -370,11 +342,6 @@ CLIPS = {
                 (0.22, KI_THRUST, "LINEAR"), (0.42, KI_THRUST, "LINEAR"),
                 (0.46, KI_PUSH, "BEZIER"), (0.72, KI_PUSH, "BEZIER"),
                 (1.0, GUARD, "BEZIER"), (1.2, "IDLE", "BEZIER")],
-    # 버티고 선 자세(0) → 오른발을 들어(0.26) 꼭대기에서 잠깐 멎고(0.34) → 쾅(0.42, LINEAR 로 곧게)
-    "BlastHeel": [(0.0, BLAST_READY, "BEZIER"), (0.26, BLAST_LIFT, "BEZIER"),
-                  (0.34, BLAST_TOP, "LINEAR"), (0.42, BLAST_SLAM, "LINEAR"),
-                  (0.48, BLAST_RECOIL, "BEZIER"), (0.60, BLAST_SETTLE, "BEZIER"),
-                  (0.85, BLAST_SETTLE, "BEZIER"), (1.20, "IDLE", "BEZIER")],
     # 뛰어(0.10) 무릎을 접고(0.26) 뻗어(0.40) 0.45 에 맞고(= 도착 · `LUNGE_HIT_S`) 내려앉는다(0.58)
     "FlyingKick": [(0.0, FK_CROUCH, "BEZIER"), (0.10, FK_TAKEOFF, "BEZIER"),
                    (0.26, FK_CHAMBER, "LINEAR"), (0.40, FK_KICK, "LINEAR"),

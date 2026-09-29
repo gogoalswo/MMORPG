@@ -3464,13 +3464,11 @@ func _toggle_cheats() -> void:
 
 ## **테스트 모드 스킬 목록** (2026-09-28 요청: "테스트 모드에서는 스킬을 목록을 왼쪽에 버튼 만들어서
 ## 누르면 사용할 수 있게 만들어"). 치트 여닫기 단추 **오른쪽 옆**에 "스킬 목록" 단추가 서고, 펼치면
-## 그 위로 내 직업 스킬이 두 줄로 선다. 누르면 퀵슬롯 칸과 **같은 요청**(`skill`)을 보낸다 — 판정은
-## World 가 다시 본다 (안 배웠으면 거절). 퀵슬롯 4칸에 없는 스킬도 바로 써 볼 수 있게 한 것이다.
-## 치트 목록 위로 쌓지 않은 까닭 — 펼친 치트 목록이 이미 화면 위로 넘친다 (play-mode.md)
+## 내 직업 스킬이 두 줄로 **왼쪽 끝에 붙어** 선다 (2026-09-29 요청: "나오는 화면을 왼쪽으로 붙여").
+## 누르면 퀵슬롯 칸과 **같은 요청**(`skill`)을 보낸다 — 판정은 World 가 다시 본다 (안 배웠으면
+## 거절). 퀵슬롯 4칸에 없는 스킬도 바로 써 볼 수 있게 한 것이다.
+## 목록 자리가 펼친 치트 목록 자리와 같아서 **한쪽을 펼치면 다른 쪽이 접힌다**
 const SKILL_LIST_TOGGLE := Vector2(150, 44)
-## 목록과 여닫기 단추 사이 틈. 목록 오른쪽 끝이 아래 가운데 묶음(레벨 배지·체력·퀵슬롯, 윗변 y=444)
-## 위로 16px 걸려서 그만큼 더 띄운다 (1280×720 에서 쟀다)
-const SKILL_LIST_GAP := 26
 const SKILL_LIST_CELL := Vector2(160, 52)
 func _build_skill_list(lift: float) -> void:
 	var shift := CHEAT_TOGGLE.x + 6
@@ -3494,10 +3492,8 @@ func _build_skill_list(lift: float) -> void:
 	_ui_root.add_child(_skill_list)
 	_skill_list.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 20)
 	_skill_list.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	_skill_list.offset_left += shift
-	_skill_list.offset_right += shift
-	_skill_list.offset_top -= lift + SKILL_LIST_TOGGLE.y + SKILL_LIST_GAP
-	_skill_list.offset_bottom -= lift + SKILL_LIST_TOGGLE.y + SKILL_LIST_GAP
+	_skill_list.offset_top -= lift + SKILL_LIST_TOGGLE.y + 6
+	_skill_list.offset_bottom -= lift + SKILL_LIST_TOGGLE.y + 6
 	_set_skill_list_open(false)
 
 
@@ -3505,6 +3501,8 @@ func _build_skill_list(lift: float) -> void:
 func _set_skill_list_open(open: bool) -> void:
 	if open:
 		_fill_skill_list()
+		if _cheat_column.visible:
+			_set_cheats_open(false)
 	_skill_list.visible = open
 	_skill_list_toggle.text = "스킬 목록 닫기" if open else "스킬 목록 열기"
 	_skill_list_toggle.modulate = Color.WHITE if open else Color(1, 1, 1, 0.75)
@@ -3529,6 +3527,8 @@ func _fill_skill_list() -> void:
 
 
 func _set_cheats_open(open: bool) -> void:
+	if open and _skill_list != null and _skill_list.visible:
+		_set_skill_list_open(false)
 	_cheat_column.visible = open
 	_cheat_toggle.text = "치트 목록 닫기" if open else "치트 목록 열기"
 	_cheat_toggle.modulate = Color.WHITE if open else Color(1, 1, 1, 0.75)

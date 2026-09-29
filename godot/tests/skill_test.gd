@@ -27,6 +27,7 @@ func _init() -> void:
 	_case_claw_up()
 	_case_quake_up()
 	_case_ice_up()
+	_case_ki_up()
 	Save.clear()
 
 	if _failed == 0:
@@ -752,4 +753,72 @@ func _case_ice_up() -> void:
 		_fail("빙결: %dms · 모양 '%s' · 상태 %s (2000ms · ice · stun 여야 한다)" % [left, mob.stun_look, mob.state])
 	else:
 		print("  빙주각 강화: 파쇄 %dms 뒤 범위 안 전부 80%% (나중에 들어온 놈 포함), 빙결 %dms 얼음" % [int(shatter.followMs), left])
+	me.skill_upgrades = {}
+
+
+## 파천장 강화 (2026-09-29) — "연파" 는 0.3초 뒤 **시전 순간 보던 쪽 부채꼴**에 60% 를 한 번 더
+## (그 사이 몸을 돌려도 같은 쪽), "기폭" 은 0.9초 뒤 **앞 4.5m 둘레 2.5m 원**에 80% 를 한 번 더
+func _case_ki_up() -> void:
+	var s := _setup(0)
+	var w: World = s[0]
+	var me: Dictionary = s[1]
+	var mobs: Array = s[2]
+	# 나는 (0, 0) 에서 +x 를 본다. 앞 1.5m · 옆 3m(부채꼴 밖) · 앞 6.8m(사거리 밖, 기폭 원 안)
+	for spot in [["front", 1.5, 0.0], ["side", 0.0, 3.0], ["far", 6.8, 0.0]]:
+		var mob := World.make_monster(spot[0], GameData.monster_kind("mob003"), spot[1], spot[2], 10000.0, 0.0)
+		mob.max_hp = 999999
+		mob.hp = 999999
+		mobs.append(mob)
+	w.learn_skill("me", "ki_burst")
+	w.set_skill_bar("me", ["ki_burst"])
+	var skill := Skills.get_skill("fighter", "ki_burst")
+	var twin := Skills.upgrade("ki_burst", "twin")
+	var boom := Skills.upgrade("ki_burst", "detonate")
+	me.skill_upgrades = {"ki_burst": ["twin", "detonate"]}
+	me.skill_ready_at = {}
+	me.cast_until = 0
+	w._zones.clear()
+	w.cast("me", "ki_burst")
+	var now := Time.get_ticks_msec() + int(skill.delayMs) + 50
+	w.drain_events()
+	w._run_landings(now)
+	var first := _hits(w.drain_events())
+	if first != ["front"]:
+		_fail("파천장 첫 파도가 %s 를 쳤다 (front 만이어야 한다)" % str(first))
+	var attack := float(me.stats.attack) * float(skill.power)
+	var twin_zone: Dictionary = {}
+	var boom_zone: Dictionary = {}
+	for zone_hit in w._zones:
+		if int(zone_hit.next_at) - now == int(twin.followMs):
+			twin_zone = zone_hit
+		elif int(zone_hit.next_at) - now == int(boom.followMs):
+			boom_zone = zone_hit
+	if twin_zone.is_empty() or boom_zone.is_empty() or w._zones.size() != 2:
+		_fail("파천장 강화 지대가 %d개 — 연파 %dms · 기폭 %dms 뒤 하나씩이어야 한다" % [
+			w._zones.size(), int(twin.followMs), int(boom.followMs)])
+		w._zones.clear()
+		me.skill_upgrades = {}
+		return
+	if absf(float(twin_zone.attack) - attack * float(twin.followPower)) > 1e-3 \
+			or absf(float(boom_zone.attack) - attack * float(boom.followPower)) > 1e-3:
+		_fail("파천장 강화 공격 연파 %.2f · 기폭 %.2f (%.2f · %.2f 여야 한다)" % [
+			float(twin_zone.attack), float(boom_zone.attack),
+			attack * float(twin.followPower), attack * float(boom.followPower)])
+	# 등을 돌려도 연파는 시전 순간 보던 쪽으로 나간다
+	me.rot = -PI / 2.0
+	w._run_zones(int(twin_zone.next_at))
+	var second := _hits(w.drain_events())
+	if second != ["front"]:
+		_fail("연파가 %s 를 쳤다 (시전 때 보던 쪽 부채꼴의 front 만이어야 한다)" % str(second))
+	w._run_zones(int(boom_zone.next_at))
+	var third := _hits(w.drain_events())
+	if third != ["far"]:
+		_fail("기폭이 %s 를 쳤다 (앞 %.1fm 둘레 %.1fm 의 far 만이어야 한다)" % [
+			str(third), float(boom.followAhead), float(boom.followRadius)])
+	if not w._zones.is_empty():
+		_fail("파천장 강화 지대가 터진 뒤에도 남았다 (%d개)" % w._zones.size())
+	else:
+		print("  파천장 강화: 연파 %dms 뒤 같은 부채꼴 60%%, 기폭 %dms 뒤 앞 %.1fm 원 80%%" % [
+			int(twin.followMs), int(boom.followMs), float(boom.followAhead)])
+	w._zones.clear()
 	me.skill_upgrades = {}

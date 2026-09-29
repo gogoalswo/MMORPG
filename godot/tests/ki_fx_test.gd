@@ -32,6 +32,9 @@ func _run() -> void:
 	_case_reach()
 	await _case_once(game)
 	await _case_gone(game)
+	_case_upgrade_table()
+	await _case_upgraded(game)
+	await _case_gone(game)
 	_done()
 
 
@@ -150,6 +153,80 @@ func _case_gone(game: Node3D) -> void:
 		_fail("이펙트가 안 사라졌다")
 	else:
 		print("  %d프레임 뒤 치워졌다" % waited)
+
+
+## 강화 이펙트의 시각·자리가 **판정 표와 같다** — 연파 파도가 나가는 때, 기폭이 터지는 때·자리,
+## 터지는 빛살이 판정 반경 안
+func _case_upgrade_table() -> void:
+	var twin := Skills.upgrade("ki_burst", "twin")
+	var boom := Skills.upgrade("ki_burst", "detonate")
+	if twin.is_empty() or boom.is_empty():
+		_fail("강화 표에 파천장 연파·기폭이 없다")
+		return
+	if roundi(KiFx.TWIN_DELAY * 1000.0) != int(twin.followMs):
+		_fail("연파 파도 %.2f초 ≠ 판정 %dms" % [KiFx.TWIN_DELAY, int(twin.followMs)])
+	if roundi(KiFx.DETONATE_AT * 1000.0) != int(boom.followMs):
+		_fail("기폭 이펙트 %.2f초 ≠ 판정 %dms" % [KiFx.DETONATE_AT, int(boom.followMs)])
+	if absf(KiFx.DETONATE_Z - float(boom.followAhead)) > 1e-3:
+		_fail("기폭 자리 %.2fm ≠ 판정 %.2fm" % [KiFx.DETONATE_Z, float(boom.followAhead)])
+	var box := KiFx.blast_mesh().get_aabb()
+	var edge := maxf(maxf(absf(box.position.x), absf(box.end.x)), maxf(absf(box.position.z), absf(box.end.z)))
+	if edge > float(boom.followRadius):
+		_fail("기폭 빛살이 판정 반경 %.1fm 를 넘는다 (%.2fm)" % [float(boom.followRadius), edge])
+	print("  연파 %.2f초 · 기폭 %.2f초 앞 %.1fm, 빛살 옆으로 %.2fm" % [
+		KiFx.TWIN_DELAY, KiFx.DETONATE_AT, KiFx.DETONATE_Z, edge])
+
+
+## 연파·기폭을 붙이고 **실제 경로로** 쏜다 — 첫 파도(기폭)와 0.3초 뒤 푸른 파도가 둘 다 서고,
+## 첫 파도가 `DETONATE_AT` 에 터진다(방출기가 켜진다). 푸른 파도는 터지지 않는다
+func _case_upgraded(game: Node3D) -> void:
+	var me: Dictionary = game._transport._world._players[game._transport.my_id()]
+	while Time.get_ticks_msec() < int(me.rooted_until):
+		await process_frame
+	me.skill_upgrades = {"ki_burst": ["twin", "detonate"]}
+	me.skill_ready_at = {}
+	me.cast_until = 0
+	game._transport.send(&"skill", {"skill": "ki_burst"})
+	var delay := float(Skills.get_skill("fighter", "ki_burst").get("delayMs", 0)) / 1000.0
+	await create_timer(delay + 0.05).timeout
+	var list := _busy(game)
+	if list.size() != 1 or not list[0]._detonate or list[0]._twin:
+		_fail("기폭을 붙이고 쐈는데 첫 파도가 %d개 (기폭 붙은 금빛 하나여야 한다)" % list.size())
+		me.skill_upgrades = {}
+		return
+	var first: KiFx = list[0]
+	await create_timer(KiFx.TWIN_DELAY + 0.05).timeout
+	list = _busy(game)
+	var twin: KiFx = null
+	for fx: KiFx in list:
+		if fx._twin:
+			twin = fx
+	if list.size() != 2 or twin == null or twin._detonate:
+		_fail("연파를 붙였는데 %.1f초 뒤 파도가 %d개 (푸른 것 하나 더, 기폭 없이)" % [KiFx.TWIN_DELAY, list.size()])
+	elif absf(wrapf(twin.rotation.y - first.rotation.y, -PI, PI)) > 1e-3 or twin.position.distance_to(first.position) > 1e-3:
+		_fail("푸른 파도가 첫 파도와 다른 자리·쪽에서 나갔다")
+	await create_timer(KiFx.DETONATE_AT - KiFx.TWIN_DELAY).timeout
+	if not first._blasted:
+		_fail("기폭이 %.1f초가 지나도 안 터졌다" % KiFx.DETONATE_AT)
+	for e: CPUParticles3D in [first._blast_aura, first._blast_motes, first._blast_dust]:
+		if not e.emitting:
+			_fail("기폭 방출기가 터질 때 안 켜졌다")
+		if e.explosiveness < 1.0 or e.cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_OFF:
+			_fail("기폭 방출기 — 되감아 쓰는 1회용은 한꺼번에 내보내고 그림자를 끈다 (규칙 3절)")
+	if twin != null and twin._blasted:
+		_fail("푸른 파도까지 터졌다 — 기폭은 첫 파도만이다")
+	print("  강화: 금빛 파도(기폭) + %.1f초 뒤 푸른 파도, %.1f초에 터졌다" % [KiFx.TWIN_DELAY, KiFx.DETONATE_AT])
+	me.skill_upgrades = {}
+
+
+func _busy(game: Node3D) -> Array:
+	var out: Array = []
+	if game._fx == null:
+		return out
+	for child in game._fx.get_children():
+		if child is KiFx and FxPool.busy(child):
+			out.append(child)
+	return out
 
 
 func _newest(game: Node3D) -> KiFx:

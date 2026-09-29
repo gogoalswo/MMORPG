@@ -28,7 +28,7 @@ extends Node3D
 
 ## 게임을 열 때 미리 만들어 두는 수. **하나는 꼭 있어야 한다** — 재질을 붙들고
 ## 있어야 셰이더가 안 버려진다. 타격은 할퀴기 다섯 대 × 무리 여럿이라 여럿 둔다
-const PREFILL := {&"claw": 2, &"bolt": 1, &"slam": 1, &"ice": 1, &"ki": 1, &"nova": 1, &"crush": 1, &"hit": 12}
+const PREFILL := {&"claw": 2, &"bolt": 1, &"slam": 1, &"ice": 1, &"ki": 2, &"nova": 1, &"crush": 1, &"hit": 12}
 
 ## 키 → 쉬고 있는 이펙트
 var _idle: Dictionary = {}

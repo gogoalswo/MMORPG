@@ -473,21 +473,26 @@ func attack(player_id: String) -> void:
 ## origin 이 주어지면 그 자리를 중심으로 한 **원**으로 본다 (원거리 스킬이 날아가
 ## 터진 것). 날아가 터진 것에 "시전자 정면"은 의미가 없다. origin 이 없으면
 ## 시전자 자리에서 정면 부채꼴로 본다 — 등 뒤는 맞지 않는다.
+##
+## `facing` 을 주면 origin 이 있어도 **그 쪽 부채꼴**로 본다 — 뒤따르는 한 대(파천장 "연파")가
+## 시전한 자리·보던 쪽을 기억해 두고 나중에 다시 고를 때다. 그 사이 몸을 돌려도 안 바뀐다
 func _pick_targets(
 	player: Dictionary,
 	reach: float,
 	arc: float,
 	max_targets: int,
 	origin: Dictionary = {},
+	facing: float = NAN,
 ) -> Array:
 	if max_targets == 0:
 		return []
 	var from_x: float = origin.get("x", player.x)
 	var from_z: float = origin.get("z", player.z)
-	var facing_x := sin(float(player.rot))
-	var facing_z := cos(float(player.rot))
+	var rot := float(player.rot) if is_nan(facing) else facing
+	var facing_x := sin(rot)
+	var facing_z := cos(rot)
 	var half_arc := arc / 2.0
-	var use_arc := origin.is_empty() and arc < TAU
+	var use_arc := arc < TAU and (origin.is_empty() or not is_nan(facing))
 
 	var found: Array = []
 	for monster in _monsters:
@@ -2066,16 +2071,27 @@ func _land(player: Dictionary, skill: Dictionary, skill_id: String, upgrades: Ar
 	# **뒤따르는 한 대** (빙주각 파쇄) — 정해 둔 때에 **그 순간 범위 안에 있는 놈 전부**에게
 	# 한 번 더. 처음엔 첫 대로 맞은 놈에게만 예약했는데 "처음 맞은 몬스터가 아니면 데미지가
 	# 안 들어가" 는 지적을 받았다 (2026-09-25) — 부서지는 기둥에 새로 걸어 들어온 놈도 맞아야
-	# 한다. 그래서 **한 번만 터지는 지대**(`_zones`)로 건다: 같은 중심·반경, 그때 다시 고른다
+	# 한다. 그래서 **한 번만 터지는 지대**(`_zones`)로 건다: 같은 중심·반경, 그때 다시 고른다.
+	# 모양은 판정과 같다 — 부채꼴이면 **시전 순간의 자리·보던 쪽** 부채꼴이다 (파천장 "연파").
+	# `followAhead`·`followRadius` 가 있으면 보던 쪽으로 옮긴 자리의 원이다 (파천장 "기폭")
 	for id in upgrades:
 		var up := Skills.upgrade(skill_id, str(id))
 		var follow := int(up.get("followMs", 0))
 		if follow <= 0:
 			continue
+		var fx := float(origin.get("x", player.x))
+		var fz := float(origin.get("z", player.z))
+		var follow_reach := reach
+		var follow_arc := arc if origin.is_empty() else TAU
+		if up.has("followRadius"):
+			var ahead := float(up.get("followAhead", 0.0))
+			fx += sin(float(player.rot)) * ahead
+			fz += cos(float(player.rot)) * ahead
+			follow_reach = float(up.followRadius)
+			follow_arc = TAU
 		_zones.append({
-			"player": player_id,
-			"x": float(origin.get("x", player.x)), "z": float(origin.get("z", player.z)),
-			"reach": reach, "cap": cap,
+			"player": player_id, "x": fx, "z": fz,
+			"reach": follow_reach, "cap": cap, "arc": follow_arc, "facing": float(player.rot),
 			"attack": attack * float(up.get("followPower", 1.0)),
 			"skill": skill_id, "next_at": now + follow, "until": now + follow, "tick": follow,
 		})
@@ -2131,7 +2147,10 @@ func _run_zones(now: int) -> void:
 			continue
 		if now >= int(zone_hit.next_at) and int(zone_hit.next_at) <= int(zone_hit.until):
 			var origin := {"x": float(zone_hit.x), "z": float(zone_hit.z)}
-			for target in _pick_targets(player, float(zone_hit.reach), TAU, int(zone_hit.cap), origin):
+			# 부채꼴(연파)은 건 순간의 보던 쪽으로 — 균열 지대·파쇄는 원이다 (`arc` 가 없거나 한 바퀴)
+			var zone_arc := float(zone_hit.get("arc", TAU))
+			var zone_facing := float(zone_hit.get("facing", NAN)) if zone_arc < TAU else NAN
+			for target in _pick_targets(player, float(zone_hit.reach), zone_arc, int(zone_hit.cap), origin, zone_facing):
 				_hit_monster(player, target, float(zone_hit.attack), str(zone_hit.skill))
 			while int(zone_hit.next_at) <= now:
 				zone_hit.next_at = int(zone_hit.next_at) + int(zone_hit.tick)

@@ -28,6 +28,7 @@ const KNOWN_SKILL_KEYS := [
 const KNOWN_UPGRADE_KEYS := [
 	"extraHits", "zoneMs", "zoneTickMs", "zonePower", "followPower", "powerMul",  # 셈한다
 	"id", "skill", "name", "desc", "exp", "stunMs", "stunLook", "rangeMul", "followMs",
+	"followAhead", "followRadius",
 ]
 
 
@@ -59,7 +60,8 @@ static func min_ms(ledger: Dictionary, kind: Dictionary) -> float:
 			var extra := float(upgrade.get("extraHits", 0))
 			hits += extra
 			power += float(skill.get("power", 1)) * extra
-			power += float(upgrade.get("followPower", 0))
+			# 뒤따르는 한 대는 **한 대(`power`)의** 몇 배다 — 배율만 더하면 스킬 배율만큼 작게 센다
+			power += float(skill.get("power", 1)) * float(upgrade.get("followPower", 0))
 			if upgrade.has("zoneMs"):
 				var ticks := float(upgrade.zoneMs) / maxf(1.0, float(upgrade.get("zoneTickMs", 500)))
 				power += float(upgrade.get("zonePower", 1)) * ticks

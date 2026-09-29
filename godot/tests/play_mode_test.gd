@@ -155,8 +155,12 @@ func _check_skill_list(game: Node3D, me: Dictionary) -> void:
 	if game._cheat_column.visible:
 		_fail("스킬 목록: 스킬 목록을 펼쳤는데 치트 목록이 안 접혔다")
 	var last := str(ids[-1])
+	# 퀵슬롯에 없는 스킬로 시험한다 — 숨긴 스킬이 빠지면 직업 스킬이 칸 수(4) 이하라 다 올라가 있다
 	if last in me.skill_bar:
-		_fail("스킬 목록: 퀵슬롯에 없는 스킬로 시험해야 한다 — %s 가 퀵슬롯에 있다" % last)
+		game._transport.send(&"setSkillBar", {"bar": me.skill_bar.filter(func(s): return str(s) != last)})
+		await process_frame
+	if last in me.skill_bar:
+		_fail("스킬 목록: 퀵슬롯에 없는 스킬로 시험해야 한다 — %s 를 퀵슬롯에서 못 뺐다" % last)
 	var before: int = game._swing_until
 	game._skill_list.get_node(last).pressed.emit()
 	for i in 3:

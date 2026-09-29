@@ -473,6 +473,17 @@ func _locked(key: String) -> bool:
 	return ref.is_empty() and key in ["multi", "item", "grade"]
 
 
+## 고른 장비가 부서져 없어졌다 — **처음 탭(단일 강화 · 전체)으로 돌리고 기준을 비운다** (2026-09-29
+## "장비를 강화하다가 터지면 다시 장비를 선택하기 전에는 초기탭으로 이동하고 다른 버튼 비활성화 시켜").
+## 전에는 기준(`ref`)이 부서진 뒤에도 남아 다중 · 같은 아이템 · 같은 등급이 풀린 채였다
+func _reset_pick() -> void:
+	target = {}
+	ref = {}
+	picked = []
+	mode = "one"
+	filter = "all"
+
+
 func set_goal(level: int) -> void:
 	if running:
 		return
@@ -959,6 +970,9 @@ func _finish(stopped: bool) -> void:
 		if left > 0:
 			text += " · 남은 것 %d개" % left
 		good = reach > 0
+		# 담은 것이 전부 부서졌다 — 고를 장비가 없으니 처음 탭으로 (터지는 연출은 이 박자 전에 끝났다)
+		if picked.is_empty() and lost > 0:
+			_reset_pick()
 	result.text = text
 	result.add_theme_color_override("font_color", _game.INV_GOLD_HI if good else _game.INV_WARN)
 	finished.emit(head, text, good)
@@ -1058,6 +1072,9 @@ func show_result(type: StringName, payload: Dictionary) -> void:
 			result.text = ("+%d 에서 %s" % [from, what]) if running else "강화 실패 — %s" % what
 			good = false
 			broke = true
+			# 대상이 통째로 없어졌으면 처음 탭으로 — 겹친 칸에서 하나만 부서졌으면 남은 것이 그대로 대상이다
+			if _stack().is_empty():
+				_reset_pick()
 		_:
 			result.text = "유지  +%d" % level
 			good = true

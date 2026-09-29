@@ -2166,6 +2166,28 @@ func _case_enhance_batch(game: Node, me: Dictionary) -> void:
 	if not left.is_empty() and int(left.get("enhance", 0)) != 2:
 		_fail("목표 +2 인데 +%d 에서 멈췄다" % int(left.get("enhance", 0)))
 	print("  단일 자동 +2: '%s'" % pop.result.text)
+	# 부서지면 처음 탭으로 (2026-09-29 "터지면 다시 장비를 선택하기 전에는 초기탭으로 이동하고 다른 버튼
+	# 비활성화") — 같은 등급 탭에서 +8 을 부서질 때까지 두드린다. 부서지면 단일 · 전체, 기준이 비고
+	# 다중 · 같은 아이템 · 같은 등급이 잠긴다
+	var broke := false
+	for attempt in 40:
+		me.bag.append({"id": ref_id, "grade": 1, "enhance": 8, "options": []})
+		pop.open({"where": "bag", "index": me.bag.size() - 1})
+		pop.pick_filter("grade")
+		pop.go.pressed.emit()
+		await process_frame
+		if pop.target.is_empty():
+			broke = true
+			break
+	if not broke:
+		_fail("+8 을 40번 두드렸는데 한 번도 안 부서졌다")
+	elif pop.mode != "one" or pop.filter != "all" or not pop.ref.is_empty() \
+			or not pop.tabs["multi"].disabled or not pop.filters["item"].disabled or not pop.filters["grade"].disabled \
+			or pop.kind.text != "강화할 장비를 선택해 주세요":
+		_fail("부서진 뒤 탭 %s · %s · 기준 %s · 다중 잠김 %s · 같은 아이템 잠김 %s · '%s'" % [
+			pop.mode, pop.filter, pop.ref, pop.tabs["multi"].disabled, pop.filters["item"].disabled, pop.kind.text])
+	else:
+		print("  파괴 뒤: 단일 · 전체로 돌아가고 다른 탭 잠김")
 	# 낮은 강화부터 한 단계씩 (2026-09-24 "강화 수치가 다른게 있으면 낮은 강화부터 천천히 한 단계씩") —
 	# +0 셋과 +2 둘을 +3 목표로 돌리면 첫 바퀴는 +0 만 두드리고 +2 는 그대로다
 	var low: Array = []

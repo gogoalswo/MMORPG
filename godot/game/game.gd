@@ -1655,6 +1655,7 @@ func _make_button(text: String, on_press: Callable) -> Button:
 	for state in ["normal", "hover", "pressed", "disabled"]:
 		button.add_theme_stylebox_override(state, _frame_box("ui_button", 28, 6))
 	button.pressed.connect(on_press)
+	ButtonFx.attach(button)
 	return button
 
 

@@ -72,8 +72,10 @@ const BUTTON_OUTLINE := Color("#141816")
 const BUTTON_OUTLINE_SIZE := 4
 
 
-## 단추 글자를 받은 그림 결로 칠한다 (`BUTTON_TEXT` + 검은 테). 막힌 단추는 회색
+## 단추 글자를 받은 그림 결로 칠한다 (`BUTTON_TEXT` + 검은 테). 막힌 단추는 회색.
+## 누름·뗌·클릭 움직임(`ButtonFx`)도 여기서 붙인다 — 청록 단추는 대부분 이 길을 지난다
 static func paint_button_text(button: Button, size: int) -> Button:
+	ButtonFx.attach(button)
 	for key in ["font_color", "font_pressed_color", "font_hover_color", "font_hover_pressed_color", "font_focus_color"]:
 		button.add_theme_color_override(key, BUTTON_TEXT)
 	button.add_theme_color_override("font_disabled_color", HERE_COLOR)
@@ -81,6 +83,8 @@ static func paint_button_text(button: Button, size: int) -> Button:
 	button.add_theme_constant_override("outline_size", BUTTON_OUTLINE_SIZE)
 	button.add_theme_font_size_override("font_size", size)
 	return button
+
+
 ## 제목 글자 — 노란 제목(`TITLE_COLOR`) 대신 상아빛 (받은 던전 그림의 제목 결)
 const PAGE_TITLE_COLOR := Color("#ece4cc")
 const PAGE_TITLE_SIZE := 32

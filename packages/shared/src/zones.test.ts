@@ -135,12 +135,14 @@ test('차원문이 모든 존에 있다', () => {
   assert.deepEqual(without.map((z) => z.id), [], '차원문이 없는 존이 있다');
 });
 
-test('차원문이 모든 존에서 같은 자리·같은 색이다', () => {
-  // 존마다 다르면 "나가려면 어디로" 를 매번 다시 찾는다
+test('차원문이 모든 존에서 같은 색이고, 자리는 마을만 한가운데다', () => {
+  // 존마다 다르면 "나가려면 어디로" 를 매번 다시 찾는다. 마을만은 맵 한가운데다 (2026-09-29 요청)
+  assert.deepEqual(ZONES[START_ZONE]!.gate.position, [0, 0]);
   const gates = Object.values(ZONES).map((z) => z.gate);
   const first = gates[0]!;
+  const outside = Object.values(ZONES).filter((z) => z.id !== START_ZONE).map((z) => z.gate);
+  for (const gate of outside) assert.deepEqual(gate.position, outside[0]!.position);
   for (const gate of gates) {
-    assert.deepEqual(gate.position, first.position);
     assert.equal(gate.radius, first.radius);
     assert.equal(gate.color, first.color);
     assert.equal(gate.name, first.name);

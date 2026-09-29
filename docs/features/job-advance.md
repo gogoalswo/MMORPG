@@ -27,7 +27,7 @@
 |---|---|
 | `packages/shared/src/jobAdvance.ts` | **표.** `JOB_ADVANCE_LEVELS` · `JOB_ADVANCES`(단계·레벨·존·보스) · `jobAdvanceZones(gate)` |
 | `packages/shared/src/skills.ts` | 스킬의 **`tier`**(전직 단계) · `canLearn(…, jobTier)` |
-| `packages/shared/src/zones.ts` | 마을 NPC `전직관 레온`(`role: 'jobs'`, (7, 7)) · `ZONES` 에 시험 존 넷 |
+| `packages/shared/src/zones.ts` | 마을 NPC `전직관 레온`(`role: 'jobs'`, (-6.5, -3.5) — 문 위 살짝 왼쪽) · `ZONES` 에 시험 존 넷 |
 | `packages/shared/src/jobAdvance.test.ts` | 레벨 · 존마다 보스 하나 · 보스 = 전직 레벨 - 1 · 격투가 스킬 단계 · 잠금 |
 | `scripts/export-shared.mjs` | `skills.json` 의 `jobAdvances` 로 내보낸다 |
 | `godot/world/skills.gd` | `tier_of` · `job_advance(tier)` · `job_tier_of_zone` · `unlocked_at` · `can_learn(…, job_tier)` |

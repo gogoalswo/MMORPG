@@ -120,6 +120,9 @@ func _fight() -> void:
 	w.open("village")
 	w.join("me")
 	var me: Dictionary = w.snapshot().players["me"]
+	# 마을 도착 지점은 문(한가운데)을 비켜 (4, 4)다 — 허수아비 자리를 재기 쉽게 한가운데에 세운다
+	me.x = 0.0
+	me.z = 0.0
 	var mobs: Array = w.snapshot().monsters
 	_eq("마을엔 몬스터가 없다", mobs.size(), 0)
 
@@ -153,6 +156,7 @@ func _fight() -> void:
 	var w2 := World.new()
 	w2.open("village")
 	w2.join("you")
+	w2.snapshot().players["you"].merge({"x": 0.0, "z": 0.0}, true)
 	var mobs2: Array = w2.snapshot().monsters
 	mobs2.append(mobs[0].duplicate())
 	w2.input_move("you", 1, -1.0, 0.0, 0.0)
@@ -168,6 +172,7 @@ func _fight() -> void:
 	var w3 := World.new()
 	w3.open("village")
 	w3.join("k")
+	w3.snapshot().players["k"].merge({"x": 0.0, "z": 0.0}, true)
 	var mobs3: Array = w3.snapshot().monsters
 	mobs3.append(mobs[0].duplicate())
 	mobs3[0].hp = 1

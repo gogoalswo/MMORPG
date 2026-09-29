@@ -164,7 +164,12 @@ func _run_scene() -> void:
 	# 문 아치를 누르면 창이 열린다 — **멀리 서 있어도 바로** 열린다
 	# (2026-09-18 요청: "포탈까지 안 걸어가도 클릭하면 UI 열리게")
 	game._gate_panel.close_panel()
-	# 도착 지점 — 문에서 12.7m (맵이 ±12.5 라 더 멀리는 못 선다)
+	# 위에서 줄을 골라 사냥터로 넘어왔다 — 문 자리는 **지금 존**에서 읽는다. 마을만 문이
+	# 한가운데라 존마다 다르다 (2026-09-29). 서는 자리는 사냥터 도착 지점 — 문에서 25.5m
+	var here: Array = game._transport.snapshot().get("gate", {}).get("position", [0, 0])
+	gx = float(here[0])
+	gz = float(here[1])
+	me = game._transport.snapshot().players[game._transport.my_id()]
 	me.x = 0.0
 	me.z = 0.0
 	for i in 3:

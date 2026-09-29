@@ -51,8 +51,15 @@ const GATE_SPOT: [number, number] = [-18, -18];
 const GATE_COLOR = '#4aa8ff';
 const GATE_NAME = '사냥터 이동';
 
-const gateFor = (): ZoneDef['gate'] => ({
-  position: [GATE_SPOT[0], GATE_SPOT[1]],
+/**
+ * 마을만은 문이 **맵 한가운데**에 선다 (2026-09-29 요청: "마을에서는 포탈이 맵 가운데 있게
+ * 변경해"). 마을은 몬스터가 없어 문과 몬스터를 맵 양 끝으로 가를 이유가 없고, 광장 한복판이라
+ * 어디서 들어와도 먼저 눈에 띈다. 도착 지점은 문을 비켜 화면 아래(+x, +z)로 물렸다 — 아래 VILLAGE.
+ */
+const VILLAGE_GATE_SPOT: [number, number] = [0, 0];
+
+const gateFor = (spot: [number, number] = GATE_SPOT): ZoneDef['gate'] => ({
+  position: [spot[0], spot[1]],
   radius: 2.6,
   color: GATE_COLOR,
   name: GATE_NAME,
@@ -166,17 +173,20 @@ const VILLAGE: ZoneDef = {
   id: 'village',
   name: '마을',
   size: ZONE_SIZE,
-  spawns: { default: [0, 0] },
-  // 사냥터로 나가는 유일한 문. 사냥터에 선 것과 같은 자리·같은 색이다.
-  gate: gateFor(),
+  // 문이 한가운데(0, 0)라 도착 지점은 문 바로 아래(화면 아래쪽 +x, +z)다. 문 위에 서면
+  // 아치 안에 캐릭터가 박힌다. 문 반지름(2.6)에서 3m 떨어진다
+  spawns: { default: [4, 4] },
+  // 사냥터로 나가는 유일한 문. 색·이름은 사냥터와 같고 **자리만 맵 한가운데**다
+  gate: gateFor(VILLAGE_GATE_SPOT),
   // **전직관 한 명만 선다** (2026-09-26 요청: "마을에 불필요한 NPC들은 제거해. 지금은 전직
   // 교관만 있으면 되겠어"). 상인·대장장이·마을 사람 넷을 뺐다. 상점·대장간 판정(`World`)과
   // 창(`NpcPanel`), 모델(`merchant`·`smith`·`villager_*`)은 남아 있다 — 줄만 되살리면 선다
   // → docs/features/npc-town.md
   npcs: [
-    // 전직 — 화면 아래 귀퉁이 쪽. 문(화면 맨 위 (-9, -9))과 맵 반대편이다.
+    // 전직 — **문 위에서 살짝 왼쪽** (2026-09-29 요청). 화면 위는 (-x, -z), 왼쪽은 (-x, +z)라
+    // 위로 7m·왼쪽으로 2m 다. 문 아치가 5.2m 높이라 그보다 가까우면 아치 뒤에 가려진다.
     // 누르면 다음 전직 버튼이 뜨고, 레벨이 되면 시험(보스)으로 보낸다 (jobAdvance.ts)
-    { name: '전직관 레온', job: 'fighter', look: 'trainer', x: 7, z: 7, role: 'jobs', title: '전직' },
+    { name: '전직관 레온', job: 'fighter', look: 'trainer', x: -6.5, z: -3.5, role: 'jobs', title: '전직' },
   ],
   env: {
     skyColor: '#b9c9d8',

@@ -341,6 +341,9 @@ func _button(text: String, on_press: Callable) -> Button:
 ## 잠긴 단추 글자 · (흑백을 못 뜰 때) 조각에 곱하는 빛
 const OFF_TEXT := Color("#8c8a84")
 const OFF_TINT := Color(0.5, 0.5, 0.5)
+## 고르지 않은 탭 글자 — 선택(금빛 `INV_GOLD_HI`)과 잠김(`OFF_TEXT`) 사이 밝기. 그 전엔 `INV_DIM` 이라
+## 청록 단추 위에서 안 읽혔다 (2026-09-29 "미선택 된 탭버튼의 글씨 색상이 회색이라 잘 안 보여")
+const TAB_IDLE := Color("#c8c0ac")
 var _greys := {}
 
 ## 조각의 흑백 한 벌 — 밝기만 남기고 조금 어둡게. 조각마다 한 번만 뜬다
@@ -641,7 +644,7 @@ func _light(buttons: Dictionary, on_key: String) -> void:
 	for key in buttons:
 		var on: bool = key == on_key
 		var button: Button = buttons[key]
-		button.add_theme_color_override("font_color", _game.INV_GOLD_HI if on else _game.INV_DIM)
+		button.add_theme_color_override("font_color", _game.INV_GOLD_HI if on else TAB_IDLE)
 		button.add_theme_color_override("font_hover_color", _game.INV_GOLD_HI if on else _game.INV_TEXT)
 
 

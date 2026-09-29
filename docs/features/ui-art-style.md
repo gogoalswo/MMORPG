@@ -10,6 +10,9 @@ HUD 와 NPC 창이 이것으로 되어 있고, **앞으로 만드는 UI 는 전�
 
 한 줄로: **어두운 판 + 머리카락처럼 얇은 금테 + 상아빛으로 칠한 아이콘.**
 
+> ★★★ **HUD 아이콘은 아래 "HUD 아이콘 기준 (2026-09-29)" 이 앞으로의 기준이다** — 사용자가 "지금 느낌 좋다.
+> HUD는 앞으로도 지금 스타일로 만들자" 라고 했다. 이 인용 블록의 나머지와 "아이콘 결 (2026-09-28)" 절은 그 전 기록이다.
+>
 > ★★ **아이콘은 2026-09-28 부터 기준이 바뀌었다 — "리니지풍 칠한 아이콘".** 사용자가 다른 게임의
 > 메뉴 스크린샷(상점 돈주머니 · 인벤토리 가방 · 스펠 마법서 · 퀘스트 두루마리)을 주며 "지금 아이콘
 > 마음에 안 들으니까 저런식으로", 이어서 "**앞으로 기준**" 으로 삼으라고 했다.
@@ -17,11 +20,54 @@ HUD 와 NPC 창이 이것으로 되어 있고, **앞으로 만드는 UI 는 전�
 > 부드럽게 칠한 반실사이고, **색은 전부 세피아 단색조 한 줄기**(`#24170a` ~ `#ddd0b3`, 상아·카키·바랜 놋쇠)다 —
 > 아이콘마다 제 색을 칠했다가 "색감이 통일되어 있자나" 라는 지적을 받고 다시 칠했다. 참고 그림 · 팔레트 띠 주소와
 > 프롬프트는 [hud.md](hud.md) "지금은 칠한 반실사 결". **새 HUD 아이콘은 그 틀을 쓴다** (청동 문장 결은 폐기).
-> **새로 만드는 아이콘은 전부 아래 "아이콘 결 (2026-09-28)" 절을 따른다.** 판·칸·테두리(어두운 판 +
+> (그 전 문장: 새로 만드는 아이콘은 전부 "아이콘 결 (2026-09-28)" 절을 따른다 — **지금은 "HUD 아이콘 기준 (2026-09-29)"**.) 판·칸·테두리(어두운 판 +
 > 얇은 금테)는 그대로다 — 받은 그림은 아이콘만 보여 줬다. 이 절 아래의 "아이콘류" 프롬프트와
 > 상아빛 참고 그림은 **옛 결**이라 새 아이콘에 쓰지 않는다.
 
-## 아이콘 결 (2026-09-28) ★★
+## HUD 아이콘 기준 (2026-09-29) ★★★
+
+**"지금 느낌 좋다. HUD는 앞으로도 지금 스타일로 만들자"** (2026-09-29). 오른쪽 위 메뉴 · 자동사냥 · 물약 ·
+던전 문 열한 장이 이 결이다. **HUD 에 새 아이콘을 넣거나 갈 때는 이 절 그대로 한다 — 결을 새로 짓지 않는다.**
+
+| | |
+|---|---|
+| 그림 | 손으로 부드럽게 칠한 반실사 **물건 하나**. 실루엣이 단순하고 잔세공이 적다 (42~62px 에서 읽혀야 한다) |
+| 색 ★ | **세피아 단색조 한 줄기** — `#24170a` · `#504330` · `#6a5b47` · `#847965` · `#a59a82` · `#c2baa5` · `#ddd0b3` (상아·카키·바랜 놋쇠). 물건 제 색(파랑·보라·빨강·번쩍이는 금)을 칠하지 않는다. 색은 **점 하나**(흐린 청록·검붉은 보석, 3% 미만)까지만 |
+| 빛·각 | 왼쪽 위 부드러운 빛, 약간 비스듬한 3/4 (해골·X 검·문처럼 정면이 읽히는 것은 정면) |
+| 바탕 | 흰 바탕으로 받아 `build-item-icons.mjs` 가 걷는다. 판·원판·테 없음 |
+| 글자 | 그림에 안 굽는다 — 메뉴는 아래 줄 `Label` ([hud.md](hud.md) "메뉴 아이콘") |
+
+**참고 그림 둘을 같이 물린다** (둘 다 바르코에 올라가 있다 — 다시 올리지 않는다):
+
+1. 받은 스크린샷(세력 탑 · 커뮤니티 · 랭킹 트로피 · PVP 검): `https://3d.varco.ai/api/objects/7cb46959217839da3aa126a3a6a909eb.jpg`
+2. 팔레트 띠(위 일곱 색): `https://3d.varco.ai/api/objects/ba3adc8e23e0f960db7f48563bb129da.png`
+
+**프롬프트** — `GenerateImage`, `nano-banana-pro`, 1:1, **세 장**. `<무엇>` · `<쓰임>` 만 간다
+(정면인 것은 `Slight three-quarter view` 를 `Front view` 로):
+
+```
+Mobile MMORPG HUD menu icon: <무엇>, meaning '<쓰임>'. MATCH THE FIRST REFERENCE IMAGE'S ART STYLE EXACTLY
+(its castle tower, group of people, trophy and crossed swords): a softly hand-painted semi-realistic game
+icon with gentle light from the upper left, smooth soft matte shading and a clean, simple, bold silhouette
+with little fine detail. COLOR: use ONE unified, muted sepia palette, shown as swatches in the second
+reference image: dark umber shadows (#24170a, #504330), khaki-taupe midtones (#6a5b47, #847965), pale
+parchment-ivory highlights (#a59a82, #c2baa5, #ddd0b3) — like aged bone and pale worn brass, low saturation.
+No bright red, no saturated blue, no purple, no orange, no vivid yellow gold, no pure white highlights.
+At most one tiny accent spot of muted teal or deep dull red, covering less than 3% of the icon.
+Slight three-quarter view, centered, fills the frame, readable at 60 pixels. One object standing alone —
+it must NOT sit on any disc, circle, plate, badge, frame or panel. Isolated on a flat pure white background;
+everything outside the object is pure white, the four corners must be pure white. Do not copy the swatches,
+captions or dark background of the references: no text, no letters, no numbers.
+```
+
+고르고 넣는 법:
+
+- **팔레트 띠를 그려 오는 장이 가끔 있다** (던전 문 세 장 중 하나) — 그래서 세 장을 뽑아 거른다.
+- 모양이 마음에 드는데 색이 튀면 새로 뽑지 말고 **`EditImage` 로 색만 다시 칠한다** — 지시문은 [hud.md](hud.md) "색은 한 줄기".
+- 굽고 나서 **받은 스크린샷 옆에 42px 로 나란히 놓고** 색감이 한 줄기인지, 작게도 읽히는지 본다 (확인용 한 장).
+- 고른 해시는 `scripts/fetch-assets.sh`, 그림 표는 [hud.md](hud.md) "지금은 칠한 반실사 결".
+
+## 아이콘 결 (2026-09-28) — 옛 기준, 기록
 
 | | |
 |---|---|
@@ -151,7 +197,7 @@ HUD 와 NPC 창이 이것으로 되어 있고, **앞으로 만드는 UI 는 전�
 2. **안쪽은 어두운 판이고, 뚫지 않는다.** 채움·숫자·아이콘이 그 위에 올라간다.
    뚫으면 게임 바닥이 비친다.
 3. **아이콘은 테두리 없이 제 색으로 선다.** 원판·배지·액자 위에 앉히지 않는다.
-   칠하는 결은 위 "아이콘 결 (2026-09-28)" — 상아빛 + 금색 선화는 옛 결이다.
+   칠하는 결은 위 "HUD 아이콘 기준 (2026-09-29)" — 상아빛 + 금색 선화 · 청동 문장은 옛 결이다.
 4. **글자는 그림에 굽지 않는다.** 전부 `Label` 로 얹는다.
 5. **조각이 없어도 돌아간다.** `sync:godot` 을 안 돌린 사람에게는 코드로 그린 판과
    테두리가 나온다 (`_frame_box` 의 폴백, `_white`, `SpinRing`).

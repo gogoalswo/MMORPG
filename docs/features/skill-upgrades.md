@@ -441,7 +441,10 @@
 - **피해를 올리는 칸(배율·타수·장판·추가타)을 새로 넣으면 `godot/server/kill_check.gd` 의 `min_ms` 도 고친다** — 서버가 "이보다 빨리 못 잡는다" 를 셈한다. 모르는 칸이 생기면 `server_test` 가 실패해서 알려 준다 → [server.md](server.md)
 - **강화를 더할 때** — `SKILL_UPGRADES` 에 한 줄(`exp` 필수, 효과는 `stunMs` · `rangeMul` · `powerMul` · `extraHits` · `zoneMs`·`zoneTickMs`·`zonePower` · `followMs`·`followPower` · `followAhead`·`followRadius` · `stunLook` · `pullRadius`·`pullMs` 중에서) → `npm run export:godot`.
   효과가 새 종류면 `cast` 에 판정을, `_show_skill` 에 이펙트 분기를 더한다.
-  효과 문구(`desc`)는 **카드(280px) 한 줄**에 들어가야 한다.
+  효과 문구(`desc`)는 **카드(280px) 한 줄**에 들어가야 한다. 안쪽(256px)을 넘으면 `_fit_upgrade_desc` 가
+  글자를 18 에서 한 단계씩 줄인다(14 까지) — 2026-09-29 요청 문구 "기를 폭발시켜 80% 데미지 추가 타격" 이
+  18 에서 넘쳐 15 로 뜬다. 14 로도 넘치면 문구를 줄여야 한다.
+  (같은 날 요청으로 문구를 "N초 뒤 N% 데미지 추가 타격" 꼴로 바꿨다 — 연파 · 기폭 · 폭렬권 연쇄 폭발.)
 - **던전 보상을 바꿀 때** — `DUNGEON_SKILL_EXP_PER_STAGE`(단계당). 단계마다 따로 주려면
   `RAID_STAGES` 의 `skillExp` 를 고치고 `zones.test.ts` 의 "단계 × 1000" 검사도 고친다.
   새 던전 종류(시련의 탑 · 보물 창고)를 열면 그 단계에도 `skillExp` 를 채운다.

@@ -1133,6 +1133,9 @@ func _case_bag(game: Node3D) -> void:
 		if game._enhance.kind.text != "+0  →  +1":
 			_fail("팝업 단계 줄이 '%s'" % game._enhance.kind.text)
 		print("  강화 팝업: %s · %s" % [pop_box, str(odds_rows)])
+		# 굴림은 월드 난수라 몬스터 배치가 쓴 만큼 결과가 바뀐다 — 2026-09-29 에 한 마리씩 세우자
+		# 성공이 파괴로 뒤집혀 다중 강화 검사까지 깨졌다. 아래 다중 강화처럼 씨앗을 고정한다
+		game._transport._world._rng.seed = SEED_ENHANCE
 		game._enhance.go.pressed.emit()
 		for i in 3:
 			await process_frame

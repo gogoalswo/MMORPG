@@ -246,10 +246,82 @@
       "monsters": [
         {
           "kind": "mob008",
-          "x": 16,
-          "z": 16,
-          "radius": 13,
-          "count": 16,
+          "x": -15,
+          "z": -2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob008",
+          "x": -4,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob008",
+          "x": 4,
+          "z": -26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob008",
+          "x": -20,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob008",
+          "x": 11,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob008",
+          "x": -5,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob008",
+          "x": -10,
+          "z": 26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob008",
+          "x": 12,
+          "z": 2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob008",
+          "x": 25,
+          "z": -5,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob008",
+          "x": 9,
+          "z": 17,
+          "radius": 0,
+          "count": 1,
           "respawnMs": 10000
         }
       ],
@@ -285,10 +357,82 @@
       "monsters": [
         {
           "kind": "mob018",
-          "x": 16,
-          "z": 16,
-          "radius": 13,
-          "count": 16,
+          "x": -15,
+          "z": -2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob018",
+          "x": -4,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob018",
+          "x": 4,
+          "z": -26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob018",
+          "x": -20,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob018",
+          "x": 11,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob018",
+          "x": -5,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob018",
+          "x": -10,
+          "z": 26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob018",
+          "x": 12,
+          "z": 2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob018",
+          "x": 25,
+          "z": -5,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob018",
+          "x": 9,
+          "z": 17,
+          "radius": 0,
+          "count": 1,
           "respawnMs": 10000
         }
       ],
@@ -324,10 +468,82 @@
       "monsters": [
         {
           "kind": "mob028",
-          "x": 16,
-          "z": 16,
-          "radius": 13,
-          "count": 16,
+          "x": -15,
+          "z": -2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob028",
+          "x": -4,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob028",
+          "x": 4,
+          "z": -26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob028",
+          "x": -20,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob028",
+          "x": 11,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob028",
+          "x": -5,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob028",
+          "x": -10,
+          "z": 26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob028",
+          "x": 12,
+          "z": 2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob028",
+          "x": 25,
+          "z": -5,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob028",
+          "x": 9,
+          "z": 17,
+          "radius": 0,
+          "count": 1,
           "respawnMs": 10000
         }
       ],
@@ -363,10 +579,82 @@
       "monsters": [
         {
           "kind": "mob038",
-          "x": 16,
-          "z": 16,
-          "radius": 13,
-          "count": 16,
+          "x": -15,
+          "z": -2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob038",
+          "x": -4,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob038",
+          "x": 4,
+          "z": -26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob038",
+          "x": -20,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob038",
+          "x": 11,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob038",
+          "x": -5,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob038",
+          "x": -10,
+          "z": 26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob038",
+          "x": 12,
+          "z": 2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob038",
+          "x": 25,
+          "z": -5,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob038",
+          "x": 9,
+          "z": 17,
+          "radius": 0,
+          "count": 1,
           "respawnMs": 10000
         }
       ],
@@ -402,10 +690,82 @@
       "monsters": [
         {
           "kind": "mob048",
-          "x": 16,
-          "z": 16,
-          "radius": 13,
-          "count": 16,
+          "x": -15,
+          "z": -2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob048",
+          "x": -4,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob048",
+          "x": 4,
+          "z": -26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob048",
+          "x": -20,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob048",
+          "x": 11,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob048",
+          "x": -5,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob048",
+          "x": -10,
+          "z": 26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob048",
+          "x": 12,
+          "z": 2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob048",
+          "x": 25,
+          "z": -5,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob048",
+          "x": 9,
+          "z": 17,
+          "radius": 0,
+          "count": 1,
           "respawnMs": 10000
         }
       ],
@@ -441,10 +801,82 @@
       "monsters": [
         {
           "kind": "mob058",
-          "x": 16,
-          "z": 16,
-          "radius": 13,
-          "count": 16,
+          "x": -15,
+          "z": -2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob058",
+          "x": -4,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob058",
+          "x": 4,
+          "z": -26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob058",
+          "x": -20,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob058",
+          "x": 11,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob058",
+          "x": -5,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob058",
+          "x": -10,
+          "z": 26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob058",
+          "x": 12,
+          "z": 2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob058",
+          "x": 25,
+          "z": -5,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob058",
+          "x": 9,
+          "z": 17,
+          "radius": 0,
+          "count": 1,
           "respawnMs": 10000
         }
       ],
@@ -480,10 +912,82 @@
       "monsters": [
         {
           "kind": "mob068",
-          "x": 16,
-          "z": 16,
-          "radius": 13,
-          "count": 16,
+          "x": -15,
+          "z": -2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob068",
+          "x": -4,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob068",
+          "x": 4,
+          "z": -26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob068",
+          "x": -20,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob068",
+          "x": 11,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob068",
+          "x": -5,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob068",
+          "x": -10,
+          "z": 26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob068",
+          "x": 12,
+          "z": 2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob068",
+          "x": 25,
+          "z": -5,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob068",
+          "x": 9,
+          "z": 17,
+          "radius": 0,
+          "count": 1,
           "respawnMs": 10000
         }
       ],
@@ -519,10 +1023,82 @@
       "monsters": [
         {
           "kind": "mob078",
-          "x": 16,
-          "z": 16,
-          "radius": 13,
-          "count": 16,
+          "x": -15,
+          "z": -2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob078",
+          "x": -4,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob078",
+          "x": 4,
+          "z": -26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob078",
+          "x": -20,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob078",
+          "x": 11,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob078",
+          "x": -5,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob078",
+          "x": -10,
+          "z": 26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob078",
+          "x": 12,
+          "z": 2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob078",
+          "x": 25,
+          "z": -5,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob078",
+          "x": 9,
+          "z": 17,
+          "radius": 0,
+          "count": 1,
           "respawnMs": 10000
         }
       ],
@@ -558,10 +1134,82 @@
       "monsters": [
         {
           "kind": "mob088",
-          "x": 16,
-          "z": 16,
-          "radius": 13,
-          "count": 16,
+          "x": -15,
+          "z": -2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob088",
+          "x": -4,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob088",
+          "x": 4,
+          "z": -26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob088",
+          "x": -20,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob088",
+          "x": 11,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob088",
+          "x": -5,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob088",
+          "x": -10,
+          "z": 26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob088",
+          "x": 12,
+          "z": 2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob088",
+          "x": 25,
+          "z": -5,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob088",
+          "x": 9,
+          "z": 17,
+          "radius": 0,
+          "count": 1,
           "respawnMs": 10000
         }
       ],
@@ -597,10 +1245,82 @@
       "monsters": [
         {
           "kind": "mob098",
-          "x": 16,
-          "z": 16,
-          "radius": 13,
-          "count": 16,
+          "x": -15,
+          "z": -2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob098",
+          "x": -4,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob098",
+          "x": 4,
+          "z": -26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob098",
+          "x": -20,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob098",
+          "x": 11,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob098",
+          "x": -5,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob098",
+          "x": -10,
+          "z": 26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob098",
+          "x": 12,
+          "z": 2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob098",
+          "x": 25,
+          "z": -5,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob098",
+          "x": 9,
+          "z": 17,
+          "radius": 0,
+          "count": 1,
           "respawnMs": 10000
         }
       ],
@@ -636,10 +1356,82 @@
       "monsters": [
         {
           "kind": "mob108",
-          "x": 16,
-          "z": 16,
-          "radius": 13,
-          "count": 16,
+          "x": -15,
+          "z": -2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob108",
+          "x": -4,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob108",
+          "x": 4,
+          "z": -26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob108",
+          "x": -20,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob108",
+          "x": 11,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob108",
+          "x": -5,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob108",
+          "x": -10,
+          "z": 26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob108",
+          "x": 12,
+          "z": 2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob108",
+          "x": 25,
+          "z": -5,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob108",
+          "x": 9,
+          "z": 17,
+          "radius": 0,
+          "count": 1,
           "respawnMs": 10000
         }
       ],
@@ -675,10 +1467,82 @@
       "monsters": [
         {
           "kind": "mob118",
-          "x": 16,
-          "z": 16,
-          "radius": 13,
-          "count": 16,
+          "x": -15,
+          "z": -2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob118",
+          "x": -4,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob118",
+          "x": 4,
+          "z": -26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob118",
+          "x": -20,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob118",
+          "x": 11,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob118",
+          "x": -5,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob118",
+          "x": -10,
+          "z": 26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob118",
+          "x": 12,
+          "z": 2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob118",
+          "x": 25,
+          "z": -5,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob118",
+          "x": 9,
+          "z": 17,
+          "radius": 0,
+          "count": 1,
           "respawnMs": 10000
         }
       ],
@@ -714,10 +1578,82 @@
       "monsters": [
         {
           "kind": "mob128",
-          "x": 16,
-          "z": 16,
-          "radius": 13,
-          "count": 16,
+          "x": -15,
+          "z": -2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob128",
+          "x": -4,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob128",
+          "x": 4,
+          "z": -26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob128",
+          "x": -20,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob128",
+          "x": 11,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob128",
+          "x": -5,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob128",
+          "x": -10,
+          "z": 26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob128",
+          "x": 12,
+          "z": 2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob128",
+          "x": 25,
+          "z": -5,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob128",
+          "x": 9,
+          "z": 17,
+          "radius": 0,
+          "count": 1,
           "respawnMs": 10000
         }
       ],
@@ -753,10 +1689,82 @@
       "monsters": [
         {
           "kind": "mob138",
-          "x": 16,
-          "z": 16,
-          "radius": 13,
-          "count": 16,
+          "x": -15,
+          "z": -2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob138",
+          "x": -4,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob138",
+          "x": 4,
+          "z": -26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob138",
+          "x": -20,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob138",
+          "x": 11,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob138",
+          "x": -5,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob138",
+          "x": -10,
+          "z": 26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob138",
+          "x": 12,
+          "z": 2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob138",
+          "x": 25,
+          "z": -5,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob138",
+          "x": 9,
+          "z": 17,
+          "radius": 0,
+          "count": 1,
           "respawnMs": 10000
         }
       ],
@@ -792,10 +1800,82 @@
       "monsters": [
         {
           "kind": "mob148",
-          "x": 16,
-          "z": 16,
-          "radius": 13,
-          "count": 16,
+          "x": -15,
+          "z": -2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob148",
+          "x": -4,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob148",
+          "x": 4,
+          "z": -26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob148",
+          "x": -20,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob148",
+          "x": 11,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob148",
+          "x": -5,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob148",
+          "x": -10,
+          "z": 26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob148",
+          "x": 12,
+          "z": 2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob148",
+          "x": 25,
+          "z": -5,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob148",
+          "x": 9,
+          "z": 17,
+          "radius": 0,
+          "count": 1,
           "respawnMs": 10000
         }
       ],
@@ -831,10 +1911,82 @@
       "monsters": [
         {
           "kind": "mob158",
-          "x": 16,
-          "z": 16,
-          "radius": 13,
-          "count": 16,
+          "x": -15,
+          "z": -2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob158",
+          "x": -4,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob158",
+          "x": 4,
+          "z": -26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob158",
+          "x": -20,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob158",
+          "x": 11,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob158",
+          "x": -5,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob158",
+          "x": -10,
+          "z": 26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob158",
+          "x": 12,
+          "z": 2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob158",
+          "x": 25,
+          "z": -5,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob158",
+          "x": 9,
+          "z": 17,
+          "radius": 0,
+          "count": 1,
           "respawnMs": 10000
         }
       ],
@@ -870,10 +2022,82 @@
       "monsters": [
         {
           "kind": "mob168",
-          "x": 16,
-          "z": 16,
-          "radius": 13,
-          "count": 16,
+          "x": -15,
+          "z": -2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob168",
+          "x": -4,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob168",
+          "x": 4,
+          "z": -26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob168",
+          "x": -20,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob168",
+          "x": 11,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob168",
+          "x": -5,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob168",
+          "x": -10,
+          "z": 26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob168",
+          "x": 12,
+          "z": 2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob168",
+          "x": 25,
+          "z": -5,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob168",
+          "x": 9,
+          "z": 17,
+          "radius": 0,
+          "count": 1,
           "respawnMs": 10000
         }
       ],
@@ -909,10 +2133,82 @@
       "monsters": [
         {
           "kind": "mob178",
-          "x": 16,
-          "z": 16,
-          "radius": 13,
-          "count": 16,
+          "x": -15,
+          "z": -2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob178",
+          "x": -4,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob178",
+          "x": 4,
+          "z": -26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob178",
+          "x": -20,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob178",
+          "x": 11,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob178",
+          "x": -5,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob178",
+          "x": -10,
+          "z": 26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob178",
+          "x": 12,
+          "z": 2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob178",
+          "x": 25,
+          "z": -5,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob178",
+          "x": 9,
+          "z": 17,
+          "radius": 0,
+          "count": 1,
           "respawnMs": 10000
         }
       ],
@@ -948,10 +2244,82 @@
       "monsters": [
         {
           "kind": "mob188",
-          "x": 16,
-          "z": 16,
-          "radius": 13,
-          "count": 16,
+          "x": -15,
+          "z": -2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob188",
+          "x": -4,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob188",
+          "x": 4,
+          "z": -26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob188",
+          "x": -20,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob188",
+          "x": 11,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob188",
+          "x": -5,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob188",
+          "x": -10,
+          "z": 26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob188",
+          "x": 12,
+          "z": 2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob188",
+          "x": 25,
+          "z": -5,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob188",
+          "x": 9,
+          "z": 17,
+          "radius": 0,
+          "count": 1,
           "respawnMs": 10000
         }
       ],
@@ -987,10 +2355,82 @@
       "monsters": [
         {
           "kind": "mob198",
-          "x": 16,
-          "z": 16,
-          "radius": 13,
-          "count": 16,
+          "x": -15,
+          "z": -2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob198",
+          "x": -4,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob198",
+          "x": 4,
+          "z": -26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob198",
+          "x": -20,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob198",
+          "x": 11,
+          "z": -13,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob198",
+          "x": -5,
+          "z": 12,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob198",
+          "x": -10,
+          "z": 26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob198",
+          "x": 12,
+          "z": 2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob198",
+          "x": 25,
+          "z": -5,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob198",
+          "x": 9,
+          "z": 17,
+          "radius": 0,
+          "count": 1,
           "respawnMs": 10000
         }
       ],

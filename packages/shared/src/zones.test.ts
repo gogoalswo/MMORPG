@@ -186,7 +186,7 @@ test('차원문 목록의 사냥터가 전부 default 스폰을 가진다', () =
     const [x, z] = getSpawn(zone, 'default');
     // 도착 지점이 무리 원 안이면 몬스터 사이에 떨어진다. 인식 범위(반경 + aggroRange)
     // 밖까지는 안 본다 — 맵을 2/3 로 줄이며(2026-09-23) 무리가 ±14 로 붙어서, 도착하면
-    // 몬스터가 알아채는 것을 받아들였다 (docs/features/world-zones.md "무리 자리")
+    // 몬스터가 알아채는 것을 받아들였다 (docs/features/world-zones.md "몬스터 자리")
     for (const pack of zone.monsters ?? []) {
       const d = Math.hypot(pack.x - x, pack.z - z);
       const kind = MONSTER_KINDS[pack.kind];
@@ -195,6 +195,37 @@ test('차원문 목록의 사냥터가 전부 default 스폰을 가진다', () =
         d > pack.radius,
         `${zoneId}: 도착 지점이 ${kind.name} 무리 안이다 (${d.toFixed(1)}m)`
       );
+    }
+  }
+});
+
+test('사냥터 몬스터가 한 번에 한 마리씩 붙는다', () => {
+  /**
+   * "여러 마리가 한 번에 붙지 않도록 듬성듬성" (2026-09-29, docs/features/world-zones.md "몬스터 자리").
+   * 한 놈 옆에 붙어 싸울 때 이웃은 순찰로 다가와도 어그로 밖이어야 하고,
+   * 도착 지점도 누구의 어그로·순찰 범위 안이 아니어야 한다.
+   * 순찰 반경은 godot/world/world.gd 의 PATROL_RADIUS, 근접 사거리는 강한 종의 attackRange 보다 넉넉히.
+   */
+  const PATROL = 2;
+  const MELEE = 2.5;
+  for (const zoneId of FIELD_ORDER) {
+    const zone = getZone(zoneId);
+    const mobs = zone.monsters ?? [];
+    const [sx, sz] = getSpawn(zone, 'default');
+    for (const [i, a] of mobs.entries()) {
+      const aggro = MONSTER_KINDS[a.kind]!.aggroRange;
+      assert.equal(a.count, 1, `${zoneId}: 한 자리에 한 마리`);
+      assert.ok(
+        Math.hypot(a.x - sx, a.z - sz) > aggro + PATROL + 1,
+        `${zoneId}: (${a.x}, ${a.z}) 가 도착 지점을 알아챈다`
+      );
+      for (const b of mobs.slice(i + 1)) {
+        const d = Math.hypot(a.x - b.x, a.z - b.z);
+        assert.ok(
+          d - PATROL * 2 - MELEE > aggro,
+          `${zoneId}: (${a.x}, ${a.z}) 와 (${b.x}, ${b.z}) 가 ${d.toFixed(1)}m — 같이 끌린다`
+        );
+      }
     }
   }
 });

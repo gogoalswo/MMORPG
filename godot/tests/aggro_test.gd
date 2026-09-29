@@ -54,7 +54,7 @@ func _setup(mob_x: float, mob_z: float, player_x: float, player_z: float) -> Arr
 
 
 func _case_idle() -> void:
-	# 어그로(9.1m) 밖이면 쫓지 않는다. **가만히 서 있는 것은 아니다** —
+	# 어그로(7m) 밖이면 쫓지 않는다. **가만히 서 있는 것은 아니다** —
 	# 집 주변을 서성인다 (순찰은 tests/patrol_test.gd 가 따로 본다)
 	var s := _setup(-6.0, -3.0, -6.0, 12.0)
 	var w: World = s[0]
@@ -70,14 +70,14 @@ func _case_idle() -> void:
 
 
 func _case_chase() -> void:
-	# 어그로 안이면 다가온다
-	var s := _setup(-6.0, -3.0, -6.0, 5.0)
+	# 어그로(7m) 안이면 다가온다
+	var s := _setup(-6.0, -3.0, -6.0, 3.0)
 	var w: World = s[0]
 	var mob: Dictionary = s[2]
-	var before: float = absf(mob.z - 5.0)
+	var before: float = absf(mob.z - 3.0)
 	for i in 60:
 		w.step(1.0 / 60.0)
-	var after: float = absf(mob.z - 5.0)
+	var after: float = absf(mob.z - 3.0)
 	if after >= before:
 		_fail("어그로 안인데 안 다가왔다 (%.2f -> %.2f)" % [before, after])
 	else:

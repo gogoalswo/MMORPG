@@ -14,7 +14,7 @@ var _failed := 0
 
 
 func _init() -> void:
-	_case_radius_covers_one_pack()
+	_case_radius_reaches_next()
 	_case_anchor_on_toggle()
 	_case_walks_in_and_hits()
 	_case_casts_skills()
@@ -64,54 +64,29 @@ func _gap(a: Dictionary, b: Dictionary) -> float:
 	return Vector2(a.x - b.x, a.z - b.z).length()
 
 
-## 사냥터 무리는 반지름 8m 원에 흩어져 있고 무리끼리 40m 떨어져 있다.
-## 무리 안 **어디에 서서 켜도** 그 무리가 다 들어와야 한다.
-## 옆 무리는 이제 들어온다 — 맵을 2/3 로 줄이며(2026-09-23) 무리 간격이 28 이 돼
-## 한 무리를 덮는 반경(≥26)으로는 옆 무리를 뺄 수 없고, 사용자가 그걸 받아들였다.
-## 그래서 옆 무리 거리는 검사하지 않고 적어만 둔다
-func _case_radius_covers_one_pack() -> void:
+## 사냥터 몬스터는 시작 지점 둘레에 **한 마리씩** 14.8m 넘게 떨어져 선다 (2026-09-29, world-zones.md).
+## 한 놈을 잡고 나면 다음 놈이 반경 안에 있어야 자동 사냥이 멈추지 않는다 —
+## 시작 지점에서 켰을 때 대부분이 들어오는지도 적어 둔다
+func _case_radius_reaches_next() -> void:
 	var w := World.new()
 	w.open("meadow")
-	# 보스는 다른 무리 옆에 혼자 서 있어 무리로 치지 않는다 (id 로 가른다)
-	var packs := {}
-	for mob in w.snapshot().monsters:
-		if str(mob.id).begins_with("boss"):
-			continue
-		var key := "%s%s" % ["n" if mob.home_x < 0 else "p", "n" if mob.home_z < 0 else "p"]
-		if not packs.has(key):
-			packs[key] = []
-		packs[key].append(mob)
-
-	# 2026-09-28 부터 화면 아래 귀퉁이 무리 하나뿐이다 (world-zones.md)
-	if packs.size() != 1:
-		_fail("초원 무리를 %d 개로 봤다 (1 이어야 한다)" % packs.size())
-		return
-
-	var widest := 0.0
-	for key in packs:
-		for a in packs[key]:
-			for b in packs[key]:
-				widest = maxf(widest, _gap(a, b))
-	if widest > World.HUNT_RADIUS:
-		_fail("한 무리의 양 끝이 %.1f m — 반경 %.1f 로는 다 못 덮는다" % [
-			widest, World.HUNT_RADIUS
-		])
-	else:
-		print("  한 무리 양 끝 %.1f m < 반경 %.1f m — 통째로 들어온다" % [
-			widest, World.HUNT_RADIUS
-		])
-
-	# 옆 무리가 얼마나 붙어 있는지 적어만 둔다 (위 설명)
-	var nearest_other := INF
-	for key in packs:
-		for anchor in packs[key]:
-			for other in packs:
-				if other == key:
-					continue
-				for mob in packs[other]:
-					nearest_other = minf(nearest_other, _gap(anchor, mob))
-	if nearest_other < INF:
-		print("  옆 무리는 최소 %.1f m (반경 %.1f)" % [nearest_other, World.HUNT_RADIUS])
+	var mobs: Array = w.snapshot().monsters
+	var farthest_next := 0.0
+	for a in mobs:
+		var nearest := INF
+		for b in mobs:
+			if a != b:
+				nearest = minf(nearest, _gap(a, b))
+		farthest_next = maxf(farthest_next, nearest)
+	if farthest_next > World.HUNT_RADIUS:
+		_fail("이웃까지 %.1f m — 반경 %.1f 로는 다음 놈에 못 닿는다" % [farthest_next, World.HUNT_RADIUS])
+	var from_start := 0
+	for mob in mobs:
+		if Vector2(mob.x, mob.z).length() <= World.HUNT_RADIUS:
+			from_start += 1
+	print("  가장 먼 이웃 %.1f m < 반경 %.1f · 시작 지점에서 %d/%d 마리" % [
+		farthest_next, World.HUNT_RADIUS, from_start, mobs.size()
+	])
 
 
 ## 켜면 **그 자리**가 앵커다. 앵커가 없으면 몬스터를 따라 맵 끝까지 끌려간다

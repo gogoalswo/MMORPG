@@ -33,10 +33,15 @@ const SOURCES = {
   sand: 'map5',
   cobble: 'map6',
   lava: 'map7',
+  // 덤불숲 흙 — 사용자가 준 리니지 흙바닥 스크린샷을 물려 뽑았다 (2026-09-29, fetch-assets.sh)
+  soil: 'map8',
 };
 
 /** 밝기를 높이로 볼 때의 기울기 배율. 돌판·자갈은 틈이 깊고, 눈·모래는 얕다 */
-const BUMP = { stone: 6, grass: 3, snow: 4, dirt: 4, sand: 3, cobble: 7, lava: 5 };
+const BUMP = { stone: 6, grass: 3, snow: 4, dirt: 4, sand: 3, cobble: 7, lava: 5, soil: 3 };
+
+/** 인자로 종류를 주면 그것만 굽는다 — 원본이 한 장만 있을 때 (`node … soil`) */
+const ONLY = process.argv.slice(2);
 
 /** 2×2 평균으로 반으로 줄인다. 이음새를 건드리지 않는 유일한 방법이다 */
 function halve(data, size, channels) {
@@ -55,7 +60,7 @@ function halve(data, size, channels) {
 
 mkdirSync(OUT_DIR, { recursive: true });
 
-for (const [kind, file] of Object.entries(SOURCES)) {
+for (const [kind, file] of Object.entries(SOURCES).filter(([k]) => ONLY.length === 0 || ONLY.includes(k))) {
   const src = `${SRC_DIR}/${file}.png`;
   const { data, info } = await sharp(src).removeAlpha().raw().toBuffer({ resolveWithObject: true });
   let size = info.width;

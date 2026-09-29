@@ -11,6 +11,11 @@ mkdir -p assets-src/textures public/assets/textures public/assets/hdri public/as
 # 바닥 텍스처 — 바르코로 만든 타일 이미지 7장(map1~7.png). 출처와 약관은 docs/ASSETS.md.
 # 결과물 주소를 아직 못 박았다 — 받아 둔 원본(assets-src/textures/varco/map*.png)이 있을 때만 만든다.
 # 여기서는 JPEG(색 + 밝기로 만든 노멀)까지만 만든다. 배포되는 .ktx2 는 `npm run compress` 가 누른다.
+# 덤불숲 흙(map8) — 이것만은 주소가 있다 (2026-09-29, 흙바닥 스크린샷을 물려 뽑은 네 장 중 넷째)
+if [ ! -f assets-src/textures/varco/map8.png ]; then
+  echo "받는 중: textures/varco/map8.png"
+  curl -sL --max-time 120 -o assets-src/textures/varco/map8.png "https://3d.varco.ai/api/objects/da0390c41b3f0abd40dc80653a8f1d1f.png"
+fi
 if [ -f assets-src/textures/varco/map1.png ]; then
   node scripts/build-ground-textures.mjs
 else

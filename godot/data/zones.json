@@ -298,8 +298,8 @@
         "hemiIntensity": 0.8,
         "grassDark": "#2f3a28",
         "grassLight": "#4a5936",
-        "ground": "grass",
-        "groundTint": "#4a5936"
+        "ground": "soil",
+        "groundTint": "#6b5f49"
       }
     },
     "canyon": {
@@ -1948,7 +1948,8 @@
     "dirt",
     "sand",
     "cobble",
-    "lava"
+    "lava",
+    "soil"
   ],
   "groundLooks": {
     "stone": {
@@ -1999,6 +2000,13 @@
       "roughness": 0.9,
       "mean": "#3e3837",
       "glow": 1
+    },
+    "soil": {
+      "tile": 4,
+      "blend": 0.45,
+      "roughness": 0.95,
+      "mean": "#221b14",
+      "glow": 0
     }
   }
 }

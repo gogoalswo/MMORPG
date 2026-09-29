@@ -15,7 +15,7 @@ import type { MonsterSpawnDef } from './monsters.ts';
  * 바닥 텍스처 종류. 이미지 한 장이 한 종류다 (바르코로 만든 타일 7장,
  * docs/ASSETS.md). 사냥터 20곳이 이 중 여섯을 나눠 쓰고, 돌판은 마을이 쓴다.
  */
-export const GROUND_KINDS = ['stone', 'grass', 'snow', 'dirt', 'sand', 'cobble', 'lava'] as const;
+export const GROUND_KINDS = ['stone', 'grass', 'snow', 'dirt', 'sand', 'cobble', 'lava', 'soil'] as const;
 
 /**
  * 존 한 변(m) — 마을·사냥터·던전·전직 시험 전부 같다. 이동 가능 영역은 ±(33/2 - 4) = ±12.5.
@@ -64,6 +64,8 @@ export const GROUND_LOOKS: Record<GroundKind, GroundLook> = {
   sand: { tile: 6, blend: 0.45, roughness: 0.9, mean: '#e6ca9d', glow: 0 },
   cobble: { tile: 8, blend: 0, roughness: 0.8, mean: '#746b5c', glow: 0 },
   lava: { tile: 12, blend: 0, roughness: 0.9, mean: '#3e3837', glow: 1 },
+  // 덤불숲 흙 (2026-09-29) — 어두운 흙에 잔알갱이. 참고 스크린샷의 알갱이 크기에 맞춰 4m
+  soil: { tile: 4, blend: 0.45, roughness: 0.95, mean: '#221b14', glow: 0 },
 };
 
 /**

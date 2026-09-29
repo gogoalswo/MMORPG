@@ -38,6 +38,7 @@ const LAYERS := ["grass", "stone", "cobble", "dirt"]
 ## - `shade`   : 풀빛 얼룩 세기 (0~1). 이끼 낀 어두운 데와 볕 든 연두 데가 섞인다 —
 ##               풀 한 장이 넓게 깔리면 밋밋해서, 숲 바닥의 얼룩덜룩함을 준다
 ## - `looks`   : {층: [목표색, 밝기 배율]} — 존 색 대신 이 층을 이 색으로 끌어당긴다
+## - `layers`  : 층 넷 (기본 `LAYERS`). 0 번이 나머지를 채우는 바닥이다
 ## - `void`    : true 면 이동 끝(`rim`) 너머 바닥을 **검게** 칠한다 — 갈 수 없는 곳은 땅이 아니다
 const RECIPES := {
 	"village": {
@@ -57,26 +58,29 @@ const RECIPES := {
 	# 어두운 숲 바닥). 광장 없이 흙길 하나가 차원문(-9, -9) → 도착 지점 → 무리
 	# (6, 6)로 굽이치고, 한 갈래가 오른쪽 언덕으로 빠진다. 나무·바위·풀포기는 Scenery
 	"thicket": {
+		# 바닥은 **흙 한 장** (2026-09-29 "기존 바닥은 뭔가 바닥 느낌이 잘 안나. 스크린샷처럼") —
+		# 리니지 흙바닥 스크린샷을 물려 바르코로 뽑은 `soil`. 풀·흙길·맨땅·풀빛 얼룩은 뺐다
+		"layers": ["soil", "stone", "cobble", "dirt"],
 		"plaza": 0.0,
-		"roads": [
-			[[-24, -21], [-15, -14], [-9, -9], [-6, -3], [0, 0], [2, 4], [6, 6], [9, 12], [8, 20], [11, 30]],
-			[[0, 0], [5, -3], [9, -8], [16, -10], [24, -17], [33, -18]],
-		],
+		"roads": [],
 		"road_layer": "dirt",
 		"road_w": 0.9,
 		"bumps": 0.55,
 		"rim": 12.5,
 		"rim_top": 0.0,
 		"flats": [[-9, -9, 3.0], [0, 0, 2.0]],
-		"patch": 0.55,
-		"shade": 1.0,
+		"patch": 0.0,
+		"shade": 0.0,
 		# 이동 끝부터는 검은 바닥 (2026-09-28 "해당 위치부터는 그냥 검은색으로 나와야 하는 것
 		# 아니야?") — 끝 너머가 풀밭으로 이어져 있으니 누르면 끝으로 당겨지는 게 고장으로 보였다.
 		# 그늘·턱으로 경계를 그어 봤는데 서서히 어두워져 선으로 안 읽혔다. 언덕도 없이 평평하게
 		"void": true,
-		# 존 색(grassLight #4a5936)은 검은빛이라 이끼 바닥이 흙과 안 갈린다 — 참고 그림의
-		# 짙지만 살아 있는 초록으로 덮어쓴다. shared 존 색은 하늘·다른 곳이 같이 써서 안 건드린다
-		"looks": {"grass": ["#6f8f38", 1.9], "dirt": ["#5e4a30", 1.25]},
+		"specular": 0.0,
+		# 흙 밝기 — 기존 바닥 규칙(반사율 0.3배)으로는 이 존의 어두운 조명에서 거의 검다.
+		# 화면이 참고 스크린샷(평균 #261b14)과 같아지게 재서 맞춘 배율
+		"looks": {"soil": ["#1e1d1c", 28.0]},
+		# 무늬 대비는 원본 그대로 — 1.4 제곱이면 흙의 밝은 티만 튀어 반짝이 가루가 된다
+		"contrast": 1.0,
 	},
 }
 
@@ -156,9 +160,13 @@ func mesh_instance(env: Dictionary) -> MeshInstance3D:
 		_mesh_cache = _mesh()
 		_splat_cache = _splat_texture()
 	node.mesh = _mesh_cache
-	node.material_override = Ground.terrain_material(env, LAYERS, _splat_cache, SPLAT_HALF, _recipe.get("looks", {}))
-	if _recipe.get("void", false) and node.material_override is ShaderMaterial:
-		node.material_override.set_shader_parameter("void_edge", float(_recipe.rim))
+	node.material_override = Ground.terrain_material(env, _recipe.get("layers", LAYERS), _splat_cache, SPLAT_HALF, _recipe.get("looks", {}))
+	if node.material_override is ShaderMaterial:
+		if _recipe.get("void", false):
+			node.material_override.set_shader_parameter("void_edge", float(_recipe.rim))
+		node.material_override.set_shader_parameter("specular", float(_recipe.get("specular", 0.5)))
+		if _recipe.has("contrast"):
+			node.material_override.set_shader_parameter("contrast", float(_recipe.contrast))
 	return node
 
 

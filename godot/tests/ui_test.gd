@@ -1672,6 +1672,17 @@ func _check_upgrades(game: Node3D, me: Dictionary, panel: Control, screen: Vecto
 		_fail("1000 을 채웠는데 강화가 안 붙었다 (%s · '%s')" % [str(me.skill_upgrades), cards[0].amount.text])
 	else:
 		print("  강화 칸: %s · 400 → +10만으로 '%s' · 남은 %d" % [box, cards[0].amount.text, int(me.skill_exp)])
+	# 글자가 길어져도 창은 그대로이고 글자가 줄어든다 (2026-09-29 — 안내 줄에 밀려 창이 들썩였다)
+	# (창은 전체 화면이라 그대로다 — 늘던 것은 가운데 세 칸이다)
+	var columns: Control = cards[0].card.get_parent().get_parent()
+	var wide := columns.get_global_rect()
+	me.skill_exp = 999999999
+	game._redraw_skills()
+	await process_frame
+	var hint: Label = game._upgrade_hint
+	if not columns.get_global_rect().is_equal_approx(wide) or hint.get_theme_font_size("font_size") >= 17:
+		_fail("경험치 %d 에서 스킬창 칸 %s → %s · 안내 글자 %d — 칸은 그대로, 글자가 줄어야 한다" % [
+			int(me.skill_exp), wide, columns.get_global_rect(), hint.get_theme_font_size("font_size")])
 	world.debug_reset_upgrades("me")
 
 

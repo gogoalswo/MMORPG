@@ -102,6 +102,7 @@ func _inventory_changed(p: Dictionary) -> void:
 ## --- 처치 보상 ---
 
 ## 몬스터를 잡았다 → 드롭·골드·경험치·레벨·전직 시험·던전 클리어. `target` 은 `{kind, zone}` —
+## **던전(토벌)에서는 스킬 경험치만 준다** — 드롭·골드·크리스탈·캐릭터 경험치 없음 (2026-09-29 요청).
 ## **레벨·경험치·보스 여부는 여기서 표로 찾는다.** 기기가 수치를 보내면 서버가 그 값을 믿어야 한다.
 ## 이 처치가 정말 있었는지(스폰 명부 · 최소 처치 시간)는 드롭 판정 단계에서 본다
 func kill(p: Dictionary, target: Dictionary) -> void:
@@ -113,6 +114,9 @@ func kill(p: Dictionary, target: Dictionary) -> void:
 		"level": int(kind.get("level", 1)), "exp_reward": float(kind.get("expReward", 0)),
 		"boss": bool(kind.get("boss", false)), "zone": str(target.get("zone", "")),
 	}
+	if not GameData.dungeon_stage(str(target.zone)).is_empty():
+		_check_dungeon_clear(p, target)
+		return
 	# 보상을 굴린다. **굴리는 쪽은 언제나 판정하는 쪽이다**
 	var loot := Items.roll_drop(int(target.level), str(p.job), rng)
 	p.gold = int(p.gold) + int(loot.gold)

@@ -685,10 +685,10 @@ func _case_dungeon(game: Node3D) -> void:
 	var window: Control = panel.find_child("StageWindow", true, false)
 	if not screen.encloses(window.get_global_rect()):
 		_fail("단계 창이 화면 밖으로 넘친다: %s" % window.get_global_rect())
-	# 처음엔 1단계가 골라져 있고, 보상(장비 + 크리스탈 + 골드)이 보인다
-	if panel.picked_stage() != "raid_01" or panel.reward_count() < 3:
-		_fail("단계 창을 열면 1단계가 골라지고 보상이 보여야 한다: %s 보상 %d칸" % [panel.picked_stage(), panel.reward_count()])
-	# 맨 앞은 던전 클리어의 스킬 경험치 (1단계 = 1000)
+	# 처음엔 1단계가 골라져 있고, 보상은 스킬 경험치 한 칸뿐이다 (장비·크리스탈·골드 없음)
+	if panel.picked_stage() != "raid_01" or panel.reward_count() != 1:
+		_fail("단계 창을 열면 1단계가 골라지고 보상은 한 칸이어야 한다: %s 보상 %d칸" % [panel.picked_stage(), panel.reward_count()])
+	# 그 한 칸은 던전 클리어의 스킬 경험치 (1단계 = 1000)
 	var first_reward: Label = panel._rewards.get_child(0).find_children("*", "Label", true, false)[0]
 	if first_reward.text != "스킬 경험치 1000":
 		_fail("보상 맨 앞이 스킬 경험치여야 한다: '%s'" % first_reward.text)
@@ -700,8 +700,8 @@ func _case_dungeon(game: Node3D) -> void:
 	await _tap_row(panel, 4)
 	if not panel.visible or panel.picked_stage() != "raid_05":
 		_fail("5단계를 눌렀으면 창은 그대로이고 5단계가 골라져야 한다: %s" % panel.picked_stage())
-	elif panel.reward_count() <= 8:
-		_fail("5단계는 두 등급(1·2)이 나와 보상이 1단계보다 많아야 한다: %d칸" % panel.reward_count())
+	elif panel.reward_count() != 1 or panel._rewards.get_child(0).find_children("*", "Label", true, false)[0].text != "스킬 경험치 5000":
+		_fail("5단계 보상은 스킬 경험치 5000 한 칸이어야 한다: %d칸" % panel.reward_count())
 	# X 는 단계 창만 닫는다 — 던전 카드로 돌아간다
 	panel.close_button().pressed.emit()
 	await process_frame

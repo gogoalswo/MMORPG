@@ -53,7 +53,7 @@
 | `packages/shared/src/skills.test.ts` · `zones.test.ts` | 강화가 있는 스킬에 붙나 · 필요 경험치가 전직 단계 표와 맞나 · 스킬마다 둘 이하 / 단계 보상 = 단계 × 1000 |
 | `godot/world/skills.gd` `upgrade` · `upgrades_of` · `stun_ms` · `range_mul` · `power_mul` · `upgrade_sum` | 표 읽기. `upgrades_of` 의 순서가 1번·2번. `power_mul` 은 피해 배율(`powerMul`, 곱한다), `upgrade_sum` 은 더하는 효과(`extraHits`) |
 | `godot/world/game_data.gd` `dungeon_stage` | 존 id → 던전 단계(`skillExp` 포함). 던전이 아니면 빈 사전 |
-| `godot/world/ledger.gd` `_check_dungeon_clear` | ★ 던전 보스를 잡으면 `skill_exp` 에 더한다 (`skillExp` 이벤트 · 알림). `Ledger.kill` 에서 전직 시험 확인 다음에 부른다. `skill_exp` 는 장부 칸(`KEYS`)이다 → [server.md](server.md) |
+| `godot/world/ledger.gd` `_check_dungeon_clear` | ★ 던전 보스를 잡으면 `skill_exp` 에 더한다 (`skillExp` 이벤트 · 알림). `Ledger.kill` 이 던전 존이면 이것만 부르고 돌아간다(드롭·경험치 없음). `skill_exp` 는 장부 칸(`KEYS`)이다 → [server.md](server.md) |
 | `godot/world/ledger.gd` `feed_upgrade` | ★ 스킬창의 넣기 단추 (`feedUpgrade` → `World.feed_upgrade` → 장부) — **판정은 여기서** (직업·번호·이미 붙었나·경험치가 있나 → 모자란 만큼만 빼서 쌓고, 닿으면 붙인다) |
 | `godot/world/ledger.gd` `add_upgrade` | 강화를 붙이고 그 강화에 쌓이던 경험치를 지운다 — 붙는 길은 전부 여기를 지난다 (`feed_upgrade` 도 여기. 치트는 `World._add_upgrade` 로 부른다) |
 | `godot/world/world.gd` `cast` | 붙은 강화를 `skill` 이벤트에 싣고(`upgrades`), 사거리에 배율을 곱하고, 각·대 수를 더하고, 기절·지대를 건다 |
@@ -96,6 +96,8 @@
 - **던전 보스를 잡으면** 그 단계의 `skillExp`(단계 × 1000)가 캐릭터의 `skill_exp` 에
   더해진다 (`Ledger._check_dungeon_clear`). **잡을 때마다** 받는다 — 보스가 다시 서면(15분,
   나갔다 들어오면 바로) 또 받는다. 사냥터 보스·전직 시험 보스는 안 준다(던전 존이 아니다).
+- **던전은 스킬 경험치만 준다** (2026-09-29) — 드롭·골드·크리스탈·캐릭터 경험치가 없다.
+  `Ledger.kill` 이 던전 존이면 `_check_dungeon_clear` 만 부르고 돌아간다 → [dungeons.md](dungeons.md).
 - **스킬창에서 카드를 눌러 강화를 고르고**(금 막대, 처음엔 1번), 아래 **[넣기]** 를 누르면
   모아 둔 경험치가 고른 강화에 **모자란 만큼만** 들어간다 — 남는 것은 `skill_exp` 에 그대로
   남아 다른 강화에 쓴다. (경험치북 판은 넘친 만큼 버렸다.)

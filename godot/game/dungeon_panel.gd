@@ -473,34 +473,14 @@ func _select(zone_id: String) -> void:
 		_rewards.add_child(_reward_cell(reward))
 
 
-## 그 단계 보스가 주는 것 — **판정이 주는 것 그대로다.** 맨 앞은 던전 클리어의
-## **스킬 경험치**(`skillExp`, `ledger.gd` 의 `_check_dungeon_clear`). 그다음 장비는
-## 그 레벨대가 여는 등급(`Items.drop_grades`) × 슬롯 6종, 높은 등급부터
-## (`Items.roll_drop`). 그 뒤에 크리스탈 · 골드(굴리는 폭). 확률은 적지 않는다 —
-## 받은 그림도 이름뿐이다
+## 그 단계 보스가 주는 것 — **판정이 주는 것 그대로다.** 던전은 클리어의
+## **스킬 경험치**(`skillExp`, `ledger.gd` 의 `_check_dungeon_clear`) 하나만 준다 —
+## 장비·크리스탈·골드는 뺐다 (2026-09-29 요청)
 func _stage_rewards(stage: Dictionary) -> Array:
 	var out: Array = []
-	var level := int(stage.get("level", 0))
 	var skill_exp := int(stage.get("skillExp", 0))
 	if skill_exp > 0:
 		out.append({"name": "스킬 경험치 %d" % skill_exp, "icon": "ui_icon_skill", "color": CARD_GOLD})
-	var grades := Items.drop_grades(level)
-	grades.sort()
-	grades.reverse()
-	for g in grades:
-		for slot in Items.slots():
-			var id := Items.item_id(int(g), str(slot))
-			var stack := {"id": id, "grade": int(g)}
-			out.append({
-				"name": Items.stack_name(stack),
-				"icon": str(_item_icon.call(stack)) if _item_icon.is_valid() else str(slot),
-				"color": ChatLog.grade_text_color(int(g)),
-				"grade": int(g),
-			})
-	var crystal := Items.crystal_id()
-	out.append({"name": Items.stack_name({"id": crystal}), "icon": crystal, "color": TEXT_COLOR})
-	var gold := Items.gold_range(level)
-	out.append({"name": "골드 %d ~ %d" % [gold.x, gold.y], "icon": "gold", "color": CARD_GOLD})
 	return out
 
 

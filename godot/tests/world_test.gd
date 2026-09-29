@@ -13,14 +13,17 @@ func _init() -> void:
 	t.open(GameData.start_zone())
 
 	var start := _me(t)
-	_expect("시작 자리는 마을 스폰", Vector2(start.x, start.z), Vector2(0, 0))
+	# 마을 스폰은 문(한가운데)을 비켜 (4, 4)다 — 수치는 표에서 읽는다
+	var spawn: Array = GameData.zone(GameData.start_zone())["spawns"]["default"]
+	var spawn_at := Vector2(float(spawn[0]), float(spawn[1]))
+	_expect("시작 자리는 마을 스폰", Vector2(start.x, start.z), spawn_at)
 	_expect_text("존 이름", str(t.snapshot().get("zone")), "village")
 
 	# 1초어치 오른쪽 이동 (60틱). 4.6m/s 이므로 4.6m
 	for i in 60:
 		t.send(&"input", {"seq": i + 1, "dx": 1.0, "dz": 0.0, "dt": 1.0 / 60.0})
 	var after := _me(t)
-	_expect("1초 달리면 4.6m", Vector2(after.x, after.z), Vector2(4.6, 0.0))
+	_expect("1초 달리면 4.6m", Vector2(after.x, after.z), spawn_at + Vector2(4.6, 0.0))
 
 	# 같은 순번을 다시 보내면 무시한다 (지연 도착한 중복)
 	t.send(&"input", {"seq": 60, "dx": 1.0, "dz": 0.0, "dt": 1.0 / 60.0})

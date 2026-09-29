@@ -190,14 +190,14 @@
       "size": 66,
       "spawns": {
         "default": [
-          0,
-          0
+          4,
+          4
         ]
       },
       "gate": {
         "position": [
-          -18,
-          -18
+          0,
+          0
         ],
         "radius": 2.6,
         "color": "#4aa8ff",
@@ -208,8 +208,8 @@
           "name": "전직관 레온",
           "job": "fighter",
           "look": "trainer",
-          "x": 7,
-          "z": 7,
+          "x": -6.5,
+          "z": -3.5,
           "role": "jobs",
           "title": "전직"
         }

@@ -41,9 +41,13 @@ const AHEAD := 0.9
 const CORE_Y := 1.25
 const GROUND := 0.05
 
-## 호 한 가닥 = [시작(초), 지나가는 데 걸리는 시간(초)]. 머리가 끝까지 가며 꼬리가
-## 따라와 사라진다. 꼬리 길이(호 길이에 대한 비율)
+## 호 한 가닥 = [시작(초), 머리가 끝까지 가는 시간(초)]. 꼬리 길이(호 길이에 대한 비율)
 const TRAIL := 0.6
+## 머리가 끝에 닿은 뒤 버티는 시간 · **알파를 빼며 사그라드는 시간** — 파천장(`KiFx`)과 같다
+## (2026-09-29 요청: "파천장 이펙트처럼 사라질때 알파 빠지면서 스르륵"). 전에는 꼬리가 머리를
+## 쫓아가 호가 닦이듯 꺼졌다
+const HOLD := 0.08
+const FADE := 0.6
 ## 끓는 동안 가운데를 감아 도는 호 — 수 · 반지름 · 지나가는 시간
 const GATHER_ARCS := 28
 const GATHER_RADIUS_MIN := 0.4
@@ -67,8 +71,10 @@ const RAY_SWEEP_MAX := 0.3
 const SEGMENTS := 24
 const RAY_SEGMENTS := 8
 ## 두 겹 — 넓은 금빛 헤일로 + 가는 흰 심 (규칙 5절: 폭만 다른 겹)
+## 호 세 겹의 폭 — 파천장 소용돌이(`KiFx.SWIRL_LAYERS`)와 같은 비율(넓은 헤일로 · 크림빛 · 가는 흰 심)
 const HALO_WIDTH := 1.1
-const CORE_WIDTH := 0.28
+const MID_WIDTH := 0.44
+const CORE_WIDTH := 0.13
 
 ## 가운데 빛무리 — 끓는 동안 이만큼까지 부푼다 (m)
 ## 너무 크고 진하면 몸을 통째로 덮는다 (2차 캡처) — 참고 그림처럼 몸이 비쳐야 한다
@@ -120,22 +126,28 @@ const LIGHT_LIFE := 0.45
 const SHAKE := 0.2
 const SHAKE_TIME := 0.45
 
-const COLOR_HALO := Color(1.0, 0.7, 0.18, 0.55)
-const COLOR_CORE := Color(1.0, 0.96, 0.82, 0.95)
-const COLOR_ORB := Color("#ffe39a")
-const COLOR_FLASH := Color("#ffd98a")
-const COLOR_GOLD := Color("#ffd04a")
-const COLOR_FIRE_HOT := Color("#fff6d8")
-const COLOR_FIRE := Color("#ffb53a")
-const COLOR_FIRE_END := Color("#ff6a14")
-const COLOR_SMOKE := Color("#8a7e70")
-const COLOR_DUST := Color("#c8ae86")
+## 색은 **파천장(`KiFx`) 색감**이다 (2026-09-29 요청) — 주황 불길이 아니라 연한 금빛·크림빛·흰빛.
+## 호 세 겹 = `KiFx.SWIRL_LAYERS`, 섬광 = `KiFx.COLOR_FLASH`, 기운 = `KiFx.COLOR_AURA`,
+## 금가루 = `KiFx.COLOR_MOTE`, 흙먼지 = `KiFx.COLOR_DUST`. 불덩이도 흰 속 → 크림 → 연한 금빛으로 식는다
+const COLOR_HALO := Color(1.0, 0.78, 0.38, 0.38)
+const COLOR_MID := Color(1.0, 0.95, 0.78, 0.8)
+const COLOR_CORE := Color(1.0, 1.0, 1.0, 1.0)
+const COLOR_ORB := Color(1.0, 0.94, 0.78)
+const COLOR_FLASH := Color(1.0, 0.93, 0.72)
+const COLOR_GOLD := Color("#ffe3a0")
+const COLOR_FIRE_HOT := Color("#fffaf0")
+const COLOR_FIRE := Color(1.0, 0.95, 0.78)
+const COLOR_FIRE_END := Color(1.0, 0.82, 0.45)
+const COLOR_SMOKE := Color("#a39886")
+const COLOR_DUST := Color(0.93, 0.86, 0.7)
 const COLOR_SCORCH := Color("#1e1409")
-const COLOR_LIGHT := Color("#ffc65a")
+const COLOR_LIGHT := Color(1.0, 0.9, 0.7)
 
-## 호·빛살 셰이더. `UV` = (지나가기 시작하는 시각, 걸리는 시간), `UV2` = (호 위의
+## 호·빛살 셰이더. `UV` = (나오는 시각, 머리가 끝까지 가는 시간), `UV2` = (호 위의
 ## 자리 0~1, 폭 방향 −1·0·1), `COLOR.r` = 폭 배율. 셰이더가 `now` 로 머리~꼬리
 ## 사이만 초승달 폭으로 벌린다 — 할퀴기(`SkillFx.CLAW_SHADER`)와 같은 생각이다.
+## 머리가 끝에 닿으면 `hold` 만큼 버티다가 `fade` 동안 **알파가 스무스스텝으로 빠지고**
+## 꼬리는 머리 쪽으로 30% 만 모인다 — 파천장 `KiFx._draw_swirl` 과 같은 사라짐이다.
 ## 시각을 `COLOR` 에 넣지 않는 것은 꼭짓점 색이 8비트라 시각이 뭉개져서다
 const SWIRL_SHADER := """
 shader_type spatial;
@@ -145,11 +157,19 @@ uniform vec4 tint : source_color = vec4(1.0);
 uniform float width = 0.3;
 uniform float now = 0.0;
 uniform float trail = 0.6;
+uniform float hold = 0.08;
+uniform float fade = 0.6;
 varying float side;
+varying float alpha;
 void vertex() {
 	float lt = now - UV.x;
-	float head = lt / max(UV.y, 1e-3) * (1.0 + trail);
-	float u = (UV2.x - (head - trail)) / trail;
+	float p = clamp(lt / max(UV.y, 1e-3), 0.0, 1.0);
+	float head = 1.0 - pow(1.0 - p, 3.0);
+	float tail = max(0.0, head - trail);
+	float f = clamp((lt - UV.y - hold) / max(fade, 1e-3), 0.0, 1.0);
+	tail = mix(tail, head, (1.0 - pow(1.0 - f, 3.0)) * 0.3);
+	alpha = 1.0 - smoothstep(0.0, 1.0, f);
+	float u = (UV2.x - tail) / max(head - tail, 1e-3);
 	float w = (lt < 0.0 || u < 0.0 || u > 1.0) ? 0.0 : sin(PI * pow(u, 1.6));
 	vec3 across = normalize(cross(INV_VIEW_MATRIX[2].xyz, NORMAL));
 	VERTEX += across * UV2.y * width * COLOR.r * 0.5 * w;
@@ -158,7 +178,7 @@ void vertex() {
 void fragment() {
 	vec4 t = texture(streak, vec2(side * 0.5 + 0.5, 0.5));
 	ALBEDO = tint.rgb * t.rgb;
-	ALPHA = tint.a * t.a;
+	ALPHA = tint.a * t.a * alpha;
 }
 """
 static var _shader: Shader
@@ -169,6 +189,7 @@ var _hit := false
 var _blown := false
 var _smoked := false
 var _halo: MeshInstance3D
+var _mid: MeshInstance3D
 var _core: MeshInstance3D
 var _orb: MeshInstance3D
 var _flash: MeshInstance3D
@@ -218,10 +239,12 @@ func _build() -> void:
 	_halo.position = core_at
 	# 셰이더가 폭을 벌리므로 경계 상자를 넉넉히 — 안 그러면 비껴 볼 때 통째로 잘린다
 	_halo.extra_cull_margin = 3.0 * SIZE
+	_mid = _sheet(swirl_material(MID_WIDTH * SIZE, COLOR_MID))
 	_core = _sheet(swirl_material(CORE_WIDTH * SIZE, COLOR_CORE))
-	_core.mesh = _halo.mesh
-	_core.position = core_at
-	_core.extra_cull_margin = 3.0 * SIZE
+	for node in [_mid, _core]:
+		node.mesh = _halo.mesh
+		node.position = core_at
+		node.extra_cull_margin = 3.0 * SIZE
 
 	_orb = _sheet(LightningFx.flare(COLOR_ORB))
 	var orb := QuadMesh.new()
@@ -297,10 +320,11 @@ func finish() -> void:
 
 
 func _show() -> void:
-	for node in [_halo, _core]:
+	# 마지막 가닥(폭발 호 — 늦게는 0.12초 뒤에 나온다)이 다 사그라들 때까지 켜 둔다
+	var swirling := _t < EXPLODE + 0.12 + BLAST_SWEEP_MAX + HOLD + FADE
+	for node in [_halo, _mid, _core]:
 		(node.material_override as ShaderMaterial).set_shader_parameter(&"now", _t)
-	_halo.visible = _t < EXPLODE + BLAST_SWEEP_MAX + 0.2
-	_core.visible = _halo.visible
+		node.visible = swirling
 
 	# 가운데 빛무리 — 닿는 순간 튀고, 끓는 동안 떨며 부풀고, 터지면 빠르게 죈다
 	var orb_size := 0.0
@@ -311,10 +335,11 @@ func _show() -> void:
 		orb_size = lerpf(ORB_MIN, ORB_MAX, k * k) * (1.0 + 0.12 * sin(_t * 70.0)) + pop * 0.8
 		orb_alpha = 0.45 + 0.35 * k
 	elif _t >= EXPLODE:
-		var k := (_t - EXPLODE) / 0.25
+		var k := minf((_t - EXPLODE) / FADE, 1.0)
 		orb_size = ORB_MAX * (1.0 - k * 0.5)
-		# 끓을 때의 진하기에서 사그라든다 — 1.0 으로 튀면 섬광과 겹쳐 흰 덩어리가 된다
-		orb_alpha = 0.8 * (1.0 - k)
+		# 끓을 때의 진하기에서 사그라든다 — 1.0 으로 튀면 섬광과 겹쳐 흰 덩어리가 된다.
+		# 알파는 스무스스텝으로 스르륵 빠진다 (파천장과 같다)
+		orb_alpha = 0.8 * (1.0 - smoothstep(0.0, 1.0, k))
 	_orb.visible = orb_alpha > 0.0
 	if _orb.visible:
 		_orb.scale = Vector3.ONE * orb_size * SIZE
@@ -423,7 +448,7 @@ func _aura_emitter() -> CPUParticles3D:
 	e.initial_velocity_max = 2.6
 	e.gravity = Vector3(0.0, 1.5, 0.0)
 	e.scale_amount_curve = LightningFx.grow_curve(1.8)
-	e.color_ramp = LightningFx.fade_ramp(COLOR_FIRE, 0.55)
+	e.color_ramp = KiFx.soft_ramp(COLOR_FIRE, 0.55)
 	var mat := LightningFx.mote(Color.WHITE, true)
 	mat.albedo_texture = FxTex.puff()
 	e.material_override = mat
@@ -468,10 +493,12 @@ func _fire_emitter() -> CPUParticles3D:
 	e.scale_amount_curve = LightningFx.grow_curve(2.2)
 	var ramp := Gradient.new()
 	# 첫 색도 흰색이 아니라 옅은 금빛이다 — 흰 속이 한가운데 겹치면 흰 공이 된다
+	# 알파는 일찍부터 천천히 빠진다 — `KiFx.soft_ramp` 와 같은 곡선 (끝에서 팍 꺼지지 않게)
 	ramp.set_color(0, Color(COLOR_ORB.r, COLOR_ORB.g, COLOR_ORB.b, 0.32))
 	ramp.set_offset(1, 0.3)
 	ramp.set_color(1, Color(COLOR_FIRE.r, COLOR_FIRE.g, COLOR_FIRE.b, 0.4))
-	ramp.add_point(0.7, Color(COLOR_FIRE_END.r, COLOR_FIRE_END.g, COLOR_FIRE_END.b, 0.25))
+	ramp.add_point(0.6, Color(COLOR_FIRE_END.r, COLOR_FIRE_END.g, COLOR_FIRE_END.b, 0.2))
+	ramp.add_point(0.85, Color(COLOR_FIRE_END.r, COLOR_FIRE_END.g, COLOR_FIRE_END.b, 0.06))
 	ramp.add_point(1.0, Color(COLOR_FIRE_END.r, COLOR_FIRE_END.g, COLOR_FIRE_END.b, 0.0))
 	e.color_ramp = ramp
 	var mat := LightningFx.mote(Color.WHITE, true)
@@ -496,7 +523,7 @@ func _smoke_emitter() -> CPUParticles3D:
 	e.damping_max = 1.5
 	e.gravity = Vector3(0.0, 0.7, 0.0)
 	e.scale_amount_curve = LightningFx.grow_curve(2.0)
-	e.color_ramp = LightningFx.fade_ramp(COLOR_SMOKE, 0.3)
+	e.color_ramp = KiFx.soft_ramp(COLOR_SMOKE, 0.3)
 	var mat := LightningFx.mote(Color.WHITE)
 	mat.albedo_texture = FxTex.puff()
 	mat.proximity_fade_enabled = true
@@ -521,7 +548,7 @@ func _dust_emitter() -> CPUParticles3D:
 	e.damping_min = DUST_DAMP
 	e.damping_max = DUST_DAMP
 	e.scale_amount_curve = LightningFx.grow_curve(2.0)
-	e.color_ramp = LightningFx.fade_ramp(COLOR_DUST, 0.55)
+	e.color_ramp = KiFx.soft_ramp(COLOR_DUST, 0.55)
 	var mat := LightningFx.mote(Color.WHITE)
 	mat.albedo_texture = FxTex.puff()
 	mat.proximity_fade_enabled = true
@@ -541,6 +568,8 @@ static func swirl_material(width: float, tint: Color) -> ShaderMaterial:
 	mat.set_shader_parameter(&"width", width)
 	mat.set_shader_parameter(&"tint", tint)
 	mat.set_shader_parameter(&"trail", TRAIL)
+	mat.set_shader_parameter(&"hold", HOLD)
+	mat.set_shader_parameter(&"fade", FADE)
 	return mat
 
 

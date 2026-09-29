@@ -1,5 +1,5 @@
 import { ZONE_SIZE, type GateDef, type ZoneDef } from './zone.ts';
-import { MONSTER_KINDS, bossIdFor, bossLevel } from './monsters.ts';
+import { MONSTER_KINDS, bossIdFor, bossLevel, monsterIdFor, tierLevels } from './monsters.ts';
 
 /**
  * 던전 — 가방 옆 "던전" 단추로 들어간다 (차원문 목록에는 없다).
@@ -7,12 +7,12 @@ import { MONSTER_KINDS, bossIdFor, bossLevel } from './monsters.ts';
  *   던전 단추 ─┬─ 토벌 던전 ─┬─ 1단계 (초원 보스 Lv.9)
  *              │             ├─ …
  *              │             └─ 20단계
- *              ├─ (준비 중)
+ *              ├─ 시련의 탑 ─┬─ 1단계 (초원 몬스터 Lv.8 × 10, 30초에 7마리)
+ *              │             └─ … 20단계
  *              └─ (준비 중)
  *
- * **종류는 셋인데 지금은 토벌 하나만 연다** (2026-09-23 요청: "일단 한 가지 타입만
- * 구현하자"). 나머지 둘은 창에 이름만 보이고 눌리지 않는다 — `open: false`.
- * 이름은 자리를 잡아 둔 가칭이다. 열 때 정한다.
+ * **종류는 셋인데 토벌과 시련의 탑을 연다** (토벌 2026-09-23, 시련의 탑 2026-09-29).
+ * 보물 창고는 창에 이름만 보이고 눌리지 않는다 — `open: false`. 이름은 가칭이다.
  *
  * **단계 하나 = 존 하나 = 보스 한 마리.** 보스는 사냥터 보스를 그대로 쓴다 —
  * N단계는 N번째 사냥터의 보스다. 새 종을 만들지 않으니 몬스터 표·모델이 그대로다.
@@ -24,10 +24,17 @@ export interface DungeonStage {
   zone: string;
   /** 1부터 */
   stage: number;
-  boss: string;
+  /** 토벌만 — 그 단계 보스 */
+  boss?: string;
   level: number;
   /** 깨면(보스를 잡으면) 들어오는 **스킬 경험치** — 단계 × `DUNGEON_SKILL_EXP_PER_STAGE` */
   skillExp: number;
+  /** 시련의 탑만 — 나오는 일반 몬스터 종 (토벌은 `boss`) */
+  monster?: string;
+  /** 시련의 탑만 — `seconds` 안에 `kills` 마리를 잡으면 통과, 크리스탈 `crystals` 개 */
+  kills?: number;
+  seconds?: number;
+  crystals?: number;
 }
 
 export interface DungeonType {
@@ -81,9 +88,56 @@ const RAID_STAGES: DungeonStage[] = Array.from({ length: BOSS_COUNT }, (_, i) =>
   skillExp: (i + 1) * DUNGEON_SKILL_EXP_PER_STAGE,
 }));
 
+/**
+ * **시련의 탑 — 30초 안에 7마리** (2026-09-29 요청: "30초 동안 여러 몬스터를 잡으면 통과하는
+ * 던전", "7마리 잡는걸로 하고, 맵 크기를 줄여", "크리스탈을 보상으로").
+ *
+ * - 7마리는 설계의 "동레벨 한 마리 4초"(`KILL_SECONDS`, stat-balance.md 7장)에서 나왔다 —
+ *   30 ÷ 4 = 7.5. 동레벨 평타만으로는 5~6마리라 스킬을 섞어야 통과한다.
+ * - N단계 = N번째 사냥터의 **강한 일반 몬스터**(`tierLevels(N-1)[1]`, Lv.10N-2). 새 종을 만들지 않는다.
+ * - 맵은 `TRIAL_ZONE_SIZE`(30, 이동 가능 ±11) — 사냥터(66)의 절반이 안 된다. 사냥터의 4초에는
+ *   다음 몬스터까지 8m 걷는 시간이 들어 있는데, 좁은 맵에서는 그 시간이 거의 빠진다.
+ * - 몬스터는 도착 지점을 둘러싼 **반경 `TRIAL_RING` 원에 `TRIAL_MONSTERS` 마리**, 되살아나지
+ *   않는다(시험 동안). 7마리보다 셋 많게 둬 한두 마리가 멀리 떠돌아도 모자라지 않다.
+ * - 통과 판정은 기기(`World._trial`)가 하고, 크리스탈은 장부(`Ledger.trial_clear`)가 준다.
+ *   서버는 들어온 뒤 30초 안에 인정한 처치 수를 제 명단으로 다시 센다 (server.md).
+ * - 보상 = 단계 × `TRIAL_CRYSTALS_PER_STAGE` 개 (사용자가 고른 안: "단계 × 1개").
+ * - 차원문이 없다 — 나가는 길은 결과창 **확인**(마을로)과 HUD **마을가기** 다.
+ */
+export const TRIAL_KILLS = 7;
+export const TRIAL_SECONDS = 30;
+export const TRIAL_CRYSTALS_PER_STAGE = 1;
+export const TRIAL_ZONE_SIZE = 30;
+export const TRIAL_MONSTERS = 10;
+export const TRIAL_RING = 7;
+
+const trialZoneId = (stage: number) => `trial_${String(stage).padStart(2, '0')}`;
+
+const TRIAL_STAGES: DungeonStage[] = Array.from({ length: BOSS_COUNT }, (_, i) => {
+  const level = tierLevels(i)[1];
+  return {
+    zone: trialZoneId(i + 1),
+    stage: i + 1,
+    monster: monsterIdFor(level),
+    level,
+    skillExp: 0,
+    kills: TRIAL_KILLS,
+    seconds: TRIAL_SECONDS,
+    crystals: (i + 1) * TRIAL_CRYSTALS_PER_STAGE,
+  };
+});
+
+/** 시련 몬스터 자리 — 도착 지점(0, 0)을 둘러싼 원에 고르게. 한 자리에 한 마리 */
+export function trialSpots(): [number, number][] {
+  return Array.from({ length: TRIAL_MONSTERS }, (_, i) => {
+    const a = (i / TRIAL_MONSTERS) * Math.PI * 2;
+    return [Math.round(Math.cos(a) * TRIAL_RING * 10) / 10, Math.round(Math.sin(a) * TRIAL_RING * 10) / 10];
+  });
+}
+
 export const DUNGEON_TYPES: DungeonType[] = [
   { id: 'raid', name: '토벌 던전', open: true, stages: RAID_STAGES },
-  { id: 'trial', name: '시련의 탑', open: false, stages: [] },
+  { id: 'trial', name: '시련의 탑', open: true, stages: TRIAL_STAGES },
   { id: 'treasure', name: '보물 창고', open: false, stages: [] },
 ];
 
@@ -98,13 +152,26 @@ export function dungeonZones(gate: () => GateDef): ZoneDef[] {
   const out: ZoneDef[] = [];
   for (const type of DUNGEON_TYPES) {
     for (const s of type.stages) {
+      const name = `${type.name} ${s.stage}단계`;
+      if (s.monster) {
+        // 시련의 탑 — 좁은 맵, 차원문 없음, 되살아나지 않는 몬스터 원
+        out.push({
+          id: s.zone,
+          name,
+          size: TRIAL_ZONE_SIZE,
+          spawns: { default: [0, 0] },
+          monsters: trialSpots().map(([x, z]) => ({ kind: s.monster!, x, z, radius: 0, count: 1, respawnMs: 900000 })),
+          env: DUNGEON_ENV,
+        });
+        continue;
+      }
       out.push({
         id: s.zone,
-        name: `${type.name} ${s.stage}단계`,
+        name,
         size: ZONE_SIZE,
         spawns: { default: [0, 0] },
         gate: gate(),
-        monsters: [{ kind: s.boss, x: DUNGEON_BOSS_SPOT[0], z: DUNGEON_BOSS_SPOT[1], radius: 3, count: 1, respawnMs: 900000 }],
+        monsters: [{ kind: s.boss!, x: DUNGEON_BOSS_SPOT[0], z: DUNGEON_BOSS_SPOT[1], radius: 3, count: 1, respawnMs: 900000 }],
         env: DUNGEON_ENV,
       });
     }

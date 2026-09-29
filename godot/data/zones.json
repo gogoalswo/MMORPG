@@ -173,8 +173,209 @@
     {
       "id": "trial",
       "name": "시련의 탑",
-      "open": false,
-      "stages": []
+      "open": true,
+      "stages": [
+        {
+          "zone": "trial_01",
+          "stage": 1,
+          "monster": "mob008",
+          "level": 8,
+          "skillExp": 0,
+          "kills": 7,
+          "seconds": 30,
+          "crystals": 1
+        },
+        {
+          "zone": "trial_02",
+          "stage": 2,
+          "monster": "mob018",
+          "level": 18,
+          "skillExp": 0,
+          "kills": 7,
+          "seconds": 30,
+          "crystals": 2
+        },
+        {
+          "zone": "trial_03",
+          "stage": 3,
+          "monster": "mob028",
+          "level": 28,
+          "skillExp": 0,
+          "kills": 7,
+          "seconds": 30,
+          "crystals": 3
+        },
+        {
+          "zone": "trial_04",
+          "stage": 4,
+          "monster": "mob038",
+          "level": 38,
+          "skillExp": 0,
+          "kills": 7,
+          "seconds": 30,
+          "crystals": 4
+        },
+        {
+          "zone": "trial_05",
+          "stage": 5,
+          "monster": "mob048",
+          "level": 48,
+          "skillExp": 0,
+          "kills": 7,
+          "seconds": 30,
+          "crystals": 5
+        },
+        {
+          "zone": "trial_06",
+          "stage": 6,
+          "monster": "mob058",
+          "level": 58,
+          "skillExp": 0,
+          "kills": 7,
+          "seconds": 30,
+          "crystals": 6
+        },
+        {
+          "zone": "trial_07",
+          "stage": 7,
+          "monster": "mob068",
+          "level": 68,
+          "skillExp": 0,
+          "kills": 7,
+          "seconds": 30,
+          "crystals": 7
+        },
+        {
+          "zone": "trial_08",
+          "stage": 8,
+          "monster": "mob078",
+          "level": 78,
+          "skillExp": 0,
+          "kills": 7,
+          "seconds": 30,
+          "crystals": 8
+        },
+        {
+          "zone": "trial_09",
+          "stage": 9,
+          "monster": "mob088",
+          "level": 88,
+          "skillExp": 0,
+          "kills": 7,
+          "seconds": 30,
+          "crystals": 9
+        },
+        {
+          "zone": "trial_10",
+          "stage": 10,
+          "monster": "mob098",
+          "level": 98,
+          "skillExp": 0,
+          "kills": 7,
+          "seconds": 30,
+          "crystals": 10
+        },
+        {
+          "zone": "trial_11",
+          "stage": 11,
+          "monster": "mob108",
+          "level": 108,
+          "skillExp": 0,
+          "kills": 7,
+          "seconds": 30,
+          "crystals": 11
+        },
+        {
+          "zone": "trial_12",
+          "stage": 12,
+          "monster": "mob118",
+          "level": 118,
+          "skillExp": 0,
+          "kills": 7,
+          "seconds": 30,
+          "crystals": 12
+        },
+        {
+          "zone": "trial_13",
+          "stage": 13,
+          "monster": "mob128",
+          "level": 128,
+          "skillExp": 0,
+          "kills": 7,
+          "seconds": 30,
+          "crystals": 13
+        },
+        {
+          "zone": "trial_14",
+          "stage": 14,
+          "monster": "mob138",
+          "level": 138,
+          "skillExp": 0,
+          "kills": 7,
+          "seconds": 30,
+          "crystals": 14
+        },
+        {
+          "zone": "trial_15",
+          "stage": 15,
+          "monster": "mob148",
+          "level": 148,
+          "skillExp": 0,
+          "kills": 7,
+          "seconds": 30,
+          "crystals": 15
+        },
+        {
+          "zone": "trial_16",
+          "stage": 16,
+          "monster": "mob158",
+          "level": 158,
+          "skillExp": 0,
+          "kills": 7,
+          "seconds": 30,
+          "crystals": 16
+        },
+        {
+          "zone": "trial_17",
+          "stage": 17,
+          "monster": "mob168",
+          "level": 168,
+          "skillExp": 0,
+          "kills": 7,
+          "seconds": 30,
+          "crystals": 17
+        },
+        {
+          "zone": "trial_18",
+          "stage": 18,
+          "monster": "mob178",
+          "level": 178,
+          "skillExp": 0,
+          "kills": 7,
+          "seconds": 30,
+          "crystals": 18
+        },
+        {
+          "zone": "trial_19",
+          "stage": 19,
+          "monster": "mob188",
+          "level": 188,
+          "skillExp": 0,
+          "kills": 7,
+          "seconds": 30,
+          "crystals": 19
+        },
+        {
+          "zone": "trial_20",
+          "stage": 20,
+          "monster": "mob198",
+          "level": 198,
+          "skillExp": 0,
+          "kills": 7,
+          "seconds": 30,
+          "crystals": 20
+        }
+      ]
     },
     {
       "id": "treasure",
@@ -7326,6 +7527,2046 @@
           "x": 16,
           "z": 16,
           "radius": 3,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "trial_01": {
+      "id": "trial_01",
+      "name": "시련의 탑 1단계",
+      "size": 30,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "monsters": [
+        {
+          "kind": "mob008",
+          "x": 7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob008",
+          "x": 5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob008",
+          "x": 2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob008",
+          "x": -2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob008",
+          "x": -5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob008",
+          "x": -7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob008",
+          "x": -5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob008",
+          "x": -2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob008",
+          "x": 2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob008",
+          "x": 5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "trial_02": {
+      "id": "trial_02",
+      "name": "시련의 탑 2단계",
+      "size": 30,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "monsters": [
+        {
+          "kind": "mob018",
+          "x": 7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob018",
+          "x": 5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob018",
+          "x": 2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob018",
+          "x": -2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob018",
+          "x": -5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob018",
+          "x": -7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob018",
+          "x": -5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob018",
+          "x": -2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob018",
+          "x": 2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob018",
+          "x": 5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "trial_03": {
+      "id": "trial_03",
+      "name": "시련의 탑 3단계",
+      "size": 30,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "monsters": [
+        {
+          "kind": "mob028",
+          "x": 7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob028",
+          "x": 5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob028",
+          "x": 2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob028",
+          "x": -2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob028",
+          "x": -5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob028",
+          "x": -7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob028",
+          "x": -5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob028",
+          "x": -2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob028",
+          "x": 2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob028",
+          "x": 5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "trial_04": {
+      "id": "trial_04",
+      "name": "시련의 탑 4단계",
+      "size": 30,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "monsters": [
+        {
+          "kind": "mob038",
+          "x": 7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob038",
+          "x": 5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob038",
+          "x": 2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob038",
+          "x": -2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob038",
+          "x": -5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob038",
+          "x": -7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob038",
+          "x": -5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob038",
+          "x": -2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob038",
+          "x": 2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob038",
+          "x": 5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "trial_05": {
+      "id": "trial_05",
+      "name": "시련의 탑 5단계",
+      "size": 30,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "monsters": [
+        {
+          "kind": "mob048",
+          "x": 7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob048",
+          "x": 5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob048",
+          "x": 2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob048",
+          "x": -2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob048",
+          "x": -5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob048",
+          "x": -7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob048",
+          "x": -5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob048",
+          "x": -2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob048",
+          "x": 2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob048",
+          "x": 5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "trial_06": {
+      "id": "trial_06",
+      "name": "시련의 탑 6단계",
+      "size": 30,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "monsters": [
+        {
+          "kind": "mob058",
+          "x": 7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob058",
+          "x": 5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob058",
+          "x": 2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob058",
+          "x": -2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob058",
+          "x": -5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob058",
+          "x": -7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob058",
+          "x": -5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob058",
+          "x": -2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob058",
+          "x": 2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob058",
+          "x": 5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "trial_07": {
+      "id": "trial_07",
+      "name": "시련의 탑 7단계",
+      "size": 30,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "monsters": [
+        {
+          "kind": "mob068",
+          "x": 7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob068",
+          "x": 5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob068",
+          "x": 2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob068",
+          "x": -2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob068",
+          "x": -5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob068",
+          "x": -7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob068",
+          "x": -5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob068",
+          "x": -2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob068",
+          "x": 2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob068",
+          "x": 5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "trial_08": {
+      "id": "trial_08",
+      "name": "시련의 탑 8단계",
+      "size": 30,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "monsters": [
+        {
+          "kind": "mob078",
+          "x": 7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob078",
+          "x": 5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob078",
+          "x": 2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob078",
+          "x": -2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob078",
+          "x": -5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob078",
+          "x": -7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob078",
+          "x": -5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob078",
+          "x": -2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob078",
+          "x": 2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob078",
+          "x": 5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "trial_09": {
+      "id": "trial_09",
+      "name": "시련의 탑 9단계",
+      "size": 30,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "monsters": [
+        {
+          "kind": "mob088",
+          "x": 7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob088",
+          "x": 5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob088",
+          "x": 2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob088",
+          "x": -2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob088",
+          "x": -5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob088",
+          "x": -7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob088",
+          "x": -5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob088",
+          "x": -2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob088",
+          "x": 2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob088",
+          "x": 5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "trial_10": {
+      "id": "trial_10",
+      "name": "시련의 탑 10단계",
+      "size": 30,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "monsters": [
+        {
+          "kind": "mob098",
+          "x": 7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob098",
+          "x": 5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob098",
+          "x": 2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob098",
+          "x": -2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob098",
+          "x": -5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob098",
+          "x": -7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob098",
+          "x": -5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob098",
+          "x": -2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob098",
+          "x": 2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob098",
+          "x": 5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "trial_11": {
+      "id": "trial_11",
+      "name": "시련의 탑 11단계",
+      "size": 30,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "monsters": [
+        {
+          "kind": "mob108",
+          "x": 7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob108",
+          "x": 5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob108",
+          "x": 2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob108",
+          "x": -2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob108",
+          "x": -5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob108",
+          "x": -7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob108",
+          "x": -5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob108",
+          "x": -2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob108",
+          "x": 2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob108",
+          "x": 5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "trial_12": {
+      "id": "trial_12",
+      "name": "시련의 탑 12단계",
+      "size": 30,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "monsters": [
+        {
+          "kind": "mob118",
+          "x": 7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob118",
+          "x": 5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob118",
+          "x": 2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob118",
+          "x": -2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob118",
+          "x": -5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob118",
+          "x": -7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob118",
+          "x": -5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob118",
+          "x": -2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob118",
+          "x": 2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob118",
+          "x": 5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "trial_13": {
+      "id": "trial_13",
+      "name": "시련의 탑 13단계",
+      "size": 30,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "monsters": [
+        {
+          "kind": "mob128",
+          "x": 7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob128",
+          "x": 5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob128",
+          "x": 2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob128",
+          "x": -2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob128",
+          "x": -5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob128",
+          "x": -7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob128",
+          "x": -5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob128",
+          "x": -2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob128",
+          "x": 2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob128",
+          "x": 5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "trial_14": {
+      "id": "trial_14",
+      "name": "시련의 탑 14단계",
+      "size": 30,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "monsters": [
+        {
+          "kind": "mob138",
+          "x": 7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob138",
+          "x": 5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob138",
+          "x": 2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob138",
+          "x": -2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob138",
+          "x": -5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob138",
+          "x": -7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob138",
+          "x": -5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob138",
+          "x": -2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob138",
+          "x": 2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob138",
+          "x": 5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "trial_15": {
+      "id": "trial_15",
+      "name": "시련의 탑 15단계",
+      "size": 30,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "monsters": [
+        {
+          "kind": "mob148",
+          "x": 7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob148",
+          "x": 5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob148",
+          "x": 2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob148",
+          "x": -2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob148",
+          "x": -5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob148",
+          "x": -7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob148",
+          "x": -5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob148",
+          "x": -2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob148",
+          "x": 2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob148",
+          "x": 5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "trial_16": {
+      "id": "trial_16",
+      "name": "시련의 탑 16단계",
+      "size": 30,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "monsters": [
+        {
+          "kind": "mob158",
+          "x": 7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob158",
+          "x": 5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob158",
+          "x": 2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob158",
+          "x": -2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob158",
+          "x": -5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob158",
+          "x": -7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob158",
+          "x": -5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob158",
+          "x": -2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob158",
+          "x": 2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob158",
+          "x": 5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "trial_17": {
+      "id": "trial_17",
+      "name": "시련의 탑 17단계",
+      "size": 30,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "monsters": [
+        {
+          "kind": "mob168",
+          "x": 7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob168",
+          "x": 5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob168",
+          "x": 2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob168",
+          "x": -2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob168",
+          "x": -5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob168",
+          "x": -7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob168",
+          "x": -5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob168",
+          "x": -2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob168",
+          "x": 2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob168",
+          "x": 5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "trial_18": {
+      "id": "trial_18",
+      "name": "시련의 탑 18단계",
+      "size": 30,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "monsters": [
+        {
+          "kind": "mob178",
+          "x": 7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob178",
+          "x": 5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob178",
+          "x": 2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob178",
+          "x": -2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob178",
+          "x": -5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob178",
+          "x": -7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob178",
+          "x": -5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob178",
+          "x": -2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob178",
+          "x": 2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob178",
+          "x": 5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "trial_19": {
+      "id": "trial_19",
+      "name": "시련의 탑 19단계",
+      "size": 30,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "monsters": [
+        {
+          "kind": "mob188",
+          "x": 7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob188",
+          "x": 5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob188",
+          "x": 2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob188",
+          "x": -2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob188",
+          "x": -5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob188",
+          "x": -7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob188",
+          "x": -5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob188",
+          "x": -2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob188",
+          "x": 2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob188",
+          "x": 5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "trial_20": {
+      "id": "trial_20",
+      "name": "시련의 탑 20단계",
+      "size": 30,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "monsters": [
+        {
+          "kind": "mob198",
+          "x": 7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob198",
+          "x": 5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob198",
+          "x": 2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob198",
+          "x": -2.2,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob198",
+          "x": -5.7,
+          "z": 4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob198",
+          "x": -7,
+          "z": 0,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob198",
+          "x": -5.7,
+          "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob198",
+          "x": -2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob198",
+          "x": 2.2,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        },
+        {
+          "kind": "mob198",
+          "x": 5.7,
+          "z": -4.1,
+          "radius": 0,
           "count": 1,
           "respawnMs": 900000
         }

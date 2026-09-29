@@ -338,6 +338,9 @@ var _bag_dot: Control
 var _design_cell: Control
 ## HUD 위쪽 가운데 "마을가기" — 마을 밖에서만 선다 (`_refresh_home_button`)
 var _home_button: Button
+## 시련의 탑 — 마을가기 밑의 "남은 시간 · 처치 k / 7" 줄과 결과창 (docs/features/dungeons.md "시련의 탑")
+var _trial_hud: Label
+var _trial_result: TrialResult
 var _skill_panel: PanelContainer
 ## 스킬창. 틀은 한 번 짓고 `_redraw_skills` 가 채운다
 var _skill_big: PanelContainer
@@ -574,6 +577,17 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			# 전직 버튼으로 옮겨 가면 창이 남는다 — 새 존에는 그 NPC 가 없다
 			_npc_panel.visible = false
 			_job_panel.visible = false
+			_trial_result.visible = false
+		&"trial":
+			# 성공이든 실패든 결과창. 걷던 곳·자동 사냥 겨냥을 멈춘다 — 확인을 누르면 마을로 나간다
+			_target = Vector3.INF
+			_target_mob = ""
+			_marker.visible = false
+			_trial_result.show_result(payload)
+		&"trialReward":
+			_chat.add_line("재료 획득", "%s x%d" % [Items.stack_name({"id": Items.crystal_id()}), int(payload.get("crystal", 0))], INV_TEXT)
+			if _bag_panel.visible:
+				_redraw_bag()
 		&"jobAdvanced":
 			# 글은 뒤따르는 notice 가 적는다. 스킬창이 열려 있으면 잠금을 풀어 다시 그린다
 			if _skill_panel.visible:
@@ -2730,6 +2744,21 @@ func _build_skill_bar() -> void:
 	_home_button.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_refresh_home_button()
 
+	# 시련의 탑 시계 — 마을가기 바로 밑. 도는 동안만 보인다 (`_draw_trial_hud`)
+	_trial_hud = Label.new()
+	_trial_hud.name = "trial_hud"
+	_trial_hud.add_theme_font_size_override("font_size", 26)
+	_trial_hud.add_theme_color_override("font_color", GatePanel.CARD_GOLD)
+	_trial_hud.add_theme_color_override("font_outline_color", GatePanel.BUTTON_OUTLINE)
+	_trial_hud.add_theme_constant_override("outline_size", 6)
+	_trial_hud.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_trial_hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_trial_hud.visible = false
+	_ui_root.add_child(_trial_hud)
+	_trial_hud.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP, Control.PRESET_MODE_MINSIZE, 20)
+	_trial_hud.offset_top = 20 + HOME_BUTTON_SIZE.y + 10
+	_trial_hud.grow_horizontal = Control.GROW_DIRECTION_BOTH
+
 	# 설계(치트 목록) — 메뉴에서 빼서 **화면 오른쪽 맨 아래 모서리**에 숨겨 둔다 (2026-09-28 요청:
 	# "설계 버튼을 오른쪽 맨 아래로 위치 변경하고, 아이콘이랑 텍스트 안 보이게 알파0으로").
 	# `modulate` 알파 0 이라 그림·글자는 안 보이지만 누름(hit)은 그대로 받는다
@@ -3913,6 +3942,12 @@ func _build_npc_panel() -> void:
 		_job_panel.visible = false
 	)
 
+	# 시련의 탑 결과창 — 확인을 누르면 마을로 (trial_result.gd)
+	_trial_result = TrialResult.make(_frame_box, _icon)
+	_trial_result.theme = _ui_root.theme
+	top.add_child(_trial_result)
+	_trial_result.confirmed.connect(_go_village)
+
 
 func _show_npc(payload: Dictionary) -> void:
 	var role := str(payload.get("role", ""))
@@ -4002,6 +4037,19 @@ func _on_gate_tapped() -> void:
 	_target_mob = ""
 	_marker.visible = false
 	_open_gate()
+
+
+## 시련의 탑 시계 줄 — World 가 준 `trial`(`ends_at` · `kills` · `need`)을 그린다. 결과가 나면 숨긴다
+func _draw_trial_hud() -> void:
+	if _trial_hud == null:
+		return
+	var trial: Dictionary = _transport.snapshot().get("trial", {})
+	_trial_hud.visible = not trial.is_empty() and str(trial.get("result", "")) == ""
+	if not _trial_hud.visible:
+		return
+	var left := maxi(0, int(trial.get("ends_at", 0)) - Time.get_ticks_msec())
+	_trial_hud.text = "남은 시간 %d초   처치 %d / %d" % [
+		ceili(left / 1000.0), int(trial.get("kills", 0)), int(trial.get("need", 0))]
 
 
 ## "마을가기" — 마을 밖에서만 보인다. 존을 지을 때마다 다시 본다
@@ -4398,6 +4446,7 @@ func _process(delta: float) -> void:
 	_last_delta = delta
 	_send_input(delta)
 	_draw_state()
+	_draw_trial_hud()
 	_tick_aoe()
 	_tick_range(delta)
 	if _auto_spin != null and _auto_spin.visible:

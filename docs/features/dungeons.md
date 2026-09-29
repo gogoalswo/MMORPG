@@ -9,6 +9,9 @@
 2026-09-23 요청: "가방 옆에 던전 버튼 → 세 가지 타입 → 타입을 누르면 단계 선택.
 일단 한 가지 타입만 구현. 보스를 각 던전마다 배치."
 
+2026-09-29 에 둘째 종류 **시련의 탑**을 열었다 — 좁은 맵에서 **30초 안에 7마리**를 잡으면 통과,
+보상은 크리스탈. 아래 "시련의 탑".
+
 ```
 [스킬][강화][크리스탈][가방][던전][설계]  ← 오른쪽 위 (강화·크리스탈은 2026-09-24)
           │
@@ -40,7 +43,12 @@
 
 | 파일 | 역할 |
 |---|---|
-| `packages/shared/src/dungeons.ts` | **표.** `DUNGEON_TYPES`(종류 셋·열림·단계) · `dungeonZones(gate)`(단계마다 존) · `DUNGEON_ZONES` |
+| `packages/shared/src/dungeons.ts` | **표.** `DUNGEON_TYPES`(종류 셋·열림·단계) · `dungeonZones(gate)`(단계마다 존) · `DUNGEON_ZONES` · 시련의 탑 상수(`TRIAL_*`) · `trialSpots` |
+| `godot/world/world.gd` | 시련 시계 — `_trial` · `_start_trial`(존을 열 때) · `_count_trial_kill`(`_kill` 에서) · `_check_trial`(`step` 에서) · `_trial_event` · 스냅숏의 `trial` |
+| `godot/world/ledger.gd` | `trial_clear` — 통과하면 크리스탈 단계 × 1 (`trialReward` 이벤트) |
+| `godot/server/ledger_server.gd` | `OPS` 의 `trial_clear` · `_check_trial` — 서버가 인정한 처치를 30초 안으로 다시 센다 |
+| `godot/game/trial_result.gd` | `TrialResult` — 결과창(성공/실패 · 처치 수 · 보상 · **확인** → 마을) |
+| `godot/tests/trial_test.gd` | 좁은 맵·열 마리·시계 · 7마리째 통과(크리스탈 +N, 결과 한 번) · 30초 지나면 실패 · 나가면 시계 없음 |
 | `packages/shared/src/zones.ts` | `ZONES` 에 던전 존을 섞어 넣는다 (문은 `gateFor` 를 넘겨준다) |
 | `packages/shared/src/zones.test.ts` | "던전 — 종류 셋, 열린 종류는 단계마다 보스 한 마리" · 차원문 목록 검사에 던전 존 포함 |
 | `scripts/export-shared.mjs` | `zones.json` 의 `dungeons` 로 내보낸다 |
@@ -48,20 +56,21 @@
 | `godot/game/dungeon_panel.gd` | `DungeonPanel` — **`GatePanel` 을 물려받는다.** 종류는 `_add_card`(카드 줄 `_cards`), 단계 창은 `_build_stages`(물려받은 줄 `_scroll` 을 왼쪽 칸으로 옮긴다) · `_select` · `_stage_rewards` · `_on_enter` |
 | `godot/world/items.gd` | `gold_range` · `gold_base` — 단계 창 골드 칸이 `roll_drop` 과 같은 식을 쓰게 |
 | `godot/game/gate_panel.gd` | `_add_row` · `_clear_rows` · `_title` — 두 창이 같이 쓴다 |
-| `godot/game/game.gd` | `_menu_cells` 셋째 단추 · `_toggle_dungeon` · `_build_gate_panel`(같은 층에 단다) · `_on_gate_pick`(둘 다 `travel`) |
+| `godot/game/game.gd` | `_menu_cells` 셋째 단추 · `_toggle_dungeon` · `_build_gate_panel`(같은 층에 단다) · `_on_gate_pick`(둘 다 `travel`) · 시련 `_trial_hud`(`_draw_trial_hud`) · `_trial_result`(`trial` 이벤트 → 결과창, 확인 → `_go_village`) |
 | `public/assets/icons/ui_icon_dungeon.png` | 단추 그림 (구운 결과, 커밋한다). 원본 주소는 `scripts/fetch-assets.sh` |
 | `public/assets/icons/dungeon_*.png` · `ui_dungeon_card.png` · `ui_dungeon_crest.png` | 카드 풍경 셋 · 카드 틀 · 위 장식 (2026-09-28) |
 | `godot/tools/shot.gd` | `npm run shot:godot -- dungeon` → `logs/dungeon.png`(카드 셋) · `logs/dungeon_stage.png`(5단계를 고른 단계 창) |
-| `godot/tests/ui_test.gd` | `_case_dungeon` — 가방 옆인가 · 전체 화면 · 카드 3장(세로로 긴가 · 나란한가 · 그림) · 단계 칩 없음 · 막힌 카드 · 던전 창 위에 단계 창 · 20줄 · 1단계 골라짐 · 5단계 누르면 고르기만(보상은 스킬 경험치 5000 한 칸) · X 는 단계 창만 · 글자 · 입장하면 보스 한 마리 |
+| `godot/tests/ui_test.gd` | `_case_dungeon` — 가방 옆인가 · 전체 화면 · 카드 3장(세로로 긴가 · 나란한가 · 그림) · 단계 칩 없음 · 막힌 카드 · 던전 창 위에 단계 창 · 20줄 · 1단계 골라짐 · 5단계 누르면 고르기만(보상은 스킬 경험치 5000 한 칸) · X 는 단계 창만 · 글자 · 입장하면 보스 한 마리. `_case_trial` — 시련 카드 → 규칙 줄 · 통과 보상 · 입장 → HUD 시계 · 시간 끝 → "실패" 결과창 · 성공 그림 · 확인 → 마을 |
+| `godot/tests/server_test.gd` | `_case_trial_check` — 6마리면 `too_few` · 7마리면 크리스탈 · 두 번째는 `claimed` · 30초 뒤 처치는 안 센다 |
 
 ## 규칙
 
-### 종류는 셋, 지금은 토벌 하나만 연다 ★
+### 종류는 셋, 토벌과 시련의 탑을 연다 ★
 
 `open: false` 인 종류는 창에 이름과 "준비 중" 만 보이고 **막힌 줄**이다(눌러도
-아무 일 없다). **시련의 탑 · 보물 창고는 자리를 잡아 둔 가칭이다** — 열 때 이름과
+아무 일 없다). **보물 창고는 자리를 잡아 둔 가칭이다** — 열 때 이름과
 규칙을 정한다. 열면 `stages` 를 채우고 `open: true` 로 바꾼다. 테스트가
-"열림 ↔ 단계가 있다" 를 같이 본다.
+"열림 ↔ 단계가 있다" 를 같이 본다. 시련의 탑은 2026-09-29 에 열었다 (사용자가 두 가칭 중 골랐다).
 
 ### 단계 하나 = 존 하나 = 보스 한 마리 ★
 
@@ -88,11 +97,46 @@
   `Ledger.kill` 이 존이 던전 단계(`GameData.dungeon_stage`)면 `_check_dungeon_clear` 만 부르고
   돌아간다. 사냥터 보스를 그대로 써도 드롭 표를 건드리지 않은 것은 이 분기 덕이다.
 
+### 시련의 탑 — 30초 안에 7마리 ★★ (2026-09-29)
+
+요청: "30초 동안 여러 몬스터를 잡으면 통과하는 던전" → "7마리 잡는걸로 하고, 맵 크기를 줄여" →
+"크리스탈을 보상으로" → 실패는 "결과창 UI 만들어서 성공, 실패 및 보상 아이템 표시하고 확인 누르면 나가게".
+
+| 항목 | 값 | 어디 |
+|---|---|---|
+| 통과 | **30초 안에 7마리** | `TRIAL_SECONDS` · `TRIAL_KILLS` |
+| 단계 | 20 (`trial_01` … `trial_20`) — N단계 = N번째 사냥터의 **강한 일반 몬스터**(`tierLevels(N-1)[1]`, Lv.10N-2) | `TRIAL_STAGES` |
+| 맵 | **30**(이동 가능 ±11) — 사냥터 66 의 절반이 안 된다. 차원문 없음 | `TRIAL_ZONE_SIZE` |
+| 몬스터 | 도착 지점(0, 0)을 두른 **반경 7 원에 10마리**, 한 자리 한 마리, 시험 동안 안 되살아남(15분) | `TRIAL_MONSTERS` · `TRIAL_RING` · `trialSpots` |
+| 보상 | 통과하면 **크리스탈 N단계 × 1개** (실패하면 없음). 잡는 몬스터의 평소 드롭·경험치는 그대로 | `TRIAL_CRYSTALS_PER_STAGE` · `Ledger.trial_clear` |
+
+- **7마리는 설계의 "동레벨 한 마리 4초"에서 나왔다** ([stat-balance.md](stat-balance.md) 7장 `KILL_SECONDS`) —
+  30 ÷ 4 = 7.5. 동레벨 평타만으로는 7~9타 × 0.7초라 5~6마리이고, **스킬을 섞어야** 통과한다.
+  사냥터의 4초에는 다음 몬스터까지 8m 걷는 시간(약 1.7초)이 들어 있는데, 좁은 맵에서는 그게 거의 빠져서
+  같은 7마리라도 사냥터보다 조금 쉽다. 그래서 맵을 줄여 달라고 한 것이다.
+- **몬스터를 셋 더(10마리) 둔다** — 한두 마리가 순찰로 떠돌거나 멀리 있어도 모자라지 않게.
+  원 이웃 간격은 약 4.4m 라 어그로(3)에 옆 녀석이 같이 끌려올 수 있다 — 시험에서는 오히려 빨라진다.
+- **시계는 들어온 순간부터 돈다** (`World.open` → `_start_trial`). 서버도 `enter` 를 받은 때부터 센다.
+- **판정을 셋으로 가른다** ([server.md](server.md) "판정을 둘로 가른다"):
+  - 기기(`World._trial`) — 시계와 잡은 수. 7마리째에 `result = "clear"` 로 굳히고 장부에 `trial_clear` 를 청한다.
+    시간이 다 되면(`_check_trial`, `step` 마다) `"fail"`. 결과가 난 뒤의 처치는 안 센다. 둘 다 `trial` 이벤트 하나.
+  - 장부(`Ledger.trial_clear`) — 크리스탈을 준다. 로컬(테스트 모드·서버 주소 없음)은 기기 판정을 믿는다.
+  - 서버(`LedgerServer._check_trial`) — **제가 인정한 처치만** 30초(+1.5초 흔들림) 안으로 센다. 한 번 들어와 한 번만.
+- **결과창**(`TrialResult`) — 성공이든 실패든 뜬다. 제목 "시련의 탑 N단계" · 큰 글자 **성공(초록)/실패(붉은)** ·
+  "처치 k / 7" · 보상 칸(크리스탈 아이콘 + "크리스탈 xN", 실패면 "보상 없음") · **확인**. 닫기 X 는 없다 — 나가는 길이
+  확인 하나다. 확인 → `_go_village`(마을가기와 같은 `travel`). 결은 전직 창과 같은 던전 결(돌판 틀 · 청록 단추).
+- **HUD 시계** — 마을가기 단추 바로 밑에 "남은 시간 N초   처치 k / 7" (금빛 글자 · 검은 테). 결과가 나면 숨는다.
+- **단계 창** — 오른쪽 칸에 몬스터 레벨·이름 밑 **"30초 안에 7마리"**(`trial_rule`), 보상 맨 앞은
+  **"통과 보상  크리스탈 N개"** 한 칸뿐이다 (토벌이 스킬 경험치 한 칸만 보이는 것과 같다 — 2026-09-29).
+- 죽으면 되살아나기가 마을로 보낸다 — 시계는 그 존을 떠나는 순간 없어진다(`open` 이 다시 건다).
+  죽어 있는 동안 시간이 끝나면 결과창("실패")이 먼저 뜬다.
+
 ### 차원문 목록에는 없다
 
 던전 존은 `FIELD_ORDER` 에 넣지 않았다. 차원문 창은 마을 + 사냥터만 보여 준다.
-**나오는 길은 차원문이다** — 던전 존에도 다른 존과 같은 자리(동쪽 4)에 문이 있다
-(`zones.test.ts` 의 "차원문이 모든 존에 있다").
+**나오는 길은 차원문이다** — 토벌 던전 존에도 다른 존과 같은 자리에 문이 있다
+(`zones.test.ts` 의 "차원문이 사냥터 말고는 모든 존에 있다"). **시련의 탑은 문이 없다** — 맵(±11)이 문 자리(-18, -18)보다
+작고, 나가는 길은 결과창 확인과 HUD 마을가기다.
 
 ### 종류 카드 ★
 
@@ -210,7 +254,9 @@
 
 - 종류를 열 때: `DUNGEON_TYPES` 에 단계를 채우고 `open: true` → `npm run export:godot`
   → `npm test` · `npm run test:godot`. `ui_test` 의 "토벌만 열리고" 검사도 같이 고친다.
-- 존 개수가 바뀌므로 `godotExport.test.ts` 의 존 수(지금 45 = 마을 1 + 사냥터 20 + 던전 20 + 전직 시험 4)도 고친다.
+- 존 개수가 바뀌므로 `godotExport.test.ts` 의 존 수(지금 65 = 마을 1 + 사냥터 20 + 토벌 20 + 시련 20 + 전직 시험 4)도 고친다.
+- 시련의 규칙(초·마릿수·보상)을 바꾸면 `dungeons.ts` 의 `TRIAL_*` 만 고치고 `npm run export:godot` — 기기·장부·서버가
+  전부 표(`seconds` · `kills` · `crystals`)를 읽는다. 마릿수를 올리면 `TRIAL_MONSTERS` 가 그보다 많은지 테스트가 본다.
 - 보스를 던전 전용으로 세게 만들고 싶으면 몬스터 표(`monsters.ts`)에 종을 따로 만든다 —
   사냥터 보스 수치를 바꾸면 사냥터도 같이 흔들린다.
 

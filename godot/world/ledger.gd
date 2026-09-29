@@ -181,6 +181,20 @@ func _check_dungeon_clear(p: Dictionary, target: Dictionary) -> void:
 	_notice("던전 %d단계 클리어! 스킬 경험치 +%d" % [int(stage.stage), gain])
 
 
+## 시련의 탑을 통과했다 → 그 단계의 **크리스탈**(`crystals` = 단계 × 1)을 준다.
+## 시간 안에 몇 마리를 잡았는지는 부르는 쪽이 봤다 — 기기는 `World._trial`, 서버는
+## `LedgerServer._check_trial` 이 제 명단으로 다시 센다 (docs/features/dungeons.md "시련의 탑")
+func trial_clear(p: Dictionary, zone_id: String) -> void:
+	var stage := GameData.dungeon_stage(zone_id)
+	var count := int(stage.get("crystals", 0))
+	if int(stage.get("kills", 0)) <= 0 or count <= 0:
+		return
+	if not give(p, {"id": Items.crystal_id(), "count": count}):
+		_notice("가방이 가득 차 크리스탈을 받지 못했습니다")
+		return
+	events.append({"type": "trialReward", "stage": int(stage.stage), "crystal": count})
+
+
 ## --- 유료 재화 (docs/features/server.md "유료 재화") ---
 
 ## 다이아를 넣는다. **서버가 결제 영수증을 확인한 뒤에만 부른다** (`LedgerServer._finish_purchase`) —

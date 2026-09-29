@@ -316,6 +316,7 @@ func _run_scene() -> void:
 	await _case_design_panel(game)
 	# 존을 옮기므로 맨 끝에 둔다
 	await _case_dungeon(game)
+	await _case_trial(game)
 	await _case_home(game)
 
 	if _failed == 0:
@@ -644,8 +645,9 @@ func _case_dungeon(game: Node3D) -> void:
 	if panel.card_count() != 3 or panel.stages_open():
 		_fail("던전 종류가 카드 3장이어야 하는데 %d장 (단계 창 %s)" % [panel.card_count(), panel.stages_open()])
 		return
-	if panel.card(0).disabled or not panel.card(1).disabled or not panel.card(2).disabled:
-		_fail("토벌만 열리고 나머지 둘은 막혀야 한다")
+	# 토벌·시련의 탑이 열리고 보물 창고만 막혀 있다 (2026-09-29)
+	if panel.card(0).disabled or panel.card(1).disabled or not panel.card(2).disabled:
+		_fail("토벌·시련의 탑만 열리고 보물 창고는 막혀야 한다")
 	for i in 3:
 		var box: Rect2 = panel.card(i).get_global_rect()
 		if box.size.y < box.size.x * 1.4:
@@ -670,7 +672,7 @@ func _case_dungeon(game: Node3D) -> void:
 	if seen.contains("20단계"):
 		_fail("카드에 단계 수가 남아 있다")
 	# 막힌 카드는 눌러도 아무 일이 없다
-	await _tap_card(panel, 1)
+	await _tap_card(panel, 2)
 	if panel.stages_open():
 		_fail("준비 중인 종류를 눌렀는데 단계 창이 떴다")
 	# 토벌을 누르면 **던전 창 위에** 단계 창 — 던전 창은 닫히지 않는다
@@ -734,6 +736,74 @@ func _case_dungeon(game: Node3D) -> void:
 		_fail("던전 안에 보스 한 마리만 있어야 하는데 %d마리" % monsters.size())
 	else:
 		print("  던전 1단계: 보스 %s 한 마리" % GameData.monster_kind(str(monsters[0].kind)).get("name", ""))
+
+
+## 시련의 탑 — 카드 → 단계 창(규칙 · 통과 보상 크리스탈) → 입장 → HUD 시계 → 시간이 다 되면 결과창
+## "실패" → 성공 결과도 그려 본다 → 확인을 누르면 마을로 (docs/features/dungeons.md "시련의 탑")
+func _case_trial(game: Node3D) -> void:
+	var panel: DungeonPanel = game._dungeon_panel
+	game._toggle_dungeon()
+	await process_frame
+	await _tap_card(panel, 1)
+	if not panel.stages_open() or panel.row_count() != 20:
+		_fail("시련의 탑을 누르면 단계 20줄이 떠야 한다 (%s · %d줄)" % [panel.stages_open(), panel.row_count()])
+		return
+	if panel.picked_stage() != "trial_01":
+		_fail("시련 단계 창을 열면 1단계가 골라져야 한다: %s" % panel.picked_stage())
+	var first_reward: Label = panel._rewards.get_child(0).find_children("*", "Label", true, false)[0]
+	if first_reward.text != "통과 보상  크리스탈 1개":
+		_fail("시련 보상 맨 앞이 통과 크리스탈이어야 한다: '%s'" % first_reward.text)
+	var rule: Label = panel.find_child("trial_rule", true, false)
+	if rule == null or rule.text != "30초 안에 7마리":
+		_fail("시련 규칙 줄이 없다: %s" % (rule.text if rule != null else "없음"))
+	panel.enter_button().pressed.emit()
+	for i in 3:
+		await process_frame
+	if game._shown_zone != "trial_01":
+		_fail("시련 1단계에 못 들어갔다: %s" % game._shown_zone)
+		return
+	var hud: Label = game._trial_hud
+	if not hud.visible or not hud.text.contains("처치 0 / 7") or not hud.text.contains("남은 시간"):
+		_fail("시련 HUD 시계가 없다: 보임 %s '%s'" % [hud.visible, hud.text])
+	elif hud.get_global_rect().intersects(game._home_button.get_global_rect()):
+		_fail("시련 시계가 마을가기 단추와 겹친다")
+	var font: Font = load(FONT)
+	var seen: String = hud.text + rule.text + first_reward.text
+
+	# 시간을 다 쓴 것으로 친다 — World 의 다음 step 이 실패를 낸다
+	game._transport.snapshot().trial.ends_at = Time.get_ticks_msec() - 1
+	for i in 3:
+		await process_frame
+	var result: TrialResult = game._trial_result
+	if not result.visible or result._verdict.text != "실패" or result.reward_count() != 0:
+		_fail("시간이 다 됐는데 실패 결과창이 아니다: 보임 %s '%s' 보상 %d" % [result.visible, result._verdict.text, result.reward_count()])
+	if hud.visible:
+		_fail("결과가 났는데 시계가 남았다")
+	await process_frame
+	if not panel.get_viewport_rect().encloses(result.get_global_rect()):
+		_fail("결과창이 화면 밖으로 넘친다: %s" % result.get_global_rect())
+	for label in result.find_children("*", "Label", true, false):
+		seen += label.text
+	# 성공 결과 — 보상 칸(크리스탈)이 하나
+	result.show_result({"result": "clear", "stage": 4, "kills": 7, "need": 7, "crystals": 4})
+	if result._verdict.text != "성공" or result.reward_count() != 1:
+		_fail("성공 결과창이 틀렸다: '%s' 보상 %d" % [result._verdict.text, result.reward_count()])
+	for label in result.find_children("*", "Label", true, false):
+		seen += label.text
+	seen += result.confirm_button().text
+	var missing := ""
+	for ch in seen:
+		if ch != " " and ch != "\n" and not font.has_char(ch.unicode_at(0)):
+			missing += ch
+	if missing != "":
+		_fail("시련 글자가 폰트에 없다: %s" % missing)
+	result.confirm_button().pressed.emit()
+	for i in 5:
+		await process_frame
+	if result.visible or game._shown_zone != GameData.start_zone():
+		_fail("확인을 눌렀는데 마을로 안 나갔다: %s (창 %s)" % [game._shown_zone, result.visible])
+	else:
+		print("  시련의 탑: 시계 '%s' · 실패/성공 결과창 · 확인 → 마을" % hud.text)
 
 
 ## 던전 종류 카드 i 를 누른다 — 막힌 카드는 고도 단추처럼 아무 일도 없다

@@ -28,9 +28,6 @@ extends SceneTree
 
 ## 게임 시간을 몇 배로 늦추나
 const SLOW := 0.08
-## 첫 시전을 제 속도로 다 돌리는 시간(ms). 잔불이 남는 폭렬 찍기는 6초 넘게 떠 있어서,
-## 기본값(2.6초)이면 첫 것이 두 번째와 겹쳐 찍힌다
-const FIRST_WAIT := {"blast_heel": 7000}
 ## 몇 프레임째를 찍나. `SLOW` 를 곱하면 대략 0.03·0.08·0.15·0.22·0.32·0.48초다
 const SHOTS := [2, 5, 9, 14, 20, 30]
 ## 요구 레벨과 포인트를 안 보고 배우게 해 준다 (스킬창을 누를 사람이 없다)
@@ -153,7 +150,7 @@ func _run() -> void:
 		await _idle(game, skill == "idle:close")
 		return
 	# 동작 한 순간 — `pose:Jab:0.1` (클립:초) · 정면 · 옆 · 뒤를 가까이.
-	# 뛰어오른 순간은 `pose:BlastHeel:0.34:1.6` 처럼 넷째 값(m)만큼 조준을 올린다
+	# 뛰어오른 순간은 `pose:SkyBreaker:0.42:3.4` 처럼 넷째 값(m)만큼 조준을 올린다
 	if skill.begins_with("pose:"):
 		var part := skill.split(":")
 		await _idle(game, true, part[1], float(part[2]), float(part[3]) if part.size() > 3 else 0.0)
@@ -206,7 +203,7 @@ func _run() -> void:
 	# 되감아 쓰므로, 한 번 끝난 것이 제대로 되감기는지가 첫 시전보다 중요하다
 	Skills.set_switch("cooldownOff", true)
 	game._transport.send(&"skill", {"skill": skill})
-	var first_end := Time.get_ticks_msec() + int(FIRST_WAIT.get(skill, 2600))
+	var first_end := Time.get_ticks_msec() + 2600
 	while Time.get_ticks_msec() < first_end:
 		await process_frame
 	Engine.time_scale = SLOW

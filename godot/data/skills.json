@@ -346,21 +346,6 @@
       "reqLevel": 180,
       "tier": 4,
       "description": "주먹에 기를 실어 내질러 일대를 폭발시킨다."
-    },
-    "blast_heel": {
-      "id": "blast_heel",
-      "name": "폭렬 찍기",
-      "job": "fighter",
-      "cooldown": 10000,
-      "delayMs": 420,
-      "castMs": 1200,
-      "range": 5,
-      "arc": 6.283185307179586,
-      "power": 13,
-      "maxTargets": 10,
-      "reqLevel": 180,
-      "tier": 4,
-      "description": "한 발을 들어 땅을 내리찍어 연기와 함께 기를 사방으로 터뜨린다."
     }
   },
   "byJob": {
@@ -370,8 +355,7 @@
       "frost_pillar",
       "sky_breaker",
       "ki_burst",
-      "nova_fist",
-      "blast_heel"
+      "nova_fist"
     ],
     "mage": [
       "fireball",

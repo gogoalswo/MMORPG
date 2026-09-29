@@ -162,8 +162,11 @@ export interface ZoneDef {
   size: number;
   /** 이름 붙은 스폰 지점들. 'default' 는 반드시 있어야 한다 */
   spawns: Record<string, [number, number]>;
-  /** 목적지를 고르는 문. 존을 오가는 유일한 길이라 모든 존에 있다 */
-  gate: GateDef;
+  /**
+   * 목적지를 고르는 문. **사냥터에는 없다** (2026-09-29) — 거기서는 HUD 의 "마을가기" 단추로
+   * 마을에 돌아간다. 마을·던전·전직 시험에는 있다
+   */
+  gate?: GateDef;
   npcs?: NpcDef[];
   monsters?: MonsterSpawnDef[];
   env: ZoneEnv;

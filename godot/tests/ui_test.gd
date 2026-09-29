@@ -160,6 +160,18 @@ func _run_scene() -> void:
 		_fail("줄 오른쪽 끝을 눌렀다 뗐는데 안 골라졌다")
 	else:
 		print("  줄 오른쪽 끝(%.0fpx)으로 고르기, 누름 표시 붙었다 떨어진다" % far.x)
+	# 고른 줄(첫 사냥터)로 옮겨졌다 — 사냥터에는 차원문이 없으니(2026-09-29) 위쪽 가운데
+	# "마을가기" 로 돌아온다. 아래 문 누르기 검사는 마을 문을 본다
+	for i in 5:
+		await process_frame
+	if game._shown_zone != GameData.start_zone():
+		_check_home_button(game)
+		game._home_button.pressed.emit()
+		for i in 5:
+			await process_frame
+		if game._shown_zone != GameData.start_zone():
+			_fail("사냥터에서 마을가기를 눌렀는데 %s 그대로다" % game._shown_zone)
+	me = game._transport.snapshot().players[game._transport.my_id()]
 
 	# 문 아치를 누르면 창이 열린다 — **멀리 서 있어도 바로** 열린다
 	# (2026-09-18 요청: "포탈까지 안 걸어가도 클릭하면 UI 열리게")
@@ -193,6 +205,10 @@ func _run_scene() -> void:
 	else:
 		_fail("차원문 모델이 없다 — npm run sync:godot 을 돌렸나")
 
+	# 마을에서는 "마을가기" 단추가 없다
+	if game._home_button.visible:
+		_fail("마을인데 마을가기 단추가 보인다")
+
 	# 골라서 옮긴다
 	game._on_gate_pick("meadow")
 	for i in 5:
@@ -203,6 +219,10 @@ func _run_scene() -> void:
 		_fail("옮겼는데 고르는 화면이 안 닫혔다")
 	else:
 		print("  골라서 이동: %s" % game._label.text.split("\n")[0].strip_edges())
+	# 사냥터에는 차원문이 없고, 위쪽 가운데 "마을가기" 가 선다 (2026-09-29)
+	if not game._transport.snapshot().get("gate", {}).is_empty():
+		_fail("사냥터에 차원문이 남아 있다")
+	_check_home_button(game)
 
 	# 자동 사냥 단추 — 누르면 켜지고 글자가 바뀐다. 실제로 사냥하는지는
 	# tests/auto_hunt_test.gd 가 본다 (여기는 단추와 화면만)
@@ -291,6 +311,7 @@ func _run_scene() -> void:
 	await _case_design_panel(game)
 	# 존을 옮기므로 맨 끝에 둔다
 	await _case_dungeon(game)
+	await _case_home(game)
 
 	if _failed == 0:
 		print("UI: 전부 통과")
@@ -2046,3 +2067,40 @@ func _case_enhance_batch(game: Node, me: Dictionary) -> void:
 	pop.run_button.pressed.emit()  # 중지
 	if game._chat.lines().size() != chat_mark + 1:
 		_fail("중지했는데 채팅이 한 줄이 아니다")
+
+
+## "마을가기" 단추 자리 — 위쪽 가운데, 화면 안, 메뉴·상태 글자 줄과 안 겹친다 (hud.md "마을가기")
+func _check_home_button(game: Node) -> void:
+	var button: Button = game._home_button
+	if not button.visible:
+		_fail("사냥터인데 마을가기 단추가 안 보인다")
+		return
+	var box := button.get_global_rect()
+	if not Rect2(Vector2.ZERO, Vector2(1280, 720)).encloses(box) or box.position.y > 40.0 \
+			or absf(box.get_center().x - 640.0) > 2.0:
+		_fail("마을가기 단추가 위쪽 가운데가 아니다: %s" % box)
+	for cell in game._menu_cells:
+		if box.intersects(cell.get_global_rect()):
+			_fail("마을가기 단추가 메뉴 %s 와 겹친다" % cell.get_global_rect())
+	var line: Label = game._label
+	if box.intersects(Rect2(line.global_position, line.get_minimum_size())):
+		_fail("마을가기 단추가 왼쪽 위 글자 줄과 겹친다")
+	print("  마을가기 단추: %s '%s'" % [box, button.text])
+
+
+## 누르면 마을로 가고 단추가 숨는다. 던전에서도 된다 (앞 `_case_dungeon` 이 던전에 두고 온다)
+func _case_home(game: Node) -> void:
+	if game._shown_zone == GameData.start_zone():
+		game._on_gate_pick("meadow")
+		for i in 5:
+			await process_frame
+	var from: String = game._shown_zone
+	game._home_button.pressed.emit()
+	for i in 5:
+		await process_frame
+	if game._shown_zone != GameData.start_zone():
+		_fail("마을가기를 눌렀는데 %s 그대로다" % game._shown_zone)
+	elif game._home_button.visible:
+		_fail("마을에 왔는데 마을가기 단추가 남아 있다")
+	else:
+		print("  마을가기: %s → %s" % [from, game._shown_zone])

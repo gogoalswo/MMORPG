@@ -59,11 +59,11 @@ const SAVE_EVERY_MS := 10000
 
 ## --- 순찰 ---
 ## 쫓을 사람이 없는 몬스터는 집 주변을 서성인다. 가만히 선 무리는 살아 있는 것처럼
-## 보이지 않아서다. 값은 **어그로(7m)보다 작게** 잡는다 — 순찰 때문에
+## 보이지 않아서다. 값은 **어그로(3m)보다 작게** 잡는다 — 순찰 때문에
 ## 사람에게 먼저 닿으면 "가만히 있었는데 맞았다"가 된다.
-## 4 → 2 (2026-09-29): 사냥터 몬스터가 14.8m 간격으로 한 마리씩 서는데, 둘이 서로 쪽으로
-## 4m 씩 걸어 나오면 한 놈 옆에서 싸울 때 이웃이 알아챈다 (packages/shared/src/zones.ts `FIELD_SPOTS`)
-const PATROL_RADIUS := 2.0
+## 4 → 1 (2026-09-29): 사냥터 몬스터가 8m 간격으로 한 마리씩 서는데, 둘이 서로 쪽으로
+## 걸어 나오면 한 놈 옆에서 싸울 때 이웃이 알아챈다 (packages/shared/src/zones.ts `fieldSpots`)
+const PATROL_RADIUS := 1.0
 ## 걷는 것처럼 보이게 제 속도의 이만큼으로만 움직인다
 const PATROL_SPEED := 0.35
 ## 목적지에 이만큼 붙으면 도착으로 본다
@@ -2053,6 +2053,10 @@ func _hit_monster(player: Dictionary, target: Dictionary, attack: float, skill_i
 	})
 	if target.hp <= 0:
 		_kill(player, target, Time.get_ticks_msec())
+	# **맞으면 때린 사람을 쫓는다** (2026-09-29) — 어그로를 3m 로 좁혀서, 이게 없으면 멀리서
+	# 쏘는 동안 몬스터가 가만히 서 있다. 이미 쫓는 대상이 있거나 집으로 돌아가는 중이면 그대로 둔다
+	elif str(target.get("target", "")) == "" and not bool(target.get("leashing", false)):
+		target.target = str(player.id)
 
 
 ## 맨몸 스탯에 장비를 **곱한다**. 장비가 바뀔 때마다 다시 만든다 —

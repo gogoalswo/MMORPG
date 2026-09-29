@@ -23,7 +23,7 @@ const SLACK_MS := 1500.0
 const KNOWN_SKILL_KEYS := [
 	"power", "hits", "cooldown", "castMs",  # 셈한다
 	"arc", "delayMs", "description", "hitGap", "id", "job", "maxTargets", "name",
-	"projectile", "range", "reqLevel", "tier", "atTarget",
+	"projectile", "range", "reqLevel", "tier",
 ]
 const KNOWN_UPGRADE_KEYS := [
 	"extraHits", "zoneMs", "zoneTickMs", "zonePower", "followPower", "powerMul",  # 셈한다

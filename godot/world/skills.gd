@@ -198,12 +198,6 @@ static func is_ranged(skill: Dictionary) -> bool:
 	return str(skill.get("projectile", "")) != ""
 
 
-## **타겟 자리에서 솟는** 스킬인가 (폭렬 찍기 — 표의 `atTarget`). 날아가지 않아 원거리기는
-## 아니지만, 판정은 원거리기처럼 그 자리 둘레 `blast_radius` 다
-static func at_target(skill: Dictionary) -> bool:
-	return bool(skill.get("atTarget", false))
-
-
 ## 원거리 스킬이 **타겟 자리에서** 터질 때의 판정 반경.
 ##
 ## 사거리를 그대로 쓰면 안 된다 — 원거리기는 사거리가 10~14 라 타겟을 중심으로

@@ -62,7 +62,7 @@ N번 강화" 치트가 전부 그 목록을 보므로 **어디에도 안 뜬다.
 | `packages/client/src/scene/skillFx.ts` | **스킬 이펙트** — 시전 고리, 전방위 고리, 명중 섬광, 회복 |
 | `packages/server/src/ZoneRoom.ts` | `handleLearnSkill` / `handleSetSkillBar` / `handleSkill` / `tryAutoSkill` |
 | **`godot/game/game.gd`** `_build_skill_bar` · `_build_skill_panel` · `_redraw_skills` | ★ **고도 퀵슬롯(HUD 하단 4칸)과 스킬창** — 아래 "스킬창과 퀵슬롯" |
-| `public/assets/icons/skill_<id>.png` · `ui_skill_slot` · `ui_slot_pick` | 바르코로 만든 스킬 아이콘(격투가 6개)과 칸 테두리·고른 칸 테두리. 주소는 `fetch-assets.sh` |
+| `public/assets/icons/skill_<id>.png` · `ui_skill_slot` · `ui_slot_pick` | 바르코로 만든 스킬 아이콘(격투가 7개 — 할퀴기·천붕각·낙뢰·빙주각·파천장·무적파쇄권·폭렬권)과 칸 테두리·고른 칸 테두리. 주소는 `fetch-assets.sh` |
 | **`godot/game/skill_fx.gd`** | ★ **고도 스킬 이펙트** — 할퀴기(`SkillFx.claw`): 발톱 세 가닥 초승달이 앞 120° 를 세 번 쓴다(연타 강화면 다섯 번 · 보라). 에셋 없이 코드로, **줄기는 리본 메시**(`LightningFx` 도구를 돌려 쓴다) |
 | **`godot/game/lightning_fx.gd`** | ★ **낙뢰**(`LightningFx.bolt`) — 번개 세 번 · 갈라지는 땅 · 튀는 파편. **줄기는 리본 메시**(`trail`·`ribbon`), 파편만 파티클 |
 | **`godot/game/quake_fx.gd`** | ★ **천붕각**(`QuakeFx.slam`) — 금 여덟 갈래가 어긋나게 갈라지고 모래 먼지가 충격파로 밀려난다. 금은 한 번 깐 메시를 셰이더가 자라게 한다 |
@@ -619,6 +619,12 @@ N번 강화" 치트가 전부 그 목록을 보므로 **어디에도 안 뜬다.
   "MATCH THE REFERENCE IMAGES' STYLE EXACTLY … bare foot stomping … ice crystal pillars
   bursting up … in a ring" 로 두 장 뽑아 첫 장을 썼다 — 한 번에 결이 맞았다.
   다음 격투가 스킬 아이콘도 이 참고 그림을 그대로 쓰면 된다.
+- **파천장·무적파쇄권·폭렬권 아이콘**(2026-09-29)도 이 참고 그림을 그대로 물려 한 번에 결이 맞았다.
+  프롬프트 틀: "Square skill icon for a martial-arts fighter game. MATCH THE REFERENCE IMAGES' STYLE EXACTLY:
+  the same hand-painted semi-realistic look, the same dark moody background, the same framing that fills the
+  whole square edge to edge … Subject: <무엇> … No character face, no text, no letters, no numbers, no border,
+  no frame." 스킬마다 두 장씩 뽑아 하나씩 골랐다 — 손바닥 + 금빛 소용돌이(파천장) · 붕대 주먹 + 흰 심에서
+  터지는 파란 가시(무적파쇄권) · 금빛 소용돌이 속 주먹(폭렬권). 주소는 `fetch-assets.sh`.
 
 ### 이펙트 — 파천장 (`ki_fx.gd`) ★
 

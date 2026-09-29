@@ -165,9 +165,8 @@ func _check_layout(game: Node3D, panel: JobPanel) -> void:
 	if done.bg_color == ahead.bg_color:
 		_fail("1차를 마쳤는데 1차 점과 3차 점이 같은 색이다")
 	var icon: TextureRect = panel.find_child("skill_icon", true, false)
-	# 2차 해금은 무적파쇄권인데 아이콘을 아직 안 만들었다 — 그때 창은 그림 자리에 이름을 적는다
-	if icon.texture == null and panel._skill_empty.text != "무적파쇄권":
-		_fail("해금 스킬(무적파쇄권)이 그림도 이름도 없다 ('%s')" % panel._skill_empty.text)
+	if icon.texture == null:
+		_fail("해금 스킬(무적파쇄권) 아이콘이 없다 — npm run sync:godot 을 돌렸나")
 	var level_row: Label = panel.find_child("level_row", true, false)
 	var boss_row: Label = panel.find_child("boss_row", true, false)
 	if not level_row.text.begins_with("레벨 70") or not boss_row.text.contains("Lv.69"):

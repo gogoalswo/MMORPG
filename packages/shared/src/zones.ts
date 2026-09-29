@@ -1,4 +1,4 @@
-import { ZONE_SIZE, type GroundKind, type ZoneDef, type ZoneEnv } from './zone.ts';
+import { ZONE_SIZE, type GateDef, type GroundKind, type ZoneDef, type ZoneEnv } from './zone.ts';
 import { monsterIdFor, tierLevels } from './monsters.ts';
 import { dungeonZones } from './dungeons.ts';
 import { jobAdvanceZones } from './jobAdvance.ts';
@@ -58,7 +58,7 @@ const GATE_NAME = '사냥터 이동';
  */
 const VILLAGE_GATE_SPOT: [number, number] = [0, 0];
 
-const gateFor = (spot: [number, number] = GATE_SPOT): ZoneDef['gate'] => ({
+const gateFor = (spot: [number, number] = GATE_SPOT): GateDef => ({
   position: [spot[0], spot[1]],
   radius: 2.6,
   color: GATE_COLOR,
@@ -125,29 +125,44 @@ function envFor(theme: FieldTheme): ZoneEnv {
 }
 
 /**
- * 사냥터 몬스터 — **화면 아래 귀퉁이 무리 하나**, 강한 종 16마리 (2026-09-28).
+ * 사냥터 몬스터 — **맵 전체에 한 마리씩 듬성듬성**, 강한 종 (2026-09-29).
  *
- * 전에는 네 귀퉁이(±16)에 무리 넷(약한 종 둘 · 강한 종 둘, 50마리씩 = 200마리)과
- * 6시 보스 하나가 섰다. 요청이 셋 겹쳤다 — "맵을 반으로" · "아래 방향만 나오도록" ·
- * "각 맵에 보스 제거". 아래 귀퉁이에 있던 것이 강한 종 무리라 **그 무리만 남기고**,
- * 반으로 줄인 맵에 50마리가 안 들어가서 마릿수를 줄였다. 약한 종(`tierLevels` 의 앞)
- * 은 사냥터에 안 나온다 — 셋 중에서 사용자가 골랐다 (약·강 섞기 / 넓이 기준 반 대신).
+ * 요청: 동그라미(시작 지점) 둘레에 네모(몬스터)를 흩어 그린 그림 + "여러 마리가 한 번에 붙지 않도록
+ * 듬성듬성 배치하고, 어그로 범위로 수정해", 이어서 "그 정도 간격으로 배치하라고 한 거야. 그 숫자만
+ * 배치하라고 한게 아니야. 몬스터를 더 많이". 그림 한 장을 **한 화면**(가로 약 25m · 세로 약 23m —
+ * `camera_rig.gd` 거리 26.7 · FOV 30 · 부각 42°)으로 재면 이웃까지 평균 5.8m 다.
  *
- * - 자리 (16, 16) · 반경 13 — 무리 끝이 16 + 13 = 29 로 **이동 가능 영역 끝에 닿는다.**
- *   도착 지점(0,0)에서 중심까지 22.6 이라 무리 원 밖으로 9.6m 남는다.
- * - **간격을 넓혔다** (2026-09-28, "맵 크기를 지금보다 두 배 키우고, 몬스터 간격을 넓혀") —
- *   마릿수는 16 그대로 반경을 6.5 → 13 (두 배)으로 키워, 한 마리가 차지하는 넓이가 4배,
- *   몬스터 사이 거리가 약 두 배다.
- * - 16마리 — 반경 6.5 일 때 씨앗 100개 × 사냥터 20곳의 강한 종으로 `scatterSpawn` 을 돌려 **한 번도
- *   안 겹치는** 가장 큰 수다 (18 이면 2000번에 7번, 20 이면 21번, 30 은 씨앗 하나에서만
- *   통과했다). 예전 반경 13 · 50마리도 같은 방식으로 0번이었다 — 같은 여유를 지킨다.
- *   `zones.test.ts` 의 "무리 안에서 몬스터가 서로 겹치지 않는다" 가 잡는다.
- *   stat-balance.md 의 단위(한 그룹 50마리)와는 이제 어긋난다.
+ * - 자리는 **표에서 생성**한다 (`fieldSpots`) — 존마다 씨앗을 달리해 아무 자리나 뽑고, 이미 뽑은
+ *   자리와 `FIELD_SPACING` 안이면 버린다. 사냥터마다 35~38마리, 이웃까지 평균 8.7m.
+ * - `radius: 0` · `count: 1` — 흩뿌리지 않고 **그 자리에 한 마리**. 되살아나도 같은 자리다.
+ * - 한 번에 한 마리만 붙는 조건: 두 자리 사이(≥ 8) − 순찰 반경 1 × 2 − 근접 사거리 2.5 = 3.5
+ *   > 어그로 3 (`monsters.ts` 의 `AGGRO_RANGE`). 한 놈 옆에서 싸워도 이웃은 알아채지 않는다.
+ *   `zones.test.ts` 가 20곳 전부 본다.
+ * - 도착 지점(0,0) 둘레 `FIELD_CLEAR` 안에는 세우지 않는다 — 들어서자마자 달려오지 않게.
+ * - 자리 끝 ±27.5 — 이동 끝(±29)에서 순찰 반경만큼 안쪽.
+ * - 전에는 화면 아래 귀퉁이 (16, 16)·반경 13 원에 16마리를 흩뿌린 무리 하나였다.
  * - 보스는 없다. 보스 종(`boss00`~)은 던전·전직 시험에서만 선다.
  */
-const PACK_SPOT: [number, number] = [16, 16];
-const PACK_COUNT = 16;
-const PACK_RADIUS = 13;
+const FIELD_SPACING = 8;
+const FIELD_EDGE = 27.5;
+const FIELD_CLEAR = 6;
+const FIELD_TRIES = 6000;
+
+export function fieldSpots(index: number): [number, number][] {
+  let seed = 1000 + index * 7919;
+  const random = () => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648;
+  };
+  const out: [number, number][] = [];
+  for (let t = 0; t < FIELD_TRIES; t++) {
+    const x = Math.round((random() * 2 - 1) * FIELD_EDGE * 10) / 10;
+    const z = Math.round((random() * 2 - 1) * FIELD_EDGE * 10) / 10;
+    if (Math.hypot(x, z) < FIELD_CLEAR) continue;
+    if (out.every(([a, b]) => Math.hypot(a - x, b - z) >= FIELD_SPACING)) out.push([x, z]);
+  }
+  return out;
+}
 
 function buildField(theme: FieldTheme, index: number): ZoneDef {
   const strong = tierLevels(index)[1];
@@ -159,11 +174,12 @@ function buildField(theme: FieldTheme, index: number): ZoneDef {
     name: theme.name,
     size: ZONE_SIZE,
     spawns: { default: [0, 0] },
-    gate: gateFor(),
-    // 화면 아래 귀퉁이에 강한 종 무리 하나. 보스는 없다 (위 PACK_SPOT)
-    monsters: [
-      { kind: monsterIdFor(strong), x: PACK_SPOT[0], z: PACK_SPOT[1], radius: PACK_RADIUS, count: PACK_COUNT, respawnMs: 10000 },
-    ],
+    // 차원문이 없다 (2026-09-29 요청 "사냥터에 들어가면 포탈을 제거해") — 마을로는 HUD 위쪽
+    // "마을가기" 단추로 간다 (docs/features/hud.md "마을가기")
+    // 맵 전체에 한 마리씩 (위 fieldSpots). 보스는 없다
+    monsters: fieldSpots(index).map(([x, z]) => ({
+      kind: monsterIdFor(strong), x, z, radius: 0, count: 1, respawnMs: 10000,
+    })),
     env: envFor(theme),
   };
 }

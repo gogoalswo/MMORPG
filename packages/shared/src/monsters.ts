@@ -172,6 +172,17 @@ export function monsterIdFor(level: number): string {
 }
 
 /**
+ * 일반 몬스터의 인식 범위 (m) — **레벨과 상관없이 하나** (2026-09-29).
+ *
+ * "여러 마리가 한 번에 붙지 않도록 듬성듬성 배치하고, 어그로 범위로 수정해". 사냥터 몬스터가
+ * 8m 이상 떨어져 한 마리씩 서므로(`zones.ts` 의 `fieldSpots`), 한 놈 옆에서 싸울 때 이웃이
+ * 알아채지 않게 좁혔다 — 간격 8 − 순찰 반경 1 × 2 − 근접 사거리 2.5 = 3.5 > 3.
+ * 이렇게 좁으면 멀리서 때려도 가만히 있으므로 **맞으면 때린 사람을 쫓는다** (`world.gd` `_hit_monster`).
+ * 전에는 `9 + 레벨 × 0.04` (최대 16)라 고레벨일수록 옆 놈까지 끌려왔다.
+ */
+const AGGRO_RANGE = 3;
+
+/**
  * 레벨 하나에서 능력치를 뽑는다 — **고정 표에서 읽는다** ★★
  * ([monsterTable.ts](monsterTable.ts), 꺼내는 곳은 [balance.ts](balance.ts) 의 `monster()`).
  *
@@ -201,7 +212,7 @@ function statsForLevel(level: number, strong: boolean) {
     expReward: Math.round(design.exp),
     attackRange: strong ? 2.2 : 1.9,
     attackCooldown: Math.round(design.interval * 1000),
-    aggroRange: Math.round(Math.min(16, 9 + level * 0.04) * 10) / 10,
+    aggroRange: AGGRO_RANGE,
     leashRange: Math.round(Math.min(34, 22 + level * 0.06) * 10) / 10,
     moveSpeed: strong ? 4.4 : 3.6,
     scale: Math.round(Math.min(1.7, 1 + level * 0.004) * (strong ? 1.12 : 1) * 100) / 100,

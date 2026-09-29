@@ -270,8 +270,8 @@ func _run_scene() -> void:
 			else:
 				posts += 1
 		print("  초원: 모델 %d마리, 기둥 %d마리" % [rigs, posts])
-		# 초원은 무리 하나 16마리 (2026-09-28) — 전부 모델이어야 한다
-		if rigs < 16:
+		# 초원은 맵 전체에 한 마리씩 (2026-09-29) — 전부 모델이어야 한다
+		if rigs < GameData.zone("meadow").get("monsters", []).size():
 			_fail("모델로 선 몬스터가 %d마리뿐이다" % rigs)
 		if posts > 0:
 			_fail("기둥으로 선 몬스터가 %d마리 있다 — 보스까지 모델이어야 한다" % posts)

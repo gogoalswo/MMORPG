@@ -138,7 +138,7 @@ func _case_restore_zone() -> void:
 			second.zone_id, back.x, back.z, back.level, back.hp, back.stats.maxHp
 		])
 	# 몬스터는 저장하지 않는다 — 다시 들어오면 새로 난다
-	if second.snapshot().monsters.size() != 16:
+	if second.snapshot().monsters.size() != GameData.zone(second.zone_id).get("monsters", []).size():
 		_fail("되살린 존에 몬스터가 안 났다")
 
 

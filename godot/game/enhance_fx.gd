@@ -190,6 +190,9 @@ func _draw_sparkle() -> void:
 
 ## 네 갈래 별 — 가는 십자 두 겹(긴 것 + 45° 짧은 것)
 func _star(at: Vector2, r: float, turn: float, tint: Color) -> void:
+	# 켜지고 꺼지는 끝(반지름 ≈ 0)에는 점이 한데 뭉쳐 삼각 분할이 실패한다 — 안 보이는 크기라 건너뛴다
+	if r < 0.5:
+		return
 	for layer in 2:
 		var long := r if layer == 0 else r * 0.45
 		var waist := long * 0.16

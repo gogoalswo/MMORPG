@@ -352,15 +352,16 @@
       "name": "폭렬 찍기",
       "job": "fighter",
       "cooldown": 10000,
-      "range": 6,
       "delayMs": 420,
       "castMs": 1200,
+      "range": 8,
+      "atTarget": true,
       "arc": 6.283185307179586,
       "power": 13,
       "maxTargets": 10,
       "reqLevel": 180,
       "tier": 4,
-      "description": "한 발을 들어 땅을 내리찍어 폭발을 일으키고 잔불을 남긴다."
+      "description": "한 발을 들어 땅을 내리찍어 적의 자리에 폭발 기둥을 솟구치게 한다."
     }
   },
   "byJob": {

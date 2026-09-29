@@ -53,6 +53,9 @@ const NPC_REACH := 4.5
 
 ## `_pick_targets` 에 넘기면 명수 상한 없이 범위 안을 전부 고른다
 const ALL_TARGETS := -1
+## 타겟 자리에서 솟는 스킬(`atTarget`)이 잡을 놈이 없을 때 — 보는 쪽 이만큼(m) 앞에서 터진다.
+## 제자리에서 터지면 "타겟 자리" 가 아니라 내 둘레 기술로 보인다
+const AT_TARGET_AHEAD := 3.0
 
 ## 몇 초마다 저장하나
 const SAVE_EVERY_MS := 10000
@@ -1799,6 +1802,14 @@ func cast(player_id: String, skill_id: String, aim_id := "") -> void:
 				aim = near[0]
 		if not aim.is_empty():
 			player.rot = atan2(aim.x - player.x, aim.z - player.z)
+	# **타겟 자리에서 솟는 스킬**(폭렬 찍기)은 터질 자리를 **지금** 박아 둔다 — 늦게 떨어져도
+	# 판정과 기둥이 같은 자리에 선다. 잡힌 놈이 없으면 보는 쪽 앞(`AT_TARGET_AHEAD`)이다
+	if Skills.at_target(skill):
+		if aim.is_empty():
+			aim = {"x": float(player.x) + sin(float(player.rot)) * AT_TARGET_AHEAD,
+				"z": float(player.z) + cos(float(player.rot)) * AT_TARGET_AHEAD}
+		else:
+			aim = {"x": float(aim.x), "z": float(aim.z)}
 
 	# 스킬도 같은 공격 모션을 쓰므로 같은 동안 발이 묶인다.
 	# **기본 공격 간격으로 자른다** — 스킬 쿨타임(수 초)으로 자르면 걷지도 못하고,
@@ -1818,10 +1829,15 @@ func cast(player_id: String, skill_id: String, aim_id := "") -> void:
 	player.cast_until = now + maxi(maxi(root, int(skill.get("castMs", 0))), combo_ms)
 	# 붙은 강화도 싣는다 — 화면이 이펙트를 고른다 (기절이면 붉은 번개, 범위면 좌우 두 번 더).
 	# `delay_ms` 가 있으면 화면은 동작만 먼저 틀고 이펙트는 그만큼 뒤에 세운다
-	_events.append({
+	var shown := {
 		"type": "skill", "id": player_id, "skill": skill_id, "root_ms": root,
 		"upgrades": upgrades.duplicate(), "delay_ms": delay,
-	})
+	}
+	# 타겟 자리에서 솟는 스킬은 그 자리를 싣는다 — 화면이 이펙트를 거기 세운다
+	if Skills.at_target(skill):
+		shown["tx"] = float(aim.x)
+		shown["tz"] = float(aim.z)
+	_events.append(shown)
 
 	# 회복형은 공격 판정을 하지 않는다
 	var heal := float(skill.get("selfHeal", 0.0))
@@ -1892,7 +1908,7 @@ func _land(player: Dictionary, skill: Dictionary, skill_id: String, upgrades: Ar
 	# 중심이다 — 내 앞을 베는 동작인데 판정만 저쪽에서 나면 이펙트와 어긋난다
 	var origin: Dictionary = {}
 	var reach := range_now
-	if not aim.is_empty() and Skills.is_ranged(skill):
+	if not aim.is_empty() and (Skills.is_ranged(skill) or Skills.at_target(skill)):
 		origin = {"x": aim.x, "z": aim.z}
 		reach = Skills.blast_radius(skill)
 

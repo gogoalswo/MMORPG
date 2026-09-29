@@ -343,7 +343,7 @@ fetch_icon 88ed30ca07ae8540039dc73b53aebd0c ui_icon_skill     # 스킬 — 룬 �
 fetch_icon de42ffab755beb593e6d3cb05702ee74 ui_icon_enhance   # 강화 — 모루를 내리치는 망치 · 불티 (둘째). 2026-09-29 세피아 단색조
 fetch_icon 84ed0d2f4f913a7df644fda63885cfe6 ui_icon_crystal   # 크리스탈 — 바위에서 솟은 결정 (첫째). 2026-09-29 세피아 단색조
 fetch_icon fba999f3e828debccb1109e84189d3a0 ui_icon_bag       # 가방 — 버클 가죽 배낭 (첫째). 2026-09-29 세피아 단색조
-fetch_icon b0fdcd1b136eb9d57dcdd1f50b279da5 ui_icon_dungeon   # 던전 — 굽은 뿔 해골 정면 (첫째). 2026-09-29 세피아 단색조
+fetch_icon 82f60e0a994bb7257ca7da850cd82069 ui_icon_dungeon   # 던전 — 돌 아치에 반쯤 열린 나무 문 (세 장 중 둘째, 처음부터 세피아 팔레트로 뽑음). 2026-09-29
 fetch_icon 60019ed8187ff0cff607c9aa023849f4 ui_icon_design    # 설계 — 두루마리 도면 위 컴퍼스 (첫째). 2026-09-29 세피아 단색조
 fetch_icon 0cd496bab7dbf9e3e1b78144b25a235c ui_icon_rank      # 랭킹 — 받침 달린 트로피 (첫째). 2026-09-29 세피아 단색조
 # 던전 종류 카드 — 받은 그림(다른 게임의 던전 창)을 참고로 물려 뽑은 풍경 · 틀 · 장식

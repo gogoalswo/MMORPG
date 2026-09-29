@@ -254,6 +254,7 @@ Rig(humanoid) → Animate 로 나온 것을 합쳤다. 출처와 약관은
 | `NovaFist` | 폭렬권 `nova_fist` (2026-09-29 요청: "모아질 때 주먹을 내지르고 있다가 터질 때 기를 터트리는") | 오른 스트레이트를 앞발 내딛으며 뻗고 왼손으로 오른팔을 받친다. **0.70초까지 뻗은 채** 낮게 웅크리고, 0.30초부터 두 프레임마다 **좌우로 번갈아 떨며**(7번, 터질수록 세게 — 주먹 최대 약 7cm · 척추·머리 ±4°, `nova_shake`) 버틴다. 처음엔 1~2cm 네 번이라 안 보였다("떨림을 더 크게"). **0.77초에 두 팔을 위로 활짝 펼치고 가슴을 젖혀** 기를 터뜨리고(이펙트 폭발 0.75초 · `delayMs`), 1.2초에 대기로 | 0.10s · 터뜨림 0.77s |
 | `FrostStomp` | 빙주각 `frost_pillar` | 왼 무릎을 높이 들었다 짓밟으며 말 탄 자세로 내려앉고 두 손바닥을 땅으로 누른다 | 0.10s |
 | `KiBurst` | 파천장 `ki_burst` (2026-09-29) | 오른주먹을 허리로 당겨 몸을 감았다가 곧게 내지르고(0.22) **0.42초까지 꼼짝 않는다** — 절도. 기가 나가며 한 번 더 민다 | **0.42s** — 판정·이펙트도 이때 (`delayMs`) |
+| `FlyingKick` | **날라차기** — 평타 대상이 4m 넘게 멀 때 (`lunge`, 2026-09-29 요청) | 웅크렸다(0) 왼 무릎을 끌어올리며 뛰고(0.10, 몸 0.25m) 오른 무릎을 가슴까지 접었다가(0.26, 0.54m) 몸을 뒤로 젖히며 **오른발을 곧게 앞으로 뻗는다**(0.40). 0.58초에 오른발을 앞에 두고 내려앉아 0.8초에 싸움 자세. **앞으로 가는 거리는 판정이 옮긴다**(`World._run_lunges`) — 클립은 제자리에서 뜨기만 한다. 나는 시간에 맞춰 **배속을 바꿔 튼다**(`lunge.speed`) → [auto-hunt-and-targeting.md](auto-hunt-and-targeting.md) "날라차기" | **0.45s** = 도착 (`LUNGE_HIT_S` — 같이 고친다) |
 | `BlastHeel` | 폭렬 찍기 `blast_heel` (2026-09-28, 같은 날 2차) | **다리를 넓게 벌려 무릎을 굽히고 두 팔을 비스듬히 아래로 벌린 자세(0)** — 사용자가 그려 준 막대 그림 — 에서 몸을 왼발로 옮기며 **오른 무릎을 옆으로 높이 들고**(0.26, 꼭대기에서 0.34 까지 잠깐 멎음) **바닥으로 쾅 내려찍으며 더 낮게 주저앉는다**. 두 손은 땅 쪽으로 누른다. 1.2초에 일어선다. **뛰지 않는다** — 1차는 뛰어올라 뒤꿈치로 찍었는데 "점프해서 찍지 말고" 로 바꿨다 | **0.42s** — 판정·이펙트도 이때 (`delayMs` 420) |
 
 - **부딪히는 순간을 0.1초 안에 둔다.** 이펙트·판정이 시전 그 순간(t=0)에 나가므로 준비 동작을
@@ -296,8 +297,9 @@ Rig(humanoid) → Animate 로 나온 것을 합쳤다. 출처와 약관은
 - 고치는 법: 자세 표(`GUARD`·`JAB`…)나 `CLIPS` 의 시각을 고치고 두 줄을 돌린다.
   ```bash
   npm run blender -- --python scripts/blender/fighter_moves.py
-  node scripts/add-clips.mjs public/assets/models/varco_fighter.glb public/assets/models/varco_fighter.glb public/assets/anim/fighter_moves.glb
+  node scripts/add-clips.mjs public/assets/models/varco_fighter.glb public/assets/models/varco_fighter.glb public/assets/anim/fighter_moves.glb --align
   ```
+  **`--align` 을 붙인다** — 지금 몸(팬티 차림, 2026-09-26)은 기본 자세가 T 포즈가 아니다. `fetch-assets.sh` 도 붙여 돌린다.
   `fetch-assets.sh` 도 격투가를 다시 지은 뒤 두 번째 줄을 돌린다 (블렌더 없이).
   그다음 `npm run sync:godot` — 동기화는 원본 **내용 해시**로 바뀐 것을 가린다. 예전엔 크기만
   봐서 키 값만 바뀐 모델(크기가 같다)을 건너뛰고 옛 모델로 테스트가 돌았다 (2026-09-24 에 고쳤다).

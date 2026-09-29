@@ -199,6 +199,10 @@ const HIT_CLIP := "Hit"
 var _move_clip := ""
 var _move_until := 0
 var _move_fresh := false
+## 동작 배속 — 날라차기만 1 이 아니다 (발이 닿는 키가 도착에 오게 판정이 정해 준다)
+var _move_speed := 1.0
+## 날라차기 클립 — 판정(`World._lunge`)이 `lunge` 로 알린다
+const LUNGE_CLIP := "FlyingKick"
 var _swings := 0
 var _camera: CameraRig
 ## 존 이름·골드·fps·빌드가 적히는 줄. 상태판 아래에 깔린다
@@ -470,6 +474,11 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			if str(payload.get("id", "")) == _transport.my_id():
 				_swings += 1
 				_start_move(SWING_CLIPS[_swings % SWING_CLIPS.size()])
+		&"lunge":
+			# 날라차기 — 나는 동안과 내려앉는 동안 달리기로 끊기지 않게 막는다
+			_swing_until = Time.get_ticks_msec() + int(payload.get("ms", 700))
+			if str(payload.get("id", "")) == _transport.my_id():
+				_start_move(LUNGE_CLIP, float(payload.get("speed", 1.0)))
 		&"died":
 			_last_event = "쓰러졌습니다 — 아무 데나 눌러 마을에서 되살아나기"
 			_target = Vector3.INF
@@ -4417,8 +4426,8 @@ func _chase_and_hit(delta: float) -> void:
 	var auto := bool(me.get("auto", false))
 	if to.length() > reach:
 		_move(dir, delta)
-		if auto:
-			_transport.send(&"strike", {"id": _target_mob})
+		# 끈 사람도 보낸다 — 멀면 판정이 날라차기로 붙인다(`World._lunge`). 가까우면 걸어서 붙는다
+		_transport.send(&"strike", {"id": _target_mob})
 		return
 	# 사거리 안이다. 제자리에서 그쪽을 보고(dt 0) 친다
 	_move(dir, 0.0)
@@ -4435,7 +4444,7 @@ func _move(dir: Vector2, delta: float) -> void:
 
 
 ## 동작을 건다. 실제로 트는 건 다음 `_play_player_clip` 이다 — 이벤트는 그리기 전에 온다
-func _start_move(clip: String) -> void:
+func _start_move(clip: String, speed := 1.0) -> void:
 	if not _player is Rig:
 		return
 	var rig: Rig = _player
@@ -4443,7 +4452,8 @@ func _start_move(clip: String) -> void:
 		return
 	_move_clip = clip
 	_move_fresh = true
-	_move_until = Time.get_ticks_msec() + int(rig.clip_length(clip) * 1000.0 * MOVE_CEILING)
+	_move_speed = speed
+	_move_until = Time.get_ticks_msec() + int(rig.clip_length(clip) * 1000.0 * MOVE_CEILING / speed)
 
 
 ## 맞은 동작을 건다 — 틀어도 되는 때만 (`HIT_CLIP` 위 설명)
@@ -4480,7 +4490,7 @@ func _play_player_clip(me: Dictionary) -> void:
 	if _move_clip != "":
 		if _move_fresh:
 			_move_fresh = false
-			rig.replay(_move_clip, 1.0, MOVE_BLEND)
+			rig.replay(_move_clip, _move_speed, MOVE_BLEND)
 			return
 		var cut := _moving and now >= _swing_until
 		# 끝은 **클립이 실제로 다 돌았는지**로 본다. 시계(`_move_until`)로 재면 히트스톱이

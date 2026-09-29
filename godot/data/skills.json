@@ -287,6 +287,7 @@
       "maxTargets": 10,
       "reqLevel": 120,
       "tier": 3,
+      "hidden": true,
       "description": "뛰어올라 내리찍어 일대를 무너뜨린다."
     },
     "thunder_fall": {
@@ -370,7 +371,6 @@
       "rising_kick",
       "ki_burst",
       "crush_fist",
-      "sky_breaker",
       "nova_fist"
     ],
     "mage": [

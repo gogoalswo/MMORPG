@@ -1,7 +1,7 @@
 class_name CrushFx
 extends Node3D
 
-## 무적파쇄권(`crush_fist`) 연출 — **기마 자세로 1초 동안 파란 기를 모았다가, 주먹을 내지르는
+## 무적파쇄권(`crush_fist`) 연출 — **기마 자세로 0.5초 동안 파란 기를 모았다가, 주먹을 내지르는
 ## 순간 주먹 자리에서 흰 심과 파란 가시 빛살이 사방으로 터진다** (2026-09-29 요청: "공수도 자세로
 ## 기 모은다음 주먹을 강하게 내질러서 이펙트 터트리는 스킬". 참고 그림 — 흰 심에서 날카로운 파란
 ## 가시가 제멋대로 길게 뻗고, 파란 불티가 튄다).
@@ -9,7 +9,7 @@ extends Node3D
 ## 시간 순서 (시전부터 초):
 ## - `GATHER` ~ `PUNCH` — **기를 모은다.** 둘레에서 파란 빛알이 몸으로 빨려 들고, 몸에서 푸른
 ##   기운이 피어오르고, 허리의 두 주먹이 점점 밝아지고, 몸 둘레에 짧은 전기가 튄다.
-## - `PUNCH`(1.08) — **내지른다.** 판정도 이때다(스킬 표의 `delayMs`). 흰 섬광 · 가시 별 두 장 ·
+## - `PUNCH`(0.60) — **내지른다.** 판정도 이때다(스킬 표의 `delayMs`). 흰 섬광 · 가시 별 두 장 ·
 ##   날카로운 가시 빛살(메시) · 파란 기운 · 불티 · 발밑 흙먼지 · 화면 흔들림.
 ##
 ## **빛살·전기는 파티클이 아니라 메시다** (규칙 3절) — 게임 전체에서 **한 번만** 깔고
@@ -25,10 +25,15 @@ extends Node3D
 
 ## 기마 자세를 잡는 시각 — 동작 `CrushFist` 가 0.15초에 자세를 잡는다
 const GATHER := 0.12
-## 주먹이 닿는 시각 = 스킬 표의 `delayMs`(1080ms) = 동작 `CrushFist` 의 내지르는 키.
-## **셋은 같이 고친다** (`crush_fx_test.gd`)
-const PUNCH := 1.08
-## 내지른 오른주먹 자리 (캐릭터 기준 — 오른쪽 −X · 앞 +Z). 동작의 1.08 키에서 잰 값이다 —
+## 주먹이 닿는 시각 = 스킬 표의 `delayMs`(600ms) = 동작 `CrushFist` 의 내지르는 키.
+## **셋은 같이 고친다** (`crush_fx_test.gd`). 처음엔 1.08(1초 모음) — 2026-09-29 "기 모으는 시간을 0.5초로"
+const PUNCH := 0.60
+## **터지는 것의 크기 배율** (2026-09-29 요청: "터지는 이펙트 크기를 1.5배 키워"). 아래 크기(m)·속도는
+## 1배 기준이고 쓰는 자리에서 곱한다 — 가시 길이·폭, 가시 별·섬광, 불티·기운·흙먼지(속도·감속을 같이
+## 곱해 시간은 그대로 거리만 1.5배, `_grow`). **모으는 것(빛알·주먹 빛·전기)과 자리(`FIST`·`CENTER`)는
+## 곱하지 않는다** — 몸과 동작에 맞물려 있다. 판정 사거리도 같이 넓혔다 (4 → 5.5m)
+const SIZE := 1.5
+## 내지른 오른주먹 자리 (캐릭터 기준 — 오른쪽 −X · 앞 +Z). 동작의 0.60 키에서 잰 값이다 —
 ## `crush_fx_test.gd` 가 모델의 `RightHand` 뼈를 그 순간 재어 대조한다
 const FIST := Vector3(-0.07, 1.17, 0.74)
 ## 터지는 가운데 — 주먹보다 조금 앞
@@ -149,20 +154,20 @@ static func span() -> float:
 
 ## 불티가 가운데에서 가장 멀리 가는 거리(m)
 static func spark_reach() -> float:
-	return SPARK_SPEED_MAX * SPARK_SPEED_MAX / (2.0 * SPARK_DAMP)
+	return SPARK_SPEED_MAX * SPARK_SPEED_MAX / (2.0 * SPARK_DAMP) * SIZE
 
 
 ## 노드를 만든다 — 한 번만. 되감기는 `_start`
 func _build() -> void:
-	_ink = _sheet(ink_material(INK_WIDTH, COLOR_INK))
-	_halo = _sheet(_ray_material(HALO_WIDTH, COLOR_HALO))
-	_mid = _sheet(_ray_material(MID_WIDTH, COLOR_MID))
-	_core = _sheet(_ray_material(CORE_WIDTH, COLOR_CORE))
+	_ink = _sheet(ink_material(INK_WIDTH * SIZE, COLOR_INK))
+	_halo = _sheet(_ray_material(HALO_WIDTH * SIZE, COLOR_HALO))
+	_mid = _sheet(_ray_material(MID_WIDTH * SIZE, COLOR_MID))
+	_core = _sheet(_ray_material(CORE_WIDTH * SIZE, COLOR_CORE))
 	for node in [_ink, _halo, _mid, _core]:
 		node.mesh = ray_mesh()
 		node.position = CENTER
 		# 셰이더가 폭을 벌리므로 경계 상자를 넉넉히 — 안 그러면 비껴 볼 때 통째로 잘린다
-		node.extra_cull_margin = 3.0
+		node.extra_cull_margin = 3.0 * SIZE
 
 	_crackle = _sheet(_ray_material(CRACKLE_WIDTH * 3.0, COLOR_HALO, 1.0, 0.03, 0.1))
 	_crackle_core = _sheet(_ray_material(CRACKLE_WIDTH, COLOR_CORE, 1.0, 0.03, 0.1))
@@ -175,25 +180,25 @@ func _build() -> void:
 	_fist_l.position = HAND_L
 	_fist_r = _flare(COLOR_SKY, 1.0)
 	_fist_r.position = HAND_R
-	_flash = _flare(Color.WHITE, FLASH_SIZE)
+	_flash = _flare(Color.WHITE, FLASH_SIZE * SIZE)
 	_flash.position = CENTER
-	_bloom = _flare(COLOR_BLUE, BLOOM_SIZE)
+	_bloom = _flare(COLOR_BLUE, BLOOM_SIZE * SIZE)
 	_bloom.position = CENTER
 	# 가시 별 — 씨앗이 다른 두 장을 겹쳐 가시를 촘촘하게. **큰 것은 알파(파랑)** 로 빛보다 먼저 깐다 —
 	# 가산 파랑은 회색 바닥에서 하늘빛으로 바래서 참고 그림의 짙은 파란 윤곽이 안 나왔다 (1차 캡처)
-	_star_big = _flare(COLOR_DEEP, STAR_BIG)
+	_star_big = _flare(COLOR_DEEP, STAR_BIG * SIZE)
 	var deep := _star_big.material_override as StandardMaterial3D
 	deep.albedo_texture = FxTex.star(7)
 	deep.blend_mode = BaseMaterial3D.BLEND_MODE_MIX
 	deep.render_priority = -1
 	_star_big.position = CENTER
-	_star_small = _flare(COLOR_SKY, STAR_SMALL)
+	_star_small = _flare(COLOR_SKY, STAR_SMALL * SIZE)
 	(_star_small.material_override as StandardMaterial3D).albedo_texture = FxTex.star(23)
 	_star_small.position = CENTER
 
 	_light = OmniLight3D.new()
 	_light.position = BODY
-	_light.omni_range = LIGHT_RANGE
+	_light.omni_range = LIGHT_RANGE * SIZE
 	_light.light_color = COLOR_LIGHT
 	add_child(_light)
 
@@ -202,6 +207,8 @@ func _build() -> void:
 	_sparks = _spark_emitter()
 	_puffs = _puff_emitter()
 	_dust = _dust_emitter()
+	for e in [_sparks, _puffs, _dust]:
+		_grow(e)
 	for e in _emitters():
 		e.emitting = false
 		# 그림자를 끈다 — 기본으로 켜져 있어 땅 가까운 덩이가 어두운 호를 드리운다 (규칙 3절)
@@ -326,21 +333,22 @@ func _emitters() -> Array:
 ## 기를 모으는 빛알 — 몸 둘레 구에서 나와 **몸 한가운데로 빨려 든다**(음의 방사 가속).
 ## 모으는 동안 고르게 나온다(`explosiveness` 0 — 가산이라 안 나온 알이 검게 안 보인다)
 func _gather_emitter() -> CPUParticles3D:
-	var e := NovaFx._emitter(80, PUNCH - GATHER, 0.0, 1.7)
+	# 모으는 시간이 0.5초로 줄어(처음 1초) 빨리 빨려 들게 가속을 세게, 사라지는 때를 늦게 뒀다
+	var e := NovaFx._emitter(80, PUNCH - GATHER, 0.0, 1.5)
 	e.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE_SURFACE
 	e.mesh = NovaFx._dot(0.16)
 	e.initial_velocity_min = 0.0
 	e.initial_velocity_max = 0.3
-	e.radial_accel_min = -14.0
-	e.radial_accel_max = -9.0
-	e.damping_min = 2.0
-	e.damping_max = 3.0
+	e.radial_accel_min = -28.0
+	e.radial_accel_max = -20.0
+	e.damping_min = 1.0
+	e.damping_max = 1.5
 	e.gravity = Vector3.ZERO
-	# 나타나 몸에 닿을 즈음(수명의 40%) 사라진다 — 가운데에 모여 뭉치지 않게
+	# 나타나 몸에 닿을 즈음(수명의 70%) 사라진다 — 가운데에 모여 뭉치지 않게
 	var curve := Curve.new()
 	curve.add_point(Vector2(0.0, 0.2))
 	curve.add_point(Vector2(0.12, 1.0))
-	curve.add_point(Vector2(0.4, 0.0))
+	curve.add_point(Vector2(0.7, 0.0))
 	curve.add_point(Vector2(1.0, 0.0))
 	e.scale_amount_curve = curve
 	e.scale_amount_min = 0.6
@@ -438,6 +446,17 @@ func _dust_emitter() -> CPUParticles3D:
 	return e
 
 
+## 방출기를 `SIZE` 배로 — 나오는 구 · 알갱이 크기 · 속도 · 감속 · 중력을 같이 곱한다 (`NovaFx._grow` 와 같다)
+static func _grow(e: CPUParticles3D) -> void:
+	e.emission_sphere_radius *= SIZE
+	(e.mesh as QuadMesh).size *= SIZE
+	e.initial_velocity_min *= SIZE
+	e.initial_velocity_max *= SIZE
+	e.damping_min *= SIZE
+	e.damping_max *= SIZE
+	e.gravity *= SIZE
+
+
 ## 빛살 한 겹의 가산 재질 — 폭렬권 셰이더를 쓰고 꼬리·사라짐만 바꾼다.
 ## 꼬리를 1 로 두면 머리가 끝에 닿은 뒤에도 가시 전체가 남는다
 static func _ray_material(width: float, tint: Color, trail := 1.0,
@@ -527,7 +546,7 @@ static func rays() -> Array:
 		var a := float(i) * 2.39996 + rng.randf_range(-0.2, 0.2)
 		var dir := Vector3(cos(a) * ring, y, sin(a) * ring).normalized()
 		var short := i % 3 == 0
-		var length := rng.randf_range(RAY_MIN, RAY_MIN + 0.6) if short else rng.randf_range(RAY_MIN + 0.6, RAY_MAX)
+		var length := (rng.randf_range(RAY_MIN, RAY_MIN + 0.6) if short else rng.randf_range(RAY_MIN + 0.6, RAY_MAX)) * SIZE
 		# 아래로 뻗는 가시는 땅 위에서 끝낸다 — 가운데가 주먹 높이라 길면 땅을 뚫는다
 		if dir.y < 0.0:
 			length = minf(length, (CENTER.y - 0.2) / -dir.y)

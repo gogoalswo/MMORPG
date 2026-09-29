@@ -233,10 +233,11 @@ NOVA_SETTLE = pose(NOVA_BURST, hips=(0.0, 0.0, -0.05), spine=(-6, 0, 0), head=(-
                    lh=(0.34, -0.12, 0.80), rh=(-0.34, -0.12, 0.80))
 
 # 무적파쇄권 — **공수도 기마 자세**(다리를 넓게 벌려 무릎을 바깥으로 굽히고, 두 주먹을 허리
-# 앞에 쥔다 — 2026-09-29 사용자가 준 도복 그림)로 **1초 동안 떨며 기를 모은다.** 모을수록 조금씩
-# 낮게 가라앉는다. 그다음 오른주먹을 허리로 당겼다가(0.98) **몸을 틀며 곧게 내지르고 왼주먹은
-# 허리로 당긴다**(1.08 — 정권 지르기의 당겨 손). 발은 끝까지 기마 자세 그대로다.
-# 내지르는 키 1.08 이 판정·폭발이다 (`skills.ts` 의 `delayMs` 1080 · `CrushFx.PUNCH` — 같이 고친다)
+# 앞에 쥔다 — 2026-09-29 사용자가 준 도복 그림)로 **0.5초 동안 떨며 기를 모은다**(처음엔 1초 —
+# 같은 날 "기 모으는 시간을 0.5초로 줄이고"). 모을수록 조금씩 낮게 가라앉는다. 그다음 오른주먹을
+# 허리로 당겼다가(0.50) **몸을 틀며 곧게 내지르고 왼주먹은 허리로 당긴다**(0.60 — 정권 지르기의
+# 당겨 손). 발은 끝까지 기마 자세 그대로다.
+# 내지르는 키 0.60 이 판정·폭발이다 (`skills.ts` 의 `delayMs` 600 · `CrushFx.PUNCH` — 같이 고친다)
 CRUSH_STANCE = pose(GUARD,
                     hips=(0.0, 0.0, -0.13), hipsR=(0, 0, 0),
                     spine=(2, 0, 0), head=(-4, 0, 0),
@@ -247,7 +248,7 @@ CRUSH_STANCE = pose(GUARD,
 CRUSH_DEEP = pose(CRUSH_STANCE, hips=(0.0, 0.0, -0.16), spine=(5, 0, 0), head=(-7, 0, 0),
                   lh=(0.20, -0.14, 0.45), rh=(-0.20, -0.14, 0.45))
 # 떨림 — 기가 차오르며 몸과 두 주먹이 번갈아 떤다. 끝으로 갈수록 세진다 (폭렬권 떨림과 같은 방식)
-CRUSH_SHAKES = 7
+CRUSH_SHAKES = 5
 
 
 def crush_shake(i):
@@ -386,14 +387,13 @@ CLIPS = {
                 (0.22, KI_THRUST, "LINEAR"), (0.42, KI_THRUST, "LINEAR"),
                 (0.46, KI_PUSH, "BEZIER"), (0.72, KI_PUSH, "BEZIER"),
                 (1.0, GUARD, "BEZIER"), (1.2, "IDLE", "BEZIER")],
-    # 기마 자세(0.15)로 떨며 기를 모으고(~0.90) 오른주먹을 당겼다가(0.98) 1.08 에 내지른다(판정).
-    # 1.08 → 1.40 은 내지른 채 버틴다. 길이 1.8 = 스킬 표의 `castMs`
-    "CrushFist": [(0.0, GUARD, "BEZIER"), (0.15, CRUSH_STANCE, "BEZIER"),
-                  (0.26, CRUSH_STANCE, "BEZIER")]
-                 + [((9 + 3 * i) / FPS, crush_shake(i), "LINEAR") for i in range(CRUSH_SHAKES)]
-                 + [(0.98, CRUSH_CHAMBER, "LINEAR"), (1.08, CRUSH_PUNCH, "LINEAR"),
-                    (1.14, CRUSH_PUSH, "BEZIER"), (1.40, CRUSH_PUSH, "BEZIER"),
-                    (1.62, GUARD, "BEZIER"), (1.8, "IDLE", "BEZIER")],
+    # 기마 자세(0.12)로 떨며 기를 모으고(~0.43) 오른주먹을 당겼다가(0.50) 0.60 에 내지른다(판정).
+    # 0.60 → 0.90 은 내지른 채 버틴다. 길이 1.3 = 스킬 표의 `castMs`
+    "CrushFist": [(0.0, GUARD, "BEZIER"), (0.12, CRUSH_STANCE, "BEZIER")]
+                 + [((5 + 2 * i) / FPS, crush_shake(i), "LINEAR") for i in range(CRUSH_SHAKES)]
+                 + [(0.50, CRUSH_CHAMBER, "LINEAR"), (0.60, CRUSH_PUNCH, "LINEAR"),
+                    (0.66, CRUSH_PUSH, "BEZIER"), (0.90, CRUSH_PUSH, "BEZIER"),
+                    (1.12, GUARD, "BEZIER"), (1.3, "IDLE", "BEZIER")],
     # 뛰어(0.10) 무릎을 접고(0.26) 뻗어(0.40) 0.45 에 맞고(= 도착 · `LUNGE_HIT_S`) 내려앉는다(0.58)
     "FlyingKick": [(0.0, FK_CROUCH, "BEZIER"), (0.10, FK_TAKEOFF, "BEZIER"),
                    (0.26, FK_CHAMBER, "LINEAR"), (0.40, FK_KICK, "LINEAR"),

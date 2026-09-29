@@ -44,8 +44,8 @@ func _case_table(game: Node3D) -> void:
 	var delay := float(skill.get("delayMs", 0)) / 1000.0
 	if absf(delay - CrushFx.PUNCH) > 0.02:
 		_fail("판정은 %.2f초에 떨어지는데 이펙트는 %.2f초에 터진다" % [delay, CrushFx.PUNCH])
-	# "1초간 기를 모은 다음" — 모으는 시간이 1초 가까이는 돼야 한다
-	if CrushFx.PUNCH - CrushFx.GATHER < 0.9:
+	# "기 모으는 시간을 0.5초로" (처음엔 "1초간 기를 모은 다음") — 0.5초 남짓 모아야 한다
+	if absf(CrushFx.PUNCH - CrushFx.GATHER - 0.5) > 0.05:
 		_fail("기를 %.2f초만 모은다" % (CrushFx.PUNCH - CrushFx.GATHER))
 	var clip: float = game._player.clip_length("CrushFist") if game._player != null else 0.0
 	if absf(clip - float(skill.get("castMs", 0)) / 1000.0) > 0.05:

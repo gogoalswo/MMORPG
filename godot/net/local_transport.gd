@@ -117,8 +117,8 @@ func send(message: StringName, payload: Dictionary) -> void:
 			_world.travel(MY_ID, str(payload.get("zone", "")))
 		&"npc":
 			_world.npc_open(MY_ID, str(payload.get("name", "")))
-		&"jobAdvance":
-			_world.job_advance(MY_ID)
+		&"learnPassive":
+			_world.learn_passive(MY_ID, str(payload.get("id", "")))
 		&"learnSkill":
 			_world.learn_skill(MY_ID, str(payload.get("skill", "")))
 		&"setSkillBar":

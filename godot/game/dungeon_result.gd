@@ -117,7 +117,8 @@ func show_result(event: Dictionary) -> void:
 		_rewards.remove_child(child)
 		child.queue_free()
 	var skill_exp := int(event.get("skill_exp", 0))
-	if skill_exp > 0:
+	# 보이는 스킬이 없으면 숨긴다 (2026-09-29 — `DungeonPanel._stage_rewards` 와 같다)
+	if skill_exp > 0 and Skills.actives_shown(World.DEFAULT_JOB):
 		_rewards.add_child(_reward_cell("ui_icon_skill", "스킬 경험치 %d" % skill_exp))
 	var crystals := int(event.get("crystals", 0))
 	if crystals > 0:

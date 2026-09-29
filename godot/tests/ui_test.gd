@@ -394,11 +394,14 @@ func _case_potion(game: Node3D) -> void:
 	game._transport.send(&"potionPct", {"pct": int(GameData.combat().get("potionAutoDefault", 50))})
 	await process_frame
 	var cell: Control = game._potion_cell
-	# 퀵슬롯 **왼쪽**, 한 뼘(`AUTO_GAP`) 띄워서 (2026-09-26 요청)
-	var first: Rect2 = game._bar_buttons[0].get_global_rect()
+	# 퀵슬롯 **왼쪽**, 한 뼘(`AUTO_GAP`) 띄워서 (2026-09-26 요청).
+	# 퀵슬롯 스킬 칸이 숨었으면(보이는 스킬이 없다, 2026-09-29) 자동사냥 칸 왼쪽이다 — 한 뼘 더 띄워진다
+	var quick_shown: bool = game._bar_buttons[0].visible
+	var first: Rect2 = (game._bar_buttons[0] if quick_shown else game._auto_cell).get_global_rect()
+	var reach := 20.0 if quick_shown else 40.0 + float(game.AUTO_GAP)
 	var rect := cell.get_global_rect()
 	if absf(rect.get_center().y - first.get_center().y) > 2.0 or rect.end.x > first.position.x \
-			or first.position.x - rect.end.x > 20.0:
+			or first.position.x - rect.end.x > reach:
 		_fail("물약 칸이 퀵슬롯 바로 왼쪽이 아니다: 물약 %s · 첫 퀵슬롯 %s" % [rect, first])
 	var icon: TextureRect = cell.find_child("icon", true, false)
 	if icon.texture == null:
@@ -687,13 +690,16 @@ func _case_dungeon(game: Node3D) -> void:
 	var window: Control = panel.find_child("StageWindow", true, false)
 	if not screen.encloses(window.get_global_rect()):
 		_fail("단계 창이 화면 밖으로 넘친다: %s" % window.get_global_rect())
-	# 처음엔 1단계가 골라져 있고, 보상은 스킬 경험치 한 칸뿐이다 (장비·크리스탈·골드 없음)
-	if panel.picked_stage() != "raid_01" or panel.reward_count() != 1:
-		_fail("단계 창을 열면 1단계가 골라지고 보상은 한 칸이어야 한다: %s 보상 %d칸" % [panel.picked_stage(), panel.reward_count()])
+	# 처음엔 1단계가 골라져 있고, 보상은 스킬 경험치 한 칸뿐이다 (장비·크리스탈·골드 없음).
+	# **보이는 스킬이 없으면 그 칸도 숨는다** (2026-09-29 요청: "던전의 스킬 경험치 숨김") — 0칸
+	var shown := Skills.actives_shown(World.DEFAULT_JOB)
+	if panel.picked_stage() != "raid_01" or panel.reward_count() != (1 if shown else 0):
+		_fail("단계 창을 열면 1단계가 골라지고 보상은 %d칸이어야 한다: %s 보상 %d칸" % [1 if shown else 0, panel.picked_stage(), panel.reward_count()])
 	# 그 한 칸은 던전 클리어의 스킬 경험치 (1단계 = 1000)
-	var first_reward: Label = panel._rewards.get_child(0).find_children("*", "Label", true, false)[0]
-	if first_reward.text != "스킬 경험치 1000":
-		_fail("보상 맨 앞이 스킬 경험치여야 한다: '%s'" % first_reward.text)
+	if shown and panel.reward_count() > 0:
+		var first_reward: Label = panel._rewards.get_child(0).find_children("*", "Label", true, false)[0]
+		if first_reward.text != "스킬 경험치 1000":
+			_fail("보상 맨 앞이 스킬 경험치여야 한다: '%s'" % first_reward.text)
 	seen += panel._stage_title.text + panel.row(0).text + panel.row(19).text + panel.enter_button().text
 	for label in window.find_children("*", "Label", true, false):
 		seen += label.text
@@ -702,7 +708,9 @@ func _case_dungeon(game: Node3D) -> void:
 	await _tap_row(panel, 4)
 	if not panel.visible or panel.picked_stage() != "raid_05":
 		_fail("5단계를 눌렀으면 창은 그대로이고 5단계가 골라져야 한다: %s" % panel.picked_stage())
-	elif panel.reward_count() != 1 or panel._rewards.get_child(0).find_children("*", "Label", true, false)[0].text != "스킬 경험치 5000":
+	elif not shown and panel.reward_count() != 0:
+		_fail("보이는 스킬이 없는데 5단계 보상이 %d칸이다 (스킬 경험치는 숨긴다)" % panel.reward_count())
+	elif shown and (panel.reward_count() != 1 or panel._rewards.get_child(0).find_children("*", "Label", true, false)[0].text != "스킬 경험치 5000"):
 		_fail("5단계 보상은 스킬 경험치 5000 한 칸이어야 한다: %d칸" % panel.reward_count())
 	# X 는 단계 창만 닫는다 — 던전 카드로 돌아간다
 	panel.close_button().pressed.emit()
@@ -1721,9 +1729,12 @@ func _check_upgrades(game: Node3D, me: Dictionary, panel: Control, screen: Vecto
 
 func _case_skills(game: Node3D) -> void:
 	var me: Dictionary = game._transport.snapshot().players[game._transport.my_id()]
-	# 스킬창·퀵슬롯을 보는 케이스다 — 전직 스킬까지 다 올리게 4차까지 마쳐 둔다
-	me["job_tier"] = 4
 	var screen := Vector2(1280, 720)
+	# 보이는 액티브가 없는 직업(격투가, 2026-09-29)은 패시브 창을 본다
+	if not Skills.actives_shown(str(me.job)):
+		await _case_passive(game, me)
+		await _case_switches(game)
+		return
 
 	# 퀵슬롯 4칸이 화면 아래 가운데에, 오른쪽 단추들과 겹치지 않게
 	var quick: Array = game._bar_buttons
@@ -1870,7 +1881,93 @@ func _case_skills(game: Node3D) -> void:
 	me.skill_bar.assign(kept)
 	if panel.visible:
 		_fail("빈 퀵슬롯을 눌렀는데 스킬창이 열렸다")
+	await _case_switches(game)
 
+
+## 격투가 스킬창 (2026-09-29 요청: "스킬을 다 숨김처리 … 10레벨마다 공속을 올려주는 패시브") —
+## 보이는 액티브가 없어 **퀵슬롯 스킬 칸 · 장착 줄 · 강화 칸이 숨고**, 목록에는 패시브 질풍각 하나.
+## 열린 단계가 남았으면 **HUD 스킬 아이콘과 [습득] 위에 레드닷**, 누르면 한 단계 오르고 평타가 빨라진다
+func _case_passive(game: Node3D, me: Dictionary) -> void:
+	var screen := Vector2(1280, 720)
+	var world = game._transport._world
+	for cell in game._bar_buttons:
+		if cell.visible:
+			_fail("보이는 스킬이 없는데 퀵슬롯 스킬 칸이 보인다")
+			break
+	await process_frame
+	# 물약·자동사냥 칸은 그대로 아래 가운데
+	var auto_rect: Rect2 = game._auto_cell.get_global_rect()
+	var middle: float = (game._potion_cell.get_global_rect().position.x + auto_rect.end.x) / 2.0
+	if absf(middle - screen.x / 2.0) > 2.0:
+		_fail("물약·자동사냥 칸이 아래 가운데가 아니다: 가운데 x=%.0f" % middle)
+
+	var gale := Skills.passive("gale_kicks")
+	var was_level := int(me.level)
+	me.level = 25
+	me.passives = {"gale_kicks": 1}
+	world._refresh_stats(me)
+	game._refresh_status(me)
+	if not game._skill_dot.visible:
+		_fail("Lv.25 · 1단계라 배울 단계가 남았는데 HUD 스킬 레드닷이 꺼져 있다")
+
+	game._toggle_skills()
+	await process_frame
+	var panel: Control = game._skill_panel
+	if not panel.visible:
+		_fail("스킬 단추를 눌렀는데 창이 안 떴다")
+		return
+	if not Rect2(Vector2.ZERO, screen).encloses(panel.get_global_rect()):
+		_fail("스킬창 %s 이 화면 밖으로 나간다" % panel.get_global_rect())
+	for node in game._active_only:
+		if node.visible:
+			_fail("보이는 스킬이 없는데 %s 가 보인다" % node)
+	if game._skill_ids != ["gale_kicks"] or game._skill_name.text != str(gale.name):
+		_fail("목록은 질풍각 하나여야 한다: %s · '%s'" % [game._skill_ids, game._skill_name.text])
+	if game._skill_equip.visible or game._skill_unequip.visible or not game._passive_learn.visible:
+		_fail("패시브를 골랐으면 장착/해제 대신 [습득] 만 서야 한다")
+	var badge: String = game._skill_cells[0].find_child("badge", true, false).text
+	if badge != "1/20":
+		_fail("질풍각 칸 글자가 '1/20' 이어야 하는데 '%s'" % badge)
+	if game._passive_learn.disabled or not game._passive_dot.visible:
+		_fail("열린 단계가 남았는데 [습득] 이 막혔거나 레드닷이 없다")
+	# 레드닷은 단추 **오른쪽 위 모서리**에 얹힌다
+	var button: Rect2 = game._passive_learn.get_global_rect()
+	var dot: Rect2 = game._passive_dot.get_global_rect()
+	if not button.encloses(dot) or dot.end.x < button.end.x - 1 or dot.position.y > button.position.y + 1:
+		_fail("레드닷이 [습득] 오른쪽 위에 없다: 단추 %s · 점 %s" % [button, dot])
+
+	var before := Combat.effective_cooldown(me.stats.attackCooldown, me.stats.attackSpeed)
+	game._on_passive_learn()
+	await process_frame
+	var after := Combat.effective_cooldown(me.stats.attackCooldown, me.stats.attackSpeed)
+	if int(me.passives.get("gale_kicks", 0)) != 2:
+		_fail("[습득] 을 눌렀는데 2단계가 아니다: %s" % me.passives)
+	elif after >= before:
+		_fail("단계가 올랐는데 평타 간격이 그대로다: %dms → %dms" % [before, after])
+	# Lv.25 는 두 단계까지 — 다 배웠으면 점이 꺼지고 단추가 막힌다
+	game._refresh_status(me)
+	if game._passive_dot.visible or not game._passive_learn.disabled or game._skill_dot.visible:
+		_fail("열린 단계를 다 배웠는데 레드닷이 남았거나 [습득] 이 눌린다")
+	if not game._skill_state.text.begins_with("30레벨"):
+		_fail("다음 단계가 열리는 레벨이 안 적혔다: '%s'" % game._skill_state.text)
+	print("  패시브: 질풍각 1 → 2단계, 평타 %dms → %dms, 레드닷 켜짐 → 꺼짐" % [before, after])
+
+	var font: Font = load(FONT)
+	var missing := ""
+	for ch in "질풍각 패시브 단계 공격 속도 레벨마다 초당 회 다음 습득할 수 있습니다 끝까지 배웠습니다 열립니다":
+		if ch != " " and not font.has_char(ch.unicode_at(0)):
+			missing += ch
+	if missing != "":
+		_fail("패시브 글자가 폰트에 없다: %s" % missing)
+
+	game._toggle_skills()
+	me.level = was_level
+	me.passives = {}
+	world._refresh_stats(me)
+
+
+## 테스트 스위치·치트 여닫기·무적·범위 단추 — 스킬창 시험에서 떼어냈다 (격투가는 패시브 길로 온다)
+func _case_switches(game: Node3D) -> void:
 	# 테스트 스위치 단추 — 누르면 뒤집히고, 다시 누르면 돌아온다
 	if game._switch_buttons.has("unlockAll"):
 		_fail("레벨 잠금 해제 단추는 걷었는데 아직 있다")

@@ -19,6 +19,7 @@ const OPS := {
 	"enter": "s",
 	"kill": "t",
 	"learn_skill": "s",
+	"learn_passive": "s",
 	"feed_upgrade": "si",
 	"equip": "i",
 	"unequip": "s",
@@ -350,17 +351,12 @@ func _args(shape: String, raw: Variant) -> Variant:
 	return out
 
 
-## 존에 들어왔다. **게임에 있는 입장 규칙만 본다** — 전직 시험은 바로 다음 단계이고 레벨이 될 때만.
-## 일반 사냥터·던전은 막는 규칙이 없다 (`World.travel`). 들어올 때마다 명단을 새로 센다 —
+## 존에 들어왔다. **게임에 있는 입장 규칙만 본다** — 지금은 막는 규칙이 없다 (`World.travel`.
+## 전직 시험 존은 2026-09-29 에 전직째로 없앴다). 들어올 때마다 명단을 새로 센다 —
 ## 기기도 존을 다시 열면 몬스터를 새로 놓는다
 func _enter(account: Dictionary, zone: String) -> String:
 	if not GameData.zones().get("zones", {}).has(zone):
 		return "no_zone"
-	var tier := Skills.job_tier_of_zone(zone)
-	if tier > 0:
-		var p: Dictionary = account.ledger
-		if tier != int(p.get("job_tier", 0)) + 1 or int(p.level) < int(Skills.job_advance(tier).get("level", 0)):
-			return "zone_locked"
 	_hunts[account.id] = {"zone": zone, "entered_at": int(clock.call()), "roster": World.roster(zone), "killed": {}}
 	return ""
 

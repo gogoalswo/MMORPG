@@ -180,8 +180,6 @@ func _case_skill_priority() -> void:
 	var me: Dictionary = s[1]
 	me.skills = bar.duplicate()
 	me.skill_bar = bar.duplicate()
-	# 낙뢰·빙주각·천붕각은 전직 스킬이다 — 전직을 마친 셈 친다
-	me.job_tier = 3
 	# 전직 스킬 두 방이면 더미가 죽는다 — 넷 다 볼 때까지 버티게 한다
 	s[2].hp = 100000000
 	w.set_auto("me", true)
@@ -245,7 +243,6 @@ func _case_skill_faces_body() -> void:
 			mob.hp = 999999
 		me.skills = ["thunder_fall"]
 		me.skill_bar = ["thunder_fall"]
-		me.job_tier = 3
 		w.set_auto("me", true)
 		me.auto_target = "A"
 		# 방금 A 를 골랐다 — 안 잡으면 첫 틱에 다시 훑어 더 가까운 B 로 갈아탄다 (`HUNT_RESCAN_MS`)

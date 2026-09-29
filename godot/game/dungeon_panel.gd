@@ -484,7 +484,9 @@ func _select(zone_id: String) -> void:
 func _stage_rewards(stage: Dictionary) -> Array:
 	var out: Array = []
 	var skill_exp := int(stage.get("skillExp", 0))
-	if skill_exp > 0:
+	# **보이는 스킬이 없으면 숨긴다** (2026-09-29 요청: "던전의 스킬 경험치 숨김 처리해").
+	# 판정은 그대로 쌓는다 — 스킬 표의 `hidden` 을 풀면 곧바로 다시 뜬다
+	if skill_exp > 0 and Skills.actives_shown(World.DEFAULT_JOB):
 		out.append({"name": "스킬 경험치 %d" % skill_exp, "icon": "ui_icon_skill", "color": CARD_GOLD})
 	# 시련의 탑 통과 보상 — 크리스탈 단계 × 1개 (`Ledger.trial_clear`). 이것도 한 칸만
 	var trial_crystals := int(stage.get("crystals", 0))

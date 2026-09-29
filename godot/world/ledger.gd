@@ -14,7 +14,7 @@ extends RefCounted
 
 ## 서버가 가질 칸. 여기 없는 칸은 이 파일이 만지지 않는다
 const KEYS := [
-	"job", "job_tier", "level", "exp", "gold", "skills", "skill_points",
+	"job", "level", "exp", "gold", "skills", "skill_points", "passives",
 	"skill_upgrades", "skill_upgrade_exp", "skill_exp", "bag", "equipped", "granted",
 	"diamonds",
 ]
@@ -38,8 +38,8 @@ static func fresh(job: String) -> Dictionary:
 	for id in Skills.for_job(job).slice(0, 1):
 		starter.append(str(id))
 	return {
-		"job": job, "job_tier": 0, "level": 1, "exp": 0, "gold": 0,
-		"skills": starter, "skill_points": 0,
+		"job": job, "level": 1, "exp": 0, "gold": 0,
+		"skills": starter, "skill_points": 0, "passives": {},
 		"skill_upgrades": {}, "skill_upgrade_exp": {}, "skill_exp": 0,
 		"bag": [], "equipped": {}, "granted": [],
 		"diamonds": 0,
@@ -136,7 +136,6 @@ func kill(p: Dictionary, target: Dictionary) -> void:
 	p.level = grown.level
 	p.exp = grown.exp
 	events.append({"type": "reward", "exp": gained})
-	_check_job_trial(p, target)
 	_check_dungeon_clear(p, target)
 
 	if grown.level > before:
@@ -144,27 +143,6 @@ func kill(p: Dictionary, target: Dictionary) -> void:
 		var per_level := int(GameData.combat().get("skillPointPerLevel", 1))
 		p.skill_points = int(p.skill_points) + (grown.level - before) * per_level
 		events.append({"type": "levelUp", "level": grown.level})
-
-
-## 전직 시험에서 보스를 잡았다 → **그 단계가 바로 다음 단계일 때만** 전직한다.
-## 지난 시험을 다시 잡거나(이미 전직) 건너뛴 시험은 아무 일 없다
-func _check_job_trial(p: Dictionary, target: Dictionary) -> void:
-	var tier := Skills.job_tier_of_zone(str(target.get("zone", "")))
-	if tier == 0 or not bool(target.get("boss", false)):
-		return
-	if tier != int(p.get("job_tier", 0)) + 1:
-		return
-	if int(p.level) < int(Skills.job_advance(tier).get("level", 0)):
-		return
-	p.job_tier = tier
-	var names: Array = []
-	for id in Skills.unlocked_at(str(p.job), tier):
-		names.append(str(Skills.all().get(id, {}).get("name", id)))
-	events.append({"type": "jobAdvanced", "tier": tier, "skills": names})
-	if names.is_empty():
-		_notice("%d차 전직을 마쳤습니다" % tier)
-	else:
-		_notice("%d차 전직! %s 을(를) 배울 수 있습니다" % [tier, ", ".join(names)])
 
 
 ## 던전 보스를 잡았다 → 그 단계의 **스킬 경험치**(`skillExp` = 단계 × 1000)가 `skill_exp` 에
@@ -178,7 +156,11 @@ func _check_dungeon_clear(p: Dictionary, target: Dictionary) -> void:
 		return
 	p.skill_exp = int(p.get("skill_exp", 0)) + gain
 	events.append({"type": "skillExp", "gain": gain, "total": p.skill_exp})
-	_notice("던전 %d단계 클리어! 스킬 경험치 +%d" % [int(stage.stage), gain])
+	# 보이는 스킬이 없으면 경험치는 말없이 쌓는다 (2026-09-29 요청: "던전의 스킬 경험치 숨김")
+	if Skills.actives_shown(str(p.job)):
+		_notice("던전 %d단계 클리어! 스킬 경험치 +%d" % [int(stage.stage), gain])
+	else:
+		_notice("던전 %d단계 클리어!" % int(stage.stage))
 
 
 ## 시련의 탑을 통과했다 → 그 단계의 **크리스탈**(`crystals` = 단계 × 1)을 준다.
@@ -217,11 +199,7 @@ func learn_skill(p: Dictionary, skill_id: String) -> void:
 		return
 	if skill_id in p.skills:
 		return
-	var tier := Skills.tier_of(skill)
-	if tier > int(p.get("job_tier", 0)):
-		_notice("%d차 전직 후 배웁니다" % tier)
-		return
-	if not Skills.can_learn(skill, str(p.job), int(p.level), int(p.job_tier)):
+	if not Skills.can_learn(skill, str(p.job), int(p.level)):
 		_notice("%d레벨에 배웁니다" % int(skill.get("reqLevel", 1)))
 		return
 	var cost := Skills.point_cost()
@@ -232,6 +210,30 @@ func learn_skill(p: Dictionary, skill_id: String) -> void:
 	p.skill_points = int(p.skill_points) - cost
 	p.skills.append(skill_id)
 	events.append({"type": "skills", "learned": p.skills.duplicate()})
+
+
+## 패시브 한 단계를 배운다 (docs/features/passives.md). **직업·레벨·끝 단계를 여기서 다시 본다.**
+## 값은 없다 — 레벨이 되면 공짜다 (2026-09-29 요청: "레벨 되면 공짜로 배울 수 있지만 습득 버튼을
+## 만들어서 배우게"). 한 번에 한 단계만 오른다
+func learn_passive(p: Dictionary, passive_id: String) -> void:
+	var passive := Skills.passive(passive_id)
+	if passive.is_empty() or str(passive.get("job", "")) != str(p.job):
+		_notice("배울 수 없는 패시브입니다")
+		return
+	var ranks: Dictionary = p.get("passives", {})
+	var rank := int(ranks.get(passive_id, 0))
+	if rank >= int(passive.maxRank):
+		_notice("%s 을(를) 끝까지 배웠습니다" % str(passive.name))
+		return
+	if rank >= Skills.passive_open(passive, int(p.level)):
+		_notice("%d레벨에 배웁니다" % ((rank + 1) * int(passive.everyLevels)))
+		return
+	ranks[passive_id] = rank + 1
+	p.passives = ranks
+	events.append({"type": "passives", "passives": ranks.duplicate()})
+	_notice("%s %d단계 — 공격 속도 +%d%%" % [
+		str(passive.name), rank + 1, roundi((rank + 1) * float(passive.perRank) * 100.0)
+	])
 
 
 ## 스킬창에서 **고른 강화에 모아 둔 스킬 경험치(`skill_exp`)를 넣는다** — 그 스킬의

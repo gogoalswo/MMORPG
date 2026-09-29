@@ -27,8 +27,9 @@ static func write(zone_id: String, player: Dictionary) -> void:
 		"x": player.x,
 		"z": player.z,
 		"level": player.level,
-		# 전직 단계 (0 = 전직 전) — 없던 칸이라 옛 저장은 0 으로 읽힌다
-		"job_tier": player.get("job_tier", 0),
+		# 패시브 단계 `{ id: 단계 }` — 없던 칸이라 옛 저장은 빈 사전으로 읽힌다.
+		# 옛 저장의 `job_tier`(전직 단계)는 2026-09-29 에 전직째로 없애서 읽지 않는다
+		"passives": player.get("passives", {}),
 		"exp": player.exp,
 		"hp": player.hp,
 		"dead": player.get("dead", false),

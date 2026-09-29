@@ -100,7 +100,8 @@ func _case_hello_and_ops() -> void:
 	for slot in Ledger.STARTER_SLOTS:
 		if ledger.equipped.get(slot, {}).is_empty():
 			_fail("새 계정에 시작 장비(%s)가 안 끼워졌다" % slot)
-	if ledger.skills.is_empty():
+	# 첫 스킬을 배운 채 시작한다 — 보이는 스킬이 없는 직업(격투가, 2026-09-29)은 빈 채
+	if ledger.skills.size() != mini(1, Skills.for_job(str(ledger.job)).size()):
 		_fail("새 계정이 첫 스킬을 안 배웠다")
 
 	# 벗기 → 팔기. 판 값은 다시 보내도 한 번만 들어온다
@@ -264,15 +265,10 @@ func _case_kill_checks() -> void:
 		_fail("존에 들기 전의 처치를 받았다")
 	if send.call("enter", ["없는존"]).get("reason") != "no_zone":
 		_fail("없는 존에 들어갔다")
-	var trial := str(Skills.job_advance(1).get("zone", ""))
-	if send.call("enter", [trial]).get("reason") != "zone_locked":
-		_fail("레벨이 모자란데 전직 시험(%s)에 들어갔다" % trial)
 
 	# 새 캐릭터가 **바로는 못 잡는** 몬스터가 있는 사냥터를 고른다
 	var pick := {}
 	for zone in GameData.zones().get("zones", {}):
-		if Skills.job_tier_of_zone(str(zone)) > 0:
-			continue
 		for mob_id in World.roster(str(zone)):
 			var kind_id := str(World.roster(str(zone))[mob_id].kind)
 			var kind: Dictionary = GameData.load_table("monsters").kinds[kind_id]

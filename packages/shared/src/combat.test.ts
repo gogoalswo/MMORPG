@@ -247,7 +247,7 @@ test('치명타·공속은 맨몸에서 0 이다 — 전부 장비에서 온다'
     const stats = statsFor(job, 50);
     assert.equal(stats.crit, 0, `${job} 의 바탕 치명타가 0 이 아니다`);
     assert.equal(stats.critDamage, 1, '맨몸 치명타 피해는 배수 1');
-    assert.equal(stats.attackSpeed, 0, '공격 속도는 장비로만 얻는다');
+    assert.equal(stats.attackSpeed, 0, '맨몸 공격 속도는 0 — 패시브 질풍각에서만 얻는다');
   }
 });
 

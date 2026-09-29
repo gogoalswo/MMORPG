@@ -30,7 +30,7 @@ import {
   AUTO_SKILL_TEST_GAP,
   SKILL_UPGRADES,
   SKILL_UPGRADE_MAX,
-  JOB_ADVANCES,
+  PASSIVES,
   JOB_IDS,
   JOB_STATS,
   PROJECTILE_SPEED,
@@ -129,9 +129,8 @@ export function buildData() {
       // 스킬 강화 — 스킬마다 둘까지, 강화서로만 붙는다 (2026-09-23)
       upgrades: SKILL_UPGRADES,
       upgradeMax: SKILL_UPGRADE_MAX,
-      // 스킬 경험치북 — 스킬창에서 고른 강화에 경험치를 넣는다
-      // 전직 — 단계마다 레벨·시험 존·보스 (jobAdvance.ts). 스킬의 `tier` 와 짝이다
-      jobAdvances: JOB_ADVANCES,
+      // 패시브 — 레벨마다 열리고 스킬창 [습득] 으로 붙는다 (2026-09-29, 질풍각 = 공속)
+      passives: PASSIVES,
     },
     // 밸런스 설계(stat-balance.md)의 수치. **아직 게임이 안 읽는다** — 판정은
     // 여전히 combat.json 으로 돈다. 설계 문서 9장 순서대로 stats.gd 가 먼저 서야 한다

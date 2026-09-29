@@ -70,8 +70,10 @@ func _case(mode: String) -> void:
 		await _check_test_level(game, me)
 		await _check_skill_list(game, me)
 		await _check_test_skills(game, me)
-	if game._skill_list_toggle.visible != test or game._skill_list.visible:
-		_fail("%s: 스킬 목록 단추가 %s 이어야 하고 목록은 접혀 있어야 한다" % [mode, "보여야" if test else "숨어야"])
+	# 스킬 목록 단추는 테스트 모드이고 **보이는 스킬이 있을 때만** 선다 (2026-09-29)
+	var list_shown := test and Skills.actives_shown(str(me.job))
+	if game._skill_list_toggle.visible != list_shown or game._skill_list.visible:
+		_fail("%s: 스킬 목록 단추가 %s 이어야 하고 목록은 접혀 있어야 한다" % [mode, "보여야" if list_shown else "숨어야"])
 	# 다음 경우를 위해 되돌린다 — 쿨타임 스위치는 표(static)라 장면을 치워도 남는다
 	Skills.set_switch("cooldownOff", false)
 	game.queue_free()
@@ -113,14 +115,18 @@ func _check_test_level(game: Node3D, me: Dictionary) -> void:
 		_fail("테스트 모드: 200레벨은 한 번만 줘야 한다 — 50 으로 낮췄는데 Lv%d" % again)
 
 
-## 테스트 모드는 모든 스킬을 배우고 전직도 끝까지 올린 채 시작한다 — 한 번만 (2026-09-28).
-## 액션바에서 빼 둔 뒤 다시 들어와도 빈 칸이 도로 채워지면 안 된다
+## 테스트 모드는 모든 스킬을 배운 채 시작한다 — 한 번만 (2026-09-28).
+## 액션바에서 빼 둔 뒤 다시 들어와도 빈 칸이 도로 채워지면 안 된다.
+## **패시브는 비워 둔다** (2026-09-29) — Lv.200 이라 HUD 스킬 아이콘에 레드닷이 켜져 있어야 한다
 func _check_test_skills(game: Node3D, me: Dictionary) -> void:
 	for id in Skills.for_job(str(me.job)):
 		if not (str(id) in me.skills):
 			_fail("테스트 모드: 스킬 %s 를 배운 채 시작해야 한다" % id)
-	if int(me.job_tier) != Skills.job_advances().size():
-		_fail("테스트 모드: 전직이 %d차여야 한다 — %d차" % [Skills.job_advances().size(), int(me.job_tier)])
+	if not me.get("passives", {}).is_empty():
+		_fail("테스트 모드: 패시브는 비워 둬야 한다 — %s" % me.passives)
+	await process_frame
+	if not game._skill_dot.visible:
+		_fail("테스트 모드: Lv.200 인데 스킬 아이콘 레드닷이 꺼져 있다")
 	me.skill_bar.clear()
 	game._transport.send(&"testSkills", {})
 	await process_frame
@@ -132,6 +138,9 @@ func _check_test_skills(game: Node3D, me: Dictionary) -> void:
 ## 누르면 쓰인다. 왼쪽 끝에 붙고, 퀵슬롯·채팅창을 덮지 않는다 (1280×720). 치트 목록과 같은
 ## 자리라 한쪽을 펼치면 다른 쪽이 접힌다 (2026-09-29)
 func _check_skill_list(game: Node3D, me: Dictionary) -> void:
+	# 보이는 스킬이 없으면 단추째 숨는다 — 볼 것이 없다 (격투가, 2026-09-29)
+	if not Skills.actives_shown(str(me.job)):
+		return
 	game._skill_list_toggle.pressed.emit()
 	await process_frame
 	var ids: Array = Skills.for_job(str(me.job))

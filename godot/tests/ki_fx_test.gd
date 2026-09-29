@@ -39,11 +39,10 @@ func _run() -> void:
 
 
 ## 액션바의 파천장을 누르면 **멈춤 뒤에** 이펙트가 서고 화면이 흔들린다 — **실제 경로로 쏜다.**
-## 4차 전직(Lv.180) 스킬이라 레벨·포인트·전직 단계를 직접 올린다
+## 4차 전직(Lv.180) 스킬이라 레벨·포인트를 직접 올린다
 func _case_cast(game: Node3D) -> void:
 	var player: Dictionary = game._transport._world._players[game._transport.my_id()]
 	player["level"] = 180
-	player["job_tier"] = 4
 	player["skill_points"] = 5
 	game._transport.send(&"learnSkill", {"skill": "ki_burst"})
 	game._transport.send(&"setSkillBar", {"bar": ["ki_burst"]})

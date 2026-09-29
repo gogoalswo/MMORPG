@@ -107,7 +107,6 @@ func _case_fist() -> void:
 func _case_cast(game: Node3D) -> void:
 	var player: Dictionary = game._transport._world._players[game._transport.my_id()]
 	player["level"] = 180
-	player["job_tier"] = 4
 	player["skill_points"] = 5
 	game._transport.send(&"learnSkill", {"skill": "crush_fist"})
 	game._transport.send(&"setSkillBar", {"bar": ["crush_fist"]})

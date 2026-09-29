@@ -233,6 +233,12 @@ static func roll_tier_options(tier: int, grade: int, rng: RandomNumberGenerator)
 	return out
 
 
+## 화면에 적을 옵션 줄 — **뽑기에서 뺀 종류(공속)는 숨긴다** (2026-09-29 요청: "장비 옵션에 공속은
+## 제거할꺼야"). 저장된 옛 아이템에 줄은 남아 있지만 계산(`stack_stats`)도 무시한다
+static func shown_options(lines: Array) -> Array:
+	return lines.filter(func(option): return str(option.get("kind", "")) != "attackSpeed")
+
+
 static func describe_option(option: Dictionary) -> String:
 	var label: Dictionary = _t().get("optionLabel", {})
 	# 저장된 옛 아이템의 공격력·방어력 옵션 — 지금 표에 없어 영어 키가 찍혔다 (2026-09-23).
@@ -349,9 +355,10 @@ static func stack_stats(stack: Dictionary) -> Dictionary:
 	total.attack = base.attack
 	total.defense = base.defense
 	total.maxHp = base.maxHp
-	# 치확·공속은 퍼센트 정수로 들어 있다 (목걸이 50 = +50%p)
+	# 치확은 퍼센트 정수로 들어 있다 (목걸이 50 = +50%p).
+	# **공속은 장비에서 안 온다** ★ (2026-09-29 요청: "장비 옵션에 공속은 제거할꺼야") — 공속은
+	# 패시브 질풍각에서만 온다 (docs/features/passives.md). 옛 아이템에 남은 공속 옵션도 무시한다
 	total.crit = base.crit / 100.0
-	total.attackSpeed = base.attackSpeed / 100.0
 
 	# 옵션 여섯 종은 전부 퍼센트다. HP 만 **기본 스탯에 곱할 %** 라 같은 자리에 더하고,
 	# 나머지 다섯은 비율(0.07 = 7%)로 바꿔 담는다. **1·2·3차를 다 더한다**
@@ -364,7 +371,6 @@ static func stack_stats(stack: Dictionary) -> Dictionary:
 			"maxHp": total.maxHp += value
 			"crit": total.crit += value / 100.0
 			"critDamage": total.critDamage += value / 100.0
-			"attackSpeed": total.attackSpeed += value / 100.0
 			"cooldown": total.cooldown += value / 100.0
 			"penetration": total.penetration += value / 100.0
 	return total

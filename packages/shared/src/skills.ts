@@ -77,10 +77,9 @@ export interface SkillDef {
   /** 배우려면 필요한 레벨 */
   reqLevel: number;
   /**
-   * **전직 단계** — 이만큼 전직해야 배우고 쓴다 (없으면 0 = 기본 스킬). 2026-09-26 요청:
-   * "기본 스킬은 할퀴기고 1차 전직하면 낙뢰 2차 전직하면 빙주각 3차 전직하면 천붕각".
-   * 테스트 스위치(`SKILL_UNLOCK_ALL`)와 **무관하게** 본다 — 스위치는 레벨·포인트만 푼다.
-   * 전직 레벨·보스는 `jobAdvance.ts` → [job-advance.md]
+   * **스킬 등급** (없으면 0) — 스킬 강화의 필요 경험치(`SKILL_UPGRADE_EXP_BY_TIER`)만 이 칸으로 고른다.
+   * 원래는 전직 단계(이만큼 전직해야 배우고 쓴다)였는데 **2026-09-29 에 전직을 없앴다** (요청:
+   * "전직 시험 제거") — 잠금은 사라지고 등급 값만 남았다 → [job-advance.md]
    */
   tier?: number;
   /**
@@ -116,6 +115,51 @@ export function skillCooldown(skill: SkillDef): number {
 
 /** 레벨업 한 번에 주는 스킬 포인트 */
 export const SKILL_POINT_PER_LEVEL = 1;
+
+/**
+ * **패시브** — 배워 두면 늘 붙어 있는 스탯. 액션바에 안 오르고 쿨타임도 없다.
+ *
+ * 2026-09-29 요청: "스킬을 다 숨김처리 하고, 공속을 성장시켜서 빠르게 때리는 스타일로 전투
+ * 스타일을 바꿀거야 … 10레벨마다 공속을 올려주는 패시브 스킬을 배울 수 있게", "200레벨 기준
+ * 초당 8번 때릴꺼야", "레벨 되면 공짜로 배울 수 있지만 습득 버튼을 만들어서 배우게".
+ *
+ * - `everyLevels` 레벨마다 한 단계가 열린다 — 열린 단계는 **스킬창의 [습득]** 을 눌러야 붙는다.
+ *   값(포인트·골드)은 없다. 되는지는 판정(`Ledger.learn_passive`)이 레벨로 다시 본다.
+ * - 공속은 **더한다** — `간격 / (1 + 공속)` 이라 단계마다 초당 타수가 같은 폭(+0.34타)으로 는다.
+ *   격투가 900ms 에 20단계 × 31% = +620% → **125ms = 초당 8타** (`skills.test.ts` 가 본다).
+ * - 공속은 이 패시브에서만 온다 — 장비 공속 옵션은 같은 날 뺐다 (`OPTION_KINDS`).
+ */
+export interface PassiveDef {
+  id: string;
+  job: JobId;
+  name: string;
+  description: string;
+  /** 올리는 스탯 — 지금은 공속 하나 */
+  stat: 'attackSpeed';
+  /** 한 단계에 오르는 양 (0.31 = +31%) */
+  perRank: number;
+  /** 몇 레벨마다 한 단계가 열리나 */
+  everyLevels: number;
+  maxRank: number;
+}
+
+export const PASSIVES: PassiveDef[] = [
+  {
+    id: 'gale_kicks',
+    job: 'fighter',
+    name: '질풍각',
+    description: '발차기가 바람처럼 빨라진다.',
+    stat: 'attackSpeed',
+    perRank: 0.31,
+    everyLevels: 10,
+    maxRank: 20,
+  },
+];
+
+/** 그 레벨까지 열린 단계 수 — Lv.10 에 1, Lv.200 에 20 */
+export function passiveRankOpen(passive: PassiveDef, level: number): number {
+  return Math.max(0, Math.min(passive.maxRank, Math.floor(level / passive.everyLevels)));
+}
 
 /**
  * **테스트용 스위치 — 배우는 데 걸리는 제한(요구 레벨·스킬 포인트)을 끈다.** (2026-09-12)
@@ -432,6 +476,8 @@ const SKILL_LIST: SkillDef[] = [
     castMs: 1000,
     maxTargets: 4,
     reqLevel: 1,
+    // 숨김 — 2026-09-29 요청 "스킬을 다 숨김처리 하고, 공속을 성장시켜서 빠르게 때리는 스타일로"
+    hidden: true,
     description: '손톱을 세워 앞 부채꼴을 세 번 긁어낸다.',
   },
   {
@@ -536,6 +582,7 @@ const SKILL_LIST: SkillDef[] = [
     // 1차 전직(Lv.30)에 열린다 (2026-09-29 요청: "1레벨 할퀴기 · 30 파천장 · 70 무적파쇄권 · 120 폭렬권")
     reqLevel: 30,
     tier: 1,
+    hidden: true,
     description: '기를 모아 손바닥으로 내질러 앞을 휩쓴다.',
   },
   {
@@ -567,6 +614,7 @@ const SKILL_LIST: SkillDef[] = [
     // 3차 전직(Lv.120)에 열린다 (2026-09-29 재배치)
     reqLevel: 120,
     tier: 3,
+    hidden: true,
     description: '주먹에 기를 실어 내질러 일대를 폭발시킨다.',
   },
   {
@@ -594,6 +642,7 @@ const SKILL_LIST: SkillDef[] = [
     // 2차 전직(Lv.70)에 열린다 (2026-09-29 재배치)
     reqLevel: 70,
     tier: 2,
+    hidden: true,
     description: '기마 자세로 기를 모았다가 주먹을 내질러 앞을 산산이 부순다.',
   },
 ];
@@ -838,17 +887,10 @@ function skillsOf(job: JobId): string[] {
 
 /**
  * 그 레벨에 배울 수 있는지 — 테스트 스위치(`SKILL_UNLOCK_ALL`)가 켜져 있으면 레벨을 안 본다.
- * **전직 단계(`tier`)는 스위치와 무관하게 본다.** `jobTier` 를 안 넘기면(옛 Colyseus 서버)
- * 전직을 안 본다 — 전직은 고도 판정(`World`)에만 있다
+ * 전직 잠금은 2026-09-29 에 전직째로 없앴다
  */
-export function canLearn(
-  skill: SkillDef,
-  job: JobId,
-  level: number,
-  jobTier: number = Number.POSITIVE_INFINITY
-): boolean {
+export function canLearn(skill: SkillDef, job: JobId, level: number): boolean {
   if (skill.job !== job) return false;
-  if ((skill.tier ?? 0) > jobTier) return false;
   return SKILL_UNLOCK_ALL || level >= skill.reqLevel;
 }
 

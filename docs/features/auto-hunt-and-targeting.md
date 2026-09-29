@@ -211,7 +211,7 @@ tryAutoSkill(...) || (거리 <= attackRange && handleAttack(...))
 
 | 파일 | 역할 |
 |---|---|
-| `godot/world/world.gd` | `set_auto` / `_drive_auto` / `_pick_hunt_target` / `_walk_auto` / `_auto_strike` / `_auto_cast` / `set_auto_priority` / `strike` / `_patrol_auto` / `_take_manual` / `_anchor_here` / **`_lunge` · `_run_lunges`**(날라차기), 상수 `HUNT_*` · `MANUAL_HOLD_MS` · `LUNGE_*` |
+| `godot/world/world.gd` | `set_auto` / `_drive_auto` / `_pick_hunt_target`(1초마다 다시 훑는다) / `_walk_auto` / `_auto_strike` / `_auto_cast` / `set_auto_priority` / `strike` / `_patrol_auto` / `_take_manual` / `_anchor_here` / **`_lunge` · `_run_lunges`**(날라차기), 상수 `HUNT_*`(`HUNT_RESCAN_MS` 포함) · `MANUAL_HOLD_MS` · `LUNGE_*` |
 | `godot/world/skills.gd` | `Skills.auto_order` — 스킬을 볼 순서 (판정과 설정 창이 같이 쓴다) |
 | `godot/world/save.gd` | `auto_priority` 저장 |
 | `godot/net/local_transport.gd` | 메시지 `autoHunt {on}` · `strike {id}` · `autoPriority {ids}` |
@@ -258,7 +258,11 @@ tryAutoSkill(...) || (거리 <= attackRange && handleAttack(...))
 위의 "왜 자동 사냥은 서버가 하나"가 고도에서도 그대로다).
 
 1. `_pick_hunt_target` — 앵커 반경 안에서 **가장 가까운** 산 놈. 잡고 있던 놈은
-   리쉬 안이면 계속 잡는다 (대상을 안 바꾼다).
+   리쉬 안이면 계속 잡되, **`HUNT_RESCAN_MS`(1초)마다 다시 훑어 더 가까운 놈이 있으면
+   갈아탄다** (2026-09-29 "멀리 있는 타겟을 잡았다가 근처에 스폰되면 근처 몬스터를 먼저").
+   다음 훑을 시각은 `auto_scan_at` 이고, 잡은 놈이 죽거나 리쉬를 벗어나면 기다리지 않고
+   바로 훑는다. **매 틱 훑지 않는 이유** — 거리가 비슷한 두 놈 사이에서 대상이 틱마다
+   떨린다. 테스트는 `auto_hunt_test.gd` 의 `_case_rescan_nearer`.
 2. `_walk_auto` — 사거리의 `HUNT_STANDOFF`(0.7) 까지 붙는다. 사람이 모는 입력과
    같은 `Movement.apply_move` 를 타므로 경계·몬스터 충돌이 같다. **휘두르는
    동안에는 발을 멈춘다**(`rooted_until`).

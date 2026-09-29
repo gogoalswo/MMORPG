@@ -98,6 +98,10 @@ const HUNT_RADIUS := 27.0
 ## 잡고 있던 놈은 이 거리까지는 계속 잡는다. 반경과 같으면 경계에 걸친 놈을
 ## 잡았다 놓았다 반복한다
 const HUNT_LEASH := HUNT_RADIUS + 6.0
+## 잡고 있던 놈이 살아 있어도 이 간격마다 다시 훑어 **더 가까운 놈으로 갈아탄다**
+## (2026-09-29 "멀리 있는 타겟을 잡았다가 근처에 스폰되면 근처 몬스터를 먼저").
+## 매 틱 훑으면 거리가 비슷한 두 놈 사이에서 대상이 떨린다
+const HUNT_RESCAN_MS := 1000
 ## 사거리를 꽉 채우고 서면 몬스터가 조금만 움직여도 빠진다. 이만큼 안으로 붙는다
 const HUNT_STANDOFF := 0.7
 ## 목적지에 이만큼 붙으면 도착으로 본다
@@ -259,6 +263,8 @@ func join(player_id: String) -> void:
 		"auto_x": float(spawn[0]),
 		"auto_z": float(spawn[1]),
 		"auto_target": "",
+		# 다음에 대상을 다시 훑는 시각 (`HUNT_RESCAN_MS`)
+		"auto_scan_at": 0,
 		# --- 테스트: 무적 --- 켜면 몬스터에게 맞아도 HP 가 안 준다.
 		# 존을 옮겨도 유지한다 (테스트 중에 존마다 다시 켜면 번거롭다)
 		"invincible": bool(kept.get("invincible", false)),
@@ -557,7 +563,7 @@ func _drive_auto(delta: float, now: int) -> void:
 		if now < int(player.get("manual_until", 0)):
 			continue
 
-		var target := _pick_hunt_target(player)
+		var target := _pick_hunt_target(player, now)
 		if target.is_empty():
 			# 아무도 없다. 앵커 주변을 서성이며 기다린다
 			player.auto_target = ""
@@ -742,9 +748,14 @@ func _auto_cast(player: Dictionary, id: String, aim_id: String, gap: float, now:
 ## 앵커 반경 안에서 **가장 가까운** 산 몬스터. 잡고 있던 놈은 리쉬까지 봐준다 —
 ## 반경과 같으면 경계에 걸친 놈을 잡았다 놓았다 반복하고, 놓을 때마다 앵커로
 ## 걸어 돌아가려다 다시 붙는 그림이 된다.
-func _pick_hunt_target(player: Dictionary) -> Dictionary:
+##
+## 잡고 있던 놈은 **`HUNT_RESCAN_MS`(1초) 동안만** 그대로 둔다. 그 뒤에는 다시 훑어
+## 더 가까운 놈이 있으면 갈아탄다 — 멀리 있는 놈을 쫓는 사이 옆에 리스폰된 놈을
+## 두고 계속 걸어가지 않게 한다.
+func _pick_hunt_target(player: Dictionary, now: int) -> Dictionary:
 	var anchor := Vector2(float(player.auto_x), float(player.auto_z))
 	var current := str(player.get("auto_target", ""))
+	var rescan := now >= int(player.get("auto_scan_at", 0))
 	var best: Dictionary = {}
 	var best_gap := INF
 
@@ -752,18 +763,20 @@ func _pick_hunt_target(player: Dictionary) -> Dictionary:
 		if int(monster.hp) <= 0:
 			continue
 		var from_anchor := Vector2(monster.x - anchor.x, monster.z - anchor.y).length()
-		# 잡고 있던 놈이면 리쉬 안까지 계속 잡는다 (대상을 바꾸지 않는다)
 		if str(monster.id) == current:
-			if from_anchor <= HUNT_LEASH:
+			# 잡고 있던 놈은 리쉬 안까지 봐준다. 훑을 때가 아니면 그대로 잡는다
+			if from_anchor > HUNT_LEASH:
+				continue
+			if not rescan:
 				return monster
-			continue
-		if from_anchor > HUNT_RADIUS:
+		elif from_anchor > HUNT_RADIUS:
 			continue
 		var gap := Vector2(monster.x - player.x, monster.z - player.z).length()
 		if gap < best_gap:
 			best_gap = gap
 			best = monster
 
+	player.auto_scan_at = now + HUNT_RESCAN_MS
 	return best
 
 

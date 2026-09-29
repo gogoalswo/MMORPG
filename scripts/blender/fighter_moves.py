@@ -260,6 +260,50 @@ BLAST_SLAM = pose(BLAST_READY,
 BLAST_RECOIL = pose(BLAST_SLAM, hips=(0.0, -0.02, -0.19), spine=(20, 0, 0))
 BLAST_SETTLE = pose(BLAST_SLAM, hips=(0.0, -0.02, -0.165), spine=(14, 0, 0))
 
+# 무적파쇄권 — **공수도 기마 자세**(다리를 넓게 벌려 무릎을 바깥으로 굽히고, 두 주먹을 허리
+# 앞에 쥔다 — 2026-09-29 사용자가 준 도복 그림)로 **1초 동안 떨며 기를 모은다.** 모을수록 조금씩
+# 낮게 가라앉는다. 그다음 오른주먹을 허리로 당겼다가(0.98) **몸을 틀며 곧게 내지르고 왼주먹은
+# 허리로 당긴다**(1.08 — 정권 지르기의 당겨 손). 발은 끝까지 기마 자세 그대로다.
+# 내지르는 키 1.08 이 판정·폭발이다 (`skills.ts` 의 `delayMs` 1080 · `CrushFx.PUNCH` — 같이 고친다)
+CRUSH_STANCE = pose(GUARD,
+                    hips=(0.0, 0.0, -0.13), hipsR=(0, 0, 0),
+                    spine=(2, 0, 0), head=(-4, 0, 0),
+                    lh=(0.19, -0.13, 0.47), lhPole=(1, 0.6, 0),
+                    rh=(-0.19, -0.13, 0.47), rhPole=(-1, 0.6, 0),
+                    lf=(0.25, -0.02, 0.078), lfPole=(1, -1, 0), lfYaw=20,
+                    rf=(-0.25, 0.02, 0.078), rfPole=(-1, -1, 0), rfYaw=-20)
+CRUSH_DEEP = pose(CRUSH_STANCE, hips=(0.0, 0.0, -0.16), spine=(5, 0, 0), head=(-7, 0, 0),
+                  lh=(0.20, -0.14, 0.45), rh=(-0.20, -0.14, 0.45))
+# 떨림 — 기가 차오르며 몸과 두 주먹이 번갈아 떤다. 끝으로 갈수록 세진다 (폭렬권 떨림과 같은 방식)
+CRUSH_SHAKES = 7
+
+
+def crush_shake(i):
+    k = i / (CRUSH_SHAKES - 1)
+    s = (1 if i % 2 == 0 else -1) * (0.4 + 0.6 * k)
+    a, b = CRUSH_STANCE, CRUSH_DEEP
+
+    def mix(key):
+        return tuple(x + (y - x) * k for x, y in zip(a[key], b[key]))
+    hips, spine, head, lh, rh = (mix(key) for key in ("hips", "spine", "head", "lh", "rh"))
+    return pose(b,
+                hips=(hips[0] + 0.012 * s, hips[1], hips[2]),
+                spine=(spine[0] + 2 * s, spine[1], spine[2] - 3 * s),
+                head=(head[0] + 2 * s, head[1], head[2] + 3 * s),
+                lh=(lh[0] + 0.015 * s, lh[1], lh[2] + 0.012 * s),
+                rh=(rh[0] - 0.015 * s, rh[1], rh[2] - 0.012 * s))
+
+
+CRUSH_CHAMBER = pose(CRUSH_DEEP, hipsR=(0, 0, -18), spine=(4, 0, -12), head=(-6, 0, 16),
+                     rh=(-0.19, 0.06, 0.50), rhPole=(-0.6, 1, 0),
+                     lh=(0.12, -0.22, 0.52), lhPole=(1, 0.2, -0.4))
+# 자세가 낮아 팔만 뻗으면 앞 0.33 에서 멎는다 — 골반을 앞으로 밀고 크게 틀어 어깨가 따라 나가게 한다
+CRUSH_PUNCH = pose(CRUSH_DEEP, hips=(0.0, -0.05, -0.15), hipsR=(0, 0, 26), spine=(12, 0, 20),
+                   head=(-8, 0, -24),
+                   rh=(-0.02, -0.48, 0.66), rhPole=(-1, 0, -0.6),
+                   lh=(0.20, 0.05, 0.50), lhPole=(0.6, 1, 0))
+CRUSH_PUSH = pose(CRUSH_PUNCH, hips=(0.0, -0.06, -0.15), spine=(15, 0, 22), rh=(-0.02, -0.50, 0.66))
+
 # 피격 — 맞은 순간 머리와 상체가 뒤로 젖혀지고 몸이 뒤로 밀리며, 두 팔을 얼굴 앞으로
 # 모아 막는다. 발은 그대로 버틴다 (2026-09-24 요청: "피격 받았을 때 모션도 넣어").
 # 짧아야 한다 — 몬스터 여럿에게 맞으면 계속 겹쳐 튼다
@@ -375,6 +419,14 @@ CLIPS = {
                   (0.34, BLAST_TOP, "LINEAR"), (0.42, BLAST_SLAM, "LINEAR"),
                   (0.48, BLAST_RECOIL, "BEZIER"), (0.60, BLAST_SETTLE, "BEZIER"),
                   (0.85, BLAST_SETTLE, "BEZIER"), (1.20, "IDLE", "BEZIER")],
+    # 기마 자세(0.15)로 떨며 기를 모으고(~0.90) 오른주먹을 당겼다가(0.98) 1.08 에 내지른다(판정).
+    # 1.08 → 1.40 은 내지른 채 버틴다. 길이 1.8 = 스킬 표의 `castMs`
+    "CrushFist": [(0.0, GUARD, "BEZIER"), (0.15, CRUSH_STANCE, "BEZIER"),
+                  (0.26, CRUSH_STANCE, "BEZIER")]
+                 + [((9 + 3 * i) / FPS, crush_shake(i), "LINEAR") for i in range(CRUSH_SHAKES)]
+                 + [(0.98, CRUSH_CHAMBER, "LINEAR"), (1.08, CRUSH_PUNCH, "LINEAR"),
+                    (1.14, CRUSH_PUSH, "BEZIER"), (1.40, CRUSH_PUSH, "BEZIER"),
+                    (1.62, GUARD, "BEZIER"), (1.8, "IDLE", "BEZIER")],
     # 뛰어(0.10) 무릎을 접고(0.26) 뻗어(0.40) 0.45 에 맞고(= 도착 · `LUNGE_HIT_S`) 내려앉는다(0.58)
     "FlyingKick": [(0.0, FK_CROUCH, "BEZIER"), (0.10, FK_TAKEOFF, "BEZIER"),
                    (0.26, FK_CHAMBER, "LINEAR"), (0.40, FK_KICK, "LINEAR"),

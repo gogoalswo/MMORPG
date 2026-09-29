@@ -111,3 +111,39 @@ static func puff(size := 96) -> ImageTexture:
 	var tex := ImageTexture.create_from_image(img)
 	_cache[key] = tex
 	return tex
+
+
+## **가시 별** — 가운데에서 날카로운 가시가 제멋대로 길게 뻗은 폭발 윤곽 (무적파쇄권,
+## 2026-09-29 참고 그림: 흰 심에서 파란 가시가 사방으로 터진다). 가시마다 각도·길이·폭이 달라
+## 동그란 원으로 안 읽힌다. `seed` 가 다르면 가시 자리가 달라서 두 장을 겹치면 촘촘해진다.
+## 가운데로 갈수록 진하다 — 흰 심이 된다. 각도를 1024 칸으로 먼저 재 두고 칸을 읽는다
+static func star(seed := 1, size := 192) -> ImageTexture:
+	var key := "star_%d_%d" % [seed, size]
+	if _cache.has(key):
+		return _cache[key]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed
+	const BINS := 1024
+	var reach := PackedFloat32Array()
+	reach.resize(BINS)
+	reach.fill(0.22)
+	for i in 34:
+		var at := rng.randf() * TAU
+		var length := rng.randf_range(0.45, 1.0) if i % 3 != 0 else rng.randf_range(0.3, 0.6)
+		var half := rng.randf_range(0.035, 0.1)
+		for b in BINS:
+			var d := absf(wrapf(float(b) / BINS * TAU - at, -PI, PI))
+			if d < half:
+				reach[b] = maxf(reach[b], length * pow(1.0 - d / half, 1.8))
+	var img := Image.create(size, size, false, Image.FORMAT_RGBA8)
+	var mid := float(size - 1) * 0.5
+	for y in size:
+		for x in size:
+			var v := Vector2(float(x) - mid, float(y) - mid)
+			var d := v.length() / mid
+			var r := reach[int(fposmod(v.angle(), TAU) / TAU * BINS) % BINS]
+			var a := clampf((r - d) / maxf(r * 0.25, 0.02), 0.0, 1.0) * lerpf(1.0, 0.45, clampf(d / r, 0.0, 1.0))
+			img.set_pixel(x, y, Color(1.0, 1.0, 1.0, a))
+	var tex := ImageTexture.create_from_image(img)
+	_cache[key] = tex
+	return tex

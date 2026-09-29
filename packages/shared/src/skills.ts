@@ -586,6 +586,31 @@ const SKILL_LIST: SkillDef[] = [
     tier: 4,
     description: '한 발을 들어 땅을 내리찍어 연기와 함께 기를 사방으로 터뜨린다.',
   },
+  {
+    /**
+     * **공수도 기마 자세로 1초간 기를 모은 다음 주먹을 강하게 내질러, 주먹 자리에서 파란 기가
+     * 가시처럼 터진다** (`CrushFx.burst`, 2026-09-29 요청 — 참고 그림 두 장: 기마 자세로 두
+     * 주먹을 허리에 둔 공수도 도복 그림, 흰 심에서 파란 가시 빛살이 사방으로 터지는 스크린샷).
+     *
+     * 판정은 **주먹이 닿는 순간**이다 (`delayMs`) — 기를 모으는 1초 동안은 아무도 안 맞고 발이
+     * 묶인다. `delayMs` 는 `CrushFx.PUNCH` 와 동작 `CrushFist` 의 내지르는 키와 같이 고친다
+     * (`crush_fx_test.gd` 가 맞춰 본다). 터지는 자리가 주먹 앞이라 판정도 **앞 반원**이다.
+     */
+    id: 'crush_fist',
+    name: '무적파쇄권',
+    job: 'fighter',
+    cooldown: 14000,
+    delayMs: 1080,
+    castMs: 1800,
+    range: 4.0,
+    arc: Math.PI,
+    power: 16.0,
+    maxTargets: 10,
+    // 4차 전직(Lv.180)에 열린다
+    reqLevel: 180,
+    tier: 4,
+    description: '기마 자세로 기를 모았다가 주먹을 내질러 앞을 산산이 부순다.',
+  },
 ];
 
 export const SKILLS: Record<string, SkillDef> = Object.fromEntries(

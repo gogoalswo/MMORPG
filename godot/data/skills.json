@@ -361,6 +361,21 @@
       "reqLevel": 180,
       "tier": 4,
       "description": "한 발을 들어 땅을 내리찍어 연기와 함께 기를 사방으로 터뜨린다."
+    },
+    "crush_fist": {
+      "id": "crush_fist",
+      "name": "무적파쇄권",
+      "job": "fighter",
+      "cooldown": 14000,
+      "delayMs": 1080,
+      "castMs": 1800,
+      "range": 4,
+      "arc": 3.141592653589793,
+      "power": 16,
+      "maxTargets": 10,
+      "reqLevel": 180,
+      "tier": 4,
+      "description": "기마 자세로 기를 모았다가 주먹을 내질러 앞을 산산이 부순다."
     }
   },
   "byJob": {
@@ -371,7 +386,8 @@
       "sky_breaker",
       "ki_burst",
       "nova_fist",
-      "blast_heel"
+      "blast_heel",
+      "crush_fist"
     ],
     "mage": [
       "fireball",

@@ -47,11 +47,11 @@ func _village(level: int) -> World:
 	return w
 
 
-## 전직 전에는 낙뢰·빙주각·천붕각을 배우지도 쓰지도 못한다. 할퀴기는 된다
+## 전직 전에는 파천장·무적파쇄권·폭렬권을 배우지도 쓰지도 못한다. 할퀴기는 된다
 func _case_locked() -> void:
 	var w := _village(200)
 	var me: Dictionary = w.snapshot().players["me"]
-	for id in ["thunder_fall", "frost_pillar", "sky_breaker"]:
+	for id in ["ki_burst", "crush_fist", "nova_fist"]:
 		w.learn_skill("me", id)
 		if id in me.skills:
 			_fail("전직 전에 %s 을(를) 배웠다" % id)
@@ -59,13 +59,13 @@ func _case_locked() -> void:
 	if not ("rising_kick" in me.skills):
 		_fail("기본 스킬 할퀴기를 못 배웠다")
 	# 전직 전 저장에 배운 채로 남은 것도 못 쓴다
-	me.skills.append("thunder_fall")
-	me.skill_bar = ["thunder_fall"]
+	me.skills.append("ki_burst")
+	me.skill_bar = ["ki_burst"]
 	w.drain_events()
-	w.cast("me", "thunder_fall")
+	w.cast("me", "ki_burst")
 	if not _first(w.drain_events(), "skill").is_empty():
-		_fail("전직 전에 낙뢰가 나갔다")
-	print("  전직 전: 할퀴기만 배운다 · 낙뢰는 배워 있어도 안 나간다")
+		_fail("전직 전에 파천장가 나갔다")
+	print("  전직 전: 할퀴기만 배운다 · 파천장는 배워 있어도 안 나간다")
 
 
 ## NPC 창에는 **다음 전직 하나**만. 레벨이 모자라면 버튼이 안 눌린다
@@ -89,7 +89,7 @@ func _case_npc_state() -> void:
 	print("  NPC 창: 2차면 '3차 전직', Lv.29 에서는 1차 버튼이 막힌다, 4차 뒤엔 없다")
 
 
-## 버튼 → 시험 존(보스 한 마리) → 잡으면 전직 · 낙뢰 해금
+## 버튼 → 시험 존(보스 한 마리) → 잡으면 전직 · 파천장 해금
 func _case_trial() -> void:
 	var w := _village(1)
 	var me: Dictionary = w.snapshot().players["me"]
@@ -114,19 +114,19 @@ func _case_trial() -> void:
 	var events := w.drain_events()
 	if int(me.job_tier) != 1 or _first(events, "jobAdvanced").is_empty():
 		_fail("보스를 잡았는데 1차 전직이 안 됐다 (%d)" % int(me.job_tier))
-	w.learn_skill("me", "thunder_fall")
-	if not ("thunder_fall" in me.skills):
-		_fail("1차 전직 뒤에도 낙뢰를 못 배운다")
-	w.learn_skill("me", "frost_pillar")
-	if "frost_pillar" in me.skills:
-		_fail("1차 전직으로 빙주각(2차)까지 풀렸다")
+	w.learn_skill("me", "ki_burst")
+	if not ("ki_burst" in me.skills):
+		_fail("1차 전직 뒤에도 파천장를 못 배운다")
+	w.learn_skill("me", "crush_fist")
+	if "crush_fist" in me.skills:
+		_fail("1차 전직으로 무적파쇄권(2차)까지 풀렸다")
 
 	# 같은 시험을 다시 잡아도 2차가 되지는 않는다
 	mobs[0].hp = mobs[0].max_hp
 	w._hit_monster(me, mobs[0], 1e9, "")
 	if int(me.job_tier) != 1:
 		_fail("1차 시험 보스를 또 잡았더니 %d차가 됐다" % int(me.job_tier))
-	print("  1차: Lv.30 → job_1 · 보스 %s 처치 → 1차 · 낙뢰 해금 (빙주각은 잠김)" % mobs[0].kind)
+	print("  1차: Lv.30 → job_1 · 보스 %s 처치 → 1차 · 파천장 해금 (무적파쇄권은 잠김)" % mobs[0].kind)
 
 
 ## 차원문·던전 창 길(travel)로는 시험에 못 간다 — 전직 NPC 로만
@@ -165,8 +165,9 @@ func _check_layout(game: Node3D, panel: JobPanel) -> void:
 	if done.bg_color == ahead.bg_color:
 		_fail("1차를 마쳤는데 1차 점과 3차 점이 같은 색이다")
 	var icon: TextureRect = panel.find_child("skill_icon", true, false)
-	if icon.texture == null:
-		_fail("해금 스킬(빙주각) 아이콘이 없다 — npm run sync:godot 을 돌렸나")
+	# 2차 해금은 무적파쇄권인데 아이콘을 아직 안 만들었다 — 그때 창은 그림 자리에 이름을 적는다
+	if icon.texture == null and panel._skill_empty.text != "무적파쇄권":
+		_fail("해금 스킬(무적파쇄권)이 그림도 이름도 없다 ('%s')" % panel._skill_empty.text)
 	var level_row: Label = panel.find_child("level_row", true, false)
 	var boss_row: Label = panel.find_child("boss_row", true, false)
 	if not level_row.text.begins_with("레벨 70") or not boss_row.text.contains("Lv.69"):
@@ -212,19 +213,22 @@ func _case_learn_all(game: Node3D) -> void:
 			_fail("%s 을(를) 안 배웠다" % id)
 	if me.skill_bar.size() != mini(all.size(), 4):
 		_fail("액션바가 %d칸" % me.skill_bar.size())
-	# 배운 낙뢰가 실제로 나간다
+	# 배운 파천장가 실제로 나간다
 	me.cast_until = 0
 	me.skill_ready_at = {}
-	game._transport._world.cast(game._transport.my_id(), "thunder_fall")
-	if int(me.skill_ready_at.get("thunder_fall", 0)) == 0:
-		_fail("모두 배운 뒤에도 낙뢰가 안 나간다")
+	game._transport._world.cast(game._transport.my_id(), "ki_burst")
+	if int(me.skill_ready_at.get("ki_burst", 0)) == 0:
+		_fail("모두 배운 뒤에도 파천장가 안 나간다")
 	print("  치트: %d차 전직 · 스킬 %d개 · 액션바 %s" % [int(me.job_tier), me.skills.size(), str(me.skill_bar)])
 
 
-## 전직 단계는 저장에 남는다
+## 전직 단계는 저장에 남는다. 숨긴 스킬(낙뢰)은 배운 기록은 남고 액션바에서만 빠진다
 func _case_save() -> void:
 	var w := _village(70)
-	w.snapshot().players["me"].job_tier = 2
+	var saved: Dictionary = w.snapshot().players["me"]
+	saved.job_tier = 2
+	saved.skills = ["rising_kick", "thunder_fall"]
+	saved.skill_bar = ["rising_kick", "thunder_fall"]
 	w.save("me")
 	var back := World.new()
 	back.open("village")
@@ -234,6 +238,9 @@ func _case_save() -> void:
 	var tier := int(back.snapshot().players["me"].get("job_tier", -1))
 	if tier != 2:
 		_fail("저장에서 전직 단계가 %d (2 여야 한다)" % tier)
+	var loaded: Dictionary = back.snapshot().players["me"]
+	if loaded.skill_bar != ["rising_kick"] or not ("thunder_fall" in loaded.skills):
+		_fail("숨긴 낙뢰: 액션바 %s · 배운 것 %s (액션바에서만 빠져야 한다)" % [loaded.skill_bar, loaded.skills])
 	Save.clear()
 
 

@@ -1553,7 +1553,8 @@ func _case_design_panel(game: Node3D) -> void:
 func _check_upgrades(game: Node3D, me: Dictionary, panel: Control, screen: Vector2) -> void:
 	var world: World = game._transport._world
 	world.debug_reset_upgrades("me")
-	var index: int = Skills.for_job(str(me.job)).find("thunder_fall")
+	# 낙뢰(강화 기절·범위)로 보다가 낙뢰를 숨기면서(2026-09-29) 할퀴기로 옮겼다
+	var index: int = Skills.for_job(str(me.job)).find("rising_kick")
 	game._pick_skill(index)
 	await process_frame
 	var cards: Array = game._upgrade_cards
@@ -1568,31 +1569,31 @@ func _check_upgrades(game: Node3D, me: Dictionary, panel: Control, screen: Vecto
 	var feed: Button = game._feed_button
 	me.skill_exp = 0
 	game._redraw_skills()
-	if str(cards[0].name.text) != "기절" or not cards[0].pick.visible or not feed.disabled:
-		_fail("낙뢰 1번 강화가 '기절'·골라짐·넣기 꺼짐이어야 하는데 '%s'·%s·%s" % [
+	if str(cards[0].name.text) != "위력" or not cards[0].pick.visible or not feed.disabled:
+		_fail("할퀴기 1번 강화가 '위력'·골라짐·넣기 꺼짐이어야 하는데 '%s'·%s·%s" % [
 			cards[0].name.text, cards[0].pick.visible, feed.disabled])
-	if cards[1].hit.disabled or str(cards[1].name.text) != "범위":
-		_fail("낙뢰 2번 강화가 '범위' 로 골라질 수 있어야 하는데 '%s'" % cards[1].name.text)
+	if cards[1].hit.disabled or str(cards[1].name.text) != "연타":
+		_fail("할퀴기 2번 강화가 '연타' 로 골라질 수 있어야 하는데 '%s'" % cards[1].name.text)
 	if feed.get_global_rect().end.x > box.end.x or feed.get_global_rect().end.y > box.end.y:
 		_fail("넣기 단추 %s 가 창 밖이다" % feed.get_global_rect())
 
-	# 던전 2단계만큼(2000) 있으면 2000 만 들어가고, 테스트 단추(+10만)로 채우면 완료
-	# (낙뢰는 1차 전직 스킬이라 10000)
-	me.skill_exp = 2000
+	# 400 있으면 400 만 들어가고, 테스트 단추(+10만)로 채우면 완료
+	# (할퀴기는 기본 스킬이라 1000)
+	me.skill_exp = 400
 	game._redraw_skills()
-	if feed.disabled or not str(game._upgrade_hint.text).begins_with("스킬 경험치 2000"):
+	if feed.disabled or not str(game._upgrade_hint.text).begins_with("스킬 경험치 400"):
 		_fail("스킬 경험치가 있는데 넣기가 꺼져 있거나 안내가 틀리다 ('%s')" % game._upgrade_hint.text)
 	feed.pressed.emit()
-	if str(cards[0].amount.text) != "경험치 2000 / 10000" or int(cards[0].bar.value) != 2000 or not feed.disabled:
-		_fail("2000 을 넣었는데 '%s' · 넣기 꺼짐 %s" % [cards[0].amount.text, feed.disabled])
+	if str(cards[0].amount.text) != "경험치 400 / 1000" or int(cards[0].bar.value) != 400 or not feed.disabled:
+		_fail("400 을 넣었는데 '%s' · 넣기 꺼짐 %s" % [cards[0].amount.text, feed.disabled])
 	game._test_button("", 10, 10, &"debugSkillExp", {}).pressed.emit()
 	feed.pressed.emit()
 	await process_frame
-	if me.skill_upgrades.get("thunder_fall", []) != ["stun"] or str(cards[0].amount.text) != "강화 완료" \
+	if me.skill_upgrades.get("rising_kick", []) != ["wide"] or str(cards[0].amount.text) != "강화 완료" \
 			or not feed.disabled:
-		_fail("10000 을 채웠는데 강화가 안 붙었다 (%s · '%s')" % [str(me.skill_upgrades), cards[0].amount.text])
+		_fail("1000 을 채웠는데 강화가 안 붙었다 (%s · '%s')" % [str(me.skill_upgrades), cards[0].amount.text])
 	else:
-		print("  강화 칸: %s · 2000 → +10만으로 '%s' · 남은 %d" % [box, cards[0].amount.text, int(me.skill_exp)])
+		print("  강화 칸: %s · 400 → +10만으로 '%s' · 남은 %d" % [box, cards[0].amount.text, int(me.skill_exp)])
 	world.debug_reset_upgrades("me")
 
 

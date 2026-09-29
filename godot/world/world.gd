@@ -1297,9 +1297,12 @@ func restore(player_id: String) -> bool:
 			learned.append(str(id))
 	player.skills = learned
 	player.skill_points = int(saved.get("skill_points", 0))
+	# 숨긴 스킬(`hidden`, 직업 목록에 없는 것)은 액션바에서만 뺀다 — 배운 기록은 남겨 둬서
+	# 숨김을 풀면 스킬창에서 다시 올리면 된다
+	var listed := Skills.for_job(str(player.job))
 	var bar: Array = []
 	for id in saved.get("skill_bar", []):
-		if str(id) in learned:
+		if str(id) in learned and str(id) in listed:
 			bar.append(str(id))
 	player.skill_bar = bar
 	# 자동 사냥 스킬 순서 — 없던 칸이라 옛 저장은 빈 목록(쿨타임 긴 순)으로 읽힌다

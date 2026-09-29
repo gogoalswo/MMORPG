@@ -357,10 +357,10 @@ func _case_gone(game: Node3D) -> void:
 
 
 ## **"기절" 강화가 붙으면 붉은 번개**, 떼면 다시 푸른 번개 (2026-09-23 요청).
-## 테스트 단추 요청("전체 1번 강화")으로 붙인다. 풀이 한 벌을 되감아
-## 쓰므로 붉게 칠한 것이 **다음 푸른 낙뢰에 남지 않는지**도 본다
+## 판정에 강화를 직접 붙인다 — 낙뢰가 숨김이라(2026-09-29) "전체 강화" 테스트 단추가 안 붙인다.
+## 풀이 한 벌을 되감아 쓰므로 붉게 칠한 것이 **다음 푸른 낙뢰에 남지 않는지**도 본다
 func _case_red(game: Node3D) -> void:
-	game._transport.send(&"debugUpgradeAll", {"slot": 0})
+	_give_upgrade(game, "stun")
 	for pair in [[true, "붉은"], [false, "푸른"]]:
 		if not pair[0]:
 			game._transport.send(&"debugResetUpgrades", {})
@@ -388,7 +388,7 @@ func _case_red(game: Node3D) -> void:
 ## 떼면 다시 세 번이다 (풀이 한 벌이라 옆 번개가 남으면 안 된다)
 func _case_wide(game: Node3D) -> void:
 	game._transport.send(&"debugResetUpgrades", {})
-	game._transport.send(&"debugUpgradeAll", {"slot": 1})
+	_give_upgrade(game, "wide")
 	_cast(game)
 	for i in 4:
 		await process_frame
@@ -471,3 +471,9 @@ func _done() -> void:
 	else:
 		print("낙뢰 이펙트: %d개 실패" % _failed)
 		quit(1)
+
+
+## 낙뢰에 강화 하나를 판정 쪽에 곧바로 붙인다 (숨긴 스킬이라 테스트 단추로는 안 붙는다)
+func _give_upgrade(game: Node3D, upgrade_id: String) -> void:
+	var me: Dictionary = game._transport._world.snapshot().players[game._transport.my_id()]
+	me.skill_upgrades = {"thunder_fall": [upgrade_id]}

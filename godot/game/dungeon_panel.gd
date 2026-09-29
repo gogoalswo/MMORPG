@@ -464,11 +464,16 @@ func _select(zone_id: String) -> void:
 	if stage.is_empty():
 		return
 	var level := int(stage.get("level", 0))
-	var boss := GameData.monster_kind(str(stage.get("boss", "")))
+	# 토벌은 보스, 시련의 탑은 나오는 일반 몬스터와 규칙("30초 · 7마리")
+	var boss := GameData.monster_kind(str(stage.get("boss", stage.get("monster", ""))))
 	_boss.add_child(_card_label("Lv.%d" % level, CARD_SUB_SIZE, CARD_SUB_COLOR))
 	var name_label := _card_label(str(boss.get("name", "")), CARD_NAME_SIZE - 4, TEXT_COLOR)
 	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_boss.add_child(name_label)
+	if int(stage.get("kills", 0)) > 0:
+		var rule := _card_label("%d초 안에 %d마리" % [int(stage.get("seconds", 30)), int(stage.kills)], CARD_SUB_SIZE, CARD_GOLD)
+		rule.name = "trial_rule"
+		_boss.add_child(rule)
 	for reward in _stage_rewards(stage):
 		_rewards.add_child(_reward_cell(reward))
 
@@ -484,6 +489,10 @@ func _stage_rewards(stage: Dictionary) -> Array:
 	var skill_exp := int(stage.get("skillExp", 0))
 	if skill_exp > 0:
 		out.append({"name": "스킬 경험치 %d" % skill_exp, "icon": "ui_icon_skill", "color": CARD_GOLD})
+	# 시련의 탑 통과 보상 — 크리스탈 단계 × 1개 (`Ledger.trial_clear`). 그 뒤는 몬스터가 떨구는 것
+	var trial_crystals := int(stage.get("crystals", 0))
+	if trial_crystals > 0:
+		out.append({"name": "통과 보상  크리스탈 %d개" % trial_crystals, "icon": Items.crystal_id(), "color": CARD_GOLD})
 	var grades := Items.drop_grades(level)
 	grades.sort()
 	grades.reverse()

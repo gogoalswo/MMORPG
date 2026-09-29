@@ -28,6 +28,7 @@ const OPS := {
 	"sell": "i",
 	"enhance": "sk",
 	"enhance_many": "ai",
+	"trial_clear": "s",
 }
 
 var store: AccountStore
@@ -156,6 +157,12 @@ func _op(session: Dictionary, message: Dictionary) -> Dictionary:
 			if not why.is_empty():
 				# **이상치는 기록만 한다** — 제재는 사람이 한다. 보상만 안 준다
 				print("처치 거절 %s %s: %s" % [account.id, why, JSON.stringify(args[0])])
+				return _error(req, why)
+			ledger.callv(op, [account.ledger] + args)
+		"trial_clear":
+			var why := _check_trial(account, str(args[0]))
+			if not why.is_empty():
+				print("시련 거절 %s %s: %s" % [account.id, why, str(args[0])])
 				return _error(req, why)
 			ledger.callv(op, [account.ledger] + args)
 		_:
@@ -378,6 +385,29 @@ func _check_kill(account: Dictionary, target: Dictionary) -> String:
 	if not KillCheck.allows(now - available, KillCheck.min_ms(account.ledger, kind)):
 		return "too_fast"
 	hunt.killed[target.id] = now
+	return ""
+
+
+## 시련의 탑 통과를 대 본다 (docs/features/dungeons.md "시련의 탑"). 되면 빈 글자.
+## **서버가 인정한 처치만 센다** — 들어온 때(`entered_at`)부터 제한 시간(+흔들림) 안에 잡은 것이
+## 필요한 수 이상이어야 한다. 한 번 들어와 한 번만 받는다 (다시 받으려면 다시 들어온다)
+func _check_trial(account: Dictionary, zone: String) -> String:
+	var hunt: Dictionary = _hunts.get(account.id, {})
+	if hunt.is_empty() or str(hunt.zone) != zone:
+		return "wrong_zone"
+	var stage := GameData.dungeon_stage(zone)
+	if int(stage.get("kills", 0)) <= 0:
+		return "not_trial"
+	if bool(hunt.get("trial_claimed", false)):
+		return "claimed"
+	var deadline := float(hunt.entered_at) + float(stage.get("seconds", 30)) * 1000.0 + KillCheck.SLACK_MS
+	var counted := 0
+	for at in hunt.killed.values():
+		if float(at) <= deadline:
+			counted += 1
+	if counted < int(stage.kills):
+		return "too_few"
+	hunt["trial_claimed"] = true
 	return ""
 
 

@@ -138,12 +138,16 @@
 | | `{t:"error", id?, reason}` — `no_hello` · `no_id` · `stale` · `unknown_op` · `bad_args` · `unknown_type` · `bad_message` · `store_failed` |
 
 `OPS`(받는 요청과 인자 모양): `enter` · `kill` · `learn_skill` · `feed_upgrade` · `equip` · `unequip` · `sort_bag` ·
-`use_crystal` · `buy` · `sell` · `enhance` · `enhance_many`. JSON 숫자는 실수로 오므로 모양대로 바꾸고,
+`use_crystal` · `buy` · `sell` · `enhance` · `enhance_many` · `trial_clear`. JSON 숫자는 실수로 오므로 모양대로 바꾸고,
 모양이 틀리면 `bad_args`.
 
 - **`kill` 은 `{kind, zone, id}` 만 받는다** — 레벨·경험치·보스 여부는 `Ledger.kill` 이 몬스터 표에서
   찾는다. 기기가 수치를 보내면 서버가 그 값을 믿어야 해서다. 판정 전에 위 "처치 보고를 어떻게 믿나" 로
   대 본다 — 거절 이유는 `no_zone` · `wrong_zone` · `not_in_roster` · `not_respawned` · `too_fast`.
+- **`trial_clear`**(존 이름) — 시련의 탑 통과. 서버가 **제가 인정한 처치**(`_hunts` 의 `killed`) 중
+  들어온 때부터 제한 시간 + `SLACK_MS` 안에 잡은 것을 세어 필요한 수(7)에 닿아야 크리스탈을 준다
+  (`LedgerServer._check_trial`). 거절 이유는 `wrong_zone` · `not_trial` · `too_few` · `claimed`(한 번
+  들어와 한 번만) → [dungeons.md](dungeons.md) "시련의 탑".
 - **`enter`**(존 이름)는 장부를 바꾸지 않는다 — 서버가 명단을 세고 입장 조건(`zone_locked` ·
   `no_zone`)을 본다. 기기는 붙을 때(`LocalTransport._attach`)와 존을 옮길 때(`World.open`) 보낸다.
 - **`grant_once` 는 끝까지 받지 않는다** — 기기가 "이걸 줘" 라고 할 수 있게 되면 끝이다.

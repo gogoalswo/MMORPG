@@ -19,6 +19,7 @@ func _init() -> void:
 	_case_roster_matches_spawn()
 	_case_known_keys()
 	_case_kill_checks()
+	_case_trial_check()
 	_case_chat()
 	_case_rank()
 	_case_purchase()
@@ -305,6 +306,56 @@ func _case_kill_checks() -> void:
 	now[0] += 10
 	if send.call("kill", [target]).get("reason") != "not_respawned":
 		_fail("되살아나기 전에 또 잡은 것을 받았다")
+
+
+## 시련의 탑 — 서버가 **제가 인정한 처치**를 센다. 모자라면 · 시간이 지나서 잡았으면 · 두 번째면 거절
+func _case_trial_check() -> void:
+	var server := LedgerServer.new(AccountStore.new(DIR))
+	var now := [500000]
+	server.clock = func() -> int: return now[0]
+	var session := {}
+	server.handle(session, {"t": "hello"})
+	var ledger: Dictionary = session.account.ledger
+	ledger.level = 30
+	var id := [1000]
+	var send := func(op: String, args: Array) -> Dictionary:
+		id[0] += 1
+		return server.handle(session, {"t": "op", "id": id[0], "op": op, "args": args})
+	var zone := "trial_02"
+	var stage := GameData.dungeon_stage(zone)
+	var roster := World.roster(zone)
+	var ids: Array = roster.keys()
+	var kind: Dictionary = GameData.load_table("monsters").kinds[str(roster[ids[0]].kind)]
+	# 최소 처치 시간이 지난 뒤에 잡는다 — 들어온 때부터 재므로 한 번만 기다리면 된다
+	var wait := int(KillCheck.min_ms(ledger, kind) * KillCheck.HEADROOM) + 1
+	if wait >= int(stage.seconds) * 1000:
+		_fail("Lv.30 이 시련 2단계 몬스터를 30초 안에 못 잡는다고 친다 (%dms) — 검사를 못 한다" % wait)
+		return
+
+	if send.call("trial_clear", [zone]).get("reason") != "wrong_zone":
+		_fail("들어오지도 않은 시련을 통과시켰다")
+	send.call("enter", [zone])
+	now[0] += wait
+	for i in int(stage.kills) - 1:
+		send.call("kill", [{"kind": str(roster[ids[i]].kind), "zone": zone, "id": str(ids[i])}])
+	if send.call("trial_clear", [zone]).get("reason") != "too_few":
+		_fail("%d마리만 잡았는데 통과시켰다" % (int(stage.kills) - 1))
+	var last := int(stage.kills) - 1
+	send.call("kill", [{"kind": str(roster[ids[last]].kind), "zone": zone, "id": str(ids[last])}])
+	var ok: Dictionary = send.call("trial_clear", [zone])
+	var reward: Array = ok.get("events", []).filter(func(e): return str(e.get("type", "")) == "trialReward")
+	if ok.get("t") != "result" or reward.is_empty() or int(reward[0].crystal) != int(stage.crystals):
+		_fail("7마리를 잡았는데 통과를 거절했다: %s" % ok.get("reason", ok))
+	if send.call("trial_clear", [zone]).get("reason") != "claimed":
+		_fail("한 번 들어와 두 번 받았다")
+
+	# 다시 들어와 30초가 지난 뒤에 잡은 것은 안 센다
+	send.call("enter", [zone])
+	now[0] += int(stage.seconds) * 1000 + int(KillCheck.SLACK_MS) + 1
+	for i in int(stage.kills):
+		send.call("kill", [{"kind": str(roster[ids[i]].kind), "zone": zone, "id": str(ids[i])}])
+	if send.call("trial_clear", [zone]).get("reason") != "too_few":
+		_fail("시간이 지난 뒤 잡은 것으로 통과시켰다")
 
 
 ## 채팅 — 모두에게 뿌리기 · 서버가 붙이는 이름 · 제어 문자 · 도배 막기 · 지난 줄 · 강화 알림

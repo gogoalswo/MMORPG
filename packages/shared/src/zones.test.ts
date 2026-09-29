@@ -1,7 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FIELD_ORDER, START_ZONE, ZONES, getSpawn, getZone } from './zones.ts';
-import { DUNGEON_SKILL_EXP_PER_STAGE, DUNGEON_TYPES, DUNGEON_ZONES } from './dungeons.ts';
+import {
+  DUNGEON_SKILL_EXP_PER_STAGE, DUNGEON_TYPES, DUNGEON_ZONES,
+  TRIAL_CRYSTALS_PER_STAGE, TRIAL_KILLS, TRIAL_MONSTERS, TRIAL_SECONDS,
+} from './dungeons.ts';
 import { JOB_ADVANCES } from './jobAdvance.ts';
 import { MONSTER_KINDS } from './monsters.ts';
 import { GROUND_KINDS } from './zone.ts';
@@ -91,12 +94,13 @@ test('사냥터 순서가 몬스터 레벨 순서와 같다', () => {
   }
 });
 
-test('던전 — 종류 셋, 열린 종류는 단계마다 보스 한 마리', () => {
+test('던전 — 종류 셋, 토벌은 단계마다 보스 한 마리', () => {
   assert.equal(DUNGEON_TYPES.length, 3);
   assert.ok(DUNGEON_TYPES.some((t) => t.open), '열린 던전이 하나도 없다');
   for (const type of DUNGEON_TYPES) {
     // 닫힌 종류에 단계가 있으면 창에서 못 가는 존이 생긴다
     assert.equal(type.open, type.stages.length > 0, `${type.id}: 열림과 단계 유무가 어긋난다`);
+    if (type.id !== 'raid') continue;
     let previous = 0;
     for (const s of type.stages) {
       const zone = getZone(s.zone);
@@ -104,7 +108,7 @@ test('던전 — 종류 셋, 열린 종류는 단계마다 보스 한 마리', (
       assert.equal(monsters.length, 1, `${s.zone}: 보스 한 무리만 있어야 한다`);
       assert.equal(monsters[0]!.count, 1);
       assert.equal(monsters[0]!.kind, s.boss);
-      const kind = MONSTER_KINDS[s.boss];
+      const kind = MONSTER_KINDS[s.boss!];
       assert.ok(kind?.boss, `${s.zone}: ${s.boss} 가 보스가 아니다`);
       assert.equal(kind.level, s.level);
       // 단계가 오를수록 보스가 세진다
@@ -117,6 +121,34 @@ test('던전 — 종류 셋, 열린 종류는 단계마다 보스 한 마리', (
     }
   }
   assert.equal(new Set(DUNGEON_ZONES).size, DUNGEON_ZONES.length, '단계 존 id 가 겹친다');
+});
+
+test('시련의 탑 — 30초 7마리, 좁은 맵, 일반 몬스터가 7마리보다 넉넉하다', () => {
+  const trial = DUNGEON_TYPES.find((t) => t.id === 'trial')!;
+  assert.ok(trial.open);
+  assert.equal(trial.stages.length, 20);
+  let previous = 0;
+  for (const s of trial.stages) {
+    assert.equal(s.kills, TRIAL_KILLS);
+    assert.equal(s.seconds, TRIAL_SECONDS);
+    // 보상 = 단계 × 1개 (2026-09-29)
+    assert.equal(s.crystals, s.stage * TRIAL_CRYSTALS_PER_STAGE);
+    const zone = getZone(s.zone);
+    assert.ok(zone.size < ZONES[START_ZONE]!.size, `${s.zone}: 맵이 줄지 않았다`);
+    const mobs = zone.monsters ?? [];
+    assert.equal(mobs.length, TRIAL_MONSTERS);
+    assert.ok(TRIAL_MONSTERS > TRIAL_KILLS, '잡을 수보다 몬스터가 적다');
+    for (const m of mobs) {
+      assert.equal(m.kind, s.monster);
+      const kind = MONSTER_KINDS[m.kind]!;
+      assert.ok(!kind.boss, `${s.zone}: 일반 몬스터여야 한다`);
+      assert.equal(kind.level, s.level);
+      // 시험 동안 되살아나면 7마리가 쉬워진다
+      assert.ok(m.respawnMs >= TRIAL_SECONDS * 1000);
+    }
+    assert.ok(s.level > previous, `${s.zone}: 앞 단계보다 낮은 레벨`);
+    previous = s.level;
+  }
 });
 
 test('없는 스폰 이름은 default 로 떨어진다', () => {
@@ -132,8 +164,10 @@ test('차원문이 사냥터 말고는 모든 존에 있다', () => {
   // 걸어 들어가는 포탈이 없으므로, 마을에 문이 없으면 사냥터로 나갈 길이 없다.
   // 사냥터는 문을 뺐다 (2026-09-29 요청 "사냥터에 들어가면 포탈을 제거해") — 나올 때는
   // HUD 위쪽 "마을가기" 단추를 쓴다. 던전·전직 시험은 그대로 둔다
+  // 시련의 탑도 없다 — 결과창 "확인" 이 마을로 보낸다 (dungeons.ts)
   const fields = new Set<string>(FIELD_ORDER);
-  const without = Object.values(ZONES).filter((z) => !z.gate && !fields.has(z.id));
+  const trials = new Set(DUNGEON_TYPES.find((t) => t.id === 'trial')!.stages.map((s) => s.zone));
+  const without = Object.values(ZONES).filter((z) => !z.gate && !fields.has(z.id) && !trials.has(z.id));
   assert.deepEqual(without.map((z) => z.id), [], '차원문이 없는 존이 있다');
   const withGate = FIELD_ORDER.filter((id) => getZone(id).gate);
   assert.deepEqual(withGate, [], '사냥터에 차원문이 남아 있다');

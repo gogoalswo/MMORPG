@@ -43,6 +43,10 @@ var _zones: Array = []
 ## 아직 안 떨어진 스킬 (`delayMs` 가 있는 스킬 — 천붕각이 뛰어올랐다 내려찍는다).
 ## `{player, skill, upgrades, range, aim, at}` — `step` 이 때가 되면 `_land` 로 넣는다
 var _landings: Array = []
+## **시련의 탑** — 이 존이 시련 단계면 `{zone, stage, need, crystals, ends_at, kills, result}`, 아니면 빈 사전.
+## 시계와 잡은 수는 여기(기기)가 센다. `result` 는 ""(도는 중) · "clear" · "fail" — 정해지면 더 세지 않는다.
+## 크리스탈은 장부가 준다(`trial_clear`) → docs/features/dungeons.md "시련의 탑"
+var _trial: Dictionary = {}
 
 ## 어느 직업으로 시작하나. 만드는 화면이 없어서 당분간 고정이다
 const DEFAULT_JOB := "fighter"
@@ -176,6 +180,7 @@ func open(id: String) -> void:
 	_combos.clear()
 	_zones.clear()
 	_spawn_monsters()
+	_start_trial()
 	# 서버에 붙어 있으면 어느 존에 들어왔는지 알린다 — 처치 보고를 그 존의 명단에 대 본다
 	if remote != null:
 		remote.request(&"enter", [id])
@@ -368,6 +373,7 @@ func input_move(player_id: String, seq: int, dx: float, dz: float, dt: float) ->
 func step(delta: float) -> void:
 	var now := Time.get_ticks_msec()
 	_respawn(now)
+	_check_trial(now)
 	_run_landings(now)
 	_run_lunges(delta, now)
 	_run_combos(now)
@@ -436,6 +442,7 @@ func snapshot() -> Dictionary:
 		"monsters": _monsters,
 		"gate": zone.get("gate", {}),
 		"npcs": zone.get("npcs", []),
+		"trial": _trial,
 	}
 
 
@@ -847,6 +854,56 @@ func _kill(player: Dictionary, target: Dictionary, now: int) -> void:
 	# 보상(드롭·골드·경험치·레벨·전직 시험)은 장부가 굴린다 — `Ledger.kill`.
 	# **종류·존·개체 id 만 보낸다** — 수치는 장부가 표에서 찾고, 서버는 id 를 제 명단에 대 본다
 	_ledger_call(player, &"kill", [{"kind": str(target.kind), "zone": zone_id, "id": str(target.id)}])
+	_count_trial_kill(player, now)
+
+
+## --- 시련의 탑 --- (docs/features/dungeons.md "시련의 탑")
+
+## 존을 열 때 — 시련 단계면 시계를 건다. 들어온 순간부터 센다 (서버도 `enter` 부터 센다)
+func _start_trial() -> void:
+	_trial = {}
+	var stage := GameData.dungeon_stage(zone_id)
+	if int(stage.get("kills", 0)) <= 0:
+		return
+	_trial = {
+		"zone": zone_id,
+		"stage": int(stage.get("stage", 0)),
+		"need": int(stage.kills),
+		"crystals": int(stage.get("crystals", 0)),
+		"ends_at": Time.get_ticks_msec() + int(float(stage.get("seconds", 30)) * 1000.0),
+		"kills": 0,
+		"result": "",
+	}
+
+
+## 한 마리 잡았다 — 시간 안이면 센다. 다 채우면 통과, 크리스탈은 장부에 청한다
+func _count_trial_kill(player: Dictionary, now: int) -> void:
+	if _trial.is_empty() or str(_trial.result) != "" or now >= int(_trial.ends_at):
+		return
+	_trial.kills = int(_trial.kills) + 1
+	if int(_trial.kills) < int(_trial.need):
+		return
+	_trial.result = "clear"
+	_ledger_call(player, &"trial_clear", [zone_id])
+	_events.append(_trial_event())
+
+
+## 시간이 다 됐는데 못 채웠으면 실패
+func _check_trial(now: int) -> void:
+	if _trial.is_empty() or str(_trial.result) != "" or now < int(_trial.ends_at):
+		return
+	_trial.result = "fail"
+	_events.append(_trial_event())
+
+
+## 결과창이 그리는 것 — 성공·실패, 잡은 수, 보상 크리스탈(실패면 0)
+func _trial_event() -> Dictionary:
+	var clear := str(_trial.result) == "clear"
+	return {
+		"type": "trial", "result": _trial.result, "stage": _trial.stage,
+		"kills": _trial.kills, "need": _trial.need,
+		"crystals": int(_trial.crystals) if clear else 0,
+	}
 
 
 ## 죽은 몬스터를 제 시간에 되살린다

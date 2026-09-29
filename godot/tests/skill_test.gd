@@ -27,6 +27,7 @@ func _init() -> void:
 	_case_claw_up()
 	_case_quake_up()
 	_case_ice_up()
+	_case_crush_up()
 	Save.clear()
 
 	if _failed == 0:
@@ -702,6 +703,70 @@ func _case_quake_up() -> void:
 ## 빙주각 강화 — "파쇄" 는 1.1초 뒤 **그때 범위 안에 있는 놈 전부**에게 한 대의 80% 를 한 번 더
 ## (첫 대로 맞은 놈만이 아니다 — 2026-09-25 지적),
 ## "빙결" 은 맞은 놈을 2초 세우고 **얼음 모양**(`stun_look = "ice"`)을 단다 (2026-09-24)
+## 무적파쇄권 강화 — 흡인: 10m 안(뒤도)의 놈이 `pullMs` 동안 주먹 앞으로 끌려와 터짐(`delayMs`)에
+## 맞고, 10m 밖은 그대로다. 기절: 주먹이 닿는 순간부터 2초
+func _case_crush_up() -> void:
+	var s := _setup(1)
+	var w: World = s[0]
+	var me: Dictionary = s[1]
+	var near: Dictionary = s[2][0]
+	var behind := World.make_monster("behind", GameData.monster_kind("mob003"), -8.0, 3.0, 10000.0, 0.0)
+	var out := World.make_monster("out", GameData.monster_kind("mob003"), 11.0, 0.0, 10000.0, 0.0)
+	s[2].append(behind)
+	s[2].append(out)
+	for mob in s[2]:
+		mob.max_hp = 999999
+		mob.hp = 999999
+	w.learn_skill("me", "crush_fist")
+	w.set_skill_bar("me", ["crush_fist"])
+	var skill := Skills.get_skill("fighter", "crush_fist")
+	var pull := Skills.upgrade("crush_fist", "pull")
+	if pull.is_empty() or Skills.upgrade("crush_fist", "stun").is_empty():
+		_fail("무적파쇄권 강화: 흡인·기절이 표에 없다")
+		return
+	me.skill_upgrades = {"crush_fist": ["pull"]}
+	me.skill_ready_at = {}
+	me.cast_until = 0
+	w._landings.clear()
+	var now := Time.get_ticks_msec()
+	w.cast("me", "crush_fist")
+	var late := int(behind.get("pull_until", 0)) - now
+	if late < int(pull.pullMs) or late > int(pull.pullMs) + 50 or int(out.get("pull_until", 0)) != 0:
+		_fail("흡인: 뒤 8.5m 의 놈이 %dms 동안 끌림 · 11m 의 놈 %d (%dms · 0 이어야 한다)" % [
+			late, int(out.get("pull_until", 0)), int(pull.pullMs)])
+		return
+	if int(pull.pullMs) >= int(skill.delayMs):
+		_fail("흡인: 끌기(%dms)가 터짐(%dms)보다 늦게 끝난다" % [int(pull.pullMs), int(skill.delayMs)])
+	w._step_monsters(0.05, now + late)
+	var at := Vector2(behind.x - me.x, behind.z - me.z)
+	var facing := Vector2(sin(float(me.rot)), cos(float(me.rot)))
+	if int(behind.pull_until) != 0 or at.length() > float(skill.range) or at.dot(facing) < 0.0:
+		_fail("흡인: 끌린 놈이 (%.2f, %.2f) — 앞 반원 %.1fm 안이어야 한다" % [at.x, at.y, float(skill.range)])
+	w.drain_events()
+	w._run_landings(now + int(skill.delayMs) + 100)
+	var struck := _hits(w.drain_events())
+	if not ("behind" in struck) or not (str(near.id) in struck) or ("out" in struck):
+		_fail("흡인: 터질 때 맞은 놈 %s (behind·%s 는 맞고 out 은 안 맞아야 한다)" % [str(struck), near.id])
+	# 기절 — 끌지 않고, 주먹이 닿는 순간부터 2초
+	me.skill_upgrades = {"crush_fist": ["stun"]}
+	me.skill_ready_at = {}
+	me.cast_until = 0
+	behind.pull_until = 0
+	near.stunned_until = 0
+	now = Time.get_ticks_msec()
+	w.cast("me", "crush_fist")
+	if int(out.get("pull_until", 0)) != 0 or int(behind.pull_until) != 0:
+		_fail("기절: 흡인 없이 끌렸다")
+	var land_at := now + int(skill.delayMs) + 100
+	w._run_landings(land_at)
+	var left := int(near.stunned_until) - land_at
+	if left < 1900 or left > 2100 or str(near.state) != "stun":
+		_fail("기절: %dms · 상태 %s (2000ms · stun 이어야 한다)" % [left, near.state])
+	else:
+		print("  무적파쇄권 강화: 흡인 %dm → 앞 반원에 모여 맞음, 기절 %dms" % [int(pull.pullRadius), left])
+	me.skill_upgrades = {}
+
+
 func _case_ice_up() -> void:
 	var s := _setup(1)
 	var w: World = s[0]

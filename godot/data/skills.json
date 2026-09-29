@@ -474,6 +474,23 @@
       "stunMs": 2000,
       "stunLook": "ice",
       "exp": 50000
+    },
+    {
+      "id": "pull",
+      "skill": "crush_fist",
+      "name": "흡인",
+      "desc": "10m 안의 적을 끌어당김",
+      "pullRadius": 10,
+      "pullMs": 500,
+      "exp": 50000
+    },
+    {
+      "id": "stun",
+      "skill": "crush_fist",
+      "name": "기절",
+      "desc": "맞은 적 2초 기절",
+      "stunMs": 2000,
+      "exp": 50000
     }
   ],
   "upgradeMax": 2,

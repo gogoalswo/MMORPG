@@ -28,6 +28,7 @@ const KNOWN_SKILL_KEYS := [
 const KNOWN_UPGRADE_KEYS := [
 	"extraHits", "zoneMs", "zoneTickMs", "zonePower", "followPower", "powerMul",  # 셈한다
 	"id", "skill", "name", "desc", "exp", "stunMs", "stunLook", "rangeMul", "followMs",
+	"pullRadius", "pullMs",
 ]
 
 

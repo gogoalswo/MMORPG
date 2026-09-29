@@ -53,6 +53,10 @@ const NPC_REACH := 4.5
 
 ## `_pick_targets` 에 넘기면 명수 상한 없이 범위 안을 전부 고른다
 const ALL_TARGETS := -1
+## 끌어당기기(무적파쇄권 흡인)의 도착점 — 주먹 앞 `PULL_AHEAD` m 둘레, 온 쪽으로 `PULL_SPREAD` m
+## 까지 남긴다. 한 점에 겹쳐 쌓이지 않으면서도 앞 반원 5.5m 판정 안에 다 들어온다
+const PULL_AHEAD := 2.2
+const PULL_SPREAD := 1.2
 
 ## 몇 초마다 저장하나
 const SAVE_EVERY_MS := 10000
@@ -850,6 +854,7 @@ func _respawn(now: int) -> void:
 		monster.hp = monster.max_hp
 		monster.respawn_at = 0
 		monster.stunned_until = 0
+		monster.pull_until = 0
 		# 죽은 자리에서 다시 선다. 집에서 멀면 다음 틱의 리쉬 검사가 도로 켠다
 		monster.leashing = false
 
@@ -884,6 +889,19 @@ func _step_monsters(delta: float, now: int) -> void:
 				monster.rooted_until = now + Combat.monster_root_ms(float(monster.attack_cooldown))
 				_burst_aoe(monster)
 			continue
+
+		# **끌려오는 중** (무적파쇄권 흡인) — 못 움직이고 못 때린다. 기절처럼 예고한 범위 공격
+		# 뒤에 본다 (예고한 놈은 `_pull_in` 이 애초에 안 끈다). 마지막 틱에 도착점에 딱 놓는다
+		if int(monster.get("pull_until", 0)) != 0:
+			var span := maxf(1.0, float(int(monster.pull_until) - int(monster.pull_start)))
+			var t := clampf(float(now - int(monster.pull_start)) / span, 0.0, 1.0)
+			t = t * t * (3.0 - 2.0 * t)
+			monster.x = lerpf(float(monster.pull_from_x), float(monster.pull_to_x), t)
+			monster.z = lerpf(float(monster.pull_from_z), float(monster.pull_to_z), t)
+			if now < int(monster.pull_until):
+				monster.state = "stun"
+				continue
+			monster.pull_until = 0
 
 		# **기절** — 못 움직이고 못 때린다. 예고한 범위 공격(위)보다 뒤에 본다:
 		# 한번 예고한 것은 그대로 터진다는 규칙을 기절도 깨지 않는다
@@ -1247,6 +1265,8 @@ static func make_monster(
 		"rooted_until": 0,
 		# 기절이 풀리는 시각 (스킬 강화 — 낙뢰 기절). 그때까지 못 움직이고 못 때린다
 		"stunned_until": 0,
+		# 끌려오는 중 (무적파쇄권 흡인) — 이 시각까지 `pull_*` 의 두 점 사이를 옮겨진다 (`_pull_in`)
+		"pull_until": 0,
 		# 기절이 어떻게 보이나 — `ice` 면 화면이 몸을 얼음빛으로 굳힌다 (빙주각 빙결)
 		"stun_look": "",
 		# 정확히 겹쳤을 때 밀려날 방향. **서로 달라야 풀린다**
@@ -1955,6 +1975,12 @@ func cast(player_id: String, skill_id: String, aim_id := "") -> void:
 		"upgrades": upgrades.duplicate(), "delay_ms": delay,
 	})
 
+	# **끌어당기기** (무적파쇄권 흡인) — 기를 모으는 동안 둘레의 놈을 주먹 앞으로 모은다.
+	# 판정(`delayMs`)보다 먼저 끝나서, 모인 놈이 터지는 앞 반원에 든다
+	var pull := Skills.upgrade_sum(skill_id, upgrades, "pullRadius")
+	if pull > 0.0:
+		_pull_in(player, pull, roundi(Skills.upgrade_sum(skill_id, upgrades, "pullMs")), now)
+
 	# 회복형은 공격 판정을 하지 않는다
 	var heal := float(skill.get("selfHeal", 0.0))
 	if heal > 0.0:
@@ -1980,6 +2006,31 @@ func cast(player_id: String, skill_id: String, aim_id := "") -> void:
 		})
 		return
 	_land(player, skill, skill_id, upgrades, range_now, aim, now)
+
+
+## 끌어당기기 — 반경 안의 산 몬스터마다 출발점·도착점·시각을 달아 두면 `_step_monsters` 가 옮긴다.
+## 도착점은 주먹 앞(`PULL_AHEAD`) 둘레에 **온 쪽으로 조금 남긴다**(`PULL_SPREAD`) — 뒤에서 끌려온
+## 놈도 캐릭터 앞 1m 에 서서 앞 반원 판정에 든다. 보스 범위 공격을 예고한 놈은 안 끈다
+## ("한번 예고한 원은 그 자리에서 터진다")
+func _pull_in(player: Dictionary, radius: float, ms: int, now: int) -> void:
+	var me := Vector2(player.x, player.z)
+	var facing := Vector2(sin(float(player.rot)), cos(float(player.rot)))
+	var center := me + facing * PULL_AHEAD
+	for monster in _monsters:
+		if int(monster.hp) <= 0 or int(monster.burst_at) != 0:
+			continue
+		var at := Vector2(monster.x, monster.z)
+		if at.distance_to(me) > radius:
+			continue
+		var off := at - center
+		var to := center + off.limit_length(PULL_SPREAD)
+		monster.pull_from_x = at.x
+		monster.pull_from_z = at.y
+		monster.pull_to_x = to.x
+		monster.pull_to_z = to.y
+		monster.pull_start = now
+		monster.pull_until = now + maxi(1, ms)
+		monster.state = "stun"
 
 
 ## 때가 된 늦은 스킬을 떨어뜨린다. 그 사이 죽었거나 떠난 사람 것은 버린다

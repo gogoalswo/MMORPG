@@ -642,6 +642,12 @@ export interface SkillUpgradeDef {
   followPower?: number;
   /** 기절이 **어떻게 보이나** — `ice` 면 몸이 얼음빛으로 굳는다 (빙주각 "빙결") */
   stunLook?: 'ice';
+  /**
+   * **끌어당기기** (무적파쇄권 "흡인") — 시전하는 순간 이 반경(m) 안의 산 몬스터를 `pullMs`
+   * 동안 주먹 앞으로 끌어 모은다. 피해는 없다 — 모은 놈이 터지는 판정에 들어갈 뿐이다
+   */
+  pullRadius?: number;
+  pullMs?: number;
 }
 
 /** 스킬 하나에 붙는 강화 수 */
@@ -727,6 +733,24 @@ const UPGRADE_LIST: Omit<SkillUpgradeDef, 'exp'>[] = [
     desc: '맞은 적 2초 빙결',
     stunMs: 2000,
     stunLook: 'ice',
+  },
+  {
+    // 2026-09-29 요청: "흡인은 10m 범위의 몬스터를 끌어당기도록". 기를 모으는 동안(0.5초) 주먹
+    // 앞으로 모아 0.6초의 터짐에 들어오게 한다 — 끝나는 때가 `delayMs`(600)보다 앞이어야 한다
+    id: 'pull',
+    skill: 'crush_fist',
+    name: '흡인',
+    desc: '10m 안의 적을 끌어당김',
+    pullRadius: 10,
+    pullMs: 500,
+  },
+  {
+    // 2026-09-29 요청: "스킬 강화 다른 하나는 스턴 만들어. 2초간 스턴으로". 이펙트는 아직 없다
+    id: 'stun',
+    skill: 'crush_fist',
+    name: '기절',
+    desc: '맞은 적 2초 기절',
+    stunMs: 2000,
   },
 ];
 

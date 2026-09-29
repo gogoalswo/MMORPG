@@ -1593,7 +1593,7 @@ func _build_bag_window(panel: PanelContainer) -> void:
 
 ## 창 안의 작은 단추 (정렬·장비·장착·물약 ±·자동사냥 위/아래 …) — 던전 창의 입장 단추처럼
 ## **청록 돌판 단추 조각(`ui_button`) + 주황빛 금 글자** (2026-09-29, 그 전엔 둥근 금테).
-## 조각은 74px 높이라 40px 단추에 여백 28 로 늘이면 모서리가 겹친다. 그래서 **조각을 단추
+## 조각은 83px 높이라 40px 단추에 여백 28 로 늘이면 모서리가 겹친다. 그래서 **조각을 단추
 ## 높이로 한 번 줄여**(`_small_button_texture`) 좌우 끝을 그대로 쓴다
 func _inv_button(text: String, on_press: Callable) -> Button:
 	var button := Button.new()

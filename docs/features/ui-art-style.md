@@ -75,7 +75,12 @@ HUD 와 NPC 창이 이것으로 되어 있고, **앞으로 만드는 UI 는 전�
 사용자가 단추 그림 한 장("인챈트")을 주며 **"UI 버튼을 이런 스타일로"** 라고 했다.
 그래서 모든 창이 같이 쓰는 단추 조각 `ui_button` 을 둥근 금테에서 **청록 돌판**으로 갈았다.
 
-한 줄로: **금테 없는 청록 돌판 + 위 가장자리 밝은 선 + 아래 검은 그늘선 + 주황빛 금 글자.**
+한 줄로: **닳은 청록 돌판 + 깨진 모서리 + 안쪽에 새긴 가는 선 + 주황빛 금 글자.**
+
+**테두리가 핵심이다.** 첫 판(반듯한 청록 판)은 "느낌이 달라. 테두리 쪽에 이미지를 추가로 그려놔서
+심심하지 않게 만들었다" 는 지적을 받았다. 그래서 두 번째 그림을 물려 다시 뽑았다 — 가장자리가
+조금 울퉁불퉁하고, **오른쪽 위·왼쪽 아래 모서리가 깨져 옅게 긁힌 자국과 가는 금**이 있고,
+가장자리 안쪽을 따라 **새긴 선**이 한 바퀴 돈다. 가운데 면은 글자가 앉도록 고르다.
 
 | 쓰임 | 값 (받은 그림에서 뽑았다) |
 |---|---|
@@ -84,13 +89,18 @@ HUD 와 NPC 창이 이것으로 되어 있고, **앞으로 만드는 UI 는 전�
 | 아래 그늘선 | `#181b1b` ~ `#242f2e` |
 | 글자 | `#f8c878` + 검은 테 `#141816` 4px (`GatePanel.BUTTON_TEXT` · `BUTTON_OUTLINE`) |
 
-- **참고 그림**(받은 그림을 180px JPEG 로 줄인 것, 1.3KB, 다시 받아 `cmp` 로 같음을 봤다):
-  `https://3d.varco.ai/api/objects/ad26567a1ff295797dcbc277789bcd35.jpg`
-- 프롬프트는 "판·칸·테두리류" 틀 대신 `MATCH THE REFERENCE IMAGE'S STYLE EXACTLY — the teal stone
-  button in the reference, but EMPTY` 로 시작하고 위 색 값을 박았다. `NO gold rim, NO metal frame`
-  과 `Ignore the text in the reference` 를 넣었다. 16:9 로 두 장 뽑아 받은 그림과 더 닮은 장
-  (좌우가 어둡고 위 선이 밝은 쪽)을 골랐다.
-- 구우면 **192x74** 다 (옛 금테는 192x58). 9조각 여백 28 은 그대로 맞는다.
+- **참고 그림**(두 번째로 받은 그림의 단추 부분만 240px JPEG 로 자른 것, 2.1KB, 다시 받아 `cmp` 로
+  같음을 봤다): `https://3d.varco.ai/api/objects/6d5f295f2e2f9f84e1ced92151ac76ee.jpg`
+  (첫 그림 `ad26567a…jpg` 는 테두리가 작아 안 보여서 반듯한 판만 나왔다)
+- 프롬프트는 `MATCH THE REFERENCE IMAGE'S STYLE EXACTLY — the weathered teal stone button in the
+  reference, but EMPTY` 로 시작하고 색 값을 박은 뒤 **`THE EDGES ARE THE POINT`** 로 테두리를 하나씩
+  적었다 (울퉁불퉁한 윤곽 · 안쪽에 새긴 선 · 깨지고 긁힌 모서리와 가는 금 · 위 밝은 선 · 아래 그늘).
+  `All of this detail stays within a narrow band near the border` 로 무늬를 9조각 여백 안에 가뒀고,
+  `NO gold rim, NO metal frame, NO gems` 를 넣었다. 16:9 로 두 장 뽑아 모서리가 받은 그림처럼
+  오른쪽 위·왼쪽 아래만 깨진 장을 골랐다.
+- 구우면 **192x83** 이다 (옛 금테는 192x58). 깨진 자리가 가장자리 14~21px 안에 있어 **9조각 여백 28 이
+  무늬를 그대로 품는다** — 가운데만 늘어난다.
+- **`WIDE_TOLERANCE` 에서 뺐다.** 모서리의 옅게 긁힌 자국이 흰 배경과 가까워서다.
 - 글자색은 `GatePanel.paint_button_text` 한 곳에서 칠한다 — 가방·스킬 단추(`_gold_text`),
   던전 입장, 전직 단추가 이걸 부른다. 옅은 `CARD_GOLD` 는 청록 위에서 묻힌다.
 - 조각이 없으면 `_inv_box` 가 같은 청록(`#45605d`)으로 판을 그린다.

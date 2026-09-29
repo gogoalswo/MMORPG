@@ -283,9 +283,10 @@ fetch_icon 7fe4055eec2fdebd37b6dc157d4f30ae ui_subpanel  # 이름표·스탯 상
 fetch_icon dac29087bdffce5bdaa23666f2872afe ui_slot      # 칸
 fetch_icon 1344b8afc27c134af2b2f5942b111bbf ui_tab_on    # 고른 탭 (상아빛 — 글자는 어둡게 얹는다)
 fetch_icon 757608f70e49e1a099e5f1cb2b67710f ui_tab_off   # 안 고른 탭
-# 단추는 2026-09-29 에 청록 돌판으로 갈았다 — 사용자가 준 "인챈트" 단추 그림을 물려 뽑았다
-# (ui-art-style.md "단추 결"). 옛 둥근 금테는 9768fc8560a2ece9c040596698357747
-fetch_icon cd74048554eb869a32f6c2903a240e6d ui_button    # 단추
+# 단추는 2026-09-29 에 닳은 청록 돌판으로 갈았다 — 사용자가 준 "인챈트" 단추 그림을 물려 뽑았다
+# (ui-art-style.md "단추 결"). 옛 둥근 금테는 9768fc8560a2ece9c040596698357747,
+# 테두리 무늬 없는 첫 판은 cd74048554eb869a32f6c2903a240e6d
+fetch_icon 12bef34400ef662201819c4eeb6be134 ui_button    # 단추
 fetch_icon 70f1e1a287f9e93cc1abb39f5759dccb ui_figure    # 장착 칸 사이 캐릭터
 # 인벤토리 결 (2026-09-23). 사용자가 준 인벤토리 그림을 **참고 그림으로 물려** 뽑았다 —
 # 어두운 판 + 녹슨 청동 테 + 작은 모서리 쇠장식. 장비·상세·인벤토리 세 창이 쓴다

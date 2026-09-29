@@ -394,11 +394,7 @@ func _build_stages() -> void:
 	_enter.custom_minimum_size = ENTER_SIZE
 	_enter.size_flags_horizontal = Control.SIZE_SHRINK_END
 	_enter.focus_mode = Control.FOCUS_NONE
-	_enter.add_theme_font_size_override("font_size", 28)
-	_enter.add_theme_color_override("font_color", CARD_GOLD)
-	_enter.add_theme_color_override("font_pressed_color", CARD_GOLD)
-	_enter.add_theme_color_override("font_hover_color", CARD_GOLD)
-	_enter.add_theme_color_override("font_disabled_color", HERE_COLOR)
+	paint_button_text(_enter, 28)
 	# 입장은 단추 조각(`ui_button`) 그대로다 — 줄만 평평하다(`_row_box`)
 	for state in ["normal", "hover", "disabled", "focus"]:
 		_enter.add_theme_stylebox_override(state, _button_box(false))

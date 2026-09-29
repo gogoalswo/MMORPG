@@ -156,11 +156,7 @@ func _build() -> void:
 	_button = Button.new()
 	_button.name = "advance"
 	_button.custom_minimum_size = Vector2(0, 70)
-	_button.add_theme_font_size_override("font_size", 26)
-	_button.add_theme_color_override("font_color", IVORY)
-	_button.add_theme_color_override("font_hover_color", IVORY)
-	_button.add_theme_color_override("font_pressed_color", IVORY)
-	_button.add_theme_color_override("font_focus_color", IVORY)
+	GatePanel.paint_button_text(_button, 26)
 	_button.add_theme_color_override("font_disabled_color", DIM)
 	_button.add_theme_stylebox_override("normal", _button_box(false, false))
 	_button.add_theme_stylebox_override("hover", _button_box(false, false))

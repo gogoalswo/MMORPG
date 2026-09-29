@@ -63,8 +63,24 @@ const CARD_MARGIN := 34
 const CARD_DARK := Color("#1b1c17")
 ## 칸 제목 · 부제의 옅은 금빛
 const CARD_SUB_COLOR := Color("#c9b98a")
-## 고른 줄 · 단추 글자 · 구분선의 금빛
+## 고른 줄 · 구분선의 금빛
 const CARD_GOLD := Color("#dfc97a")
+## 단추 글자 — 청록 돌판 단추(`ui_button`, 2026-09-29) 위의 **주황빛 금 + 검은 테**.
+## 받은 단추 그림("인챈트")의 글자에서 뽑은 값이다. 옅은 `CARD_GOLD` 는 청록 위에서 묻혔다
+const BUTTON_TEXT := Color("#f8c878")
+const BUTTON_OUTLINE := Color("#141816")
+const BUTTON_OUTLINE_SIZE := 4
+
+
+## 단추 글자를 받은 그림 결로 칠한다 (`BUTTON_TEXT` + 검은 테). 막힌 단추는 회색
+static func paint_button_text(button: Button, size: int) -> Button:
+	for key in ["font_color", "font_pressed_color", "font_hover_color", "font_hover_pressed_color", "font_focus_color"]:
+		button.add_theme_color_override(key, BUTTON_TEXT)
+	button.add_theme_color_override("font_disabled_color", HERE_COLOR)
+	button.add_theme_color_override("font_outline_color", BUTTON_OUTLINE)
+	button.add_theme_constant_override("outline_size", BUTTON_OUTLINE_SIZE)
+	button.add_theme_font_size_override("font_size", size)
+	return button
 ## 제목 글자 — 노란 제목(`TITLE_COLOR`) 대신 상아빛 (받은 던전 그림의 제목 결)
 const PAGE_TITLE_COLOR := Color("#ece4cc")
 const PAGE_TITLE_SIZE := 32

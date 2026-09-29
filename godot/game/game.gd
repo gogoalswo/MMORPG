@@ -1585,10 +1585,9 @@ func _build_bag_window(panel: PanelContainer) -> void:
 
 
 ## 창 안의 작은 단추 (정렬·장비·장착·물약 ±·자동사냥 위/아래 …) — 던전 창의 입장 단추처럼
-## **둥근 금테 단추 조각(`ui_button`) + 금빛 글자** (2026-09-28, 그 전엔 인벤토리 결 `inv_button`).
-## 조각은 58px 높이라 40px 단추에 여백 28 로 늘이면 모서리가 겹치고, 반씩 자르면 둥근 끝이
-## 뾰족한 육각형이 된다 (찍어서 봤다). 그래서 **조각을 단추 높이로 한 번 줄여**
-## (`_small_button_texture`) 끝의 반원을 그대로 쓴다
+## **청록 돌판 단추 조각(`ui_button`) + 주황빛 금 글자** (2026-09-29, 그 전엔 둥근 금테).
+## 조각은 74px 높이라 40px 단추에 여백 28 로 늘이면 모서리가 겹친다. 그래서 **조각을 단추
+## 높이로 한 번 줄여**(`_small_button_texture`) 좌우 끝을 그대로 쓴다
 func _inv_button(text: String, on_press: Callable) -> Button:
 	var button := Button.new()
 	button.text = text
@@ -1597,7 +1596,7 @@ func _inv_button(text: String, on_press: Callable) -> Button:
 	var texture := _small_button_texture()
 	for state in ["normal", "hover", "pressed", "disabled"]:
 		if texture == null:
-			button.add_theme_stylebox_override(state, _inv_box("ui_button", 28, 6, "#1a1a17", "#5a4c34"))
+			button.add_theme_stylebox_override(state, _inv_box("ui_button", 28, 6, "#45605d", "#1a1e1e"))
 			continue
 		var box := StyleBoxTexture.new()
 		box.texture = texture
@@ -3647,11 +3646,7 @@ func _stone_pick_box() -> StyleBox:
 
 ## 단추 글자를 던전 창의 입장 단추처럼 금빛으로 (막히면 흐린 회색)
 func _gold_text(button: Button, size: int = 26) -> Button:
-	for key in ["font_color", "font_pressed_color", "font_hover_color", "font_hover_pressed_color"]:
-		button.add_theme_color_override(key, DungeonPanel.CARD_GOLD)
-	button.add_theme_color_override("font_disabled_color", GatePanel.HERE_COLOR)
-	button.add_theme_font_size_override("font_size", size)
-	return button
+	return GatePanel.paint_button_text(button, size)
 
 
 func _toggle_skills() -> void:

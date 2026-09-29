@@ -114,6 +114,27 @@ const HUNT_PATROL_REST_MS := 1200
 ## 화면이 멈춰서 입력이 끊긴 것과 손을 뗀 것을 구별할 방법이 없고, 구별할 필요도
 ## 없다. 둘 다 "사람이 안 몰고 있다"이다
 const MANUAL_HOLD_MS := 400
+
+## 날라차기 (2026-09-29 요청: "평타 사용 시 몬스터와 거리가 어느정도 떨어져 있으면 뛰어가는 게
+## 아니라 날라차기 하면서 보간해서 빠른속도로 이동하면서 붙도록"). 평타 대상이 `LUNGE_MIN` 보다
+## 멀고 `LUNGE_MAX` 안이면 달려가지 않고 날아 차며 붙는다 — 더 멀면 여기까지 달려와서 난다.
+## 사거리 안쪽(`HUNT_STANDOFF`)까지 `LUNGE_SPEED` 로 나는데, 짧아도 `LUNGE_MIN_S`·길어도
+## `LUNGE_MAX_S` 로 자른다. **도착하는 순간 평타와 같은 판정으로 맞는다** (`_run_lunges`)
+const LUNGE_MIN := 4.0
+const LUNGE_MAX := 10.0
+const LUNGE_SPEED := 16.0
+const LUNGE_MIN_S := 0.22
+const LUNGE_MAX_S := 0.45
+## 클립(`FlyingKick`)에서 발이 닿는 키. 화면은 나는 시간이 이것이 되게 클립 배속을 바꾼다 —
+## `scripts/blender/fighter_moves.py` 의 `FK_IMPACT` 키와 같이 고친다
+const LUNGE_HIT_S := 0.45
+## 내려앉는 동안 발이 묶인다 — 안 묶으면 차자마자 다음 걸음이 나가 착지 자세가 끊긴다
+const LUNGE_LAND_MS := 300
+## 사거리가 이보다 긴 직업(원거리)은 날지 않는다 — 활·마법을 쏘러 몬스터 코앞으로 날아가면 안 된다
+const LUNGE_REACH := 3.0
+## 나는 동안 거는 잠금(경직·시전·공격). **끝은 벽시계가 아니라 `step` 의 시간으로 본다** —
+## 헤드리스 테스트는 프레임만 돌려 벽시계가 거의 안 간다. 넉넉히 걸어 두고 착지에서 다시 잡는다
+const LUNGE_HOLD_MS := 5000
 ## 캐릭터를 막는 몸을 훑는 반경. ZoneRoom.ts 의 SOLID_SCAN_RANGE 와 같은 값이다
 const SOLID_SCAN_RANGE := 4.0
 
@@ -339,6 +360,7 @@ func step(delta: float) -> void:
 	var now := Time.get_ticks_msec()
 	_respawn(now)
 	_run_landings(now)
+	_run_lunges(delta, now)
 	_run_combos(now)
 	_run_zones(now)
 	_step_monsters(delta, now)
@@ -574,6 +596,11 @@ func _auto_strike(player: Dictionary, id: String, target: Dictionary, now: int) 
 	# 걸려 한 발짝도 못 나간다 — 붙기 전에 제자리에서 팔만 돌게 된다
 	if gap <= float(player.stats.attackRange):
 		attack(id)
+		return
+	# 멀면 날아 차며 붙는다. **돌아온 스킬이 있으면 걸어 붙어 스킬부터 쓴다** — 날라차기는
+	# 평타라서, 날면 스킬보다 평타가 먼저 나간다 (스킬 먼저 · `_case_casts_skills`)
+	if not _skill_ready(player, now):
+		_lunge(player, id, target, now)
 
 
 ## 몬스터를 눌러 쫓는 동안 화면이 보내는 한 수 (game.gd `_chase_and_hit`).
@@ -587,13 +614,112 @@ func strike(player_id: String, mob_id: String) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty() or bool(player.dead):
 		return
-	if not bool(player.get("auto", false)):
-		attack(player_id)
-		return
+	var auto := bool(player.get("auto", false))
 	for monster in _monsters:
 		if str(monster.id) == mob_id and int(monster.hp) > 0:
-			_auto_strike(player, player_id, monster, Time.get_ticks_msec())
+			if auto:
+				_auto_strike(player, player_id, monster, Time.get_ticks_msec())
+			# 끈 사람은 평타다 — 멀면 날아 차며 붙고(`_lunge`), 사거리 안이면 그 자리에서 친다.
+			# 그 사이(사거리 ~ `LUNGE_MIN`)는 화면이 걸어서 붙인다 — 여기서 치면 헛휘둘러 발이 묶인다
+			elif not _lunge(player, player_id, monster, Time.get_ticks_msec()):
+				var gap := Vector2(float(monster.x) - player.x, float(monster.z) - player.z).length()
+				if gap <= float(player.stats.attackRange):
+					attack(player_id)
 			return
+	if not auto:
+		attack(player_id)
+
+
+## 자동 사냥이 쓸 스킬 중 쿨타임이 돈 것이 있나 (회복기는 빼고 — 피가 차 있으면 안 쓴다)
+func _skill_ready(player: Dictionary, now: int) -> bool:
+	var ready_at: Dictionary = player.skill_ready_at
+	for skill_id in Skills.auto_order(str(player.job), player.skill_bar, player.get("auto_priority", [])):
+		var skill := Skills.get_skill(str(player.job), str(skill_id))
+		if skill.is_empty() or float(skill.get("selfHeal", 0.0)) > 0.0:
+			continue
+		if now >= int(ready_at.get(skill_id, 0)):
+			return true
+	return false
+
+
+## 날라차기를 건다 — 평타를 칠 수 있을 때, 대상이 `LUNGE_MIN` 보다 멀고 `LUNGE_MAX` 안이면.
+## 건 순간부터 착지까지 발·스킬·평타가 다 묶이고, 움직임은 `_run_lunges` 가 한다.
+## 나갔으면 true
+func _lunge(player: Dictionary, id: String, target: Dictionary, now: int) -> bool:
+	var reach := float(player.stats.attackRange)
+	if reach > LUNGE_REACH or player.has("lunge"):
+		return false
+	if now < maxi(int(player.next_attack_at), maxi(int(player.rooted_until), int(player.get("cast_until", 0)))):
+		return false
+	var to := Vector2(float(target.x) - player.x, float(target.z) - player.z)
+	var gap := to.length()
+	if gap <= LUNGE_MIN or gap > LUNGE_MAX:
+		return false
+	var secs := clampf((gap - reach * HUNT_STANDOFF) / LUNGE_SPEED, LUNGE_MIN_S, LUNGE_MAX_S)
+	player.lunge = {
+		"target": str(target.id), "from_x": player.x, "from_z": player.z,
+		"to_x": player.x, "to_z": player.z, "t": 0.0, "secs": secs,
+	}
+	player.rot = atan2(to.x, to.y)
+	player.rooted_until = now + LUNGE_HOLD_MS
+	player.cast_until = now + LUNGE_HOLD_MS
+	player.next_attack_at = now + LUNGE_HOLD_MS
+	# 화면은 이것을 받고 날라차기 동작을 튼다. 발이 닿는 키가 도착에 오게 배속을 준다
+	_events.append({
+		"type": "lunge", "id": id, "target": str(target.id),
+		"ms": roundi(secs * 1000.0) + LUNGE_LAND_MS, "speed": LUNGE_HIT_S / secs,
+	})
+	return true
+
+
+## 날고 있는 사람을 한 틱 옮긴다. **대상이 움직이면 도착점도 따라간다** — 나는 0.2~0.45초에
+## 몬스터도 한두 걸음 간다. 가는 길의 다른 몸은 넘어간다(날고 있다). 부딪힘은 착지에서 한 번 민다.
+##
+## 보간은 `k²(2-k)` — 제자리에서 차고 올라(속도 0) 가운데서 빨라지고, **닿는 순간에도 속도가
+## 남는다.** 끝에서 0 으로 줄이면(smoothstep) 발을 뻗은 채 둥실 떠서 닿는 것처럼 보인다
+func _run_lunges(delta: float, now: int) -> void:
+	for id in _players:
+		var player: Dictionary = _players[id]
+		if not player.has("lunge"):
+			continue
+		var lunge: Dictionary = player.lunge
+		if bool(player.dead):
+			player.erase("lunge")
+			player.rooted_until = now
+			player.cast_until = now
+			player.next_attack_at = now
+			continue
+		var target := {}
+		for monster in _monsters:
+			if str(monster.id) == str(lunge.target) and int(monster.hp) > 0:
+				target = monster
+				break
+		if not target.is_empty():
+			var from := Vector2(float(lunge.from_x), float(lunge.from_z))
+			var at := Vector2(float(target.x), float(target.z))
+			var stop := from.direction_to(at) * float(player.stats.attackRange) * HUNT_STANDOFF
+			lunge.to_x = at.x - stop.x
+			lunge.to_z = at.y - stop.y
+		lunge.t = float(lunge.t) + delta
+		var k := clampf(float(lunge.t) / float(lunge.secs), 0.0, 1.0)
+		var e := k * k * (2.0 - k)
+		player.x = clampf(lerpf(float(lunge.from_x), float(lunge.to_x), e), -half_size, half_size)
+		player.z = clampf(lerpf(float(lunge.from_z), float(lunge.to_z), e), -half_size, half_size)
+		if k < 1.0:
+			continue
+
+		# 닿았다 — 겹친 몸을 밀어내고 평타와 같은 판정으로 찬다
+		player.erase("lunge")
+		Movement.push_out_of_solids(player, _solids_near(player.x, player.z), half_size)
+		var stats: Dictionary = player.stats
+		player.next_attack_at = now + Combat.effective_cooldown(stats.attackCooldown, stats.attackSpeed)
+		player.rooted_until = now + LUNGE_LAND_MS
+		player.cast_until = now
+		if not target.is_empty():
+			player.rot = atan2(float(target.x) - player.x, float(target.z) - player.z)
+		var picked := _pick_targets(player, float(stats.attackRange), _attack_arc(), 1)
+		if not picked.is_empty():
+			_hit_monster(player, picked[0], float(stats.attack), "")
 
 
 ## 자동 사냥의 스킬. **우선순위 순서대로**(`Skills.auto_order` — 사람이 정한 순서, 안 정했으면

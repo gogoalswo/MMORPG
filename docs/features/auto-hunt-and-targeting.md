@@ -211,7 +211,7 @@ tryAutoSkill(...) || (거리 <= attackRange && handleAttack(...))
 
 | 파일 | 역할 |
 |---|---|
-| `godot/world/world.gd` | `set_auto` / `_drive_auto` / `_pick_hunt_target` / `_walk_auto` / `_auto_strike` / `_auto_cast` / `set_auto_priority` / `strike` / `_patrol_auto` / `_take_manual` / `_anchor_here`, 상수 `HUNT_*` · `MANUAL_HOLD_MS` |
+| `godot/world/world.gd` | `set_auto` / `_drive_auto` / `_pick_hunt_target` / `_walk_auto` / `_auto_strike` / `_auto_cast` / `set_auto_priority` / `strike` / `_patrol_auto` / `_take_manual` / `_anchor_here` / **`_lunge` · `_run_lunges` · `_skill_ready`**(날라차기), 상수 `HUNT_*` · `MANUAL_HOLD_MS` · `LUNGE_*` |
 | `godot/world/skills.gd` | `Skills.auto_order` — 스킬을 볼 순서 (판정과 설정 창이 같이 쓴다) |
 | `godot/world/save.gd` | `auto_priority` 저장 |
 | `godot/net/local_transport.gd` | 메시지 `autoHunt {on}` · `strike {id}` · `autoPriority {ids}` |
@@ -386,7 +386,7 @@ tryAutoSkill(...) || (거리 <= attackRange && handleAttack(...))
 
 - 자동 사냥이 켜져 있으면 화면은 `attack` 대신 **`strike {id}`** 를 보낸다. 판정(`World.strike`)은
   자동 사냥과 같은 `_auto_strike` 로 **스킬부터** 쓰고, 나간 게 없으면 사거리 안일 때만 평타다.
-  꺼져 있으면 `strike` 는 그냥 `attack` 이다.
+  꺼져 있으면 `strike` 는 평타다 — 멀면 날아 차며 붙고(아래 "날라차기"), 사거리 안이면 `attack`.
 - **붙는 도중에도 매 프레임 보낸다.** 원거리기는 그 스킬 사거리에 들자마자 나가야 한다 —
   기본 공격 사거리까지 다 걸어 들어간 뒤에야 쓰면 원거리기가 아니다.
 - 보내는 id 는 **어느 쪽을 볼지와 스킬 사거리를 재는 데만** 쓴다. 누구를 맞출지는 여전히
@@ -397,6 +397,34 @@ tryAutoSkill(...) || (거리 <= attackRange && handleAttack(...))
   확인: `auto_hunt_test.gd` 의 `_case_skill_faces_body`.
 - 누른 놈을 자동 사냥의 대상(`auto_target`)으로 넘기는 방법은 쓰지 않았다. 앵커 리쉬 밖의
   놈을 누르면 자동 사냥이 놓아 버려서, 누른 놈을 쫓는다는 뜻이 깨진다.
+
+### 날라차기 — 멀면 날아 차며 붙는다 (`_lunge` · `_run_lunges`) ★ (2026-09-29)
+
+요청: "평타 사용 시 몬스터와 거리가 어느정도 떨어져 있으면 뛰어가는 게 아니라, 해당 몬스터한테
+날라차기 하면서 보간해서 빠른속도로 이동하면서 붙도록". 평타 대상이 **4m(`LUNGE_MIN`) 넘게,
+10m(`LUNGE_MAX`) 안**이면 판정이 캐릭터를 대상 앞(사거리 × `HUNT_STANDOFF` = 1.54m)까지 날려
+보내고, **닿는 순간 평타와 같은 판정으로 찬다.** 10m 보다 멀면 10m 까지 달려와서 난다.
+
+| | |
+|---|---|
+| 나는 시간 | 거리 ÷ 16m/s(`LUNGE_SPEED`), 0.22~0.45초로 자른다 — 7m 에서 0.35초 · 15.6m/s (달리기 4.6) |
+| 보간 | `k²(2-k)` — 제자리에서 차고 올라 가운데서 빨라지고 **닿는 순간에도 속도가 남는다.** smoothstep 으로 끝에서 0 이 되면 발을 뻗은 채 둥실 떠서 닿아 보인다 |
+| 대상이 움직이면 | 도착점이 매 틱 따라간다 (나는 동안 몬스터도 한두 걸음 간다) |
+| 가는 길의 다른 몸 | 넘어간다(날고 있다). 착지에서 `push_out_of_solids` 한 번 |
+| 나는 동안 | 발·스킬·평타가 다 묶인다 (`rooted_until`·`cast_until`·`next_attack_at` 을 5초 걸고 착지에서 다시 잡는다) |
+| 착지 뒤 | 경직 300ms(`LUNGE_LAND_MS`), 다음 평타는 공격 간격(700ms) 뒤 |
+| 누가 | 사거리 3m(`LUNGE_REACH`) 이하 직업만 — 원거리는 쏘러 코앞으로 날아가면 안 된다 |
+
+- **끝은 벽시계가 아니라 `step` 의 시간으로 본다.** 헤드리스 테스트는 프레임만 돌려 벽시계가 거의
+  안 가서, 벽시계로 재면 날다 멈춘 채 테스트가 끝난다.
+- **자동 사냥은 돌아온 스킬이 있으면 날지 않는다**(`_skill_ready`) — 걸어 붙어 스킬부터 쓴다.
+  날라차기도 평타라, 날면 스킬보다 평타가 먼저 나가 "스킬 먼저" 가 깨진다.
+- 끈 사람이 눌러 쫓으면 화면이 사거리 밖에서도 `strike` 를 보낸다. 판정은 멀면 날고, 사거리
+  안이면 친다. **그 사이(2.2~4m)는 아무것도 안 한다** — 화면이 걸어서 붙인다. 치면 헛휘둘러 발이 묶인다.
+- 화면은 `lunge {id, ms, speed}` 을 받고 `FlyingKick` 을 **`speed` 배속으로** 튼다 — 클립에서 발이
+  닿는 키(0.45초 · `LUNGE_HIT_S`)가 도착에 오게 판정이 정해 준다. `ms`(나는 시간 + 착지) 동안은
+  달리기로 끊기지 않는다(`_swing_until`). 동작은 [characters-and-animation.md](characters-and-animation.md) 의 "블렌더 동작".
+- 확인: `godot/tests/lunge_test.gd` (날아 붙어 차기 · 대상 따라가기 · 가까우면/너무 멀면/원거리면 안 난다 · 자동 사냥).
 
 ### 아직 없는 것
 

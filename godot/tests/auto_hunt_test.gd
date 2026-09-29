@@ -316,12 +316,13 @@ func _case_click_casts_skills() -> void:
 			w.strike("me", str(mob.id))
 			w.step(1.0 / 60.0)
 			for e in w.drain_events():
-				if first == "" and (e.type == "swing" or e.type == "skill"):
+				if first == "" and (e.type == "swing" or e.type == "skill" or e.type == "lunge"):
 					first = str(e.type)
 			if first != "":
 				break
 
-		var want := "skill" if auto else "swing"
+		# 끈 사람은 평타다 — 10m 밖이라 날아 차며 붙는다 (`World._lunge`, lunge_test.gd)
+		var want := "skill" if auto else "lunge"
 		if first != want:
 			_fail("눌러 쫓기(자동 %s): 첫 수가 %s 여야 하는데 %s" % [auto, want, first if first != "" else "없음"])
 		else:

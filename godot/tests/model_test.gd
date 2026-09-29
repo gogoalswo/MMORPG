@@ -180,6 +180,7 @@ func _check_moves(game: Node3D) -> void:
 		[&"skill", {"id": me, "skill": "frost_pillar", "root_ms": 400}, "FrostStomp"],
 		[&"skill", {"id": me, "skill": "thunder_fall", "root_ms": 400}, "Thunder"],
 		[&"skill", {"id": me, "skill": "nova_fist", "root_ms": 750, "delay_ms": 750}, "NovaFist"],
+		[&"lunge", {"id": me, "ms": 600, "speed": 1.5}, "FlyingKick"],
 	]
 	for c in cases:
 		game._on_event(c[0], c[1])
@@ -187,6 +188,9 @@ func _check_moves(game: Node3D) -> void:
 		await process_frame
 		if rig._playing != c[2]:
 			_fail("%s(%s) 뒤에 %s 가 아니라 %s 를 튼다" % [c[0], c[1].get("skill", ""), c[2], rig._playing])
+	# 날라차기는 판정이 준 배속으로 튼다 — 발이 닿는 키가 도착에 와야 한다
+	if not is_equal_approx(rig._speed, 1.5):
+		_fail("날라차기 배속이 1.5 가 아니라 %.2f" % rig._speed)
 	# 끝나면 대기로 돌아간다
 	game._move_until = 0
 	await process_frame

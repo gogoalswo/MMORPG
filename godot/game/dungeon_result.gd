@@ -1,14 +1,15 @@
-class_name TrialResult
+class_name DungeonResult
 extends PanelContainer
 
-## 시련의 탑 결과창 — 성공이든 실패든 뜨고, **확인**을 누르면 마을로 나간다
-## (2026-09-29 요청: "결과창 UI 만들어서 성공, 실패 및 보상 아이템 표시하고 확인 누르면 나가게").
-## 판정은 World(`_trial`)가 했고, 이 창은 `trial` 이벤트를 그리기만 한다 → docs/features/dungeons.md
+## 던전 결과창 — **모든 던전**(토벌 · 시련의 탑)에서 성공이든 실패든 뜨고, **확인**을 누르면 마을로 나간다
+## (2026-09-29 요청: 시련의 탑 "결과창 UI 만들어서 성공, 실패 및 보상 아이템 표시하고 확인 누르면 나가게"
+## → "모든 던전을 결과창 UI 나오게 만들어"). 판정은 World(`_run`)가 했고, 이 창은 `dungeonResult`
+## 이벤트를 그리기만 한다 → docs/features/dungeons.md "결과창"
 ##
-##   돌판 틀(ui_dungeon_card) ─┬─ 제목 "시련의 탑 N단계"
-##                            ├─ 큰 글자 "성공" / "실패" · 처치 k / 7
+##   돌판 틀(ui_dungeon_card) ─┬─ 제목 "토벌 던전 N단계" / "시련의 탑 N단계"
+##                            ├─ 큰 글자 "성공" / "실패" · (시련만) 처치 k / 7
 ##                            ├─ 가르는 선
-##                            ├─ 보상 칸 [크리스탈] 크리스탈 xN   (실패면 "보상 없음")
+##                            ├─ 보상 칸 [스킬] 스킬 경험치 N · [크리스탈] 크리스탈 xN   (실패면 "보상 없음")
 ##                            └─ 단추 "확인"
 ##
 ## 닫기 X 는 없다 — 나가는 길이 확인 하나라서다. 결은 전직 창과 같다 (ui-art-style.md "창은 던전 결")
@@ -40,8 +41,8 @@ var _button: Button
 
 
 ## `frame_box` · `icon` 은 `game.gd` 것을 받는다 (전직 창과 같다)
-static func make(frame_box: Callable, icon: Callable) -> TrialResult:
-	var panel := TrialResult.new()
+static func make(frame_box: Callable, icon: Callable) -> DungeonResult:
+	var panel := DungeonResult.new()
 	panel._frame_box = frame_box
 	panel._icon = icon
 	panel._build()
@@ -49,7 +50,7 @@ static func make(frame_box: Callable, icon: Callable) -> TrialResult:
 
 
 func _build() -> void:
-	name = "TrialResult"
+	name = "DungeonResult"
 	visible = false
 	custom_minimum_size = Vector2(WIDTH, 0)
 	add_theme_stylebox_override("panel", _frame_box.call("ui_dungeon_card", GatePanel.CARD_MARGIN, STONE_IN))
@@ -103,20 +104,25 @@ func _build() -> void:
 	column.add_child(_button)
 
 
-## `World._trial_event` 그대로 — `{result, stage, kills, need, crystals}`
+## `World._finish_run` 그대로 — `{dungeon, name, stage, result, kills, need, skill_exp, crystals}`
 func show_result(event: Dictionary) -> void:
 	var clear := str(event.get("result", "")) == "clear"
-	_title.text = "시련의 탑 %d단계" % int(event.get("stage", 0))
+	_title.text = "%s %d단계" % [str(event.get("name", "던전")), int(event.get("stage", 0))]
 	_verdict.text = "성공" if clear else "실패"
 	_verdict.add_theme_color_override("font_color", OK if clear else WARN)
+	# 처치 수는 시련의 탑만 — 토벌은 보스 한 마리라 셀 것이 없다
+	_count.visible = int(event.get("need", 0)) > 0
 	_count.text = "처치 %d / %d" % [int(event.get("kills", 0)), int(event.get("need", 0))]
 	for child in _rewards.get_children():
 		_rewards.remove_child(child)
 		child.queue_free()
+	var skill_exp := int(event.get("skill_exp", 0))
+	if skill_exp > 0:
+		_rewards.add_child(_reward_cell("ui_icon_skill", "스킬 경험치 %d" % skill_exp))
 	var crystals := int(event.get("crystals", 0))
 	if crystals > 0:
 		_rewards.add_child(_reward_cell(Items.crystal_id(), "%s x%d" % [Items.stack_name({"id": Items.crystal_id()}), crystals]))
-	else:
+	if _rewards.get_child_count() == 0:
 		var none := _label("보상 없음", 20, DIM)
 		none.name = "no_reward"
 		_rewards.add_child(none)

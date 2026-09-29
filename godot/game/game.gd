@@ -338,9 +338,9 @@ var _bag_dot: Control
 var _design_cell: Control
 ## HUD 위쪽 가운데 "마을가기" — 마을 밖에서만 선다 (`_refresh_home_button`)
 var _home_button: Button
-## 시련의 탑 — 마을가기 밑의 "남은 시간 · 처치 k / 7" 줄과 결과창 (docs/features/dungeons.md "시련의 탑")
+## 시련의 탑 시계(마을가기 밑의 "남은 시간 · 처치 k / 7" 줄)와 **모든 던전의 결과창** (docs/features/dungeons.md "결과창")
 var _trial_hud: Label
-var _trial_result: TrialResult
+var _dungeon_result: DungeonResult
 var _skill_panel: PanelContainer
 ## 스킬창. 틀은 한 번 짓고 `_redraw_skills` 가 채운다
 var _skill_big: PanelContainer
@@ -500,8 +500,6 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			_marker.visible = false
 			_gate_panel.visible = false
 			_dungeon_panel.visible = false
-		&"revived":
-			_last_event = "마을에서 되살아났습니다"
 		&"aoe":
 			_show_aoe(payload)
 		&"skillRange":
@@ -577,13 +575,19 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			# 전직 버튼으로 옮겨 가면 창이 남는다 — 새 존에는 그 NPC 가 없다
 			_npc_panel.visible = false
 			_job_panel.visible = false
-			_trial_result.visible = false
-		&"trial":
+			_dungeon_result.visible = false
+		&"dungeonResult":
 			# 성공이든 실패든 결과창. 걷던 곳·자동 사냥 겨냥을 멈춘다 — 확인을 누르면 마을로 나간다
+			# (쓰러졌으면 마을에서 되살아난다 — `_on_result_confirmed`)
 			_target = Vector3.INF
 			_target_mob = ""
 			_marker.visible = false
-			_trial_result.show_result(payload)
+			_dungeon_result.show_result(payload)
+			if _am_dead():
+				_last_event = "쓰러졌습니다 — 확인을 누르면 마을에서 되살아납니다"
+		&"revived":
+			_dungeon_result.visible = false
+			_last_event = "마을에서 되살아났습니다"
 		&"trialReward":
 			_chat.add_line("재료 획득", "%s x%d" % [Items.stack_name({"id": Items.crystal_id()}), int(payload.get("crystal", 0))], INV_TEXT)
 			if _bag_panel.visible:
@@ -3943,10 +3947,10 @@ func _build_npc_panel() -> void:
 	)
 
 	# 시련의 탑 결과창 — 확인을 누르면 마을로 (trial_result.gd)
-	_trial_result = TrialResult.make(_frame_box, _icon)
-	_trial_result.theme = _ui_root.theme
-	top.add_child(_trial_result)
-	_trial_result.confirmed.connect(_go_village)
+	_dungeon_result = DungeonResult.make(_frame_box, _icon)
+	_dungeon_result.theme = _ui_root.theme
+	top.add_child(_dungeon_result)
+	_dungeon_result.confirmed.connect(_on_result_confirmed)
 
 
 func _show_npc(payload: Dictionary) -> void:
@@ -4039,12 +4043,20 @@ func _on_gate_tapped() -> void:
 	_open_gate()
 
 
-## 시련의 탑 시계 줄 — World 가 준 `trial`(`ends_at` · `kills` · `need`)을 그린다. 결과가 나면 숨긴다
+## 던전 결과창 "확인" — 쓰러져 있으면 되살아나기(마을에서), 아니면 마을가기와 같은 `travel`
+func _on_result_confirmed() -> void:
+	if _am_dead():
+		_transport.send(&"revive", {})
+	else:
+		_go_village()
+
+
+## 시련의 탑 시계 줄 — World 가 준 던전 판(`ends_at` · `kills` · `need`)을 그린다. 결과가 나면 숨긴다
 func _draw_trial_hud() -> void:
 	if _trial_hud == null:
 		return
-	var trial: Dictionary = _transport.snapshot().get("trial", {})
-	_trial_hud.visible = not trial.is_empty() and str(trial.get("result", "")) == ""
+	var trial: Dictionary = _transport.snapshot().get("dungeon", {})
+	_trial_hud.visible = str(trial.get("dungeon", "")) == "trial" and str(trial.get("result", "")) == ""
 	if not _trial_hud.visible:
 		return
 	var left := maxi(0, int(trial.get("ends_at", 0)) - Time.get_ticks_msec())
@@ -4242,8 +4254,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	# 터치는 기본 설정이 마우스로 바꿔 주므로 이 한 줄이 폰도 덮는다
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		_holding = false
-		# 죽어 있으면 어딜 눌러도 부활 요청이다
+		# 죽어 있으면 어딜 눌러도 부활 요청이다 — 던전 결과창이 떠 있으면 그 "확인" 으로만
 		if _am_dead():
+			if _dungeon_result.visible:
+				return
 			_transport.send(&"revive", {})
 			return
 		var hit := _ground_point(event.position)

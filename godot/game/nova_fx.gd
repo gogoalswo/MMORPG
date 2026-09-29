@@ -126,6 +126,23 @@ const LIGHT_LIFE := 0.45
 const SHAKE := 0.2
 const SHAKE_TIME := 0.45
 
+## **강화 "연쇄 폭발"**(`chain`, 2026-09-29) — 폭발 `CHAIN` 초 뒤 같은 자리에서 **작은 2차 폭발**:
+## 섬광 · 빛 · 불티 · 불덩이만 한 번 더 (호·빛살·흙먼지·그을림은 한 번뿐). 판정의 `followMs`
+## (600)와 같아야 한다 — `nova_fx_test.gd` 가 맞춰 본다. 크기는 첫 폭발의 `CHAIN_SCALE` 배
+const CHAIN := 1.0
+const CHAIN_SCALE := 0.7
+const CHAIN_SPARKS := 60
+const CHAIN_FIRE := 14
+const CHAIN_LIGHT := 0.6
+const CHAIN_SHAKE := 0.12
+## 2차 폭발의 호·빛살을 첫 폭발에서 얼마나 돌리나 — 같은 자리에 같은 모양이 겹치면 안 읽힌다
+const CHAIN_TURN := PI / 6.0
+## **강화 "과부하"**(`overload`, 2026-09-29) — 피해 +300%. 소용돌이 세 겹이 `OVER_WIDTH` 배 굵고
+## 헤일로가 금빛에서 흰빛 쪽으로, 섬광이 `OVER_FLASH` 배 크고 진하고, 빛이 `OVER_LIGHT` 배다
+const OVER_WIDTH := 1.35
+const OVER_FLASH := 1.3
+const OVER_LIGHT := 1.5
+
 ## 색은 **파천장(`KiFx`) 색감**이다 (2026-09-29 요청) — 주황 불길이 아니라 연한 금빛·크림빛·흰빛.
 ## 호 세 겹 = `KiFx.SWIRL_LAYERS`, 섬광 = `KiFx.COLOR_FLASH`, 기운 = `KiFx.COLOR_AURA`,
 ## 금가루 = `KiFx.COLOR_MOTE`, 흙먼지 = `KiFx.COLOR_DUST`. 불덩이도 흰 속 → 크림 → 연한 금빛으로 식는다
@@ -142,6 +159,8 @@ const COLOR_SMOKE := Color("#a39886")
 const COLOR_DUST := Color(0.93, 0.86, 0.7)
 const COLOR_SCORCH := Color("#1e1409")
 const COLOR_LIGHT := Color(1.0, 0.9, 0.7)
+## 과부하 헤일로 — 연한 금빛(`COLOR_HALO`)보다 희고 진하다
+const COLOR_OVER_HALO := Color(1.0, 0.94, 0.8, 0.44)
 
 ## 호·빛살 셰이더. `UV` = (나오는 시각, 머리가 끝까지 가는 시간), `UV2` = (호 위의
 ## 자리 0~1, 폭 방향 −1·0·1), `COLOR.r` = 폭 배율. 셰이더가 `now` 로 머리~꼬리
@@ -159,6 +178,8 @@ uniform float now = 0.0;
 uniform float trail = 0.6;
 uniform float hold = 0.08;
 uniform float fade = 0.6;
+// 이 시각보다 먼저 나오는 가닥은 숨긴다 — 연쇄 폭발이 같은 메시로 폭발 호·빛살만 다시 띄운다
+uniform float from = -1.0;
 varying float side;
 varying float alpha;
 void vertex() {
@@ -170,7 +191,7 @@ void vertex() {
 	tail = mix(tail, head, (1.0 - pow(1.0 - f, 3.0)) * 0.3);
 	alpha = 1.0 - smoothstep(0.0, 1.0, f);
 	float u = (UV2.x - tail) / max(head - tail, 1e-3);
-	float w = (lt < 0.0 || u < 0.0 || u > 1.0) ? 0.0 : sin(PI * pow(u, 1.6));
+	float w = (lt < 0.0 || u < 0.0 || u > 1.0 || UV.x < from) ? 0.0 : sin(PI * pow(u, 1.6));
 	vec3 across = normalize(cross(INV_VIEW_MATRIX[2].xyz, NORMAL));
 	VERTEX += across * UV2.y * width * COLOR.r * 0.5 * w;
 	side = UV2.y;
@@ -188,11 +209,17 @@ var _t := 0.0
 var _hit := false
 var _blown := false
 var _smoked := false
+var _over := false
+var _chain := false
+var _chained := false
 var _halo: MeshInstance3D
 var _mid: MeshInstance3D
 var _core: MeshInstance3D
+## 연쇄 폭발의 호·빛살 세 겹 — 같은 메시, 시계만 `CHAIN` 늦다
+var _chain_layers: Array[MeshInstance3D] = []
 var _orb: MeshInstance3D
 var _flash: MeshInstance3D
+var _flash2: MeshInstance3D
 var _scorch: MeshInstance3D
 var _light: OmniLight3D
 var _glitter: CPUParticles3D
@@ -201,18 +228,22 @@ var _sparks: CPUParticles3D
 var _fire: CPUParticles3D
 var _smoke: CPUParticles3D
 var _dust: CPUParticles3D
+var _sparks2: CPUParticles3D
+var _fire2: CPUParticles3D
 
 
 ## 폭렬권을 띄운다. `at` 은 시전자 발밑(월드), `facing` 은 보는 쪽(rad).
+## 강화 — `overload` 면 굵고 흰 폭발, `chain` 이면 `CHAIN` 초 뒤 작은 2차 폭발 (따로 논다).
 ## 풀(`FxPool`)에 쉬는 것이 있으면 되감아 쓴다 — 새로 만들지 않는다
-static func burst(parent: Node3D, at: Vector3, facing: float) -> NovaFx:
+static func burst(parent: Node3D, at: Vector3, facing: float,
+		overload := false, chain := false) -> NovaFx:
 	var fx := FxPool.take(parent, &"nova") as NovaFx
 	if fx == null:
 		fx = NovaFx.new()
 		fx.name = "NovaFx"
 		parent.add_child(fx)
 		fx._build()
-	fx._start(at, facing)
+	fx._start(at, facing, overload, chain)
 	return fx
 
 
@@ -245,6 +276,15 @@ func _build() -> void:
 		node.mesh = _halo.mesh
 		node.position = core_at
 		node.extra_cull_margin = 3.0 * SIZE
+	for pair in [[HALO_WIDTH, COLOR_HALO], [MID_WIDTH, COLOR_MID], [CORE_WIDTH, COLOR_CORE]]:
+		var layer := _sheet(swirl_material(float(pair[0]) * SIZE * CHAIN_SCALE, pair[1]))
+		(layer.material_override as ShaderMaterial).set_shader_parameter(&"from", EXPLODE - 1e-3)
+		layer.mesh = _halo.mesh
+		layer.position = core_at
+		layer.rotation.y = CHAIN_TURN
+		layer.scale = Vector3.ONE * CHAIN_SCALE
+		layer.extra_cull_margin = 3.0 * SIZE
+		_chain_layers.append(layer)
 
 	_orb = _sheet(LightningFx.flare(COLOR_ORB))
 	var orb := QuadMesh.new()
@@ -256,6 +296,12 @@ func _build() -> void:
 	flash.size = Vector2.ONE * FLASH_SIZE * SIZE
 	_flash.mesh = flash
 	_flash.position = core_at
+	# 연쇄 폭발의 섬광 — 첫 섬광과 겹칠 일은 없지만(0.35초에 꺼진다) 크기가 달라 따로 둔다
+	_flash2 = _sheet(LightningFx.flare(COLOR_FLASH))
+	var flash2 := QuadMesh.new()
+	flash2.size = Vector2.ONE * FLASH_SIZE * SIZE * CHAIN_SCALE
+	_flash2.mesh = flash2
+	_flash2.position = core_at
 
 	_scorch = _sheet(LightningFx.stain(COLOR_SCORCH))
 	var mark := PlaneMesh.new()
@@ -275,23 +321,52 @@ func _build() -> void:
 	_fire = _fire_emitter()
 	_smoke = _smoke_emitter()
 	_dust = _dust_emitter()
+	# 연쇄 폭발 — 강화가 없어도 늘 만들어 둔다 (처음 나올 때 새로 만들면 멈칫한다)
+	_sparks2 = _spark_emitter()
+	_sparks2.amount = CHAIN_SPARKS
+	_fire2 = _fire_emitter()
+	_fire2.amount = CHAIN_FIRE
 	for e in _emitters():
 		_grow(e)
 		e.emitting = false
 		add_child(e)
+	# 작은 폭발 — 속도·감속을 같이 줄여 같은 시간에 `CHAIN_SCALE` 만큼만 간다 (`_grow` 와 같은 셈)
+	for e in [_sparks2, _fire2]:
+		e.initial_velocity_min *= CHAIN_SCALE
+		e.initial_velocity_max *= CHAIN_SCALE
+		e.damping_min *= CHAIN_SCALE
+		e.damping_max *= CHAIN_SCALE
+		e.gravity *= CHAIN_SCALE
+		(e.mesh as QuadMesh).size *= CHAIN_SCALE
 	_dust.position = Vector3(0.0, 0.25, AHEAD)
-	for e in [_glitter, _aura, _sparks, _fire, _smoke]:
+	for e in [_glitter, _aura, _sparks, _fire, _smoke, _sparks2, _fire2]:
 		e.position = core_at
 
 
 ## 처음으로 되감는다. **아무것도 만들지 않는다** — 자리·보는 쪽·시각만 넣는다
-func _start(at: Vector3, facing: float) -> void:
+func _start(at: Vector3, facing: float, overload := false, chain := false) -> void:
 	position = at
 	rotation.y = facing
 	_t = 0.0
 	_hit = false
 	_blown = false
 	_smoked = false
+	_over = overload
+	_chain = chain
+	_chained = false
+	# 과부하 — 소용돌이 세 겹의 폭과 헤일로 색. 풀에서 되감아 쓰므로 강화가 없으면 되돌린다
+	var widen := OVER_WIDTH if overload else 1.0
+	var widths := [HALO_WIDTH, MID_WIDTH, CORE_WIDTH]
+	var layers := [_halo, _mid, _core]
+	for i in layers.size():
+		var mat := (layers[i] as MeshInstance3D).material_override as ShaderMaterial
+		mat.set_shader_parameter(&"width", float(widths[i]) * SIZE * widen)
+		(_chain_layers[i].material_override as ShaderMaterial).set_shader_parameter(
+			&"width", float(widths[i]) * SIZE * CHAIN_SCALE * widen)
+	(_halo.material_override as ShaderMaterial).set_shader_parameter(
+		&"tint", COLOR_OVER_HALO if overload else COLOR_HALO)
+	(_chain_layers[0].material_override as ShaderMaterial).set_shader_parameter(
+		&"tint", COLOR_OVER_HALO if overload else COLOR_HALO)
 	_show()
 
 
@@ -306,6 +381,10 @@ func _process(delta: float) -> void:
 		_blown = true
 		for e in [_sparks, _fire, _dust]:
 			e.restart()
+	if _chain and not _chained and _t >= EXPLODE + CHAIN:
+		_chained = true
+		_sparks2.restart()
+		_fire2.restart()
 	if not _smoked and _t >= EXPLODE + SMOKE_AFTER:
 		_smoked = true
 		_smoke.restart()
@@ -325,6 +404,11 @@ func _show() -> void:
 	for node in [_halo, _mid, _core]:
 		(node.material_override as ShaderMaterial).set_shader_parameter(&"now", _t)
 		node.visible = swirling
+	# 연쇄 폭발 — 같은 가닥을 `CHAIN` 늦게, 폭발 호·빛살만 (`from`)
+	var late := _t - CHAIN
+	for node in _chain_layers:
+		(node.material_override as ShaderMaterial).set_shader_parameter(&"now", late)
+		node.visible = _chain and late >= EXPLODE and late < EXPLODE + 0.12 + BLAST_SWEEP_MAX + HOLD + FADE
 
 	# 가운데 빛무리 — 닿는 순간 튀고, 끓는 동안 떨며 부풀고, 터지면 빠르게 죈다
 	var orb_size := 0.0
@@ -349,9 +433,17 @@ func _show() -> void:
 	var f := (_t - EXPLODE) / FLASH_LIFE
 	_flash.visible = f >= 0.0 and f < 1.0
 	if _flash.visible:
-		_flash.scale = Vector3.ONE * lerpf(0.9, 1.1, sqrt(f))
+		var big := OVER_FLASH if _over else 1.0
+		_flash.scale = Vector3.ONE * lerpf(0.9, 1.1, sqrt(f)) * big
 		_flash.material_override.albedo_color = Color(
-			COLOR_FLASH.r, COLOR_FLASH.g, COLOR_FLASH.b, 0.55 * pow(1.0 - f, 1.8))
+			COLOR_FLASH.r, COLOR_FLASH.g, COLOR_FLASH.b, (0.62 if _over else 0.55) * pow(1.0 - f, 1.8))
+	# 연쇄 폭발 섬광 — 같은 자리, 작고 옅게
+	var f2 := (_t - EXPLODE - CHAIN) / FLASH_LIFE
+	_flash2.visible = _chain and f2 >= 0.0 and f2 < 1.0
+	if _flash2.visible:
+		_flash2.scale = Vector3.ONE * lerpf(0.9, 1.1, sqrt(f2))
+		_flash2.material_override.albedo_color = Color(
+			COLOR_FLASH.r, COLOR_FLASH.g, COLOR_FLASH.b, 0.45 * pow(1.0 - f2, 1.8))
 
 	# 그을림 — 터지는 순간 드러나 남았다가 마지막 0.8초에만 흐려진다
 	var since := _t - EXPLODE
@@ -366,7 +458,10 @@ func _show() -> void:
 	if _t >= IMPACT and _t < EXPLODE:
 		energy = LIGHT_GATHER * (_t - IMPACT) / (EXPLODE - IMPACT)
 	elif since < LIGHT_LIFE:
-		energy = LIGHT_BLAST * (1.0 - since / LIGHT_LIFE)
+		energy = LIGHT_BLAST * (OVER_LIGHT if _over else 1.0) * (1.0 - since / LIGHT_LIFE)
+	var since2 := since - CHAIN
+	if _chain and since2 >= 0.0 and since2 < LIGHT_LIFE:
+		energy = maxf(energy, LIGHT_BLAST * CHAIN_LIGHT * (1.0 - since2 / LIGHT_LIFE))
 	_light.visible = energy > 0.0
 	_light.light_energy = energy
 
@@ -381,7 +476,7 @@ func _sheet(mat: Material) -> MeshInstance3D:
 
 ## 떠 있는 방출기 전부
 func _emitters() -> Array:
-	return [_glitter, _aura, _sparks, _fire, _smoke, _dust]
+	return [_glitter, _aura, _sparks, _fire, _smoke, _dust, _sparks2, _fire2]
 
 
 ## 방출기 공통 — 한 번 쏘고 끝, 사방 구에서 나온다

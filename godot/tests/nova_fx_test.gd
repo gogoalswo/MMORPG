@@ -30,6 +30,7 @@ func _run() -> void:
 	_case_reach()
 	await _case_cast(game)
 	await _case_once(game)
+	await _case_upgrades(game)
 	await _case_gone(game)
 	_done()
 
@@ -136,6 +137,50 @@ func _case_once(game: Node3D) -> void:
 	var ahead := fx._orb.global_position - fx.global_position
 	if ahead.dot(Vector3(sin(1.0), 0.0, cos(1.0))) < NovaFx.AHEAD * 0.9:
 		_fail("기운이 보는 쪽 앞이 아닌 곳에 모인다")
+	fx.queue_free()
+	await process_frame
+
+
+## 강화 (2026-09-29) — 표의 값이 요청대로인가, 2차 폭발이 판정의 `followMs` 에 나오나,
+## 풀에서 되감아 쓸 때 과부하 모양이 강화 없는 폭렬권에 남지 않나
+func _case_upgrades(game: Node3D) -> void:
+	var power := float(Skills.get_skill("fighter", "nova_fist").get("power", 0.0))
+	var over := Skills.upgrade("nova_fist", "overload")
+	var chain := Skills.upgrade("nova_fist", "chain")
+	if over.is_empty() or chain.is_empty():
+		_fail("폭렬권 강화(과부하·연쇄 폭발)가 표에 없다")
+		return
+	if absf(power - 10.0) > 1e-4:
+		_fail("폭렬권 기본이 %d%% 다 — 1000%% 여야 한다" % int(power * 100.0))
+	if absf(power * float(over.get("powerMul", 1.0)) - power - 3.0) > 1e-4:
+		_fail("과부하가 300%% 추가가 아니다 (× %.2f)" % float(over.get("powerMul", 1.0)))
+	if absf(float(chain.get("followPower", 0.0)) - 0.5) > 1e-4:
+		_fail("연쇄 폭발이 50%% 가 아니다")
+	if absf(float(chain.get("followMs", 0)) / 1000.0 - NovaFx.CHAIN) > 0.02:
+		_fail("연쇄 폭발 판정은 폭발 %.2f초 뒤인데 2차 폭발은 %.2f초 뒤다"
+			% [float(chain.get("followMs", 0)) / 1000.0, NovaFx.CHAIN])
+
+	var fx := NovaFx.burst(game._zone_node, Vector3.ZERO, 0.0, true, true)
+	fx.set_process(false)
+	var wide := float((fx._halo.material_override as ShaderMaterial).get_shader_parameter(&"width"))
+	if wide <= NovaFx.HALO_WIDTH * NovaFx.SIZE * 1.01:
+		_fail("과부하인데 소용돌이가 안 굵다")
+	while fx._t < NovaFx.EXPLODE + NovaFx.CHAIN - 0.05:
+		fx._process(0.05)
+	if fx._sparks2.emitting or fx._flash2.visible:
+		_fail("2차 폭발이 제 시각보다 먼저 나온다")
+	fx._process(0.08)
+	if not fx._sparks2.emitting or not fx._fire2.emitting or not fx._flash2.visible:
+		_fail("연쇄 폭발인데 2차 폭발(불티·불덩이·섬광)이 안 나온다")
+	# 같은 노드를 강화 없이 되감는다 — 풀이 한 벌이라 모양이 남으면 안 된다
+	fx._start(Vector3.ZERO, 0.0)
+	wide = float((fx._halo.material_override as ShaderMaterial).get_shader_parameter(&"width"))
+	if absf(wide - NovaFx.HALO_WIDTH * NovaFx.SIZE) > 1e-4:
+		_fail("강화 없는 폭렬권에 과부하 굵기가 남았다")
+	while fx._t < NovaFx.EXPLODE + NovaFx.CHAIN + 0.1:
+		fx._process(0.05)
+	if fx._flash2.visible:
+		_fail("연쇄 폭발이 없는데 2차 섬광이 나온다")
 	fx.queue_free()
 	await process_frame
 

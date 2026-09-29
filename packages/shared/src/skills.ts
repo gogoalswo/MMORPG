@@ -558,7 +558,8 @@ const SKILL_LIST: SkillDef[] = [
     castMs: 1200,
     range: 7.5,
     arc: Math.PI * 2,
-    power: 14.0,
+    // 1000% (2026-09-29 요청 — 처음엔 1400% 였다). 강화 "과부하" 가 +300%, "연쇄 폭발" 이 이 값의 50%
+    power: 10.0,
     maxTargets: 10,
     // 3차 전직(Lv.120)에 열린다 (2026-09-29 재배치)
     reqLevel: 120,
@@ -751,6 +752,26 @@ const UPGRADE_LIST: Omit<SkillUpgradeDef, 'exp'>[] = [
     name: '기절',
     desc: '맞은 적 2초 기절',
     stunMs: 2000,
+  },
+  {
+    // 2026-09-29 요청: "과부하는 데미지 300% 추가". 기본이 1000% 라 × 1.3 = 1300% 다 —
+    // 기본 `power` 를 바꾸면 이 배율도 같이 본다. 이펙트는 소용돌이·섬광이 굵고 하얘진다 (NovaFx.OVER_*)
+    id: 'overload',
+    skill: 'nova_fist',
+    name: '과부하',
+    desc: '데미지 300% 추가',
+    powerMul: 1.3,
+  },
+  {
+    // 2026-09-29 요청: "폭렬권 데미지의 50% 데미지 한번 더". 폭발 1초 뒤 **그때 범위 안에 있는
+    // 놈 전부**에게 (빙주각 파쇄와 같은 판정). 과부하가 붙으면 1300% 의 50% 다.
+    // 이펙트는 같은 자리에서 작은 2차 폭발 (NovaFx.CHAIN — 이 `followMs` 와 같아야 한다)
+    id: 'chain',
+    skill: 'nova_fist',
+    name: '연쇄 폭발',
+    desc: '1초 뒤 50% 한 번 더 폭발',
+    followMs: 1000,
+    followPower: 0.5,
   },
 ];
 

@@ -343,7 +343,7 @@
       "castMs": 1200,
       "range": 7.5,
       "arc": 6.283185307179586,
-      "power": 14,
+      "power": 10,
       "maxTargets": 10,
       "reqLevel": 120,
       "tier": 3,
@@ -491,6 +491,23 @@
       "desc": "맞은 적 2초 기절",
       "stunMs": 2000,
       "exp": 50000
+    },
+    {
+      "id": "overload",
+      "skill": "nova_fist",
+      "name": "과부하",
+      "desc": "데미지 300% 추가",
+      "powerMul": 1.3,
+      "exp": 200000
+    },
+    {
+      "id": "chain",
+      "skill": "nova_fist",
+      "name": "연쇄 폭발",
+      "desc": "1초 뒤 50% 한 번 더 폭발",
+      "followMs": 1000,
+      "followPower": 0.5,
+      "exp": 200000
     }
   ],
   "upgradeMax": 2,

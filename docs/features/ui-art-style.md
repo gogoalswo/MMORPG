@@ -56,7 +56,7 @@ HUD 와 NPC 창이 이것으로 되어 있고, **앞으로 만드는 UI 는 전�
 | 제목 | 왼쪽 **문장**(그 창의 메뉴 아이콘) + 상아빛 글자(`PAGE_TITLE_COLOR` `#ece4cc`) + 밑에 가는 선(`HEAD_LINE`) | `_stone_title` · `GatePanel._restyle_title` |
 | 칸·상자 | 어두운 평판 + 가는 흙금빛 선 (`CELL_BG` · `CELL_LINE` `#3d3729`) | `_stone_cell_box` · 전직 `_stone_cell` |
 | 목록 줄·탭 | 평평한 줄, 고른 것만 옅은 금빛 바탕 + 왼쪽 금 막대 | `GatePanel._row_box` · `_stone_tab_box` |
-| 단추 | 둥근 금테 `ui_button` + 금빛 글자(`CARD_GOLD` `#dfc97a`). 40px 단추는 조각을 줄여 쓴다 | `_inv_button` · `_small_button_texture` · `GatePanel._button_box` |
+| 단추 | **청록 돌판** `ui_button` + 주황빛 금 글자(`BUTTON_TEXT` `#f8c878`, 검은 테) — 아래 "단추 결" 절. 40px 단추는 조각을 줄여 쓴다 | `_inv_button` · `_small_button_texture` · `GatePanel._button_box` · `GatePanel.paint_button_text` |
 
 - **상수는 `GatePanel` 한 곳에 있다.** 던전 창이 차원문 창을 물려받아서 거기 두면 둘 다 쓰고,
   다른 창은 `GatePanel.X` 로 가져다 쓴다. 한 곳을 고치면 모든 창이 같이 바뀐다.
@@ -65,6 +65,32 @@ HUD 와 NPC 창이 이것으로 되어 있고, **앞으로 만드는 UI 는 전�
 - 아이콘 칸(스킬 칸 `ui_skill_slot`·`ui_slot`, 고른 칸 금테)은 그대로다 — 던전 보상 칸의 아이콘 테와 결이 같다.
 - 아래 "얇은 금테" · "인벤토리 결" 은 **옛 창 결**로 남겨 둔 기록이다 (색·아이콘 규칙은 여전히 쓴다).
 - 확인: `npm run shot:godot -- skills|bag|gate|job|shop|char|rank|potion|auto|debug|dungeon`.
+
+## 단추 결 (2026-09-29) ★
+
+사용자가 단추 그림 한 장("인챈트")을 주며 **"UI 버튼을 이런 스타일로"** 라고 했다.
+그래서 모든 창이 같이 쓰는 단추 조각 `ui_button` 을 둥근 금테에서 **청록 돌판**으로 갈았다.
+
+한 줄로: **금테 없는 청록 돌판 + 위 가장자리 밝은 선 + 아래 검은 그늘선 + 주황빛 금 글자.**
+
+| 쓰임 | 값 (받은 그림에서 뽑았다) |
+|---|---|
+| 판 | 위 `#486662` → 아래 `#3e5755`, 자글자글한 돌 결, 좌우 끝이 조금 어둡다 |
+| 위 가장자리 밝은 선 | `#628481` (1~2px) |
+| 아래 그늘선 | `#181b1b` ~ `#242f2e` |
+| 글자 | `#f8c878` + 검은 테 `#141816` 4px (`GatePanel.BUTTON_TEXT` · `BUTTON_OUTLINE`) |
+
+- **참고 그림**(받은 그림을 180px JPEG 로 줄인 것, 1.3KB, 다시 받아 `cmp` 로 같음을 봤다):
+  `https://3d.varco.ai/api/objects/ad26567a1ff295797dcbc277789bcd35.jpg`
+- 프롬프트는 "판·칸·테두리류" 틀 대신 `MATCH THE REFERENCE IMAGE'S STYLE EXACTLY — the teal stone
+  button in the reference, but EMPTY` 로 시작하고 위 색 값을 박았다. `NO gold rim, NO metal frame`
+  과 `Ignore the text in the reference` 를 넣었다. 16:9 로 두 장 뽑아 받은 그림과 더 닮은 장
+  (좌우가 어둡고 위 선이 밝은 쪽)을 골랐다.
+- 구우면 **192x74** 다 (옛 금테는 192x58). 9조각 여백 28 은 그대로 맞는다.
+- 글자색은 `GatePanel.paint_button_text` 한 곳에서 칠한다 — 가방·스킬 단추(`_gold_text`),
+  던전 입장, 전직 단추가 이걸 부른다. 옅은 `CARD_GOLD` 는 청록 위에서 묻힌다.
+- 조각이 없으면 `_inv_box` 가 같은 청록(`#45605d`)으로 판을 그린다.
+- 상점 창의 탭·값표(`npc_panel.gd` `_tag_box`)도 같은 조각이다. 탭 글자색(고름/안 고름)은 그대로 뒀다.
 
 ## 색
 

@@ -244,7 +244,7 @@
   | 제목 (`_stone_title`) | 왼쪽 문장(메뉴 아이콘: 장비 `ui_icon_character` · 인벤토리 `ui_icon_bag` · 크리스탈 `ui_icon_crystal`) + 상아빛 글자 + 밑에 가는 선 | 금빛 글자만 |
   | 칸 · 스탯 상자 (`_stone_cell_box`) | 던전 보상 칸과 같은 평판 (`CELL_BG` + 가는 `CELL_LINE`) | `inv_slot` |
   | 세로 탭 (`_stone_tab_box`) | 던전 단계 줄처럼 — 고른 것만 옅은 금빛 바탕 + 왼쪽 금 막대, 줄마다 아래 선 | `inv_tab_on`/`off` |
-  | 단추 (`_inv_button`) | 입장 단추처럼 둥근 금테 `ui_button` + 금빛 글자 | `inv_button` |
+  | 단추 (`_inv_button`) | 입장 단추처럼 청록 돌판 `ui_button` + 주황빛 금 글자 (2026-09-29 → [ui-art-style.md](ui-art-style.md) "단추 결") | `inv_button` |
 
   - **단추 조각은 40px 높이로 한 번 줄여 쓴다** (`_small_button_texture`). ★ 조각이 58px 라 여백
     28 로 늘이면 모서리가 겹치고, 반(20)씩 자르면 둥근 끝이 **뾰족한 육각형**이 됐다 (찍어서 봤다).

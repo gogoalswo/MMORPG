@@ -503,6 +503,17 @@ func _case_upgrade() -> void:
 	ledger.take_events()
 	if int(me.skill_exp) != 3000:
 		_fail("던전 3단계 보스를 잡으면 3000 이어야 하는데 %d" % int(me.skill_exp))
+	# 던전 처치는 스킬 경험치**만** 준다 — 골드·경험치·물건·레벨 그대로 (2026-09-29)
+	var before := [int(me.gold), int(me.exp), int(me.level), str(me.bag)]
+	ledger.kill(me, {"kind": str(GameData.dungeon_stage("raid_03").boss), "zone": "raid_03"})
+	var kill_events := ledger.take_events()
+	if int(me.skill_exp) != 6000 or [int(me.gold), int(me.exp), int(me.level), str(me.bag)] != before:
+		_fail("던전 처치가 스킬 경험치 말고 다른 것을 줬다 (%d · %s → %s)" % [
+			int(me.skill_exp), before, [int(me.gold), int(me.exp), int(me.level), str(me.bag)]])
+	for e in kill_events:
+		if str(e.type) in ["loot", "reward", "levelUp"]:
+			_fail("던전 처치에서 '%s' 이벤트가 나왔다" % e.type)
+	me.skill_exp = 3000
 	w.feed_upgrade("me", "thunder_fall", 0)
 	var got := int(me.skill_upgrade_exp.get("thunder_fall", {}).get("stun", 0))
 	if got != 3000 or int(me.skill_exp) != 0 or not me.skill_upgrades.is_empty():

@@ -594,10 +594,10 @@ func _auto_strike(player: Dictionary, id: String, target: Dictionary, now: int) 
 	if gap <= float(player.stats.attackRange):
 		attack(id)
 		return
-	# 멀면 날아 차며 붙는다. **돌아온 스킬이 있으면 걸어 붙어 스킬부터 쓴다** — 날라차기는
-	# 평타라서, 날면 스킬보다 평타가 먼저 나간다 (스킬 먼저 · `_case_casts_skills`)
-	if not _skill_ready(player, now):
-		_lunge(player, id, target, now)
+	# 멀면 날아 차며 붙는다. **거리로 가린다** (2026-09-29 "스킬 거리가 안 닿으면 날라차기 먼저") —
+	# 여기까지 왔으면 사거리가 닿는 스킬이 없다는 뜻이다(`_auto_cast` 가 사거리를 본다).
+	# 돌아온 스킬이 있어도 날아 붙고, 착지하면 그 스킬이 나간다
+	_lunge(player, id, target, now)
 
 
 ## 몬스터를 눌러 쫓는 동안 화면이 보내는 한 수 (game.gd `_chase_and_hit`).
@@ -625,18 +625,6 @@ func strike(player_id: String, mob_id: String) -> void:
 			return
 	if not auto:
 		attack(player_id)
-
-
-## 자동 사냥이 쓸 스킬 중 쿨타임이 돈 것이 있나 (회복기는 빼고 — 피가 차 있으면 안 쓴다)
-func _skill_ready(player: Dictionary, now: int) -> bool:
-	var ready_at: Dictionary = player.skill_ready_at
-	for skill_id in Skills.auto_order(str(player.job), player.skill_bar, player.get("auto_priority", [])):
-		var skill := Skills.get_skill(str(player.job), str(skill_id))
-		if skill.is_empty() or float(skill.get("selfHeal", 0.0)) > 0.0:
-			continue
-		if now >= int(ready_at.get(skill_id, 0)):
-			return true
-	return false
 
 
 ## 날라차기를 건다 — 평타를 칠 수 있을 때, 대상이 `LUNGE_MIN` 보다 멀고 `LUNGE_MAX` 안이면.

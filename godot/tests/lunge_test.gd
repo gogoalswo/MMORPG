@@ -17,6 +17,8 @@ func _init() -> void:
 	_case_too_far()
 	_case_ranged_stays()
 	_case_auto_lunges()
+	_case_skill_out_of_reach()
+	_case_skill_in_reach()
 
 	if _failed == 0:
 		print("날라차기: 전부 통과")
@@ -189,3 +191,56 @@ func _case_auto_lunges() -> void:
 		_fail("자동 사냥이 9m 밖 대상에게 날지 않았다")
 	else:
 		print("  자동 사냥도 스킬이 없으면 날아 붙는다")
+
+
+## 자동 사냥 — 돌아온 스킬이 있어도 **거리가 안 닿으면 날라차기 먼저** (2026-09-29 요청),
+## 내려앉으면 그 스킬이 나간다. 할퀴기 사거리 3, 대상 9m
+func _case_skill_out_of_reach() -> void:
+	var s := _setup(9.0, 0.0)
+	var w: World = s[0]
+	var me: Dictionary = s[1]
+	me.skills = ["rising_kick"]
+	me.skill_bar = ["rising_kick"]
+	w.set_auto("me", true)
+	w.drain_events()
+	var order: Array = []
+	for i in 60:
+		w.step(1.0 / 60.0)
+		for e in w.drain_events():
+			if e.type == "lunge" or e.type == "skill" or e.type == "swing":
+				order.append(str(e.type))
+		if not me.has("lunge") and not order.is_empty():
+			break
+	# 착지 경직(300ms)은 벽시계다 — 기다렸다가 다음 수를 본다
+	OS.delay_msec(World.LUNGE_LAND_MS + 50)
+	for i in 10:
+		w.step(1.0 / 60.0)
+		for e in w.drain_events():
+			if e.type == "lunge" or e.type == "skill" or e.type == "swing":
+				order.append(str(e.type))
+	if order.size() < 2 or order[0] != "lunge" or order[1] != "skill":
+		_fail("스킬이 안 닿는 9m 에서 날라차기 → 스킬 순이어야 하는데 %s" % [order])
+	else:
+		print("  스킬(사거리 3)이 안 닿는 9m: 날라차기 → 착지 뒤 스킬")
+
+
+## 자동 사냥 — 스킬 사거리가 닿으면 날지 않고 그 자리에서 스킬을 쓴다. 빙주각 사거리 5, 대상 4.5m
+func _case_skill_in_reach() -> void:
+	var s := _setup(4.5, 0.0)
+	var w: World = s[0]
+	var me: Dictionary = s[1]
+	me.job_tier = 9
+	me.skills = ["frost_pillar"]
+	me.skill_bar = ["frost_pillar"]
+	w.set_auto("me", true)
+	w.drain_events()
+	var first := ""
+	for i in 10:
+		w.step(1.0 / 60.0)
+		for e in w.drain_events():
+			if first == "" and (e.type == "lunge" or e.type == "skill" or e.type == "swing"):
+				first = str(e.type)
+	if first != "skill":
+		_fail("스킬(사거리 5)이 닿는 4.5m 에서 첫 수가 %s" % (first if first != "" else "없음"))
+	else:
+		print("  스킬(사거리 5)이 닿는 4.5m: 날지 않고 스킬")

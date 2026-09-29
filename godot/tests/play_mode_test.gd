@@ -125,7 +125,8 @@ func _check_test_skills(game: Node3D, me: Dictionary) -> void:
 
 
 ## 테스트 모드 스킬 목록 (2026-09-28) — 펼치면 내 직업 스킬이 다 뜨고, 퀵슬롯에 없는 것도
-## 누르면 쓰인다. 치트 목록·퀵슬롯·채팅창을 덮지 않는다 (1280×720)
+## 누르면 쓰인다. 왼쪽 끝에 붙고, 퀵슬롯·채팅창을 덮지 않는다 (1280×720). 치트 목록과 같은
+## 자리라 한쪽을 펼치면 다른 쪽이 접힌다 (2026-09-29)
 func _check_skill_list(game: Node3D, me: Dictionary) -> void:
 	game._skill_list_toggle.pressed.emit()
 	await process_frame
@@ -133,13 +134,13 @@ func _check_skill_list(game: Node3D, me: Dictionary) -> void:
 	if not game._skill_list.visible or game._skill_list.get_child_count() != ids.size():
 		_fail("스킬 목록: 펼치면 스킬 %d개가 떠야 한다 — %d개" % [ids.size(), game._skill_list.get_child_count()])
 		return
-	game._set_cheats_open(true)
-	await process_frame
+	if game._skill_list.get_global_rect().position.x != game._cheat_toggle.get_global_rect().position.x:
+		_fail("스킬 목록: 왼쪽 끝(치트 단추와 같은 x)에 붙어야 한다 — %s" % game._skill_list.get_global_rect())
 	# 아래 가운데 묶음 — 퀵슬롯 칸이 아니라 레벨 배지·체력 막대까지 담은 통째로 본다
 	var dock: Control = game._bar_buttons[0]
 	while dock.get_parent() != game._ui_root:
 		dock = dock.get_parent()
-	var others: Array = [game._cheat_column, game._cheat_toggle, game._chat, dock]
+	var others: Array = [game._cheat_toggle, game._chat, dock]
 	for rect_of in [game._skill_list, game._skill_list_toggle]:
 		var mine: Rect2 = rect_of.get_global_rect()
 		if mine.position.y < 0:
@@ -147,7 +148,12 @@ func _check_skill_list(game: Node3D, me: Dictionary) -> void:
 		for other in others:
 			if mine.intersects(other.get_global_rect()):
 				_fail("스킬 목록: %s 가 %s 를 덮는다" % [rect_of.name, other.name])
-	game._set_cheats_open(false)
+	game._set_cheats_open(true)
+	if game._skill_list.visible:
+		_fail("스킬 목록: 치트 목록을 펼쳤는데 스킬 목록이 안 접혔다")
+	game._skill_list_toggle.pressed.emit()
+	if game._cheat_column.visible:
+		_fail("스킬 목록: 스킬 목록을 펼쳤는데 치트 목록이 안 접혔다")
 	var last := str(ids[-1])
 	if last in me.skill_bar:
 		_fail("스킬 목록: 퀵슬롯에 없는 스킬로 시험해야 한다 — %s 가 퀵슬롯에 있다" % last)

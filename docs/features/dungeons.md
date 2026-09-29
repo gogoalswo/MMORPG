@@ -44,11 +44,12 @@
 | 파일 | 역할 |
 |---|---|
 | `packages/shared/src/dungeons.ts` | **표.** `DUNGEON_TYPES`(종류 셋·열림·단계) · `dungeonZones(gate)`(단계마다 존) · `DUNGEON_ZONES` · 시련의 탑 상수(`TRIAL_*`) · `trialSpots` |
-| `godot/world/world.gd` | 시련 시계 — `_trial` · `_start_trial`(존을 열 때) · `_count_trial_kill`(`_kill` 에서) · `_check_trial`(`step` 에서) · `_trial_event` · 스냅숏의 `trial` |
+| `godot/world/world.gd` | **던전 한 판** — `_run` · `_start_run`(존을 열 때) · `_count_run_kill`(`_kill` 에서 — 토벌 보스 · 시련 마릿수) · `_check_run_time`(`step` 에서, 시련 30초) · `_fail_run_on_death`(`_hit_player` 에서) · `_finish_run`(`dungeonResult` 이벤트) · 스냅숏의 `dungeon` |
+| `godot/world/game_data.gd` | `dungeon_type_of(zone)` — 결과창 제목의 종류 이름 |
 | `godot/world/ledger.gd` | `trial_clear` — 통과하면 크리스탈 단계 × 1 (`trialReward` 이벤트) |
 | `godot/server/ledger_server.gd` | `OPS` 의 `trial_clear` · `_check_trial` — 서버가 인정한 처치를 30초 안으로 다시 센다 |
-| `godot/game/trial_result.gd` | `TrialResult` — 결과창(성공/실패 · 처치 수 · 보상 · **확인** → 마을) |
-| `godot/tests/trial_test.gd` | 좁은 맵·열 마리·시계 · 7마리째 통과(크리스탈 +N, 결과 한 번) · 30초 지나면 실패 · 나가면 시계 없음 |
+| `godot/game/dungeon_result.gd` | `DungeonResult` — **모든 던전**의 결과창(성공/실패 · 시련만 처치 수 · 보상 · **확인**) |
+| `godot/tests/dungeon_run_test.gd` | 시련: 좁은 맵·열 마리·시계 · 7마리째 통과(크리스탈 +N, 결과 한 번) · 30초 지나면 실패 · 나가면 시계 없음. 토벌: 보스 처치 → 성공(스킬 경험치). 둘 다 쓰러지면 바로 실패 |
 | `packages/shared/src/zones.ts` | `ZONES` 에 던전 존을 섞어 넣는다 (문은 `gateFor` 를 넘겨준다) |
 | `packages/shared/src/zones.test.ts` | "던전 — 종류 셋, 열린 종류는 단계마다 보스 한 마리" · 차원문 목록 검사에 던전 존 포함 |
 | `scripts/export-shared.mjs` | `zones.json` 의 `dungeons` 로 내보낸다 |
@@ -56,11 +57,11 @@
 | `godot/game/dungeon_panel.gd` | `DungeonPanel` — **`GatePanel` 을 물려받는다.** 종류는 `_add_card`(카드 줄 `_cards`), 단계 창은 `_build_stages`(물려받은 줄 `_scroll` 을 왼쪽 칸으로 옮긴다) · `_select` · `_stage_rewards` · `_on_enter` |
 | `godot/world/items.gd` | `gold_range` · `gold_base` — 단계 창 골드 칸이 `roll_drop` 과 같은 식을 쓰게 |
 | `godot/game/gate_panel.gd` | `_add_row` · `_clear_rows` · `_title` — 두 창이 같이 쓴다 |
-| `godot/game/game.gd` | `_menu_cells` 셋째 단추 · `_toggle_dungeon` · `_build_gate_panel`(같은 층에 단다) · `_on_gate_pick`(둘 다 `travel`) · 시련 `_trial_hud`(`_draw_trial_hud`) · `_trial_result`(`trial` 이벤트 → 결과창, 확인 → `_go_village`) |
+| `godot/game/game.gd` | `_menu_cells` 셋째 단추 · `_toggle_dungeon` · `_build_gate_panel`(같은 층에 단다) · `_on_gate_pick`(둘 다 `travel`) · 시련 `_trial_hud`(`_draw_trial_hud`) · `_dungeon_result`(`dungeonResult` 이벤트 → 결과창, 확인 → `_on_result_confirmed`) |
 | `public/assets/icons/ui_icon_dungeon.png` | 단추 그림 (구운 결과, 커밋한다). 원본 주소는 `scripts/fetch-assets.sh` |
 | `public/assets/icons/dungeon_*.png` · `ui_dungeon_card.png` · `ui_dungeon_crest.png` | 카드 풍경 셋 · 카드 틀 · 위 장식 (2026-09-28) |
 | `godot/tools/shot.gd` | `npm run shot:godot -- dungeon` → `logs/dungeon.png`(카드 셋) · `logs/dungeon_stage.png`(5단계를 고른 단계 창) |
-| `godot/tests/ui_test.gd` | `_case_dungeon` — 가방 옆인가 · 전체 화면 · 카드 3장(세로로 긴가 · 나란한가 · 그림) · 단계 칩 없음 · 막힌 카드 · 던전 창 위에 단계 창 · 20줄 · 1단계 골라짐 · 5단계 누르면 고르기만(보상은 스킬 경험치 5000 한 칸) · X 는 단계 창만 · 글자 · 입장하면 보스 한 마리. `_case_trial` — 시련 카드 → 규칙 줄 · 통과 보상 · 입장 → HUD 시계 · 시간 끝 → "실패" 결과창 · 성공 그림 · 확인 → 마을 |
+| `godot/tests/ui_test.gd` | `_case_dungeon` — 가방 옆인가 · 전체 화면 · 카드 3장(세로로 긴가 · 나란한가 · 그림) · 단계 칩 없음 · 막힌 카드 · 던전 창 위에 단계 창 · 20줄 · 1단계 골라짐 · 5단계 누르면 고르기만(보상은 스킬 경험치 5000 한 칸) · X 는 단계 창만 · 글자 · 입장하면 보스 한 마리. `_case_raid_death` — 토벌에서 쓰러짐 → "실패" 결과창 · 화면을 눌러도 안 살아남 · 확인 → 마을에서 되살아남. `_case_trial` — 시련 카드 → 규칙 줄 · 크리스탈 칸 · 입장 → HUD 시계 · 시간 끝 → "실패" 결과창 · 성공 그림 · 확인 → 마을 |
 | `godot/tests/server_test.gd` | `_case_trial_check` — 6마리면 `too_few` · 7마리면 크리스탈 · 두 번째는 `claimed` · 30초 뒤 처치는 안 센다 |
 
 ## 규칙
@@ -116,20 +117,38 @@
   같은 7마리라도 사냥터보다 조금 쉽다. 그래서 맵을 줄여 달라고 한 것이다.
 - **몬스터를 셋 더(10마리) 둔다** — 한두 마리가 순찰로 떠돌거나 멀리 있어도 모자라지 않게.
   원 이웃 간격은 약 4.4m 라 어그로(3)에 옆 녀석이 같이 끌려올 수 있다 — 시험에서는 오히려 빨라진다.
-- **시계는 들어온 순간부터 돈다** (`World.open` → `_start_trial`). 서버도 `enter` 를 받은 때부터 센다.
+- **시계는 들어온 순간부터 돈다** (`World.open` → `_start_run`). 서버도 `enter` 를 받은 때부터 센다.
 - **판정을 셋으로 가른다** ([server.md](server.md) "판정을 둘로 가른다"):
-  - 기기(`World._trial`) — 시계와 잡은 수. 7마리째에 `result = "clear"` 로 굳히고 장부에 `trial_clear` 를 청한다.
-    시간이 다 되면(`_check_trial`, `step` 마다) `"fail"`. 결과가 난 뒤의 처치는 안 센다. 둘 다 `trial` 이벤트 하나.
+  - 기기(`World._run`) — 시계와 잡은 수. 7마리째에 `result = "clear"` 로 굳히고 장부에 `trial_clear` 를 청한다.
+    시간이 다 되거나(`_check_run_time`, `step` 마다) 쓰러지면 `"fail"`. 결과가 난 뒤의 처치는 안 센다. 결과는 아래 "결과창".
   - 장부(`Ledger.trial_clear`) — 크리스탈을 준다. 로컬(테스트 모드·서버 주소 없음)은 기기 판정을 믿는다.
   - 서버(`LedgerServer._check_trial`) — **제가 인정한 처치만** 30초(+1.5초 흔들림) 안으로 센다. 한 번 들어와 한 번만.
-- **결과창**(`TrialResult`) — 성공이든 실패든 뜬다. 제목 "시련의 탑 N단계" · 큰 글자 **성공(초록)/실패(붉은)** ·
-  "처치 k / 7" · 보상 칸(크리스탈 아이콘 + "크리스탈 xN", 실패면 "보상 없음") · **확인**. 닫기 X 는 없다 — 나가는 길이
-  확인 하나다. 확인 → `_go_village`(마을가기와 같은 `travel`). 결은 전직 창과 같은 던전 결(돌판 틀 · 청록 단추).
+- **결과창**은 토벌과 같이 쓴다 — 아래 "결과창".
 - **HUD 시계** — 마을가기 단추 바로 밑에 "남은 시간 N초   처치 k / 7" (금빛 글자 · 검은 테). 결과가 나면 숨는다.
 - **단계 창** — 오른쪽 칸에 몬스터 레벨·이름 밑 **"30초 안에 7마리"**(`trial_rule`), 보상 맨 앞은
-  **"통과 보상  크리스탈 N개"** 한 칸뿐이다 (토벌이 스킬 경험치 한 칸만 보이는 것과 같다 — 2026-09-29).
-- 죽으면 되살아나기가 마을로 보낸다 — 시계는 그 존을 떠나는 순간 없어진다(`open` 이 다시 건다).
-  죽어 있는 동안 시간이 끝나면 결과창("실패")이 먼저 뜬다.
+  **"크리스탈 N개"** 한 칸뿐이다 (토벌이 스킬 경험치 한 칸만 보이는 것과 같다 — 2026-09-29).
+  처음엔 "통과 보상  크리스탈 N개" 였는데 "통과 보상 스트링 제거해" 로 뺐다.
+
+### 결과창 — 모든 던전 ★★ (2026-09-29)
+
+요청: 시련의 탑에 먼저 만들었다가 토벌에서 쓰러져도 안 떠서 "모든 던전을 결과창 UI 나오게 만들어".
+
+| 던전 | 성공 | 실패 | 보상 칸 |
+|---|---|---|---|
+| 토벌 | 보스를 잡은 순간 | **쓰러진 순간** | 스킬 경험치 N×1000 (`Ledger._check_dungeon_clear` 가 이미 줬다) |
+| 시련의 탑 | 7마리째를 잡은 순간 | 30초가 지났거나 **쓰러진 순간** | 크리스탈 xN (`Ledger.trial_clear`) |
+
+- 판정은 `World._run` 하나다 — 던전 단계 존을 열면 판이 열리고(`_start_run`), 결과가 정해지는 순간
+  `dungeonResult` 이벤트(`{dungeon, name, stage, result, kills, need, skill_exp, crystals}`) 하나가 나간다.
+  보상 값은 성공일 때만 실린다. 한 판에 한 번뿐이다 — 정해지면 바뀌지 않는다.
+- 창(`DungeonResult`) — 제목 "토벌 던전 N단계" / "시련의 탑 N단계" · 큰 글자 **성공(초록)/실패(붉은)** ·
+  시련만 "처치 k / 7" · 보상 칸(실패면 "보상 없음") · **확인**. 닫기 X 는 없다 — 나가는 길이 확인 하나다.
+  결은 전직 창과 같은 던전 결(돌판 틀 · 청록 단추).
+- **확인** → 살아 있으면 마을가기와 같은 `travel`, **쓰러져 있으면 되살아나기**(`revive` — 마을에서 선다).
+  결과창이 떠 있는 동안은 화면을 눌러도 되살아나지 않는다 — 원래는 "아무 데나 눌러 되살아나기" 였는데,
+  그러면 결과를 읽기도 전에 창이 사라진다. 상태 줄은 "쓰러졌습니다 — 확인을 누르면 마을에서 되살아납니다".
+- 존을 옮기거나(`zone`) 되살아나면(`revived`) 창을 닫는다.
+- 전직 시험(`job_1` …)은 던전이 아니라 넣지 않았다 — 던전 창의 종류가 아니다.
 
 ### 차원문 목록에는 없다
 

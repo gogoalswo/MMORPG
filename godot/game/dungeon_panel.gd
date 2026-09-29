@@ -489,7 +489,7 @@ func _stage_rewards(stage: Dictionary) -> Array:
 	# 시련의 탑 통과 보상 — 크리스탈 단계 × 1개 (`Ledger.trial_clear`). 이것도 한 칸만
 	var trial_crystals := int(stage.get("crystals", 0))
 	if trial_crystals > 0:
-		out.append({"name": "통과 보상  크리스탈 %d개" % trial_crystals, "icon": Items.crystal_id(), "color": CARD_GOLD})
+		out.append({"name": "크리스탈 %d개" % trial_crystals, "icon": Items.crystal_id(), "color": CARD_GOLD})
 	return out
 
 

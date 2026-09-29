@@ -73,6 +73,15 @@ static func dungeons() -> Array:
 	return zones().get("dungeons", [])
 
 
+## 이 존이 던전 단계면 그 종류(`{id, name, open, stages}`), 아니면 빈 사전
+static func dungeon_type_of(zone_id: String) -> Dictionary:
+	for type in dungeons():
+		for stage in type.get("stages", []):
+			if str(stage.get("zone", "")) == zone_id:
+				return type
+	return {}
+
+
 ## 이 존이 던전 단계면 그 단계(`{zone, stage, boss, level, skillExp}`), 아니면 빈 사전
 static func dungeon_stage(zone_id: String) -> Dictionary:
 	for type in dungeons():

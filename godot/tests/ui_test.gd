@@ -741,6 +741,7 @@ func _case_dungeon(game: Node3D) -> void:
 ## 시련의 탑 — 카드 → 단계 창(규칙 · 통과 보상 크리스탈) → 입장 → HUD 시계 → 시간이 다 되면 결과창
 ## "실패" → 성공 결과도 그려 본다 → 확인을 누르면 마을로 (docs/features/dungeons.md "시련의 탑")
 func _case_trial(game: Node3D) -> void:
+	await _case_raid_death(game)
 	var panel: DungeonPanel = game._dungeon_panel
 	game._toggle_dungeon()
 	await process_frame
@@ -751,8 +752,8 @@ func _case_trial(game: Node3D) -> void:
 	if panel.picked_stage() != "trial_01":
 		_fail("시련 단계 창을 열면 1단계가 골라져야 한다: %s" % panel.picked_stage())
 	var first_reward: Label = panel._rewards.get_child(0).find_children("*", "Label", true, false)[0]
-	if first_reward.text != "통과 보상  크리스탈 1개":
-		_fail("시련 보상 맨 앞이 통과 크리스탈이어야 한다: '%s'" % first_reward.text)
+	if first_reward.text != "크리스탈 1개":
+		_fail("시련 보상 맨 앞이 크리스탈이어야 한다: '%s'" % first_reward.text)
 	var rule: Label = panel.find_child("trial_rule", true, false)
 	if rule == null or rule.text != "30초 안에 7마리":
 		_fail("시련 규칙 줄이 없다: %s" % (rule.text if rule != null else "없음"))
@@ -771,10 +772,10 @@ func _case_trial(game: Node3D) -> void:
 	var seen: String = hud.text + rule.text + first_reward.text
 
 	# 시간을 다 쓴 것으로 친다 — World 의 다음 step 이 실패를 낸다
-	game._transport.snapshot().trial.ends_at = Time.get_ticks_msec() - 1
+	game._transport.snapshot().dungeon.ends_at = Time.get_ticks_msec() - 1
 	for i in 3:
 		await process_frame
-	var result: TrialResult = game._trial_result
+	var result: DungeonResult = game._dungeon_result
 	if not result.visible or result._verdict.text != "실패" or result.reward_count() != 0:
 		_fail("시간이 다 됐는데 실패 결과창이 아니다: 보임 %s '%s' 보상 %d" % [result.visible, result._verdict.text, result.reward_count()])
 	if hud.visible:
@@ -785,7 +786,7 @@ func _case_trial(game: Node3D) -> void:
 	for label in result.find_children("*", "Label", true, false):
 		seen += label.text
 	# 성공 결과 — 보상 칸(크리스탈)이 하나
-	result.show_result({"result": "clear", "stage": 4, "kills": 7, "need": 7, "crystals": 4})
+	result.show_result({"dungeon": "trial", "name": "시련의 탑", "result": "clear", "stage": 4, "kills": 7, "need": 7, "crystals": 4})
 	if result._verdict.text != "성공" or result.reward_count() != 1:
 		_fail("성공 결과창이 틀렸다: '%s' 보상 %d" % [result._verdict.text, result.reward_count()])
 	for label in result.find_children("*", "Label", true, false):
@@ -804,6 +805,38 @@ func _case_trial(game: Node3D) -> void:
 		_fail("확인을 눌렀는데 마을로 안 나갔다: %s (창 %s)" % [game._shown_zone, result.visible])
 	else:
 		print("  시련의 탑: 시계 '%s' · 실패/성공 결과창 · 확인 → 마을" % hud.text)
+
+
+## 토벌 던전에서 쓰러졌다 — 결과창 "실패"(처치 줄 없음 · 보상 없음) · 화면을 눌러도 안 살아나고
+## "확인" 을 눌러야 마을에서 되살아난다 (2026-09-29 요청: "모든 던전을 결과창 UI 나오게 만들어")
+func _case_raid_death(game: Node3D) -> void:
+	if game._shown_zone != "raid_01":
+		_fail("토벌 1단계에서 이어져야 하는데 %s" % game._shown_zone)
+		return
+	var world: World = game._transport._world
+	var snap: Dictionary = world.snapshot()
+	var me: Dictionary = snap.players[game._transport.my_id()]
+	world._hit_player(me, snap.monsters[0], 1e9)
+	for i in 3:
+		await process_frame
+	var result: DungeonResult = game._dungeon_result
+	if not result.visible or result._verdict.text != "실패" or result._title.text != "토벌 던전 1단계" \
+			or result._count.visible or result.reward_count() != 0:
+		_fail("토벌에서 쓰러졌는데 실패 결과창이 아니다: 보임 %s '%s' '%s' 처치 줄 %s 보상 %d" % [
+			result.visible, result._title.text, result._verdict.text, result._count.visible, result.reward_count()])
+		return
+	game._unhandled_input(_mouse(Vector2(200, 400), true))
+	await process_frame
+	if not bool(me.get("dead", false)):
+		_fail("결과창이 떠 있는데 화면을 눌러 되살아났다 — 확인으로만")
+	result.confirm_button().pressed.emit()
+	for i in 5:
+		await process_frame
+	me = world.snapshot().players[game._transport.my_id()]
+	if bool(me.get("dead", false)) or world.zone_id != GameData.start_zone() or result.visible:
+		_fail("확인을 눌렀는데 마을에서 안 살아났다: 죽음 %s · %s · 창 %s" % [me.get("dead"), world.zone_id, result.visible])
+	else:
+		print("  토벌에서 쓰러짐 → 결과창 '실패' → 확인 → 마을에서 되살아남")
 
 
 ## 던전 종류 카드 i 를 누른다 — 막힌 카드는 고도 단추처럼 아무 일도 없다

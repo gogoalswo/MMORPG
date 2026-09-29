@@ -84,10 +84,11 @@ const SKILL_COLUMNS := 4
 const SKILL_GAP := 10
 ## 스킬창 셋째 칸(강화) 폭
 const UPGRADE_W := 280
-## 강화 설명 글자 크기 — 카드 안(`UPGRADE_W` − 여백 24)에 한 줄로 안 들어가면 한 단계씩 줄인다
-## (`UPGRADE_DESC_MIN` 까지). "기를 폭발시켜 80% 데미지 추가 타격" 이 18 에서 256px 을 넘었다 (2026-09-29)
+## 강화 칸 글자는 칸 폭이 고정이고 **글자가 줄어든다** — 이름·설명·경험치·안내 줄 모두
+## 한 줄에 안 들어가면 제 크기에서 한 단계씩 줄인다(`UPGRADE_FONT_MIN` 까지, 그래도 넘치면 잘린다).
+## 글자에 맞춰 칸이 늘면 창 전체가 들썩였다 — "+10만" 뒤 안내 줄이 280 을 넘었다 (2026-09-29 지적)
 const UPGRADE_DESC_SIZE := 18
-const UPGRADE_DESC_MIN := 14
+const UPGRADE_FONT_MIN := 10
 const SKILL_INSET := 5
 ## 스킬창 설명 칸이 늘 잡아 두는 줄 수 — 설명 두 줄 + 빈 줄 + 데미지 줄.
 ## 설명이 한 줄이든 두 줄이든 칸 높이를 **두 줄 기준**으로 고정한다 (2026-09-28 요청).
@@ -3233,6 +3234,7 @@ func _build_upgrade_column(columns: HBoxContainer) -> void:
 	# 모아 둔 스킬 경험치(던전 클리어로 쌓인다)를 고른 강화에 모자란 만큼 넣는다.
 	# 예전엔 경험치북 세 단추(하급·중급·상급)였다 — 2026-09-28 에 하나로 합쳤다
 	_upgrade_hint = _inv_label("", 17, INV_DIM)
+	_upgrade_hint.clip_text = true
 	column.add_child(_upgrade_hint)
 	_feed_button = _gold_text(_make_button("넣기", _on_feed_pressed))
 	_feed_button.custom_minimum_size = Vector2(UPGRADE_W, 70)
@@ -3242,12 +3244,11 @@ func _build_upgrade_column(columns: HBoxContainer) -> void:
 
 ## 강화 카드 하나 — 번호 · 이름 · 효과 · 경험치 막대 · `320 / 1000`.
 ## 스킬 칸처럼 **겉에 투명 단추(`hit`)를 덮어** 카드 어디를 눌러도 고른다
-## 강화 설명을 카드 한 줄에 맞춘다 — 넘치면 글자를 줄인다 (늘 18 로 두면 카드가 밀려 넓어진다)
-func _fit_upgrade_desc(label: Label) -> void:
+## 강화 칸 글자를 `room` 폭 한 줄에 맞춘다 — `size` 에서 넘치면 한 단계씩 줄인다.
+## 칸은 `clip_text` 라 글자에 밀려 넓어지지 않는다 (창 크기가 고정이다)
+func _fit_upgrade_text(label: Label, room: float, size: int) -> void:
 	var font := label.get_theme_font("font")
-	var room := float(UPGRADE_W - 24)
-	var size := UPGRADE_DESC_SIZE
-	while size > UPGRADE_DESC_MIN and font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x > room:
+	while size > UPGRADE_FONT_MIN and font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x > room:
 		size -= 1
 	label.add_theme_font_size_override("font_size", size)
 
@@ -3270,9 +3271,12 @@ func _make_upgrade_card(slot: int) -> PanelContainer:
 	rows.add_child(head)
 	var title_label := _inv_label("", 24, INV_TEXT)
 	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title_label.clip_text = true
 	head.add_child(title_label)
-	head.add_child(_inv_label("%d번" % (slot + 1), 17, INV_DIM))
-	var effect := _inv_label("", 18, INV_TEXT)
+	var number := _inv_label("%d번" % (slot + 1), 17, INV_DIM)
+	head.add_child(number)
+	var effect := _inv_label("", UPGRADE_DESC_SIZE, INV_TEXT)
+	effect.clip_text = true
 	rows.add_child(effect)
 	var bar := ProgressBar.new()
 	bar.show_percentage = false
@@ -3288,6 +3292,7 @@ func _make_upgrade_card(slot: int) -> PanelContainer:
 	bar.add_theme_stylebox_override("fill", fill)
 	rows.add_child(bar)
 	var amount := _inv_label("", 17, INV_DIM)
+	amount.clip_text = true
 	rows.add_child(amount)
 
 	var pick := Panel.new()
@@ -3303,7 +3308,7 @@ func _make_upgrade_card(slot: int) -> PanelContainer:
 	card.add_child(hit)
 
 	_upgrade_cards.append({
-		"card": card, "name": title_label, "effect": effect, "bar": bar,
+		"card": card, "name": title_label, "number": number, "effect": effect, "bar": bar,
 		"amount": amount, "pick": pick, "hit": hit,
 	})
 	return card
@@ -3325,7 +3330,7 @@ func _redraw_upgrades(me: Dictionary) -> void:
 			card.name.text = "없음"
 			card.name.add_theme_color_override("font_color", INV_DIM)
 			card.effect.text = "아직 없는 강화"
-			_fit_upgrade_desc(card.effect)
+			_fit_upgrade_card(card)
 			bar.visible = false
 			card.amount.text = ""
 			continue
@@ -3336,11 +3341,11 @@ func _redraw_upgrades(me: Dictionary) -> void:
 		card.name.text = str(upgrade.name)
 		card.name.add_theme_color_override("font_color", INV_GOLD_HI if done else INV_TEXT)
 		card.effect.text = str(upgrade.get("desc", ""))
-		_fit_upgrade_desc(card.effect)
 		bar.visible = true
 		bar.max_value = need
 		bar.value = got
 		card.amount.text = "강화 완료" if done else "경험치 %d / %d" % [got, need]
+		_fit_upgrade_card(card)
 
 	# 넣기 단추 — 고른 강화가 없거나 이미 붙었거나 모아 둔 경험치가 없으면 꺼진다
 	var target: Dictionary = list[_upgrade_slot] if _upgrade_slot < list.size() else {}
@@ -3352,7 +3357,18 @@ func _redraw_upgrades(me: Dictionary) -> void:
 		_upgrade_hint.text = "스킬 경험치 %d — %s 강화 완료" % [pool, target.name]
 	else:
 		_upgrade_hint.text = "스킬 경험치 %d — %s에 넣기" % [pool, target.name]
+	_fit_upgrade_text(_upgrade_hint, UPGRADE_W, 17)
 	_feed_button.disabled = not open or pool <= 0
+
+
+## 카드 안쪽(`UPGRADE_W` − 여백 24)에 이름·설명·경험치 줄을 맞춘다. 이름은 "1번" 옆자리만 쓴다
+func _fit_upgrade_card(card: Dictionary) -> void:
+	var room := float(UPGRADE_W - 24)
+	var number: Label = card.number
+	var head_gap := float(number.get_parent().get_theme_constant("separation"))
+	_fit_upgrade_text(card.name, room - number.get_minimum_size().x - head_gap, 24)
+	_fit_upgrade_text(card.effect, room, UPGRADE_DESC_SIZE)
+	_fit_upgrade_text(card.amount, room, 17)
 
 
 ## 카드를 누르면 그 강화를 고른다 — 넣기 단추가 그쪽으로 넣는다

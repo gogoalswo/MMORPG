@@ -172,9 +172,10 @@ const RUN_SPEED_EPS := 0.5
 var _last_delta := 0.0
 ## 공격 동작을 언제까지 트나 (서버가 준 경직 시간)
 var _swing_until := 0
-## 블렌더로 지은 동작 (`scripts/blender/fighter_moves.py`). 평타는 잽·스트레이트를
-## 번갈아 내고, 스킬은 스킬마다 하나다. 모델에 클립이 없으면 옛 `Attack` 으로 돌아간다
-const SWING_CLIPS := ["Jab", "Cross"]
+## 블렌더로 지은 동작 (`scripts/blender/fighter_moves.py`). 평타는 **오른발·왼발 앞차기를
+## 번갈아** 찬다 (2026-09-29 요청: "새로운 연속 발차기 애니메이션을 만들어" — 그 전엔 잽·스트레이트).
+## 공속만큼 배속으로 튼다(`swing.speed`). 스킬은 스킬마다 하나다. 클립이 없으면 옛 `Attack` 으로 돌아간다
+const SWING_CLIPS := ["KickR", "KickL"]
 const SKILL_CLIPS := {
 	"rising_kick": "Claw", "thunder_fall": "Thunder",
 	"sky_breaker": "SkyBreaker", "frost_pillar": "FrostStomp",
@@ -293,10 +294,10 @@ var _show_range := false
 ## 스킬 범위 표시 단추와, 그 위에 마지막 시전의 반경·각·맞은 수를 적는 줄
 var _range_button: Button
 var _range_label: Label
-## 상점·대장간 창 — 전직 창과 같은 결로 조립한 창이다 (`NpcPanel`)
+## 상점·대장간 창 — 조각으로 조립한 창이다 (`NpcPanel`). 지금 마을에는 서는 NPC 가 없다
 var _npc_panel: NpcPanel
-## 전직 창 — 상점·대장간과 따로 조립한 창이다 (`JobPanel`)
-var _job_panel: JobPanel
+## HUD 스킬 아이콘의 레드닷 — 배울 수 있는 패시브 단계가 있으면 켠다 (`_refresh_status`)
+var _skill_dot: Control
 ## 액션바 4칸. 눌리면 그 스킬을 쓴다
 var _bar_buttons: Array = []
 ## 칸마다 지난 프레임에 쿨타임이 돌고 있었나 — 끝나는 순간을 잡아 번쩍인다
@@ -359,6 +360,11 @@ var _feed_button: Button
 var _upgrade_hint: Label
 var _skill_equip: Button
 var _skill_unequip: Button
+## 패시브 한 단계를 배우는 단추 (`learnPassive`) — 패시브를 골랐을 때만 선다. 위에 레드닷
+var _passive_learn: Button
+var _passive_dot: Control
+## 보이는 액티브 스킬이 없으면 숨기는 것들 — "장착 중" 줄 · 장착/해제 · 강화 칸 (2026-09-29)
+var _active_only: Array = []
 var _skill_grid: GridContainer
 ## 목록 칸과 그 칸의 스킬 id (같은 순서). 직업이 바뀌면 다시 짓는다
 var _skill_cells: Array = []
@@ -487,7 +493,9 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			_swing_until = Time.get_ticks_msec() + int(payload.get("root_ms", 400))
 			if str(payload.get("id", "")) == _transport.my_id():
 				_swings += 1
-				_start_move(SWING_CLIPS[_swings % SWING_CLIPS.size()])
+				# **공속만큼 빨리 찬다** (2026-09-29 요청: "공속이 빨라지면 그만큼 애니메이션을 빠르게
+				# 재생해") — 판정이 실어 보낸 배속(= 기본 간격 / 지금 간격). Lv.200 이면 7.2배
+				_start_move(SWING_CLIPS[_swings % SWING_CLIPS.size()], float(payload.get("speed", 1.0)))
 		&"lunge":
 			# 날라차기 — 나는 동안과 내려앉는 동안 달리기로 끊기지 않게 막는다
 			_swing_until = Time.get_ticks_msec() + int(payload.get("ms", 700))
@@ -573,9 +581,8 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 		# (2026-09-28 요청: "포탈을 클릭 했을 때만 UI가 나오도록")
 		&"zone":
 			_last_event = "%s 에 도착했습니다" % GameData.zone(str(payload.get("zone", ""))).get("name", "")
-			# 전직 버튼으로 옮겨 가면 창이 남는다 — 새 존에는 그 NPC 가 없다
+			# 창이 열린 채 옮겨 가면 남는다 — 새 존에는 그 NPC 가 없다
 			_npc_panel.visible = false
-			_job_panel.visible = false
 			_dungeon_result.visible = false
 		&"dungeonResult":
 			# 성공이든 실패든 결과창. 걷던 곳·자동 사냥 겨냥을 멈춘다 — 확인을 누르면 마을로 나간다
@@ -593,8 +600,8 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			_chat.add_line("재료 획득", "%s x%d" % [Items.stack_name({"id": Items.crystal_id()}), int(payload.get("crystal", 0))], INV_TEXT)
 			if _bag_panel.visible:
 				_redraw_bag()
-		&"jobAdvanced":
-			# 글은 뒤따르는 notice 가 적는다. 스킬창이 열려 있으면 잠금을 풀어 다시 그린다
+		&"passives":
+			# 글은 뒤따르는 notice 가 적는다. 레드닷은 `_refresh_status` 가 매 프레임 맞춘다
 			if _skill_panel.visible:
 				_redraw_skills()
 
@@ -936,7 +943,10 @@ func _icon_button(
 func _add_red_dot(cell: Control) -> Control:
 	var holder := Control.new()
 	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	cell.find_child("inset", true, false).add_child(holder)
+	# 아이콘 칸은 그림 판(`inset`)에, 단추는 단추 자체에 붙인다
+	var inset := cell.find_child("inset", true, false)
+	(inset if inset != null else cell).add_child(holder)
+	holder.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 	var dot := Panel.new()
 	dot.name = "red_dot"
@@ -2333,7 +2343,7 @@ func _fill_item_view(view: Dictionary, stack: Dictionary, worn: bool, fits: bool
 	# 옵션은 **차수별로** 적는다 — 1차(드랍) · 2차(크리스탈) · 3차(비어 있음)
 	for tier in Items.option_tiers():
 		var head := "%d차 옵션" % int(tier.tier)
-		var lines: Array = stack.get(str(tier.key), [])
+		var lines: Array = Items.shown_options(stack.get(str(tier.key), []))
 		for option in lines:
 			rows.append([head, Items.describe_option(option)])
 		if lines.is_empty():
@@ -2450,7 +2460,7 @@ func _redraw_crystal() -> void:
 	for tier in Items.option_tiers():
 		var head := "%d차 옵션" % int(tier.tier)
 		var tint := INV_GOLD_HI if str(tier.get("source", "")) == "crystal" else INV_TEXT
-		var lines: Array = stack.get(str(tier.key), [])
+		var lines: Array = Items.shown_options(stack.get(str(tier.key), []))
 		for option in lines:
 			rows.append([head, Items.describe_option(option), tint])
 		if lines.is_empty() and str(tier.get("source", "")) != "drop":
@@ -2606,7 +2616,7 @@ func _stack_label(stack: Dictionary) -> String:
 		text += " +%d" % enhance
 	text += " (%d등급)" % int(stack.get("grade", 1))
 	var options: Array = []
-	for option in stack.get("options", []) + stack.get("options2", []):
+	for option in Items.shown_options(stack.get("options", []) + stack.get("options2", [])):
 		options.append(Items.describe_option(option))
 	if not options.is_empty():
 		text += "\n" + ", ".join(options)
@@ -2645,6 +2655,9 @@ func _build_skill_bar() -> void:
 	for slot in int(GameData.combat().get("skillBarSize", 4)):
 		var cell := _make_skill_cell(QUICK_CELL, "ui_quick_slot", _on_bar_pressed.bind(slot), QUICK_MARGIN)
 		cell.find_child("key", true, false).text = str(slot + 1)
+		# **보이는 액티브 스킬이 없으면 숨긴다** (2026-09-29 요청: "퀵슬롯 … 숨김 처리해") —
+		# 격투가는 평타만 쓴다. 스킬 표의 `hidden` 을 풀면 칸이 곧바로 돌아온다
+		cell.visible = Skills.actives_shown(World.DEFAULT_JOB)
 		dock.add_child(cell)
 		_bar_buttons.append(cell)
 		_bar_cooling.append(false)
@@ -2710,11 +2723,12 @@ func _build_skill_bar() -> void:
 	# 그림만으로는 무엇인지 헷갈린다는 요청 ("이런식으로 텍스트 넣도록"). 그림도 같은 날
 	# 받은 그림(리니지풍 칠한 아이콘)대로 일곱 장 전부 갈았다 (docs/features/hud.md "메뉴 아이콘")
 	var bag_cell := _icon_button("ui_icon_bag", "가방", _toggle_bag, MENU_BTN, true)
+	var skill_cell := _icon_button("ui_icon_skill", "스킬", _toggle_skills, MENU_BTN, true)
 	_menu_cells = [
 		# 캐릭터 정보 — 스킬 왼쪽, 메뉴 맨 앞 (2026-09-25 요청 "상세 정보창을 따로 띄우고
 		# 버튼을 만들어"). 그림은 기사 투구
 		_icon_button("ui_icon_character", "정보", _toggle_char, MENU_BTN, true),
-		_icon_button("ui_icon_skill", "스킬", _toggle_skills, MENU_BTN, true),
+		skill_cell,
 		# 강화 — 가방 왼쪽 옆 (2026-09-24 요청 "가방 ui 옆에 강화 ui 버튼 만들어").
 		# 오른쪽 옆은 던전 자리다. 그림은 모루를 내리치는 망치
 		_icon_button("ui_icon_enhance", "강화", _toggle_enhance, MENU_BTN, true),
@@ -2732,6 +2746,8 @@ func _build_skill_bar() -> void:
 	for cell in _menu_cells:
 		menu.add_child(cell)
 	_bag_dot = _add_red_dot(bag_cell)
+	# 배울 수 있는 패시브 단계가 있으면 켠다 — `_refresh_status` 가 매 프레임 맞춘다 (2026-09-29 요청)
+	_skill_dot = _add_red_dot(skill_cell)
 	menu.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE, 20)
 	menu.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 
@@ -3171,10 +3187,12 @@ func _build_skill_panel() -> void:
 	right.add_theme_constant_override("separation", 12)
 	columns.add_child(right)
 
-	right.add_child(_caption("장착 중"))
+	var equip_caption := _caption("장착 중")
+	right.add_child(equip_caption)
 	var slots := HBoxContainer.new()
 	slots.add_theme_constant_override("separation", SKILL_GAP)
 	right.add_child(slots)
+	_active_only = [equip_caption, slots]
 	_slot_cells.clear()
 	for slot in int(GameData.combat().get("skillBarSize", 4)):
 		var cell := _make_skill_cell(SKILL_CELL, "ui_skill_slot", _pick_slot.bind(slot))
@@ -3205,8 +3223,14 @@ func _build_skill_panel() -> void:
 	buttons.add_child(_skill_unequip)
 	_skill_equip = _gold_text(_make_button("장착", _on_skill_equip))
 	buttons.add_child(_skill_equip)
+	# 패시브 [습득] — 레벨이 되면 공짜로 한 단계 (2026-09-29 요청: "습득 버튼을 만들어서 배우게 …
+	# 스킬 UI 안에서도 습득 버튼 위에 레드닷"). 점은 단추 오른쪽 위 모서리에 얹는다
+	_passive_learn = _gold_text(_make_button("습득", _on_passive_learn))
+	_passive_learn.name = "learnPassive"
+	buttons.add_child(_passive_learn)
+	_passive_dot = _add_red_dot(_passive_learn)
 
-	_build_upgrade_column(columns)
+	_active_only.append(_build_upgrade_column(columns))
 
 
 ## 스킬창 셋째 칸 — **고른 스킬의 강화 두 칸과 경험치북 단추** (2026-09-23).
@@ -3220,7 +3244,7 @@ func _build_skill_panel() -> void:
 ## 설명 칸 아래에 줄로 넣지 않고 칸을 하나 더 세웠다 — 창이 이미 580px 라 더하면
 ## 720 을 넘는다. 옆으로는 1234px 로 1280 안에 든다. 카드는 설명 칸과 같은 던전 결 평판
 ## (`_stone_cell_box`), 고른 카드는 금 막대(`_stone_pick_box`), 단추는 `ui_button` — 새 조각은 없다
-func _build_upgrade_column(columns: HBoxContainer) -> void:
+func _build_upgrade_column(columns: HBoxContainer) -> Control:
 	var column := VBoxContainer.new()
 	column.custom_minimum_size = Vector2(UPGRADE_W, 0)
 	column.add_theme_constant_override("separation", 10)
@@ -3240,6 +3264,7 @@ func _build_upgrade_column(columns: HBoxContainer) -> void:
 	_feed_button.custom_minimum_size = Vector2(UPGRADE_W, 70)
 	_feed_button.add_theme_font_size_override("font_size", 20)
 	column.add_child(_feed_button)
+	return column
 
 
 ## 강화 카드 하나 — 번호 · 이름 · 효과 · 경험치 막대 · `320 / 1000`.
@@ -3461,7 +3486,7 @@ func _build_test_switches() -> void:
 	column.add_child(reset)
 	column.move_child(reset, 0)
 	# 스킬 경험치 +10만 — 던전을 안 돌고 강화를 볼 때 (`World.debug_skill_exp`)
-	# 스킬 모두 배우기 — 전직도 끝까지 올린다 (2026-09-26 요청, `World.debug_learn_all`).
+	# 스킬 모두 배우기 — 패시브도 끝 단계까지 (2026-09-26 요청, `World.debug_learn_all`).
 	# 목록이 이미 화면 위로 넘치므로 **줄을 늘리지 않고** 스킬 경험치와 한 줄에 반씩 놓는다
 	var book_row := HBoxContainer.new()
 	book_row.add_theme_constant_override("separation", 6)
@@ -3619,8 +3644,10 @@ func _apply_play_mode() -> void:
 			_transport.send(&"testKit", {})
 			# 200레벨로 시작한다 — 한 번만 (`World.grant_test_level`)
 			_transport.send(&"testLevel", {})
-			# 모든 스킬을 배우고 전직도 끝까지 — 한 번만 (`World.grant_test_skills`)
+			# 모든 스킬을 배운다 — 한 번만 (`World.grant_test_skills`). 패시브는 비워 둔다(습득을 눌러 본다)
 			_transport.send(&"testSkills", {})
+			# 스킬 목록 단추는 **보이는 스킬이 있을 때만** — 격투가는 평타만 쓴다 (2026-09-29)
+			_skill_list_toggle.visible = Skills.actives_shown(World.DEFAULT_JOB)
 			_refresh_switches()
 			_set_cheats_open(false)
 		PlayMode.NORMAL:
@@ -3756,11 +3783,14 @@ func _me() -> Dictionary:
 	return _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
 
 
-## 스킬창 내용을 지금 상태로 채운다. 목록은 직업이 바뀌었을 때만 다시 짓는다
+## 스킬창 내용을 지금 상태로 채운다. 목록은 직업이 바뀌었을 때만 다시 짓는다.
+## **패시브가 목록 앞에 선다** (2026-09-29) — 격투가는 보이는 액티브가 없어 질풍각 하나다
 func _redraw_skills() -> void:
 	var me := _me()
 	var job := str(me.get("job", "fighter"))
 	var ids: Array = []
+	for p in Skills.passives_for(job):
+		ids.append(str(p.id))
 	for id in Skills.for_job(job):
 		ids.append(str(id))
 	if ids != _skill_ids:
@@ -3778,27 +3808,29 @@ func _redraw_skills() -> void:
 	var bar: Array = me.get("skill_bar", [])
 	var learned: Array = me.get("skills", [])
 	var level := int(me.get("level", 1))
-	var job_tier := int(me.get("job_tier", 0))
+	var ranks: Dictionary = me.get("passives", {})
+	var actives := Skills.actives_shown(job)
+	for node in _active_only:
+		node.visible = actives
 
 	for index in _skill_cells.size():
 		var id := str(_skill_ids[index])
 		var cell: PanelContainer = _skill_cells[index]
-		var skill: Dictionary = Skills.all().get(id, {})
 		_fill_skill_cell(cell, id, "")
-		# 안 배운 것만 "Lv.N 습득". 배웠으면 지운다. 장착 번호는 적지 않는다 — 번호는 퀵슬롯에 있다
-		var badge: Label = cell.find_child("badge", true, false)
-		# 전직이 모자라면 "N차 전직" — 레벨보다 이것이 먼저 막는다
-		var tier := Skills.tier_of(skill)
-		if id in learned and tier <= job_tier:
-			badge.text = ""
-		elif tier > job_tier:
-			badge.text = "%d차 전직" % tier
-		else:
-			badge.text = "Lv.%d 습득" % int(skill.get("reqLevel", 1))
-		# 아직 배울 수 없는 것은 흐리게 (배웠어도 전직 전이면 못 쓴다)
-		var open: bool = (id in learned and tier <= job_tier) or Skills.can_learn(skill, job, level, job_tier)
-		cell.modulate = Color.WHITE if open else Color(0.5, 0.5, 0.5)
 		cell.get_node("pick").visible = id == _skill_pick
+		var badge: Label = cell.find_child("badge", true, false)
+		var passive := Skills.passive(id)
+		if not passive.is_empty():
+			# 패시브는 단계를 적는다. 아직 한 단계도 안 열렸으면 흐리게
+			badge.text = "%d/%d" % [int(ranks.get(id, 0)), int(passive.maxRank)]
+			cell.modulate = Color.WHITE if Skills.passive_open(passive, level) > 0 else Color(0.5, 0.5, 0.5)
+			continue
+		var skill: Dictionary = Skills.all().get(id, {})
+		# 안 배운 것만 "Lv.N 습득". 배웠으면 지운다. 장착 번호는 적지 않는다 — 번호는 퀵슬롯에 있다
+		badge.text = "" if id in learned else "Lv.%d 습득" % int(skill.get("reqLevel", 1))
+		# 아직 배울 수 없는 것은 흐리게
+		var open: bool = id in learned or Skills.can_learn(skill, job, level)
+		cell.modulate = Color.WHITE if open else Color(0.5, 0.5, 0.5)
 
 	for slot in _slot_cells.size():
 		var cell: PanelContainer = _slot_cells[slot]
@@ -3806,15 +3838,21 @@ func _redraw_skills() -> void:
 		_fill_skill_cell(cell, id, "+")
 		cell.get_node("pick").visible = _skill_swap or (id != "" and id == _skill_pick)
 
-	var skill: Dictionary = Skills.all().get(_skill_pick, {})
 	_fill_skill_cell(_skill_big, _skill_pick, "")
+	var picked_passive := Skills.passive(_skill_pick)
+	_passive_learn.visible = not picked_passive.is_empty()
+	_skill_equip.visible = actives and picked_passive.is_empty()
+	_skill_unequip.visible = _skill_equip.visible
+	if not picked_passive.is_empty():
+		_draw_passive(me, picked_passive)
+		return
+
+	var skill: Dictionary = Skills.all().get(_skill_pick, {})
 	_skill_name.text = str(skill.get("name", ""))
 	# 범위기는 범위에 든 놈을 **전부** 친다 — 명수 상한이 없어서 "범위" 라고만 적는다
 	var targets := int(skill.get("maxTargets", 1))
-	var need_tier := Skills.tier_of(skill)
-	_skill_info.text = "요구 레벨 %d%s\n재사용 %s초\n사거리 %s, %s" % [
+	_skill_info.text = "요구 레벨 %d\n재사용 %s초\n사거리 %s, %s" % [
 		int(skill.get("reqLevel", 1)),
-		" · %d차 전직" % need_tier if need_tier > 0 else "",
 		str(snappedf(float(skill.get("cooldown", 0)) / 1000.0, 0.1)),
 		str(skill.get("range", 0)),
 		"대상 %d명" % targets if targets <= 1 else "범위",
@@ -3829,11 +3867,9 @@ func _redraw_skills() -> void:
 		_skill_state.text = "바꿀 칸을 누르세요"
 	elif equipped:
 		_skill_state.text = "장착 중 (%d번 칸)" % (bar.find(_skill_pick) + 1)
-	elif need_tier > job_tier:
-		_skill_state.text = "%d차 전직 후 배웁니다" % need_tier
 	elif _skill_pick in learned:
 		_skill_state.text = "배움"
-	elif Skills.can_learn(skill, job, level, job_tier):
+	elif Skills.can_learn(skill, job, level):
 		_skill_state.text = "장착하면 배웁니다"
 	else:
 		_skill_state.text = "%d레벨에 배웁니다" % int(skill.get("reqLevel", 1))
@@ -3842,6 +3878,43 @@ func _redraw_skills() -> void:
 	_skill_equip.disabled = _skill_pick == "" or (equipped and not _skill_swap)
 	_skill_unequip.disabled = not equipped or _skill_swap
 	_redraw_upgrades(me)
+
+
+## 고른 패시브를 왼쪽 칸에 적고 [습득] 을 맞춘다. **레벨이 되면 공짜** — 되는지는 장부가 다시 본다.
+## 초당 타수는 지금 스탯(`me.stats`, 패시브가 이미 더해진 것)과 한 단계 더 배운 뒤를 나란히 적는다
+func _draw_passive(me: Dictionary, passive: Dictionary) -> void:
+	var id := str(passive.id)
+	var level := int(me.get("level", 1))
+	var rank := int(me.get("passives", {}).get(id, 0))
+	var top := int(passive.maxRank)
+	var every := int(passive.everyLevels)
+	var per := float(passive.perRank)
+	var open := Skills.passive_open(passive, level)
+	_skill_name.text = str(passive.get("name", id))
+	_skill_info.text = "패시브 · %d / %d 단계\n공격 속도 +%d%%\n%d레벨마다 +%d%%" % [
+		rank, top, roundi(rank * per * 100.0), every, roundi(per * 100.0),
+	]
+	var stats: Dictionary = me.get("stats", {})
+	var base := float(stats.get("attackCooldown", 900))
+	var speed := float(stats.get("attackSpeed", 0.0))
+	var now := 1000.0 / Combat.effective_cooldown(base, speed)
+	_skill_desc.text = "%s\n\n초당 %.1f회 공격" % [str(passive.get("description", "")), now]
+	if rank < top:
+		_skill_desc.text += " → 다음 단계 %.1f회" % (1000.0 / Combat.effective_cooldown(base, speed + per))
+	if rank >= top:
+		_skill_state.text = "끝까지 배웠습니다"
+	elif rank < open:
+		_skill_state.text = "습득할 수 있습니다"
+	else:
+		_skill_state.text = "%d레벨에 다음 단계가 열립니다" % ((rank + 1) * every)
+	_passive_learn.disabled = rank >= open
+	_passive_dot.visible = rank < open
+
+
+## [습득] — 고른 패시브 한 단계를 요청한다. 답(`passives`)이 오면 창을 다시 그린다
+func _on_passive_learn() -> void:
+	if not Skills.passive(_skill_pick).is_empty():
+		_transport.send(&"learnPassive", {"id": _skill_pick})
 
 
 func _pick_skill(index: int) -> void:
@@ -3951,17 +4024,6 @@ func _build_npc_panel() -> void:
 		_npc_panel.redraw()
 	)
 
-	# 전직 창도 같은 층이다 — 얇은 금테 결 (job_panel.gd)
-	_job_panel = JobPanel.make(_frame_box, _icon)
-	# 한글 폰트는 _ui_root 의 테마에 있다 — 다른 층이라 직접 물려준다
-	_job_panel.theme = _ui_root.theme
-	top.add_child(_job_panel)
-	_close_button(_job_panel, func() -> void: _job_panel.visible = false, 0)
-	_job_panel.advance.connect(func() -> void:
-		_transport.send(&"jobAdvance", {})
-		_job_panel.visible = false
-	)
-
 	# 시련의 탑 결과창 — 확인을 누르면 마을로 (trial_result.gd)
 	_dungeon_result = DungeonResult.make(_frame_box, _icon)
 	_dungeon_result.theme = _ui_root.theme
@@ -3972,17 +4034,6 @@ func _build_npc_panel() -> void:
 func _show_npc(payload: Dictionary) -> void:
 	var role := str(payload.get("role", ""))
 	var title := str(payload.get("title", ""))
-	if role == "jobs":
-		_npc_panel.visible = false
-		_job_panel.fill(
-			str(payload.get("name", "")),
-			payload.get("job", {}),
-			int(_me().get("level", 1)),
-			func(id: String) -> String: return str(Skills.all().get(id, {}).get("name", id)),
-		)
-		_job_panel.visible = true
-		return
-	_job_panel.visible = false
 	_npc_panel.open(str(payload.get("name", "")), role, title, payload.get("items", []))
 
 
@@ -4640,7 +4691,8 @@ func _play_player_clip(me: Dictionary) -> void:
 	if _move_clip != "":
 		if _move_fresh:
 			_move_fresh = false
-			rig.replay(_move_clip, _move_speed, MOVE_BLEND)
+			# 섞는 시간도 배속만큼 줄인다 — 7배로 찰 때 0.06초를 섞으면 발이 다 뻗기 전에 다음 대가 온다
+			rig.replay(_move_clip, _move_speed, MOVE_BLEND / maxf(_move_speed, 1.0))
 			return
 		var cut := _moving and now >= _swing_until
 		# 끝은 **클립이 실제로 다 돌았는지**로 본다. 시계(`_move_until`)로 재면 히트스톱이
@@ -4856,9 +4908,14 @@ func _feel_hit(payload: Dictionary, on_me: bool, body: Node3D) -> void:
 	# 연달아 걸려 동작이 뚝뚝 끊긴다 (2026-09-24). 맞은 건 붉어짐·흔들림·퍼짐으로 안다.
 	# 맞음 동작(`Hit`)과 공격이 이기는 규칙(`HIT_CLIP` 위)과 같은 생각이다
 	var busy := on_me and _move_clip != "" and _move_clip != HIT_CLIP
+	# **내가 때렸으면 멈춤을 공속만큼 줄인다** (2026-09-29) — 초당 8번 차는데 한 대에 0.045초씩
+	# 멈추면 시간의 36% 가 멈춰 있어 발차기가 뚝뚝 끊긴다. 한 대 간격에서 차지하는 몫을 지킨다
+	var stop := float(feel.stop)
+	if not on_me:
+		stop /= 1.0 + maxf(float(_me().get("stats", {}).get("attackSpeed", 0.0)), 0.0)
 	if not busy:
-		HitFx.hitstop(body, feel.stop)
-	HitFx.hitstop(attacker, feel.stop)
+		HitFx.hitstop(body, stop)
+	HitFx.hitstop(attacker, stop)
 	if body != null:
 		# **내 캐릭터는 밀지 않는다** — 카메라가 쫓아가 화면째 흔들리고, 걷는지 보는
 		# 거리 계산(`_moving`)이 밀린 거리를 달린 걸로 읽는다. 퍼지기만 한다
@@ -5006,6 +5063,7 @@ func _refresh_status(me: Dictionary) -> void:
 	var max_hp := maxf(1.0, float(me.stats.maxHp))
 	_hp_bar.max_value = max_hp
 	_hp_bar.value = float(me.hp)
+	_skill_dot.visible = Skills.passive_learnable(str(me.job), int(me.level), me.get("passives", {}))
 	_hp_text.text = "%d / %d" % [int(me.hp), int(max_hp)]
 	# 다음 레벨까지 필요한 양. 만렙이면 0 이 와서 0 으로 나누게 된다
 	var need := maxi(1, Combat.exp_to_next(int(me.level)))

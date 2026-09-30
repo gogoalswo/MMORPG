@@ -160,10 +160,6 @@ func _run() -> void:
 		await _hand(game)
 		return
 
-	# 전직 창 — 1차를 마친 Lv.70 이 전직관에게 말을 건 모습 (`npm run shot:godot -- job`)
-	if skill == "job":
-		await _job(game)
-		return
 	# 상점·대장간 창 — Lv.40 에 골드와 장비를 쥐여 주고 말을 건 모습
 	if skill == "shop" or skill == "smith":
 		await _npc_window(game, skill)
@@ -177,8 +173,6 @@ func _run() -> void:
 	var player: Dictionary = game._transport._world._players[game._transport.my_id()]
 	player["level"] = LEVEL
 	player["skill_points"] = 99
-	# 전직으로 풀리는 스킬도 찍을 수 있게 끝 단계까지 올린다 (전직 잠금은 테스트 스위치와 무관하다)
-	player["job_tier"] = 4
 	# `rising_kick@90` 처럼 붙이면 그 쪽(도)을 보고 쓴다 — 캐릭터 기준 이펙트는
 	# 보는 쪽에 따라 화면에서 모양이 달라서, 한 방향만 찍으면 못 보는 게 있다
 	if "@" in skill:
@@ -621,23 +615,6 @@ func _npc_window(game: Node3D, which: String) -> void:
 	var img := root.get_viewport().get_texture().get_image()
 	img.save_png("res://../logs/shot_%s.png" % which)
 	print("logs/shot_%s.png" % which)
-	quit(0)
-
-
-## 전직 창. 단계 줄의 점·선이 한 줄에 서는지, 카드 안 글자가 테 밖으로 안 나가는지 눈으로 본다
-func _job(game: Node3D) -> void:
-	var player: Dictionary = game._transport._world._players[game._transport.my_id()]
-	player["level"] = 70
-	player["job_tier"] = 1
-	player["x"] = 5.0
-	player["z"] = 7.0
-	game._transport.send(&"npc", {"name": "전직관 레온"})
-	for i in 30:
-		await process_frame
-	await RenderingServer.frame_post_draw
-	var img := root.get_viewport().get_texture().get_image()
-	img.save_png("res://../logs/shot_job.png")
-	print("logs/shot_job.png")
 	quit(0)
 
 

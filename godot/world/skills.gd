@@ -141,55 +141,65 @@ static func auto_order(job: String, bar: Array, priority: Array) -> Array:
 	return order + rest
 
 
-## 배울 수 있나. **직업과 전직 단계는 스위치와 무관하게 본다** —
-## 남의 직업 스킬은 배워 봐야 쓸 수가 없고, 전직 스킬은 전직해야 풀린다
-static func can_learn(skill: Dictionary, job: String, level: int, job_tier: int) -> bool:
+## 배울 수 있나. **직업은 스위치와 무관하게 본다** — 남의 직업 스킬은 배워 봐야 쓸 수가 없다.
+## 전직 잠금은 2026-09-29 에 전직째로 없앴다 (docs/features/job-advance.md)
+static func can_learn(skill: Dictionary, job: String, level: int) -> bool:
 	if str(skill.get("job", "")) != job:
-		return false
-	if tier_of(skill) > job_tier:
 		return false
 	return unlock_all() or level >= int(skill.get("reqLevel", 1))
 
 
-## --- 전직 (`jobAdvance.ts` → docs/features/job-advance.md) ---
-
-## 이 스킬이 풀리는 전직 단계 — 없으면 0 (기본 스킬)
-static func tier_of(skill: Dictionary) -> int:
-	return int(skill.get("tier", 0))
+static func point_cost() -> int:
+	return 0 if unlock_all() else 1
 
 
-## 전직 표 — 1차부터 차례로 `{ tier, level, zone, boss, bossLevel }`
-static func job_advances() -> Array:
-	return _table().get("jobAdvances", [])
+## 그 직업에 **보이는 액티브 스킬**이 있나. 없으면 화면이 퀵슬롯 스킬 칸 · 스킬창 장착 줄 ·
+## 강화 칸 · 던전의 스킬 경험치를 숨긴다 (2026-09-29 — 격투가는 평타만 쓴다)
+static func actives_shown(job: String) -> bool:
+	return not for_job(job).is_empty()
 
 
-## `tier` 차 전직 한 줄. 없으면(0 이하 · 마지막 넘어) 빈 사전
-static func job_advance(tier: int) -> Dictionary:
-	var all := job_advances()
-	if tier < 1 or tier > all.size():
-		return {}
-	return all[tier - 1]
+## --- 패시브 (`skills.ts` 의 `PASSIVES` → docs/features/passives.md) ---
 
-
-## 이 존이 전직 시험이면 몇 차인지, 아니면 0
-static func job_tier_of_zone(zone_id: String) -> int:
-	for entry in job_advances():
-		if str(entry.get("zone", "")) == zone_id:
-			return int(entry.get("tier", 0))
-	return 0
-
-
-## 그 직업이 `tier` 차 전직으로 푸는 스킬 id 들 (4차처럼 아직 없으면 빈 배열)
-static func unlocked_at(job: String, tier: int) -> Array:
+## 그 직업의 패시브들 — 표 순서
+static func passives_for(job: String) -> Array:
 	var out: Array = []
-	for id in for_job(job):
-		if tier_of(all().get(str(id), {})) == tier:
-			out.append(str(id))
+	for p in _table().get("passives", []):
+		if str(p.get("job", "")) == job:
+			out.append(p)
 	return out
 
 
-static func point_cost() -> int:
-	return 0 if unlock_all() else 1
+## id 로 하나. 없으면 빈 사전
+static func passive(id: String) -> Dictionary:
+	for p in _table().get("passives", []):
+		if str(p.get("id", "")) == id:
+			return p
+	return {}
+
+
+## 그 레벨까지 열린 단계 수 — Lv.10 에 1 (`passiveRankOpen` 과 같은 식)
+static func passive_open(p: Dictionary, level: int) -> int:
+	var every := maxi(1, int(p.get("everyLevels", 10)))
+	return clampi(level / every, 0, int(p.get("maxRank", 0)))
+
+
+## 지금 [습득] 을 누를 수 있는 패시브가 있나 — HUD 스킬 아이콘·스킬창 버튼의 **레드닷**
+static func passive_learnable(job: String, level: int, ranks: Dictionary) -> bool:
+	for p in passives_for(job):
+		if int(ranks.get(str(p.id), 0)) < passive_open(p, level):
+			return true
+	return false
+
+
+## 배운 패시브가 스탯에 더하는 양 `{ 스탯: 합 }` — `World.stats_of` 가 더한다
+static func passive_bonus(job: String, ranks: Dictionary) -> Dictionary:
+	var out := {}
+	for p in passives_for(job):
+		var rank := clampi(int(ranks.get(str(p.id), 0)), 0, int(p.get("maxRank", 0)))
+		var stat := str(p.get("stat", ""))
+		out[stat] = float(out.get(stat, 0.0)) + rank * float(p.get("perRank", 0.0))
+	return out
 
 
 ## 날아가는 것이 보이는 스킬인가. 따로 필드를 두지 않고 projectile 로 가른다 —

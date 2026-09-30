@@ -2,6 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   JOB_SKILLS,
+  PASSIVES,
+  passiveRankOpen,
   PROJECTILE_SPEED,
   SKILLS,
   SKILL_BAR_SIZE,
@@ -13,7 +15,7 @@ import {
   skillForJob,
 } from './skills.ts';
 import { JOB_IDS } from './character.ts';
-import { MAX_LEVEL } from './combat.ts';
+import { MAX_LEVEL, effectiveCooldown, statsFor } from './combat.ts';
 
 /**
  * 스킬 데이터 검사.
@@ -24,6 +26,8 @@ import { MAX_LEVEL } from './combat.ts';
  */
 
 const all = Object.values(SKILLS);
+/** 보이는 스킬이 있는 직업 — 격투가는 2026-09-29 부터 평타만 쓴다 */
+const SKILLED_JOBS = JOB_IDS.filter((job) => JOB_SKILLS[job].length > 0);
 
 test('id 와 키가 일치한다', () => {
   for (const [key, skill] of Object.entries(SKILLS)) {
@@ -53,8 +57,9 @@ test('직업마다 액션바를 채울 만큼은 갖는다', () => {
    * 원래는 "칸 수보다 **많아야** 고르는 의미가 있다" 였다. 2026-09-12 격투가를
    * 이펙트가 붙은 넷만 남기고 정리하면서 딱 4개가 됐다 — 고를 여지는 없지만 빈 칸도
    * 없다. 스킬을 더 만들면 자연스럽게 다시 고르게 된다.
+   * 격투가는 2026-09-29 부터 보이는 스킬이 없다 (아래 "격투가는 평타로만 싸운다") — 뺀다.
    */
-  for (const job of JOB_IDS) {
+  for (const job of SKILLED_JOBS) {
     assert.ok(
       JOB_SKILLS[job].length >= SKILL_BAR_SIZE,
       `${job}: ${JOB_SKILLS[job].length}개라 액션바(${SKILL_BAR_SIZE}칸)에 빈 칸이 남는다`
@@ -77,7 +82,7 @@ test('요구 레벨이 오름차순이고 만렙 안에 있다', () => {
 
 test('시작하자마자 배울 수 있는 스킬이 직업마다 하나씩 있다', () => {
   // 없으면 1레벨이 기본 공격만 갖고 시작한다
-  for (const job of JOB_IDS) {
+  for (const job of SKILLED_JOBS) {
     const first = SKILLS[JOB_SKILLS[job][0]!]!;
     assert.equal(first.reqLevel, 1, `${job}: 첫 스킬이 Lv.${first.reqLevel}`);
   }
@@ -105,7 +110,7 @@ test('수치가 말이 되는 범위에 있다', () => {
 
 test('레벨이 오를수록 세진다', () => {
   // 공격기끼리만 비교한다 — 회복기는 배율이 0 이라 줄에 끼면 안 된다
-  for (const job of JOB_IDS) {
+  for (const job of SKILLED_JOBS) {
     const attacks = JOB_SKILLS[job]
       .map((id) => SKILLS[id]!)
       .filter((s) => !s.selfHeal);
@@ -152,8 +157,16 @@ test('자기 주위로 터지는 기술은 사거리가 짧다', () => {
   }
 });
 
+test('격투가는 평타로만 싸운다 — 보이는 스킬이 없다', () => {
+  // 2026-09-29 요청: "스킬을 다 숨김처리 하고, 공속을 성장시켜서 빠르게 때리는 스타일로".
+  // 판정·이펙트 데이터는 남아 있어서 `hidden` 만 지우면 돌아온다
+  assert.deepEqual(JOB_SKILLS.fighter, []);
+  assert.ok(Object.values(SKILLS).some((s) => s.job === 'fighter' && s.hidden));
+});
+
 test('다른 직업 스킬은 걸러진다', () => {
-  const fighterSkill = JOB_SKILLS.fighter[0]!;
+  // 숨긴 스킬도 판정 표에는 있다 — 걸러지는지는 그대로 본다
+  const fighterSkill = 'rising_kick';
   assert.ok(skillForJob('fighter', fighterSkill));
   assert.equal(skillForJob('mage', fighterSkill), null);
   assert.equal(skillForJob('fighter', '없는스킬'), null);
@@ -195,4 +208,16 @@ test('스킬 강화는 있는 스킬에 붙고, 스킬마다 둘까지이며, �
   for (const [skill, ids] of Object.entries(perSkill)) {
     assert.ok(ids.length <= SKILL_UPGRADE_MAX, `${skill} 강화가 ${ids.length}개`);
   }
+});
+
+test('질풍각 — Lv.200 에 격투가가 초당 8번 때린다', () => {
+  // 2026-09-29 요청: "200레벨 기준 초당 8번 때릴꺼야". 공속은 이 패시브에서만 온다
+  const gale = PASSIVES.find((p) => p.id === 'gale_kicks')!;
+  assert.ok(gale, '질풍각이 없다');
+  assert.equal(passiveRankOpen(gale, 9), 0, 'Lv.9 는 아직 0단계');
+  assert.equal(passiveRankOpen(gale, 10), 1, 'Lv.10 에 1단계');
+  assert.equal(passiveRankOpen(gale, MAX_LEVEL), gale.maxRank, '만렙에 끝 단계');
+  const base = statsFor('fighter', MAX_LEVEL).attackCooldown;
+  const interval = effectiveCooldown(base, gale.perRank * gale.maxRank);
+  assert.equal(interval, 125, `만렙 간격 ${interval}ms`);
 });

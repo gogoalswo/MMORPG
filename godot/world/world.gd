@@ -254,8 +254,6 @@ func join(player_id: String) -> void:
 		"last_seq": -1,
 		"dead": bool(kept.get("dead", false)),
 		"job": DEFAULT_JOB,
-		# 전직 단계 — 0 이 전직 전. 전직 시험 보스를 잡으면 오른다 (`_advance_job`)
-		"job_tier": int(kept.get("job_tier", 0)),
 		"level": level,
 		# 존을 옮겨도 성장은 따라간다
 		"exp": int(kept.get("exp", 0)),
@@ -287,6 +285,8 @@ func join(player_id: String) -> void:
 		# --- 스킬 ---
 		"skills": kept.get("skills", starter).duplicate(),
 		"skill_points": int(kept.get("skill_points", level - 1)),
+		# 배운 패시브 단계 `{ id: 단계 }` — 스킬창 [습득] 으로 오른다 (`learn_passive`)
+		"passives": kept.get("passives", {}).duplicate(),
 		"skill_bar": kept.get("skill_bar", starter).duplicate(),
 		# 자동 사냥이 스킬을 볼 순서 (`set_auto_priority`). 비어 있으면 쿨타임이 긴 것부터다
 		# (`Skills.auto_order`). 저장에 남는다
@@ -420,9 +420,6 @@ func travel(player_id: String, target: String) -> void:
 	var all: Dictionary = GameData.zones().get("zones", {})
 	if not all.has(target) or target == zone_id:
 		return
-	# 전직 시험은 **전직 NPC 로만** 간다 (`job_advance`) — 레벨·단계를 거기서 본다
-	if Skills.job_tier_of_zone(target) > 0:
-		return
 	_move_to(target)
 
 
@@ -468,8 +465,12 @@ func attack(player_id: String) -> void:
 	player.next_attack_at = now + cooldown
 	var root := Combat.attack_root_ms(cooldown)
 	player.rooted_until = now + root
-	# 휘두르는 동안 못 움직인다는 통보. 화면이 이 값만큼 동작을 튼다
-	_events.append({"type": "swing", "id": player_id, "root_ms": root})
+	# 휘두르는 동안 못 움직인다는 통보. 화면이 이 값만큼 동작을 튼다.
+	# `speed` 는 발차기를 트는 배속 — 기본 간격 / 지금 간격 (공속 +620% 면 7.2배, 2026-09-29)
+	_events.append({
+		"type": "swing", "id": player_id, "root_ms": root,
+		"speed": float(stats.attackCooldown) / maxf(1.0, float(cooldown)),
+	})
 
 	var picked := _pick_targets(player, float(stats.attackRange), _attack_arc(), 1)
 	if picked.is_empty():
@@ -1389,7 +1390,6 @@ func restore(player_id: String) -> bool:
 
 	var player: Dictionary = _players[player_id]
 	player.level = int(saved.get("level", 1))
-	player.job_tier = clampi(int(saved.get("job_tier", 0)), 0, Skills.job_advances().size())
 	player.stats = Combat.stats_for(str(player.job), player.level)
 	player.exp = int(saved.get("exp", 0))
 	player.hp = clampi(int(saved.get("hp", player.stats.maxHp)), 0, int(player.stats.maxHp))
@@ -1404,6 +1404,15 @@ func restore(player_id: String) -> bool:
 			learned.append(str(id))
 	player.skills = learned
 	player.skill_points = int(saved.get("skill_points", 0))
+	# 패시브도 **지금 있는 것만**, 끝 단계 안으로 되살린다
+	var ranks := {}
+	var raw_passives = saved.get("passives", {})
+	if raw_passives is Dictionary:
+		for p in Skills.passives_for(str(player.job)):
+			var rank := clampi(int(raw_passives.get(str(p.id), 0)), 0, int(p.maxRank))
+			if rank > 0:
+				ranks[str(p.id)] = rank
+	player.passives = ranks
 	# 숨긴 스킬(`hidden`, 직업 목록에 없는 것)은 액션바에서만 뺀다 — 배운 기록은 남겨 둬서
 	# 숨김을 풀면 스킬창에서 다시 올리면 된다
 	var listed := Skills.for_job(str(player.job))
@@ -1522,43 +1531,8 @@ func npc_open(player_id: String, npc_name: String) -> void:
 			"title": str(npc.get("title", "")),
 			"items": listed,
 		}
-		if role == "jobs":
-			event["job"] = _job_state(player)
 		_events.append(event)
 		return
-
-
-## --- 전직 (docs/features/job-advance.md) ---
-
-## 전직 창이 그릴 것 — 지금 단계와 **다음 전직 한 줄**(없으면 빈 사전 = 다 마쳤다).
-## 버튼이 눌리는지(`ready`)도 여기서 정한다 — 화면이 레벨을 다시 재지 않는다
-func _job_state(player: Dictionary) -> Dictionary:
-	var tier := int(player.get("job_tier", 0))
-	var next := Skills.job_advance(tier + 1)
-	var state := {"tier": tier, "next": next.duplicate()}
-	if not next.is_empty():
-		state["ready"] = int(player.level) >= int(next.level)
-		state["skills"] = Skills.unlocked_at(str(player.job), tier + 1)
-		var boss := GameData.monster_kind(str(next.boss))
-		state["boss_name"] = str(boss.get("name", next.boss))
-	return state
-
-
-## 전직 버튼. **NPC 곁인지 · 레벨이 되는지 · 다음 단계인지를 여기서 다시 본다** —
-## 되면 그 단계의 시험(보스 한 마리)으로 옮긴다. 전직은 보스를 잡아야 된다 (`Ledger._check_job_trial`)
-func job_advance(player_id: String) -> void:
-	var player: Dictionary = _players.get(player_id, {})
-	if player.is_empty() or bool(player.dead) or not _npc_near(player, "jobs"):
-		return
-	var next := Skills.job_advance(int(player.get("job_tier", 0)) + 1)
-	if next.is_empty():
-		_notice("모든 전직을 마쳤습니다")
-		return
-	if int(player.level) < int(next.level):
-		_notice("%d레벨에 %d차 전직을 받을 수 있습니다" % [int(next.level), int(next.tier)])
-		return
-	_move_to(str(next.zone))
-	_notice("%d차 전직 시험 — 보스를 처치하세요" % int(next.tier))
 
 
 ## 기본 공격이 닿는 정면 각도(라디안). 등 뒤의 적은 맞지 않는다
@@ -1572,6 +1546,15 @@ func learn_skill(player_id: String, skill_id: String) -> void:
 	if player.is_empty():
 		return
 	_ledger_call(player, &"learn_skill", [skill_id])
+
+
+## 패시브 한 단계를 배운다 (스킬창 [습득]). **직업·레벨·끝 단계를 장부가 다시 본다** —
+## 값은 없다. 스탯은 `_after_ledger` 가 다시 만든다 (공속이 곧바로 붙는다)
+func learn_passive(player_id: String, passive_id: String) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	_ledger_call(player, &"learn_passive", [passive_id])
 
 
 ## 테스트 스위치(쿨타임 0 · 레벨 잠금 해제)를 켜고 끈다. 이름은 Skills.SWITCHES 만 받는다
@@ -1799,7 +1782,9 @@ func grant_test_skills(player_id: String) -> void:
 	if player.is_empty() or "testSkills" in player.get("granted", []):
 		return
 	player.granted.append("testSkills")
-	debug_learn_all(player_id)
+	# **패시브는 비워 둔다** — Lv.200 으로 시작하니 스킬창 [습득] 과 레드닷을 곧바로 눌러 본다.
+	# 끝까지 올리려면 치트 "스킬 모두 배우기"
+	debug_learn_all(player_id, false)
 
 
 ## --- 스킬 강화 ---
@@ -1829,14 +1814,20 @@ func debug_skill_exp(player_id: String) -> void:
 	_notice("테스트: 스킬 경험치 +%d" % DEBUG_SKILL_EXP)
 
 
-## **테스트: 스킬 모두 배우기** (2026-09-26 요청). 전직 스킬은 전직해야 쓰므로(job-advance.md)
-## **전직 단계도 끝까지 올린다** — 배우기만 하면 낙뢰·빙주각·천붕각이 안 나간다.
-## 레벨·포인트는 안 본다(치트다). 액션바 빈 칸은 배운 순서대로 채운다 — 4칸이 차 있으면 그대로
-func debug_learn_all(player_id: String) -> void:
+## **테스트: 스킬 모두 배우기** (2026-09-26 요청). 레벨·포인트는 안 본다(치트다).
+## 액션바 빈 칸은 배운 순서대로 채운다 — 4칸이 차 있으면 그대로.
+## **패시브도 끝 단계까지 올린다** (2026-09-29 — 격투가는 보이는 스킬이 없고 패시브 하나다)
+func debug_learn_all(player_id: String, passives := true) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty():
 		return
-	player.job_tier = Skills.job_advances().size()
+	if passives:
+		var ranks: Dictionary = player.get("passives", {})
+		for p in Skills.passives_for(str(player.job)):
+			ranks[str(p.id)] = int(p.maxRank)
+		player.passives = ranks
+		_refresh_stats(player)
+		_events.append({"type": "passives", "passives": ranks.duplicate()})
 	for id in Skills.for_job(str(player.job)):
 		if not (str(id) in player.skills):
 			player.skills.append(str(id))
@@ -1848,7 +1839,7 @@ func debug_learn_all(player_id: String) -> void:
 			player.skill_bar.append(id)
 	_events.append({"type": "skills", "learned": player.skills.duplicate()})
 	_events.append({"type": "skillBar", "bar": player.skill_bar.duplicate()})
-	_notice("테스트: %d차 전직 · 스킬 %d개를 모두 배웠다" % [int(player.job_tier), player.skills.size()])
+	_notice("테스트: 스킬 %d개 · 패시브 끝 단계까지 배웠다" % player.skills.size())
 
 
 ## 강화를 붙이고, 그 강화에 쌓이던 경험치를 지운다 (붙은 뒤에는 더 못 넣는다)
@@ -1992,9 +1983,6 @@ func cast(player_id: String, skill_id: String, aim_id := "") -> void:
 	# 없는 스킬이거나 다른 직업 스킬
 	var skill := Skills.get_skill(str(player.job), skill_id)
 	if skill.is_empty():
-		return
-	# **전직 스킬은 전직해야 쓴다** — 전직이 생기기 전 저장에 배운 채로 남아 있어도 막는다
-	if Skills.tier_of(skill) > int(player.get("job_tier", 0)):
 		return
 
 	# 배워서 액션바에 올린 것만 쓸 수 있다.
@@ -2353,12 +2341,13 @@ func _hit_monster(player: Dictionary, target: Dictionary, attack: float, skill_i
 ## 내려보내므로 여기서는 그대로 곱하기만 한다. 생존을 레벨 쪽에 묶어 둬야
 ## 저레벨 캐릭이 고등급 장비를 껴도 상위 사냥터에서 죽어 **게이팅이 자동으로 걸린다**
 func _refresh_stats(player: Dictionary) -> void:
-	player.stats = stats_of(str(player.job), int(player.level), player.equipped)
+	player.stats = stats_of(str(player.job), int(player.level), player.equipped, player.get("passives", {}))
 	player.hp = mini(int(player.hp), int(player.stats.maxHp))
 
 
 ## 스탯 계산 알맹이 — 서버의 처치 검증(`KillCheck`)도 같은 값을 쓴다
-static func stats_of(job: String, level: int, equipped: Dictionary) -> Dictionary:
+## `passives` 는 배운 패시브 단계 `{ id: 단계 }` — **공속은 여기서만 온다** (질풍각, 2026-09-29)
+static func stats_of(job: String, level: int, equipped: Dictionary, passives: Dictionary = {}) -> Dictionary:
 	var stats := Combat.stats_for(job, level)
 	var gear := Items.equipment_stats(equipped)
 	# 캐릭터 정보 창이 **기본 → 증가 % → 최종** 을 풀어 적는다 (2026-09-25 요청). 화면이
@@ -2376,7 +2365,10 @@ static func stats_of(job: String, level: int, equipped: Dictionary) -> Dictionar
 		stats["gear_" + key] = float(gear[key])
 	stats.crit = maxf(float(stats.crit) + gear.crit, 0.0)
 	stats.critDamage += gear.critDamage
-	stats.attackSpeed = maxf(float(stats.attackSpeed) + gear.attackSpeed, 0.0)
+	# 캐릭터 정보 창이 패시브 몫을 따로 적는다 — 더하기 전 값을 같이 내린다
+	var passive := Skills.passive_bonus(job, passives)
+	stats["passive_attackSpeed"] = float(passive.get("attackSpeed", 0.0))
+	stats.attackSpeed = maxf(float(stats.attackSpeed) + gear.attackSpeed + stats.passive_attackSpeed, 0.0)
 	# **쿨감·관통만 90% 에서 멈춘다** ★ (2026-09-23 지시). 수치를 더 주고 싶으면
 	# 이 줄이 아니라 옵션 최대치(`OPTION_MAX_VALUE`)를 올린다
 	var c := GameData.combat()

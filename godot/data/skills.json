@@ -272,6 +272,7 @@
       "castMs": 1000,
       "maxTargets": 4,
       "reqLevel": 1,
+      "hidden": true,
       "description": "손톱을 세워 앞 부채꼴을 세 번 긁어낸다."
     },
     "sky_breaker": {
@@ -333,6 +334,7 @@
       "maxTargets": 8,
       "reqLevel": 30,
       "tier": 1,
+      "hidden": true,
       "description": "기를 모아 손바닥으로 내질러 앞을 휩쓴다."
     },
     "nova_fist": {
@@ -348,6 +350,7 @@
       "maxTargets": 10,
       "reqLevel": 120,
       "tier": 3,
+      "hidden": true,
       "description": "주먹에 기를 실어 내질러 일대를 폭발시킨다."
     },
     "crush_fist": {
@@ -363,16 +366,12 @@
       "maxTargets": 10,
       "reqLevel": 70,
       "tier": 2,
+      "hidden": true,
       "description": "기마 자세로 기를 모았다가 주먹을 내질러 앞을 산산이 부순다."
     }
   },
   "byJob": {
-    "fighter": [
-      "rising_kick",
-      "ki_burst",
-      "crush_fist",
-      "nova_fist"
-    ],
+    "fighter": [],
     "mage": [
       "fireball",
       "frost_nova",
@@ -531,34 +530,16 @@
     }
   ],
   "upgradeMax": 2,
-  "jobAdvances": [
+  "passives": [
     {
-      "tier": 1,
-      "level": 30,
-      "zone": "job_1",
-      "boss": "boss02",
-      "bossLevel": 29
-    },
-    {
-      "tier": 2,
-      "level": 70,
-      "zone": "job_2",
-      "boss": "boss06",
-      "bossLevel": 69
-    },
-    {
-      "tier": 3,
-      "level": 120,
-      "zone": "job_3",
-      "boss": "boss11",
-      "bossLevel": 119
-    },
-    {
-      "tier": 4,
-      "level": 180,
-      "zone": "job_4",
-      "boss": "boss17",
-      "bossLevel": 179
+      "id": "gale_kicks",
+      "job": "fighter",
+      "name": "질풍각",
+      "description": "발차기가 바람처럼 빨라진다.",
+      "stat": "attackSpeed",
+      "perRank": 0.31,
+      "everyLevels": 10,
+      "maxRank": 20
     }
   ]
 }

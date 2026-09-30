@@ -309,6 +309,8 @@ fetch_icon eb9cc29622b3030bd7d35e327ef00e9d skill_frost_pillar
 fetch_icon c0835bf86d0847fe4cadc3f7c5090c78 skill_ki_burst
 fetch_icon c65ce9a57a1437995b6445fdafbb01d1 skill_crush_fist
 fetch_icon f5b4d86f87536275ef83fc7ceb1b3533 skill_nova_fist
+# 질풍각 — 패시브 (2026-09-29). 같은 참고 그림을 물려 두 장 뽑아 둘째 장(맨발 여럿이 돌풍 속에서 연달아)을 골랐다
+fetch_icon 10ae54e87397299c57a80cec9dbcaf35 skill_gale_kicks
 # 메인 HUD. 아트를 **두 번** 갈았다 — 처음 뽑은 두꺼운 금테가 "너무 두껍다" 는
 # 지적을 받고(2026-09-20), 받은 그림대로 **머리카락처럼 얇은 금선**과 **테 없는
 # 선화 아이콘**으로 다시 뽑았다. 아래 주소가 그 두 번째 것이다.

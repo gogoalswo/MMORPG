@@ -78,6 +78,31 @@ CROSS = pose(GUARD,
              lh=(0.09, -0.10, 0.80),
              rf=(-0.10, 0.09, 0.10), rfYaw=0, rfPitch=25)
 
+# 연속 발차기 — **평타** (2026-09-29 요청: "새로운 연속 발차기 애니메이션을 만들어. 공속이 빨라지면
+# 그만큼 애니메이션을 빠르게 재생해"). 칠 때마다 오른발(뒷발) · 왼발(앞발) 앞차기를 번갈아 찬다.
+# 무릎을 접어 올렸다(0.06) 곧게 뻗어 명치 높이를 차고(0.12 = 맞는 순간) 다시 접어 싸움 자세로.
+# 고도는 공속만큼 배속으로 튼다(`swing.speed` = 1 + 공속) — Lv.200 이면 7.2배라 한 번에 0.08초
+KICK_R_CHAMBER = pose(GUARD,
+                      hips=(0.02, 0.0, -0.02), hipsR=(0, 0, 4),
+                      spine=(-4, 0, 6), head=(2, 0, -8),
+                      lh=(0.12, -0.16, 0.76), rh=(-0.13, -0.02, 0.74),
+                      rf=(-0.08, -0.08, 0.36), rfPole=(0, -1, 0.6), rfYaw=0, rfPitch=-20)
+KICK_R_EXTEND = pose(KICK_R_CHAMBER,
+                     hips=(0.02, -0.03, -0.02), hipsR=(0, 0, 10),
+                     spine=(-10, 0, 8), head=(6, 0, -12),
+                     rh=(-0.17, 0.04, 0.72),
+                     rf=(-0.06, -0.44, 0.50), rfPole=(0, -0.3, 1), rfPitch=-10)
+KICK_L_CHAMBER = pose(GUARD,
+                      hips=(-0.02, 0.02, -0.02), hipsR=(0, 0, -20),
+                      spine=(-4, 0, -10), head=(2, 0, 24),
+                      lh=(0.13, -0.04, 0.75), rh=(-0.06, -0.14, 0.76),
+                      lf=(0.09, -0.20, 0.36), lfPole=(0, -1, 0.6), lfPitch=-20)
+KICK_L_EXTEND = pose(KICK_L_CHAMBER,
+                     hips=(-0.02, -0.01, -0.02), hipsR=(0, 0, -24),
+                     spine=(-10, 0, -12), head=(6, 0, 28),
+                     lh=(0.16, 0.02, 0.73),
+                     lf=(0.08, -0.48, 0.50), lfPole=(0, -0.3, 1), lfPitch=-10)
+
 # 할퀴기 — 넓은 자세에서 오른손·왼손·오른손으로 앞을 가로질러 긁는다.
 # 이펙트의 첫 줄기가 캐릭터 오른쪽에서 왼쪽으로 가고 번갈아 돈다 (`SkillFx.local_point`)
 CLAW_BASE = pose(GUARD,
@@ -365,6 +390,13 @@ CLIPS = {
             (0.40, GUARD, "BEZIER"), (0.60, GUARD, "BEZIER")],
     "Cross": [(0.0, GUARD, "LINEAR"), (0.10, CROSS, "BEZIER"), (0.20, CROSS, "BEZIER"),
               (0.42, GUARD, "BEZIER"), (0.60, GUARD, "BEZIER")],
+    # 평타 — 번갈아 찬다. 0.12 가 맞는 순간, 0.45 에 싸움 자세로 돌아와 0.60 까지 선다
+    "KickR": [(0.0, GUARD, "LINEAR"), (0.06, KICK_R_CHAMBER, "LINEAR"),
+              (0.12, KICK_R_EXTEND, "BEZIER"), (0.18, KICK_R_EXTEND, "BEZIER"),
+              (0.28, KICK_R_CHAMBER, "BEZIER"), (0.45, GUARD, "BEZIER"), (0.60, GUARD, "BEZIER")],
+    "KickL": [(0.0, GUARD, "LINEAR"), (0.06, KICK_L_CHAMBER, "LINEAR"),
+              (0.12, KICK_L_EXTEND, "BEZIER"), (0.18, KICK_L_EXTEND, "BEZIER"),
+              (0.28, KICK_L_CHAMBER, "BEZIER"), (0.45, GUARD, "BEZIER"), (0.60, GUARD, "BEZIER")],
     "Claw": [(0.0, CLAW_R_WIND, "LINEAR"), (0.10, CLAW_R_DONE, "LINEAR"),
              (0.18, CLAW_L_DONE, "LINEAR"), (0.28, CLAW_R_LAST, "BEZIER"),
              (0.46, CLAW_R_LAST, "BEZIER"), (0.75, GUARD, "BEZIER"), (1.0, "IDLE", "BEZIER")],

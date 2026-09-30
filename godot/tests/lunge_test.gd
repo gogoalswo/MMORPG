@@ -229,7 +229,6 @@ func _case_skill_in_reach() -> void:
 	var s := _setup(4.5, 0.0)
 	var w: World = s[0]
 	var me: Dictionary = s[1]
-	me.job_tier = 9
 	me.skills = ["frost_pillar"]
 	me.skill_bar = ["frost_pillar"]
 	w.set_auto("me", true)

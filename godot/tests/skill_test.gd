@@ -67,9 +67,6 @@ func _setup(mob_count: int = 1) -> Array:
 	# 마을 도착 지점은 문(한가운데)을 비켜 (4, 4)다 — 허수아비 자리를 재기 쉽게 한가운데에 세운다
 	me.x = 0.0
 	me.z = 0.0
-	# 스킬 판정을 보는 테스트다 — 전직 스킬(낙뢰·빙주각·천붕각)을 다 쓰게 3차까지 마쳐 둔다.
-	# 전직 잠금 자체는 job_advance_test 가 본다
-	me["job_tier"] = 3
 	# 배우기·액션바를 빈손에서 본다 — 새 캐릭터의 첫 스킬은 `_case_starter` 가 본다
 	me.skills = []
 	me.skill_bar = []
@@ -91,6 +88,13 @@ func _case_starter() -> void:
 	w.open("village")
 	w.join("me")
 	var me: Dictionary = w.snapshot().players["me"]
+	# 보이는 스킬이 없는 직업(격투가, 2026-09-29 — 평타만 쓴다)은 빈손으로 시작한다
+	if Skills.for_job(str(me.job)).is_empty():
+		if not me.skills.is_empty() or not me.skill_bar.is_empty():
+			_fail("새 캐릭터: 보이는 스킬이 없는데 %s · %s 를 쥐고 시작했다" % [me.skills, me.skill_bar])
+		else:
+			print("  새 캐릭터: 보이는 스킬 없음 — 빈 퀵슬롯으로 시작")
+		return
 	var first := str(Skills.for_job(str(me.job))[0])
 	if me.skills != [first] or me.skill_bar != [first]:
 		_fail("새 캐릭터: 배움 %s · 액션바 %s — %s 하나여야 한다" % [str(me.skills), str(me.skill_bar), first])
@@ -144,9 +148,11 @@ func _case_bar() -> void:
 	if me.skill_bar.size() != 0:
 		_fail("안 배운 스킬이 액션바에 올라갔다")
 
-	for id in Skills.for_job("fighter"):
+	# 격투가 스킬은 전부 숨김이다(2026-09-29) — 판정은 남아 있어 id 로 직접 배운다
+	var four := ["rising_kick", "ki_burst", "crush_fist", "nova_fist"]
+	for id in four:
 		w.learn_skill("me", str(id))
-	w.set_skill_bar("me", Skills.for_job("fighter"))
+	w.set_skill_bar("me", four)
 	if me.skill_bar.size() != size:
 		_fail("액션바가 %d칸이어야 하는데 %d" % [size, me.skill_bar.size()])
 	else:

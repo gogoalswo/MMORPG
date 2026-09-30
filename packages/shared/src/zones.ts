@@ -1,7 +1,6 @@
 import { ZONE_SIZE, type GateDef, type GroundKind, type ZoneDef, type ZoneEnv } from './zone.ts';
 import { monsterIdFor, tierLevels } from './monsters.ts';
 import { dungeonZones } from './dungeons.ts';
-import { jobAdvanceZones } from './jobAdvance.ts';
 
 /**
  * 존 배치.
@@ -194,16 +193,11 @@ const VILLAGE: ZoneDef = {
   spawns: { default: [4, 4] },
   // 사냥터로 나가는 유일한 문. 색·이름은 사냥터와 같고 **자리만 맵 한가운데**다
   gate: gateFor(VILLAGE_GATE_SPOT),
-  // **전직관 한 명만 선다** (2026-09-26 요청: "마을에 불필요한 NPC들은 제거해. 지금은 전직
-  // 교관만 있으면 되겠어"). 상인·대장장이·마을 사람 넷을 뺐다. 상점·대장간 판정(`World`)과
-  // 창(`NpcPanel`), 모델(`merchant`·`smith`·`villager_*`)은 남아 있다 — 줄만 되살리면 선다
-  // → docs/features/npc-town.md
-  npcs: [
-    // 전직 — **문 위에서 살짝 왼쪽** (2026-09-29 요청). 화면 위는 (-x, -z), 왼쪽은 (-x, +z)라
-    // 위로 7m·왼쪽으로 2m 다. 문 아치가 5.2m 높이라 그보다 가까우면 아치 뒤에 가려진다.
-    // 누르면 다음 전직 버튼이 뜨고, 레벨이 되면 시험(보스)으로 보낸다 (jobAdvance.ts)
-    { name: '전직관 레온', job: 'fighter', look: 'trainer', x: -6.5, z: -3.5, role: 'jobs', title: '전직' },
-  ],
+  // **아무도 서지 않는다** (2026-09-29 요청: "전직관 삭제해" — 전직을 통째로 없앴다).
+  // 그 전엔 전직관 레온 한 명(2026-09-26 요청으로 상인·대장장이·마을 사람 넷을 뺐다)이었다.
+  // 상점·대장간 판정(`World`)과 창(`NpcPanel`), 모델(`merchant`·`smith`·`trainer`·`villager_*`)은
+  // 남아 있다 — 줄만 되살리면 선다 → docs/features/npc-town.md
+  npcs: [],
   env: {
     skyColor: '#b9c9d8',
     sunIntensity: 2.7,
@@ -223,8 +217,6 @@ export const ZONES: Record<string, ZoneDef> = {
   ...Object.fromEntries(FIELDS.map((theme, i) => [theme.id, buildField(theme, i)])),
   // 던전 단계마다 존 하나 — 차원문 목록에는 없고 던전 창으로만 간다 (dungeons.ts)
   ...Object.fromEntries(dungeonZones(gateFor).map((zone) => [zone.id, zone])),
-  // 전직 시험마다 존 하나 — 전직 NPC 로만 간다 (jobAdvance.ts)
-  ...Object.fromEntries(jobAdvanceZones(gateFor).map((zone) => [zone.id, zone])),
 };
 
 export const START_ZONE = VILLAGE.id;

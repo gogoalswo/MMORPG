@@ -41,18 +41,18 @@ func _first(events: Array, type_name: String) -> Dictionary:
 	return {}
 
 
-## 마을에는 **전직관 한 명만** 선다 (2026-09-26 요청: "지금은 전직 교관만 있으면 되겠어")
+## 마을에는 **아무도 서지 않는다** (2026-09-29 요청: "전직관 삭제해"). 그 전엔 전직관 한 명이었다
 func _case_list() -> void:
 	var w := World.new()
 	w.open("village")
 	var npcs: Array = w.snapshot().get("npcs", [])
-	if npcs.size() != 1 or str(npcs[0].get("role", "")) != "jobs":
-		_fail("마을 NPC 가 전직관 한 명이 아니다: %s" % str(npcs.map(func(n): return n.get("name", ""))))
+	if not npcs.is_empty():
+		_fail("마을에 NPC 가 서 있다: %s" % str(npcs.map(func(n): return n.get("name", ""))))
 	else:
-		print("  마을 NPC: %s 한 명" % npcs[0].name)
+		print("  마을 NPC: 없음")
 	# 시험용으로 세운 상인이 전역 존 표로 새지 않았나 (복사해서 고친다)
 	_village()
-	if GameData.zone("village").get("npcs", []).size() != 1:
+	if not GameData.zone("village").get("npcs", []).is_empty():
 		_fail("시험용 상인이 GameData 의 존 표로 샜다")
 
 

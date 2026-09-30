@@ -112,6 +112,18 @@ export function attackRootMs(cooldownMs: number): number {
  */
 export const MONSTER_SWING_MS = 650;
 
+/**
+ * 휘두르기를 시작하고 **몸이 닿기까지** (ms). 판정은 휘두르기를 알리고 이만큼 뒤에 피해를 넣는다 ★
+ *
+ * 2026-09-30 지적: "몬스터가 플레이어를 실제 공격 할 때 액션이랑 데미지 입히는 타이밍이 안 맞아".
+ * 전에는 휘두르는 **순간** 피해를 넣고, 화면은 그 피해 알림을 받고서야 `Attack` 을 0.8초부터
+ * 틀었다. 손이 닿는 건 클립 1.00초(오우거 할퀴기 정점 — 위, 저레벨 여섯도 1.00 에 맞췄다)라
+ * **숫자가 늘 0.2초 먼저 떴다.** 0.2초 = 1.00 − 0.80 (`game.gd` 의 `MOB_SWING_FROM`).
+ * 그 사이 사거리 밖(+0.5m)으로 빠지면 빗나간다 — 보고 피할 수 있는 것도 이 덕이다.
+ * 경직(`MONSTER_SWING_MS`)보다 짧아야 한다 — 닿는 순간까지는 서 있어야 한다.
+ */
+export const MONSTER_HIT_DELAY_MS = 200;
+
 /** 짐승이 한 번 휘두르는 동안 묶이는 시간. 공격 간격을 넘지 않는다 */
 export function monsterRootMs(cooldownMs: number): number {
   return Math.max(0, Math.min(MONSTER_SWING_MS, Math.round(cooldownMs)));

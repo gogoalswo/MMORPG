@@ -310,6 +310,7 @@ func _run_scene() -> void:
 
 	await _case_status(game)
 	await _case_potion(game)
+	await _case_sound(game)
 	await _case_auto_priority(game)
 	await _case_bag_dot(game)
 	await _case_bag(game)
@@ -389,6 +390,45 @@ func _case_auto_priority(game: Node3D) -> void:
 	me.skills = kept_skills
 	me.skill_bar = kept_bar
 	print("  자동사냥 설정: 쿨타임 긴 순 → 위로 올리기 → 되돌리기")
+
+
+## 소리 설정 — 메뉴 "설정" 으로 창이 뜨고, -/+ · 슬라이더가 Master 버스 볼륨을 바꾸고 저장한다.
+## 0 이면 버스를 음소거한다. 끝에 처음 값으로 되돌린다
+func _case_sound(game: Node3D) -> void:
+	var before := SoundSettings.volume()
+	var cell: Control = null
+	for c in game._menu_cells:
+		if c.find_child("hit", true, false).tooltip_text == "설정":
+			cell = c
+	if cell == null:
+		_fail("메뉴에 설정 단추가 없다")
+		return
+	cell.find_child("hit", true, false).pressed.emit()
+	await process_frame
+	var panel: Control = game._sound_panel
+	if not panel.visible:
+		_fail("설정을 눌렀는데 소리 창이 안 떴다")
+	var bus := AudioServer.get_bus_index("Master")
+	game._set_sound(50)
+	panel.find_child("sound_up", true, false).pressed.emit()
+	await process_frame
+	if SoundSettings.volume() != 60 or game._sound_label.text != "60%" \
+			or absf(AudioServer.get_bus_volume_db(bus) - linear_to_db(0.6)) > 0.01:
+		_fail("+ 를 눌렀는데 볼륨 %d · 글자 '%s' · %.2fdB" % [
+			SoundSettings.volume(), game._sound_label.text, AudioServer.get_bus_volume_db(bus)])
+	var slider: HSlider = panel.find_child("sound_slider", true, false)
+	slider.value = 0
+	await process_frame
+	if SoundSettings.volume() != 0 or not AudioServer.is_bus_mute(bus) or game._sound_label.text != "소리 끔":
+		_fail("슬라이더를 0 으로 끌었는데 음소거가 아니다 (볼륨 %d · 글자 '%s')" % [
+			SoundSettings.volume(), game._sound_label.text])
+	panel.find_child("sound_down", true, false).pressed.emit()
+	if SoundSettings.volume() != 0:
+		_fail("0 아래로 내려갔다: %d" % SoundSettings.volume())
+	game._set_sound(before)
+	if AudioServer.is_bus_mute(bus):
+		_fail("되돌렸는데 음소거가 남았다")
+	game._toggle_sound_panel()
 
 
 func _case_potion(game: Node3D) -> void:
@@ -536,9 +576,9 @@ func _case_status(game: Node3D) -> void:
 	# 오른쪽 위 메뉴 — 화면 안, 묶음과 안 겹침.
 	# 정보 · 스킬 · 강화 · 크리스탈 · 가방 · 던전 (강화·크리스탈은 2026-09-24 에 가방 왼쪽에,
 	# 정보는 2026-09-25 에 맨 앞에 더했다). 설계는 2026-09-28 에 오른쪽 맨 아래로 뺐다 — 아래에서 본다.
-	# 헬스는 2026-09-30 에 던전 옆에 더했다 (docs/features/fitness.md)
-	if game._menu_cells.size() != 7:
-		_fail("오른쪽 위 단추가 7개여야 하는데 %d개" % game._menu_cells.size())
+	# 헬스는 2026-09-30 에 던전 옆에 더했다 (docs/features/fitness.md). 설정(소리)은 같은 날 맨 끝에
+	if game._menu_cells.size() != 8:
+		_fail("오른쪽 위 단추가 8개여야 하는데 %d개" % game._menu_cells.size())
 		return
 	# 설계 단추 — 오른쪽 맨 아래 모서리에 붙고, 알파 0 이라 안 보이지만 누르면 창이 열린다
 	var design_rect: Rect2 = game._design_cell.get_global_rect()

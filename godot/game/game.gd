@@ -4942,7 +4942,7 @@ func _show_hit(payload: Dictionary) -> void:
 	at.y = HitFx.chest_y(body, 1.0)
 
 	var font: Font = _ui_root.theme.default_font if _ui_root.theme != null else null
-	var fx := HitFx.spawn(_fx, at, payload, font)
+	var fx := HitFx.spawn(_fx, at, payload, font, body)
 	if body != null and not bool(payload.get("heal", false)):
 		fx.flash_body(body)
 

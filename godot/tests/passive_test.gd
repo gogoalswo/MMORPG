@@ -2,7 +2,7 @@ extends SceneTree
 
 ## 패시브 질풍각 (docs/features/passives.md) — **판정은 장부가 다시 본다.**
 ## 레벨마다 한 단계가 열리고 [습득] 한 번에 한 단계, 공속은 여기서만 온다.
-## Lv.200 · 20단계면 격투가 평타가 100ms = 초당 10번이다 (2026-09-30 요청, 처음엔 8번)
+## 2레벨마다 한 단계, Lv.200 · 100단계면 격투가 평타가 100ms = 초당 10번이다 (2026-09-30 요청, 처음엔 8번)
 ##
 ##   godot --headless --path godot --script tests/passive_test.gd
 
@@ -47,44 +47,43 @@ func _case_learn() -> void:
 	var s := _me()
 	var w: World = s[0]
 	var me: Dictionary = s[1]
-	me.level = 9
+	me.level = 1
 	w.learn_passive("me", "gale_kicks")
 	if _rank(me) != 0:
-		_fail("Lv.9 인데 1단계를 배웠다")
-	me.level = 25
+		_fail("Lv.1 인데 1단계를 배웠다")
+	me.level = 5
 	w.learn_passive("me", "gale_kicks")
 	w.learn_passive("me", "gale_kicks")
 	w.learn_passive("me", "gale_kicks")
 	if _rank(me) != 2:
-		_fail("Lv.25 는 두 단계까지인데 %d단계" % _rank(me))
-	# Lv.10 철각도 배워야 Lv.25 에 배울 것이 없다
-	w.learn_passive("me", "iron_leg")
-	if Skills.passive_learnable("fighter", 25, me.passives):
+		_fail("Lv.5 는 두 단계까지(2레벨마다 한 단계)인데 %d단계" % _rank(me))
+	if Skills.passive_learnable("fighter", 5, me.passives):
 		_fail("열린 단계를 다 배웠는데 레드닷 조건이 켜져 있다")
-	if not Skills.passive_learnable("fighter", 30, me.passives):
-		_fail("Lv.30 이면 3단계가 열려 레드닷 조건이 켜져야 한다")
+	if not Skills.passive_learnable("fighter", 6, me.passives):
+		_fail("Lv.6 이면 3단계가 열려 레드닷 조건이 켜져야 한다")
 	w.learn_passive("me", "없는패시브")
 	me.level = 999
-	for i in 30:
+	for i in 120:
 		w.learn_passive("me", "gale_kicks")
 	var top := int(Skills.passive("gale_kicks").maxRank)
 	if _rank(me) != top:
 		_fail("끝 단계가 %d 인데 %d단계" % [top, _rank(me)])
 	else:
-		print("  배우기: Lv.9 막힘 · Lv.25 두 단계까지 · 끝 %d단계에서 멈춤" % top)
+		print("  배우기: Lv.1 막힘 · Lv.5 두 단계까지 · 끝 %d단계에서 멈춤" % top)
 
 
-## 20단계면 격투가 평타 간격 100ms (초당 10번) — `stats_of` 가 더한다
+## 끝 단계(100)면 격투가 평타 간격 100ms (초당 10번) — `stats_of` 가 더한다
 func _case_speed() -> void:
-	var stats := World.stats_of("fighter", 200, {}, {"gale_kicks": 20})
+	var top := int(Skills.passive("gale_kicks").maxRank)
+	var stats := World.stats_of("fighter", 200, {}, {"gale_kicks": top})
 	var interval := Combat.effective_cooldown(stats.attackCooldown, stats.attackSpeed)
 	if interval != 100:
-		_fail("Lv.200 · 20단계 평타 간격이 100ms 가 아니다: %dms" % interval)
+		_fail("Lv.200 · %d단계 평타 간격이 100ms 가 아니다: %dms" % [top, interval])
 	var bare := World.stats_of("fighter", 200, {})
 	if float(bare.attackSpeed) != 0.0:
 		_fail("패시브 없이 공속이 %s" % bare.attackSpeed)
-	print("  공속: 0단계 %dms → 20단계 %dms (초당 %.1f번)" % [
-		Combat.effective_cooldown(bare.attackCooldown, bare.attackSpeed), interval, 1000.0 / interval
+	print("  공속: 0단계 %dms → %d단계 %dms (초당 %.1f번)" % [
+		Combat.effective_cooldown(bare.attackCooldown, bare.attackSpeed), top, interval, 1000.0 / interval
 	])
 
 
@@ -129,7 +128,7 @@ func _case_kill_check() -> void:
 	var ledger := Ledger.fresh("fighter")
 	ledger.level = 200
 	var slow := KillCheck.min_ms(ledger, kind)
-	ledger.passives = {"gale_kicks": 20}
+	ledger.passives = {"gale_kicks": int(Skills.passive("gale_kicks").maxRank)}
 	var fast := KillCheck.min_ms(ledger, kind)
 	if fast >= slow:
 		_fail("패시브를 배웠는데 최소 처치 시간이 그대로다: %.0f → %.0fms" % [slow, fast])

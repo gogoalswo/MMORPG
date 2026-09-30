@@ -4001,10 +4001,10 @@ func _redraw_skills() -> void:
 	_redraw_upgrades(me)
 
 
-## 패시브 나무를 짓는다 — 직업이 바뀔 때만. **줄은 레벨**(10·20·…·200), **칸은 계열**:
+## 패시브 나무를 짓는다 — 직업이 바뀔 때만. **줄은 레벨**(여는 레벨), **칸은 계열**:
 ## 앞 단계(`requires`)가 있는 패시브는 그 계열 칸 아래에 선다 (치확 50 → 150 · 치피 70 → 200).
-## 질풍각은 20단계가 한 칸에 줄지어 선다 — 칸 하나가 습득 한 번이다
-## (2026-09-30 요청: "레벨 버튼을 눌러서 레벨업 하는 방식이 아니라 다음 스킬을 계속 습득하는 방식으로").
+## 단계가 여럿인 패시브(질풍각 100단계)는 **칸 하나**(`step` 0)에서 [레벨업] 으로 올린다 — 2레벨마다
+## 한 단계라 단계마다 칸을 세우면 스크롤이 너무 길다 (2026-09-30 요청: "이전처럼 같은 칸에 레벨 올리는 식으로").
 ## 칸은 `Container` 에 자리를 박아 둔다 — 끌기·누르기는 가방과 같은 `DragScroll` 이 맡는다.
 ## 칸을 먼저 넣고 레벨 글자는 뒤에 넣는다 — 나무 자식 번호가 `_tree_nodes` 번호와 같아야 한다
 func _build_tree(job: String) -> void:
@@ -4023,11 +4023,12 @@ func _build_tree(job: String) -> void:
 		else:
 			column_of[str(p.id)] = columns
 			columns += 1
-		for step in range(1, int(p.maxRank) + 1):
-			var at := step * int(p.everyLevels)
-			if not at in levels:
-				levels.append(at)
-			_tree_nodes.append({"id": str(p.id), "step": step, "level": at, "column": column_of[str(p.id)]})
+		var at := int(p.everyLevels)
+		if not at in levels:
+			levels.append(at)
+		# 단계가 여럿이면 칸 하나 — `step` 0 은 "다음에 배울 단계"(`_cell_step`)
+		var step := 0 if int(p.maxRank) > 1 else 1
+		_tree_nodes.append({"id": str(p.id), "step": step, "level": at, "column": column_of[str(p.id)]})
 	levels.sort()
 	for index in _tree_nodes.size():
 		var node: Dictionary = _tree_nodes[index]
@@ -4037,8 +4038,9 @@ func _build_tree(job: String) -> void:
 		cell.size = Vector2(TREE_CELL, TREE_CELL)
 		_tree.add_child(cell)
 		_fill_skill_cell(cell, node.id, "")
-		# 칸마다 "N단" — 질풍각은 칸마다 같은 그림이고, 계열(철각 1~4단)도 그림을 같이 쓴다
-		cell.find_child("badge", true, false).text = Skills.passive_title(Skills.passive(node.id), node.step).rsplit(" ", true, 1)[-1]
+		# 칸마다 "N단" — 계열(철각 1~4단)은 그림을 같이 쓴다. 한 칸짜리 여러 단계는 `_redraw_tree` 가 "배운/끝" 을 적는다
+		if int(node.step) > 0:
+			cell.find_child("badge", true, false).text = Skills.passive_title(Skills.passive(node.id), node.step).rsplit(" ", true, 1)[-1]
 		node.cell = cell
 		node.dot = _add_red_dot(cell)
 	for row in levels.size():
@@ -4075,8 +4077,17 @@ func _tree_ready_index() -> int:
 	return -1
 
 
-## 나무 칸 하나의 상태 — "done"(배움) · "ready"(지금 습득) · "level"(레벨 모자람) · "order"(앞 단계부터)
+## 나무 칸의 단계. 한 칸짜리 여러 단계(`step` 0)는 **다음에 배울 단계** — 끝까지 배웠으면 끝 단계
+func _cell_step(p: Dictionary, step: int, ranks: Dictionary) -> int:
+	if step > 0:
+		return step
+	return mini(int(ranks.get(str(p.id), 0)) + 1, int(p.maxRank))
+
+
+## 나무 칸 하나의 상태 — "done"(배움) · "ready"(지금 습득) · "level"(레벨 모자람) · "order"(앞 단계부터).
+## 한 칸짜리 여러 단계는 다음 단계로 본다 — 끝까지 배워야 "done"
 func _tree_state(p: Dictionary, step: int, level: int, ranks: Dictionary) -> String:
+	step = _cell_step(p, step, ranks)
 	var rank := int(ranks.get(str(p.id), 0))
 	if rank >= step:
 		return "done"
@@ -4094,7 +4105,12 @@ func _redraw_tree(level: int, ranks: Dictionary) -> void:
 	for node in _tree_nodes:
 		var state := _tree_state(Skills.passive(node.id), node.step, level, ranks)
 		node.cell.get_node("pick").visible = node.id == _skill_pick and int(node.step) == _passive_step
-		var shade := Color.WHITE if state == "done" else TREE_SHADE
+		var rank := int(ranks.get(str(node.id), 0))
+		# 한 칸짜리 여러 단계는 한 단계라도 배웠으면 밝고, 칸에 "배운/끝" 단계를 적는다
+		var many := int(node.step) == 0
+		if many:
+			node.cell.find_child("badge", true, false).text = "%d/%d" % [rank, int(Skills.passive(node.id).maxRank)]
+		var shade := Color.WHITE if state == "done" or (many and rank > 0) else TREE_SHADE
 		node.cell.self_modulate = shade
 		node.cell.find_child("icon", true, false).modulate = shade
 		node.dot.visible = state == "ready"
@@ -4117,7 +4133,9 @@ func _draw_tree_arrows() -> void:
 			var x := _tree_spot(column, 0).x + TREE_CELL * 0.5
 			var top := _tree_spot(column, upper.row).y + TREE_CELL + 6
 			var tip := _tree_spot(column, list[i].row).y - 6
-			var lit := int(ranks.get(upper.id, 0)) >= int(upper.step)
+			# 한 칸짜리 여러 단계는 끝까지 배워야 금빛 — 뒤 칸의 `requires` 가 그렇다
+			var need := int(upper.step) if int(upper.step) > 0 else int(Skills.passive(upper.id).maxRank)
+			var lit := int(ranks.get(upper.id, 0)) >= need
 			var color := INV_GOLD_HI if lit else Color(INV_DIM, 0.6)
 			_tree.draw_line(Vector2(x, top), Vector2(x, tip - 12), color, 3.0)
 			_tree.draw_colored_polygon(PackedVector2Array([
@@ -4126,13 +4144,16 @@ func _draw_tree_arrows() -> void:
 
 
 ## 고른 나무 칸(패시브 · 단계)을 왼쪽 칸에 적고 [습득] 을 맞춘다. **레벨이 되면 공짜** — 되는지는 장부가 다시 본다.
-## 칸 하나가 습득 한 번이라 단추는 늘 "습득"이다 ("레벨업" 은 2026-09-30 나무로 바꾸며 걷었다).
-## 질풍각은 초당 타수를 지금 스탯(`me.stats`, 패시브가 이미 더해진 것)과 이 칸까지 배운 뒤로 나란히 적는다
+## 칸 하나가 한 단계인 패시브는 단추가 늘 "습득", 한 칸짜리 여러 단계(질풍각)는 처음만 "습득" 이고 그 뒤로 "레벨업".
+## 질풍각은 초당 타수를 지금 스탯(`me.stats`, 패시브가 이미 더해진 것)과 다음 단계 뒤로 나란히 적는다
 func _draw_passive(me: Dictionary, passive: Dictionary) -> void:
 	var id := str(passive.id)
-	var step := _passive_step
 	var ranks: Dictionary = me.get("passives", {})
 	var rank := int(ranks.get(id, 0))
+	if _passive_step == 0:
+		_draw_passive_many(me, passive, rank)
+		return
+	var step := _passive_step
 	var at := step * int(passive.everyLevels)
 	_skill_name.text = Skills.passive_title(passive, step)
 	_skill_info.text = "패시브 · %d레벨 습득\n효과 : %s" % [at, Skills.passive_effect(passive, 1)]
@@ -4162,11 +4183,45 @@ func _draw_passive(me: Dictionary, passive: Dictionary) -> void:
 	_passive_dot.visible = state == "ready"
 
 
-## [습득] — 고른 나무 칸을 요청한다. 장부는 "다음 단계" 하나를 올리므로 그 칸이 다음 단계일 때만 보낸다.
-## 답(`passives`)이 오면 창을 다시 그린다
+## 한 칸짜리 여러 단계(질풍각) — "N / 끝 단계" · 현재 · 다음 단계, 초당 타수 지금 → 다음 단계.
+## 단추는 처음(0단계)만 "습득", 그 뒤로 "레벨업" (나무 이전 판과 같다, 2026-09-30 요청으로 되살렸다)
+func _draw_passive_many(me: Dictionary, passive: Dictionary, rank: int) -> void:
+	var top := int(passive.maxRank)
+	var per := float(passive.perRank)
+	_skill_name.text = Skills.passive_title(passive, rank) if rank > 0 else str(passive.get("name", passive.id))
+	var next := "없음" if rank >= top else Skills.passive_effect(passive, rank + 1)
+	var now := Skills.passive_effect(passive, rank) if rank > 0 else "없음"
+	_skill_info.text = "패시브 · %d / %d 단계\n현재 단계 : %s\n다음 단계 : %s" % [rank, top, now, next]
+	_skill_desc.text = str(passive.get("description", ""))
+	if str(passive.get("stat", "")) == "attackSpeed":
+		var stats: Dictionary = me.get("stats", {})
+		var base := float(stats.get("attackCooldown", 900))
+		var speed := float(stats.get("attackSpeed", 0.0))
+		_skill_desc.text += "\n\n초당 %.1f회 공격" % (1000.0 / Combat.effective_cooldown(base, speed))
+		if rank < top:
+			_skill_desc.text += " → 다음 단계 %.1f회" % (1000.0 / Combat.effective_cooldown(base, speed + per))
+	var state := _tree_state(passive, 0, int(me.get("level", 1)), me.get("passives", {}))
+	match state:
+		"done":
+			_skill_state.text = "끝까지 배웠습니다"
+		"ready":
+			_skill_state.text = "습득할 수 있습니다"
+		"level":
+			_skill_state.text = "%d레벨에 다음 단계가 열립니다" % ((rank + 1) * int(passive.everyLevels))
+		_:
+			_skill_state.text = "%s 을(를) 먼저 습득해야 합니다" % Skills.passive_title(Skills.passive(str(passive.requires)), 1)
+	_passive_learn.text = "습득" if rank == 0 else "레벨업"
+	_passive_learn.disabled = state != "ready"
+	_passive_dot.visible = state == "ready"
+
+
+## [습득] — 고른 나무 칸을 요청한다. 장부는 "다음 단계" 하나를 올리므로 그 칸이 다음 단계일 때만 보낸다
+## (한 칸짜리 여러 단계는 늘 다음 단계다). 답(`passives`)이 오면 창을 다시 그린다
 func _on_passive_learn() -> void:
-	var rank := int(_me().get("passives", {}).get(_skill_pick, 0))
-	if not Skills.passive(_skill_pick).is_empty() and rank + 1 == _passive_step:
+	var p := Skills.passive(_skill_pick)
+	var ranks: Dictionary = _me().get("passives", {})
+	var rank := int(ranks.get(_skill_pick, 0))
+	if not p.is_empty() and rank < int(p.maxRank) and rank + 1 == _cell_step(p, _passive_step, ranks):
 		_transport.send(&"learnPassive", {"id": _skill_pick})
 
 

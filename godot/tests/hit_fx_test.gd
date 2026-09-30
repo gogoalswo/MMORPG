@@ -53,7 +53,31 @@ func _run() -> void:
 	await _case_model(game)
 	await _case_player(game)
 	await _case_heal(game)
+	_case_sound(game, mob)
 	_done()
+
+
+## 평타만 소리가 난다 — 스킬 피격·내가 맞음은 조용하다 (2026-09-30)
+func _case_sound(game: Node3D, mob: Dictionary) -> void:
+	var sound: AudioStreamPlayer = game._hit_sound
+	if sound.stream == null:
+		_fail("평타 소리(%s)를 못 읽었다 — npm run sync:godot" % game.HIT_SOUND)
+		return
+	sound.stop()
+	game._on_event(&"hit", _hit(mob, 5, false, false))
+	if not sound.playing:
+		_fail("평타가 맞았는데 소리가 안 났다")
+	sound.stop()
+	var skill_hit := _hit(mob, 5, false, false)
+	skill_hit["skill"] = "rising_kick"
+	game._on_event(&"hit", skill_hit)
+	if sound.playing:
+		_fail("스킬 피격에 평타 소리가 났다")
+	var me: Dictionary = game._transport.snapshot().get("players", {}).get(game._transport.my_id(), {})
+	game._on_event(&"hit", {"target": game._transport.my_id(), "target_kind": "player",
+		"amount": 1, "crit": false, "killed": false, "x": me.x, "z": me.z})
+	if sound.playing:
+		_fail("내가 맞았는데 평타 소리가 났다")
 
 
 ## 몬스터를 때리면 그 자리 가슴 높이에서 터지고, 맞은 몸이 붉어진다

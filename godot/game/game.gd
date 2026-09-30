@@ -290,6 +290,9 @@ var _hp_text: Label
 var _exp_text: Label
 ## 맞았을 때 화면 가장자리가 붉어지는 비네트 (game/hurt_flash.gd)
 var _hurt: HurtFlash
+## 평타가 맞을 때 나는 소리 (2026-09-30 요청). 없으면(에셋을 안 받은 PC) 조용히 넘어간다
+const HIT_SOUND := "res://assets/sfx/hit.wav"
+var _hit_sound: AudioStreamPlayer
 var _touch_guard: TouchGuard
 var _gate_panel: GatePanel
 ## 던전 창 — 가방 옆 단추로 연다 (docs/features/dungeons.md)
@@ -680,6 +683,12 @@ func _build_persistent() -> void:
 	# 제일 먼저 넣어 HUD 글자 밑에 깔린다 — 비네트가 체력·상태를 가리면 안 된다
 	_hurt = HurtFlash.new()
 	_ui_root.add_child(_hurt)
+	_hit_sound = AudioStreamPlayer.new()
+	# 공속이 초당 8번까지 오른다 — 한 벌이면 다음 대가 앞 소리를 끊는다
+	_hit_sound.max_polyphony = 4
+	if ResourceLoader.exists(HIT_SOUND):
+		_hit_sound.stream = load(HIT_SOUND)
+	add_child(_hit_sound)
 	# 폰 웹에서 손가락 떼기를 놓치면 모든 누름이 죽는다 — 막히면 푼다 (touch_guard.gd)
 	_touch_guard = TouchGuard.new()
 	add_child(_touch_guard)
@@ -4920,6 +4929,10 @@ func _show_hit(payload: Dictionary) -> void:
 		var max_hp := float(me.get("stats", {}).get("maxHp", 100))
 		# 최대 체력의 4분의 1을 한 번에 맞으면 제일 진하다
 		_hurt.hit(float(payload.get("amount", 0)) / maxf(1.0, max_hp * 0.25))
+
+	# 평타만 소리를 낸다 — 스킬 피격(`skill` 이 있음)·내가 맞음·회복은 조용하다
+	if not on_me and str(payload.get("skill", "")) == "" and _hit_sound.stream != null:
+		_hit_sound.play()
 
 	_feel_hit(payload, on_me, body)
 

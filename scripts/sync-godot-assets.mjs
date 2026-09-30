@@ -111,6 +111,9 @@ const GROUND = [
   'stone', 'grass', 'snow', 'dirt', 'sand', 'cobble', 'lava', 'soil',
 ].flatMap((kind) => [`ground_${kind}_color.ktx2`, `ground_${kind}_normal.ktx2`]);
 
+/** 효과음. 평타 피격음(2026-09-30) */
+const SFX = ['hit.wav'];
+
 /**
  * 모델 텍스처를 얼마나 줄이나. 1024 짜리를 그대로 두면 고도가 두 포맷으로 구워
  * pck 가 13MB 가 된다 (scripts/shrink-glb-textures.mjs 에 재 본 값이 있다).
@@ -147,6 +150,7 @@ const jobs = [
   // 보내는 쪽과 받는 쪽 폴더 이름을 같게 둔다 — play.bat 이 public/assets 를 통째로
   // 미러링하므로, 이름이 어긋나면 PC 에서만 바닥이 빠진다 (2026-09-19 에 맞췄다)
   { names: GROUND, from: join(ROOT, 'public', 'assets', 'textures'), to: join(ROOT, 'godot', 'assets', 'textures') },
+  { names: SFX, from: join(ROOT, 'public', 'assets', 'sfx'), to: join(ROOT, 'godot', 'assets', 'sfx') },
 ];
 
 let copied = 0;

@@ -10,10 +10,10 @@ extends RefCounted
 ## 차원문(`portal.gd`)과 같은 짜임이다. 바르코 모델을 받으면 이 자리에 넣기만 하면 된다
 
 const MODEL := "res://assets/models/varco_tomb.glb"
-## 묘비 크기(m) — 흙 둔덕의 폭. 처음엔 0.8 로 작게 했다가("크기는 작게 만들어") 2배로 키웠다
-## (2026-09-30 "묘비 크기를 지금의 2배로 키워"). 바르코 모델은 폭·깊이 1 × 높이 0.61 로 나와서
-## 1.6 이면 비석 꼭대기가 1m 쯤 — 사람(1.8m)의 허리께다
-const SIZE := 1.6
+## 묘비 높이(m) — 사람(1.8m)의 허리께. 처음엔 작게(0.5m) 했다가 2배로 키웠다
+## (2026-09-30 "크기는 작게 만들어" → "지금의 2배로 키워"). 그 뒤 흙 둔덕을 뺀 모델로 바꿔서
+## ("묘비만 냅두고 묘비 아래 흙은 제거해") 가장 긴 변이 높이다 — 폭 0.83 × 높이 1 × 깊이 0.55
+const SIZE := 1.0
 ## 모델이 없을 때의 돌판 높이(m) — 모델의 키와 맞춘다
 const FALLBACK_HEIGHT := 1.0
 const STONE := Color("#77726a")
@@ -30,7 +30,7 @@ static func create(x: float, y: float, z: float) -> Node3D:
 		var packed: PackedScene = load(MODEL)
 		var model := packed.instantiate() as Node3D
 		# 모델은 가장 긴 변이 1 로 정규화돼 있고 원점이 한가운데다 (portal.gd 와 같다).
-		# 묘비는 납작해서(높이 0.61) 반이 아니라 **바닥면**을 땅에 앉힌다
+		# 반을 올리는 대신 **바닥면**을 땅에 앉힌다 — 모델이 바뀌어도 받침이 땅에 붙게
 		model.scale = Vector3.ONE * SIZE
 		model.position.y = -_bottom(model) * SIZE
 		root.add_child(model)

@@ -1,8 +1,11 @@
 {
   "start": "village",
   "fieldOrder": [
+    "slime_habitat",
     "meadow",
+    "mushroom_grove",
     "thicket",
+    "scorpion_den",
     "canyon",
     "waste",
     "mire",
@@ -415,9 +418,327 @@
         "groundTint": "#6a665c"
       }
     },
+    "slime_habitat": {
+      "id": "slime_habitat",
+      "name": "슬라임 서식지",
+      "size": 66,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "monsters": [
+        {
+          "kind": "mob003",
+          "x": -26,
+          "z": -11.6,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": 15.8,
+          "z": -4.4,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": -14,
+          "z": 4,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": 15.9,
+          "z": 15.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": -20,
+          "z": -19.9,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": -9.2,
+          "z": 23.5,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": 13.2,
+          "z": -26.3,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": -14.5,
+          "z": -13.6,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": 2.4,
+          "z": -6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": -1.7,
+          "z": 16.2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": -6.3,
+          "z": -5.4,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": 24.7,
+          "z": -9.4,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": 26.2,
+          "z": 2.6,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": 22.1,
+          "z": 22.8,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": -20.9,
+          "z": -1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": 0,
+          "z": -15.6,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": -26.4,
+          "z": 22.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": 10.8,
+          "z": 24.2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": 5.2,
+          "z": 7.5,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": 24.9,
+          "z": -25.5,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": 16,
+          "z": 6.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": -27,
+          "z": -25.8,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": 11,
+          "z": -10.9,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": 1.1,
+          "z": 24.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": -0.5,
+          "z": -26.3,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": -18.9,
+          "z": 15.9,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": -23.6,
+          "z": 8.5,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": -10,
+          "z": 15.4,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": 7.6,
+          "z": -18.9,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": 24.6,
+          "z": 11.2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": -5.1,
+          "z": 8.5,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": -17.1,
+          "z": 26.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": -13.3,
+          "z": -26.5,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": 16.4,
+          "z": -17.9,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": 6.6,
+          "z": 15.5,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": 8.4,
+          "z": -0.3,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob003",
+          "x": -8,
+          "z": -18.9,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        }
+      ],
+      "env": {
+        "skyColor": "#bccfc9",
+        "sunIntensity": 2.7,
+        "hemiIntensity": 1.1,
+        "grassDark": "#5b6e3a",
+        "grassLight": "#88995a",
+        "ground": "grass",
+        "groundTint": "#88995a"
+      }
+    },
     "meadow": {
       "id": "meadow",
-      "name": "초원",
+      "name": "뿔토끼 들판",
       "size": 66,
       "spawns": {
         "default": [
@@ -741,9 +1062,343 @@
         "groundTint": "#7c8b54"
       }
     },
+    "mushroom_grove": {
+      "id": "mushroom_grove",
+      "name": "버섯 군락지",
+      "size": 66,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "monsters": [
+        {
+          "kind": "mob013",
+          "x": -10,
+          "z": 17.6,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": -14,
+          "z": -10.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": 25.1,
+          "z": -19.8,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": 26.1,
+          "z": -5.5,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": -16.1,
+          "z": 8.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": -13,
+          "z": 25.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": -23.2,
+          "z": 0.6,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": 11.1,
+          "z": -23.3,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": -1.5,
+          "z": 15.3,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": -5.9,
+          "z": -26.8,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": 7.2,
+          "z": -14.9,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": -26.4,
+          "z": 19.9,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": -17.5,
+          "z": -17.8,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": 1.1,
+          "z": 6.8,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": 7.5,
+          "z": 15.8,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": 0.5,
+          "z": -8.8,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": 6.1,
+          "z": 25.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": 18.6,
+          "z": 7.6,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": 25.5,
+          "z": 14,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": 14.8,
+          "z": -0.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": -25.2,
+          "z": -11.3,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": -24.9,
+          "z": -26.2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": 20.2,
+          "z": 27,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": -7.6,
+          "z": 0.5,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": 16.4,
+          "z": 18.5,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": 19.2,
+          "z": -12.8,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": -7.7,
+          "z": -17,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": 8.5,
+          "z": -5.8,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": -25.8,
+          "z": 9.2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": 2.6,
+          "z": -22.4,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": -1.9,
+          "z": 26.8,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": 27.2,
+          "z": 21.9,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": -15,
+          "z": -26.6,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": 9.5,
+          "z": 8,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": 21.6,
+          "z": -27.5,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": 26.9,
+          "z": 3.9,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": -7,
+          "z": 8.9,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": -18,
+          "z": 18.2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob013",
+          "x": -22.7,
+          "z": 27,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        }
+      ],
+      "env": {
+        "skyColor": "#6f7a70",
+        "sunIntensity": 1.89,
+        "hemiIntensity": 0.85,
+        "grassDark": "#34402c",
+        "grassLight": "#52603c",
+        "ground": "grass",
+        "groundTint": "#52603c"
+      }
+    },
     "thicket": {
       "id": "thicket",
-      "name": "덤불숲",
+      "name": "사마귀 둥지",
       "size": 66,
       "spawns": {
         "default": [
@@ -1051,9 +1706,343 @@
         "groundTint": "#6b5f49"
       }
     },
+    "scorpion_den": {
+      "id": "scorpion_den",
+      "name": "전갈 소굴",
+      "size": 66,
+      "spawns": {
+        "default": [
+          0,
+          0
+        ]
+      },
+      "monsters": [
+        {
+          "kind": "mob023",
+          "x": 6.1,
+          "z": -8.2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": -25.5,
+          "z": 7.3,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": 4.6,
+          "z": 15.4,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": -10,
+          "z": 17.6,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": 11.9,
+          "z": -18,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": 21.4,
+          "z": -4.8,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": -14.8,
+          "z": 27.2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": -5.8,
+          "z": 25.9,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": -4.5,
+          "z": -13.4,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": 26.6,
+          "z": 11.4,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": 15,
+          "z": -26.3,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": -18.5,
+          "z": -14.6,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": -26.5,
+          "z": -8.3,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": -17.6,
+          "z": 2.2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": -20.3,
+          "z": 13.9,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": 10.1,
+          "z": 8.8,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": 15.7,
+          "z": 26.6,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": -8.9,
+          "z": 8,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": -9,
+          "z": -5.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": 19.2,
+          "z": 17.4,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": -26.5,
+          "z": -26,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": -1.3,
+          "z": -23.8,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": -0.3,
+          "z": 7.7,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": -26.2,
+          "z": 21.9,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": 21.7,
+          "z": -16.8,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": 10.7,
+          "z": -0.9,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": 7.4,
+          "z": 27.3,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": -12.3,
+          "z": -27.3,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": 26.2,
+          "z": -27.5,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": 26.9,
+          "z": 25.6,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": 18.7,
+          "z": 8,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": -11,
+          "z": -18.5,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": 3.9,
+          "z": -16.4,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": 6.9,
+          "z": -27.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": -26.7,
+          "z": -17.8,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": 15.5,
+          "z": -10.3,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": 25.9,
+          "z": 3.2,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": -18.1,
+          "z": -6.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        },
+        {
+          "kind": "mob023",
+          "x": 27.3,
+          "z": -10.8,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 10000
+        }
+      ],
+      "env": {
+        "skyColor": "#cdb897",
+        "sunIntensity": 2.43,
+        "hemiIntensity": 1.02,
+        "grassDark": "#7a6a44",
+        "grassLight": "#9a885a",
+        "ground": "sand",
+        "groundTint": "#c09f6c"
+      }
+    },
     "canyon": {
       "id": "canyon",
-      "name": "메마른 협곡",
+      "name": "코볼트 야영지",
       "size": 66,
       "spawns": {
         "default": [

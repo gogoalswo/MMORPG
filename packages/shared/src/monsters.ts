@@ -91,8 +91,16 @@ interface TierDef {
   names: [string, string];
   bodyColor: string;
   accentColor: string;
-  /** 이 사냥터 몬스터가 쓸 모델 */
-  look: string;
+  /**
+   * 이 몬스터들이 쓸 모델. 하나면 두 종이 같이 쓰고, 둘이면 [약한 쪽, 강한 쪽] 이다.
+   * 저레벨 여섯 종(슬라임~코볼트)은 종마다 제 모델이 있다 (2026-09-29).
+   */
+  look: string | [string, string];
+}
+
+/** 이 티어의 [약한 쪽, 강한 쪽] 모델 */
+function tierLooks(tier: TierDef): [string, string] {
+  return Array.isArray(tier.look) ? tier.look : [tier.look, tier.look];
 }
 
 /** 사냥터 순서대로 보스 이름 */
@@ -119,18 +127,22 @@ const BOSS_LOOKS = [
 ];
 
 function bossLookFor(index: number): string {
-  const mob = TIERS[index]?.look;
+  const tier = TIERS[index];
+  const mobs = tier ? tierLooks(tier) : [];
   for (let i = 0; i < BOSS_LOOKS.length; i++) {
     const pick = BOSS_LOOKS[(index + i) % BOSS_LOOKS.length]!;
-    if (pick !== mob) return pick;
+    if (!mobs.includes(pick)) return pick;
   }
   return BOSS_LOOKS[0]!;
 }
 
 const TIERS: TierDef[] = [
-  { names: ['들늑대', '숲그림자'], bodyColor: '#7b6a55', accentColor: '#4a3f33', look: 'varco_ogre1' }, // 초원
-  { names: ['가시멧돼지', '그림자늑대'], bodyColor: '#6b5230', accentColor: '#3a2c19', look: 'varco_ogre2' }, // 덤불숲
-  { names: ['바위짐승', '협곡사냥꾼'], bodyColor: '#6d6a63', accentColor: '#3d3b37', look: 'varco_ogre3' }, // 메마른 협곡
+  // 저레벨 여섯 종 — 말랑한 것 → 작은 동물 → 식물 → 곤충 → 인간형 순으로 세진다 (2026-09-29).
+  // 종마다 사냥터가 하나씩이다 (zones.ts 의 FIELDS). 모델은 바르코, 동작은 블렌더
+  // (scripts/blender/mob_moves.py) → docs/features/characters-and-animation.md "저레벨 몬스터"
+  { names: ['슬라임', '뿔토끼'], bodyColor: '#5f7a3c', accentColor: '#2f4020', look: ['mob_slime', 'mob_hare'] },
+  { names: ['버섯괴물', '사마귀'], bodyColor: '#7a3b2e', accentColor: '#5a6b34', look: ['mob_mushroom', 'mob_mantis'] },
+  { names: ['전갈', '코볼트'], bodyColor: '#b08a52', accentColor: '#7a3f25', look: ['mob_scorpion', 'mob_kobold'] },
   { names: ['잿빛사냥개', '공포야수'], bodyColor: '#58545a', accentColor: '#2b2a2e', look: 'varco_ogre4' }, // 잿빛 황야
   { names: ['늪지벌레', '수렁괴물'], bodyColor: '#4d5a3f', accentColor: '#26301f', look: 'varco_ogre5' }, // 안개 늪
   { names: ['서리늑대', '얼음발톱'], bodyColor: '#9fb6c4', accentColor: '#5d707d', look: 'varco_ogre1' }, // 서리 고원
@@ -228,7 +240,7 @@ function buildKinds(): Record<string, MonsterKind> {
         id,
         name: tier.names[slot]!,
         level,
-        look: tier.look,
+        look: tierLooks(tier)[slot]!,
         bodyColor: tier.bodyColor,
         accentColor: tier.accentColor,
         ...statsForLevel(level, slot === 1),

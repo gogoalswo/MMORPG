@@ -23,6 +23,8 @@ const MODELS = [
   'varco_fighter.glb', // 캐릭터 (기본 직업 격투가 고정)
   // 몬스터 — 사냥터 20곳이 오우거 5종을 차례로 돌려 쓴다 (monsters.ts 의 TIERS[].look · BOSS_LOOKS)
   'varco_ogre1.glb', 'varco_ogre2.glb', 'varco_ogre3.glb', 'varco_ogre4.glb', 'varco_ogre5.glb',
+  // 저레벨 여섯 종 — 사냥터마다 한 종 (monsters.ts 의 TIERS 앞 셋, scripts/blender/mob_moves.py)
+  'mob_slime.glb', 'mob_hare.glb', 'mob_mushroom.glb', 'mob_mantis.glb', 'mob_scorpion.glb', 'mob_kobold.glb',
   'varco_portal.glb', // 차원문 (모든 존의 GATE_SPOT)
   // 마을 NPC 7명 — zones.ts 의 NpcDef.look (rig.gd 의 FILES)
   'npc_merchant.glb', 'npc_smith.glb', 'npc_trainer.glb',

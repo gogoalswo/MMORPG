@@ -48,7 +48,7 @@ func _setup(mob_x: float, mob_z: float, player_x: float, player_z: float) -> Arr
 	me.x = player_x
 	me.z = player_z
 	var mobs: Array = w.snapshot().monsters
-	# 들늑대(mob003) 실제 값으로. World 스폰과 같은 함수를 쓴다
+	# 슬라임(mob003) 실제 값으로. World 스폰과 같은 함수를 쓴다
 	mobs.append(World.make_monster(
 		"dummy", GameData.monster_kind("mob003"), mob_x, mob_z, 10000.0, 0.0
 	))
@@ -137,7 +137,7 @@ func _case_attack() -> void:
 	elif taken > full / 10:
 		_fail("한 대에 최대 체력의 1/10 이 넘게 날아간다 (%d/%d)" % [taken, full])
 	else:
-		print("  들늑대에게 %d 맞음 (%d -> %d)" % [taken, full, me.hp])
+		print("  슬라임에게 %d 맞음 (%d -> %d)" % [taken, full, me.hp])
 
 	# 공격 간격 안에는 한 번만. 휘두르는 동안 묶여 있기도 하다
 	var once: int = me.hp

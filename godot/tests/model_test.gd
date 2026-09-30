@@ -12,6 +12,7 @@ func _init() -> void:
 	Save.clear()
 	_case_fighter()
 	_case_ogre()
+	_case_low_mobs()
 	_case_texture_size()
 	_case_texture_lossy()
 	_case_missing()
@@ -71,7 +72,7 @@ func _case_fighter() -> void:
 
 
 func _case_ogre() -> void:
-	# 초원 들늑대는 scale 1.01 -> 2.2 x 1.01 = 2.22 m
+	# 오우거 키 2.2 x scale 1.01 = 2.22 m
 	var target := GameData.beast_height("varco_ogre1", 1.01)
 	var rig := Rig.create("varco_ogre1", target)
 	if rig == null:
@@ -82,6 +83,32 @@ func _case_ogre() -> void:
 		_fail("오우거 키가 %.2f 이어야 하는데 %.2f" % [target, h])
 	else:
 		print("  오우거: 키 %.2f m, 클립 %s" % [h, rig.clips()])
+
+
+## 저레벨 여섯 종 (슬라임~코볼트) — 바르코 메시 + 블렌더 뼈대·동작 (scripts/blender/mob_moves.py).
+## 몬스터 표가 쓰는 모델이 실제로 뜨고, 고도가 부르는 클립 넷이 다 있고, 키가 표대로인가
+func _case_low_mobs() -> void:
+	var seen := []
+	for level in [3, 8, 13, 18, 23, 28]:
+		var kind: Dictionary = GameData.monster_kind("mob%03d" % level)
+		var look := str(kind.get("look", ""))
+		var target := GameData.beast_height(look, float(kind.get("scale", 1.0)))
+		var rig := Rig.create(look, target)
+		if rig == null:
+			_fail("%s(%s) 모델을 못 만들었다 — npm run sync:godot 을 돌렸나" % [kind.get("name"), look])
+			continue
+		for clip in ["Idle", "Run", "Attack", "Death"]:
+			if not rig.clips().has(clip):
+				_fail("%s 에 %s 클립이 없다" % [look, clip])
+		# 몬스터 공격은 0.8초부터 0.65초를 튼다 (game.gd 의 MOB_SWING_FROM)
+		if rig.clip_length("Attack") < 1.45:
+			_fail("%s 공격이 %.2f초 — 0.8초부터 트니 1.45초는 넘어야 한다" % [look, rig.clip_length("Attack")])
+		var h := _height(rig)
+		if absf(h - target) > 0.02:
+			_fail("%s 키가 %.2f 이어야 하는데 %.2f" % [look, target, h])
+		seen.append("%s %.2fm" % [kind.get("name"), h])
+		rig.free()
+	print("  저레벨 몬스터: %s" % " · ".join(seen))
 
 
 ## 텍스처가 실제로 줄어 있나. 안 줄면 pck 가 13MB 로 돌아간다
@@ -247,7 +274,7 @@ func _check_moves(game: Node3D) -> void:
 		print("  맞음: 서 있으면 움찔 · 공격(평타·스킬) 중엔 안 끊음 · 맞는 중에 공격하면 공격이 이김")
 
 
-## 실제 화면에서 초원까지 걸어가 몬스터가 모델로 서 있는지 본다
+## 실제 화면에서 뿔토끼 들판(meadow)까지 걸어가 몬스터가 모델로 서 있는지 본다
 func _run_scene() -> void:
 	root.add_child(load("res://main.tscn").instantiate())
 	await process_frame
@@ -272,8 +299,8 @@ func _run_scene() -> void:
 				rigs += 1
 			else:
 				posts += 1
-		print("  초원: 모델 %d마리, 기둥 %d마리" % [rigs, posts])
-		# 초원은 맵 전체에 한 마리씩 (2026-09-29) — 전부 모델이어야 한다
+		print("  뿔토끼 들판: 모델 %d마리, 기둥 %d마리" % [rigs, posts])
+		# 사냥터는 맵 전체에 한 마리씩 (2026-09-29) — 전부 모델이어야 한다
 		if rigs < GameData.zone("meadow").get("monsters", []).size():
 			_fail("모델로 선 몬스터가 %d마리뿐이다" % rigs)
 		if posts > 0:

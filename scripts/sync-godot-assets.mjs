@@ -26,6 +26,7 @@ const MODELS = [
   // 저레벨 여섯 종 — 사냥터마다 한 종 (monsters.ts 의 TIERS 앞 셋, scripts/blender/mob_moves.py)
   'mob_slime.glb', 'mob_hare.glb', 'mob_mushroom.glb', 'mob_mantis.glb', 'mob_scorpion.glb', 'mob_kobold.glb',
   'varco_portal.glb', // 차원문 (모든 존의 GATE_SPOT)
+  'varco_tomb.glb', // 묘비 — 쓰러진 자리 (tomb.gd)
   // 마을 NPC 7명 — zones.ts 의 NpcDef.look (rig.gd 의 FILES)
   'npc_merchant.glb', 'npc_smith.glb', 'npc_trainer.glb',
   'npc_villager_sack.glb', 'npc_villager_apron.glb', 'npc_villager_hood.glb', 'npc_villager_old.glb',

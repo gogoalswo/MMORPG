@@ -10,7 +10,8 @@ extends RefCounted
 ## 0 은 끔 — 버스를 음소거한다 (`linear_to_db(0)` 은 -inf 라 따로 막는다).
 
 const PATH := "user://settings.cfg"
-const DEFAULT := 100
+## 처음 값 — 한 번도 안 고른 기기는 이 크기로 시작한다. 100 이던 것을 70 으로 줄였다 (2026-09-30 요청)
+const DEFAULT := 70
 const STEP := 10
 const MAX := 100
 

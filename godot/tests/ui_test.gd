@@ -1912,7 +1912,8 @@ func _case_passive(game: Node3D, me: Dictionary) -> void:
 	var gale := Skills.passive("gale_kicks")
 	var was_level := int(me.level)
 	me.level = 25
-	me.passives = {"gale_kicks": 1}
+	# 철각(Lv.10)은 배워 둔다 — 안 배우면 질풍각을 다 배워도 레드닷이 남는다
+	me.passives = {"gale_kicks": 1, "iron_leg": 1}
 	world._refresh_stats(me)
 	game._refresh_status(me)
 	if not game._skill_dot.visible:
@@ -1926,11 +1927,14 @@ func _case_passive(game: Node3D, me: Dictionary) -> void:
 		return
 	if not Rect2(Vector2.ZERO, screen).encloses(panel.get_global_rect()):
 		_fail("스킬창 %s 이 화면 밖으로 나간다" % panel.get_global_rect())
+	# 앞 시험이 다른 칸을 골라 뒀을 수 있다 — 첫 칸(질풍각)부터 본다
+	game._pick_skill(0)
 	for node in game._active_only:
 		if node.visible:
 			_fail("보이는 스킬이 없는데 %s 가 보인다" % node)
-	if game._skill_ids != ["gale_kicks"] or game._skill_name.text != str(gale.name):
-		_fail("목록은 질풍각 하나여야 한다: %s · '%s'" % [game._skill_ids, game._skill_name.text])
+	var passive_ids := Skills.passives_for("fighter").map(func(p): return str(p.id))
+	if game._skill_ids != passive_ids or game._skill_name.text != str(gale.name):
+		_fail("목록은 패시브 %s 여야 한다: %s · '%s'" % [passive_ids, game._skill_ids, game._skill_name.text])
 	if game._skill_equip.visible or game._skill_unequip.visible or not game._passive_learn.visible:
 		_fail("패시브를 골랐으면 장착/해제 대신 [습득] 만 서야 한다")
 	var badge: String = game._skill_cells[0].find_child("badge", true, false).text
@@ -1968,9 +1972,30 @@ func _case_passive(game: Node3D, me: Dictionary) -> void:
 		_fail("다음 단계가 열리는 레벨이 안 적혔다: '%s'" % game._skill_state.text)
 	print("  패시브: 질풍각 1 → 2단계, 평타 %dms → %dms, 레드닷 켜짐 → 꺼짐" % [before, after])
 
+	# 레벨 도달 패시브(2026-09-30) — 경공(Lv.30)은 Lv.25 에 막혀 있고, 레벨이 되면 [습득] 한 번에 끝
+	var step_index: int = game._skill_ids.find("light_step")
+	game._pick_skill(step_index)
+	var step_badge: String = game._skill_cells[step_index].find_child("badge", true, false).text
+	if step_badge != "Lv.30 습득" or not game._passive_learn.disabled or game._passive_learn.text != "습득":
+		_fail("Lv.25 경공이 'Lv.30 습득' · 막힌 [습득] 이 아니다: '%s' · %s" % [step_badge, game._passive_learn.disabled])
+	if not "이동 속도 +20%" in game._skill_info.text or not game._skill_state.text.begins_with("30레벨"):
+		_fail("경공 설명이 틀렸다: '%s' · '%s'" % [game._skill_info.text, game._skill_state.text])
+	me.level = 30
+	game._redraw_skills()
+	game._on_passive_learn()
+	await process_frame
+	if int(me.passives.get("light_step", 0)) != 1 or absf(float(me.stats.moveSpeed) - 0.2) > 1e-6:
+		_fail("Lv.30 에 경공을 눌렀는데 %s · 이속 %s" % [me.passives, me.stats.get("moveSpeed")])
+	elif game._skill_state.text != "배웠습니다" or not game._passive_learn.disabled:
+		_fail("경공을 배웠는데 '%s' · 단추 %s" % [game._skill_state.text, game._passive_learn.disabled])
+	game._pick_skill(0)
+
 	var font: Font = load(FONT)
 	var missing := ""
-	for ch in "질풍각 패시브 단계 공격 속도 레벨마다 초당 회 다음 습득할 수 있습니다 끝까지 배웠습니다 열립니다":
+	var names := ""
+	for p in Skills.passives_for("fighter"):
+		names += str(p.name) + str(p.description) + Skills.passive_effect(p, 1)
+	for ch in "질풍각 패시브 단계 공격 속도 레벨마다 초당 회 다음 습득할 수 있습니다 끝까지 배웠습니다 열립니다" + names:
 		if ch != " " and not font.has_char(ch.unicode_at(0)):
 			missing += ch
 	if missing != "":

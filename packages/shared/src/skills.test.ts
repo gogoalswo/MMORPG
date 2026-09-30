@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   JOB_SKILLS,
   PASSIVES,
+  type PassiveDef,
   passiveRankOpen,
   PROJECTILE_SPEED,
   SKILLS,
@@ -220,4 +221,22 @@ test('질풍각 — Lv.200 에 격투가가 초당 8번 때린다', () => {
   const base = statsFor('fighter', MAX_LEVEL).attackCooldown;
   const interval = effectiveCooldown(base, gale.perRank * gale.maxRank);
   assert.equal(interval, 125, `만렙 간격 ${interval}ms`);
+});
+
+test('레벨 도달 패시브 일곱 — 그 레벨에 한 번만 열린다', () => {
+  // 2026-09-30 요청: 10 공격력 30% · 30 이속 20% · 50 치확 10% · 70 치피 20% · 100 관통 10% ·
+  // 150 치피 30% · 200 치피 50%
+  const want: [number, PassiveDef['stat'], number][] = [
+    [10, 'attack', 0.3], [30, 'moveSpeed', 0.2], [50, 'crit', 0.1], [70, 'critDamage', 0.2],
+    [100, 'penetration', 0.1], [150, 'critDamage', 0.3], [200, 'critDamage', 0.5],
+  ];
+  const got = PASSIVES.filter((p) => p.maxRank === 1);
+  assert.deepEqual(got.map((p) => [p.everyLevels, p.stat, p.perRank]), want);
+  for (const p of got) {
+    assert.equal(p.job, 'fighter');
+    assert.equal(passiveRankOpen(p, p.everyLevels - 1), 0, `${p.name} 이 Lv.${p.everyLevels - 1} 에 열렸다`);
+    assert.equal(passiveRankOpen(p, p.everyLevels), 1, `${p.name} 이 Lv.${p.everyLevels} 에 안 열렸다`);
+    assert.equal(passiveRankOpen(p, MAX_LEVEL), 1);
+  }
+  assert.equal(new Set(PASSIVES.map((p) => p.id)).size, PASSIVES.length, '패시브 id 가 겹친다');
 });

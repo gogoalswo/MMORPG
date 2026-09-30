@@ -15,6 +15,8 @@ func _init() -> void:
 	_case_gear()
 	_case_save()
 	_case_kill_check()
+	_case_level_passives()
+	_case_move_speed()
 	Save.clear()
 	if _failed == 0:
 		print("패시브: 전부 통과")
@@ -55,6 +57,8 @@ func _case_learn() -> void:
 	w.learn_passive("me", "gale_kicks")
 	if _rank(me) != 2:
 		_fail("Lv.25 는 두 단계까지인데 %d단계" % _rank(me))
+	# Lv.10 철각도 배워야 Lv.25 에 배울 것이 없다
+	w.learn_passive("me", "iron_leg")
 	if Skills.passive_learnable("fighter", 25, me.passives):
 		_fail("열린 단계를 다 배웠는데 레드닷 조건이 켜져 있다")
 	if not Skills.passive_learnable("fighter", 30, me.passives):
@@ -129,3 +133,64 @@ func _case_kill_check() -> void:
 	var fast := KillCheck.min_ms(ledger, kind)
 	if fast >= slow:
 		_fail("패시브를 배웠는데 최소 처치 시간이 그대로다: %.0f → %.0fms" % [slow, fast])
+
+
+## 레벨 도달 패시브 일곱 (2026-09-30 요청) — 그 레벨에 한 번, 스탯은 `stats_of` 가 더한다
+func _case_level_passives() -> void:
+	var s := _me()
+	var w: World = s[0]
+	var me: Dictionary = s[1]
+	me.level = 69
+	w.learn_passive("me", "vital_strike")
+	if int(me.passives.get("vital_strike", 0)) != 0:
+		_fail("Lv.69 에 급소 강타(Lv.70)를 배웠다")
+	me.level = 70
+	w.learn_passive("me", "vital_strike")
+	w.learn_passive("me", "vital_strike")
+	if int(me.passives.get("vital_strike", 0)) != 1:
+		_fail("Lv.70 급소 강타가 1 이 아니다: %s" % me.passives)
+
+	var all := {}
+	for p in Skills.passives_for("fighter"):
+		all[str(p.id)] = int(p.maxRank)
+	var bare := World.stats_of("fighter", 200, {})
+	var full := World.stats_of("fighter", 200, {}, all)
+	var want_attack := roundi(float(bare.attack) * 1.3)
+	if int(full.attack) != want_attack:
+		_fail("철각 공격력 %d → %d (×1.3 = %d 여야)" % [bare.attack, full.attack, want_attack])
+	var checks := {"crit": 0.1, "critDamage": 1.0, "penetration": 0.1, "moveSpeed": 0.2}
+	for key in checks:
+		var gained := float(full.get(key, 0.0)) - float(bare.get(key, 0.0))
+		if absf(gained - float(checks[key])) > 1e-6:
+			_fail("%s 가 %.2f 올라야 하는데 %.2f" % [key, checks[key], gained])
+	print("  레벨 패시브: 공격력 %d → %d · 치확 +%.0f%% · 치피 %.0f%% → %.0f%% · 관통 +%.0f%% · 이속 +%.0f%%" % [
+		bare.attack, full.attack, full.crit * 100.0, bare.critDamage * 100.0, full.critDamage * 100.0,
+		full.penetration * 100.0, full.moveSpeed * 100.0,
+	])
+	# 서버의 처치 검증도 같은 스탯을 본다 — 세졌으면 최소 처치 시간이 줄어야 한다
+	var ledger := Ledger.fresh("fighter")
+	ledger.level = 200
+	var kind: Dictionary = GameData.load_table("monsters").kinds.values()[0]
+	var slow := KillCheck.min_ms(ledger, kind)
+	ledger.passives = all.duplicate()
+	ledger.passives.erase("gale_kicks")
+	if KillCheck.min_ms(ledger, kind) > slow:
+		_fail("레벨 패시브를 배웠는데 최소 처치 시간이 늘었다")
+
+
+## 경공(이속 +20%) — 같은 입력으로 1.2배 멀리 간다
+func _case_move_speed() -> void:
+	var gone := []
+	for ranks in [{}, {"light_step": 1}]:
+		var s := _me()
+		var w: World = s[0]
+		var me: Dictionary = s[1]
+		me.level = 30
+		me.passives = ranks
+		w._refresh_stats(me)
+		var x0 := float(me.x)
+		var z0 := float(me.z)
+		w.input_move("me", 1, 1.0, 0.0, 0.1)
+		gone.append(Vector2(float(me.x) - x0, float(me.z) - z0).length())
+	if absf(gone[1] / maxf(gone[0], 1e-6) - 1.2) > 0.01:
+		_fail("경공이 이동 거리를 1.2배로 늘리지 않았다: %.3f → %.3f" % gone)

@@ -128,14 +128,19 @@ export const SKILL_POINT_PER_LEVEL = 1;
  * - 공속은 **더한다** — `간격 / (1 + 공속)` 이라 단계마다 초당 타수가 같은 폭(+0.34타)으로 는다.
  *   격투가 900ms 에 20단계 × 31% = +620% → **125ms = 초당 8타** (`skills.test.ts` 가 본다).
  * - 공속은 이 패시브에서만 온다 — 장비 공속 옵션은 같은 날 뺐다 (`OPTION_KINDS`).
+ *
+ * 2026-09-30 요청: 레벨 도달 패시브 일곱 — "10레벨 : 공격력 30% 증가 … 200레벨 : 치명타 데미지 50% 증가".
+ * 한 번 배우면 끝(`maxRank` 1)이라 `everyLevels` 가 곧 **여는 레벨**이다 (`floor(레벨 / N)` 이 1 이 된다).
+ * 값은 모두 **더한다** — 공격력은 장비 % 합계에(0.3 = +30%), 치확·치피·관통은 비율에(0.1 = +10%p),
+ * 이속은 달리기 속도 배율에(+0.2 = ×1.2). 치피 셋(70·150·200)은 겹쳐 +100% 가 된다.
  */
 export interface PassiveDef {
   id: string;
   job: JobId;
   name: string;
   description: string;
-  /** 올리는 스탯 — 지금은 공속 하나 */
-  stat: 'attackSpeed';
+  /** 올리는 스탯 — `World.stats_of` 가 이름으로 더한다 */
+  stat: 'attackSpeed' | 'attack' | 'moveSpeed' | 'crit' | 'critDamage' | 'penetration';
   /** 한 단계에 오르는 양 (0.31 = +31%) */
   perRank: number;
   /** 몇 레벨마다 한 단계가 열리나 */
@@ -154,7 +159,26 @@ export const PASSIVES: PassiveDef[] = [
     everyLevels: 10,
     maxRank: 20,
   },
+  levelPassive('iron_leg', 10, '철각', '다리를 쇠처럼 단련해 한 대가 무거워진다.', 'attack', 0.3),
+  levelPassive('light_step', 30, '경공', '몸이 가벼워 더 빨리 달린다.', 'moveSpeed', 0.2),
+  levelPassive('keen_eye', 50, '급소 간파', '급소가 눈에 들어와 치명타가 잦아진다.', 'crit', 0.1),
+  levelPassive('vital_strike', 70, '급소 강타', '급소를 더 깊이 찬다.', 'critDamage', 0.2),
+  levelPassive('armor_break', 100, '파갑', '방어를 꿰뚫고 들어간다.', 'penetration', 0.1),
+  levelPassive('deadly_kick', 150, '필살각', '한 번 들어간 치명타가 더 아프다.', 'critDamage', 0.3),
+  levelPassive('ultimate', 200, '극의', '무의 끝에 닿아 치명타가 한층 무거워진다.', 'critDamage', 0.5),
 ];
+
+/** 그 레벨에 한 번 배우는 격투가 패시브 — `everyLevels` = 여는 레벨, `maxRank` 1 */
+function levelPassive(
+  id: string,
+  level: number,
+  name: string,
+  description: string,
+  stat: PassiveDef['stat'],
+  value: number,
+): PassiveDef {
+  return { id, job: 'fighter', name, description, stat, perRank: value, everyLevels: level, maxRank: 1 };
+}
 
 /** 그 레벨까지 열린 단계 수 — Lv.10 에 1, Lv.200 에 20 */
 export function passiveRankOpen(passive: PassiveDef, level: number): number {

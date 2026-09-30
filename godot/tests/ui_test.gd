@@ -2441,8 +2441,21 @@ func _case_death(game: Node) -> void:
 		for ch in (label as Label).text:
 			if ch != " " and not font.has_char(ch.unicode_at(0)):
 				_fail("사망 창 글자 '%s' 가 폰트에 없다" % ch)
-	if _tomb_near(game, at) == null:
+	var tomb := _tomb_near(game, at)
+	if tomb == null:
 		_fail("쓰러진 자리 %s 에 묘비가 없다" % at)
+	elif ResourceLoader.exists(Tomb.MODEL):
+		# 바르코 모델이 섰나 · 땅에 앉았나(바닥이 0 근처) · 작나(비석이 사람 무릎께)
+		var meshes := tomb.find_children("*", "MeshInstance3D", true, false)
+		var low := INF
+		var high := -INF
+		for m in meshes:
+			var box: AABB = (m as MeshInstance3D).global_transform * (m as MeshInstance3D).get_aabb()
+			low = minf(low, box.position.y)
+			high = maxf(high, box.end.y)
+		var base := tomb.global_position.y
+		if meshes.size() != 1 or absf(low - base) > 0.02 or high - base > 0.7:
+			_fail("묘비 모델이 이상하다: 메시 %d · 바닥 %.3f · 높이 %.3f" % [meshes.size(), low - base, high - base])
 	game._unhandled_input(_mouse(Vector2(200, 400), true))
 	await process_frame
 	if not bool(me.get("dead", false)) or not panel.visible:

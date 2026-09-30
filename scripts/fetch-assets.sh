@@ -77,6 +77,11 @@ fi
 fetch_varco 9af24ed7f19f04fc1b5d5b0c3bef567a portal
 node scripts/shrink-glb-textures.mjs assets-src/models/varco/portal.glb public/assets/models/varco_portal.glb 1024
 
+# 묘비 — 바르코 워크플로우 "Untitled" 의 맨 아래 줄(글 → 그림 → 3D). 둥근 비석 + 십자가 + 흙 둔덕,
+# 가장 긴 변 1 로 정규화(폭·깊이 1 × 높이 0.61). 원화는 42eec0ae…png. 1024 로 줄여 커밋한다(0.6MB)
+fetch_varco fe4f698d7208dc4ab9d6752825caf8be tomb
+node scripts/shrink-glb-textures.mjs assets-src/models/varco/tomb.glb public/assets/models/varco_tomb.glb 1024
+
 # 차원문 창 UI 조각 — 같은 워크플로우. 창 바탕·소용돌이 칸·별 칸을 **따로** 받아 고도에서
 # 조립한다 (docs/features/portal-ui.md). 원화 두 장(9fbb5d1f… 9dfeff2c…)은 3D 를 뽑은 그림이라 안 받는다.
 fetch_ui() { # $1=객체 해시  $2=출력 이름

@@ -10,8 +10,11 @@ extends RefCounted
 ## 차원문(`portal.gd`)과 같은 짜임이다. 바르코 모델을 받으면 이 자리에 넣기만 하면 된다
 
 const MODEL := "res://assets/models/varco_tomb.glb"
-## 묘비 높이(m). **작게** — 사람(1.8m 안팎)의 무릎을 조금 넘는다 (2026-09-30 "크기는 작게 만들어")
-const HEIGHT := 0.6
+## 묘비 크기(m) — 흙 둔덕의 폭. **작게** (2026-09-30 "크기는 작게 만들어"). 바르코 모델은
+## 폭·깊이 1 × 높이 0.61 로 나와서 0.8 이면 비석 꼭대기가 0.5m 쯤 — 사람(1.8m)의 무릎께다
+const SIZE := 0.8
+## 모델이 없을 때의 돌판 높이(m) — 모델의 키와 맞춘다
+const FALLBACK_HEIGHT := 0.5
 const STONE := Color("#77726a")
 
 
@@ -25,15 +28,16 @@ static func create(x: float, y: float, z: float) -> Node3D:
 	if ResourceLoader.exists(MODEL):
 		var packed: PackedScene = load(MODEL)
 		var model := packed.instantiate() as Node3D
-		# 모델은 1×1×1 로 정규화돼 있고 원점이 한가운데다 (portal.gd 와 같다)
-		model.scale = Vector3.ONE * HEIGHT
-		model.position.y = 0.5 * HEIGHT
+		# 모델은 가장 긴 변이 1 로 정규화돼 있고 원점이 한가운데다 (portal.gd 와 같다).
+		# 묘비는 납작해서(높이 0.61) 반이 아니라 **바닥면**을 땅에 앉힌다
+		model.scale = Vector3.ONE * SIZE
+		model.position.y = -_bottom(model) * SIZE
 		root.add_child(model)
 		return root
 
-	# 모델이 없을 때의 돌판 — 높이 1 로 짓고 HEIGHT 로 줄인다
+	# 모델이 없을 때의 돌판 — 높이 1 로 짓고 FALLBACK_HEIGHT 로 줄인다
 	var stone := Node3D.new()
-	stone.scale = Vector3.ONE * HEIGHT
+	stone.scale = Vector3.ONE * FALLBACK_HEIGHT
 	root.add_child(stone)
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = STONE
@@ -49,6 +53,15 @@ static func create(x: float, y: float, z: float) -> Node3D:
 	cap.height = 0.16
 	stone.add_child(_part(cap, Vector3(0, 0.14 + body_h, 0), Vector3(PI / 2.0, 0, 0), mat))
 	return root
+
+
+## 모델 메시들의 가장 낮은 y (모델 자기 좌표, 배율 전)
+static func _bottom(model: Node3D) -> float:
+	var low := 0.0
+	for mesh in model.find_children("*", "MeshInstance3D", true, false):
+		var box: AABB = (mesh as MeshInstance3D).get_aabb()
+		low = minf(low, (mesh as MeshInstance3D).position.y + box.position.y)
+	return low
 
 
 static func _box(size: Vector3) -> BoxMesh:

@@ -1938,6 +1938,14 @@ func _case_passive(game: Node3D, me: Dictionary) -> void:
 		_fail("질풍각 칸 글자가 '1/20' 이어야 하는데 '%s'" % badge)
 	if game._passive_learn.disabled or not game._passive_dot.visible:
 		_fail("열린 단계가 남았는데 [습득] 이 막혔거나 레드닷이 없다")
+	# 한 번 배웠으면 단추는 "레벨업", 설명은 현재/다음 단계 두 줄 (2026-09-30 요청)
+	if game._passive_learn.text != "레벨업":
+		_fail("1단계를 배웠는데 단추가 '레벨업' 이 아니라 '%s'" % game._passive_learn.text)
+	var info: String = game._skill_info.text
+	var now_pct := roundi(float(gale.perRank) * 100.0)
+	if not ("현재 단계 : 공격 속도 +%d%%" % now_pct) in info \
+			or not ("다음 단계 : 공격 속도 +%d%%" % (now_pct * 2)) in info or "레벨마다" in info:
+		_fail("패시브 설명이 현재/다음 단계 두 줄이 아니다: '%s'" % info)
 	# 레드닷은 단추 **오른쪽 위 모서리**에 얹힌다
 	var button: Rect2 = game._passive_learn.get_global_rect()
 	var dot: Rect2 = game._passive_dot.get_global_rect()

@@ -36,11 +36,11 @@
 | `godot/server/ledger_server.gd` · `kill_check.gd` | `OPS` 에 `learn_passive` · 최소 처치 시간도 패시브를 본다 |
 | `godot/world/save.gd` | `passives` `{ id: 단계 }` 저장 (옛 저장은 빈 사전) |
 | `godot/net/local_transport.gd` | `learnPassive` 요청 |
-| `godot/game/game.gd` `_redraw_skills` · `_draw_passive` · `_on_passive_learn` | 스킬창 — 목록 맨 앞에 패시브 칸(`N/20`), 왼쪽 설명(단계 · 공속 · 초당 타수 → 다음 단계), **[습득]** 과 그 위 레드닷 |
+| `godot/game/game.gd` `_redraw_skills` · `_draw_passive` · `_on_passive_learn` | 스킬창 — 목록 맨 앞에 패시브 칸(`N/20`), 왼쪽 설명(단계 · **현재 단계 : 공격 속도 +N%** · **다음 단계 : 공격 속도 +M%**(끝이면 "없음") · 초당 타수 → 다음 단계), **[습득]** 과 그 위 레드닷. 단추 글자는 0단계일 때만 "습득", 한 번 배운 뒤로는 **"레벨업"** (2026-09-30 요청 — "N레벨마다 +M%" 줄도 이때 뺐다) |
 | `godot/game/game.gd` `_skill_dot` · `_refresh_status` | HUD 스킬 아이콘의 레드닷 — 매 프레임 `passive_learnable` 로 맞춘다 |
 | `public/assets/icons/skill_gale_kicks.png` | 아이콘 (바르코, 스킬 아이콘 참고 그림을 물렸다). 주소는 `fetch-assets.sh` |
 | `godot/tests/passive_test.gd` | 레벨 잠금 · 한 번에 한 단계 · 끝 단계 · 125ms · 옛 공속 옵션 무시 · 저장 · 서버 처치 검증 |
-| `godot/tests/ui_test.gd` `_case_passive` | 퀵슬롯 스킬 칸 숨김 · 장착 줄/강화 칸 숨김 · [습득] 누르면 단계·간격 · 레드닷 켜짐 → 꺼짐 |
+| `godot/tests/ui_test.gd` `_case_passive` | 퀵슬롯 스킬 칸 숨김 · 장착 줄/강화 칸 숨김 · 1단계면 단추가 "레벨업"·설명이 현재/다음 단계 두 줄 · [습득] 누르면 단계·간격 · 레드닷 켜짐 → 꺼짐 |
 
 ## 규칙
 

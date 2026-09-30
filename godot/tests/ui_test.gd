@@ -962,7 +962,8 @@ func _check_gate_drops(panel: GatePanel) -> void:
 			if not grades.has(int(g)):
 				_fail("몬스터 %s 가 떨구는 %d등급이 드랍 창에 없다" % [spot.kind, g])
 	for label in drops.find_children("*", "Label", true, false):
-		if "%" in (label as Label).text:
+		# 몬스터 치명타 저항은 능력치라 % 로 적는다 (드랍 확률이 아니다)
+		if "%" in (label as Label).text and label.name != "CritResist":
 			_fail("드랍 창에 확률이 적혀 있다: '%s'" % label.text)
 	# 등장 몬스터 — 종류마다 한 칸, 능력치는 몬스터 표 그대로
 	var mobs: Array = drops._list.get_node("Monsters").get_children()
@@ -975,6 +976,19 @@ func _check_gate_drops(panel: GatePanel) -> void:
 	for key in ["maxHp", "attack", "defense"]:
 		if not DropPanel.number(int(mob[key])) in stats:
 			_fail("몬스터 능력치 '%s' 에 %s(%d)가 없다" % [stats, key, int(mob[key])])
+	# 치명타 저항 — 100레벨 사냥터부터 붙는다. 마지막 사냥터 몬스터로 값과 창 폭을 본다
+	drops.show_zone(str(GameData.field_order().back()))
+	await process_frame
+	var boss_kind := GameData.monster_kind(str(drops.drops.kinds[0]))
+	var resist := (drops._list.get_node("Monsters").get_child(0).find_child("CritResist", true, false) as Label).text
+	var want := "치명타 저항 %s%%" % String.num(float(boss_kind.critResist) * 100.0, 1)
+	if float(boss_kind.critResist) <= 0.0 or resist != want:
+		_fail("치명타 저항이 '%s' — '%s' 여야 한다" % [resist, want])
+	elif drops.size.x > DropPanel.WIDTH + 1.0:
+		_fail("치명타 저항을 넣었더니 드랍 창이 %.0fpx 로 넓어졌다 (%d)" % [drops.size.x, DropPanel.WIDTH])
+	stats += " · " + resist
+	drops.show_zone(zone)
+	await process_frame
 	await process_frame
 	var screen := drops.get_viewport_rect()
 	if not screen.encloses(drops.get_global_rect()):

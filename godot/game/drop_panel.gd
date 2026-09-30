@@ -168,7 +168,15 @@ func _monster_cell(kind: Dictionary) -> Control:
 	var level := "Lv.%d" % int(kind.get("level", 1))
 	if bool(kind.get("boss", false)):
 		level += "  보스"
-	top.add_child(_label(level, NAME_FONT, GatePanel.CARD_SUB_COLOR))
+	var level_label := _label(level, NAME_FONT, GatePanel.CARD_SUB_COLOR)
+	level_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(level_label)
+	# 치명타 저항 — 때리는 쪽 치확에서 빼는 %p (`critResist`, 100레벨 사냥터부터). 능력치 줄에 넣으면
+	# 뒤 사냥터(체력 백만 단위)에서 창 폭을 넘어 윗줄 오른쪽에 둔다 (2026-09-30 요청)
+	var resist := _label("치명타 저항 %s%%" % String.num(float(kind.get("critResist", 0.0)) * 100.0, 1),
+		NAME_FONT, GatePanel.TEXT_COLOR)
+	resist.name = "CritResist"
+	top.add_child(resist)
 	var stats := _label("체력 %s     공격 %s     방어 %s" % [
 		number(int(kind.get("maxHp", 0))), number(int(kind.get("attack", 0))), number(int(kind.get("defense", 0))),
 	], NAME_FONT, GatePanel.TEXT_COLOR)

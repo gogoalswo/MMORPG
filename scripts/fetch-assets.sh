@@ -77,9 +77,10 @@ fi
 fetch_varco 9af24ed7f19f04fc1b5d5b0c3bef567a portal
 node scripts/shrink-glb-textures.mjs assets-src/models/varco/portal.glb public/assets/models/varco_portal.glb 1024
 
-# 묘비 — 바르코 워크플로우 "Untitled" 의 맨 아래 줄(글 → 그림 → 3D). 둥근 비석 + 십자가 + 흙 둔덕,
-# 가장 긴 변 1 로 정규화(폭·깊이 1 × 높이 0.61). 원화는 42eec0ae…png. 1024 로 줄여 커밋한다(0.6MB)
-fetch_varco fe4f698d7208dc4ab9d6752825caf8be tomb
+# 묘비 — 바르코 워크플로우 "Untitled" 의 맨 아래 두 줄. 첫 원화(42eec0ae…png, 흙 둔덕 포함)를
+# EditImage 로 흙만 지운 그림(dbc1b6f5…png)에서 뽑은 3D — 둥근 비석 + 십자가 + 돌 받침.
+# 가장 긴 변(높이) 1 로 정규화(폭 0.83 × 깊이 0.55). 1024 로 줄여 커밋한다(0.5MB)
+fetch_varco d70bfa94d61eda4718810417e2219bd9 tomb
 node scripts/shrink-glb-textures.mjs assets-src/models/varco/tomb.glb public/assets/models/varco_tomb.glb 1024
 
 # 차원문 창 UI 조각 — 같은 워크플로우. 창 바탕·소용돌이 칸·별 칸을 **따로** 받아 고도에서

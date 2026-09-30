@@ -126,7 +126,8 @@ export const SKILL_POINT_PER_LEVEL = 1;
  * - `everyLevels` 레벨마다 한 단계가 열린다 — 열린 단계는 **스킬창의 [습득]** 을 눌러야 붙는다.
  *   값(포인트·골드)은 없다. 되는지는 판정(`Ledger.learn_passive`)이 레벨로 다시 본다.
  * - 공속은 **더한다** — `간격 / (1 + 공속)` 이라 단계마다 초당 타수가 같은 폭(+0.34타)으로 는다.
- *   격투가 900ms 에 20단계 × 31% = +620% → **125ms = 초당 8타** (`skills.test.ts` 가 본다).
+ *   격투가 900ms 에 20단계 × 40% = +800% → **100ms = 초당 10타** (`skills.test.ts` 가 본다).
+ *   (처음엔 초당 8타 · 단계당 31% 였다 — 2026-09-30 요청 "200레벨 기준 초당 10타 때릴 수 있게")
  * - 공속은 이 패시브에서만 온다 — 장비 공속 옵션은 같은 날 뺐다 (`OPTION_KINDS`).
  *
  * 2026-09-30 요청: 레벨 도달 패시브 일곱 — "10레벨 : 공격력 30% 증가 … 200레벨 : 치명타 데미지 50% 증가".
@@ -141,7 +142,7 @@ export interface PassiveDef {
   description: string;
   /** 올리는 스탯 — `World.stats_of` 가 이름으로 더한다 */
   stat: 'attackSpeed' | 'attack' | 'moveSpeed' | 'crit' | 'critDamage' | 'penetration';
-  /** 한 단계에 오르는 양 (0.31 = +31%) */
+  /** 한 단계에 오르는 양 (0.4 = +40%) */
   perRank: number;
   /** 몇 레벨마다 한 단계가 열리나 */
   everyLevels: number;
@@ -155,7 +156,7 @@ export const PASSIVES: PassiveDef[] = [
     name: '질풍각',
     description: '발차기가 바람처럼 빨라진다.',
     stat: 'attackSpeed',
-    perRank: 0.31,
+    perRank: 0.4,
     everyLevels: 10,
     maxRank: 20,
   },

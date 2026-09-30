@@ -47,6 +47,7 @@
   "potionAutoStep": 10,
   "potionAutoMax": 90,
   "monsterSwingMs": 650,
+  "monsterHitDelayMs": 200,
   "attackArc": 1.8849555921538759,
   "maxLevel": 200,
   "skillBarSize": 4,

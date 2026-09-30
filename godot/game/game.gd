@@ -270,7 +270,8 @@ const MOB_BAR_MS := 5000
 ## 켠다** — 상태(`attack`)로 틀면 사거리 안에 서 있는 내내 3.73초짜리 클립이
 ## 준비 자세부터 감겨, 맞고 있는 동안 한 번도 안 휘두르는 것으로 보인다 (2026-09-24)
 var _mob_swing_until: Dictionary = {}
-## 오우거 `Attack` 에서 첫 할퀴기가 시작되는 자리(초). 길이는 서버 경직
+## 오우거 `Attack` 에서 첫 할퀴기가 시작되는 자리(초). 손이 닿는 건 1.00초라, 판정이 휘두르기를
+## 알리고 0.2초 뒤(`monsterHitDelayMs`)에 피해를 넣는다. 저레벨 여섯(mob_moves.py)도 1.00 에 친다. 길이는 서버 경직
 ## (`monsterSwingMs` 0.65초)과 같다 → docs/features/characters-and-animation.md
 const MOB_SWING_FROM := 0.8
 ## 마지막으로 일어난 일 한 줄 (맞았다·레벨 올랐다)
@@ -503,7 +504,7 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			if str(payload.get("id", "")) == _transport.my_id():
 				_swings += 1
 				# **공속만큼 빨리 찬다** (2026-09-29 요청: "공속이 빨라지면 그만큼 애니메이션을 빠르게
-				# 재생해") — 판정이 실어 보낸 배속(= 기본 간격 / 지금 간격). Lv.200 이면 7.2배
+				# 재생해") — 판정이 실어 보낸 배속(= 기본 간격 / 지금 간격). Lv.200 이면 9배
 				var speed := float(payload.get("speed", 1.0))
 				_start_move(_kick_clip(int(payload.get("ms", 900))), speed)
 		&"lunge":
@@ -521,6 +522,9 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			_dungeon_panel.visible = false
 		&"aoe":
 			_show_aoe(payload)
+		&"mobSwing":
+			# 몬스터가 휘두르기 시작했다 — 피해(`hit`)는 손이 닿는 0.2초 뒤에 따로 온다
+			_swing_mob(str(payload.get("id", "")))
 		&"skillRange":
 			# 판정은 늘 보낸다. 켜 뒀을 때만 그린다
 			if _show_range:
@@ -1358,7 +1362,8 @@ func _build_char_panel() -> void:
 func _build_char_window(panel: PanelContainer) -> void:
 	var side := VBoxContainer.new()
 	side.custom_minimum_size = Vector2(DETAIL_W, 0)
-	side.add_theme_constant_override("separation", 8)
+	# 7 — "평타" 줄(2026-09-30)을 더하니 8 로는 창이 화면 위로 5px 넘었다 (간격 10개 × 1px 로 되찾는다)
+	side.add_theme_constant_override("separation", 7)
 	panel.add_child(side)
 
 	var title := _stone_title(side, "캐릭터 정보", 22, "ui_icon_character")
@@ -2138,6 +2143,9 @@ func _redraw_char(me: Dictionary) -> void:
 		["치명타", "%.0f%%" % (float(stats.get("crit", 0.0)) * 100.0)],
 		["치명타 피해", "%.0f%%" % (float(stats.get("critDamage", 1.0)) * 100.0)],
 		["공격 속도", "+%.0f%%" % (float(stats.get("attackSpeed", 0.0)) * 100.0)],
+		# 공속을 실제 평타 횟수로 (2026-09-30 요청: "초당 7.5회 공격 이런식으로") — 판정과 같은
+		# `effective_cooldown` 으로 센다. 질풍각 설명(`_show_passive`)과 같은 계산이다
+		["평타", "초당 %.1f회 공격" % _attacks_per_second(stats)],
 		["쿨타임 감소", "%.0f%%" % (float(stats.get("cooldown", 0.0)) * 100.0)],
 		["방어력 관통", "%.0f%%" % (float(stats.get("penetration", 0.0)) * 100.0)],
 		# 같은 레벨 몬스터에게 맞을 때 원래 피해의 몇 % 가 들어오나 (2026-09-27). 후반 감소율이
@@ -2152,6 +2160,12 @@ func _redraw_char(me: Dictionary) -> void:
 	_char_head.text = head
 	for index in groups.size():
 		_fill_detail_rows(groups[index], _char_grids[index])
+
+
+## 초당 평타 횟수 — 판정(`world.gd`)이 다음 평타를 `effective_cooldown` 뒤로 미는 것과 같은 값
+func _attacks_per_second(stats: Dictionary) -> float:
+	return 1000.0 / Combat.effective_cooldown(
+		float(stats.get("attackCooldown", 900)), float(stats.get("attackSpeed", 0.0)))
 
 
 func _close_detail() -> void:
@@ -4908,8 +4922,6 @@ func _show_hit(payload: Dictionary) -> void:
 	# 나뿐이므로 때린 사람을 따로 가리지 않는다 (서버가 붙으면 source 를 본다)
 	if not on_me:
 		_mob_bar_until[str(payload.get("target", ""))] = Time.get_ticks_msec() + MOB_BAR_MS
-	else:
-		_swing_mob(str(payload.get("source", "")))
 	var body: Node3D = null
 	if on_me:
 		body = _player
@@ -4935,8 +4947,10 @@ func _show_hit(payload: Dictionary) -> void:
 	_feel_hit(payload, on_me, body)
 
 
-## 몬스터가 나를 때렸다. 첫 할퀴기 구간을 **처음부터 다시** 튼다 — 서버가 세워 두는
-## 시간(`monsterSwingMs`)만큼만. 범위 공격이 터진 것도 여기로 온다 (보스는 그 뒤 선다)
+## 몬스터가 휘두르기 시작했다(`mobSwing`). 첫 할퀴기 구간을 **처음부터 다시** 튼다 — 서버가 세워 두는
+## 시간(`monsterSwingMs`)만큼만. 범위 공격이 터진 것도 여기로 온다 (보스는 그 뒤 선다).
+## **피해 알림에서 틀지 않는다** (2026-09-30) — 피해는 손이 닿는 순간(클립 1.0초) 오므로 거기서
+## 0.8초부터 틀면 숫자가 뜬 뒤에 할퀴기가 나온다
 func _swing_mob(id: String) -> void:
 	var node: Node3D = _mob_nodes.get(id, null)
 	if id == "" or not node is Rig:
@@ -4965,8 +4979,8 @@ func _feel_hit(payload: Dictionary, on_me: bool, body: Node3D) -> void:
 	# 연달아 걸려 동작이 뚝뚝 끊긴다 (2026-09-24). 맞은 건 붉어짐·흔들림·퍼짐으로 안다.
 	# 맞음 동작(`Hit`)과 공격이 이기는 규칙(`HIT_CLIP` 위)과 같은 생각이다
 	var busy := on_me and _move_clip != "" and _move_clip != HIT_CLIP
-	# **내가 때렸으면 멈춤을 공속만큼 줄인다** (2026-09-29) — 초당 8번 차는데 한 대에 0.045초씩
-	# 멈추면 시간의 36% 가 멈춰 있어 발차기가 뚝뚝 끊긴다. 한 대 간격에서 차지하는 몫을 지킨다
+	# **내가 때렸으면 멈춤을 공속만큼 줄인다** (2026-09-29) — 초당 10번 차는데 한 대에 0.045초씩
+	# 멈추면 시간의 45% 가 멈춰 있어 발차기가 뚝뚝 끊긴다. 한 대 간격에서 차지하는 몫을 지킨다
 	var stop := float(feel.stop)
 	if not on_me:
 		stop /= 1.0 + maxf(float(_me().get("stats", {}).get("attackSpeed", 0.0)), 0.0)

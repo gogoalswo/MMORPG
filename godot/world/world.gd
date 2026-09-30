@@ -77,6 +77,9 @@ const PATROL_RADIUS := 1.0
 const PATROL_SPEED := 0.35
 ## 목적지에 이만큼 붙으면 도착으로 본다
 const PATROL_ARRIVE := 0.3
+## 휘두르는 동안 사람이 물러나도 맞는 여유(m). 손이 닿는 0.2초 동안 달리기(4.6m/s)로 0.9m 를
+## 가므로, 절반쯤 빠져나가면 빗나간다 — 보고 피할 수는 있되 한 발짝에 다 피하지는 못한다
+const SWING_REACH_SLACK := 0.5
 ## 한 다리 걷고 쉬는 시간. 무리가 한꺼번에 움직이지 않게 놈마다 다르게 뽑는다.
 ## 쉬는 동안은 idle 이라 **매 프레임 미는 것도 쉬어 간다** (폰 부담)
 const PATROL_REST_MIN_MS := 2000
@@ -466,7 +469,7 @@ func attack(player_id: String) -> void:
 	var root := Combat.attack_root_ms(cooldown)
 	player.rooted_until = now + root
 	# 휘두르는 동안 못 움직인다는 통보. 화면이 이 값만큼 동작을 튼다.
-	# `speed` 는 발차기를 트는 배속 — 기본 간격 / 지금 간격 (공속 +620% 면 7.2배, 2026-09-29)
+	# `speed` 는 발차기를 트는 배속 — 기본 간격 / 지금 간격 (공속 +800% 면 9배, Lv.200)
 	_events.append({
 		"type": "swing", "id": player_id, "root_ms": root,
 		"speed": float(stats.attackCooldown) / maxf(1.0, float(cooldown)),
@@ -940,6 +943,7 @@ func _respawn(now: int) -> void:
 		monster.respawn_at = 0
 		monster.stunned_until = 0
 		monster.pull_until = 0
+		monster.hit_at = 0
 		# **죽기 전 대상을 잊는다** (2026-09-29). 안 비우면 대상 유지 조건이 "리쉬 안" 이라
 		# 어그로(3m) 밖에 선 죽인 사람에게 되살아나자마자 달려간다
 		monster.target = ""
@@ -966,6 +970,12 @@ func _step_monsters(delta: float, now: int) -> void:
 		if int(monster.hp) <= 0:
 			continue
 
+		# --- 휘두른 손이 닿는 순간 --- 휘두르기를 알린 뒤 `MONSTER_HIT_DELAY_MS` 가 지나야 피해가
+		# 들어간다 (화면의 할퀴기 정점과 같은 순간). 기절·끌려오기에 걸리면 아래에서 취소된다
+		if int(monster.get("hit_at", 0)) != 0 and now >= int(monster.hit_at):
+			monster.hit_at = 0
+			_land_swing(monster)
+
 		# --- 범위 공격을 예고해 둔 상태 ---
 		# 예고한 뒤에는 **그 자리에 선다.** 원은 시전을 시작한 자리에 고정돼 있으므로
 		# 여기서 따라 움직이면 표시와 터지는 자리가 어긋나 붙어 있는 쪽은 피할 방법이
@@ -989,6 +999,7 @@ func _step_monsters(delta: float, now: int) -> void:
 			monster.z = lerpf(float(monster.pull_from_z), float(monster.pull_to_z), t)
 			if now < int(monster.pull_until):
 				monster.state = "stun"
+				monster.hit_at = 0
 				continue
 			monster.pull_until = 0
 
@@ -996,6 +1007,8 @@ func _step_monsters(delta: float, now: int) -> void:
 		# 한번 예고한 것은 그대로 터진다는 규칙을 기절도 깨지 않는다
 		if now < int(monster.get("stunned_until", 0)):
 			monster.state = "stun"
+			# 휘두르다 기절하면 그 한 대는 안 들어간다
+			monster.hit_at = 0
 			continue
 
 		# 휘두르는 동안은 못 움직인다. 화면이 공격 클립을 보여 주는 창과 같은 길이다
@@ -1075,7 +1088,11 @@ func _step_monsters(delta: float, now: int) -> void:
 		if now >= int(monster.next_attack_at):
 			monster.next_attack_at = now + int(monster.attack_cooldown)
 			monster.rooted_until = now + Combat.monster_root_ms(float(monster.attack_cooldown))
-			_hit_player(target, monster)
+			# 휘두르기부터 알리고 **피해는 손이 닿는 순간에** (위 `hit_at`) — 전에는 여기서 바로
+			# 때려서 화면의 할퀴기보다 숫자가 0.2초 먼저 떴다 (2026-09-30)
+			monster.hit_at = now + Combat.monster_hit_delay_ms()
+			monster.hit_target = str(target.get("id", ""))
+			_events.append({"type": "mobSwing", "id": monster.id})
 
 
 ## 쫓을 사람이 없을 때. 집 주변에서 한 다리 걷고 잠시 쉰다 (idle ↔ patrol).
@@ -1240,6 +1257,17 @@ func _fill_grid() -> void:
 		bucket.append(monster)
 
 
+## 휘두른 손이 닿았다. 대상이 그새 죽었거나 사거리(+`SWING_REACH_SLACK`) 밖으로 빠졌으면 빗나간다
+func _land_swing(monster: Dictionary) -> void:
+	var target: Dictionary = _players.get(str(monster.get("hit_target", "")), {})
+	if target.is_empty() or bool(target.get("dead", false)):
+		return
+	var gap := Vector2(target.x - monster.x, target.z - monster.z).length()
+	if gap > float(monster.attack_range) + SWING_REACH_SLACK:
+		return
+	_hit_player(target, monster)
+
+
 ## attack 을 따로 받는 것은 범위 공격이 평타의 power 배로 때리기 때문이다
 func _hit_player(player: Dictionary, monster: Dictionary, attack: float = -1.0) -> void:
 	var power := float(monster.attack) if attack < 0.0 else attack
@@ -1301,6 +1329,8 @@ func _burst_aoe(monster: Dictionary) -> void:
 		if gap > radius:
 			continue
 		_hit_player(player, monster, roundi(float(monster.attack) * power))
+	# 터지는 순간 휘두른다 (평타와 같은 할퀴기)
+	_events.append({"type": "mobSwing", "id": monster.id})
 
 
 ## 몬스터 한 마리를 만든다. **스폰과 테스트가 같은 함수를 쓴다** —
@@ -1353,6 +1383,9 @@ static func make_monster(
 		"patrol_rest_until": 0,
 		"next_attack_at": 0,
 		"rooted_until": 0,
+		# 휘두른 손이 닿는 시각과 그때 맞을 사람. 0 이면 휘두르는 중이 아니다 (`_land_swing`)
+		"hit_at": 0,
+		"hit_target": "",
 		# 기절이 풀리는 시각 (스킬 강화 — 낙뢰 기절). 그때까지 못 움직이고 못 때린다
 		"stunned_until": 0,
 		# 끌려오는 중 (무적파쇄권 흡인) — 이 시각까지 `pull_*` 의 두 점 사이를 옮겨진다 (`_pull_in`)

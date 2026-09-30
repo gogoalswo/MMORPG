@@ -33,6 +33,11 @@ static func attack_root_ms(cooldown_ms: float) -> int:
 ## 사람과 달리 이 값이 곧 **공격 클립을 보여 주는 창의 길이**다. 판정과 화면이
 ## 같은 값을 봐야 동작이 끝나는 순간에 발이 떨어진다 — 어느 한쪽이 길면
 ## 휘두르며 달리거나 다 휘두르고도 멈춰 있는다
+## 휘두르기를 시작하고 몸이 닿기까지(ms). 판정은 이만큼 뒤에 피해를 넣는다 (shared `MONSTER_HIT_DELAY_MS`)
+static func monster_hit_delay_ms() -> int:
+	return int(_c().get("monsterHitDelayMs", 200))
+
+
 static func monster_root_ms(cooldown_ms: float) -> int:
 	return maxi(0, mini(int(_c().get("monsterSwingMs", 650)), roundi(cooldown_ms)))
 

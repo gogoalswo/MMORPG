@@ -537,7 +537,7 @@
       "name": "질풍각",
       "description": "발차기가 바람처럼 빨라진다.",
       "stat": "attackSpeed",
-      "perRank": 0.31,
+      "perRank": 0.4,
       "everyLevels": 10,
       "maxRank": 20
     },

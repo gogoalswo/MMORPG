@@ -286,7 +286,8 @@ test('드랍률이 설계값이다 — 평면 14% 가 아니다', () => {
     105: 0.4788 + 0.1419,
     135: 0.1419 + 0.08152,
     165: 0.08152 + 0.02415,
-    195: 0.02415 + 0.01677, // 사냥터 20 — 등급6 + 등급7
+    // 사냥터 20 — 등급6 + 등급7. 등급7 은 배율 없이 0.01% 고정 (2026-09-30, `GEAR_DROP_OVERRIDE`)
+    195: 0.02415 + 0.01 / GEAR_DROP_BOOST,
   };
   for (const [level, percent] of Object.entries(want)) {
     const got = dropChanceFor(Number(level)) * 100;
@@ -354,15 +355,15 @@ test('최고 등급은 마지막 사냥터에서만 나온다', () => {
 
 test('창 안에서는 아래 등급이 더 흔하다 — 비는 설계가 정한다', () => {
   // 예전에는 2^(n-g) 로 임의로 2:1 이었다. 이제 설계의 드랍률 비 그대로다 —
-  // 사냥터 20 = [6, 7] 이면 0.0016 : 0.0011 = 1.45 : 1
+  // 사냥터 20 = [6, 7] 이면 0.0483 : 0.01 = 4.83 : 1 (등급7 은 0.01% 고정, 2026-09-30)
   const counts = new Array(GRADE_MAX + 1).fill(0);
   const N = 20000;
   for (let i = 0; i < N; i++) counts[rollGrade(i / N, 200)]++;
   assert.ok(counts[6] > counts[7], '아래 등급이 더 흔해야 한다');
   assert.ok(counts[7] > 0, '위 등급이 아예 안 나온다');
   const ratio = counts[6] / counts[7];
-  const want = 0.0016 / 0.0011;
-  assert.ok(Math.abs(ratio - want) < 0.05, `비가 ${want.toFixed(2)}:1 이어야 하는데 ${ratio.toFixed(2)}:1`);
+  const want = 0.0483 / 0.01;
+  assert.ok(Math.abs(ratio - want) < 0.1, `비가 ${want.toFixed(2)}:1 이어야 하는데 ${ratio.toFixed(2)}:1`);
 });
 
 test('등급이 곧 성능이다 — 무기는 등비 ×2.434 로 오른다', () => {

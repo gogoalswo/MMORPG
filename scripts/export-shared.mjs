@@ -45,6 +45,7 @@ import {
   POTION_AUTO_STEP,
   POTION_AUTO_MAX,
   MONSTER_SWING_MS,
+  MONSTER_HIT_DELAY_MS,
   ATTACK_ARC,
   MAX_LEVEL,
   SKILL_BAR_SIZE,
@@ -83,7 +84,7 @@ import {
   MATERIALS,
   CRYSTAL_ID,
   CRYSTAL_DROP_CHANCE,
-  GEAR_DROP_BOOST,
+  gearDropPercent,
   OPTION_LABEL,
   LEGACY_OPTION_LABEL,
   MAX_ENHANCE,
@@ -152,6 +153,7 @@ export function buildData() {
       potionAutoStep: POTION_AUTO_STEP,
       potionAutoMax: POTION_AUTO_MAX,
       monsterSwingMs: MONSTER_SWING_MS,
+      monsterHitDelayMs: MONSTER_HIT_DELAY_MS,
       attackArc: ATTACK_ARC,
       maxLevel: MAX_LEVEL,
       skillBarSize: SKILL_BAR_SIZE,
@@ -193,8 +195,8 @@ export function buildData() {
       // 등급별 킬당 드랍률 — **퍼센트 단위**다 (0.2963 = 0.2963%).
       // 설계(stat-balance.md 7장)가 "그 사냥터 체류 중에 목표 개수를 채운다"
       // 에서 역산한 값이라, 합계 하나로는 못 줄이고 등급마다 따로 둔다.
-      // **배율(`GEAR_DROP_BOOST`)을 건 판정값**이다 — 고도는 이걸 그대로 쓴다
-      gradeDropRate: GEAR_DROP_RATE.map((r) => r * GEAR_DROP_BOOST),
+      // **배율(`GEAR_DROP_BOOST`)·고정값(`GEAR_DROP_OVERRIDE`)을 건 판정값**이다 — 고도는 이걸 그대로 쓴다
+      gradeDropRate: GEAR_DROP_RATE.map((_, i) => gearDropPercent(i + 1)),
       // 등급별 착용 레벨 (1·31·61·91·121·151·181). 고도는 이걸로 "이 레벨에서
       // 낄 수 있는 최고 등급" 을 찾는다 — 30레벨 간격을 두 곳에 적지 않으려고 표로 준다
       gradeLevels: Array.from({ length: MAX_DROP_GRADE }, (_, i) => gradeLevel(i + 1)),

@@ -792,9 +792,24 @@ export function dropChanceFor(monsterLevel: number): number {
  */
 export const GEAR_DROP_BOOST = 2;
 
-/** 등급 하나의 킬당 확률(0~1). 표는 퍼센트라 100 으로 나누고 배율을 건다 */
+/**
+ * 등급별 **판정 드랍률 고정값(%)** — 여기 든 등급은 설계값·배율을 안 거치고 이 값 그대로다. ★
+ *
+ * 2026-09-30 요청: "7등급 아이템을 드랍률 0.01로 낮춰" (그 전 판정값 0.0335%).
+ * `GEAR_DROP_RATE` 는 공식에서 역산한 설계 원본이라(`balance.test.ts` 가 공식과 대조한다)
+ * 그대로 두고 여기서 덮는다. 사냥터 20 의 창 [6, 7] 비도 이 값으로 바뀐다.
+ */
+export const GEAR_DROP_OVERRIDE: Readonly<Record<number, number>> = { 7: 0.01 };
+
+/** 등급 하나의 킬당 판정 드랍률(%) — 설계값 × 배율, 고정값이 있으면 그것. 고도로 내보내는 값이다 */
+export function gearDropPercent(grade: number): number {
+  const g = Math.min(GEAR_DROP_RATE.length, Math.max(1, grade));
+  return GEAR_DROP_OVERRIDE[g] ?? (GEAR_DROP_RATE[g - 1] ?? 0) * GEAR_DROP_BOOST;
+}
+
+/** 등급 하나의 킬당 확률(0~1). 판정 드랍률이 퍼센트라 100 으로 나눈다 */
 function gearDropRate(grade: number): number {
-  return ((GEAR_DROP_RATE[Math.min(GEAR_DROP_RATE.length, Math.max(1, grade)) - 1] ?? 0) / 100) * GEAR_DROP_BOOST;
+  return gearDropPercent(grade) / 100;
 }
 
 /**

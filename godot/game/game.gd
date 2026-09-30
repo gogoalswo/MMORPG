@@ -100,6 +100,8 @@ const TREE_CELL := 84
 const TREE_GAP := 22
 const TREE_ARROW := 44
 const TREE_LABEL_W := 80
+## 안 배운 칸의 음영 (그림·틀에 곱한다)
+const TREE_SHADE := Color(0.4, 0.4, 0.4)
 ## 퀵슬롯 위 한 묶음 (2026-09-20 요청). 레벨 배지 한 변과 체력 막대 높이다.
 ## **막대 길이는 안 정한다** — 세로 상자가 가장 넓은 자식(퀵슬롯 줄)에 맞춰 준다.
 ## 막대는 **테두리 두께의 두 배보다 높아야 한다** — 34 에 여백 18 을 주었더니
@@ -4045,12 +4047,16 @@ func _tree_state(p: Dictionary, step: int, level: int, ranks: Dictionary) -> Str
 	return "ready"
 
 
-## 칸마다 — 고른 테두리 · 못 배우는 칸은 흐리게 · 지금 습득할 칸에 레드닷. 화살표도 다시 긋는다
+## 칸마다 — 고른 테두리 · **안 배운 칸은 음영**(지금 습득할 칸도, 2026-09-30 요청: "미습득한 스킬은 음영 처리해")
+## · 지금 습득할 칸에 레드닷. 칸째(`modulate`) 어둡게 하면 칸에 얹힌 레드닷까지 어두워져서
+## 틀(`self_modulate`)과 그림만 어둡게 한다. 화살표도 다시 긋는다
 func _redraw_tree(level: int, ranks: Dictionary) -> void:
 	for node in _tree_nodes:
 		var state := _tree_state(Skills.passive(node.id), node.step, level, ranks)
 		node.cell.get_node("pick").visible = node.id == _skill_pick and int(node.step) == _passive_step
-		node.cell.modulate = Color(0.45, 0.45, 0.45) if state == "level" or state == "order" else Color.WHITE
+		var shade := Color.WHITE if state == "done" else TREE_SHADE
+		node.cell.self_modulate = shade
+		node.cell.find_child("icon", true, false).modulate = shade
 		node.dot.visible = state == "ready"
 	_tree.queue_redraw()
 

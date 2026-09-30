@@ -2098,8 +2098,14 @@ func _case_passive(game: Node3D, me: Dictionary) -> void:
 	var one: Dictionary = game._tree_nodes[game._tree_find("gale_kicks", 1)]
 	var two: Dictionary = game._tree_nodes[game._tree_find("gale_kicks", 2)]
 	var three: Dictionary = game._tree_nodes[game._tree_find("gale_kicks", 3)]
-	if one.dot.visible or not two.dot.visible or three.cell.modulate == Color.WHITE:
-		_fail("배운 1단계·습득할 2단계·레벨 모자란 3단계가 안 갈린다: 점 %s/%s · 3단계 %s" % [one.dot.visible, two.dot.visible, three.cell.modulate])
+	if one.dot.visible or not two.dot.visible:
+		_fail("배운 1단계·습득할 2단계의 레드닷이 틀렸다: %s/%s" % [one.dot.visible, two.dot.visible])
+	# 안 배운 칸은 음영 — 지금 습득할 칸도 (2026-09-30 요청). 레드닷은 어두워지지 않는다
+	var shade_of := func(node: Dictionary) -> Color: return node.cell.find_child("icon", true, false).modulate
+	if shade_of.call(one) != Color.WHITE or shade_of.call(two) == Color.WHITE or shade_of.call(three) == Color.WHITE \
+			or two.cell.modulate != Color.WHITE:
+		_fail("배운 칸만 밝아야 한다: 1단계 %s · 2단계 %s · 3단계 %s · 2단계 칸째 %s" % [
+			shade_of.call(one), shade_of.call(two), shade_of.call(three), two.cell.modulate])
 	if game._passive_learn.disabled or not game._passive_dot.visible or game._passive_learn.text != "습득":
 		_fail("2단계를 골랐는데 [습득] 이 막혔거나 레드닷이 없다 ('%s')" % game._passive_learn.text)
 	var info: String = game._skill_info.text
@@ -2160,8 +2166,8 @@ func _case_passive(game: Node3D, me: Dictionary) -> void:
 	# 레벨 도달 패시브(2026-09-30) — 경공(Lv.30)은 Lv.25 에 막혀 있고, 레벨이 되면 [습득] 한 번에 끝
 	var step_node: Dictionary = game._tree_nodes[game._tree_find("light_step", 1)]
 	game._pick_tree(game._tree_find("light_step", 1))
-	if step_node.cell.modulate == Color.WHITE or not game._passive_learn.disabled or game._passive_learn.text != "습득":
-		_fail("Lv.25 경공 칸이 흐리지 않거나 [습득] 이 안 막혔다: %s · %s" % [step_node.cell.modulate, game._passive_learn.disabled])
+	if shade_of.call(step_node) == Color.WHITE or not game._passive_learn.disabled or game._passive_learn.text != "습득":
+		_fail("Lv.25 경공 칸이 흐리지 않거나 [습득] 이 안 막혔다: %s · %s" % [shade_of.call(step_node), game._passive_learn.disabled])
 	if not "이동 속도 +20%" in game._skill_info.text or not game._skill_state.text.begins_with("30레벨"):
 		_fail("경공 설명이 틀렸다: '%s' · '%s'" % [game._skill_info.text, game._skill_state.text])
 	me.level = 30

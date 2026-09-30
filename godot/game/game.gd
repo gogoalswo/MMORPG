@@ -503,7 +503,7 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			if str(payload.get("id", "")) == _transport.my_id():
 				_swings += 1
 				# **공속만큼 빨리 찬다** (2026-09-29 요청: "공속이 빨라지면 그만큼 애니메이션을 빠르게
-				# 재생해") — 판정이 실어 보낸 배속(= 기본 간격 / 지금 간격). Lv.200 이면 7.2배
+				# 재생해") — 판정이 실어 보낸 배속(= 기본 간격 / 지금 간격). Lv.200 이면 9배
 				var speed := float(payload.get("speed", 1.0))
 				_start_move(_kick_clip(int(payload.get("ms", 900))), speed)
 		&"lunge":
@@ -4942,8 +4942,8 @@ func _feel_hit(payload: Dictionary, on_me: bool, body: Node3D) -> void:
 	# 연달아 걸려 동작이 뚝뚝 끊긴다 (2026-09-24). 맞은 건 붉어짐·흔들림·퍼짐으로 안다.
 	# 맞음 동작(`Hit`)과 공격이 이기는 규칙(`HIT_CLIP` 위)과 같은 생각이다
 	var busy := on_me and _move_clip != "" and _move_clip != HIT_CLIP
-	# **내가 때렸으면 멈춤을 공속만큼 줄인다** (2026-09-29) — 초당 8번 차는데 한 대에 0.045초씩
-	# 멈추면 시간의 36% 가 멈춰 있어 발차기가 뚝뚝 끊긴다. 한 대 간격에서 차지하는 몫을 지킨다
+	# **내가 때렸으면 멈춤을 공속만큼 줄인다** (2026-09-29) — 초당 10번 차는데 한 대에 0.045초씩
+	# 멈추면 시간의 45% 가 멈춰 있어 발차기가 뚝뚝 끊긴다. 한 대 간격에서 차지하는 몫을 지킨다
 	var stop := float(feel.stop)
 	if not on_me:
 		stop /= 1.0 + maxf(float(_me().get("stats", {}).get("attackSpeed", 0.0)), 0.0)

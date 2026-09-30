@@ -210,8 +210,8 @@ test('스킬 강화는 있는 스킬에 붙고, 스킬마다 둘까지이며, �
   }
 });
 
-test('질풍각 — Lv.200 에 격투가가 초당 8번 때린다', () => {
-  // 2026-09-29 요청: "200레벨 기준 초당 8번 때릴꺼야". 공속은 이 패시브에서만 온다
+test('질풍각 — Lv.200 에 격투가가 초당 10번 때린다', () => {
+  // 2026-09-30 요청: "200레벨 기준 초당 10타 때릴 수 있게" (처음 09-29 엔 초당 8번). 공속은 이 패시브에서만 온다
   const gale = PASSIVES.find((p) => p.id === 'gale_kicks')!;
   assert.ok(gale, '질풍각이 없다');
   assert.equal(passiveRankOpen(gale, 9), 0, 'Lv.9 는 아직 0단계');
@@ -219,5 +219,5 @@ test('질풍각 — Lv.200 에 격투가가 초당 8번 때린다', () => {
   assert.equal(passiveRankOpen(gale, MAX_LEVEL), gale.maxRank, '만렙에 끝 단계');
   const base = statsFor('fighter', MAX_LEVEL).attackCooldown;
   const interval = effectiveCooldown(base, gale.perRank * gale.maxRank);
-  assert.equal(interval, 125, `만렙 간격 ${interval}ms`);
+  assert.equal(interval, 100, `만렙 간격 ${interval}ms`);
 });

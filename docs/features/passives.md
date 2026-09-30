@@ -14,21 +14,22 @@
    "연타 중에는 서서 때려" · "레벨 되면 공짜로 배울 수 있지만 습득 버튼을 만들어서 배우게 만들고,
    스킬 배울 수 있는 경우 HUD 스킬 아이콘에 레드닷 및 스킬 UI 안에서도 습득 버튼 위에 레드닷" ·
    "전직관 삭제해" · "퀵슬롯, 스킬 강화 칸, 던전의 스킬 경험치 숨김 처리해" · "패시브 아이콘 새로 만들어"
+4. **"공속을 좀 더 올리자 200레벨 기준 초당 10타 때릴 수 있게"** (2026-09-30) — 단계당 +31% → **+40%**
 
 | 레벨 | 단계 | 공속 | 평타 간격 | 초당 |
 |---|---|---|---|---|
 | 1~9 | 0 | 0% | 900ms | 1.1 |
-| 50 | 5 | +155% | 353ms | 2.8 |
-| 100 | 10 | +310% | 220ms | 4.6 |
-| 150 | 15 | +465% | 159ms | 6.3 |
-| 200 | 20 | **+620%** | **125ms** | **8.0** |
+| 50 | 5 | +200% | 300ms | 3.3 |
+| 100 | 10 | +400% | 180ms | 5.6 |
+| 150 | 15 | +600% | 129ms | 7.8 |
+| 200 | 20 | **+800%** | **100ms** | **10.0** |
 
 ## 어디
 
 | 파일 | 역할 |
 |---|---|
-| `packages/shared/src/skills.ts` | **표** — `PASSIVES`(id · 직업 · 스탯 · `perRank` 0.31 · `everyLevels` 10 · `maxRank` 20) · `passiveRankOpen(p, level)` |
-| `packages/shared/src/skills.test.ts` | "질풍각 — Lv.200 에 격투가가 초당 8번 때린다" (`effectiveCooldown(900, 6.2) = 125`) |
+| `packages/shared/src/skills.ts` | **표** — `PASSIVES`(id · 직업 · 스탯 · `perRank` 0.4 · `everyLevels` 10 · `maxRank` 20) · `passiveRankOpen(p, level)` |
+| `packages/shared/src/skills.test.ts` | "질풍각 — Lv.200 에 격투가가 초당 10번 때린다" (`effectiveCooldown(900, 8) = 100`) |
 | `scripts/export-shared.mjs` | `skills.json` 의 `passives` 로 내보낸다 |
 | `godot/world/skills.gd` | `passives_for(job)` · `passive(id)` · `passive_open(p, level)` · **`passive_learnable`(레드닷)** · `passive_bonus(job, ranks)` · `actives_shown(job)` |
 | `godot/world/ledger.gd` | **`learn_passive`** — 직업 · 레벨 · 끝 단계를 다시 본다. `KEYS` 에 `passives` |
@@ -39,12 +40,12 @@
 | `godot/game/game.gd` `_redraw_skills` · `_draw_passive` · `_on_passive_learn` | 스킬창 — 목록 맨 앞에 패시브 칸(`N/20`), 왼쪽 설명(단계 · **현재 단계 : 공격 속도 +N%** · **다음 단계 : 공격 속도 +M%**(끝이면 "없음") · 초당 타수 → 다음 단계), **[습득]** 과 그 위 레드닷. 단추 글자는 0단계일 때만 "습득", 한 번 배운 뒤로는 **"레벨업"** (2026-09-30 요청 — "N레벨마다 +M%" 줄도 이때 뺐다) |
 | `godot/game/game.gd` `_skill_dot` · `_refresh_status` | HUD 스킬 아이콘의 레드닷 — 매 프레임 `passive_learnable` 로 맞춘다 |
 | `public/assets/icons/skill_gale_kicks.png` | 아이콘 (바르코, 스킬 아이콘 참고 그림을 물렸다). 주소는 `fetch-assets.sh` |
-| `godot/tests/passive_test.gd` | 레벨 잠금 · 한 번에 한 단계 · 끝 단계 · 125ms · 옛 공속 옵션 무시 · 저장 · 서버 처치 검증 |
+| `godot/tests/passive_test.gd` | 레벨 잠금 · 한 번에 한 단계 · 끝 단계 · 100ms · 옛 공속 옵션 무시 · 저장 · 서버 처치 검증 |
 | `godot/tests/ui_test.gd` `_case_passive` | 퀵슬롯 스킬 칸 숨김 · 장착 줄/강화 칸 숨김 · 1단계면 단추가 "레벨업"·설명이 현재/다음 단계 두 줄 · [습득] 누르면 단계·간격 · 레드닷 켜짐 → 꺼짐 |
 
 ## 규칙
 
-- **공속은 더한다** — `간격 / (1 + 공속)`. 단계마다 초당 타수가 같은 폭(+0.34타)으로 는다.
+- **공속은 더한다** — `간격 / (1 + 공속)`. 단계마다 초당 타수가 같은 폭(+0.44타)으로 는다.
   곱으로 쌓으면 초반이 굼뜨고 후반에 몰린다.
 - **공속은 여기서만 온다.** 장비 공속 옵션은 같은 날 뺐다 — 뽑기 목록(`OPTION_KINDS`)에서 빠졌고,
   옛 아이템에 남은 공속 줄은 계산(`Items.stack_stats`)과 표시(`Items.shown_options`)에서 무시한다.
@@ -54,7 +55,7 @@
 - **`stats_of` 안에서 더한다** — 서버의 처치 검증(`KillCheck.min_ms`)도 같은 함수를 부른다.
   여기서 빠뜨리면 빨라진 평타가 "너무 빨리 잡았다(too_fast)" 로 거부된다.
 - **한 대 피해·몬스터 표는 그대로다** (사용자 결정 — 스킬을 안 쓰니 DPS 는 오르지 않는다).
-- **연타 중에는 서서 친다** — 경직은 그대로 `min(400, 간격)` 이라 125ms 간격이면 때리는 내내 묶인다.
+- **연타 중에는 서서 친다** — 경직은 그대로 `min(400, 간격)` 이라 100ms 간격이면 때리는 내내 묶인다.
 - **테스트 모드(Lv.200)는 패시브를 비운 채 시작한다** — 들어가자마자 레드닷과 [습득] 을 눌러 본다.
   끝까지 한 번에 올리려면 치트 "스킬 모두 배우기"(`World.debug_learn_all`).
 - 저장에서 불러올 때 **지금 있는 패시브만**, 끝 단계 안으로 되살린다.
@@ -74,8 +75,8 @@
   | 이어지는 대 | `KickSlapA` · `KickSlapB` 번갈아 | 든 발로 안쪽→바깥 · 바깥→안쪽 (0.05 에 앞을 친다) |
   A·B 는 서로의 끝 자세에서 시작해 이어 붙여도 튀지 않는다. 멈추면 든 발이 대기로 섞이며(0.15초) 내려온다.
 - 들어가며 섞는 시간(`MOVE_BLEND`)도 배속으로 나눈다.
-- **내가 때린 히트스톱은 공속만큼 줄인다** (`_feel_hit`). 초당 8번에 한 대 0.045초씩 멈추면
-  시간의 36% 가 멈춰 있어 발차기가 뚝뚝 끊긴다.
+- **내가 때린 히트스톱은 공속만큼 줄인다** (`_feel_hit`). 초당 10번에 한 대 0.045초씩 멈추면
+  시간의 45% 가 멈춰 있어 발차기가 뚝뚝 끊긴다.
 
 ### 보이는 스킬이 없으면 숨기는 것 (`Skills.actives_shown`)
 격투가 스킬은 전부 `hidden` 이다 → [skills.md](skills.md) "숨긴 스킬". 그래서 다음이 **숨는다** —
@@ -88,7 +89,7 @@
 ## 손댈 때
 
 - 초당 타수 목표를 바꾸면 `perRank` 를 고친다 (`(900 / 목표간격 - 1) / maxRank`) → `npm run export:godot`.
-  `skills.test.ts` 와 `passive_test.gd` 의 125 도 같이 고친다.
+  `skills.test.ts` 와 `passive_test.gd` 의 100 도 같이 고친다.
 - 격투가 기본 간격(`balance.ts` `JOB_MULT.fighter.interval`)을 바꾸면 위 표가 전부 움직인다.
 - 패시브를 더하면 `PASSIVES` 에 한 줄. 공속 말고 다른 스탯이면 `passive_bonus` 가 스탯 이름으로 더하므로
   `stats_of` 에서 그 스탯을 더하는 줄을 넣는다. 레드닷·스킬창은 목록을 그대로 따른다.

@@ -2,7 +2,7 @@ extends SceneTree
 
 ## 패시브 질풍각 (docs/features/passives.md) — **판정은 장부가 다시 본다.**
 ## 레벨마다 한 단계가 열리고 [습득] 한 번에 한 단계, 공속은 여기서만 온다.
-## Lv.200 · 20단계면 격투가 평타가 125ms = 초당 8번이다 (2026-09-29 요청)
+## Lv.200 · 20단계면 격투가 평타가 100ms = 초당 10번이다 (2026-09-30 요청, 처음엔 8번)
 ##
 ##   godot --headless --path godot --script tests/passive_test.gd
 
@@ -70,12 +70,12 @@ func _case_learn() -> void:
 		print("  배우기: Lv.9 막힘 · Lv.25 두 단계까지 · 끝 %d단계에서 멈춤" % top)
 
 
-## 20단계면 격투가 평타 간격 125ms (초당 8번) — `stats_of` 가 더한다
+## 20단계면 격투가 평타 간격 100ms (초당 10번) — `stats_of` 가 더한다
 func _case_speed() -> void:
 	var stats := World.stats_of("fighter", 200, {}, {"gale_kicks": 20})
 	var interval := Combat.effective_cooldown(stats.attackCooldown, stats.attackSpeed)
-	if interval != 125:
-		_fail("Lv.200 · 20단계 평타 간격이 125ms 가 아니다: %dms" % interval)
+	if interval != 100:
+		_fail("Lv.200 · 20단계 평타 간격이 100ms 가 아니다: %dms" % interval)
 	var bare := World.stats_of("fighter", 200, {})
 	if float(bare.attackSpeed) != 0.0:
 		_fail("패시브 없이 공속이 %s" % bare.attackSpeed)

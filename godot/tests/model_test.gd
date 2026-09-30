@@ -202,11 +202,11 @@ func _check_moves(game: Node3D) -> void:
 	var rig: Rig = game._player
 	var me: String = game._transport.my_id()
 	var cases := [
-		# 평타 — 든 발로 뺨 치듯 좌우로, **판정이 준 배속으로** (공속 +620% 면 7.2배). 속도와 상관없이
+		# 평타 — 든 발로 뺨 치듯 좌우로, **판정이 준 배속으로** (공속 +800% 면 9배). 속도와 상관없이
 		# 첫 대는 발을 들며 치고(In), 곧이어 오는 대는 바깥(A)·안쪽(B)을 번갈아 친다
 		[&"swing", {"id": me, "root_ms": 400, "speed": 1.0, "ms": 900}, "KickSlapIn", 1.0],
-		[&"swing", {"id": me, "root_ms": 125, "speed": 7.2, "ms": 125}, "KickSlapA", 7.2],
-		[&"swing", {"id": me, "root_ms": 125, "speed": 7.2, "ms": 125}, "KickSlapB", 7.2],
+		[&"swing", {"id": me, "root_ms": 100, "speed": 9.0, "ms": 100}, "KickSlapA", 9.0],
+		[&"swing", {"id": me, "root_ms": 100, "speed": 9.0, "ms": 100}, "KickSlapB", 9.0],
 		[&"skill", {"id": me, "skill": "frost_pillar", "root_ms": 400}, "FrostStomp"],
 		[&"skill", {"id": me, "skill": "thunder_fall", "root_ms": 400}, "Thunder"],
 		[&"skill", {"id": me, "skill": "nova_fist", "root_ms": 750, "delay_ms": 750}, "NovaFist"],

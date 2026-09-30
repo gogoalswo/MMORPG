@@ -74,9 +74,11 @@ const SPREAD_LOW := 0.5
 const SPREAD_MIN_HEIGHT := 1.3
 ## 몸을 못 재면(기둥도 없을 때) 이만한 몸으로 친다
 const SPREAD_BODY := 1.6
-## 치명타 숫자 오른쪽 위에 작게 붙는 `Cri` — 숫자 글자 크기의 이 비율 (2026-09-30,
-## "크리티컬에 느낌표 말고 Cri 라고 텍스트 작게 붙여 줘, 오른쪽 위에"). `!` 는 뗐다
-const CRI_RATIO := 0.45
+## 치명타 숫자 오른쪽 위에 작게 붙는 `CRITICAL` — 숫자 글자 크기의 이 비율 (2026-09-30,
+## "크리티컬에 느낌표 말고 Cri 라고 텍스트 작게 붙여 줘, 오른쪽 위에"). `!` 는 뗐다.
+## 처음엔 `Cri` 였다가 같은 날 "CRITICAL 로 바꿔봐" 로 바꿨다
+## `Cri` 일 땐 0.45 였다 — `CRITICAL` 은 여덟 자라 그대로 두면 숫자만큼 넓어 보였다
+const CRI_RATIO := 0.34
 ## 후보를 이만큼 뽑아 **방금 뜬 숫자들과 가장 먼 것**을 고른다. 그냥 무작위면
 ## 연달아 같은 자리에 겹치는 일이 잦다. 숫자가 옆으로 긴 만큼 좌우 거리는
 ## `SPREAD_ASPECT` 로 나눠 잰다 (좌우로 1m 떨어진 것보다 위아래 1m 가 덜 겹친다)
@@ -116,7 +118,7 @@ const BOSS_KICK := 0.5
 var _t := 0.0
 var _flash: MeshInstance3D
 var _number: Label3D
-## 치명타 숫자 오른쪽 위 `Cri`. 숫자의 자식이라 함께 떠오르고 함께 부푼다
+## 치명타 숫자 오른쪽 위 `CRITICAL`. 숫자의 자식이라 함께 떠오르고 함께 부푼다
 var _cri: Label3D
 ## 치명타면 숫자가 부푼다 (`_process`)
 var _crit := false
@@ -264,7 +266,7 @@ func _build(font: Font) -> void:
 	add_child(_number)
 
 	_cri = Label3D.new()
-	_cri.text = "Cri"
+	_cri.text = "CRITICAL"
 	_cri.font_size = DamageFont.SIZE
 	_cri.outline_size = 0
 	_cri.billboard = BaseMaterial3D.BILLBOARD_ENABLED
@@ -445,7 +447,7 @@ func _process(delta: float) -> void:
 		finish()
 
 
-## `Cri` 를 숫자 오른쪽 위 모서리에 붙인다. **자리(`position`)가 아니라 `offset` 으로 민다** —
+## `CRITICAL` 를 숫자 오른쪽 위 모서리에 붙인다. **자리(`position`)가 아니라 `offset` 으로 민다** —
 ## 숫자는 셰이더에서 화면을 보도록 돌기 때문에(billboard) 노드 좌표로 옆으로 밀면
 ## 월드 X 로 밀려 카메라가 비스듬하면 뒤로 숨는다. `offset` 은 화면을 본 판 위의 px 이다
 func _place_cri() -> void:
@@ -453,7 +455,7 @@ func _place_cri() -> void:
 	var font: Font = _number.font
 	var number_w := font.get_string_size(_number.text, HORIZONTAL_ALIGNMENT_LEFT, -1, DamageFont.SIZE).x
 	var cri_w := font.get_string_size(_cri.text, HORIZONTAL_ALIGNMENT_LEFT, -1, DamageFont.SIZE).x
-	# 숫자 판의 px 을 `Cri` 판의 px 로 바꾼다
+	# 숫자 판의 px 을 `CRITICAL` 판의 px 로 바꾼다
 	var k := _number.pixel_size / _cri.pixel_size
 	_cri.offset = Vector2(number_w * 0.5 * k + cri_w * 0.5 - DamageFont.SIZE * 0.15,
 		DamageFont.SIZE * 0.32 * k)

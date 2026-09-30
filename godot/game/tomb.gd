@@ -10,8 +10,8 @@ extends RefCounted
 ## 차원문(`portal.gd`)과 같은 짜임이다. 바르코 모델을 받으면 이 자리에 넣기만 하면 된다
 
 const MODEL := "res://assets/models/varco_tomb.glb"
-## 비석 높이(m). 사람(1.8m 안팎)의 반을 조금 넘는다
-const HEIGHT := 1.0
+## 묘비 높이(m). **작게** — 사람(1.8m 안팎)의 무릎을 조금 넘는다 (2026-09-30 "크기는 작게 만들어")
+const HEIGHT := 0.6
 const STONE := Color("#77726a")
 
 
@@ -31,19 +31,23 @@ static func create(x: float, y: float, z: float) -> Node3D:
 		root.add_child(model)
 		return root
 
+	# 모델이 없을 때의 돌판 — 높이 1 로 짓고 HEIGHT 로 줄인다
+	var stone := Node3D.new()
+	stone.scale = Vector3.ONE * HEIGHT
+	root.add_child(stone)
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = STONE
 	mat.roughness = 0.95
 	# 받침
-	root.add_child(_part(_box(Vector3(0.95, 0.14, 0.45)), Vector3(0, 0.07, 0), Vector3.ZERO, mat))
+	stone.add_child(_part(_box(Vector3(0.95, 0.14, 0.45)), Vector3(0, 0.07, 0), Vector3.ZERO, mat))
 	# 비석 몸통과 둥근 윗머리. 원기둥을 눕혀(축이 앞뒤) 몸통 위에 반쯤 묻는다
-	var body_h := HEIGHT - 0.14 - 0.35
-	root.add_child(_part(_box(Vector3(0.7, body_h, 0.16)), Vector3(0, 0.14 + body_h / 2.0, 0), Vector3.ZERO, mat))
+	var body_h := 1.0 - 0.14 - 0.35
+	stone.add_child(_part(_box(Vector3(0.7, body_h, 0.16)), Vector3(0, 0.14 + body_h / 2.0, 0), Vector3.ZERO, mat))
 	var cap := CylinderMesh.new()
 	cap.top_radius = 0.35
 	cap.bottom_radius = 0.35
 	cap.height = 0.16
-	root.add_child(_part(cap, Vector3(0, 0.14 + body_h, 0), Vector3(PI / 2.0, 0, 0), mat))
+	stone.add_child(_part(cap, Vector3(0, 0.14 + body_h, 0), Vector3(PI / 2.0, 0, 0), mat))
 	return root
 
 

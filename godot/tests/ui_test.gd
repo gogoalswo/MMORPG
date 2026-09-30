@@ -865,7 +865,8 @@ func _tap_card(panel: DungeonPanel, i: int) -> void:
 
 ## 사냥터 줄 끝 느낌표 → 드랍 창 (2026-09-30 요청: "각 사냥터별로 느낌표 눌러서, 드랍되는 아이템
 ## 표시"). 마을 줄엔 없고 · 누르면 그 사냥터 창이 뜨고(차원문 창은 그대로) · 등급마다 슬롯 6칸에
-## 그림이 있고 · 확률이 판정 표 그대로고 · 창이 화면 안이고 · X 로 닫히고 · 배지에서 미끄러지면 안 뜬다
+## 그림이 있고 · **확률은 안 적고**("확률은 넣지마") · 등장 몬스터 능력치가 표 그대로고 ·
+## 창이 화면 안이고 · X 로 닫히고 · 배지에서 미끄러지면 안 뜬다
 func _check_gate_drops(panel: GatePanel) -> void:
 	var list: ScrollContainer = panel._scroll
 	list.scroll_vertical = 0
@@ -909,13 +910,25 @@ func _check_gate_drops(panel: GatePanel) -> void:
 			if (cell.find_child("Icon", true, false) as TextureRect).texture == null:
 				_fail("드랍 칸 '%s' 에 그림이 없다" % (cell.find_child("Name", true, false) as Label).text)
 				break
-		if not is_equal_approx(float(grades[i].chance), Items.grade_drop_rate(int(grades[i].grade))):
-			_fail("드랍 창 확률이 판정 표(grade_drop_rate)와 다르다")
 	# 판정이 이 사냥터 몬스터에게서 굴리는 등급이 다 나와야 한다
 	for spot in GameData.zone(zone).get("monsters", []):
 		for g in Items.drop_grades(int(GameData.monster_kind(str(spot.kind)).get("level", 1))):
-			if not grades.any(func(e): return int(e.grade) == int(g)):
+			if not grades.has(int(g)):
 				_fail("몬스터 %s 가 떨구는 %d등급이 드랍 창에 없다" % [spot.kind, g])
+	for label in drops.find_children("*", "Label", true, false):
+		if "%" in (label as Label).text:
+			_fail("드랍 창에 확률이 적혀 있다: '%s'" % label.text)
+	# 등장 몬스터 — 종류마다 한 칸, 능력치는 몬스터 표 그대로
+	var mobs: Array = drops._list.get_node("Monsters").get_children()
+	var kinds: Array = drops.drops.get("kinds", [])
+	if kinds.is_empty() or mobs.size() != kinds.size():
+		_fail("등장 몬스터 칸 %d개 — 몬스터 종류 %d개여야 한다" % [mobs.size(), kinds.size()])
+		return
+	var mob := GameData.monster_kind(str(kinds[0]))
+	var stats := (mobs[0].find_child("Stats", true, false) as Label).text
+	for key in ["maxHp", "attack", "defense"]:
+		if not DropPanel.number(int(mob[key])) in stats:
+			_fail("몬스터 능력치 '%s' 에 %s(%d)가 없다" % [stats, key, int(mob[key])])
 	await process_frame
 	var screen := drops.get_viewport_rect()
 	if not screen.encloses(drops.get_global_rect()):
@@ -923,13 +936,12 @@ func _check_gate_drops(panel: GatePanel) -> void:
 	# 마지막 사냥터는 가장 높은 등급(태초)까지 보인다
 	var last := str(GameData.field_order().back())
 	panel.show_drops(last)
-	var top: int = int(drops.drops.grades[0].grade)
+	var top: int = int(drops.drops.grades[0])
 	if top != int(Items._t().get("gradeMax", 7)):
 		_fail("마지막 사냥터 드랍 창의 맨 위 등급이 %d — 최고 등급이어야 한다" % top)
 	await process_frame
-	print("  드랍 창: %s %d등급(%s) · 마지막 사냥터 맨 위 %d등급, 크리스탈 %s%% · 내용 %.0f / 칸 %.0fpx" % [
-		zone, int(grades[0].grade), DropPanel.percent(float(grades[0].chance)), top,
-		DropPanel.percent(float(drops.drops.crystal)), drops._list.size.y, drops._scroll.size.y])
+	print("  드랍 창: %s %d등급 · '%s' · 마지막 사냥터 맨 위 %d등급 · 내용 %.0f / 칸 %.0fpx" % [
+		zone, int(grades[0]), stats, top, drops._list.size.y, drops._scroll.size.y])
 	(drops.find_child("Close", true, false) as Button).pressed.emit()
 	if drops.visible or not panel.visible:
 		_fail("드랍 창 X 를 눌렀는데 드랍 창이 안 닫혔거나 차원문 창까지 닫혔다")

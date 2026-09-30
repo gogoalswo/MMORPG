@@ -517,13 +517,20 @@ static func gold_range(monster_level: int) -> Vector2i:
 
 ## 그 사냥터에서 떨어지는 것 — **`roll_drop` 이 굴리는 것 그대로다** (차원문 창의 느낌표가 보인다,
 ## docs/features/portal-ui.md "드랍 창"). 등급 창은 몬스터 레벨로 찾으므로 그 존 몬스터들의 창을 합친다.
-## `{levels: Vector2i, grades: [{grade, chance}] (높은 등급 먼저), gold: Vector2i, crystal: 킬당 확률}`.
+## `{kinds: [몬스터 id], levels: Vector2i, grades: [등급] (높은 등급 먼저), gold: Vector2i, crystal: 나오나}`.
+## **확률은 돌려주지 않는다** — 창에 적지 않는다 (2026-09-30 요청: "확률은 넣지마").
 ## 몬스터가 없는 존(마을)은 빈 사전
 static func zone_drops(zone_id: String) -> Dictionary:
 	var levels: Array = []
+	var kinds: Array = []
 	for spot in GameData.zone(zone_id).get("monsters", []):
-		var level := int(GameData.monster_kind(str(spot.get("kind", ""))).get("level", 0))
-		if level > 0 and not levels.has(level):
+		var kind := str(spot.get("kind", ""))
+		var level := int(GameData.monster_kind(kind).get("level", 0))
+		if level <= 0:
+			continue
+		if not kinds.has(kind):
+			kinds.append(kind)
+		if not levels.has(level):
 			levels.append(level)
 	if levels.is_empty():
 		return {}
@@ -535,14 +542,11 @@ static func zone_drops(zone_id: String) -> Dictionary:
 				seen.append(g)
 	seen.sort()
 	seen.reverse()
-	var grades: Array = []
-	for g in seen:
-		grades.append({"grade": g, "chance": grade_drop_rate(g)})
 	var lo: int = levels[0]
 	var hi: int = levels[levels.size() - 1]
 	return {
-		"levels": Vector2i(lo, hi), "grades": grades,
-		"gold": Vector2i(gold_range(lo).x, gold_range(hi).y), "crystal": crystal_drop_chance(),
+		"kinds": kinds, "levels": Vector2i(lo, hi), "grades": seen,
+		"gold": Vector2i(gold_range(lo).x, gold_range(hi).y), "crystal": crystal_drop_chance() > 0.0,
 	}
 
 

@@ -3996,9 +3996,8 @@ func _build_tree(job: String) -> void:
 		cell.size = Vector2(TREE_CELL, TREE_CELL)
 		_tree.add_child(cell)
 		_fill_skill_cell(cell, node.id, "")
-		# 여러 단계인 것(질풍각)은 칸마다 같은 그림이라 단계를 적는다
-		if int(Skills.passive(node.id).maxRank) > 1:
-			cell.find_child("badge", true, false).text = "%d단계" % node.step
+		# 칸마다 "N단" — 질풍각은 칸마다 같은 그림이고, 계열(철각 1~4단)도 그림을 같이 쓴다
+		cell.find_child("badge", true, false).text = Skills.passive_title(Skills.passive(node.id), node.step).rsplit(" ", true, 1)[-1]
 		node.cell = cell
 		node.dot = _add_red_dot(cell)
 	for row in levels.size():
@@ -4094,8 +4093,7 @@ func _draw_passive(me: Dictionary, passive: Dictionary) -> void:
 	var ranks: Dictionary = me.get("passives", {})
 	var rank := int(ranks.get(id, 0))
 	var at := step * int(passive.everyLevels)
-	var name := str(passive.get("name", id))
-	_skill_name.text = name if Skills.passive_once(passive) else "%s %d단계" % [name, step]
+	_skill_name.text = Skills.passive_title(passive, step)
 	_skill_info.text = "패시브 · %d레벨 습득\n효과 : %s" % [at, Skills.passive_effect(passive, 1)]
 	_skill_desc.text = str(passive.get("description", ""))
 	if str(passive.get("stat", "")) == "attackSpeed":
@@ -4115,7 +4113,8 @@ func _draw_passive(me: Dictionary, passive: Dictionary) -> void:
 		"level":
 			_skill_state.text = "%d레벨에 배웁니다" % at
 		_:
-			var need := "%d단계" % (step - 1) if rank + 1 < step else str(Skills.passive(str(passive.requires)).name)
+			var need := Skills.passive_title(passive, step - 1) if rank + 1 < step \
+				else Skills.passive_title(Skills.passive(str(passive.requires)), 1)
 			_skill_state.text = "%s 을(를) 먼저 습득해야 합니다" % need
 	_passive_learn.text = "습득"
 	_passive_learn.disabled = state != "ready"

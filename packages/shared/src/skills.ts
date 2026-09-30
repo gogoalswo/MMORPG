@@ -169,17 +169,19 @@ export const PASSIVES: PassiveDef[] = [
     maxRank: 20,
   },
   // 철각 계열 (2026-09-30 요청: "철각 … 30% 에서 10% 로 … 40레벨 20% … 80레벨 40% … 120레벨 80%").
-  // 뒤 셋의 이름·설명은 내가 지었다(요청에 없었다). 아이콘은 철각 것을 같이 쓴다
-  levelPassive('iron_leg', 10, '철각', '다리를 쇠처럼 단련해 한 대가 무거워진다.', 'attack', 0.1),
-  { ...levelPassive('steel_leg', 40, '강철각', '쇠를 넘어 강철이 된 다리가 더 깊이 박힌다.', 'attack', 0.2, 'iron_leg'), icon: 'iron_leg' },
-  { ...levelPassive('diamond_leg', 80, '금강각', '부서지지 않는 다리로 온 체중을 싣는다.', 'attack', 0.4, 'steel_leg'), icon: 'iron_leg' },
-  { ...levelPassive('mountain_leg', 120, '태산각', '태산을 무너뜨릴 무게가 한 발에 실린다.', 'attack', 0.8, 'diamond_leg'), icon: 'iron_leg' },
-  levelPassive('light_step', 30, '경공', '몸이 가벼워 더 빨리 달린다.', 'moveSpeed', 0.2),
-  levelPassive('keen_eye', 50, '급소 간파', '급소가 눈에 들어와 치명타가 잦아진다.', 'crit', 0.1),
-  levelPassive('vital_strike', 70, '급소 강타', '급소를 더 깊이 찬다.', 'critDamage', 0.2),
-  levelPassive('armor_break', 100, '파갑', '방어를 꿰뚫고 들어간다.', 'penetration', 0.1),
-  levelPassive('deadly_kick', 150, '필살각', '급소를 꿰뚫는 눈이 트여 치명타가 더 잦아진다.', 'crit', 0.2, 'keen_eye'),
-  levelPassive('ultimate', 200, '극의', '무의 끝에 닿아 치명타가 한층 무거워진다.', 'critDamage', 0.5, 'vital_strike'),
+  // 설명은 내가 지었다(요청에 없었다). 아이콘은 철각 것을 같이 쓴다.
+  // **이름은 계열 첫 칸 이름 + "N단"** (같은 날 요청: "1단계 이름을 동일하게 사용하고, 000 1단 이런식으로") —
+  // 한 칸짜리도 "1단" 을 붙인다. 질풍각은 한 패시브의 20단계라 이름은 그대로 두고 화면이 "질풍각 N단" 으로 적는다
+  levelPassive('iron_leg', 10, '철각 1단', '다리를 쇠처럼 단련해 한 대가 무거워진다.', 'attack', 0.1),
+  { ...levelPassive('steel_leg', 40, '철각 2단', '쇠를 넘어 강철이 된 다리가 더 깊이 박힌다.', 'attack', 0.2, 'iron_leg'), icon: 'iron_leg' },
+  { ...levelPassive('diamond_leg', 80, '철각 3단', '부서지지 않는 다리로 온 체중을 싣는다.', 'attack', 0.4, 'steel_leg'), icon: 'iron_leg' },
+  { ...levelPassive('mountain_leg', 120, '철각 4단', '태산을 무너뜨릴 무게가 한 발에 실린다.', 'attack', 0.8, 'diamond_leg'), icon: 'iron_leg' },
+  levelPassive('light_step', 30, '경공 1단', '몸이 가벼워 더 빨리 달린다.', 'moveSpeed', 0.2),
+  levelPassive('keen_eye', 50, '급소 간파 1단', '급소가 눈에 들어와 치명타가 잦아진다.', 'crit', 0.1),
+  levelPassive('vital_strike', 70, '급소 강타 1단', '급소를 더 깊이 찬다.', 'critDamage', 0.2),
+  levelPassive('armor_break', 100, '파갑 1단', '방어를 꿰뚫고 들어간다.', 'penetration', 0.1),
+  levelPassive('deadly_kick', 150, '급소 간파 2단', '급소를 꿰뚫는 눈이 트여 치명타가 더 잦아진다.', 'crit', 0.2, 'keen_eye'),
+  levelPassive('ultimate', 200, '급소 강타 2단', '무의 끝에 닿아 치명타가 한층 무거워진다.', 'critDamage', 0.5, 'vital_strike'),
 ];
 
 /** 그 레벨에 한 번 배우는 격투가 패시브 — `everyLevels` = 여는 레벨, `maxRank` 1, `requires` = 앞 단계 */

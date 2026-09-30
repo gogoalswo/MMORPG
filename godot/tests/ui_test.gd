@@ -2082,7 +2082,7 @@ func _case_passive(game: Node3D, me: Dictionary) -> void:
 	if game._tree_nodes.size() != cells or not game._tree_scroll.visible or game._skill_drag._scroll.visible:
 		_fail("나무가 %d칸이어야 하는데 %d칸 (나무 %s · 격자 %s)" % [cells, game._tree_nodes.size(), game._tree_scroll.visible, game._skill_drag._scroll.visible])
 	# 창을 열면 지금 습득할 칸(질풍각 2단계)이 골라져 있다
-	if game._skill_pick != "gale_kicks" or game._passive_step != 2 or game._skill_name.text != str(gale.name) + " 2단계":
+	if game._skill_pick != "gale_kicks" or game._passive_step != 2 or game._skill_name.text != str(gale.name) + " 2단":
 		_fail("열자마자 질풍각 2단계가 골라져야 하는데 %s %d · '%s'" % [game._skill_pick, game._passive_step, game._skill_name.text])
 	var tree_rect: Rect2 = game._tree_scroll.get_global_rect()
 	if not Rect2(Vector2.ZERO, screen).encloses(tree_rect) or tree_rect.position.x <= game._skill_big.get_global_rect().end.x:
@@ -2098,6 +2098,8 @@ func _case_passive(game: Node3D, me: Dictionary) -> void:
 	var one: Dictionary = game._tree_nodes[game._tree_find("gale_kicks", 1)]
 	var two: Dictionary = game._tree_nodes[game._tree_find("gale_kicks", 2)]
 	var three: Dictionary = game._tree_nodes[game._tree_find("gale_kicks", 3)]
+	if one.cell.find_child("badge", true, false).text != "1단" or three.cell.find_child("badge", true, false).text != "3단":
+		_fail("질풍각 칸 글자가 '1단'·'3단' 이 아니다")
 	if one.dot.visible or not two.dot.visible:
 		_fail("배운 1단계·습득할 2단계의 레드닷이 틀렸다: %s/%s" % [one.dot.visible, two.dot.visible])
 	# 안 배운 칸은 음영 — 지금 습득할 칸도 (2026-09-30 요청). 레드닷은 어두워지지 않는다
@@ -2122,7 +2124,7 @@ func _case_passive(game: Node3D, me: Dictionary) -> void:
 	game._pick_tree(game._tree_find("gale_kicks", 3))
 	game._on_passive_learn()
 	await process_frame
-	if int(me.passives.get("gale_kicks", 0)) != 1 or not game._passive_learn.disabled or not "2단계" in game._skill_state.text:
+	if int(me.passives.get("gale_kicks", 0)) != 1 or not game._passive_learn.disabled or not "질풍각 2단" in game._skill_state.text:
 		_fail("2단계 전에 3단계를 배웠거나 막히지 않았다: %s · '%s'" % [me.passives, game._skill_state.text])
 	me.level = 25
 	game._pick_tree(game._tree_find("gale_kicks", 2))
@@ -2151,7 +2153,7 @@ func _case_passive(game: Node3D, me: Dictionary) -> void:
 	game._pick_tree(game._tree_find("deadly_kick", 1))
 	game._on_passive_learn()
 	await process_frame
-	if int(me.passives.get("deadly_kick", 0)) != 0 or not game._passive_learn.disabled or not "급소 간파" in game._skill_state.text:
+	if int(me.passives.get("deadly_kick", 0)) != 0 or not game._passive_learn.disabled or not "급소 간파 1단" in game._skill_state.text:
 		_fail("급소 간파 없이 필살각을 배웠거나 안내가 없다: %s · '%s'" % [me.passives, game._skill_state.text])
 	world.learn_passive(game._transport.my_id(), "keen_eye")
 	game._redraw_skills()

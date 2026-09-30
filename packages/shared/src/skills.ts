@@ -133,7 +133,11 @@ export const SKILL_POINT_PER_LEVEL = 1;
  * 2026-09-30 요청: 레벨 도달 패시브 일곱 — "10레벨 : 공격력 30% 증가 … 200레벨 : 치명타 데미지 50% 증가".
  * 한 번 배우면 끝(`maxRank` 1)이라 `everyLevels` 가 곧 **여는 레벨**이다 (`floor(레벨 / N)` 이 1 이 된다).
  * 값은 모두 **더한다** — 공격력은 장비 % 합계에(0.3 = +30%), 치확·치피·관통은 비율에(0.1 = +10%p),
- * 이속은 달리기 속도 배율에(+0.2 = ×1.2). 치피 셋(70·150·200)은 겹쳐 +100% 가 된다.
+ * 이속은 달리기 속도 배율에(+0.2 = ×1.2).
+ *
+ * 2026-09-30 요청: 스킬창을 **레벨 줄 × 계열 칸 나무**로 — "그 전 단계를 습득해야 다음 단계도 습득할 수 있게".
+ * 같은 스탯의 뒷 패시브는 `requires` 로 앞 것에 잇는다 (치확 50 → 150 · 치피 70 → 200).
+ * 150레벨 필살각은 치명타 피해 +30% 였는데 **치명타 확률 +20%** 로 바꿨다 (같은 요청).
  */
 export interface PassiveDef {
   id: string;
@@ -147,6 +151,8 @@ export interface PassiveDef {
   /** 몇 레벨마다 한 단계가 열리나 */
   everyLevels: number;
   maxRank: number;
+  /** 먼저 끝까지 배워야 하는 패시브 — 스킬창에서 그 칸 아래로 화살표가 이어진다 */
+  requires?: string;
 }
 
 export const PASSIVES: PassiveDef[] = [
@@ -165,11 +171,11 @@ export const PASSIVES: PassiveDef[] = [
   levelPassive('keen_eye', 50, '급소 간파', '급소가 눈에 들어와 치명타가 잦아진다.', 'crit', 0.1),
   levelPassive('vital_strike', 70, '급소 강타', '급소를 더 깊이 찬다.', 'critDamage', 0.2),
   levelPassive('armor_break', 100, '파갑', '방어를 꿰뚫고 들어간다.', 'penetration', 0.1),
-  levelPassive('deadly_kick', 150, '필살각', '한 번 들어간 치명타가 더 아프다.', 'critDamage', 0.3),
-  levelPassive('ultimate', 200, '극의', '무의 끝에 닿아 치명타가 한층 무거워진다.', 'critDamage', 0.5),
+  levelPassive('deadly_kick', 150, '필살각', '급소를 꿰뚫는 눈이 트여 치명타가 더 잦아진다.', 'crit', 0.2, 'keen_eye'),
+  levelPassive('ultimate', 200, '극의', '무의 끝에 닿아 치명타가 한층 무거워진다.', 'critDamage', 0.5, 'vital_strike'),
 ];
 
-/** 그 레벨에 한 번 배우는 격투가 패시브 — `everyLevels` = 여는 레벨, `maxRank` 1 */
+/** 그 레벨에 한 번 배우는 격투가 패시브 — `everyLevels` = 여는 레벨, `maxRank` 1, `requires` = 앞 단계 */
 function levelPassive(
   id: string,
   level: number,
@@ -177,8 +183,11 @@ function levelPassive(
   description: string,
   stat: PassiveDef['stat'],
   value: number,
+  requires?: string,
 ): PassiveDef {
-  return { id, job: 'fighter', name, description, stat, perRank: value, everyLevels: level, maxRank: 1 };
+  const def: PassiveDef = { id, job: 'fighter', name, description, stat, perRank: value, everyLevels: level, maxRank: 1 };
+  if (requires) def.requires = requires;
+  return def;
 }
 
 /** 그 레벨까지 열린 단계 수 — Lv.10 에 1, Lv.200 에 20 */

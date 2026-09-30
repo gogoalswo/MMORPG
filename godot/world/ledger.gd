@@ -228,6 +228,9 @@ func learn_passive(p: Dictionary, passive_id: String) -> void:
 	if rank >= Skills.passive_open(passive, int(p.level)):
 		_notice("%d레벨에 배웁니다" % ((rank + 1) * int(passive.everyLevels)))
 		return
+	if not Skills.passive_ready(passive, ranks):
+		_notice("%s 을(를) 먼저 습득해야 합니다" % str(Skills.passive(str(passive.requires)).name))
+		return
 	ranks[passive_id] = rank + 1
 	p.passives = ranks
 	events.append({"type": "passives", "passives": ranks.duplicate()})

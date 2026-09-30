@@ -225,10 +225,10 @@ test('질풍각 — Lv.200 에 격투가가 초당 10번 때린다', () => {
 
 test('레벨 도달 패시브 일곱 — 그 레벨에 한 번만 열린다', () => {
   // 2026-09-30 요청: 10 공격력 30% · 30 이속 20% · 50 치확 10% · 70 치피 20% · 100 관통 10% ·
-  // 150 치피 30% · 200 치피 50%
+  // 150 치피 30% · 200 치피 50% → 같은 날 150 을 치확 20% 로 바꿨다 ("치명타 확률 20% 증가로 변경해")
   const want: [number, PassiveDef['stat'], number][] = [
     [10, 'attack', 0.3], [30, 'moveSpeed', 0.2], [50, 'crit', 0.1], [70, 'critDamage', 0.2],
-    [100, 'penetration', 0.1], [150, 'critDamage', 0.3], [200, 'critDamage', 0.5],
+    [100, 'penetration', 0.1], [150, 'crit', 0.2], [200, 'critDamage', 0.5],
   ];
   const got = PASSIVES.filter((p) => p.maxRank === 1);
   assert.deepEqual(got.map((p) => [p.everyLevels, p.stat, p.perRank]), want);
@@ -239,4 +239,15 @@ test('레벨 도달 패시브 일곱 — 그 레벨에 한 번만 열린다', ()
     assert.equal(passiveRankOpen(p, MAX_LEVEL), 1);
   }
   assert.equal(new Set(PASSIVES.map((p) => p.id)).size, PASSIVES.length, '패시브 id 가 겹친다');
+});
+
+test('뒷 패시브는 같은 스탯의 앞 패시브에 잇는다 — 치확 50 → 150 · 치피 70 → 200', () => {
+  const byId = new Map(PASSIVES.map((p) => [p.id, p]));
+  const chains = PASSIVES.filter((p) => p.requires).map((p) => [byId.get(p.requires!)?.everyLevels, p.everyLevels, p.stat]);
+  assert.deepEqual(chains, [[50, 150, 'crit'], [70, 200, 'critDamage']]);
+  for (const p of PASSIVES.filter((each) => each.requires)) {
+    const need = byId.get(p.requires!)!;
+    assert.equal(need.stat, p.stat, `${p.name} 이 다른 스탯(${need.name})에 이어졌다`);
+    assert.ok(need.everyLevels < p.everyLevels, `${p.name} 의 앞 단계가 더 늦게 열린다`);
+  }
 });

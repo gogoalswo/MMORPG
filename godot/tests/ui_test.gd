@@ -1572,8 +1572,15 @@ func _case_bag_drag(game: Node3D) -> void:
 	game._toggle_skills()
 	await process_frame
 	await process_frame
-	await _drag_list("스킬 목록", game._skill_drag, game._skill_drag._scroll, game._skill_grid)
-	if game._skill_ids.size() > 1:
+	# 격투가는 격자가 비고 패시브 나무가 선다 (2026-09-30) — 보이는 쪽을 끌고 누른다
+	if game._tree_scroll.visible:
+		await _drag_list("패시브 나무", game._tree_drag, game._tree_scroll, game._tree)
+		await _tap_cell(game._tree_drag, game._tree_scroll, game._tree, 1)
+		if game._skill_pick != str(game._tree_nodes[1].id) or game._passive_step != int(game._tree_nodes[1].step):
+			_fail("나무 1 번 칸을 눌렀는데 '%s' %d 가 골라졌다" % [game._skill_pick, game._passive_step])
+	else:
+		await _drag_list("스킬 목록", game._skill_drag, game._skill_drag._scroll, game._skill_grid)
+	if not game._tree_scroll.visible and game._skill_ids.size() > 1:
 		await _tap_cell(game._skill_drag, game._skill_drag._scroll, game._skill_grid, 1)
 		if game._skill_pick != game._skill_ids[1]:
 			_fail("스킬 목록 1 번 칸을 눌렀는데 '%s' 가 골라졌다" % game._skill_pick)
@@ -1671,7 +1678,7 @@ func _drag_list(name: String, _drag: DragScroll, list: ScrollContainer, grid: Co
 	list.scroll_vertical = 0
 	await process_frame
 	# **칸 위**를 잡는다 — 목록 한가운데는 칸 사이 틈일 수 있고, 틈은 칸이 막는지 못 본다
-	var grid_cols := (grid as GridContainer).columns
+	var grid_cols := (grid as GridContainer).columns if grid is GridContainer else 1
 	var grab: Vector2 = grid.get_child(mini(grid.get_child_count() - 1, grid_cols * 2)).get_global_rect().get_center()
 	_push_move(grab, 0)
 	_push_mouse(grab, true)
@@ -2011,8 +2018,6 @@ func _case_passive(game: Node3D, me: Dictionary) -> void:
 		return
 	if not Rect2(Vector2.ZERO, screen).encloses(panel.get_global_rect()):
 		_fail("스킬창 %s 이 화면 밖으로 나간다" % panel.get_global_rect())
-	# 앞 시험이 다른 칸을 골라 뒀을 수 있다 — 첫 칸(질풍각)부터 본다
-	game._pick_skill(0)
 	for node in game._active_only:
 		if node.visible:
 			_fail("보이는 스킬이 없는데 %s 가 보인다" % node)
@@ -2020,28 +2025,51 @@ func _case_passive(game: Node3D, me: Dictionary) -> void:
 	for id in passive_ids:
 		if game._icon("skill_" + str(id)) == null:
 			_fail("패시브 %s 의 아이콘(skill_%s.png)이 없다" % [id, id])
-	if game._skill_ids != passive_ids or game._skill_name.text != str(gale.name):
-		_fail("목록은 패시브 %s 여야 한다: %s · '%s'" % [passive_ids, game._skill_ids, game._skill_name.text])
+	# 나무 (2026-09-30 요청) — 칸 하나가 습득 한 번. 질풍각 20칸 + 레벨 패시브 일곱, 격자는 숨는다
+	var cells := 0
+	for p in Skills.passives_for("fighter"):
+		cells += int(p.maxRank)
+	if game._tree_nodes.size() != cells or not game._tree_scroll.visible or game._skill_drag._scroll.visible:
+		_fail("나무가 %d칸이어야 하는데 %d칸 (나무 %s · 격자 %s)" % [cells, game._tree_nodes.size(), game._tree_scroll.visible, game._skill_drag._scroll.visible])
+	# 창을 열면 지금 습득할 칸(질풍각 2단계)이 골라져 있다
+	if game._skill_pick != "gale_kicks" or game._passive_step != 2 or game._skill_name.text != str(gale.name) + " 2단계":
+		_fail("열자마자 질풍각 2단계가 골라져야 하는데 %s %d · '%s'" % [game._skill_pick, game._passive_step, game._skill_name.text])
+	var tree_rect: Rect2 = game._tree_scroll.get_global_rect()
+	if not Rect2(Vector2.ZERO, screen).encloses(tree_rect) or tree_rect.position.x <= game._skill_big.get_global_rect().end.x:
+		_fail("나무 %s 가 화면 밖이거나 설명 왼쪽이다" % tree_rect)
+	# 같은 계열 뒷 칸은 앞 칸 아래 같은 줄에 선다 — 치확 50 → 150 · 치피 70 → 200
+	for pair in [["keen_eye", "deadly_kick"], ["vital_strike", "ultimate"], ["gale_kicks", "gale_kicks"]]:
+		var up: Dictionary = game._tree_nodes[game._tree_find(pair[0], 1)]
+		var down: Dictionary = game._tree_nodes[game._tree_find(pair[1], 2 if pair[0] == pair[1] else 1)]
+		if up.column != down.column or down.row <= up.row:
+			_fail("%s 가 %s 아래에 있지 않다: 칸 %d/%d 줄 %d/%d" % [pair[1], pair[0], up.column, down.column, up.row, down.row])
 	if game._skill_equip.visible or game._skill_unequip.visible or not game._passive_learn.visible:
 		_fail("패시브를 골랐으면 장착/해제 대신 [습득] 만 서야 한다")
-	var badge: String = game._skill_cells[0].find_child("badge", true, false).text
-	if badge != "1/20":
-		_fail("질풍각 칸 글자가 '1/20' 이어야 하는데 '%s'" % badge)
-	if game._passive_learn.disabled or not game._passive_dot.visible:
-		_fail("열린 단계가 남았는데 [습득] 이 막혔거나 레드닷이 없다")
-	# 한 번 배웠으면 단추는 "레벨업", 설명은 현재/다음 단계 두 줄 (2026-09-30 요청)
-	if game._passive_learn.text != "레벨업":
-		_fail("1단계를 배웠는데 단추가 '레벨업' 이 아니라 '%s'" % game._passive_learn.text)
+	var one: Dictionary = game._tree_nodes[game._tree_find("gale_kicks", 1)]
+	var two: Dictionary = game._tree_nodes[game._tree_find("gale_kicks", 2)]
+	var three: Dictionary = game._tree_nodes[game._tree_find("gale_kicks", 3)]
+	if one.dot.visible or not two.dot.visible or three.cell.modulate == Color.WHITE:
+		_fail("배운 1단계·습득할 2단계·레벨 모자란 3단계가 안 갈린다: 점 %s/%s · 3단계 %s" % [one.dot.visible, two.dot.visible, three.cell.modulate])
+	if game._passive_learn.disabled or not game._passive_dot.visible or game._passive_learn.text != "습득":
+		_fail("2단계를 골랐는데 [습득] 이 막혔거나 레드닷이 없다 ('%s')" % game._passive_learn.text)
 	var info: String = game._skill_info.text
 	var now_pct := roundi(float(gale.perRank) * 100.0)
-	if not ("현재 단계 : 공격 속도 +%d%%" % now_pct) in info \
-			or not ("다음 단계 : 공격 속도 +%d%%" % (now_pct * 2)) in info or "레벨마다" in info:
-		_fail("패시브 설명이 현재/다음 단계 두 줄이 아니다: '%s'" % info)
+	if info != "패시브 · 20레벨 습득\n효과 : 공격 속도 +%d%%" % now_pct:
+		_fail("질풍각 2단계 설명이 틀렸다: '%s'" % info)
 	# 레드닷은 단추 **오른쪽 위 모서리**에 얹힌다
 	var button: Rect2 = game._passive_learn.get_global_rect()
 	var dot: Rect2 = game._passive_dot.get_global_rect()
 	if not button.encloses(dot) or dot.end.x < button.end.x - 1 or dot.position.y > button.position.y + 1:
 		_fail("레드닷이 [습득] 오른쪽 위에 없다: 단추 %s · 점 %s" % [button, dot])
+	# 앞 단계를 안 배운 칸은 눌러도 안 된다 — 레벨을 올려도 3단계는 2단계 뒤다
+	me.level = 30
+	game._pick_tree(game._tree_find("gale_kicks", 3))
+	game._on_passive_learn()
+	await process_frame
+	if int(me.passives.get("gale_kicks", 0)) != 1 or not game._passive_learn.disabled or not "2단계" in game._skill_state.text:
+		_fail("2단계 전에 3단계를 배웠거나 막히지 않았다: %s · '%s'" % [me.passives, game._skill_state.text])
+	me.level = 25
+	game._pick_tree(game._tree_find("gale_kicks", 2))
 
 	var before := Combat.effective_cooldown(me.stats.attackCooldown, me.stats.attackSpeed)
 	game._on_passive_learn()
@@ -2053,18 +2081,37 @@ func _case_passive(game: Node3D, me: Dictionary) -> void:
 		_fail("단계가 올랐는데 평타 간격이 그대로다: %dms → %dms" % [before, after])
 	# Lv.25 는 두 단계까지 — 다 배웠으면 점이 꺼지고 단추가 막힌다
 	game._refresh_status(me)
-	if game._passive_dot.visible or not game._passive_learn.disabled or game._skill_dot.visible:
+	if game._passive_dot.visible or not game._passive_learn.disabled or game._skill_dot.visible or two.dot.visible:
 		_fail("열린 단계를 다 배웠는데 레드닷이 남았거나 [습득] 이 눌린다")
+	if game._skill_state.text != "배웠습니다":
+		_fail("배운 칸인데 '%s'" % game._skill_state.text)
+	game._pick_tree(game._tree_find("gale_kicks", 3))
 	if not game._skill_state.text.begins_with("30레벨"):
-		_fail("다음 단계가 열리는 레벨이 안 적혔다: '%s'" % game._skill_state.text)
-	print("  패시브: 질풍각 1 → 2단계, 평타 %dms → %dms, 레드닷 켜짐 → 꺼짐" % [before, after])
+		_fail("3단계가 열리는 레벨이 안 적혔다: '%s'" % game._skill_state.text)
+	print("  패시브 나무: %d칸, 질풍각 1 → 2단계(3단계는 막힘), 평타 %dms → %dms, 레드닷 켜짐 → 꺼짐" % [cells, before, after])
+
+	# 계열 잇기 — 필살각(Lv.150 치확)은 급소 간파(Lv.50)를 배워야 열린다 (2026-09-30 요청)
+	me.level = 150
+	game._pick_tree(game._tree_find("deadly_kick", 1))
+	game._on_passive_learn()
+	await process_frame
+	if int(me.passives.get("deadly_kick", 0)) != 0 or not game._passive_learn.disabled or not "급소 간파" in game._skill_state.text:
+		_fail("급소 간파 없이 필살각을 배웠거나 안내가 없다: %s · '%s'" % [me.passives, game._skill_state.text])
+	world.learn_passive(game._transport.my_id(), "keen_eye")
+	game._redraw_skills()
+	game._on_passive_learn()
+	await process_frame
+	if int(me.passives.get("deadly_kick", 0)) != 1 or not "치명타 확률 +20%" in game._skill_info.text:
+		_fail("급소 간파 뒤에 필살각이 안 배워진다: %s · '%s'" % [me.passives, game._skill_info.text])
+	me.level = 25
+	me.passives = {"gale_kicks": 2, "iron_leg": 1}
+	world._refresh_stats(me)
 
 	# 레벨 도달 패시브(2026-09-30) — 경공(Lv.30)은 Lv.25 에 막혀 있고, 레벨이 되면 [습득] 한 번에 끝
-	var step_index: int = game._skill_ids.find("light_step")
-	game._pick_skill(step_index)
-	var step_badge: String = game._skill_cells[step_index].find_child("badge", true, false).text
-	if step_badge != "Lv.30 습득" or not game._passive_learn.disabled or game._passive_learn.text != "습득":
-		_fail("Lv.25 경공이 'Lv.30 습득' · 막힌 [습득] 이 아니다: '%s' · %s" % [step_badge, game._passive_learn.disabled])
+	var step_node: Dictionary = game._tree_nodes[game._tree_find("light_step", 1)]
+	game._pick_tree(game._tree_find("light_step", 1))
+	if step_node.cell.modulate == Color.WHITE or not game._passive_learn.disabled or game._passive_learn.text != "습득":
+		_fail("Lv.25 경공 칸이 흐리지 않거나 [습득] 이 안 막혔다: %s · %s" % [step_node.cell.modulate, game._passive_learn.disabled])
 	if not "이동 속도 +20%" in game._skill_info.text or not game._skill_state.text.begins_with("30레벨"):
 		_fail("경공 설명이 틀렸다: '%s' · '%s'" % [game._skill_info.text, game._skill_state.text])
 	me.level = 30
@@ -2085,14 +2132,14 @@ func _case_passive(game: Node3D, me: Dictionary) -> void:
 		else:
 			print("  경공: 달리기 동작 %.1f배" % game._player._speed)
 		game._moving = was_moving
-	game._pick_skill(0)
+	game._pick_tree(0)
 
 	var font: Font = load(FONT)
 	var missing := ""
 	var names := ""
 	for p in Skills.passives_for("fighter"):
 		names += str(p.name) + str(p.description) + Skills.passive_effect(p, 1)
-	for ch in "질풍각 패시브 단계 공격 속도 레벨마다 초당 회 다음 습득할 수 있습니다 끝까지 배웠습니다 열립니다" + names:
+	for ch in "질풍각 패시브 단계 공격 속도 초당 회 습득하면 습득할 수 있습니다 배웠습니다 배웁니다 효과 Lv 을(를) 먼저 습득해야 합니다" + names:
 		if ch != " " and not font.has_char(ch.unicode_at(0)):
 			missing += ch
 	if missing != "":

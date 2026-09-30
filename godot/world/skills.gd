@@ -184,10 +184,22 @@ static func passive_open(p: Dictionary, level: int) -> int:
 	return clampi(level / every, 0, int(p.get("maxRank", 0)))
 
 
+## 앞 단계(`requires`)를 끝까지 배웠나 — 없으면 참. 스킬창 나무에서 그 칸 위로 이어진 것
+## (2026-09-30 요청: "그 전 단계를 습득해야 다음 단계도 습득할 수 있게")
+static func passive_ready(p: Dictionary, ranks: Dictionary) -> bool:
+	var need := str(p.get("requires", ""))
+	return need == "" or int(ranks.get(need, 0)) >= int(passive(need).get("maxRank", 1))
+
+
+## 그 패시브의 다음 단계를 지금 배울 수 있나 — 레벨이 열렸고 앞 단계를 배웠다
+static func passive_can_learn(p: Dictionary, level: int, ranks: Dictionary) -> bool:
+	return int(ranks.get(str(p.id), 0)) < passive_open(p, level) and passive_ready(p, ranks)
+
+
 ## 지금 [습득] 을 누를 수 있는 패시브가 있나 — HUD 스킬 아이콘·스킬창 버튼의 **레드닷**
 static func passive_learnable(job: String, level: int, ranks: Dictionary) -> bool:
 	for p in passives_for(job):
-		if int(ranks.get(str(p.id), 0)) < passive_open(p, level):
+		if passive_can_learn(p, level, ranks):
 			return true
 	return false
 

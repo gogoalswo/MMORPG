@@ -2073,9 +2073,9 @@ func _case_passive(game: Node3D, me: Dictionary) -> void:
 			_fail("보이는 스킬이 없는데 %s 가 보인다" % node)
 	var passive_ids := Skills.passives_for("fighter").map(func(p): return str(p.id))
 	for id in passive_ids:
-		if game._icon("skill_" + str(id)) == null:
-			_fail("패시브 %s 의 아이콘(skill_%s.png)이 없다" % [id, id])
-	# 나무 (2026-09-30 요청) — 칸 하나가 습득 한 번. 질풍각 20칸 + 레벨 패시브 일곱, 격자는 숨는다
+		if game._icon("skill_" + Skills.icon_of(str(id))) == null:
+			_fail("패시브 %s 의 아이콘(skill_%s.png)이 없다" % [id, Skills.icon_of(str(id))])
+	# 나무 (2026-09-30 요청) — 칸 하나가 습득 한 번. 질풍각 20칸 + 레벨 패시브, 격자는 숨는다
 	var cells := 0
 	for p in Skills.passives_for("fighter"):
 		cells += int(p.maxRank)
@@ -2088,7 +2088,7 @@ func _case_passive(game: Node3D, me: Dictionary) -> void:
 	if not Rect2(Vector2.ZERO, screen).encloses(tree_rect) or tree_rect.position.x <= game._skill_big.get_global_rect().end.x:
 		_fail("나무 %s 가 화면 밖이거나 설명 왼쪽이다" % tree_rect)
 	# 같은 계열 뒷 칸은 앞 칸 아래 같은 줄에 선다 — 치확 50 → 150 · 치피 70 → 200
-	for pair in [["keen_eye", "deadly_kick"], ["vital_strike", "ultimate"], ["gale_kicks", "gale_kicks"]]:
+	for pair in [["iron_leg", "steel_leg"], ["diamond_leg", "mountain_leg"], ["keen_eye", "deadly_kick"], ["vital_strike", "ultimate"], ["gale_kicks", "gale_kicks"]]:
 		var up: Dictionary = game._tree_nodes[game._tree_find(pair[0], 1)]
 		var down: Dictionary = game._tree_nodes[game._tree_find(pair[1], 2 if pair[0] == pair[1] else 1)]
 		if up.column != down.column or down.row <= up.row:
@@ -2098,8 +2098,14 @@ func _case_passive(game: Node3D, me: Dictionary) -> void:
 	var one: Dictionary = game._tree_nodes[game._tree_find("gale_kicks", 1)]
 	var two: Dictionary = game._tree_nodes[game._tree_find("gale_kicks", 2)]
 	var three: Dictionary = game._tree_nodes[game._tree_find("gale_kicks", 3)]
-	if one.dot.visible or not two.dot.visible or three.cell.modulate == Color.WHITE:
-		_fail("배운 1단계·습득할 2단계·레벨 모자란 3단계가 안 갈린다: 점 %s/%s · 3단계 %s" % [one.dot.visible, two.dot.visible, three.cell.modulate])
+	if one.dot.visible or not two.dot.visible:
+		_fail("배운 1단계·습득할 2단계의 레드닷이 틀렸다: %s/%s" % [one.dot.visible, two.dot.visible])
+	# 안 배운 칸은 음영 — 지금 습득할 칸도 (2026-09-30 요청). 레드닷은 어두워지지 않는다
+	var shade_of := func(node: Dictionary) -> Color: return node.cell.find_child("icon", true, false).modulate
+	if shade_of.call(one) != Color.WHITE or shade_of.call(two) == Color.WHITE or shade_of.call(three) == Color.WHITE \
+			or two.cell.modulate != Color.WHITE:
+		_fail("배운 칸만 밝아야 한다: 1단계 %s · 2단계 %s · 3단계 %s · 2단계 칸째 %s" % [
+			shade_of.call(one), shade_of.call(two), shade_of.call(three), two.cell.modulate])
 	if game._passive_learn.disabled or not game._passive_dot.visible or game._passive_learn.text != "습득":
 		_fail("2단계를 골랐는데 [습득] 이 막혔거나 레드닷이 없다 ('%s')" % game._passive_learn.text)
 	var info: String = game._skill_info.text
@@ -2160,8 +2166,8 @@ func _case_passive(game: Node3D, me: Dictionary) -> void:
 	# 레벨 도달 패시브(2026-09-30) — 경공(Lv.30)은 Lv.25 에 막혀 있고, 레벨이 되면 [습득] 한 번에 끝
 	var step_node: Dictionary = game._tree_nodes[game._tree_find("light_step", 1)]
 	game._pick_tree(game._tree_find("light_step", 1))
-	if step_node.cell.modulate == Color.WHITE or not game._passive_learn.disabled or game._passive_learn.text != "습득":
-		_fail("Lv.25 경공 칸이 흐리지 않거나 [습득] 이 안 막혔다: %s · %s" % [step_node.cell.modulate, game._passive_learn.disabled])
+	if shade_of.call(step_node) == Color.WHITE or not game._passive_learn.disabled or game._passive_learn.text != "습득":
+		_fail("Lv.25 경공 칸이 흐리지 않거나 [습득] 이 안 막혔다: %s · %s" % [shade_of.call(step_node), game._passive_learn.disabled])
 	if not "이동 속도 +20%" in game._skill_info.text or not game._skill_state.text.begins_with("30레벨"):
 		_fail("경공 설명이 틀렸다: '%s' · '%s'" % [game._skill_info.text, game._skill_state.text])
 	me.level = 30

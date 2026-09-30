@@ -547,9 +547,45 @@
       "name": "철각",
       "description": "다리를 쇠처럼 단련해 한 대가 무거워진다.",
       "stat": "attack",
-      "perRank": 0.3,
+      "perRank": 0.1,
       "everyLevels": 10,
       "maxRank": 1
+    },
+    {
+      "id": "steel_leg",
+      "job": "fighter",
+      "name": "강철각",
+      "description": "쇠를 넘어 강철이 된 다리가 더 깊이 박힌다.",
+      "stat": "attack",
+      "perRank": 0.2,
+      "everyLevels": 40,
+      "maxRank": 1,
+      "requires": "iron_leg",
+      "icon": "iron_leg"
+    },
+    {
+      "id": "diamond_leg",
+      "job": "fighter",
+      "name": "금강각",
+      "description": "부서지지 않는 다리로 온 체중을 싣는다.",
+      "stat": "attack",
+      "perRank": 0.4,
+      "everyLevels": 80,
+      "maxRank": 1,
+      "requires": "steel_leg",
+      "icon": "iron_leg"
+    },
+    {
+      "id": "mountain_leg",
+      "job": "fighter",
+      "name": "태산각",
+      "description": "태산을 무너뜨릴 무게가 한 발에 실린다.",
+      "stat": "attack",
+      "perRank": 0.8,
+      "everyLevels": 120,
+      "maxRank": 1,
+      "requires": "diamond_leg",
+      "icon": "iron_leg"
     },
     {
       "id": "light_step",

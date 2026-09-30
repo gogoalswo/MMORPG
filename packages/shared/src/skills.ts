@@ -153,6 +153,8 @@ export interface PassiveDef {
   maxRank: number;
   /** 먼저 끝까지 배워야 하는 패시브 — 스킬창에서 그 칸 아래로 화살표가 이어진다 */
   requires?: string;
+  /** 아이콘 이름 (`skill_<icon>.png`). 없으면 id — 철각 계열 뒤 셋은 철각 그림을 같이 쓴다 */
+  icon?: string;
 }
 
 export const PASSIVES: PassiveDef[] = [
@@ -166,7 +168,12 @@ export const PASSIVES: PassiveDef[] = [
     everyLevels: 10,
     maxRank: 20,
   },
-  levelPassive('iron_leg', 10, '철각', '다리를 쇠처럼 단련해 한 대가 무거워진다.', 'attack', 0.3),
+  // 철각 계열 (2026-09-30 요청: "철각 … 30% 에서 10% 로 … 40레벨 20% … 80레벨 40% … 120레벨 80%").
+  // 뒤 셋의 이름·설명은 내가 지었다(요청에 없었다). 아이콘은 철각 것을 같이 쓴다
+  levelPassive('iron_leg', 10, '철각', '다리를 쇠처럼 단련해 한 대가 무거워진다.', 'attack', 0.1),
+  { ...levelPassive('steel_leg', 40, '강철각', '쇠를 넘어 강철이 된 다리가 더 깊이 박힌다.', 'attack', 0.2, 'iron_leg'), icon: 'iron_leg' },
+  { ...levelPassive('diamond_leg', 80, '금강각', '부서지지 않는 다리로 온 체중을 싣는다.', 'attack', 0.4, 'steel_leg'), icon: 'iron_leg' },
+  { ...levelPassive('mountain_leg', 120, '태산각', '태산을 무너뜨릴 무게가 한 발에 실린다.', 'attack', 0.8, 'diamond_leg'), icon: 'iron_leg' },
   levelPassive('light_step', 30, '경공', '몸이 가벼워 더 빨리 달린다.', 'moveSpeed', 0.2),
   levelPassive('keen_eye', 50, '급소 간파', '급소가 눈에 들어와 치명타가 잦아진다.', 'crit', 0.1),
   levelPassive('vital_strike', 70, '급소 강타', '급소를 더 깊이 찬다.', 'critDamage', 0.2),

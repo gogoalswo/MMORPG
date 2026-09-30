@@ -3535,7 +3535,7 @@ func _build_test_switches() -> void:
 	)
 	column.add_child(fill)
 	column.move_child(fill, 0)
-	# 크리스탈 30개를 가방에 넣는다 (2026-09-23 요청 — "가방에 30개 넣어". 드랍이 0.01% 라
+	# 크리스탈 30개를 가방에 넣는다 (2026-09-23 요청 — "가방에 30개 넣어". 드랍이 0.1% 라
 	# 주워서는 시험해 볼 수 없다)
 	var crystals := Button.new()
 	crystals.custom_minimum_size = Vector2(230, 52)

@@ -530,12 +530,12 @@ export function getMaterial(id: string): MaterialDef | null {
 }
 
 /**
- * 몬스터 한 마리가 크리스탈을 떨굴 확률 — **0.01%** (1만 마리에 하나, 2026-09-23 지시:
- * "크리스탈 드랍률은 일단 0.01%로 설정해"). 처음엔 1% 였다. 장비와 **따로** 굴린다.
+ * 몬스터 한 마리가 크리스탈을 떨굴 확률 — **0.1%** (1천 마리에 하나, 2026-09-30 지시:
+ * "크리스탈 드랍률을 0.1%로 수정해"). 처음엔 1%, 2026-09-23 에 0.01% 였다. 장비와 **따로** 굴린다.
  * 설계([stat-balance.md](../../../docs/features/stat-balance.md))에는 아직 없는 값이라
  * 손볼 자리는 여기 한 곳이다. **비율이다** — `GEAR_DROP_RATE` 처럼 퍼센트 단위가 아니다
  */
-export const CRYSTAL_DROP_CHANCE = 0.0001;
+export const CRYSTAL_DROP_CHANCE = 0.001;
 
 /** 저장된 값이 지금 규칙에 맞는지 — 서버가 불러올 때 반드시 거친다 */
 export function sanitizeOptions(

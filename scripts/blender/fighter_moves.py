@@ -397,6 +397,12 @@ CLIPS = {
     # - KickSlapIn  첫 대 — 무릎 들고(0.08) 바깥에서(0.13) 앞을 쳐(0.18 = 맞는 순간) 안쪽으로 넘긴다
     # - KickSlapA   이어지는 대 — 안쪽에서 앞을 쳐(0.05) 바깥으로
     # - KickSlapB   이어지는 대 — 바깥에서 앞을 쳐(0.05) 안쪽으로. A·B 는 번갈아 가며 서로의 끝에서 시작한다
+    # - KickSlapFull 느릴 때(초당 4타 미만) 한 대 — In 처럼 치고 무릎을 접어(0.45) **제자리로 내려와 선다**(0.65)
+    #   (2026-09-30 요청: "초당 3타 이하 일 떄는 발차기 하고 제자리로 왔다가 다시 발차기")
+    "KickSlapFull": [(0.0, GUARD, "BEZIER"), (0.08, HK_CHAMBER, "LINEAR"),
+                     (0.13, SLAP_A, "LINEAR"), (0.18, HK_EXTEND, "LINEAR"),
+                     (0.23, SLAP_B, "BEZIER"), (0.31, SLAP_B_REB, "BEZIER"),
+                     (0.45, HK_CHAMBER, "BEZIER"), (0.65, GUARD, "BEZIER"), (0.90, GUARD, "BEZIER")],
     "KickSlapIn": [(0.0, GUARD, "BEZIER"), (0.08, HK_CHAMBER, "LINEAR"),
                    (0.13, SLAP_A, "LINEAR"), (0.18, HK_EXTEND, "LINEAR"),
                    (0.23, SLAP_B, "BEZIER"), (0.31, SLAP_B_REB, "BEZIER"), (0.90, SLAP_B_REB, "BEZIER")],

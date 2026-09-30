@@ -202,11 +202,14 @@ func _check_moves(game: Node3D) -> void:
 	var rig: Rig = game._player
 	var me: String = game._transport.my_id()
 	var cases := [
-		# 평타 — 든 발로 뺨 치듯 좌우로, **판정이 준 배속으로** (공속 +800% 면 9배). 속도와 상관없이
-		# 첫 대는 발을 들며 치고(In), 곧이어 오는 대는 바깥(A)·안쪽(B)을 번갈아 친다
-		[&"swing", {"id": me, "root_ms": 400, "speed": 1.0, "ms": 900}, "KickSlapIn", 1.0],
+		# 평타 — 든 발로 뺨 치듯 좌우로, **판정이 준 배속으로** (공속 +800% 면 9배). 초당 4타부터는
+		# 첫 대는 발을 들며 치고(In), 곧이어 오는 대는 바깥(A)·안쪽(B)을 번갈아 친다.
+		# 초당 4타 미만(1.1타 · 질풍각 6단계 3.8타)이면 한 대마다 치고 내려와 선다(Full)
+		[&"swing", {"id": me, "root_ms": 100, "speed": 9.0, "ms": 100}, "KickSlapIn", 9.0],
 		[&"swing", {"id": me, "root_ms": 100, "speed": 9.0, "ms": 100}, "KickSlapA", 9.0],
 		[&"swing", {"id": me, "root_ms": 100, "speed": 9.0, "ms": 100}, "KickSlapB", 9.0],
+		[&"swing", {"id": me, "root_ms": 400, "speed": 1.0, "ms": 900}, "KickSlapFull", 1.0],
+		[&"swing", {"id": me, "root_ms": 265, "speed": 3.4, "ms": 265}, "KickSlapFull", 3.4],
 		[&"skill", {"id": me, "skill": "frost_pillar", "root_ms": 400}, "FrostStomp"],
 		[&"skill", {"id": me, "skill": "thunder_fall", "root_ms": 400}, "Thunder"],
 		[&"skill", {"id": me, "skill": "nova_fist", "root_ms": 750, "delay_ms": 750}, "NovaFist"],
@@ -231,7 +234,7 @@ func _check_moves(game: Node3D) -> void:
 	if rig._playing != "Idle":
 		_fail("동작이 끝났는데 대기가 아니라 %s" % rig._playing)
 	else:
-		print("  동작: 평타 든 발로 좌우 치기(첫 대 → A · B 번갈아 · 공속 배속), 스킬마다 제 동작, 끝나면 대기")
+		print("  동작: 평타 든 발로 좌우 치기(초당 4타 미만은 내려와 서기 · 그 위는 첫 대 → A · B 번갈아 · 공속 배속), 스킬마다 제 동작, 끝나면 대기")
 
 	# 맞으면 움찔한다 — 서 있을 때는 튼다
 	var hit := {"target": me, "target_kind": "player", "amount": 5, "killed": false}

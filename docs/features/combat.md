@@ -217,6 +217,9 @@ computeDamage(attack, defense) = max(1, round(attack * (1 - defense/(defense+45)
   (`main.ts` 의 `onHit`). 예전처럼 `state === 'attack'` 으로 틀면 사거리 안에 서
   있는 내내 클립이 다시 감겨서, **경직이 아닌 때에 시작된 휘두르기가 쫓아가는 동안
   이어졌다** — 그게 "움직이면서 공격 모션" 으로 보이던 것이다.
+  **고도는 `hit` 이 아니라 휘두르기 알림 `mobSwing` 으로 튼다** (2026-09-30). 피해(`hit`)는 손이 닿는
+  0.2초 뒤(`MONSTER_HIT_DELAY_MS`)에 따로 온다 — `hit` 에서 틀면 숫자가 할퀴기보다 먼저 떴다
+  → [characters-and-animation.md](characters-and-animation.md) "피해는 손이 닿는 순간에".
 - **경직이 풀려도 클립은 남는다.** 경직은 0.4초인데 공격 클립은 훨씬 길다
   (격투가 3.23s · 마법사 3.27s · 오우거 3.73s). **사람은 다시 걷기 시작하면
   클라이언트가 클립을 끊고**(`ATTACK_CUT_SPEED` 0.6m/s), **짐승은 안 끊는다** —

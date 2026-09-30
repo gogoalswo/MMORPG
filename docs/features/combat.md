@@ -104,6 +104,11 @@ computeDamage(attack, defense) = max(1, round(attack * (1 - defense/(defense+45)
   **치명타 데미지는 기본 피해에 더하는 %다** — 맨몸 100%(`critDamage: 1`)면 ×2, 장비로
   +20% 붙으면 ×2.2. 예전엔 `base * critDamage` 라 맨몸 치명타가 평타와 같았다 (2026-09-27 수정).
   **대상마다 따로 굴린다** — 범위기 한 방이 통째로 터지면 피해가 뭉쳐 숫자가 튄다.
+- **몬스터 치명타 저항** ★ (2026-09-30) — 굴리기 전에 **치확에서 몬스터 `critResist` 를 뺀다**
+  (`World._hit_monster` · 옛 서버 `resolvePlayerAttack`). 100레벨 사냥터부터 5%p, 한 곳마다
+  +3.5%p → 190~199 가 36.5%p, 보스도 같은 값이다. 표는 [monsters-progression.md](monsters-progression.md).
+  피해를 깎지 않고 **확률을 빼는** 이유: 치확에는 상한이 없어서 후반엔 100% 를 넘긴 몫이
+  버려졌다 — 빼는 방식이면 그 몫이 저항을 뚫는 데 쓰인다 (치확 128% vs 저항 36.5% → 91.5%).
 - 공격 간격: `effectiveCooldown(cooldown, attackSpeed) = round(cooldown / (1 + speed))`.
 
 ### 맞는 쪽 K — 후반 HP 2만, 생존은 방어가 ★★ (2026-09-27)
@@ -328,7 +333,23 @@ radius 7 · windupMs 1600 · cooldownMs 9000 · power 2.2 (보스 공격력 배�
 
 ### 사망
 - hp 0 → `dead = true`. **시간이 지나도 저절로 살아나지 않는다.** ★
-- 부활은 사람이 한다: 사망 화면(`ui/deathOverlay.ts`)을 누르면 클라이언트가
+- ★ **고도(2026-09-30)** — 쓰러지면 **사망 창**(`godot/game/death_panel.gd`, 돌판 결 ·
+  "사망" · **확인** 단추)이 뜨고, **확인을 눌러야만** 마을에서 되살아난다(`revive` →
+  `World.revive`). 예전의 "아무 데나 눌러 되살아나기" 는 걷어냈다 — 화면을 눌러도 아무 일 없다.
+  - 창은 `game.gd` 의 `_refresh_status` 가 **상태(`dead`)로** 띄운다. `died` 사건이 없이
+    죽은 채 저장된 캐릭터로 들어와도 뜨게 하려는 것이다.
+  - **던전에서 쓰러지면 사망 창 대신 던전 결과창("실패")** 이 뜬다(결과창이 보이면 사망 창은
+    숨는다). 나가는 길은 같다 → [dungeons.md](dungeons.md) "결과창".
+- ★ **묘비(2026-09-30)** — 쓰러진 자리에 묘비(`godot/game/tomb.gd`)가 선다. 자리
+  `{zone, x, z}` 는 `game.gd` 의 `_tombs` 가 **메모리에만** 들고 **저장하지 않는다** —
+  요청이 "게임 껐다 켜면 사라지게" 라서다. 존을 떠나면 존 노드와 같이 치워지고, 그 존을 다시
+  지을 때(`_build_zone`) 다시 세운다. 보여주기만 하고 판정과 무관하다(막지도 눌리지도 않는다).
+  - 모양: `godot/assets/models/varco_tomb.glb` 가 있으면 그 모델, **없으면 회색 돌판**(받침 +
+    윗머리가 둥근 비석, 높이 1m) — 차원문(`portal.gd`)과 같은 짜임. 바르코 모델을 받으면
+    그 경로에 넣기만 하면 된다.
+- 확인: `ui_test.gd` 의 `_case_death`(사망 창 · 묘비 · 화면 눌러도 그대로 · 확인 → 마을 ·
+  돌아가면 묘비 그대로)와 `_case_raid_death`(던전이면 결과창만).
+- (옛 웹 클라이언트) 사망 화면(`ui/deathOverlay.ts`)을 누르면 클라이언트가
   `travel(START_ZONE)` 로 **마을 룸에 다시 들어가고**, 들어갈 때 서버가 되살린다
   (`enterWorld` 의 revive). 부활 경로가 한 벌뿐이라는 게 요점이다 —
   서버에 따로 "부활" 메시지를 두지 않는다.

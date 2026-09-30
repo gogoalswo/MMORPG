@@ -1358,6 +1358,8 @@ static func make_monster(
 		"max_hp": int(kind.get("maxHp", 1)),
 		"hp": int(kind.get("maxHp", 1)),
 		"defense": float(kind.get("defense", 0)),
+		# 치명타 저항 — 때리는 쪽 치확에서 뺀다 (100레벨 사냥터부터, 보스도 같은 값)
+		"crit_resist": float(kind.get("critResist", 0.0)),
 		"exp_reward": float(kind.get("expReward", 0)),
 		"respawn_ms": respawn_ms,
 		# 죽어 있는 동안 다시 나올 시각. 0 이면 살아 있다
@@ -2338,7 +2340,9 @@ func _hit_monster(player: Dictionary, target: Dictionary, attack: float, skill_i
 	# **방어력 관통** — 상대 방어력을 그만큼 없는 셈 치고 때린다 (옵션으로만 붙는다)
 	var pierced: float = float(target.defense) * (1.0 - float(stats.get("penetration", 0.0)))
 	var damage := roundi(Stats.damage(attack, int(player.level), pierced))
-	var crit := Combat.roll_crit(float(stats.crit), _rng.randf())
+	# **치명타 저항은 확률에서 뺀다** (2026-09-30) — 치확 128% 로 저항 36.5% 몹을 치면 91.5%.
+	# 상한 없이 넘친 치확이 여기서 쓰인다
+	var crit := Combat.roll_crit(float(stats.crit) - float(target.get("crit_resist", 0.0)), _rng.randf())
 	# **치명타 데미지는 더하는 %다** (2026-09-27 요청) — 100% 면 기본 피해에 100% 를 더해 ×2.
 	# 맨몸이 1.0(100%) 이라 그냥 곱하면 치명타가 떠도 평타와 같았다
 	if crit:

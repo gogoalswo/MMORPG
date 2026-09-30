@@ -14,6 +14,7 @@ func _init() -> void:
 	_exp()
 	_cooldown()
 	_crit()
+	_crit_resist()
 	_fight()
 
 	if _failed == 0:
@@ -108,6 +109,31 @@ func _crit() -> void:
 	_eq("치명타 상한 없음", Combat.roll_crit(0.9, 0.8), true)
 	_eq("치명타 100% 초과", Combat.roll_crit(1.5, 0.99), true)
 	_eq("치명타 음수", Combat.roll_crit(-1.0, 0.0), false)
+
+
+## 몬스터 치명타 저항 (2026-09-30) — 100레벨 사냥터부터 5%p, 한 곳마다 +3.5%p, 보스도 같다.
+## 확률에서 **빼는** 것이라 치확이 저항보다 낮으면 절대 안 터지고, 저항만큼 넘으면 늘 터진다
+func _crit_resist() -> void:
+	for pair in [["mob098", 0.0], ["boss09", 0.0], ["mob103", 0.05], ["boss10", 0.05],
+			["mob153", 0.225], ["mob198", 0.365], ["boss19", 0.365]]:
+		_eq("저항 %s" % pair[0], float(GameData.monster_kind(pair[0]).get("critResist", -1.0)), pair[1])
+
+	var w := World.new()
+	w.open("village")
+	w.join("me")
+	var me: Dictionary = w.snapshot().players["me"]
+	var mob := World.make_monster("tough", GameData.monster_kind("mob198"), 1.5, 0.0, 10000.0, 0.0)
+	_eq("몬스터에 저항이 실린다", mob.crit_resist, 0.365)
+	var crits := {0.3: 0, 1.37: 0}
+	for chance in crits:
+		me.stats.crit = chance
+		for i in 40:
+			mob.hp = mob.max_hp
+			w._hit_monster(me, mob, float(me.stats.attack), "")
+			if bool(_first(w.drain_events(), "hit").get("crit", false)):
+				crits[chance] += 1
+	_eq("치확 30%% < 저항 36.5%% — 안 터진다", crits[0.3], 0)
+	_eq("치확 137%% - 저항 36.5%% ≥ 100%% — 늘 터진다", crits[1.37], 40)
 
 
 ## World 에서 실제로 때려 죽여 본다.

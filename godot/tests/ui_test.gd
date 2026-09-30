@@ -532,9 +532,10 @@ func _case_status(game: Node3D) -> void:
 
 	# 오른쪽 위 메뉴 — 화면 안, 묶음과 안 겹침.
 	# 정보 · 스킬 · 강화 · 크리스탈 · 가방 · 던전 (강화·크리스탈은 2026-09-24 에 가방 왼쪽에,
-	# 정보는 2026-09-25 에 맨 앞에 더했다). 설계는 2026-09-28 에 오른쪽 맨 아래로 뺐다 — 아래에서 본다
-	if game._menu_cells.size() != 6:
-		_fail("오른쪽 위 단추가 6개여야 하는데 %d개" % game._menu_cells.size())
+	# 정보는 2026-09-25 에 맨 앞에 더했다). 설계는 2026-09-28 에 오른쪽 맨 아래로 뺐다 — 아래에서 본다.
+	# 헬스는 2026-09-30 에 던전 옆에 더했다 (docs/features/fitness.md)
+	if game._menu_cells.size() != 7:
+		_fail("오른쪽 위 단추가 7개여야 하는데 %d개" % game._menu_cells.size())
 		return
 	# 설계 단추 — 오른쪽 맨 아래 모서리에 붙고, 알파 0 이라 안 보이지만 누르면 창이 열린다
 	var design_rect: Rect2 = game._design_cell.get_global_rect()
@@ -692,11 +693,16 @@ func _case_dungeon(game: Node3D) -> void:
 	var window: Control = panel.find_child("StageWindow", true, false)
 	if not screen.encloses(window.get_global_rect()):
 		_fail("단계 창이 화면 밖으로 넘친다: %s" % window.get_global_rect())
-	# 처음엔 1단계가 골라져 있고, 보상은 스킬 경험치 한 칸뿐이다 (장비·크리스탈·골드 없음).
-	# **보이는 스킬이 없으면 그 칸도 숨는다** (2026-09-29 요청: "던전의 스킬 경험치 숨김") — 0칸
+	# 처음엔 1단계가 골라져 있고, 보상은 스킬 경험치 한 칸 + 헬스 프로틴 세 칸이다 (장비·크리스탈·골드 없음).
+	# **보이는 스킬이 없으면 스킬 경험치 칸은 숨는다** (2026-09-29 요청: "던전의 스킬 경험치 숨김")
 	var shown := Skills.actives_shown(World.DEFAULT_JOB)
-	if panel.picked_stage() != "raid_01" or panel.reward_count() != (1 if shown else 0):
-		_fail("단계 창을 열면 1단계가 골라지고 보상은 %d칸이어야 한다: %s 보상 %d칸" % [1 if shown else 0, panel.picked_stage(), panel.reward_count()])
+	var skill_cells := 1 if shown else 0
+	if panel.picked_stage() != "raid_01" or panel.reward_count() != skill_cells + 3:
+		_fail("단계 창을 열면 1단계가 골라지고 보상은 %d칸이어야 한다: %s 보상 %d칸" % [skill_cells + 3, panel.picked_stage(), panel.reward_count()])
+	else:
+		var last_reward: Label = panel._rewards.get_child(skill_cells + 2).find_children("*", "Label", true, false)[0]
+		if last_reward.text != "헬스 프로틴 5개":
+			_fail("1단계 보상 끝 칸이 '헬스 프로틴 5개' 가 아니다: '%s'" % last_reward.text)
 	# 그 한 칸은 던전 클리어의 스킬 경험치 (1단계 = 1000)
 	if shown and panel.reward_count() > 0:
 		var first_reward: Label = panel._rewards.get_child(0).find_children("*", "Label", true, false)[0]
@@ -710,10 +716,10 @@ func _case_dungeon(game: Node3D) -> void:
 	await _tap_row(panel, 4)
 	if not panel.visible or panel.picked_stage() != "raid_05":
 		_fail("5단계를 눌렀으면 창은 그대로이고 5단계가 골라져야 한다: %s" % panel.picked_stage())
-	elif not shown and panel.reward_count() != 0:
-		_fail("보이는 스킬이 없는데 5단계 보상이 %d칸이다 (스킬 경험치는 숨긴다)" % panel.reward_count())
-	elif shown and (panel.reward_count() != 1 or panel._rewards.get_child(0).find_children("*", "Label", true, false)[0].text != "스킬 경험치 5000"):
-		_fail("5단계 보상은 스킬 경험치 5000 한 칸이어야 한다: %d칸" % panel.reward_count())
+	elif not shown and panel.reward_count() != 3:
+		_fail("보이는 스킬이 없는데 5단계 보상이 %d칸이다 (스킬 경험치는 숨기고 프로틴 셋만)" % panel.reward_count())
+	elif shown and (panel.reward_count() != 4 or panel._rewards.get_child(0).find_children("*", "Label", true, false)[0].text != "스킬 경험치 5000"):
+		_fail("5단계 보상은 스킬 경험치 5000 + 프로틴 셋이어야 한다: %d칸" % panel.reward_count())
 	# X 는 단계 창만 닫는다 — 던전 카드로 돌아간다
 	panel.close_button().pressed.emit()
 	await process_frame

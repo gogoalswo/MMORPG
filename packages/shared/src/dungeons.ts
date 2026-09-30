@@ -1,5 +1,6 @@
 import { ZONE_SIZE, type GateDef, type ZoneDef } from './zone.ts';
 import { MONSTER_KINDS, bossIdFor, bossLevel, monsterIdFor, tierLevels } from './monsters.ts';
+import { DUNGEON_PROTEIN_PER_STAGE } from './fitness.ts';
 
 /**
  * 던전 — 가방 옆 "던전" 단추로 들어간다 (차원문 목록에는 없다).
@@ -29,6 +30,11 @@ export interface DungeonStage {
   level: number;
   /** 깨면(보스를 잡으면) 들어오는 **스킬 경험치** — 단계 × `DUNGEON_SKILL_EXP_PER_STAGE` */
   skillExp: number;
+  /**
+   * 깨면 들어오는 **프로틴** — 세 종(파워·디펜스·헬스)을 **각각** 이만큼. 단계 × `DUNGEON_PROTEIN_PER_STAGE`.
+   * 토벌·시련의 탑 둘 다 준다 → 헬스(fitness.ts)
+   */
+  protein: number;
   /** 시련의 탑만 — 나오는 일반 몬스터 종 (토벌은 `boss`) */
   monster?: string;
   /** 시련의 탑만 — `seconds` 안에 `kills` 마리를 잡으면 통과, 크리스탈 `crystals` 개 */
@@ -86,6 +92,7 @@ const RAID_STAGES: DungeonStage[] = Array.from({ length: BOSS_COUNT }, (_, i) =>
   boss: bossIdFor(i),
   level: bossLevel(i),
   skillExp: (i + 1) * DUNGEON_SKILL_EXP_PER_STAGE,
+  protein: (i + 1) * DUNGEON_PROTEIN_PER_STAGE,
 }));
 
 /**
@@ -121,6 +128,7 @@ const TRIAL_STAGES: DungeonStage[] = Array.from({ length: BOSS_COUNT }, (_, i) =
     monster: monsterIdFor(level),
     level,
     skillExp: 0,
+    protein: (i + 1) * DUNGEON_PROTEIN_PER_STAGE,
     kills: TRIAL_KILLS,
     seconds: TRIAL_SECONDS,
     crystals: (i + 1) * TRIAL_CRYSTALS_PER_STAGE,

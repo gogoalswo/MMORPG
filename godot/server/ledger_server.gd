@@ -30,6 +30,8 @@ const OPS := {
 	"enhance": "sk",
 	"enhance_many": "ai",
 	"trial_clear": "s",
+	# 헬스 — 운동 id · 자동(1)이냐 한 번(0)이냐. 확률은 서버가 굴린다
+	"fitness_up": "si",
 }
 
 var store: AccountStore

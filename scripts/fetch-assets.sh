@@ -359,6 +359,14 @@ fetch_icon fba999f3e828debccb1109e84189d3a0 ui_icon_bag       # 가방 — 버�
 fetch_icon 82f60e0a994bb7257ca7da850cd82069 ui_icon_dungeon   # 던전 — 돌 아치에 반쯤 열린 나무 문 (세 장 중 둘째, 처음부터 세피아 팔레트로 뽑음). 2026-09-29
 fetch_icon 60019ed8187ff0cff607c9aa023849f4 ui_icon_design    # 설계 — 두루마리 도면 위 컴퍼스 (첫째). 2026-09-29 세피아 단색조
 fetch_icon 0cd496bab7dbf9e3e1b78144b25a235c ui_icon_rank      # 랭킹 — 받침 달린 트로피 (첫째). 2026-09-29 세피아 단색조
+fetch_icon 48c32df95c8cead1a978cd760ed10188 ui_icon_fitness   # 헬스 — 쇠 덤벨 (세 장 중 둘째). 2026-09-30 세피아 단색조 (HUD 아이콘 기준 프롬프트 그대로)
+# 헬스 창 (2026-09-30, docs/features/fitness.md) — 사용자가 준 다른 게임의 탈리스만 강화 창 스크린샷에서
+# 가운데 문장만 잘라(160px JPEG, fe3678d7…jpg) 물려 뽑았다. 운동마다 두 장 중 고른 것
+fetch_icon 4ec79a36a6213fa0bb5736c7e3bfffa7 ui_fitness_bench    # 벤치프레스 — 붉은 법랑 방패 · 벤치 위 바벨 (첫째)
+fetch_icon f294917cad3c2b2c2995689dbb5d2abd ui_fitness_deadlift # 데드리프트 — 푸른 법랑 · 건틀릿이 쥔 바벨 (첫째)
+fetch_icon 5c646a86f26a691ce0a8537967201adb ui_fitness_squat    # 스쿼트 — 초록 법랑 · 랙에 걸린 바벨 (둘째)
+# 프로틴 세 통을 한 장에 뽑았다 (색만 다르고 결이 같게) — build-item-icons.mjs 의 `SHEETS` 가 셋으로 자른다
+fetch_icon e27e3d5061cc3b8ee7412fa7e4a6c13d ui_protein_sheet    # 빨강 주먹 · 파랑 방패 · 초록 하트 (둘째)
 # 던전 종류 카드 — 받은 그림(다른 게임의 던전 창)을 참고로 물려 뽑은 풍경 · 틀 · 장식
 # (2026-09-28, docs/features/dungeons.md). 각 두 장 중 고른 것. 풍경은 9:16 이라 배경을 안 걷는다
 fetch_icon 835f847665366f9f3471ae4c32b7863f dungeon_raid     # 토벌 — 무너진 아치 투기장 · 뒤에 선 오거 (첫째)

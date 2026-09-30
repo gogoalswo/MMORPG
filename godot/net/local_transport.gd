@@ -162,6 +162,10 @@ func send(message: StringName, payload: Dictionary) -> void:
 				str(payload.get("skill", "")),
 				int(payload.get("slot", -1)),
 			)
+		&"fitnessUp":
+			_world.fitness_up(MY_ID, str(payload.get("kind", "")), bool(payload.get("auto", false)))
+		&"debugProtein":
+			_world.debug_protein(MY_ID)
 		&"debugSkillExp":
 			_world.debug_skill_exp(MY_ID)
 		&"debugLearnAll":

@@ -36,7 +36,8 @@ const KNOWN_UPGRADE_KEYS := [
 ## 그 몬스터를 잡는 데 걸리는 최소 시간(ms) — 이보다 빨리 잡았다는 보고는 거절한다. 0 이면 한 방도 된다
 static func min_ms(ledger: Dictionary, kind: Dictionary) -> float:
 	var stats := World.stats_of(
-		str(ledger.job), int(ledger.level), ledger.get("equipped", {}), ledger.get("passives", {})
+		str(ledger.job), int(ledger.level), ledger.get("equipped", {}), ledger.get("passives", {}),
+		ledger.get("fitness", {})
 	)
 	var k := Stats.k_of(int(ledger.level))
 	var defense := float(kind.get("defense", 0)) * (1.0 - float(stats.get("penetration", 0.0)))

@@ -384,6 +384,7 @@ frame.add_child(border)         # 채움 **다음**에 붙여야 위로 온다
 | 크리스탈 | 바위에서 솟은 결정 | `ui_icon_crystal` |
 | 가방 | 버클 가죽 배낭 | `ui_icon_bag` |
 | 던전 | 돌 아치에 반쯤 열린 나무 문 — 안쪽이 어둡다 (2026-09-29 "던전 문으로" 요청, 전엔 뿔 해골) | `ui_icon_dungeon` |
+| 헬스 | 쇠 덤벨 — 던전 옆 (2026-09-30, [fitness.md](fitness.md)) | `ui_icon_fitness` |
 | 설계 | 두루마리 도면 위 컴퍼스 | `ui_icon_design` |
 | 랭킹 | 받침 달린 트로피 | `ui_icon_rank` |
 | 자동사냥 | 장검 둘이 X자 | `ui_icon_auto` |

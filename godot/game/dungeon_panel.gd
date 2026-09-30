@@ -479,8 +479,8 @@ func _select(zone_id: String) -> void:
 
 
 ## 그 단계 보스가 주는 것 — **판정이 주는 것 그대로다.** 던전은 클리어의
-## **스킬 경험치**(`skillExp`, `ledger.gd` 의 `_check_dungeon_clear`) 하나만 준다 —
-## 장비·크리스탈·골드는 뺐다 (2026-09-29 요청). 시련의 탑은 통과 보상 크리스탈 한 칸
+## **스킬 경험치**(`skillExp`, `ledger.gd` 의 `_check_dungeon_clear`)와 헬스 **프로틴 세 종**을 준다 —
+## 장비·크리스탈·골드는 뺐다 (2026-09-29 요청). 시련의 탑은 통과 보상 크리스탈 한 칸이 더 있다
 func _stage_rewards(stage: Dictionary) -> Array:
 	var out: Array = []
 	var skill_exp := int(stage.get("skillExp", 0))
@@ -492,6 +492,14 @@ func _stage_rewards(stage: Dictionary) -> Array:
 	var trial_crystals := int(stage.get("crystals", 0))
 	if trial_crystals > 0:
 		out.append({"name": "크리스탈 %d개" % trial_crystals, "icon": Items.crystal_id(), "color": CARD_GOLD})
+	# 헬스 프로틴 — 세 종 **각각** 단계 × 5개 (토벌 · 시련 둘 다, docs/features/fitness.md)
+	var protein := int(stage.get("protein", 0))
+	if protein > 0:
+		for kind in Fitness.kinds():
+			out.append({
+				"name": "%s %d개" % [str(kind.proteinName), protein],
+				"icon": "ui_protein_" + str(kind.protein), "color": CARD_GOLD,
+			})
 	return out
 
 

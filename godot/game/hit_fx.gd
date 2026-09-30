@@ -37,13 +37,19 @@ const CRIT_SIZE := 0.017
 const FLASH_RADIUS := 0.3
 const SPARK_SIZE := 0.15
 
-## 내가 때렸다
+## 내가 때렸다 — 섬광·파편 색. **숫자는 흰 글씨 · 검은 테두리**다 (2026-09-30,
+## `DamageFont.plain` 에 구워 있어 `modulate` 를 흰색으로 둔다)
 const COLOR_DAMAGE := Color("#ffe6a0")
-## 치명타는 **색부터 다르다** — 주황(`#ff8a3d`)이던 것을 자홍으로 바꿨다 (2026-09-23,
-## "크리티컬 터지면 데미지 플로터 색상도 바꿔"). 주황은 평타의 연노랑과 같은 난색이라
-## 한 화면에 섞이면 크기로만 갈렸다. 자홍은 게임 안 어디에도 안 쓰는 색이다
-## (내가 맞음 빨강 · 회복 초록 · 낙뢰 청백과도 겹치지 않는다)
-const COLOR_CRIT := Color("#ff4fd8")
+## 치명타는 **노랑→주황 그라데이션 글꼴**(`DamageFont.crit`)로 가른다 (2026-09-30, 참고
+## 그림을 받고). 그 전에는 자홍(`#ff4fd8`)이었다 — 평타가 흰색이 되면서 난색이 다시
+## 비었다. 이 색은 섬광·파편에만 쓰고, 숫자는 색이 그림에 있어 `modulate` 가 흰색이다
+const COLOR_CRIT := Color("#ffb020")
+## 치명타 숫자가 톡 커지는 연출 — `CRIT_POP` 초 만에 `CRIT_PEAK` 배로 부풀었다가
+## `CRIT_SETTLE` 초까지 `CRIT_REST` 배로 가라앉는다. "살짝" 이라 했으므로 크게 튀지 않는다
+const CRIT_POP := 0.08
+const CRIT_SETTLE := 0.22
+const CRIT_PEAK := 1.35
+const CRIT_REST := 1.12
 ## 내가 맞았다 — 남을 때린 숫자와 색으로 갈라야 한 화면에서 구분이 된다
 const COLOR_HURT := Color("#ff5a4a")
 const COLOR_HEAL := Color("#7ce08a")
@@ -76,6 +82,8 @@ const BOSS_KICK := 0.5
 var _t := 0.0
 var _flash: MeshInstance3D
 var _number: Label3D
+## 치명타면 숫자가 부푼다 (`_process`)
+var _crit := false
 ## [{node, vel}, ...] — 튀어 나가 떨어지는 파편
 var _sparks: Array = []
 ## 파편 일곱이 같이 쓰는 재질
@@ -150,15 +158,16 @@ func _build(font: Font) -> void:
 		add_child(node)
 		_sparks.append({"node": node, "vel": Vector3.ZERO})
 
+	# 테두리·색은 글꼴 그림에 구워 있다 (`DamageFont`) — `Label3D` 의 외곽선은 끈다
 	_number = Label3D.new()
-	if font != null:
-		_number.font = font
-	_number.font_size = 64
-	_number.outline_size = 16
-	_number.outline_modulate = Color(0, 0, 0, 0.8)
+	_number.font = DamageFont.plain(font)
+	_number.font_size = DamageFont.SIZE
+	_number.outline_size = 0
 	_number.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	# 몬스터 몸에 가리면 안 보인다 — 숫자는 항상 앞에 그린다
 	_number.no_depth_test = true
+	# 머리 위 체력 막대도 앞에 그리는 반투명이라 순서가 섞이면 막대가 숫자를 긋는다 — 숫자를 맨 뒤에 그린다
+	_number.render_priority = 100
 	add_child(_number)
 
 
@@ -202,11 +211,15 @@ func _start(payload: Dictionary, font: Font) -> void:
 		_number.text = "%d!" % amount
 	else:
 		_number.text = str(amount)
-	if font != null and _number.font != font:
-		_number.font = font
+	# 그라데이션 글꼴은 **내가 친 치명타만**이다. 내가 맞은 치명타는 빨강이어야 한다
+	_crit = crit and not heal and not on_me
+	_number.font = DamageFont.crit(font) if _crit else DamageFont.plain(font)
 	# 치명타는 크게. 숫자를 읽지 않아도 크기로 먼저 안다
 	_number.pixel_size = CRIT_SIZE if crit else NUMBER_SIZE
-	_number.modulate = tint
+	# 흰 글꼴에 곱하면 채움만 물든다 (검은 테두리는 곱해도 검다) — 맞음·회복만 물들인다.
+	# 평타는 흰 그대로, 치명타는 색이 그림에 있다
+	_number.modulate = tint if heal or on_me else Color.WHITE
+	_number.scale = Vector3.ONE
 	_number.position = Vector3(randf_range(-0.4, 0.4), 0.3, 0.0)
 
 
@@ -315,11 +328,22 @@ func _process(delta: float) -> void:
 
 	if _number != null:
 		_number.position.y += RISE * delta
+		if _crit:
+			_number.scale = Vector3.ONE * crit_scale(_t)
 		# 끝 45% 동안만 흐려진다. 처음부터 흐려지면 읽을 겨를이 없다
 		_number.modulate.a = clampf((LIFE - _t) / (LIFE * 0.45), 0.0, 1.0)
 
 	if _t >= LIFE:
 		finish()
+
+
+## 치명타 숫자의 배율 — 톡 부풀었다가 조금 큰 채로 가라앉는다
+static func crit_scale(t: float) -> float:
+	if t < CRIT_POP:
+		return lerpf(1.0, CRIT_PEAK, ease(t / CRIT_POP, 0.4))
+	if t < CRIT_SETTLE:
+		return lerpf(CRIT_PEAK, CRIT_REST, ease((t - CRIT_POP) / (CRIT_SETTLE - CRIT_POP), 2.0))
+	return CRIT_REST
 
 
 ## 끝낸다 — 덧칠을 걷고 풀로 돌아간다 (풀 밖이면 지운다)

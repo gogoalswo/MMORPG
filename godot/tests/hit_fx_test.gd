@@ -142,8 +142,12 @@ func _case_crit(game: Node3D, mob: Dictionary) -> void:
 		return
 	if fx._number.text != "91!":
 		_fail("치명타 숫자가 '91!' 이 아니다 (%s)" % fx._number.text)
-	if fx._number.modulate.to_html(false) != HitFx.COLOR_CRIT.to_html(false):
-		_fail("치명타 숫자가 치명타 색이 아니다 (%s)" % fx._number.modulate.to_html(false))
+	if fx._number.font != DamageFont.crit(null):
+		_fail("치명타 숫자가 그라데이션 글꼴(DamageFont.crit)이 아니다")
+	await process_frame
+	await process_frame
+	if fx._number.scale.x <= 1.01:
+		_fail("치명타 숫자가 부풀지 않는다 (배율 %.2f)" % fx._number.scale.x)
 	if fx._number.pixel_size <= 0.006:
 		_fail("치명타가 평타보다 크지 않다 (%.4f)" % fx._number.pixel_size)
 	else:

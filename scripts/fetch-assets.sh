@@ -195,6 +195,17 @@ for n in 1 2 3 4 5; do
   fi
 done
 
+# 저레벨 몬스터 여섯 — 슬라임·뿔토끼·버섯괴물·사마귀·전갈·코볼트 (2026-09-29).
+# 바르코 커스텀 워크플로우("Untitled")의 원화(nano-banana-pro) → Generate3D 결과물이다. 뼈대가 없는 메시다 —
+# 바르코 Rig 은 사람 몸만 돼서 **뼈대·동작은 블렌더로 짓는다**. 결과 GLB 는 커밋돼 있어서 여기선 원본만 받는다.
+#   다시 지으려면: npm run blender -- --python scripts/blender/mob_moves.py
+fetch_varco a1cb35cb8d71b80ac831bfce4b63bb0c mob_slime_mesh
+fetch_varco 227156ded821fe27cdd27e78ac3b8a3c mob_hare_mesh
+fetch_varco 82f36aa6f665c2f2d8430ea6e19e6342 mob_mushroom_mesh
+fetch_varco 9973846ed2e779f522add2796e41360a mob_mantis_mesh
+fetch_varco 23e24a42f36229df3ce142c5044909d6 mob_scorpion_mesh
+fetch_varco 90a59e4d7efa708ba9dc853d003b93c6 mob_kobold_mesh
+
 # ------------------------------------------------------------ 가방·장비 아이콘
 
 # 바르코 커스텀 워크플로우 "인벤토리 UI" 의 출력물 11장. 연한 청백색 선화 한 벌이라

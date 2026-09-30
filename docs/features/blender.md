@@ -41,6 +41,14 @@ npm run blender -- --python-expr "import bpy; print(bpy.app.version_string)"
 - 키마다 보간이 섞여 있으면 내보낼 때 "Baking animation" 경고가 뼈마다 뜬다. 일부러 섞은
   것(부딪히기 전 LINEAR · 뒤 BEZIER)이라 무시한다.
 
+### 뼈대 없는 메시에 뼈대·동작 달기 (2026-09-29)
+`scripts/blender/mob_moves.py` — 저레벨 몬스터 여섯(슬라임~코볼트). 바르코 메시를 들여 발바닥을 z = 0
+으로 내리고, 좌표로 적은 뼈대를 세워 가까운 뼈 셋에 무게를 주고, `Idle`·`Run`·`Attack`·`Death` 를 키로
+찍어 **메시째** GLB 로 낸다 (텍스처는 1024 로 줄이고 JPEG). 뼈대가 없는 몸이라 캐릭터처럼 클립만
+붙이는 길(`add-clips.mjs`)을 못 쓴다 → [characters-and-animation.md](characters-and-animation.md) "저레벨 몬스터".
+- **GLB 를 다시 들여 볼 때 블렌더는 24fps 로 읽는다.** 초로 적은 시각을 30 으로 곱해 프레임을 고르면
+  엉뚱한 순간이 나온다.
+
 ## 설치는 어떻게 되나
 
 **윈도우(Git Bash)** 에서는 리눅스 tar 가 안 돈다. `scripts/blender.sh` 가 윈도우면 휴대용 zip

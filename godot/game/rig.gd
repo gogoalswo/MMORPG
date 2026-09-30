@@ -21,6 +21,13 @@ const FILES := {
 	"varco_ogre3": "varco_ogre3.glb",
 	"varco_ogre4": "varco_ogre4.glb",
 	"varco_ogre5": "varco_ogre5.glb",
+	# 저레벨 몬스터 여섯 — 바르코 메시 + 블렌더 뼈대·동작 (scripts/blender/mob_moves.py)
+	"mob_slime": "mob_slime.glb",
+	"mob_hare": "mob_hare.glb",
+	"mob_mushroom": "mob_mushroom.glb",
+	"mob_mantis": "mob_mantis.glb",
+	"mob_scorpion": "mob_scorpion.glb",
+	"mob_kobold": "mob_kobold.glb",
 	# 마을 NPC — 키는 zones.ts 의 NpcDef.look. 바르코 원화 → 3D → 리깅 → 대기 하나
 	"merchant": "npc_merchant.glb",
 	"smith": "npc_smith.glb",

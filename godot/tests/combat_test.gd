@@ -145,7 +145,7 @@ func _fight() -> void:
 	var want: int = roundi(plain * (1.0 + float(me.stats.critDamage))) if hit.crit else plain
 	_eq("피해량", hit.amount, want)
 	_eq("체력이 그만큼 줄었다", mobs[0].hp, full - want)
-	print("  들늑대 %d -> %d (%s)" % [full, mobs[0].hp, "치명타" if hit.crit else "보통"])
+	print("  슬라임 %d -> %d (%s)" % [full, mobs[0].hp, "치명타" if hit.crit else "보통"])
 
 	# 쿨타임 안에 또 치면 아무 일도 없다
 	w.attack("me")

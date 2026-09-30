@@ -17,12 +17,20 @@
  */
 export const BEAST_HEIGHT: Record<string, number> = {
   // VARCO 오우거 — 사람(1.8)보다 머리 하나 반 크다. 파일 높이가 0.88~0.94 라 2.4 배쯤 키운다.
-  // 사냥터 20곳과 보스가 전부 이 다섯을 쓴다. 옛 짐승(늑대·공룡 등)은 파일을 빼서 키도 지웠다
+  // 저레벨 여섯 곳(아래 mob_*)을 뺀 사냥터와 보스가 이 다섯을 쓴다. 옛 짐승(늑대·공룡 등)은 파일을 빼서 키도 지웠다
   varco_ogre1: 2.2,
   varco_ogre2: 2.2,
   varco_ogre3: 2.2,
   varco_ogre4: 2.2,
   varco_ogre5: 2.2,
+  // 저레벨 여섯 종 (2026-09-29) — 사람(1.8)보다 작게 시작해 레벨이 오를수록 커진다.
+  // 파일 높이가 곧 키라 **뿔토끼는 귀 끝, 전갈은 말아 올린 꼬리 끝**까지다
+  mob_slime: 0.8,
+  mob_hare: 1.0,
+  mob_mushroom: 1.4,
+  mob_mantis: 1.7,
+  mob_scorpion: 1.0,
+  mob_kobold: 1.5,
 };
 export const BEAST_HEIGHT_DEFAULT = 0.9;
 

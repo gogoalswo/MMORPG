@@ -98,7 +98,7 @@ func _case_walk() -> void:
 	if mob.state != "patrol":
 		_fail("걷는 동안 상태가 %s" % mob.state)
 
-	# 들늑대 3.6 m/s 의 0.35 배 -> 1.26 m/s. 4m 를 걷는 데 넉넉한 프레임을 준다
+	# 슬라임 3.6 m/s 의 0.35 배 -> 1.26 m/s. 4m 를 걷는 데 넉넉한 프레임을 준다
 	var walked := 0
 	for i in 400:
 		if int(mob.patrol_rest_until) > 0:

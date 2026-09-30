@@ -7,8 +7,10 @@ import { jobAdvanceZones } from './jobAdvance.ts';
  * 존 배치.
  *
  *   마을 ─┐
- *          ├─ 차원문 ─┬─ 초원(1-10)
- *   사냥터 ┘          ├─ 덤불숲(10-20)
+ *          ├─ 차원문 ─┬─ 슬라임 서식지(Lv3) · 뿔토끼 들판(Lv8)
+ *   사냥터 ┘          ├─ 버섯 군락지(Lv13) · 사마귀 둥지(Lv18)
+ *                     ├─ 전갈 소굴(Lv23) · 코볼트 야영지(Lv28)
+ *                     ├─ 잿빛 황야(30-40)
  *                     ├─ …
  *                     └─ 종말의 대지(190-200)
  *
@@ -19,7 +21,7 @@ import { jobAdvanceZones } from './jobAdvance.ts';
  * 못 나오는 방이 된다 — 예외가 나지 않고 "여기서 어떻게 나가지?" 로만 나타나서
  * `zones.test.ts` 가 전수 검사한다.
  *
- * **표에서 만든다.** 20개를 손으로 적으면 한 곳만 빠져도 조용히 지나간다.
+ * **표에서 만든다.** 23개를 손으로 적으면 한 곳만 빠져도 조용히 지나간다.
  *
  * 모든 존을 `ZONE_SIZE` 66 (이동 가능 영역 ±29) 로 맞췄다. 원래 92 — 한 화면에 보이는
  * 지면(16:9 기준 약 56.5 유닛, FOV 30 · 거리 40 · 부각 42)의 1.5배 — 였는데 "맵이 너무
@@ -78,12 +80,23 @@ interface FieldTheme {
   dirtLight: string;
   /** 0 = 훤함, 1 = 캄캄함. 안개 거리와 광량, 풀 밀도를 여기서 뽑는다 */
   dim: number;
+  /**
+   * 이 티어의 **약한 종** 사냥터. 없으면 강한 종 사냥터다.
+   * 약한 종 사냥터는 같은 티어 강한 쪽 바로 앞에 적는다 (`FIELD_MOBS` 가 순서로 티어를 센다)
+   */
+  weak?: true;
 }
 
 const FIELDS: FieldTheme[] = [
-  { id: 'meadow', name: '초원', ground: 'grass', sky: '#b4c6cf', grassDark: '#54663a', grassLight: '#7c8b54', dirtLight: '#b39c77', dim: 0.05 },
-  { id: 'thicket', name: '덤불숲', ground: 'soil', sky: '#5f6b63', grassDark: '#2f3a28', grassLight: '#4a5936', dirtLight: '#6b5f49', dim: 0.55 },
-  { id: 'canyon', name: '메마른 협곡', ground: 'dirt', sky: '#c4b39a', grassDark: '#6b6142', grassLight: '#8a7d55', dirtLight: '#b09468', dim: 0.2 },
+  // 저레벨 여섯 곳은 **몬스터 한 종에 사냥터 하나**이고 이름도 그 몬스터에서 딴다 (2026-09-29 지시:
+  // "사냥터 이름을 몬스터 이름이랑 섞어서 만들어. 예를 들어 슬라임 서식지"). 옛 초원·덤불숲·협곡 id 는
+  // 강한 종 사냥터가 물려받았다 — 저장된 위치의 레벨대가 그대로이고, 덤불숲 지형(terrain.gd)도 그대로다
+  { id: 'slime_habitat', name: '슬라임 서식지', weak: true, ground: 'grass', sky: '#bccfc9', grassDark: '#5b6e3a', grassLight: '#88995a', dirtLight: '#b6a47c', dim: 0 },
+  { id: 'meadow', name: '뿔토끼 들판', ground: 'grass', sky: '#b4c6cf', grassDark: '#54663a', grassLight: '#7c8b54', dirtLight: '#b39c77', dim: 0.05 },
+  { id: 'mushroom_grove', name: '버섯 군락지', weak: true, ground: 'grass', sky: '#6f7a70', grassDark: '#34402c', grassLight: '#52603c', dirtLight: '#75674f', dim: 0.45 },
+  { id: 'thicket', name: '사마귀 둥지', ground: 'soil', sky: '#5f6b63', grassDark: '#2f3a28', grassLight: '#4a5936', dirtLight: '#6b5f49', dim: 0.55 },
+  { id: 'scorpion_den', name: '전갈 소굴', weak: true, ground: 'sand', sky: '#cdb897', grassDark: '#7a6a44', grassLight: '#9a885a', dirtLight: '#c09f6c', dim: 0.15 },
+  { id: 'canyon', name: '코볼트 야영지', ground: 'dirt', sky: '#c4b39a', grassDark: '#6b6142', grassLight: '#8a7d55', dirtLight: '#b09468', dim: 0.2 },
   { id: 'waste', name: '잿빛 황야', ground: 'dirt', sky: '#4a4750', grassDark: '#3a3740', grassLight: '#4e4a55', dirtLight: '#655f6c', dim: 0.7 },
   { id: 'mire', name: '안개 늪', ground: 'grass', sky: '#6d7a6a', grassDark: '#37452f', grassLight: '#4d5c3d', dirtLight: '#5b5b46', dim: 0.6 },
   { id: 'frostmoor', name: '서리 고원', ground: 'snow', sky: '#c8d8e4', grassDark: '#6d7f86', grassLight: '#93a6ae', dirtLight: '#a5b1b6', dim: 0.15 },
@@ -164,8 +177,20 @@ export function fieldSpots(index: number): [number, number][] {
   return out;
 }
 
+/**
+ * 사냥터마다 [티어, 종] — 종 0 = 약한 쪽, 1 = 강한 쪽 (`tierLevels`).
+ * 강한 종 사냥터 하나가 티어 하나를 닫는다. 그래서 약한 종 사냥터가 끼어도 뒤 사냥터들의 레벨이 밀리지 않는다.
+ */
+const FIELD_MOBS: [number, 0 | 1][] = (() => {
+  let tier = 0;
+  return FIELDS.map((theme): [number, 0 | 1] => (theme.weak ? [tier, 0] : [tier++, 1]));
+})();
+
 function buildField(theme: FieldTheme, index: number): ZoneDef {
-  const strong = tierLevels(index)[1];
+  const [tier, slot] = FIELD_MOBS[index]!;
+  const level = tierLevels(tier)[slot];
+  // 자리 씨앗 — 강한 종 사냥터는 예전 번호(티어) 그대로라 배치가 안 바뀐다. 약한 종은 100 번대
+  const spots = fieldSpots(slot === 1 ? tier : 100 + tier);
 
   // 도착 지점은 맵 한가운데 하나뿐이다. 사슬 포탈이 없어졌으니 "어느 문으로
   // 들어왔나"를 따질 일이 없고, 이름 붙은 스폰(from_west 등)도 같이 사라졌다.
@@ -177,8 +202,8 @@ function buildField(theme: FieldTheme, index: number): ZoneDef {
     // 차원문이 없다 (2026-09-29 요청 "사냥터에 들어가면 포탈을 제거해") — 마을로는 HUD 위쪽
     // "마을가기" 단추로 간다 (docs/features/hud.md "마을가기")
     // 맵 전체에 한 마리씩 (위 fieldSpots). 보스는 없다
-    monsters: fieldSpots(index).map(([x, z]) => ({
-      kind: monsterIdFor(strong), x, z, radius: 0, count: 1, respawnMs: 10000,
+    monsters: spots.map(([x, z]) => ({
+      kind: monsterIdFor(level), x, z, radius: 0, count: 1, respawnMs: 10000,
     })),
     env: envFor(theme),
   };

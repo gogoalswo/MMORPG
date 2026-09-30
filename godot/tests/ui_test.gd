@@ -104,11 +104,13 @@ func _run_scene() -> void:
 	if not game._gate_panel.visible:
 		_fail("차원문을 눌렀는데 고르는 화면이 안 떴다")
 	else:
-		# 마을 + 사냥터 20곳 = 21줄. 맨 위(마을)가 지금 서 있는 곳이라 막혀 있다
+		# 마을 + 사냥터 23곳 = 24줄. 맨 위(마을)가 지금 서 있는 곳이라 막혀 있다.
+		# 사냥터 수는 표(zones.ts 의 FIELDS)가 정하므로 거기서 센다
 		var panel: GatePanel = game._gate_panel
+		var rows := 1 + GameData.field_order().size()
 		print("  차원문 화면: %d줄, 첫 줄 '%s'" % [panel.row_count(), panel.row(0).text])
-		if panel.row_count() != 21:
-			_fail("줄이 21개여야 하는데 %d개" % panel.row_count())
+		if panel.row_count() != rows or rows != 24:
+			_fail("줄이 %d개(마을 + 사냥터 23곳)여야 하는데 %d개" % [rows, panel.row_count()])
 		elif not panel.row(0).disabled or panel.row(1).disabled:
 			_fail("서 있는 곳(마을)만 막혀야 한다")
 		elif panel.row(0).icon == panel.row(1).icon:

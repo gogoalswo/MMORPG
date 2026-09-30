@@ -465,8 +465,12 @@ func attack(player_id: String) -> void:
 	player.next_attack_at = now + cooldown
 	var root := Combat.attack_root_ms(cooldown)
 	player.rooted_until = now + root
-	# 휘두르는 동안 못 움직인다는 통보. 화면이 이 값만큼 동작을 튼다
-	_events.append({"type": "swing", "id": player_id, "root_ms": root})
+	# 휘두르는 동안 못 움직인다는 통보. 화면이 이 값만큼 동작을 튼다.
+	# `speed` 는 발차기를 트는 배속 — 기본 간격 / 지금 간격 (공속 +620% 면 7.2배, 2026-09-29)
+	_events.append({
+		"type": "swing", "id": player_id, "root_ms": root,
+		"speed": float(stats.attackCooldown) / maxf(1.0, float(cooldown)),
+	})
 
 	var picked := _pick_targets(player, float(stats.attackRange), _attack_arc(), 1)
 	if picked.is_empty():

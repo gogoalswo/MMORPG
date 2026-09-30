@@ -172,9 +172,10 @@ const RUN_SPEED_EPS := 0.5
 var _last_delta := 0.0
 ## 공격 동작을 언제까지 트나 (서버가 준 경직 시간)
 var _swing_until := 0
-## 블렌더로 지은 동작 (`scripts/blender/fighter_moves.py`). 평타는 잽·스트레이트를
-## 번갈아 내고, 스킬은 스킬마다 하나다. 모델에 클립이 없으면 옛 `Attack` 으로 돌아간다
-const SWING_CLIPS := ["Jab", "Cross"]
+## 블렌더로 지은 동작 (`scripts/blender/fighter_moves.py`). 평타는 **오른발·왼발 앞차기를
+## 번갈아** 찬다 (2026-09-29 요청: "새로운 연속 발차기 애니메이션을 만들어" — 그 전엔 잽·스트레이트).
+## 공속만큼 배속으로 튼다(`swing.speed`). 스킬은 스킬마다 하나다. 클립이 없으면 옛 `Attack` 으로 돌아간다
+const SWING_CLIPS := ["KickR", "KickL"]
 const SKILL_CLIPS := {
 	"rising_kick": "Claw", "thunder_fall": "Thunder",
 	"sky_breaker": "SkyBreaker", "frost_pillar": "FrostStomp",
@@ -492,7 +493,9 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			_swing_until = Time.get_ticks_msec() + int(payload.get("root_ms", 400))
 			if str(payload.get("id", "")) == _transport.my_id():
 				_swings += 1
-				_start_move(SWING_CLIPS[_swings % SWING_CLIPS.size()])
+				# **공속만큼 빨리 찬다** (2026-09-29 요청: "공속이 빨라지면 그만큼 애니메이션을 빠르게
+				# 재생해") — 판정이 실어 보낸 배속(= 기본 간격 / 지금 간격). Lv.200 이면 7.2배
+				_start_move(SWING_CLIPS[_swings % SWING_CLIPS.size()], float(payload.get("speed", 1.0)))
 		&"lunge":
 			# 날라차기 — 나는 동안과 내려앉는 동안 달리기로 끊기지 않게 막는다
 			_swing_until = Time.get_ticks_msec() + int(payload.get("ms", 700))
@@ -4688,7 +4691,8 @@ func _play_player_clip(me: Dictionary) -> void:
 	if _move_clip != "":
 		if _move_fresh:
 			_move_fresh = false
-			rig.replay(_move_clip, _move_speed, MOVE_BLEND)
+			# 섞는 시간도 배속만큼 줄인다 — 7배로 찰 때 0.06초를 섞으면 발이 다 뻗기 전에 다음 대가 온다
+			rig.replay(_move_clip, _move_speed, MOVE_BLEND / maxf(_move_speed, 1.0))
 			return
 		var cut := _moving and now >= _swing_until
 		# 끝은 **클립이 실제로 다 돌았는지**로 본다. 시계(`_move_until`)로 재면 히트스톱이
@@ -4904,9 +4908,14 @@ func _feel_hit(payload: Dictionary, on_me: bool, body: Node3D) -> void:
 	# 연달아 걸려 동작이 뚝뚝 끊긴다 (2026-09-24). 맞은 건 붉어짐·흔들림·퍼짐으로 안다.
 	# 맞음 동작(`Hit`)과 공격이 이기는 규칙(`HIT_CLIP` 위)과 같은 생각이다
 	var busy := on_me and _move_clip != "" and _move_clip != HIT_CLIP
+	# **내가 때렸으면 멈춤을 공속만큼 줄인다** (2026-09-29) — 초당 8번 차는데 한 대에 0.045초씩
+	# 멈추면 시간의 36% 가 멈춰 있어 발차기가 뚝뚝 끊긴다. 한 대 간격에서 차지하는 몫을 지킨다
+	var stop := float(feel.stop)
+	if not on_me:
+		stop /= 1.0 + maxf(float(_me().get("stats", {}).get("attackSpeed", 0.0)), 0.0)
 	if not busy:
-		HitFx.hitstop(body, feel.stop)
-	HitFx.hitstop(attacker, feel.stop)
+		HitFx.hitstop(body, stop)
+	HitFx.hitstop(attacker, stop)
 	if body != null:
 		# **내 캐릭터는 밀지 않는다** — 카메라가 쫓아가 화면째 흔들리고, 걷는지 보는
 		# 거리 계산(`_moving`)이 밀린 거리를 달린 걸로 읽는다. 퍼지기만 한다

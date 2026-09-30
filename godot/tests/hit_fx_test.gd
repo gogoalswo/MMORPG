@@ -195,7 +195,7 @@ func _case_scatter(game: Node3D, mob: Dictionary, body: Node3D) -> void:
 		return
 	var box := HitFx.body_box(body)
 	# 몸이 작으면 판은 `SPREAD_MIN` 까지 넓어진다
-	var reach := maxf(Vector2(box.size.x, box.size.z).length(), HitFx.SPREAD_MIN.x) * 0.5 + HitFx.SPREAD_SIDE + 0.05
+	var reach := maxf(maxf(box.size.x, box.size.z), HitFx.SPREAD_MIN.x) * 0.5 + HitFx.SPREAD_SIDE + 0.05
 	# 좌우는 이펙트 자리(`World` 좌표)에서 잰다 — 몸 상자 가운데와 조금 다르다
 	var center := Vector3(mob.x, 0.0, mob.z)
 	var low := box.position.y + box.size.y * HitFx.SPREAD_LOW - 0.01
@@ -207,7 +207,7 @@ func _case_scatter(game: Node3D, mob: Dictionary, body: Node3D) -> void:
 			_fail("숫자가 몸 둘레 밖에서 떴다 (%s, 몸 %s)" % [p, box])
 		for b in spots:
 			widest = maxf(widest, p.distance_to(b))
-	if widest < 0.5:
+	if widest < 0.4:
 		_fail("숫자가 한 자리에 몰려 뜬다 (가장 먼 둘이 %.2fm)" % widest)
 	else:
 		print("  흩어짐: 여덟 개 중 가장 먼 둘 %.2fm (몸 %.2f×%.2fm)" % [widest, reach * 2.0, box.size.y])

@@ -20,6 +20,11 @@ export interface MonsterKind {
   maxHp: number;
   attack: number;
   defense: number;
+  /**
+   * 치명타 저항 — 때리는 쪽 치명타 확률에서 **이만큼 빼고** 굴린다 (비율, 0.05 = 5%p).
+   * 100레벨 사냥터부터 붙는다 → `monsterCritResist`. 보스도 같은 값이다
+   */
+  critResist: number;
   /** 공격이 닿는 거리 (m) */
   attackRange: number;
   attackCooldown: number;
@@ -215,12 +220,32 @@ const AGGRO_RANGE = 3;
  * 공격 간격은 설계가 1.5초 하나로 고정한다 — 몬스터 공격력이 그 간격에서 역산되므로
  * 종마다 다르면 총량이 어긋난다. `strong` 은 사거리·이동 속도·크기에만 쓴다.
  */
+/**
+ * 몬스터 치명타 저항 — **사냥터(10레벨)마다 고정값** ★ (2026-09-30 지시: "100레벨 이상부터는
+ * 몬스터에게 치명타 저항 능력치를 부여해" → B안 · 확률 %p 차감 · 보스도 같은 값).
+ *
+ * 100~109 사냥터 5%p 에서 한 곳 오를 때마다 +3.5%p — 190~199 가 36.5%p 다.
+ * 확률에서 **빼는** 방식이라 치확이 100% 를 넘긴 몫(상한이 없다)이 저항을 뚫는 데 쓰인다.
+ * 레벨에서 역산하지 않고 표로 둔다 — 몬스터 능력치는 고정 표다 (monsters-progression.md).
+ */
+export const MONSTER_CRIT_RESIST: readonly number[] = [
+  0.05, 0.085, 0.12, 0.155, 0.19, 0.225, 0.26, 0.295, 0.33, 0.365,
+];
+
+/** 이 레벨 몬스터의 치명타 저항. 100레벨 밑은 0 */
+export function monsterCritResist(level: number): number {
+  if (level < 100) return 0;
+  const index = Math.min(MONSTER_CRIT_RESIST.length - 1, Math.floor((level - 100) / 10));
+  return MONSTER_CRIT_RESIST[index]!;
+}
+
 function statsForLevel(level: number, strong: boolean) {
   const design = monster(level);
   return {
     maxHp: Math.round(design.hp),
     attack: Math.round(design.atk),
     defense: Math.round(design.df),
+    critResist: monsterCritResist(level),
     expReward: Math.round(design.exp),
     attackRange: strong ? 2.2 : 1.9,
     attackCooldown: Math.round(design.interval * 1000),

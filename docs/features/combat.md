@@ -104,6 +104,11 @@ computeDamage(attack, defense) = max(1, round(attack * (1 - defense/(defense+45)
   **치명타 데미지는 기본 피해에 더하는 %다** — 맨몸 100%(`critDamage: 1`)면 ×2, 장비로
   +20% 붙으면 ×2.2. 예전엔 `base * critDamage` 라 맨몸 치명타가 평타와 같았다 (2026-09-27 수정).
   **대상마다 따로 굴린다** — 범위기 한 방이 통째로 터지면 피해가 뭉쳐 숫자가 튄다.
+- **몬스터 치명타 저항** ★ (2026-09-30) — 굴리기 전에 **치확에서 몬스터 `critResist` 를 뺀다**
+  (`World._hit_monster` · 옛 서버 `resolvePlayerAttack`). 100레벨 사냥터부터 5%p, 한 곳마다
+  +3.5%p → 190~199 가 36.5%p, 보스도 같은 값이다. 표는 [monsters-progression.md](monsters-progression.md).
+  피해를 깎지 않고 **확률을 빼는** 이유: 치확에는 상한이 없어서 후반엔 100% 를 넘긴 몫이
+  버려졌다 — 빼는 방식이면 그 몫이 저항을 뚫는 데 쓰인다 (치확 128% vs 저항 36.5% → 91.5%).
 - 공격 간격: `effectiveCooldown(cooldown, attackSpeed) = round(cooldown / (1 + speed))`.
 
 ### 맞는 쪽 K — 후반 HP 2만, 생존은 방어가 ★★ (2026-09-27)

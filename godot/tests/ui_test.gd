@@ -942,9 +942,47 @@ func _check_gate_drops(panel: GatePanel) -> void:
 	await process_frame
 	print("  드랍 창: %s %d등급 · '%s' · 마지막 사냥터 맨 위 %d등급 · 내용 %.0f / 칸 %.0fpx" % [
 		zone, int(grades[0]), stats, top, drops._list.size.y, drops._scroll.size.y])
+	await _scroll_drops(drops)
 	(drops.find_child("Close", true, false) as Button).pressed.emit()
 	if drops.visible or not panel.visible:
 		_fail("드랍 창 X 를 눌렀는데 드랍 창이 안 닫혔거나 차원문 창까지 닫혔다")
+
+
+## 드랍 창이 **화면에 넣은 입력으로** 내려가나 — 끌기와 휠 (2026-09-30 요청: "스크롤로 이동할 수 있도록").
+## 목록 함수를 직접 부르면 입력이 창까지 오는지(겹친 창·`top_level`)를 못 본다
+func _scroll_drops(drops: DropPanel) -> void:
+	var list: ScrollContainer = drops._scroll
+	if drops._list.size.y <= list.size.y + 1.0:
+		print("  드랍 창 끌기: 한 화면에 들어가 건너뜀")
+		return
+	list.scroll_vertical = 0
+	await process_frame
+	var grab := list.get_global_rect().get_center()
+	_push_move(grab, 0)
+	_push_mouse(grab, true)
+	for i in 6:
+		grab.y -= 20
+		_push_move(grab, MOUSE_BUTTON_MASK_LEFT)
+		await process_frame
+	var dragged := list.scroll_vertical
+	_push_mouse(grab, false)
+	await process_frame
+	list.scroll_vertical = 0
+	await process_frame
+	var wheel := InputEventMouseButton.new()
+	wheel.button_index = MOUSE_BUTTON_WHEEL_DOWN
+	wheel.pressed = true
+	wheel.factor = 1.0
+	wheel.position = list.get_global_rect().get_center()
+	wheel.global_position = wheel.position
+	root.push_input(wheel, true)
+	await process_frame
+	var wheeled := list.scroll_vertical
+	if dragged <= 0:
+		_fail("드랍 창을 끌었는데 안 내려갔다 (내용 %.0f / 칸 %.0f)" % [drops._list.size.y, list.size.y])
+	if wheeled <= 0:
+		_fail("드랍 창에서 휠을 굴렸는데 안 내려갔다")
+	print("  드랍 창 스크롤: 끌기 %dpx · 휠 %dpx" % [dragged, wheeled])
 
 
 ## 목록의 i 번째 줄 가운데를 눌렀다 뗀다 (끌지 않는다)

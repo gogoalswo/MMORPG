@@ -322,6 +322,14 @@ fetch_icon c65ce9a57a1437995b6445fdafbb01d1 skill_crush_fist
 fetch_icon f5b4d86f87536275ef83fc7ceb1b3533 skill_nova_fist
 # 질풍각 — 패시브 (2026-09-29). 같은 참고 그림을 물려 두 장 뽑아 둘째 장(맨발 여럿이 돌풍 속에서 연달아)을 골랐다
 fetch_icon 10ae54e87397299c57a80cec9dbcaf35 skill_gale_kicks
+# 레벨 도달 패시브 일곱 (2026-09-30) — 같은 참고 그림(낙뢰·천붕각)을 물려 두 장씩 뽑아 하나씩 골랐다
+fetch_icon 726ef5820bda698d4c209289885e6128 skill_iron_leg     # 철각 — 쇠처럼 달군 붕대 정강이
+fetch_icon 2770b489247ed32e9927dc0541871e44 skill_light_step   # 경공 — 바람 소용돌이 위 맨발
+fetch_icon 69924ea52d821d174baeaccd3ca82d72 skill_keen_eye     # 급소 간파 — 몸통 실루엣 위 금빛 급소
+fetch_icon df7035359b83d07b27b6a39ea5301a27 skill_vital_strike # 급소 강타 — 뒤꿈치 아래 붉은 폭발
+fetch_icon d6177f132c7bc6f67127135d897aff14 skill_armor_break  # 파갑 — 흉갑을 뚫는 붕대 발
+fetch_icon fbe5196388b5af662bdfaf811b7d6b7f skill_deadly_kick  # 필살각 — 진홍 불꽃 발차기
+fetch_icon 75c604d54beeda5b0f92c519fbe18f0a skill_ultimate     # 극의 — 금빛 후광 속 맨발
 # 메인 HUD. 아트를 **두 번** 갈았다 — 처음 뽑은 두꺼운 금테가 "너무 두껍다" 는
 # 지적을 받고(2026-09-20), 받은 그림대로 **머리카락처럼 얇은 금선**과 **테 없는
 # 선화 아이콘**으로 다시 뽑았다. 아래 주소가 그 두 번째 것이다.

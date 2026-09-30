@@ -1940,6 +1940,9 @@ func _case_passive(game: Node3D, me: Dictionary) -> void:
 		if node.visible:
 			_fail("보이는 스킬이 없는데 %s 가 보인다" % node)
 	var passive_ids := Skills.passives_for("fighter").map(func(p): return str(p.id))
+	for id in passive_ids:
+		if game._icon("skill_" + str(id)) == null:
+			_fail("패시브 %s 의 아이콘(skill_%s.png)이 없다" % [id, id])
 	if game._skill_ids != passive_ids or game._skill_name.text != str(gale.name):
 		_fail("목록은 패시브 %s 여야 한다: %s · '%s'" % [passive_ids, game._skill_ids, game._skill_name.text])
 	if game._skill_equip.visible or game._skill_unequip.visible or not game._passive_learn.visible:

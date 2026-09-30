@@ -540,6 +540,76 @@
       "perRank": 0.4,
       "everyLevels": 10,
       "maxRank": 20
+    },
+    {
+      "id": "iron_leg",
+      "job": "fighter",
+      "name": "철각",
+      "description": "다리를 쇠처럼 단련해 한 대가 무거워진다.",
+      "stat": "attack",
+      "perRank": 0.3,
+      "everyLevels": 10,
+      "maxRank": 1
+    },
+    {
+      "id": "light_step",
+      "job": "fighter",
+      "name": "경공",
+      "description": "몸이 가벼워 더 빨리 달린다.",
+      "stat": "moveSpeed",
+      "perRank": 0.2,
+      "everyLevels": 30,
+      "maxRank": 1
+    },
+    {
+      "id": "keen_eye",
+      "job": "fighter",
+      "name": "급소 간파",
+      "description": "급소가 눈에 들어와 치명타가 잦아진다.",
+      "stat": "crit",
+      "perRank": 0.1,
+      "everyLevels": 50,
+      "maxRank": 1
+    },
+    {
+      "id": "vital_strike",
+      "job": "fighter",
+      "name": "급소 강타",
+      "description": "급소를 더 깊이 찬다.",
+      "stat": "critDamage",
+      "perRank": 0.2,
+      "everyLevels": 70,
+      "maxRank": 1
+    },
+    {
+      "id": "armor_break",
+      "job": "fighter",
+      "name": "파갑",
+      "description": "방어를 꿰뚫고 들어간다.",
+      "stat": "penetration",
+      "perRank": 0.1,
+      "everyLevels": 100,
+      "maxRank": 1
+    },
+    {
+      "id": "deadly_kick",
+      "job": "fighter",
+      "name": "필살각",
+      "description": "한 번 들어간 치명타가 더 아프다.",
+      "stat": "critDamage",
+      "perRank": 0.3,
+      "everyLevels": 150,
+      "maxRank": 1
+    },
+    {
+      "id": "ultimate",
+      "job": "fighter",
+      "name": "극의",
+      "description": "무의 끝에 닿아 치명타가 한층 무거워진다.",
+      "stat": "critDamage",
+      "perRank": 0.5,
+      "everyLevels": 200,
+      "maxRank": 1
     }
   ]
 }

@@ -2140,7 +2140,8 @@ func _redraw_char(me: Dictionary) -> void:
 	for key in CHAR_SPLIT:
 		var name := str(DETAIL_BONUS[key])
 		var final := int(stats.get(key, 0))
-		var gear := float(stats.get("gear_" + key, 0.0))
+		# 공격력 증가는 장비 % 에 패시브 철각(+30%)을 더한 합이다 — 최종이 그 합으로 곱해진다
+		var gear := float(stats.get("gear_" + key, 0.0)) + float(stats.get("passive_" + key, 0.0)) * 100.0
 		groups.append([
 			["기본 " + name, "%d" % int(stats.get("base_" + key, final))],
 			[name + " 증가", _bonus_text(key, gear), INV_GOLD_HI if gear > 0.0 else INV_DIM],
@@ -3861,6 +3862,9 @@ func _redraw_skills() -> void:
 		if not passive.is_empty():
 			# 패시브는 단계를 적는다. 아직 한 단계도 안 열렸으면 흐리게
 			badge.text = "%d/%d" % [int(ranks.get(id, 0)), int(passive.maxRank)]
+			if Skills.passive_once(passive):
+				# 한 번 배우는 것은 스킬과 같이 — 안 배웠으면 "Lv.N 습득", 배웠으면 지운다
+				badge.text = "" if int(ranks.get(id, 0)) > 0 else "Lv.%d 습득" % int(passive.everyLevels)
 			cell.modulate = Color.WHITE if Skills.passive_open(passive, level) > 0 else Color(0.5, 0.5, 0.5)
 			continue
 		var skill: Dictionary = Skills.all().get(id, {})
@@ -3930,6 +3934,9 @@ func _draw_passive(me: Dictionary, passive: Dictionary) -> void:
 	var per := float(passive.perRank)
 	var open := Skills.passive_open(passive, level)
 	_skill_name.text = str(passive.get("name", id))
+	if Skills.passive_once(passive):
+		_draw_passive_once(passive, rank, open)
+		return
 	# 공속은 "현재 단계 / 다음 단계" 두 줄 — "N레벨마다 +M%" 줄은 뺐다 (2026-09-30 요청)
 	var next := "없음" if rank >= top else "공격 속도 +%d%%" % roundi((rank + 1) * per * 100.0)
 	_skill_info.text = "패시브 · %d / %d 단계\n현재 단계 : 공격 속도 +%d%%\n다음 단계 : %s" % [
@@ -3949,6 +3956,22 @@ func _draw_passive(me: Dictionary, passive: Dictionary) -> void:
 	else:
 		_skill_state.text = "%d레벨에 다음 단계가 열립니다" % ((rank + 1) * every)
 	_passive_learn.text = "습득" if rank == 0 else "레벨업"
+	_passive_learn.disabled = rank >= open
+	_passive_dot.visible = rank < open
+
+
+## 레벨 도달 패시브(한 번 배우면 끝, 2026-09-30) — 여는 레벨과 효과 한 줄. 단추는 늘 "습득"
+func _draw_passive_once(passive: Dictionary, rank: int, open: int) -> void:
+	var at := int(passive.everyLevels)
+	_skill_info.text = "패시브 · %d레벨 습득\n효과 : %s" % [at, Skills.passive_effect(passive, 1)]
+	_skill_desc.text = str(passive.get("description", ""))
+	if rank >= 1:
+		_skill_state.text = "배웠습니다"
+	elif rank < open:
+		_skill_state.text = "습득할 수 있습니다"
+	else:
+		_skill_state.text = "%d레벨에 배웁니다" % at
+	_passive_learn.text = "습득"
 	_passive_learn.disabled = rank >= open
 	_passive_dot.visible = rank < open
 

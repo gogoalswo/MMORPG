@@ -1,4 +1,4 @@
-# 패시브 — 질풍각 (공속 성장)
+# 패시브 — 질풍각 (공속 성장) · 레벨 도달 패시브 일곱
 
 ## 무엇
 
@@ -24,6 +24,26 @@
 | 150 | 15 | +600% | 129ms | 7.8 |
 | 200 | 20 | **+800%** | **100ms** | **10.0** |
 
+### 레벨 도달 패시브 일곱 (2026-09-30)
+
+요청: "패시브 스킬 추가하자 — 10레벨 : 공격력 30% 증가 … 200레벨 : 치명타 데미지 50% 증가".
+**한 번 배우면 끝**(`maxRank` 1)이고 `everyLevels` 가 곧 여는 레벨이다 — 식(`floor(레벨 / N)`)을 따로 두지 않았다.
+이름·설명은 내가 지었다(요청에 없었다). 아이콘은 아직 없어서 칸에 이름 글자가 뜬다.
+
+| 레벨 | id | 이름 | 효과 | 더하는 곳 (`stats_of`) |
+|---|---|---|---|---|
+| 10 | `iron_leg` | 철각 | 공격력 +30% | 장비 % 합계에 더한다 — `기본 × (1 + 장비% + 0.3)` |
+| 30 | `light_step` | 경공 | 이동 속도 +20% | `stats.moveSpeed` → 달리기 속도 × 1.2 (`World._speed_of`) |
+| 50 | `keen_eye` | 급소 간파 | 치명타 확률 +10%p | `crit` 에 더한다 |
+| 70 | `vital_strike` | 급소 강타 | 치명타 피해 +20%p | `critDamage` 에 더한다 |
+| 100 | `armor_break` | 파갑 | 방어력 관통 +10%p | 장비 관통에 더한 뒤 90% 상한 |
+| 150 | `deadly_kick` | 필살각 | 치명타 피해 +30%p | 〃 |
+| 200 | `ultimate` | 극의 | 치명타 피해 +50%p | 〃 — 치피 셋을 합치면 +100% (맨몸 100% → 200%) |
+
+- **모두 더한다.** 공격력을 따로 곱하지 않은 것은 캐릭터 정보 창의 "공격력 증가" 한 줄(장비 % + 패시브)로
+  최종이 맞아떨어지게 하려고다. 가방 옆 장비 창은 여전히 **장비 몫만** 적는다.
+- 이동 속도는 캐릭터 정보 창에 줄을 두지 않았다 — 한 줄 더하면 창이 720 높이를 넘는다(`ui_test`).
+
 ## 어디
 
 | 파일 | 역할 |
@@ -31,16 +51,17 @@
 | `packages/shared/src/skills.ts` | **표** — `PASSIVES`(id · 직업 · 스탯 · `perRank` 0.4 · `everyLevels` 10 · `maxRank` 20) · `passiveRankOpen(p, level)` |
 | `packages/shared/src/skills.test.ts` | "질풍각 — Lv.200 에 격투가가 초당 10번 때린다" (`effectiveCooldown(900, 8) = 100`) |
 | `scripts/export-shared.mjs` | `skills.json` 의 `passives` 로 내보낸다 |
-| `godot/world/skills.gd` | `passives_for(job)` · `passive(id)` · `passive_open(p, level)` · **`passive_learnable`(레드닷)** · `passive_bonus(job, ranks)` · `actives_shown(job)` |
+| `godot/world/skills.gd` | `passives_for(job)` · `passive(id)` · `passive_open(p, level)` · **`passive_learnable`(레드닷)** · `passive_bonus(job, ranks)` · `passive_effect(p, rank)`("공격력 +30%") · `passive_once(p)`(레벨 도달) · `actives_shown(job)` |
 | `godot/world/ledger.gd` | **`learn_passive`** — 직업 · 레벨 · 끝 단계를 다시 본다. `KEYS` 에 `passives` |
-| `godot/world/world.gd` | `stats_of(job, level, equipped, passives)` 가 공속을 더한다 · `learn_passive` 요청 · 저장 복원 · `swing.speed` |
+| `godot/world/world.gd` | `stats_of(job, level, equipped, passives)` 가 패시브 스탯을 더한다(`passive_*` 로 몫도 내린다) · `_speed_of`(이속) · `learn_passive` 요청 · 저장 복원 · `swing.speed` |
 | `godot/server/ledger_server.gd` · `kill_check.gd` | `OPS` 에 `learn_passive` · 최소 처치 시간도 패시브를 본다 |
 | `godot/world/save.gd` | `passives` `{ id: 단계 }` 저장 (옛 저장은 빈 사전) |
 | `godot/net/local_transport.gd` | `learnPassive` 요청 |
 | `godot/game/game.gd` `_redraw_skills` · `_draw_passive` · `_on_passive_learn` | 스킬창 — 목록 맨 앞에 패시브 칸(`N/20`), 왼쪽 설명(단계 · **현재 단계 : 공격 속도 +N%** · **다음 단계 : 공격 속도 +M%**(끝이면 "없음") · 초당 타수 → 다음 단계), **[습득]** 과 그 위 레드닷. 단추 글자는 0단계일 때만 "습득", 한 번 배운 뒤로는 **"레벨업"** (2026-09-30 요청 — "N레벨마다 +M%" 줄도 이때 뺐다) |
 | `godot/game/game.gd` `_skill_dot` · `_refresh_status` | HUD 스킬 아이콘의 레드닷 — 매 프레임 `passive_learnable` 로 맞춘다 |
 | `public/assets/icons/skill_gale_kicks.png` | 아이콘 (바르코, 스킬 아이콘 참고 그림을 물렸다). 주소는 `fetch-assets.sh` |
-| `godot/tests/passive_test.gd` | 레벨 잠금 · 한 번에 한 단계 · 끝 단계 · 100ms · 옛 공속 옵션 무시 · 저장 · 서버 처치 검증 |
+| `godot/game/game.gd` `_draw_passive_once` | 레벨 도달 패시브 설명 — "패시브 · N레벨 습득" · "효과 : …", 단추는 늘 "습득", 목록 칸은 "Lv.N 습득" |
+| `godot/tests/passive_test.gd` | 레벨 잠금 · 한 번에 한 단계 · 끝 단계 · 100ms · 옛 공속 옵션 무시 · 저장 · 서버 처치 검증 · **레벨 패시브 스탯 · 경공 이동 거리 ×1.2** |
 | `godot/tests/ui_test.gd` `_case_passive` | 퀵슬롯 스킬 칸 숨김 · 장착 줄/강화 칸 숨김 · 1단계면 단추가 "레벨업"·설명이 현재/다음 단계 두 줄 · [습득] 누르면 단계·간격 · 레드닷 켜짐 → 꺼짐 |
 
 ## 규칙
@@ -91,8 +112,10 @@
 - 초당 타수 목표를 바꾸면 `perRank` 를 고친다 (`(900 / 목표간격 - 1) / maxRank`) → `npm run export:godot`.
   `skills.test.ts` 와 `passive_test.gd` 의 100 도 같이 고친다.
 - 격투가 기본 간격(`balance.ts` `JOB_MULT.fighter.interval`)을 바꾸면 위 표가 전부 움직인다.
-- 패시브를 더하면 `PASSIVES` 에 한 줄. 공속 말고 다른 스탯이면 `passive_bonus` 가 스탯 이름으로 더하므로
-  `stats_of` 에서 그 스탯을 더하는 줄을 넣는다. 레드닷·스킬창은 목록을 그대로 따른다.
+- 패시브를 더하면 `PASSIVES` 에 한 줄 (레벨 도달이면 `levelPassive(...)`). 새 스탯이면 `PassiveDef.stat` 타입,
+  `Skills.PASSIVE_STAT_NAMES`, `stats_of` 의 `passive_*` 목록과 그 스탯을 더하는 줄을 같이 넣는다.
+  레드닷·스킬창은 목록을 그대로 따른다.
+- 레드닷은 **배울 것이 하나라도 있으면** 켜진다 — 테스트가 "다 배웠다" 를 볼 때는 그 레벨의 레벨 패시브도 배워 둔다.
 
 ## 관련
 

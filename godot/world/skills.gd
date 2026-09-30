@@ -192,6 +192,26 @@ static func passive_learnable(job: String, level: int, ranks: Dictionary) -> boo
 	return false
 
 
+## 패시브가 올리는 스탯의 이름 — 스킬창·알림이 "공격력 +30%" 로 적는다
+const PASSIVE_STAT_NAMES := {
+	"attackSpeed": "공격 속도", "attack": "공격력", "moveSpeed": "이동 속도",
+	"crit": "치명타 확률", "critDamage": "치명타 피해", "penetration": "방어력 관통",
+}
+
+
+## 그 단계의 효과 한 마디 — "공격 속도 +62%" (2026-09-30, 레벨 도달 패시브가 생겨 스탯 이름을 표에서 읽는다)
+static func passive_effect(p: Dictionary, rank: int) -> String:
+	var stat := str(p.get("stat", ""))
+	return "%s +%d%%" % [
+		str(PASSIVE_STAT_NAMES.get(stat, stat)), roundi(rank * float(p.get("perRank", 0.0)) * 100.0)
+	]
+
+
+## 한 번 배우면 끝인 패시브인가 — 레벨 도달 패시브(`maxRank` 1). `everyLevels` 가 곧 여는 레벨이다
+static func passive_once(p: Dictionary) -> bool:
+	return int(p.get("maxRank", 0)) == 1
+
+
 ## 배운 패시브가 스탯에 더하는 양 `{ 스탯: 합 }` — `World.stats_of` 가 더한다
 static func passive_bonus(job: String, ranks: Dictionary) -> Dictionary:
 	var out := {}

@@ -356,7 +356,7 @@ func input_move(player_id: String, seq: int, dx: float, dz: float, dt: float) ->
 	# 몬스터를 뚫고 못 지나간다. 미는 쪽은 언제나 움직이는 쪽이다.
 	# **시체는 빼고 넘긴다** — 넣으면 보이지 않는 벽이 된다 (_solids_near)
 	Movement.apply_move(
-		player, dx, dz, dt, half_size, _run_speed, _solids_near(player.x, player.z)
+		player, dx, dz, dt, half_size, _speed_of(player), _solids_near(player.x, player.z)
 	)
 	player.last_seq = seq
 
@@ -850,7 +850,7 @@ func _walk_auto(
 		return
 	var dir := to.normalized()
 	Movement.apply_move(
-		player, dir.x, dir.y, delta, half_size, _run_speed, _solids_near(player.x, player.z)
+		player, dir.x, dir.y, delta, half_size, _speed_of(player), _solids_near(player.x, player.z)
 	)
 	player.rot = atan2(dir.x, dir.y)
 
@@ -2380,17 +2380,29 @@ func _refresh_stats(player: Dictionary) -> void:
 	player.hp = mini(int(player.hp), int(player.stats.maxHp))
 
 
+## 그 캐릭터의 달리기 속도 — 이동 속도 패시브(경공, 2026-09-30)만큼 곱한다
+func _speed_of(player: Dictionary) -> float:
+	return _run_speed * (1.0 + maxf(float(player.get("stats", {}).get("moveSpeed", 0.0)), 0.0))
+
+
 ## 스탯 계산 알맹이 — 서버의 처치 검증(`KillCheck`)도 같은 값을 쓴다
 ## `passives` 는 배운 패시브 단계 `{ id: 단계 }` — **공속은 여기서만 온다** (질풍각, 2026-09-29)
 static func stats_of(job: String, level: int, equipped: Dictionary, passives: Dictionary = {}) -> Dictionary:
 	var stats := Combat.stats_for(job, level)
 	var gear := Items.equipment_stats(equipped)
+	# 캐릭터 정보 창이 패시브 몫을 따로 적는다 — 더하기 전 값을 `passive_*` 로 같이 내린다.
+	# 레벨 도달 패시브(2026-09-30)는 **장비 몫에 더한다** — 공격력은 % 합계에, 나머지는 비율에
+	var passive := Skills.passive_bonus(job, passives)
+	for key in ["attack", "attackSpeed", "moveSpeed", "crit", "critDamage", "penetration"]:
+		stats["passive_" + key] = float(passive.get(key, 0.0))
 	# 캐릭터 정보 창이 **기본 → 증가 % → 최종** 을 풀어 적는다 (2026-09-25 요청). 화면이
 	# 공식을 다시 돌리지 않게 곱하기 전 값과 장비 % 합계를 같이 내려보낸다
 	for key in ["attack", "defense", "maxHp"]:
 		stats["base_" + key] = int(stats[key])
 		stats["gear_" + key] = float(gear[key])
-	stats.attack = maxi(1, roundi(float(stats.attack) * (1.0 + float(gear.attack) / 100.0)))
+	stats.attack = maxi(1, roundi(
+		float(stats.attack) * (1.0 + float(gear.attack) / 100.0 + float(stats.passive_attack))
+	))
 	stats.defense = maxi(0, roundi(float(stats.defense) * (1.0 + float(gear.defense) / 100.0)))
 	stats.maxHp = maxi(1, roundi(float(stats.maxHp) * (1.0 + float(gear.maxHp) / 100.0)))
 	# **상한이 없다** ★ (2026-09-23 지시: "상한 없애."). 치확 100% 면 늘 치명타,
@@ -2398,18 +2410,18 @@ static func stats_of(job: String, level: int, equipped: Dictionary, passives: Di
 	# 가방 옆 장비 창은 **장비 몫만** 적는다 (2026-09-28 요청) — 더하기 전 장비 합계를 같이 내린다
 	for key in ["crit", "critDamage", "attackSpeed"]:
 		stats["gear_" + key] = float(gear[key])
-	stats.crit = maxf(float(stats.crit) + gear.crit, 0.0)
-	stats.critDamage += gear.critDamage
-	# 캐릭터 정보 창이 패시브 몫을 따로 적는다 — 더하기 전 값을 같이 내린다
-	var passive := Skills.passive_bonus(job, passives)
-	stats["passive_attackSpeed"] = float(passive.get("attackSpeed", 0.0))
+	stats.crit = maxf(float(stats.crit) + gear.crit + stats.passive_crit, 0.0)
+	stats.critDamage += gear.critDamage + stats.passive_critDamage
+	# 이동 속도는 달리기 속도의 배율 — `_run_speed × (1 + moveSpeed)` (`_speed_of`)
+	stats["moveSpeed"] = stats.passive_moveSpeed
 	stats.attackSpeed = maxf(float(stats.attackSpeed) + gear.attackSpeed + stats.passive_attackSpeed, 0.0)
 	# **쿨감·관통만 90% 에서 멈춘다** ★ (2026-09-23 지시). 수치를 더 주고 싶으면
 	# 이 줄이 아니라 옵션 최대치(`OPTION_MAX_VALUE`)를 올린다
 	var c := GameData.combat()
 	stats["cooldown"] = clampf(float(gear.get("cooldown", 0.0)), 0.0, float(c.get("cooldownCap", 0.9)))
 	stats["penetration"] = clampf(
-		float(gear.get("penetration", 0.0)), 0.0, float(c.get("penetrationCap", 0.9))
+		float(gear.get("penetration", 0.0)) + stats.passive_penetration, 0.0,
+		float(c.get("penetrationCap", 0.9))
 	)
 	return stats
 

@@ -231,9 +231,10 @@ func learn_passive(p: Dictionary, passive_id: String) -> void:
 	ranks[passive_id] = rank + 1
 	p.passives = ranks
 	events.append({"type": "passives", "passives": ranks.duplicate()})
-	_notice("%s %d단계 — 공격 속도 +%d%%" % [
-		str(passive.name), rank + 1, roundi((rank + 1) * float(passive.perRank) * 100.0)
-	])
+	if Skills.passive_once(passive):
+		_notice("%s 습득 — %s" % [str(passive.name), Skills.passive_effect(passive, 1)])
+	else:
+		_notice("%s %d단계 — %s" % [str(passive.name), rank + 1, Skills.passive_effect(passive, rank + 1)])
 
 
 ## 스킬창에서 **고른 강화에 모아 둔 스킬 경험치(`skill_exp`)를 넣는다** — 그 스킬의

@@ -1994,6 +1994,10 @@ func _toggle_bag() -> void:
 	_bag_drag.forget()
 	if open:
 		_bag_dot.visible = false
+		# 열 때마다 정렬한다 (희귀도 → 장비 종류 → 강화, 2026-09-29 요청) — 강화 창을 닫고 고른
+		# 칸도 비운 뒤라 가방 번호가 바뀌어도 붙잡고 있던 것이 없다. 열려 있는 동안 들어온
+		# 드롭은 끝에 붙는다 — 강화 창이 가방 번호로 대상을 붙잡고 있어서 그때 섞으면 엉뚱한 걸 두드린다
+		_transport.send(&"sortBag", {})
 		_redraw_bag()
 
 
@@ -2157,6 +2161,7 @@ func _toggle_crystal() -> void:
 	_char_panel.visible = false
 	_crystal_target = {}
 	if open:
+		_transport.send(&"sortBag", {})  # 가방 창을 여는 것과 같다 (`_toggle_bag`)
 		_redraw_bag()
 
 

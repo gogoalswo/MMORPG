@@ -515,6 +515,37 @@ static func gold_range(monster_level: int) -> Vector2i:
 	return Vector2i(maxi(1, roundi(base * 0.7)), maxi(1, roundi(base * 1.3)))
 
 
+## 그 사냥터에서 떨어지는 것 — **`roll_drop` 이 굴리는 것 그대로다** (차원문 창의 느낌표가 보인다,
+## docs/features/portal-ui.md "드랍 창"). 등급 창은 몬스터 레벨로 찾으므로 그 존 몬스터들의 창을 합친다.
+## `{levels: Vector2i, grades: [{grade, chance}] (높은 등급 먼저), gold: Vector2i, crystal: 킬당 확률}`.
+## 몬스터가 없는 존(마을)은 빈 사전
+static func zone_drops(zone_id: String) -> Dictionary:
+	var levels: Array = []
+	for spot in GameData.zone(zone_id).get("monsters", []):
+		var level := int(GameData.monster_kind(str(spot.get("kind", ""))).get("level", 0))
+		if level > 0 and not levels.has(level):
+			levels.append(level)
+	if levels.is_empty():
+		return {}
+	levels.sort()
+	var seen: Array = []
+	for level in levels:
+		for g in drop_grades(int(level)):
+			if not seen.has(g):
+				seen.append(g)
+	seen.sort()
+	seen.reverse()
+	var grades: Array = []
+	for g in seen:
+		grades.append({"grade": g, "chance": grade_drop_rate(g)})
+	var lo: int = levels[0]
+	var hi: int = levels[levels.size() - 1]
+	return {
+		"levels": Vector2i(lo, hi), "grades": grades,
+		"gold": Vector2i(gold_range(lo).x, gold_range(hi).y), "crystal": crystal_drop_chance(),
+	}
+
+
 static func _roll_gear_drop(monster_level: int, rng: RandomNumberGenerator) -> Dictionary:
 	# 슬롯은 고루 나와야 한다 — 한쪽만 나오면 나머지 자리는 영영 빈다.
 	# 직업은 더 이상 후보를 가르지 않는다. **굴리는 순서는 슬롯 → 등급** —

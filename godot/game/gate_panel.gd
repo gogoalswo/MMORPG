@@ -97,6 +97,9 @@ const CELL_LINE := Color("#3d3729")
 const DEADZONE := 14
 ## 스크롤 막대 굵기 — 손가락으로 집을 수 있어야 한다 (기본은 폰에서 너무 가늘다)
 const BAR_WIDTH := 18
+## 줄 끝 느낌표 배지 한 변 · 누르는 자리를 배지 밖으로 넓히는 폭
+const INFO := 36
+const INFO_REACH := 8
 
 var _rows: VBoxContainer
 ## 제목 — 던전 창(`DungeonPanel`)이 고른 종류 이름으로 바꿔 단다
@@ -111,6 +114,10 @@ var _hold_scroll := 0
 var _dragging := false
 ## 지금 눌려 있는 줄 (뗄 때까지 밝은 틀로 둔다)
 var _held: Button = null
+## 누르고 있는 느낌표 배지 — 뗄 때 같은 배지 위면 드랍 창을 연다
+var _info_held: Control = null
+## 사냥터 드랍 창 — 느낌표를 처음 누를 때 만든다 (던전 창은 물려받아도 안 쓴다)
+var drops: DropPanel = null
 ## 조각을 여는 `game.gd` 의 손 — `_frame_box(이름, 9조각 여백, 안쪽 여백)` · `_icon(이름)`
 var _frame_box := Callable()
 var _icon := Callable()
@@ -199,6 +206,7 @@ func _build() -> void:
 
 ## 연다. 지금 서 있는 존을 알아야 그 줄을 흐리게 막는다
 func open(current_zone: String) -> void:
+	_close_drops()
 	_fill(current_zone)
 	_scroll.scroll_vertical = 0
 	_forget_hold()
@@ -207,7 +215,21 @@ func open(current_zone: String) -> void:
 
 func close_panel() -> void:
 	_forget_hold()
+	_close_drops()
 	visible = false
+
+
+## 사냥터 드랍 창을 연다 (줄 끝 느낌표). 판정이 굴리는 것 그대로다 → `DropPanel`
+func show_drops(zone_id: String) -> void:
+	if drops == null:
+		drops = DropPanel.make(_box, _piece)
+		add_child(drops)
+	drops.show_zone(zone_id)
+
+
+func _close_drops() -> void:
+	if drops != null:
+		drops.close_panel()
 
 
 ## 누르던 것을 잊는다 — 창을 여닫는 사이에 손을 뗐을 수 있다
@@ -215,6 +237,7 @@ func _forget_hold() -> void:
 	_hold = false
 	_dragging = false
 	_press(null)
+	_hold_info(null)
 
 
 ## 줄 수 (테스트용)
@@ -234,7 +257,64 @@ func _fill(current_zone: String) -> void:
 	ids.append_array(GameData.field_order())
 	for id in ids:
 		var here := str(id) == current_zone
-		_add_row(str(GameData.zone(str(id)).get("name", id)), str(id), here, _here_icon if here else _go_icon)
+		var row := _add_row(str(GameData.zone(str(id)).get("name", id)), str(id), here, _here_icon if here else _go_icon)
+		# 사냥터 줄 끝에 느낌표 — 누르면 그 사냥터의 드랍 (마을은 떨어지는 것이 없다)
+		if str(id) != GameData.start_zone():
+			_add_info(row)
+
+
+## 줄 오른쪽 끝의 느낌표 배지 (2026-09-30 요청: "각 사냥터별로 느낌표 눌러서, 드랍되는 아이템
+## 표시"). 그림이 아니라 둥근 판 + `Label` 이다 — 글자는 그림에 굽지 않는다. 줄처럼 입력을
+## 받지 않고, 누름은 목록이 `_info_at` 으로 가른다. 서 있는 곳(막힌 줄)에도 단다
+func _add_info(row: Button) -> void:
+	var badge := PanelContainer.new()
+	badge.name = "Info"
+	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var disc := StyleBoxFlat.new()
+	disc.bg_color = Color(0.08, 0.08, 0.07, 0.9)
+	disc.border_color = CARD_GOLD
+	disc.set_border_width_all(2)
+	disc.set_corner_radius_all(INFO)
+	badge.add_theme_stylebox_override("panel", disc)
+	var mark := Label.new()
+	mark.text = "!"
+	mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	mark.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	mark.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	mark.add_theme_font_size_override("font_size", INFO - 14)
+	mark.add_theme_color_override("font_color", BUTTON_TEXT)
+	mark.add_theme_color_override("font_outline_color", BUTTON_OUTLINE)
+	mark.add_theme_constant_override("outline_size", 3)
+	badge.add_child(mark)
+	badge.anchor_left = 1.0
+	badge.anchor_right = 1.0
+	badge.anchor_top = 0.5
+	badge.anchor_bottom = 0.5
+	badge.offset_left = -ROW_PAD_X - INFO
+	badge.offset_right = -ROW_PAD_X
+	badge.offset_top = -INFO * 0.5
+	badge.offset_bottom = INFO * 0.5
+	row.add_child(badge)
+
+
+## 그 자리의 느낌표 배지 (없으면 null). 손가락이 작은 배지를 비껴도 잡히게 `INFO_REACH` 만큼 넓혀 본다.
+## 막힌 줄(서 있는 곳)도 본다 — 갈 수는 없어도 드랍은 볼 수 있다
+func _info_at(at: Vector2) -> Control:
+	var point := _scroll.global_position + at
+	for child in _rows.get_children():
+		var badge := child.get_node_or_null("Info") as Control
+		if badge != null and badge.get_global_rect().grow(INFO_REACH).has_point(point):
+			return badge
+	return null
+
+
+## 누르는 배지를 달군다 (null 이면 지운다)
+func _hold_info(badge: Control) -> void:
+	if _info_held != null and is_instance_valid(_info_held):
+		_info_held.modulate = Color.WHITE
+	_info_held = badge
+	if badge != null:
+		badge.modulate = PRESS_TINT
 
 
 func _clear_rows() -> void:
@@ -284,6 +364,18 @@ func _on_list_input(event: InputEvent) -> void:
 		return
 	var click := event as InputEventMouseButton
 	if click != null and click.button_index == MOUSE_BUTTON_LEFT:
+		# 줄 끝 느낌표 — 줄 고르기보다 먼저 본다. 누른 배지에서 떼면 드랍 창
+		if click.pressed and _info_at(click.position) != null:
+			_hold_info(_info_at(click.position))
+			accept_event()
+			return
+		if not click.pressed and _info_held != null:
+			var badge := _info_held
+			_hold_info(null)
+			if badge == _info_at(click.position):
+				show_drops(str(badge.get_parent().get_meta("zone", "")))
+			accept_event()
+			return
 		if click.pressed:
 			_hold = true
 			_dragging = false

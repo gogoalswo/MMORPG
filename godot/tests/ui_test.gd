@@ -144,6 +144,8 @@ func _run_scene() -> void:
 	else:
 		print("  목록 끌기: %dpx 내려감" % dragged)
 
+	await _check_gate_drops(panel2)
+
 	# 끌지 않고 그 자리에서 떼면 그 줄을 고른 것이다.
 	# **줄 오른쪽 끝**을 누른다 — 아이콘이 아니라 줄 전체가 누르는 자리여야 한다
 	# (2026-09-20 요청: "해당 라인을 전체 클릭 영역으로 잡어")
@@ -856,6 +858,78 @@ func _tap_card(panel: DungeonPanel, i: int) -> void:
 		card.pressed.emit()
 	await process_frame
 	await process_frame
+
+
+## 사냥터 줄 끝 느낌표 → 드랍 창 (2026-09-30 요청: "각 사냥터별로 느낌표 눌러서, 드랍되는 아이템
+## 표시"). 마을 줄엔 없고 · 누르면 그 사냥터 창이 뜨고(차원문 창은 그대로) · 등급마다 슬롯 6칸에
+## 그림이 있고 · 확률이 판정 표 그대로고 · 창이 화면 안이고 · X 로 닫히고 · 배지에서 미끄러지면 안 뜬다
+func _check_gate_drops(panel: GatePanel) -> void:
+	var list: ScrollContainer = panel._scroll
+	list.scroll_vertical = 0
+	await process_frame
+	if panel.row(0).get_node_or_null("Info") != null:
+		_fail("마을 줄에 느낌표가 있다 — 마을은 떨어지는 것이 없다")
+	var badge := panel.row(1).get_node_or_null("Info") as Control
+	if badge == null:
+		_fail("사냥터 줄에 느낌표가 없다")
+		return
+	var at := badge.get_global_rect().get_center() - list.global_position
+	# 배지를 누르고 다른 줄로 미끄러져 떼면 취소다
+	panel._on_list_input(_mouse(at, true))
+	panel._on_list_input(_mouse(at + Vector2(-200, 0), false))
+	if panel.drops != null and panel.drops.visible:
+		_fail("느낌표에서 미끄러져 뗐는데 드랍 창이 떴다")
+	panel._on_list_input(_mouse(at, true))
+	panel._on_list_input(_mouse(at, false))
+	await process_frame
+	var drops := panel.drops
+	var zone := str(panel.row(1).get_meta("zone", ""))
+	if drops == null or not drops.visible:
+		_fail("느낌표를 눌렀는데 드랍 창이 안 떴다")
+		return
+	if not panel.visible:
+		_fail("느낌표를 눌렀는데 차원문 창이 닫혔다 (떠나 버렸다)")
+	if drops.zone_id != zone:
+		_fail("드랍 창이 %s 가 아니라 %s 를 보인다" % [zone, drops.zone_id])
+	var grades: Array = drops.drops.get("grades", [])
+	# 이름이 아니라 종류로 찾는다 — 같은 이름의 형제는 고도가 이름을 바꿔 붙인다
+	var grids := drops._list.find_children("*", "GridContainer", false, false)
+	# 등급마다 격자 하나 + "그 밖에"(골드·크리스탈) 하나
+	if grades.is_empty() or grids.size() != grades.size() + 1:
+		_fail("드랍 창 격자 %d개 — 등급 %d개 + 그 밖에 하나여야 한다" % [grids.size(), grades.size()])
+		return
+	for i in grades.size():
+		var cells: Array = grids[i].get_children()
+		if cells.size() != Items.slots().size():
+			_fail("%s 등급 칸이 %d개 — 슬롯 수(%d)여야 한다" % [grades[i].grade, cells.size(), Items.slots().size()])
+		for cell in cells:
+			if (cell.find_child("Icon", true, false) as TextureRect).texture == null:
+				_fail("드랍 칸 '%s' 에 그림이 없다" % (cell.find_child("Name", true, false) as Label).text)
+				break
+		if not is_equal_approx(float(grades[i].chance), Items.grade_drop_rate(int(grades[i].grade))):
+			_fail("드랍 창 확률이 판정 표(grade_drop_rate)와 다르다")
+	# 판정이 이 사냥터 몬스터에게서 굴리는 등급이 다 나와야 한다
+	for spot in GameData.zone(zone).get("monsters", []):
+		for g in Items.drop_grades(int(GameData.monster_kind(str(spot.kind)).get("level", 1))):
+			if not grades.any(func(e): return int(e.grade) == int(g)):
+				_fail("몬스터 %s 가 떨구는 %d등급이 드랍 창에 없다" % [spot.kind, g])
+	await process_frame
+	var screen := drops.get_viewport_rect()
+	if not screen.encloses(drops.get_global_rect()):
+		_fail("드랍 창이 화면 밖으로 나간다 (%s)" % drops.get_global_rect())
+	# 마지막 사냥터는 가장 높은 등급(태초)까지 보인다
+	var last := str(GameData.field_order().back())
+	panel.show_drops(last)
+	var top: int = int(drops.drops.grades[0].grade)
+	if top != int(Items._t().get("gradeMax", 7)):
+		_fail("마지막 사냥터 드랍 창의 맨 위 등급이 %d — 최고 등급이어야 한다" % top)
+	await process_frame
+	print("  드랍 창: %s %d등급(%s) · 마지막 사냥터 맨 위 %d등급, 크리스탈 %s%% · 내용 %.0f / 칸 %.0fpx" % [
+		zone, int(grades[0].grade), DropPanel.percent(float(grades[0].chance)), top,
+		DropPanel.percent(float(drops.drops.crystal)), drops._list.size.y, drops._scroll.size.y])
+	(drops.find_child("Close", true, false) as Button).pressed.emit()
+	if drops.visible or not panel.visible:
+		_fail("드랍 창 X 를 눌렀는데 드랍 창이 안 닫혔거나 차원문 창까지 닫혔다")
 
 
 ## 목록의 i 번째 줄 가운데를 눌렀다 뗀다 (끌지 않는다)

@@ -28,7 +28,9 @@
 
 요청: "패시브 스킬 추가하자 — 10레벨 : 공격력 30% 증가 … 200레벨 : 치명타 데미지 50% 증가".
 **한 번 배우면 끝**(`maxRank` 1)이고 `everyLevels` 가 곧 여는 레벨이다 — 식(`floor(레벨 / N)`)을 따로 두지 않았다.
-이름·설명은 내가 지었다(요청에 없었다). 아이콘은 아직 없어서 칸에 이름 글자가 뜬다.
+이름·설명은 내가 지었다(요청에 없었다). **아이콘**(`skill_<id>.png`, 같은 날)은 질풍각과 같이 낙뢰·천붕각 참고 그림을
+물려 바르코로 두 장씩 뽑아 하나씩 골랐다 — 주소는 `fetch-assets.sh`, 고도로 옮기는 목록은 `sync-godot-assets.mjs` 의 `ICONS`
+(여기 안 넣으면 고도에 안 간다 — `ui_test` 가 패시브마다 아이콘이 있는지 본다).
 
 | 레벨 | id | 이름 | 효과 | 더하는 곳 (`stats_of`) |
 |---|---|---|---|---|
@@ -60,7 +62,7 @@
 | `godot/net/local_transport.gd` | `learnPassive` 요청 |
 | `godot/game/game.gd` `_redraw_skills` · `_draw_passive` · `_on_passive_learn` | 스킬창 — 목록 맨 앞에 패시브 칸(`N/20`), 왼쪽 설명(단계 · **현재 단계 : 공격 속도 +N%** · **다음 단계 : 공격 속도 +M%**(끝이면 "없음") · 초당 타수 → 다음 단계), **[습득]** 과 그 위 레드닷. 단추 글자는 0단계일 때만 "습득", 한 번 배운 뒤로는 **"레벨업"** (2026-09-30 요청 — "N레벨마다 +M%" 줄도 이때 뺐다) |
 | `godot/game/game.gd` `_skill_dot` · `_refresh_status` | HUD 스킬 아이콘의 레드닷 — 매 프레임 `passive_learnable` 로 맞춘다 |
-| `public/assets/icons/skill_gale_kicks.png` | 아이콘 (바르코, 스킬 아이콘 참고 그림을 물렸다). 주소는 `fetch-assets.sh` |
+| `public/assets/icons/skill_<id>.png` | 아이콘 여덟 장 (바르코, 스킬 아이콘 참고 그림을 물렸다). 주소는 `fetch-assets.sh`, 고도 목록은 `sync-godot-assets.mjs` |
 | `godot/game/game.gd` `_draw_passive_once` | 레벨 도달 패시브 설명 — "패시브 · N레벨 습득" · "효과 : …", 단추는 늘 "습득", 목록 칸은 "Lv.N 습득" |
 | `godot/tests/passive_test.gd` | 레벨 잠금 · 한 번에 한 단계 · 끝 단계 · 100ms · 옛 공속 옵션 무시 · 저장 · 서버 처치 검증 · **레벨 패시브 스탯 · 경공 이동 거리 ×1.2** |
 | `godot/tests/ui_test.gd` `_case_passive` | 퀵슬롯 스킬 칸 숨김 · 장착 줄/강화 칸 숨김 · 1단계면 단추가 "레벨업"·설명이 현재/다음 단계 두 줄 · [습득] 누르면 단계·간격 · 레드닷 켜짐 → 꺼짐 |

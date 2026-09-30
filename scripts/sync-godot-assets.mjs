@@ -75,6 +75,9 @@ const ICONS = [
   'skill_ki_burst.png', 'skill_crush_fist.png', 'skill_nova_fist.png',
   // 패시브 질풍각 (2026-09-29)
   'skill_gale_kicks.png',
+  // 레벨 도달 패시브 일곱 (2026-09-30)
+  'skill_iron_leg.png', 'skill_light_step.png', 'skill_keen_eye.png', 'skill_vital_strike.png',
+  'skill_armor_break.png', 'skill_deadly_kick.png', 'skill_ultimate.png',
   // 메인 HUD — 왼쪽 위 상태판(초상 테두리·막대 홈·막대 채움),
   // 오른쪽 위 메뉴 단추 둘, 자동사냥 칸과 켜졌을 때 도는 고리
   // 2026-09-20 에 받은 그림대로 어두운 쇠 + 금테로 갈아 끼웠다 (막대·칸·단추),

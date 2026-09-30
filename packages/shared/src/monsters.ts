@@ -128,7 +128,7 @@ const BOSS_LOOKS = [
 
 function bossLookFor(index: number): string {
   const tier = TIERS[index];
-  const mobs = tier ? tierLooks(tier) : [];
+  const mobs: string[] = tier ? tierLooks(tier) : [];
   for (let i = 0; i < BOSS_LOOKS.length; i++) {
     const pick = BOSS_LOOKS[(index + i) % BOSS_LOOKS.length]!;
     if (!mobs.includes(pick)) return pick;

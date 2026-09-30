@@ -1358,7 +1358,8 @@ func _build_char_panel() -> void:
 func _build_char_window(panel: PanelContainer) -> void:
 	var side := VBoxContainer.new()
 	side.custom_minimum_size = Vector2(DETAIL_W, 0)
-	side.add_theme_constant_override("separation", 8)
+	# 7 — "평타" 줄(2026-09-30)을 더하니 8 로는 창이 화면 위로 5px 넘었다 (간격 10개 × 1px 로 되찾는다)
+	side.add_theme_constant_override("separation", 7)
 	panel.add_child(side)
 
 	var title := _stone_title(side, "캐릭터 정보", 22, "ui_icon_character")
@@ -2137,6 +2138,9 @@ func _redraw_char(me: Dictionary) -> void:
 		["치명타", "%.0f%%" % (float(stats.get("crit", 0.0)) * 100.0)],
 		["치명타 피해", "%.0f%%" % (float(stats.get("critDamage", 1.0)) * 100.0)],
 		["공격 속도", "+%.0f%%" % (float(stats.get("attackSpeed", 0.0)) * 100.0)],
+		# 공속을 실제 평타 횟수로 (2026-09-30 요청: "초당 7.5회 공격 이런식으로") — 판정과 같은
+		# `effective_cooldown` 으로 센다. 질풍각 설명(`_show_passive`)과 같은 계산이다
+		["평타", "초당 %.1f회 공격" % _attacks_per_second(stats)],
 		["쿨타임 감소", "%.0f%%" % (float(stats.get("cooldown", 0.0)) * 100.0)],
 		["방어력 관통", "%.0f%%" % (float(stats.get("penetration", 0.0)) * 100.0)],
 		# 같은 레벨 몬스터에게 맞을 때 원래 피해의 몇 % 가 들어오나 (2026-09-27). 후반 감소율이
@@ -2151,6 +2155,12 @@ func _redraw_char(me: Dictionary) -> void:
 	_char_head.text = head
 	for index in groups.size():
 		_fill_detail_rows(groups[index], _char_grids[index])
+
+
+## 초당 평타 횟수 — 판정(`world.gd`)이 다음 평타를 `effective_cooldown` 뒤로 미는 것과 같은 값
+func _attacks_per_second(stats: Dictionary) -> float:
+	return 1000.0 / Combat.effective_cooldown(
+		float(stats.get("attackCooldown", 900)), float(stats.get("attackSpeed", 0.0)))
 
 
 func _close_detail() -> void:

@@ -43,22 +43,22 @@ func _potions(events: Array) -> Array:
 	return events.filter(func(e: Dictionary) -> bool: return str(e.get("type", "")) == "potion")
 
 
-## HP 가 기준(처음 70%) 이하로 떨어지면 한 틱 안에 마신다. 쿨타임 동안은 또 안 마신다
+## HP 가 기준(처음 90%) 이하로 떨어지면 한 틱 안에 마신다. 쿨타임 동안은 또 안 마신다
 func _case_auto() -> void:
 	var w := _world()
 	var me: Dictionary = w.snapshot().players["me"]
 	var max_hp := int(me.stats.maxHp)
 	var rules := GameData.combat()
-	if int(me.potion_pct) != int(rules.get("potionAutoDefault", -1)) or int(me.potion_pct) != 70:
-		_fail("처음 기준이 %d%% 다 (70%% 여야 한다)" % int(me.potion_pct))
+	if int(me.potion_pct) != int(rules.get("potionAutoDefault", -1)) or int(me.potion_pct) != 90:
+		_fail("처음 기준이 %d%% 다 (90%% 여야 한다)" % int(me.potion_pct))
 	if not is_equal_approx(float(rules.get("potionHealRatio", 0)), 0.1):
 		_fail("한 병 회복이 최대 HP 의 %s 다 (10%% 여야 한다)" % str(rules.get("potionHealRatio")))
 
 	# 기준 위에서는 안 마신다
-	me.hp = max_hp * 8 / 10
+	me.hp = max_hp * 95 / 100
 	w.step(0.016)
 	if not _potions(w.drain_events()).is_empty():
-		_fail("HP 80% 인데 마셨다")
+		_fail("HP 95% 인데 마셨다")
 
 	me.hp = max_hp * 4 / 10
 	var before := int(me.hp)

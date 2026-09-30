@@ -43,7 +43,7 @@
   "attackRootMs": 400,
   "potionCooldownMs": 10000,
   "potionHealRatio": 0.1,
-  "potionAutoDefault": 70,
+  "potionAutoDefault": 90,
   "potionAutoStep": 10,
   "potionAutoMax": 90,
   "monsterSwingMs": 650,

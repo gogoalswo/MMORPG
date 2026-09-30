@@ -300,7 +300,7 @@ func join(player_id: String) -> void:
 		# 존을 옮겨도 쿨타임은 이어진다 — 안 그러면 차원문을 오가며 연달아 마신다
 		"potion_ready_at": int(kept.get("potion_ready_at", 0)),
 		# HP 가 이 % 이하로 떨어지면 저절로 마신다. 0 이면 끔. 저장에 남는다
-		"potion_pct": int(kept.get("potion_pct", _potion_rule("potionAutoDefault", 70))),
+		"potion_pct": int(kept.get("potion_pct", _potion_rule("potionAutoDefault", 90))),
 		# 스킬 강화 — `{ 스킬 id: [강화 id, …] }`. 스킬창에서 스킬 경험치로 채우면 붙는다 (`feed_upgrade`)
 		"skill_upgrades": kept.get("skill_upgrades", {}).duplicate(true),
 		# 아직 안 넣은 **스킬 경험치** — 던전을 깨면 쌓이고(`_check_dungeon_clear`) 스킬창에서

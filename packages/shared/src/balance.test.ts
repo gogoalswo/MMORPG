@@ -10,6 +10,7 @@ import { JOB_IDS } from './character.ts';
 import { MONSTER_STATS } from './monsterTable.ts';
 import { GEAR_DROP_MIN_GAP, GEAR_DROP_RATE, GEAR_DROP_TARGET, dropField } from './gear.ts';
 import { KILL_SECONDS } from './balance.ts';
+import { HP_LOSS_PER_KILL, hpLossPerKill } from './monsterAttack.ts';
 import {
   CLEAR_TIME,
   DEF_BASE,
@@ -100,11 +101,12 @@ test('몬스터 표가 설계 문서 6장과 같다 (사냥터 끝 레벨)', () 
   // 같은 배수가 되어("방어력이 올라감에 따라 몬스터 공격력도 올려") 공격력·방어력 열을 설계 비율만큼 올렸다
   const rows = [
     // 2026-09-25 에 HP 를 초반부터 서서히 올려 Lv200 에서 3배 (`3^((L−1)/199)`)
-    { level: 10, grade: 1.0, hp: 75, atk: 2 },
-    { level: 50, grade: 1.63, hp: 308, atk: 4 },
-    { level: 100, grade: 3.3, hp: 3272, atk: 20 },
-    { level: 150, grade: 4.97, hp: 57924, atk: 192 },
-    { level: 200, grade: 6.63, hp: 1278546, atk: 2547 },
+    // 2026-09-30 에 공격력을 "한 마리 잡는 동안 HP 10%" 로 다시 구웠다 (`monsterAttack.ts`)
+    { level: 10, grade: 1.0, hp: 75, atk: 33 },
+    { level: 50, grade: 1.63, hp: 308, atk: 118 },
+    { level: 100, grade: 3.3, hp: 3272, atk: 373 },
+    { level: 150, grade: 4.97, hp: 57924, atk: 2041 },
+    { level: 200, grade: 6.63, hp: 1278546, atk: 14659 },
   ];
   for (const row of rows) {
     assert.equal(Math.round(refGrade(row.level) * 100) / 100, row.grade, `Lv${row.level} 기준 등급`);
@@ -162,23 +164,16 @@ test('몬스터 방어력이 기준 플레이어의 절반쯤이다 — 체력�
   }
 });
 
-test('한 그룹을 정리하는 동안 HP 를 절반쯤 잃는다', () => {
-  for (const level of [15, 100, 195]) {
-    const ref = refPlayer(level);
-    const m = monster(level);
-    // 몬스터가 때리는 쪽이라 맞는 쪽 K(`damageTaken`)다 (2026-09-27)
-    const perHit = damageTaken(m.atk, level, ref.df);
-    const taken = (perHit * meleeAttackers(level) * CLEAR_TIME) / m.interval;
-    const ratio = taken / ref.hp;
-    // 2026-09-27: Lv1 HP 를 300 으로 올려(Lv200 은 그대로) 초반·중반은 덜 잃는다 —
-    // "1레벨부터 몬스터한테 너무 죽어서" 가 그 이유다. 후반만 설계값 50% 에 묶는다
-    if (level < 190) {
-      assert.ok(ratio < HP_LOSS_PER_CLEAR, `Lv${level} ${ratio}`);
-      continue;
-    }
+test('한 마리 잡는 동안 HP 를 10% 쯤 잃는다 ★★', () => {
+  // 2026-09-30 지시: "한 마리 잡는동안 체력을 10% 정도 잃게 만들면 좋겠는데?" 그 전에는
+  // "한 무리(3~6마리 동시) 정리에 HP 50%" 로 역산해서, 한 마리씩 서 있는 사냥터에서는
+  // 0.4~1.8% 밖에 안 잃었다. 기준은 그 레벨 격투가(기준 장비 + 열린 패시브 전부).
+  // 표는 앞 레벨보다 안 낮아지게 구웠으므로(누적 최대) 위로만 조금 넘친다
+  for (let level = 1; level <= MAX_LEVEL; level++) {
+    const loss = hpLossPerKill(level);
     assert.ok(
-      Math.abs(ratio - HP_LOSS_PER_CLEAR) <= HP_LOSS_PER_CLEAR * DESIGN_DRIFT,
-      `Lv${level} ${ratio}`
+      loss >= HP_LOSS_PER_KILL * (1 - DESIGN_DRIFT) && loss <= HP_LOSS_PER_KILL * (1 + DESIGN_DRIFT),
+      `Lv${level}: 한 마리에 HP ${(loss * 100).toFixed(1)}%`
     );
   }
 });
@@ -229,10 +224,11 @@ test('몬스터 표는 고정 표에서 나온다 — 장비를 고쳐도 안 �
 test('역할 배수 — 보스는 설계 보류라 임시값이다', () => {
   assert.deepEqual(ROLE_MULT.normal, { hp: 1, atk: 1 });
   assert.deepEqual(ROLE_MULT.elite, { hp: 3, atk: 2 });
-  assert.deepEqual(ROLE_MULT.boss, { hp: 7, atk: 5 });
+  // 보스 공격 ×5 → ×1 (2026-09-30) — 일반 몬스터를 "한 마리당 HP 10%" 로 올리면서
+  assert.deepEqual(ROLE_MULT.boss, { hp: 7, atk: 1 });
   const normal = monster(100);
   assert.equal(monster(100, 'elite').hp, normal.hp * 3);
-  assert.equal(monster(100, 'boss').atk, normal.atk * 5);
+  assert.equal(monster(100, 'boss').atk, normal.atk);
   // 역할이 달라도 방어력은 그대로다 (배수는 HP·공격력에만)
   assert.equal(monster(100, 'boss').df, normal.df);
 });
@@ -314,16 +310,10 @@ test('몬스터 HP 는 레벨이 오를수록 커진다', () => {
   }
 });
 
-test('스킬이 열리는 자리에서 몬스터 1마리 공격력은 오히려 떨어진다', () => {
-  // **의도한 것이다.** 공격력은 "동시에 때리는 마릿수" 로 나눠 역산하므로, 동시 피격이
-  // 3 → 4 → 6 으로 늘면 한 마리 몫이 그만큼 작아진다. 총량(HP 50% 손실)은 그대로다.
-  // 잡몹 한 마리는 위협이 아니고 무리가 위협인 구조가 여기서 나온다.
-  for (const level of [10, 30]) {
-    assert.ok(monster(level).atk < monster(level - 1).atk, `Lv${level} 에서 안 떨어졌다`);
-    assert.ok(meleeAttackers(level) > meleeAttackers(level - 1), `Lv${level} 동시 피격`);
-  }
-  // 단계 안에서는 레벨을 따라 오른다
-  for (let level = 31; level <= MAX_LEVEL; level++) {
+test('몬스터 공격력은 레벨을 따라 오른다', () => {
+  // 예전엔 스킬이 열리는 Lv10·30 에서 **떨어졌다** — "동시에 때리는 마릿수" 로 나눠 역산해서다.
+  // 2026-09-30 에 "한 마리당 HP 10%" 로 바꾸면서 그 전제가 없어져 전 구간이 오른다
+  for (let level = 2; level <= MAX_LEVEL; level++) {
     assert.ok(monster(level).atk >= monster(level - 1).atk, `Lv${level} 공격력이 줄었다`);
   }
 });

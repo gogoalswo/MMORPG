@@ -4785,12 +4785,24 @@ func _play_player_clip(me: Dictionary) -> void:
 		_move_clip = ""
 		# 옛 `Attack` 길로 떨어지지 않게 — 동작이 경직을 이미 다 덮었다
 		_swing_until = mini(_swing_until, now)
-		rig.play("Run" if _moving else "Idle", 1.0, 0.0, false, MOVE_OUT_BLEND)
+		if _moving:
+			rig.play("Run", _run_rate(me), 0.0, false, MOVE_OUT_BLEND)
+		else:
+			rig.play("Idle", 1.0, 0.0, false, MOVE_OUT_BLEND)
 		return
 	if now < _swing_until:
 		rig.play("Attack", 1.6, 0.8)
 		return
-	rig.play("Run" if _moving else "Idle")
+	if _moving:
+		rig.play("Run", _run_rate(me))
+	else:
+		rig.play("Idle")
+
+
+## 달리기 클립 배속 — 이동 속도만큼 빨리 튼다 (경공 +20% 면 1.2배, 2026-09-30 요청:
+## "이동 속도에 맞춰서 애니메이션도 빠르게 재생해"). 안 그러면 몸이 빨라진 만큼 발이 미끄러진다
+func _run_rate(me: Dictionary) -> float:
+	return 1.0 + maxf(float(me.get("stats", {}).get("moveSpeed", 0.0)), 0.0)
 
 
 func _find_mob(snap: Dictionary, id: String) -> Dictionary:

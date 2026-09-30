@@ -122,7 +122,7 @@ func _run() -> void:
 	if skill == "kill":
 		await _kill(game)
 		return
-	# 치명타 한 대 + 평타 한 대 — 그라데이션 숫자가 부푸는 것과 흰 평타 숫자를 나란히 ·
+	# 치명타 한 대 + 평타 다섯 대 — 그라데이션 숫자가 부푸는 것과 흰 평타 숫자가 몸 둘레에 흩어지는 것 ·
 	# 몸 튕김 · 찌그러짐 · 흔들림 (잡지 않는다)
 	if skill == "crit":
 		await _kill(game, true)
@@ -573,10 +573,11 @@ func _kill(game: Node3D, crit := false) -> void:
 			"target": str(mob.id), "target_kind": "monster", "amount": 128,
 			"crit": true, "killed": false, "x": mob.x, "z": mob.z,
 		})
-		game._on_event(&"hit", {
-			"target": str(mob.id), "target_kind": "monster", "amount": 37,
-			"crit": false, "killed": false, "x": mob.x + 1.2, "z": mob.z,
-		})
+		for i in 5:
+			game._on_event(&"hit", {
+				"target": str(mob.id), "target_kind": "monster", "amount": 37 + i * 111,
+				"crit": false, "killed": false, "x": mob.x, "z": mob.z,
+			})
 	else:
 		# 등급 일곱 색이 한 창에 보이게 등급마다 하나씩 (슬롯은 돌려 가며)
 		var codes := ["w", "a", "h", "b", "n", "r", "w"]

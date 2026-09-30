@@ -50,6 +50,25 @@ const CRIT_POP := 0.08
 const CRIT_SETTLE := 0.22
 const CRIT_PEAK := 1.35
 const CRIT_REST := 1.12
+## 숫자가 뜨는 자리 — **몸 둘레 무작위** (2026-09-30, "몬스터 주위에 랜덤한 위치에서").
+## 한 자리에서만 뜨면 연타가 한 덩어리로 겹쳐 못 읽는다. 몸 상자를 화면 기준으로
+## 좌우 `SPREAD_SIDE` m · 위 `SPREAD_TOP` m 만큼 넓힌 판 안에서 고르고, 아래는 몸
+## 높이의 `SPREAD_LOW` 에서 끊는다 (발밑은 땅·그림자에 묻힌다).
+## **몸이 작아도 판은 `SPREAD_MIN` 보다 작지 않다** — 숫자 한 개가 폭 2m(80~100px)라,
+## 슬라임 폭(0.5m)으로 벌리면 몇 px 밖에 안 벌어져 한 덩어리로 보였다 (찍어 보고 찾았다)
+const SPREAD_SIDE := 0.9
+const SPREAD_TOP := 0.7
+const SPREAD_LOW := 0.2
+const SPREAD_MIN := Vector2(1.4, 1.8)
+## 몸을 못 재면(기둥도 없을 때) 이만한 몸으로 친다
+const SPREAD_BODY := Vector2(0.9, 1.6)
+## 후보를 이만큼 뽑아 **방금 뜬 숫자들과 가장 먼 것**을 고른다. 그냥 무작위면
+## 연달아 같은 자리에 겹치는 일이 잦다. 숫자가 옆으로 긴 만큼 좌우 거리는
+## `SPREAD_ASPECT` 로 나눠 잰다 (좌우로 1m 떨어진 것보다 위아래 1m 가 덜 겹친다)
+const SPREAD_TRIES := 10
+const SPREAD_ASPECT := 2.2
+## 떠 있는 숫자 자리 — 모든 이펙트가 같이 본다. [{at, until}]
+static var _spots: Array = []
 ## 내가 맞았다 — 남을 때린 숫자와 색으로 갈라야 한 화면에서 구분이 된다
 const COLOR_HURT := Color("#ff5a4a")
 const COLOR_HEAL := Color("#7ce08a")
@@ -98,8 +117,9 @@ static var _body_mat: StandardMaterial3D
 var _painted: Array = []
 
 
-## 터뜨린다. `at` 은 월드 좌표(가슴 높이), `payload` 는 `hit` 이벤트 그대로다
-static func spawn(parent: Node3D, at: Vector3, payload: Dictionary, font: Font = null) -> HitFx:
+## 터뜨린다. `at` 은 월드 좌표(가슴 높이), `payload` 는 `hit` 이벤트 그대로다.
+## `body` 를 주면 숫자가 그 몸 둘레 무작위 자리에서 뜬다 (`_scatter`)
+static func spawn(parent: Node3D, at: Vector3, payload: Dictionary, font: Font = null, body: Node3D = null) -> HitFx:
 	var fx := FxPool.take(parent, &"hit") as HitFx
 	if fx == null:
 		fx = HitFx.new()
@@ -107,6 +127,7 @@ static func spawn(parent: Node3D, at: Vector3, payload: Dictionary, font: Font =
 		fx._build(font)
 	fx.position = at
 	fx._start(payload, font)
+	fx._scatter(body)
 	return fx
 
 
@@ -123,17 +144,70 @@ static func meshes_of(body: Node3D) -> Array:
 ## 이펙트를 터뜨릴 높이. 발밑에서 터지면 맞은 것처럼 안 보인다 —
 ## 몸 높이의 6할쯤(가슴)에 둔다. 기둥이든 모델이든 실제 크기에서 잰다
 static func chest_y(body: Node3D, fallback: float = 1.0) -> float:
-	if body == null or not is_instance_valid(body):
+	var box := body_box(body)
+	if box.size == Vector3.ZERO:
 		return fallback
+	return box.position.y + box.size.y * 0.6
+
+
+## 그려 둔 몸의 월드 상자. 못 재면 크기 0
+static func body_box(body: Node3D) -> AABB:
+	if body == null or not is_instance_valid(body):
+		return AABB()
 	var box := AABB()
 	var first := true
 	for mesh in meshes_of(body):
 		var world: AABB = mesh.global_transform * mesh.get_aabb()
 		box = world if first else box.merge(world)
 		first = false
-	if first:
-		return fallback
-	return box.position.y + box.size.y * 0.6
+	return box
+
+
+## 숫자를 몸 둘레 무작위 자리로 옮긴다. 좌우는 **화면 기준**(카메라 오른쪽)이다 —
+## 숫자는 화면을 보고 서므로(billboard) 월드 X 로 벌리면 비스듬한 카메라에서 몰려 보인다
+func _scatter(body: Node3D) -> void:
+	var box := body_box(body)
+	var width := SPREAD_BODY.x
+	var height := SPREAD_BODY.y
+	var bottom := position.y - height * 0.6
+	if box.size != Vector3.ZERO:
+		width = Vector2(box.size.x, box.size.z).length()
+		height = box.size.y
+		bottom = box.position.y
+	width = maxf(width, SPREAD_MIN.x)
+	var top := bottom + maxf(height, SPREAD_MIN.y)
+	var half := width * 0.5 + SPREAD_SIDE
+	var right := Vector3.RIGHT
+	var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
+	if cam != null:
+		right = cam.global_basis.x
+		right.y = 0.0
+		right = right.normalized() if right.length() > 0.01 else Vector3.RIGHT
+
+	var now := Time.get_ticks_msec()
+	_spots = _spots.filter(func(s: Dictionary) -> bool: return int(s.until) > now)
+	var best := Vector3.ZERO
+	var best_gap := -1.0
+	for i in SPREAD_TRIES:
+		var side := randf_range(-half, half)
+		var y := randf_range(bottom + height * SPREAD_LOW, top + SPREAD_TOP) - position.y
+		var local := right * side + Vector3.UP * y
+		var world := global_position + local if is_inside_tree() else position + local
+		var gap := INF
+		for s in _spots:
+			var d: Vector3 = world - (s.at as Vector3)
+			var across := Vector2(d.x, d.z).dot(Vector2(right.x, right.z))
+			gap = minf(gap, Vector2(across / SPREAD_ASPECT, d.y).length())
+		if gap > best_gap:
+			best_gap = gap
+			best = local
+		if _spots.is_empty():
+			break
+	_number.position = best
+	_spots.append({"at": global_position + best if is_inside_tree() else position + best,
+		"until": now + int(LIFE * 1000.0)})
+	if _spots.size() > 12:
+		_spots.pop_front()
 
 
 ## 노드를 만든다 — 한 번만. 섬광 · 파편 일곱 · 숫자
@@ -220,7 +294,7 @@ func _start(payload: Dictionary, font: Font) -> void:
 	# 평타는 흰 그대로, 치명타는 색이 그림에 있다
 	_number.modulate = tint if heal or on_me else Color.WHITE
 	_number.scale = Vector3.ONE
-	_number.position = Vector3(randf_range(-0.4, 0.4), 0.3, 0.0)
+	# 자리는 `_scatter` 가 몸 둘레에서 고른다
 
 
 ## 이 한 대가 몇 단계인가 (0~3). 회복은 때린 것이 아니라 -1.

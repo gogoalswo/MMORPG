@@ -48,6 +48,7 @@ func _run() -> void:
 	await _case_monster(game, mob, body)
 	await _case_visible(game, mob)
 	await _case_crit(game, mob)
+	await _case_scatter(game, mob, body)
 	await _case_feel(game, mob, body)
 	await _case_gone(game, body)
 	await _case_model(game)
@@ -178,6 +179,42 @@ func _case_crit(game: Node3D, mob: Dictionary) -> void:
 		print("  치명타: %s, 글자 %.3f (평타 %.3f)" % [
 			fx._number.text, fx._number.pixel_size, HitFx.NUMBER_SIZE
 		])
+
+
+## 숫자는 몸 둘레 **무작위 자리**에서 뜬다 (2026-09-30) — 한 자리에 겹쳐 뜨면 연타를 못 읽는다.
+## 여덟 대를 한꺼번에 넣고, 서로 벌어졌나 · 몸 상자(넓힌 판) 밖으로 새지 않았나를 본다
+func _case_scatter(game: Node3D, mob: Dictionary, body: Node3D) -> void:
+	var spots: Array = []
+	for i in 8:
+		game._on_event(&"hit", _hit(mob, 10 + i, false, false))
+		var fx := _newest(game)
+		if fx != null:
+			spots.append(fx._number.global_position)
+	if spots.size() < 8:
+		_fail("숫자 여덟 개가 안 섰다 (%d)" % spots.size())
+		return
+	var box := HitFx.body_box(body)
+	# 몸이 작으면 판은 `SPREAD_MIN` 까지 넓어진다
+	var reach := maxf(Vector2(box.size.x, box.size.z).length(), HitFx.SPREAD_MIN.x) * 0.5 + HitFx.SPREAD_SIDE + 0.05
+	# 좌우는 이펙트 자리(`World` 좌표)에서 잰다 — 몸 상자 가운데와 조금 다르다
+	var center := Vector3(mob.x, 0.0, mob.z)
+	var low := box.position.y + box.size.y * HitFx.SPREAD_LOW - 0.01
+	var high := box.position.y + maxf(box.size.y, HitFx.SPREAD_MIN.y) + HitFx.SPREAD_TOP + 0.01
+	var widest := 0.0
+	for a in spots:
+		var p: Vector3 = a
+		if Vector2(p.x - center.x, p.z - center.z).length() > reach or p.y < low or p.y > high:
+			_fail("숫자가 몸 둘레 밖에서 떴다 (%s, 몸 %s)" % [p, box])
+		for b in spots:
+			widest = maxf(widest, p.distance_to(b))
+	if widest < 0.5:
+		_fail("숫자가 한 자리에 몰려 뜬다 (가장 먼 둘이 %.2fm)" % widest)
+	else:
+		print("  흩어짐: 여덟 개 중 가장 먼 둘 %.2fm (몸 %.2f×%.2fm)" % [widest, reach * 2.0, box.size.y])
+	var waited := 0
+	while _newest(game) != null and waited < 240:
+		await process_frame
+		waited += 1
 
 
 ## 타격감 — 단계가 평타 < 치명타 < 처치 < 보스 로 오르고, 맞은 몸이 퍼졌다가

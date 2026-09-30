@@ -135,7 +135,7 @@ func _case_kill_check() -> void:
 		_fail("패시브를 배웠는데 최소 처치 시간이 그대로다: %.0f → %.0fms" % [slow, fast])
 
 
-## 레벨 도달 패시브 일곱 (2026-09-30 요청) — 그 레벨에 한 번, 스탯은 `stats_of` 가 더한다
+## 레벨 도달 패시브 (2026-09-30 요청) — 그 레벨에 한 번, 스탯은 `stats_of` 가 더한다
 func _case_level_passives() -> void:
 	var s := _me()
 	var w: World = s[0]
@@ -167,9 +167,10 @@ func _case_level_passives() -> void:
 		all[str(p.id)] = int(p.maxRank)
 	var bare := World.stats_of("fighter", 200, {})
 	var full := World.stats_of("fighter", 200, {}, all)
-	var want_attack := roundi(float(bare.attack) * 1.3)
+	# 철각 계열 10 · 40 · 80 · 120 = +10 · 20 · 40 · 80% → 합 +150% (2026-09-30)
+	var want_attack := roundi(float(bare.attack) * 2.5)
 	if int(full.attack) != want_attack:
-		_fail("철각 공격력 %d → %d (×1.3 = %d 여야)" % [bare.attack, full.attack, want_attack])
+		_fail("철각 계열 공격력 %d → %d (×2.5 = %d 여야)" % [bare.attack, full.attack, want_attack])
 	# 치확 50 (+10%) · 150 (+20%, 2026-09-30 에 치피에서 바꿨다) · 치피 70 (+20%) · 200 (+50%)
 	var checks := {"crit": 0.3, "critDamage": 0.7, "penetration": 0.1, "moveSpeed": 0.2}
 	for key in checks:

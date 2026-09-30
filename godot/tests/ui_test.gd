@@ -464,11 +464,20 @@ func _case_potion(game: Node3D) -> void:
 	var panel: Control = game._potion_panel
 	if not panel.visible:
 		_fail("설정을 눌렀는데 창이 안 떴다")
+	# 처음 값(90)이 상한이라 − 로 한 칸 내리고 + 로 되돌린다. 상한에서 + 는 그대로다
 	var start := int(me.potion_pct)
+	panel.find_child("potion_down", true, false).pressed.emit()
+	await process_frame
+	if int(me.potion_pct) != start - 10 or game._potion_pct_label.text != "HP %d%% 이하" % (start - 10):
+		_fail("- 를 눌렀는데 기준 %d · 글자 '%s'" % [int(me.potion_pct), game._potion_pct_label.text])
 	panel.find_child("potion_up", true, false).pressed.emit()
 	await process_frame
-	if int(me.potion_pct) != start + 10 or game._potion_pct_label.text != "HP %d%% 이하" % (start + 10):
+	if int(me.potion_pct) != start or game._potion_pct_label.text != "HP %d%% 이하" % start:
 		_fail("+ 를 눌렀는데 기준 %d · 글자 '%s'" % [int(me.potion_pct), game._potion_pct_label.text])
+	panel.find_child("potion_up", true, false).pressed.emit()
+	await process_frame
+	if int(me.potion_pct) != mini(start + 10, int(GameData.combat().get("potionAutoMax", 90))):
+		_fail("상한에서 + 를 눌렀는데 기준 %d" % int(me.potion_pct))
 	# "-" 단추 글자가 폰트에 있어야 한다 — 빼기 기호(U+2212)는 없어서 빈 단추였다
 	var down: Button = panel.find_child("potion_down", true, false)
 	var font: Font = down.get_theme_font("font")

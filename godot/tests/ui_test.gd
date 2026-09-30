@@ -1507,8 +1507,14 @@ func _case_compare(game: Node3D) -> void:
 	await process_frame
 	await process_frame
 
+	# 가방을 열면 정렬된다 (희귀도 → 종류 → 강화) — 칸 번호는 id 로 찾는다
+	var at := func(id: String) -> int:
+		for i in me.bag.size():
+			if str(me.bag[i].id) == id:
+				return i
+		return -1
 	# 반지를 고르면 — 낀 반지가 비교 창에 뜬다 (칸은 창에 입력을 넣어 누른다)
-	await _tap_cell(game._bag_drag, game._bag_scroll, game._bag_grid, 0)
+	await _tap_cell(game._bag_drag, game._bag_scroll, game._bag_grid, at.call("g1_r"))
 	await process_frame
 	var compare: PanelContainer = game._compare_panel
 	if not game._detail_panel.visible or not compare.visible:
@@ -1539,11 +1545,11 @@ func _case_compare(game: Node3D) -> void:
 
 	# 낀 것이 없는 부위(신발)를 고르면 비교 창이 없다
 	me.equipped.erase("boots")
-	await _tap_cell(game._bag_drag, game._bag_scroll, game._bag_grid, 1)
+	await _tap_cell(game._bag_drag, game._bag_scroll, game._bag_grid, at.call("g1_b"))
 	if compare.visible:
 		_fail("낀 신발이 없는데 비교 창이 떴다")
 	# 다시 반지 → 뜨고, 빈칸을 누르면 상세 창과 같이 닫힌다
-	await _tap_cell(game._bag_drag, game._bag_scroll, game._bag_grid, 0)
+	await _tap_cell(game._bag_drag, game._bag_scroll, game._bag_grid, at.call("g1_r"))
 	await _tap_cell(game._bag_drag, game._bag_scroll, game._bag_grid, 5)
 	if compare.visible or game._detail_panel.visible:
 		_fail("빈칸을 눌렀는데 비교 %s · 상세 %s" % [compare.visible, game._detail_panel.visible])

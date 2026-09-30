@@ -1995,6 +1995,16 @@ func _case_passive(game: Node3D, me: Dictionary) -> void:
 		_fail("Lv.30 에 경공을 눌렀는데 %s · 이속 %s" % [me.passives, me.stats.get("moveSpeed")])
 	elif game._skill_state.text != "배웠습니다" or not game._passive_learn.disabled:
 		_fail("경공을 배웠는데 '%s' · 단추 %s" % [game._skill_state.text, game._passive_learn.disabled])
+	# 달리기 동작도 이속만큼 빨리 튼다 (2026-09-30 요청)
+	if game._player is Rig:
+		var was_moving: bool = game._moving
+		game._moving = true
+		game._play_player_clip(me)
+		if game._player._playing != "Run" or absf(float(game._player._speed) - 1.2) > 1e-6:
+			_fail("경공을 배웠는데 달리기가 %s · %.2f배" % [game._player._playing, game._player._speed])
+		else:
+			print("  경공: 달리기 동작 %.1f배" % game._player._speed)
+		game._moving = was_moving
 	game._pick_skill(0)
 
 	var font: Font = load(FONT)

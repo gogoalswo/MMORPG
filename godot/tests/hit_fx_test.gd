@@ -157,7 +157,7 @@ func _case_visible(game: Node3D, mob: Dictionary) -> void:
 		waited += 1
 
 
-## 치명타는 숫자가 더 크고 느낌표가 붙는다 — 읽지 않아도 크기로 안다
+## 치명타는 숫자가 더 크고 오른쪽 위에 작은 `Cri` 가 붙는다 — 읽지 않아도 크기로 안다
 func _case_crit(game: Node3D, mob: Dictionary) -> void:
 	game._on_event(&"hit", _hit(mob, 91, true, false))
 	await process_frame
@@ -165,8 +165,10 @@ func _case_crit(game: Node3D, mob: Dictionary) -> void:
 	if fx == null or fx._number == null:
 		_fail("치명타 이펙트가 안 섰다")
 		return
-	if fx._number.text != "91!":
-		_fail("치명타 숫자가 '91!' 이 아니다 (%s)" % fx._number.text)
+	if fx._number.text != "91":
+		_fail("치명타 숫자가 '91' 이 아니다 (%s)" % fx._number.text)
+	if not fx._cri.visible or fx._cri.text != "Cri" or fx._cri.offset.x <= 0.0 or fx._cri.offset.y <= 0.0:
+		_fail("치명타 숫자 오른쪽 위에 'Cri' 가 없다 (보임 %s, 자리 %s)" % [fx._cri.visible, fx._cri.offset])
 	if fx._number.font != DamageFont.crit(null):
 		_fail("치명타 숫자가 그라데이션 글꼴(DamageFont.crit)이 아니다")
 	await process_frame
@@ -194,12 +196,12 @@ func _case_scatter(game: Node3D, mob: Dictionary, body: Node3D) -> void:
 		_fail("숫자 여덟 개가 안 섰다 (%d)" % spots.size())
 		return
 	var box := HitFx.body_box(body)
-	# 몸이 작으면 판은 `SPREAD_MIN` 까지 넓어진다
-	var reach := maxf(maxf(box.size.x, box.size.z), HitFx.SPREAD_MIN.x) * 0.5 + HitFx.SPREAD_SIDE + 0.05
+	# 좌우는 몸 상자가 아니라 키에 비례한다 (스킨 메시 상자는 보이는 몸보다 넓다)
+	var reach := HitFx.spread_half(box.size.y) + 0.05
 	# 좌우는 이펙트 자리(`World` 좌표)에서 잰다 — 몸 상자 가운데와 조금 다르다
 	var center := Vector3(mob.x, 0.0, mob.z)
 	var low := box.position.y + box.size.y * HitFx.SPREAD_LOW - 0.01
-	var high := box.position.y + maxf(box.size.y, HitFx.SPREAD_MIN.y) + HitFx.SPREAD_TOP + 0.01
+	var high := box.position.y + maxf(box.size.y, HitFx.SPREAD_MIN_HEIGHT) + HitFx.SPREAD_TOP + 0.01
 	var widest := 0.0
 	for a in spots:
 		var p: Vector3 = a

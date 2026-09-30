@@ -22,7 +22,8 @@ const FLASH := 0.22
 ## 맞은 몸이 붉어지는 시간
 const BODY_FLASH := 0.2
 ## 숫자가 초당 떠오르는 높이(m)
-const RISE := 1.8
+## 1.8 이던 것을 줄였다 — 0.75초에 1.35m 올라가서 몸에서 멀어져 보였다 (2026-09-30, "몬스터랑 너무 떨어져")
+const RISE := 0.9
 const SPARKS := 7
 
 ## **화면에서 몇 px 로 보이는지로 크기를 정한다.** 카메라가 화면 세로 14.3m 를
@@ -58,12 +59,24 @@ const CRIT_REST := 1.12
 ## 몬스터에서 숫자가 땅 위 2.5m 까지 올라가 "너무 멀리 나와" 라는 말을 들었다
 ## (2026-09-30). 지금은 몸 상자 바로 바깥까지만 벗어난다. 몸 폭은 대각선이 아니라
 ## 긴 변으로 잰다 (대각선은 화면에서 보이는 폭보다 넓다)
-const SPREAD_SIDE := 0.2
-const SPREAD_TOP := 0.25
-const SPREAD_LOW := 0.35
-const SPREAD_MIN := Vector2(0.8, 1.0)
+##
+## **두 번째도 멀었다** ("지금도 몬스터랑 너무 떨어져있어") — 숫자 **가운데**를 몸 폭 +0.2m
+## 까지 보냈는데, 숫자가 가로 2m 라 끝은 1m 더 나갔고, 모델의 몸 상자(스킨 메시 AABB)가
+## 보이는 몸보다 넓게 잡혔다 (키 1.1m 몬스터가 폭 1.4m). 그래서 **좌우는 키에 비례**
+## (`SPREAD_SIDE` × 키, `SPREAD_SIDE_MIN`~`SPREAD_SIDE_MAX` m)로 잡고, 숫자 가운데가
+## 몸 안쪽에만 온다. 위아래는 몸 절반(`SPREAD_LOW`)부터 머리 위 `SPREAD_TOP` m 까지
+const SPREAD_SIDE := 0.25
+const SPREAD_SIDE_MIN := 0.35
+const SPREAD_SIDE_MAX := 0.5
+const SPREAD_TOP := 0.1
+const SPREAD_LOW := 0.5
+## 몸이 이보다 낮으면 이 높이로 친다 — 키 0.6m 몬스터에서 숫자 여섯이 한 자리에 포개졌다
+const SPREAD_MIN_HEIGHT := 1.3
 ## 몸을 못 재면(기둥도 없을 때) 이만한 몸으로 친다
-const SPREAD_BODY := Vector2(0.9, 1.6)
+const SPREAD_BODY := 1.6
+## 치명타 숫자 오른쪽 위에 작게 붙는 `Cri` — 숫자 글자 크기의 이 비율 (2026-09-30,
+## "크리티컬에 느낌표 말고 Cri 라고 텍스트 작게 붙여 줘, 오른쪽 위에"). `!` 는 뗐다
+const CRI_RATIO := 0.45
 ## 후보를 이만큼 뽑아 **방금 뜬 숫자들과 가장 먼 것**을 고른다. 그냥 무작위면
 ## 연달아 같은 자리에 겹치는 일이 잦다. 숫자가 옆으로 긴 만큼 좌우 거리는
 ## `SPREAD_ASPECT` 로 나눠 잰다 (좌우로 1m 떨어진 것보다 위아래 1m 가 덜 겹친다)
@@ -103,6 +116,8 @@ const BOSS_KICK := 0.5
 var _t := 0.0
 var _flash: MeshInstance3D
 var _number: Label3D
+## 치명타 숫자 오른쪽 위 `Cri`. 숫자의 자식이라 함께 떠오르고 함께 부푼다
+var _cri: Label3D
 ## 치명타면 숫자가 부푼다 (`_process`)
 var _crit := false
 ## [{node, vel}, ...] — 튀어 나가 떨어지는 파편
@@ -152,6 +167,11 @@ static func chest_y(body: Node3D, fallback: float = 1.0) -> float:
 	return box.position.y + box.size.y * 0.6
 
 
+## 숫자 가운데가 좌우로 벗어나는 한계(m) — 키에 비례한다 (`SPREAD_SIDE` 참고)
+static func spread_half(height: float) -> float:
+	return clampf(height * SPREAD_SIDE, SPREAD_SIDE_MIN, SPREAD_SIDE_MAX)
+
+
 ## 그려 둔 몸의 월드 상자. 못 재면 크기 0
 static func body_box(body: Node3D) -> AABB:
 	if body == null or not is_instance_valid(body):
@@ -169,16 +189,13 @@ static func body_box(body: Node3D) -> AABB:
 ## 숫자는 화면을 보고 서므로(billboard) 월드 X 로 벌리면 비스듬한 카메라에서 몰려 보인다
 func _scatter(body: Node3D) -> void:
 	var box := body_box(body)
-	var width := SPREAD_BODY.x
-	var height := SPREAD_BODY.y
+	var height := SPREAD_BODY
 	var bottom := position.y - height * 0.6
 	if box.size != Vector3.ZERO:
-		width = maxf(box.size.x, box.size.z)
 		height = box.size.y
 		bottom = box.position.y
-	width = maxf(width, SPREAD_MIN.x)
-	var top := bottom + maxf(height, SPREAD_MIN.y)
-	var half := width * 0.5 + SPREAD_SIDE
+	var top := bottom + maxf(height, SPREAD_MIN_HEIGHT)
+	var half := spread_half(height)
 	var right := Vector3.RIGHT
 	var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
 	if cam != null:
@@ -246,6 +263,17 @@ func _build(font: Font) -> void:
 	_number.render_priority = 100
 	add_child(_number)
 
+	_cri = Label3D.new()
+	_cri.text = "Cri"
+	_cri.font_size = DamageFont.SIZE
+	_cri.outline_size = 0
+	_cri.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_cri.no_depth_test = true
+	_cri.render_priority = 101
+	_cri.pixel_size = CRIT_SIZE * CRI_RATIO
+	_cri.visible = false
+	_number.add_child(_cri)
+
 
 ## 처음으로 되감는다. **아무것도 만들지 않는다** — 색·숫자·파편이 튈 쪽만 새로 넣는다
 func _start(payload: Dictionary, font: Font) -> void:
@@ -284,7 +312,7 @@ func _start(payload: Dictionary, font: Font) -> void:
 	if heal:
 		_number.text = "+%d" % amount
 	elif crit:
-		_number.text = "%d!" % amount
+		_number.text = str(amount)
 	else:
 		_number.text = str(amount)
 	# 그라데이션 글꼴은 **내가 친 치명타만**이다. 내가 맞은 치명타는 빨강이어야 한다
@@ -296,6 +324,9 @@ func _start(payload: Dictionary, font: Font) -> void:
 	# 평타는 흰 그대로, 치명타는 색이 그림에 있다
 	_number.modulate = tint if heal or on_me else Color.WHITE
 	_number.scale = Vector3.ONE
+	_cri.visible = _crit
+	if _crit:
+		_place_cri()
 	# 자리는 `_scatter` 가 몸 둘레에서 고른다
 
 
@@ -408,9 +439,24 @@ func _process(delta: float) -> void:
 			_number.scale = Vector3.ONE * crit_scale(_t)
 		# 끝 45% 동안만 흐려진다. 처음부터 흐려지면 읽을 겨를이 없다
 		_number.modulate.a = clampf((LIFE - _t) / (LIFE * 0.45), 0.0, 1.0)
+		_cri.modulate.a = _number.modulate.a
 
 	if _t >= LIFE:
 		finish()
+
+
+## `Cri` 를 숫자 오른쪽 위 모서리에 붙인다. **자리(`position`)가 아니라 `offset` 으로 민다** —
+## 숫자는 셰이더에서 화면을 보도록 돌기 때문에(billboard) 노드 좌표로 옆으로 밀면
+## 월드 X 로 밀려 카메라가 비스듬하면 뒤로 숨는다. `offset` 은 화면을 본 판 위의 px 이다
+func _place_cri() -> void:
+	_cri.font = _number.font
+	var font: Font = _number.font
+	var number_w := font.get_string_size(_number.text, HORIZONTAL_ALIGNMENT_LEFT, -1, DamageFont.SIZE).x
+	var cri_w := font.get_string_size(_cri.text, HORIZONTAL_ALIGNMENT_LEFT, -1, DamageFont.SIZE).x
+	# 숫자 판의 px 을 `Cri` 판의 px 로 바꾼다
+	var k := _number.pixel_size / _cri.pixel_size
+	_cri.offset = Vector2(number_w * 0.5 * k + cri_w * 0.5 - DamageFont.SIZE * 0.15,
+		DamageFont.SIZE * 0.32 * k)
 
 
 ## 치명타 숫자의 배율 — 톡 부풀었다가 조금 큰 채로 가라앉는다

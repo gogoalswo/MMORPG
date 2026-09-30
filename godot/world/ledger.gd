@@ -2,7 +2,8 @@ class_name Ledger
 extends RefCounted
 
 ## 장부 판정 한 벌 — **값이 생기고 없어지는 것**만 여기서 정한다 (docs/features/server.md).
-## 드롭·경험치·레벨·골드·가방·장비·강화·크리스탈·스킬·스킬 강화·스킬 경험치·전직·한 번 주기.
+## 드롭·경험치·레벨·골드·가방·장비·강화·크리스탈·스킬·스킬 강화·스킬 경험치·전직·한 번 주기·
+## 헬스(프로틴·운동 단계).
 ##
 ## 나중에 붙일 서버(고도 헤드리스)가 **이 파일을 그대로** 불러 판정한다. 그래서 여기에는
 ## 자리·체력·몬스터·NPC 거리 같은 **전투 쪽 값을 들이지 않는다** — 그건 기기에만 있다.
@@ -16,7 +17,7 @@ extends RefCounted
 const KEYS := [
 	"job", "level", "exp", "gold", "skills", "skill_points", "passives",
 	"skill_upgrades", "skill_upgrade_exp", "skill_exp", "bag", "equipped", "granted",
-	"diamonds",
+	"diamonds", "proteins", "fitness",
 ]
 
 ## **첫 선물** — 새 캐릭터가 한 번만 받는 것 `[[표시, 묶음], …]`. 로컬은 `LocalTransport.open` 이,
@@ -43,6 +44,7 @@ static func fresh(job: String) -> Dictionary:
 		"skill_upgrades": {}, "skill_upgrade_exp": {}, "skill_exp": 0,
 		"bag": [], "equipped": {}, "granted": [],
 		"diamonds": 0,
+		"proteins": {}, "fitness": {},
 	}
 
 
@@ -154,13 +156,14 @@ func _check_dungeon_clear(p: Dictionary, target: Dictionary) -> void:
 	var gain := int(stage.get("skillExp", 0))
 	if gain <= 0:
 		return
+	_give_proteins(p, Fitness.dungeon_reward(stage))
 	p.skill_exp = int(p.get("skill_exp", 0)) + gain
 	events.append({"type": "skillExp", "gain": gain, "total": p.skill_exp})
 	# 보이는 스킬이 없으면 경험치는 말없이 쌓는다 (2026-09-29 요청: "던전의 스킬 경험치 숨김")
 	if Skills.actives_shown(str(p.job)):
 		_notice("던전 %d단계 클리어! 스킬 경험치 +%d" % [int(stage.stage), gain])
 	else:
-		_notice("던전 %d단계 클리어!" % int(stage.stage))
+		_notice("던전 %d단계 클리어! 프로틴 +%d" % [int(stage.stage), int(stage.get("protein", 0))])
 
 
 ## 시련의 탑을 통과했다 → 그 단계의 **크리스탈**(`crystals` = 단계 × 1)을 준다.
@@ -175,6 +178,67 @@ func trial_clear(p: Dictionary, zone_id: String) -> void:
 		_notice("가방이 가득 차 크리스탈을 받지 못했습니다")
 		return
 	events.append({"type": "trialReward", "stage": int(stage.stage), "crystal": count})
+	_give_proteins(p, Fitness.dungeon_reward(stage))
+
+
+## --- 헬스 (docs/features/fitness.md) ---
+
+## 프로틴을 넣는다 — `{프로틴 id: 개수}`. 가방이 아니라 장부의 수치라 가득 찰 일이 없다
+func _give_proteins(p: Dictionary, gains: Dictionary) -> void:
+	if gains.is_empty():
+		return
+	var have: Dictionary = p.get("proteins", {})
+	for id in gains:
+		have[str(id)] = int(have.get(str(id), 0)) + int(gains[id])
+	p.proteins = have
+	events.append({"type": "protein", "gain": gains, "total": have.duplicate()})
+
+
+## 헬스 창의 **강화**(`auto` 0) · **자동**(`auto` 1) — 그 운동의 다음 단계를 확률로 두드린다
+## (2026-09-30 요청: "강화 할 때 확률에 따라 강화"). 한 번마다 그 단계의 프로틴이 들고,
+## **실패해도 단계는 안 내려간다.** 자동은 성공하거나 프로틴이 모자랄 때까지 되풀이한다.
+## **굴리는 쪽은 판정하는 쪽이다** — 서버에서는 서버가 굴린다
+func fitness_up(p: Dictionary, kind_id: String, auto: int = 0) -> void:
+	var kind := Fitness.kind(kind_id)
+	if kind.is_empty():
+		return
+	var stages: Dictionary = p.get("fitness", {})
+	var have: Dictionary = p.get("proteins", {})
+	var protein := str(kind.protein)
+	var stage := int(stages.get(kind_id, 0))
+	if stage >= Fitness.max_stage():
+		_notice("%s는 이미 끝 단계입니다" % str(kind.name))
+		return
+	var step := Fitness.step(stage + 1)
+	var cost := int(step.cost)
+	if int(have.get(protein, 0)) < cost:
+		_notice("%s이 %d개 모자랍니다" % [str(kind.proteinName), cost - int(have.get(protein, 0))])
+		return
+	var tries := 0
+	var success := false
+	while int(have.get(protein, 0)) >= cost:
+		have[protein] = int(have[protein]) - cost
+		tries += 1
+		if rng.randf() * 100.0 < float(step.chance):
+			success = true
+			break
+		if auto == 0:
+			break
+	if success:
+		stage += 1
+		stages[kind_id] = stage
+	p.fitness = stages
+	p.proteins = have
+	events.append({
+		"type": "fitnessResult", "kind": kind_id, "result": "success" if success else "fail",
+		"stage": stage, "tries": tries, "spent": tries * cost,
+	})
+	if success:
+		_notice("%s %d단계 성공! %s +%d%%" % [str(kind.name), stage, str(kind.statName), int(Fitness.bonus(stage))])
+	elif tries > 1:
+		_notice("%s %d번 두드렸지만 실패 — %s이 모자랍니다" % [str(kind.name), tries, str(kind.proteinName)])
+	else:
+		_notice("%s %d단계 실패" % [str(kind.name), stage + 1])
 
 
 ## --- 유료 재화 (docs/features/server.md "유료 재화") ---

@@ -11,4 +11,5 @@ export * from './movement.ts';
 export * from './zone.ts';
 export * from './zones.ts';
 export * from './dungeons.ts';
+export * from './fitness.ts';
 export * from './store.ts';

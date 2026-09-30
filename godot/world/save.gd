@@ -49,6 +49,9 @@ static func write(zone_id: String, player: Dictionary) -> void:
 		"skill_upgrade_exp": player.get("skill_upgrade_exp", {}),
 		# 아직 안 넣은 스킬 경험치(던전 클리어로 쌓인다) — 없던 칸이라 옛 저장은 0 으로 읽힌다
 		"skill_exp": player.get("skill_exp", 0),
+		# 헬스 — 프로틴 `{power, defense, health}` 과 운동 단계 `{bench, deadlift, squat}`. 없던 칸이라 옛 저장은 빈 사전
+		"proteins": player.get("proteins", {}),
+		"fitness": player.get("fitness", {}),
 		# 물약을 저절로 마시는 기준(HP %) — 없던 칸이라 옛 저장은 처음 값(70)으로 읽힌다
 		"potion_pct": player.get("potion_pct", 70),
 		# 자동 사냥 스킬 순서 — 없던 칸이라 옛 저장은 빈 목록(쿨타임 긴 순)으로 읽힌다

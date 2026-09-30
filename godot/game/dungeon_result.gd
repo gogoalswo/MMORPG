@@ -104,7 +104,7 @@ func _build() -> void:
 	column.add_child(_button)
 
 
-## `World._finish_run` 그대로 — `{dungeon, name, stage, result, kills, need, skill_exp, crystals}`
+## `World._finish_run` 그대로 — `{dungeon, name, stage, result, kills, need, skill_exp, crystals, protein}`
 func show_result(event: Dictionary) -> void:
 	var clear := str(event.get("result", "")) == "clear"
 	_title.text = "%s %d단계" % [str(event.get("name", "던전")), int(event.get("stage", 0))]
@@ -123,6 +123,10 @@ func show_result(event: Dictionary) -> void:
 	var crystals := int(event.get("crystals", 0))
 	if crystals > 0:
 		_rewards.add_child(_reward_cell(Items.crystal_id(), "%s x%d" % [Items.stack_name({"id": Items.crystal_id()}), crystals]))
+	# 헬스 프로틴 세 종 — 창 높이가 빠듯해 한 칸에 나란히 (docs/features/fitness.md)
+	var protein := int(event.get("protein", 0))
+	if protein > 0:
+		_rewards.add_child(_protein_cell(protein))
 	if _rewards.get_child_count() == 0:
 		var none := _label("보상 없음", 20, DIM)
 		none.name = "no_reward"
@@ -167,6 +171,35 @@ func _reward_cell(icon_name: String, text: String) -> Control:
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	row.add_child(label)
+	return cell
+
+
+## 프로틴 세 종을 한 칸에 — [통] x25 [통] x25 [통] x25
+func _protein_cell(count: int) -> Control:
+	var cell := PanelContainer.new()
+	cell.name = "protein"
+	var box := StyleBoxFlat.new()
+	box.bg_color = GatePanel.CELL_BG
+	box.border_color = GatePanel.CELL_LINE
+	box.set_border_width_all(1)
+	box.set_content_margin_all(8)
+	cell.add_theme_stylebox_override("panel", box)
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 10)
+	cell.add_child(row)
+	for kind in Fitness.kinds():
+		var icon := TextureRect.new()
+		icon.texture = _icon.call("ui_protein_" + str(kind.protein)) if _icon.is_valid() else null
+		icon.custom_minimum_size = Vector2(REWARD_ICON, REWARD_ICON) * 0.75
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.tooltip_text = str(kind.proteinName)
+		row.add_child(icon)
+		var label := _label("x%d" % count, 22, GatePanel.CARD_GOLD)
+		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		row.add_child(label)
 	return cell
 
 

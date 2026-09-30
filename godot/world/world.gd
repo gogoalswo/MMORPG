@@ -317,6 +317,10 @@ func join(player_id: String) -> void:
 		"name": str(kept.get("name", "")),
 		# 유료 재화 — 서버가 결제를 확인해야만 는다. 혼자 노는 판에서는 늘 0 이다
 		"diamonds": int(kept.get("diamonds", 0)),
+		# --- 헬스 (docs/features/fitness.md) --- 던전을 깨면 쌓이는 프로틴 `{power, defense, health}` 과
+		# 운동 단계 `{bench, deadlift, squat}`. 헬스 창에서 프로틴을 넣어 단계를 올린다 (`fitness_up`)
+		"proteins": kept.get("proteins", {}).duplicate(),
+		"fitness": kept.get("fitness", {}).duplicate(),
 	}
 	_refresh_stats(_players[player_id])
 
@@ -880,6 +884,7 @@ func _start_run() -> void:
 		"stage": int(stage.get("stage", 0)),
 		"skill_exp": int(stage.get("skillExp", 0)),
 		"crystals": int(stage.get("crystals", 0)),
+		"protein": int(stage.get("protein", 0)),
 		"result": "",
 	}
 	if int(stage.get("kills", 0)) > 0:
@@ -929,6 +934,8 @@ func _finish_run(result: String) -> void:
 		"result": result, "kills": int(_run.get("kills", 0)), "need": int(_run.get("need", 0)),
 		"skill_exp": int(_run.skill_exp) if clear else 0,
 		"crystals": int(_run.crystals) if clear else 0,
+		# 프로틴 세 종 **각각** 이만큼 — 토벌은 `Ledger._check_dungeon_clear`, 시련은 `trial_clear` 가 이미 줬다
+		"protein": int(_run.protein) if clear else 0,
 	})
 
 
@@ -1489,6 +1496,18 @@ func restore(player_id: String) -> bool:
 	player.skill_upgrade_exp = progress
 	# 아직 안 넣은 스킬 경험치 — 없던 칸이라 옛 저장은 0. 옛 경험치북은 표에 없어 가방에서 버려진다
 	player.skill_exp = maxi(0, int(saved.get("skill_exp", 0)))
+	# 헬스 — 없던 칸이라 옛 저장은 빈 사전. **지금 표에 있는 운동·프로틴만**, 단계는 끝 단계 안으로
+	var raw_proteins = saved.get("proteins", {})
+	var raw_fitness = saved.get("fitness", {})
+	var proteins := {}
+	var stages := {}
+	for kind in Fitness.kinds():
+		if raw_proteins is Dictionary and int(raw_proteins.get(str(kind.protein), 0)) > 0:
+			proteins[str(kind.protein)] = int(raw_proteins[str(kind.protein)])
+		if raw_fitness is Dictionary and int(raw_fitness.get(str(kind.id), 0)) > 0:
+			stages[str(kind.id)] = clampi(int(raw_fitness[str(kind.id)]), 0, Fitness.max_stage())
+	player.proteins = proteins
+	player.fitness = stages
 	# 물약을 저절로 마시는 기준 — 없던 칸이라 옛 저장은 처음 값으로 읽힌다
 	set_potion_pct(player_id, int(saved.get("potion_pct", player.potion_pct)))
 
@@ -1836,6 +1855,32 @@ func feed_upgrade(player_id: String, skill_id: String, slot: int) -> void:
 	if player.is_empty():
 		return
 	_ledger_call(player, &"feed_upgrade", [skill_id, slot])
+
+
+## --- 헬스 --- (docs/features/fitness.md)
+
+## 헬스 창의 **강화** · **자동** — 운동 하나의 다음 단계를 확률로 두드린다. 판정은 `Ledger.fitness_up`
+func fitness_up(player_id: String, kind_id: String, auto: bool) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	_ledger_call(player, &"fitness_up", [kind_id, 1 if auto else 0])
+
+
+## 테스트 단추 — 프로틴 세 종을 `DEBUG_PROTEIN` 개씩 넣는다 (던전을 안 돌고 헬스를 볼 때)
+const DEBUG_PROTEIN := 10000
+
+
+func debug_protein(player_id: String) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	var have: Dictionary = player.get("proteins", {})
+	for kind in Fitness.kinds():
+		have[str(kind.protein)] = int(have.get(str(kind.protein), 0)) + DEBUG_PROTEIN
+	player.proteins = have
+	_events.append({"type": "protein", "gain": {}, "total": have.duplicate()})
+	_notice("테스트: 프로틴 세 종 +%d" % DEBUG_PROTEIN)
 
 
 ## 테스트 단추 — 스킬 경험치를 `DEBUG_SKILL_EXP` 만큼 넣는다 (던전을 안 돌고 강화를 볼 때)
@@ -2380,7 +2425,9 @@ func _hit_monster(player: Dictionary, target: Dictionary, attack: float, skill_i
 ## 내려보내므로 여기서는 그대로 곱하기만 한다. 생존을 레벨 쪽에 묶어 둬야
 ## 저레벨 캐릭이 고등급 장비를 껴도 상위 사냥터에서 죽어 **게이팅이 자동으로 걸린다**
 func _refresh_stats(player: Dictionary) -> void:
-	player.stats = stats_of(str(player.job), int(player.level), player.equipped, player.get("passives", {}))
+	player.stats = stats_of(
+		str(player.job), int(player.level), player.equipped, player.get("passives", {}), player.get("fitness", {})
+	)
 	player.hp = mini(int(player.hp), int(player.stats.maxHp))
 
 
@@ -2391,7 +2438,10 @@ func _speed_of(player: Dictionary) -> float:
 
 ## 스탯 계산 알맹이 — 서버의 처치 검증(`KillCheck`)도 같은 값을 쓴다
 ## `passives` 는 배운 패시브 단계 `{ id: 단계 }` — **공속은 여기서만 온다** (질풍각, 2026-09-29)
-static func stats_of(job: String, level: int, equipped: Dictionary, passives: Dictionary = {}) -> Dictionary:
+## `fitness` 는 헬스 운동 단계 `{ id: 단계 }` — 공격력·방어력·체력에 **장비 % 와 따로 곱한다** (fitness.md)
+static func stats_of(
+	job: String, level: int, equipped: Dictionary, passives: Dictionary = {}, fitness: Dictionary = {}
+) -> Dictionary:
 	var stats := Combat.stats_for(job, level)
 	var gear := Items.equipment_stats(equipped)
 	# 캐릭터 정보 창이 패시브 몫을 따로 적는다 — 더하기 전 값을 `passive_*` 로 같이 내린다.
@@ -2409,6 +2459,13 @@ static func stats_of(job: String, level: int, equipped: Dictionary, passives: Di
 	))
 	stats.defense = maxi(0, roundi(float(stats.defense) * (1.0 + float(gear.defense) / 100.0)))
 	stats.maxHp = maxi(1, roundi(float(stats.maxHp) * (1.0 + float(gear.maxHp) / 100.0)))
+	# 헬스 — 장비 % 에 더하지 않고 **곱한다.** 더하면 태초 풀셋(+856%) 앞에서 +50% 가 +5% 로 준다.
+	# 캐릭터 정보 창이 몫을 따로 적도록 % 를 같이 내린다 (`fitness_attack` …)
+	var fit := Fitness.stat_bonus(fitness)
+	for key in ["attack", "defense", "maxHp"]:
+		stats["fitness_" + key] = float(fit[key])
+		if float(fit[key]) > 0.0:
+			stats[key] = maxi(0 if key == "defense" else 1, roundi(float(stats[key]) * (1.0 + float(fit[key]) / 100.0)))
 	# **상한이 없다** ★ (2026-09-23 지시: "상한 없애."). 치확 100% 면 늘 치명타,
 	# 공속은 `cooldown / (1 + 공속)` 이라 얼마든 올라가도 0 으로 안 나뉜다.
 	# 가방 옆 장비 창은 **장비 몫만** 적는다 (2026-09-28 요청) — 더하기 전 장비 합계를 같이 내린다

@@ -82,6 +82,10 @@ const FRAME_SIZE = {
   'dungeon_treasure.png': 512,
   'ui_dungeon_card.png': 384,
   'ui_dungeon_crest.png': 384,
+  // 헬스 창 가운데 문장 (2026-09-30) — 창에서 280px 안팎으로 크게 앉는다
+  'ui_fitness_bench.png': 384,
+  'ui_fitness_deadlift.png': 384,
+  'ui_fitness_squat.png': 384,
 };
 /**
  * **배경을 걷지 않는 것.** 스킬 아이콘은 칸을 꽉 채운 그림이라 가장자리가 곧 그림이다.
@@ -338,9 +342,59 @@ async function makeBarFill() {
   console.log('  -> public/assets/icons/ui_bar_fill.png (직사각 그라데이션 — 여기서 그렸다)');
 }
 
+/**
+ * **한 장에 여럿을 뽑은 것을 자른다.** 색만 다른 한 벌은 한 장에 같이 뽑아야 결(각·빛·크기)이
+ * 맞는다 — 따로 뽑으면 통마다 모양이 달라진다 (2026-09-30 프로틴 세 통). 흰 세로 틈으로 가른다.
+ * 자른 것은 원본 폴더에 새 이름으로 두고, 아래 고리가 다른 그림처럼 굽는다
+ */
+const SHEETS = {
+  'ui_protein_sheet.png': ['ui_protein_power.png', 'ui_protein_defense.png', 'ui_protein_health.png'],
+};
+
+async function splitSheets() {
+  for (const [sheet, parts] of Object.entries(SHEETS)) {
+    const src = join(SRC, sheet);
+    if (!existsSync(src)) continue;
+    const { data, info } = await sharp(src).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+    // 세로 줄마다 흰색이 아닌 점이 있나 — 있는 줄이 이어진 덩어리가 그림 하나다
+    const busy = [];
+    for (let x = 0; x < info.width; x += 1) {
+      let ink = 0;
+      for (let y = 0; y < info.height; y += 1) {
+        const i = (y * info.width + x) * 3;
+        if (data[i] < 235 || data[i + 1] < 235 || data[i + 2] < 235) ink += 1;
+      }
+      busy.push(ink > 2);
+    }
+    const runs = [];
+    for (let x = 0; x < info.width; x += 1) {
+      if (busy[x] && (x === 0 || !busy[x - 1])) runs.push([x, x]);
+      if (busy[x]) runs[runs.length - 1][1] = x;
+    }
+    // 긴 덩어리부터 그림 수만큼 — 티끌 같은 짧은 덩어리는 버린다. 왼쪽부터 차례로 이름을 준다
+    const picked = runs
+      .sort((a, b) => b[1] - b[0] - (a[1] - a[0]))
+      .slice(0, parts.length)
+      .sort((a, b) => a[0] - b[0]);
+    if (picked.length !== parts.length) {
+      console.log(`  !! ${sheet}: 그림 ${parts.length}개로 못 갈랐다 (${picked.length}개)`);
+      continue;
+    }
+    for (let k = 0; k < parts.length; k += 1) {
+      const pad = 12;
+      const left = Math.max(0, picked[k][0] - pad);
+      const width = Math.min(info.width, picked[k][1] + pad + 1) - left;
+      await sharp(src).extract({ left, top: 0, width, height: info.height }).png().toFile(join(SRC, parts[k]));
+    }
+    console.log(`  -> ${sheet} 를 ${parts.join(' · ')} 로 갈랐다`);
+  }
+}
+
+await splitSheets();
+
 for (const name of readdirSync(SRC).filter((f) => f.endsWith('.png')).sort()) {
-  // 채움은 받은 그림을 쓰지 않는다 (아래에서 그려 낸다)
-  if (name === 'ui_bar_fill.png') continue;
+  // 채움은 받은 그림을 쓰지 않는다 (아래에서 그려 낸다). 한 장짜리 묶음은 자른 것만 굽는다
+  if (name === 'ui_bar_fill.png' || name in SHEETS) continue;
   const src = join(SRC, name);
   const { data, info } = await sharp(src)
     .ensureAlpha()

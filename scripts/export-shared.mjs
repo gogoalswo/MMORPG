@@ -64,6 +64,9 @@ import {
   START_ZONE,
   FIELD_ORDER,
   DUNGEON_TYPES,
+  FITNESS_KINDS,
+  FITNESS_MAX_STAGE,
+  FITNESS_STEPS,
   GROUND_KINDS,
   GROUND_LOOKS,
   ITEMS,
@@ -132,6 +135,12 @@ export function buildData() {
       upgradeMax: SKILL_UPGRADE_MAX,
       // 패시브 — 레벨마다 열리고 스킬창 [습득] 으로 붙는다 (2026-09-29, 질풍각 = 공속)
       passives: PASSIVES,
+    },
+    // 헬스 — 운동 셋과 단계 표(확률·프로틴·몫). 장부(`Ledger.fitness_up`)와 헬스 창이 읽는다
+    'fitness.json': {
+      kinds: FITNESS_KINDS,
+      maxStage: FITNESS_MAX_STAGE,
+      steps: FITNESS_STEPS,
     },
     // 밸런스 설계(stat-balance.md)의 수치. **아직 게임이 안 읽는다** — 판정은
     // 여전히 combat.json 으로 돈다. 설계 문서 9장 순서대로 stats.gd 가 먼저 서야 한다

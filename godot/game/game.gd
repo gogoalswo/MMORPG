@@ -374,6 +374,8 @@ var _death_panel: DeathPanel
 ## 쓰러진 자리 `{zone, x, z}` — 묘비(tomb.gd)를 세운다. **메모리에만 두고 저장하지 않는다**
 ## (2026-09-30 요청: "묘비는 게임 껐다 켜면 사라지게")
 var _tombs: Array[Dictionary] = []
+## 헬스 창 — 던전 창과 같은 층(10) · 전체 화면 (fitness_panel.gd)
+var _fitness_panel: FitnessPanel
 var _skill_panel: PanelContainer
 ## 스킬창. 틀은 한 번 짓고 `_redraw_skills` 가 채운다
 var _skill_big: PanelContainer
@@ -629,6 +631,8 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			# 창이 열린 채 옮겨 가면 남는다 — 새 존에는 그 NPC 가 없다
 			_npc_panel.visible = false
 			_dungeon_result.visible = false
+		&"fitnessResult":
+			_fitness_panel.show_result(payload)
 		&"dungeonResult":
 			# 성공이든 실패든 결과창. 걷던 곳·자동 사냥 겨냥을 멈춘다 — 확인을 누르면 마을로 나간다
 			# (쓰러졌으면 마을에서 되살아난다 — `_on_result_confirmed`)
@@ -2157,7 +2161,8 @@ func _toggle_char() -> void:
 
 
 ## 캐릭터 정보 — 값은 판정(`world.gd` `_refresh_stats`)이 내려준 그대로 적는다.
-## 기본(`base_*`)은 레벨 맨몸 값, 증가(`gear_*`)는 장비 % 합계, 최종은 둘을 곱한 판정 값이다.
+## 기본(`base_*`)은 레벨 맨몸 값, 증가(`gear_*`)는 장비 % 합계, 헬스(`fitness_*`)는 헬스 %,
+## 최종은 셋을 곱한 판정 값이다.
 ## 화면이 공식을 다시 돌리지 않는다 — 돌리면 반올림이 어긋나 최종이 1 씩 틀려 보인다
 ## **`_refresh_status` 가 매 프레임 부른다** — 레벨업·장비가 가방을 닫은 채로도 바로 보인다.
 ## 줄 글자가 지난번과 같으면 표를 다시 짓지 않는다
@@ -2171,9 +2176,16 @@ func _redraw_char(me: Dictionary) -> void:
 		var final := int(stats.get(key, 0))
 		# 공격력 증가는 장비 % 에 패시브 철각(+30%)을 더한 합이다 — 최종이 그 합으로 곱해진다
 		var gear := float(stats.get("gear_" + key, 0.0)) + float(stats.get("passive_" + key, 0.0)) * 100.0
+		var fit := float(stats.get("fitness_" + key, 0.0))
 		groups.append([
 			["기본 " + name, "%d" % int(stats.get("base_" + key, final))],
-			[name + " 증가", _bonus_text(key, gear), INV_GOLD_HI if gear > 0.0 else INV_DIM],
+			# 헬스 몫은 장비 % 와 따로 곱한다 (docs/features/fitness.md) — **줄을 늘리지 않고** 증가 줄
+			# 끝에 붙인다. 줄 셋을 더했더니 창이 화면(720) 위아래로 넘쳤다 (ui_test). 0 이면 안 붙인다
+			[
+				name + " 증가",
+				_bonus_text(key, gear) + ("  헬스 +%d%%" % int(fit) if fit > 0.0 else ""),
+				INV_GOLD_HI if gear > 0.0 or fit > 0.0 else INV_DIM,
+			],
 			["최종 " + name, "%d" % final, INV_GOLD_HI],
 		])
 	# 나머지는 맨몸 값이 없거나(0) 고정(치명타 피해 100%)이라 합계 한 줄씩이다
@@ -2808,6 +2820,8 @@ func _build_skill_bar() -> void:
 		bag_cell,
 		# 던전 — 가방 바로 옆 (2026-09-23 요청)
 		_icon_button("ui_icon_dungeon", "던전", _toggle_dungeon, MENU_BTN, true),
+		# 헬스 — 던전 옆 (2026-09-30). 던전에서 받은 프로틴을 넣는 곳이라 붙여 둔다. 그림은 쇠 덤벨
+		_icon_button("ui_icon_fitness", "헬스", _toggle_fitness, MENU_BTN, true),
 	]
 	# 랭킹 — 던전 옆. **서버에 붙었을 때만** 선다 (혼자 노는 판에는 견줄 사람이 없다).
 	# 그림은 월계관 두른 금 트로피(`ui_icon_rank`)
@@ -3550,16 +3564,22 @@ func _build_test_switches() -> void:
 	# 크리스탈 30개를 가방에 넣는다 (2026-09-23 요청 — "가방에 30개 넣어". 드랍이 0.1% 라
 	# 주워서는 시험해 볼 수 없다)
 	var crystals := Button.new()
-	crystals.custom_minimum_size = Vector2(230, 52)
-	crystals.add_theme_font_size_override("font_size", 18)
-	crystals.text = "테스트: 크리스탈 30"
+	crystals.custom_minimum_size = Vector2(112, 52)
+	crystals.add_theme_font_size_override("font_size", 16)
+	crystals.text = "크리스탈\n30"
 	crystals.pressed.connect(func() -> void:
 		_transport.send(&"debugCrystals", {"count": 30})
 		if _bag_panel.visible:
 			_redraw_bag()
 	)
-	column.add_child(crystals)
-	column.move_child(crystals, 0)
+	# 프로틴 세 종 +1만 — 던전을 안 돌고 헬스를 볼 때 (`World.debug_protein`, 2026-09-30).
+	# 목록이 위로 넘치므로 줄을 늘리지 않고 크리스탈과 한 줄에 반씩 놓는다
+	var crystal_row := HBoxContainer.new()
+	crystal_row.add_theme_constant_override("separation", 6)
+	crystal_row.add_child(crystals)
+	crystal_row.add_child(_test_button("프로틴\n+1만", 112, 16, &"debugProtein", {}))
+	column.add_child(crystal_row)
+	column.move_child(crystal_row, 0)
 	# 스킬 강화 — **모든 스킬 1번 강화 · 2번 강화 · 초기화** (2026-09-23 요청). 경험치북
 	# 없이 바로 붙는다 (사용자 선택). 줄이 위로 자라므로 앞의 둘은 **한 줄에 반씩** 놓는다
 	var reset := _test_button("테스트: 강화 초기화", 230, 18, &"debugResetUpgrades", {})
@@ -4318,9 +4338,27 @@ func _build_gate_panel() -> void:
 	_dungeon_panel.visibility_changed.connect(func(): dungeon_back.visible = _dungeon_panel.visible)
 	top.add_child(_dungeon_panel)
 
+	# 헬스 창도 같은 층·같은 결이다 (전체 화면 · 돌판 틀 · 뒤에 불투명한 판) → docs/features/fitness.md
+	_fitness_panel = FitnessPanel.make(_frame_box, _icon)
+	_fitness_panel.theme = _ui_root.theme
+	_fitness_panel.up_requested.connect(func(kind: String, auto: bool) -> void:
+		_transport.send(&"fitnessUp", {"kind": kind, "auto": auto})
+	)
+	var fitness_back := ColorRect.new()
+	fitness_back.name = "FitnessBack"
+	fitness_back.color = DungeonPanel.CARD_DARK
+	fitness_back.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fitness_back.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	fitness_back.visible = false
+	top.add_child(fitness_back)
+	_fitness_panel.visibility_changed.connect(func(): fitness_back.visible = _fitness_panel.visible)
+	top.add_child(_fitness_panel)
+	_close_button(_fitness_panel, _toggle_fitness, 0)
+
 
 func _open_gate() -> void:
 	_dungeon_panel.visible = false
+	_fitness_panel.visible = false
 	_gate_panel.open(_shown_zone)
 
 
@@ -4330,7 +4368,19 @@ func _toggle_dungeon() -> void:
 		_dungeon_panel.close_panel()
 		return
 	_gate_panel.visible = false
+	_fitness_panel.visible = false
 	_dungeon_panel.open(_shown_zone)
+
+
+## 헬스 단추. 열려 있으면 닫는다. 차원문·던전 창과 한 층이라 그 둘을 닫고 연다
+func _toggle_fitness() -> void:
+	if _fitness_panel.visible:
+		_fitness_panel.close_panel()
+		return
+	_gate_panel.visible = false
+	_dungeon_panel.visible = false
+	_fitness_panel.refresh(_me())
+	_fitness_panel.open()
 
 
 ## 문을 눌렀다. **거리와 상관없이 바로 창을 연다** (2026-09-18 요청: "포탈까지
@@ -5344,6 +5394,7 @@ func _refresh_status(me: Dictionary) -> void:
 	# 던전에서 쓰러졌으면 결과창("실패")이 대신 뜬다
 	_death_panel.visible = bool(me.get("dead", false)) and not _dungeon_result.visible
 	_redraw_char(me)
+	_fitness_panel.refresh(me)
 	var max_hp := maxf(1.0, float(me.stats.maxHp))
 	_hp_bar.max_value = max_hp
 	_hp_bar.value = float(me.hp)

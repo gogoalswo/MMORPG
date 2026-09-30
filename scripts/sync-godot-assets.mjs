@@ -93,6 +93,10 @@ const ICONS = [
   'ui_icon_dungeon.png',
   // 랭킹 단추 — 월계관 두른 금 트로피 (2026-09-28). 서버에 붙었을 때만 메뉴에 선다
   'ui_icon_rank.png',
+  // 헬스 (2026-09-30, docs/features/fitness.md) — 메뉴 덤벨 · 창 가운데 문장 셋 · 프로틴 셋
+  'ui_icon_fitness.png',
+  'ui_fitness_bench.png', 'ui_fitness_deadlift.png', 'ui_fitness_squat.png',
+  'ui_protein_power.png', 'ui_protein_defense.png', 'ui_protein_health.png',
   // 던전 종류 카드 그림 셋 — 토벌(보스 머리) · 시련의 탑 · 보물 창고 (2026-09-23)
   'dungeon_raid.png', 'dungeon_trial.png', 'dungeon_treasure.png',
   // 던전 카드 틀 · 위 장식 (2026-09-28)

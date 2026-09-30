@@ -245,7 +245,8 @@ export class CombatSystem {
 
       // 치명타는 대상마다 따로 굴린다 — 범위기 한 방이 통째로 터지면
       // 피해가 뭉쳐서 숫자가 튄다
-      const crit = rollCrit(extra.crit ?? 0, Math.random());
+      // **치명타 저항은 확률에서 뺀다** (100레벨 사냥터부터 — `monsterCritResist`)
+      const crit = rollCrit((extra.crit ?? 0) - runtime.kind.critResist, Math.random());
       const base = computeDamage(attack, runtime.kind.defense);
       const amount = crit
         ? Math.max(1, Math.round(base * (1 + (extra.critDamage ?? 1))))

@@ -1,0 +1,62 @@
+class_name Tomb
+extends RefCounted
+
+## 묘비 3D — 캐릭터가 쓰러진 자리에 선다 (2026-09-30 요청: "캐릭터가 죽으면 해당 위치에 묘비
+## 만들어놔. 묘비는 게임 껐다 켜면 사라지게"). 자리는 `game.gd` 의 `_tombs` 가 **메모리에만**
+## 들고 있고 저장하지 않는다 — 그래서 게임을 다시 켜면 없다. 보여주기만 하고 판정과 무관하다
+## (막지도, 눌리지도 않는다) → docs/features/combat.md "사망"
+##
+## 모델(`MODEL`)이 있으면 그걸 세우고, 없으면 회색 돌판(받침 + 윗머리가 둥근 비석)을 그린다 —
+## 차원문(`portal.gd`)과 같은 짜임이다. 바르코 모델을 받으면 이 자리에 넣기만 하면 된다
+
+const MODEL := "res://assets/models/varco_tomb.glb"
+## 비석 높이(m). 사람(1.8m 안팎)의 반을 조금 넘는다
+const HEIGHT := 1.0
+const STONE := Color("#77726a")
+
+
+static func create(x: float, y: float, z: float) -> Node3D:
+	var root := Node3D.new()
+	root.name = "Tomb"
+	root.position = Vector3(x, y, z)
+	# 정면(+z)이 카메라를 보게 돌린다 — 차원문과 같다
+	root.rotation.y = CameraRig.YAW
+
+	if ResourceLoader.exists(MODEL):
+		var packed: PackedScene = load(MODEL)
+		var model := packed.instantiate() as Node3D
+		# 모델은 1×1×1 로 정규화돼 있고 원점이 한가운데다 (portal.gd 와 같다)
+		model.scale = Vector3.ONE * HEIGHT
+		model.position.y = 0.5 * HEIGHT
+		root.add_child(model)
+		return root
+
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = STONE
+	mat.roughness = 0.95
+	# 받침
+	root.add_child(_part(_box(Vector3(0.95, 0.14, 0.45)), Vector3(0, 0.07, 0), Vector3.ZERO, mat))
+	# 비석 몸통과 둥근 윗머리. 원기둥을 눕혀(축이 앞뒤) 몸통 위에 반쯤 묻는다
+	var body_h := HEIGHT - 0.14 - 0.35
+	root.add_child(_part(_box(Vector3(0.7, body_h, 0.16)), Vector3(0, 0.14 + body_h / 2.0, 0), Vector3.ZERO, mat))
+	var cap := CylinderMesh.new()
+	cap.top_radius = 0.35
+	cap.bottom_radius = 0.35
+	cap.height = 0.16
+	root.add_child(_part(cap, Vector3(0, 0.14 + body_h, 0), Vector3(PI / 2.0, 0, 0), mat))
+	return root
+
+
+static func _box(size: Vector3) -> BoxMesh:
+	var box := BoxMesh.new()
+	box.size = size
+	return box
+
+
+static func _part(mesh: Mesh, at: Vector3, turn: Vector3, mat: Material) -> MeshInstance3D:
+	var part := MeshInstance3D.new()
+	part.mesh = mesh
+	part.position = at
+	part.rotation = turn
+	part.material_override = mat
+	return part

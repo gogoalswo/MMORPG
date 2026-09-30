@@ -102,11 +102,11 @@ test('몬스터 표가 설계 문서 6장과 같다 (사냥터 끝 레벨)', () 
   const rows = [
     // 2026-09-25 에 HP 를 초반부터 서서히 올려 Lv200 에서 3배 (`3^((L−1)/199)`)
     // 2026-09-30 에 공격력을 "한 마리 잡는 동안 HP 10%" 로 다시 구웠다 (`monsterAttack.ts`)
-    { level: 10, grade: 1.0, hp: 75, atk: 33 },
+    { level: 10, grade: 1.0, hp: 75, atk: 29 },
     { level: 50, grade: 1.63, hp: 308, atk: 118 },
-    { level: 100, grade: 3.3, hp: 3272, atk: 373 },
-    { level: 150, grade: 4.97, hp: 57924, atk: 2041 },
-    { level: 200, grade: 6.63, hp: 1278546, atk: 14659 },
+    { level: 100, grade: 3.3, hp: 3272, atk: 419 },
+    { level: 150, grade: 4.97, hp: 57924, atk: 2247 },
+    { level: 200, grade: 6.63, hp: 1278546, atk: 14955 },
   ];
   for (const row of rows) {
     assert.equal(Math.round(refGrade(row.level) * 100) / 100, row.grade, `Lv${row.level} 기준 등급`);

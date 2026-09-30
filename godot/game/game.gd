@@ -440,6 +440,8 @@ var _rank_panel: PanelContainer
 var _rank_grid: GridContainer
 var _rank_note: Label
 var _char_head: Label
+## 캐릭터 정보 창 제목 — "캐릭터 정보" 대신 닉네임을 적는다 (2026-09-30 요청)
+var _char_name: Label
 var _char_grids: Array = []
 var _char_last := ""
 var _crystal_icon: PanelContainer
@@ -1396,7 +1398,8 @@ func _build_char_window(panel: PanelContainer) -> void:
 	side.add_theme_constant_override("separation", 7)
 	panel.add_child(side)
 
-	var title := _stone_title(side, "캐릭터 정보", 22, "ui_icon_character")
+	var title := _stone_title(side, "", 22, "ui_icon_character")
+	_char_name = title
 	_char_head = _inv_label("", 20, INV_TEXT)
 	_char_head.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	title.get_parent().add_child(_char_head)
@@ -2183,10 +2186,12 @@ func _redraw_char(me: Dictionary) -> void:
 		["받는 피해", "%.1f%%" % (_taken_share(int(me.get("level", 1)), float(stats.get("defense", 0))) * 100.0)],
 	])
 	var head := "LV. %d" % int(me.get("level", 1))
-	var seen := head + str(groups)
+	var nick := str(me.get("name", ""))
+	var seen := nick + head + str(groups)
 	if seen == _char_last:
 		return
 	_char_last = seen
+	_char_name.text = nick
 	_char_head.text = head
 	for index in groups.size():
 		_fill_detail_rows(groups[index], _char_grids[index])

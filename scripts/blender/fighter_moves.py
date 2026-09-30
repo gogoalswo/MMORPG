@@ -95,6 +95,16 @@ HK_EXTEND = pose(HK_CHAMBER,
                  lh=(0.05, -0.08, 0.78), rh=(-0.10, 0.00, 0.70),
                  lf=(0.05, -0.24, 0.96), lfPole=(0, -0.3, 1), lfPitch=-10)
 
+# 뺨 때리듯 좌우로 — **평타** (2026-09-30 요청: "느릴 때, 빠를 때 구분하지 말고, 아까 스크린샷 보여준
+# 자세에서 뺨 때리듯이 좌우로 팍팍팍팍 때리도록"). 위 옆차기로 든 발을 머리 높이에서 **가로로 휘두른다**.
+# A = 바깥(몸 왼쪽, +X) · B = 안쪽(몸 앞을 가로질러, -X). 몸통도 따라 틀고 발등이 치는 쪽을 본다
+SLAP_A = pose(HK_EXTEND, hipsR=(-6, -25, -56), head=(14, 0, 48),
+              lf=(0.22, -0.14, 0.86), lfYaw=30)
+SLAP_B = pose(HK_EXTEND, hipsR=(-6, -25, -86), head=(14, 0, 74),
+              lf=(-0.10, -0.20, 0.85), lfYaw=-30)
+SLAP_A_REB = pose(SLAP_A, lf=(0.19, -0.16, 0.87))
+SLAP_B_REB = pose(SLAP_B, lf=(-0.07, -0.21, 0.86))
+
 # 할퀴기 — 넓은 자세에서 오른손·왼손·오른손으로 앞을 가로질러 긁는다.
 # 이펙트의 첫 줄기가 캐릭터 오른쪽에서 왼쪽으로 가고 번갈아 돈다 (`SkillFx.local_point`)
 CLAW_BASE = pose(GUARD,
@@ -382,20 +392,18 @@ CLIPS = {
             (0.40, GUARD, "BEZIER"), (0.60, GUARD, "BEZIER")],
     "Cross": [(0.0, GUARD, "LINEAR"), (0.10, CROSS, "BEZIER"), (0.20, CROSS, "BEZIER"),
               (0.42, GUARD, "BEZIER"), (0.60, GUARD, "BEZIER")],
-    # 평타 — 높은 옆차기. **세 벌이고 길이가 모두 0.9 = 격투가 기본 간격**이라, 공속만큼 배속으로 틀면
-    # 다음 대가 오는 때에 딱 끝난다. 0.16(시작)·0.07(이어 차기) 이 맞는 순간
-    # - HighKick     느릴 때(배속 2 미만) 한 대 — 무릎 들고(0.08) 차고(0.16) 접고(0.36) 내려와 선다(0.60)
-    # - HighKickIn   빠를 때 첫 대 — 차고 나서 **무릎을 든 채** 끝난다
-    # - HighKickLoop 빠를 때 이어 차기 — 든 무릎에서 뻗고(0.07) 접어(0.24) 든 채 기다린다
-    "HighKick": [(0.0, GUARD, "BEZIER"), (0.08, HK_CHAMBER, "LINEAR"),
-                 (0.16, HK_EXTEND, "BEZIER"), (0.24, HK_EXTEND, "BEZIER"),
-                 (0.36, HK_CHAMBER, "BEZIER"), (0.60, GUARD, "BEZIER"), (0.90, GUARD, "BEZIER")],
-    "HighKickIn": [(0.0, GUARD, "BEZIER"), (0.08, HK_CHAMBER, "LINEAR"),
-                   (0.16, HK_EXTEND, "BEZIER"), (0.24, HK_EXTEND, "BEZIER"),
-                   (0.36, HK_CHAMBER, "BEZIER"), (0.90, HK_CHAMBER, "BEZIER")],
-    "HighKickLoop": [(0.0, HK_CHAMBER, "LINEAR"), (0.07, HK_EXTEND, "BEZIER"),
-                     (0.12, HK_EXTEND, "BEZIER"), (0.24, HK_CHAMBER, "BEZIER"),
-                     (0.90, HK_CHAMBER, "BEZIER")],
+    # 평타 — 든 발로 뺨 치듯 좌우로. **세 벌이고 길이가 모두 0.9 = 격투가 기본 간격**이라 공속만큼
+    # 배속으로 틀면 다음 대가 오는 때에 딱 끝난다. 느릴 때·빠를 때를 가르지 않는다 (사용자 지시)
+    # - KickSlapIn  첫 대 — 무릎 들고(0.08) 바깥에서(0.13) 앞을 쳐(0.18 = 맞는 순간) 안쪽으로 넘긴다
+    # - KickSlapA   이어지는 대 — 안쪽에서 앞을 쳐(0.05) 바깥으로
+    # - KickSlapB   이어지는 대 — 바깥에서 앞을 쳐(0.05) 안쪽으로. A·B 는 번갈아 가며 서로의 끝에서 시작한다
+    "KickSlapIn": [(0.0, GUARD, "BEZIER"), (0.08, HK_CHAMBER, "LINEAR"),
+                   (0.13, SLAP_A, "LINEAR"), (0.18, HK_EXTEND, "LINEAR"),
+                   (0.23, SLAP_B, "BEZIER"), (0.31, SLAP_B_REB, "BEZIER"), (0.90, SLAP_B_REB, "BEZIER")],
+    "KickSlapA": [(0.0, SLAP_B_REB, "LINEAR"), (0.05, HK_EXTEND, "LINEAR"),
+                  (0.10, SLAP_A, "BEZIER"), (0.18, SLAP_A_REB, "BEZIER"), (0.90, SLAP_A_REB, "BEZIER")],
+    "KickSlapB": [(0.0, SLAP_A_REB, "LINEAR"), (0.05, HK_EXTEND, "LINEAR"),
+                  (0.10, SLAP_B, "BEZIER"), (0.18, SLAP_B_REB, "BEZIER"), (0.90, SLAP_B_REB, "BEZIER")],
     "Claw": [(0.0, CLAW_R_WIND, "LINEAR"), (0.10, CLAW_R_DONE, "LINEAR"),
              (0.18, CLAW_L_DONE, "LINEAR"), (0.28, CLAW_R_LAST, "BEZIER"),
              (0.46, CLAW_R_LAST, "BEZIER"), (0.75, GUARD, "BEZIER"), (1.0, "IDLE", "BEZIER")],

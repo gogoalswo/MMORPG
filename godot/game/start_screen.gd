@@ -101,7 +101,7 @@ func _corner_test_button() -> Button:
 func _name_row() -> VBoxContainer:
 	var row := VBoxContainer.new()
 	row.add_theme_constant_override("separation", 6)
-	name_input = LineEdit.new()
+	name_input = HangulLineEdit.new()  # 윈도우에서 한글 앞 글자가 지워지는 고도 버그를 메운다
 	name_input.custom_minimum_size = Vector2(420, 64)
 	name_input.max_length = Names.MAX_LEN
 	name_input.alignment = HORIZONTAL_ALIGNMENT_CENTER

@@ -1213,7 +1213,7 @@ func _refresh_debug() -> void:
 ## │ [ ] 몸 [ ] │                 │ 이름     ││ [][][][][] [전체]│
 ## │ [ ]    [ ] │   (게임 화면)    │ 무기 [칸]││ [][][][][] [무기]│
 ## │ [ ]    [ ] │                 │ 아이템 정보││ ...           ...│
-## │ 스탯 상자   │                 │ 등급 ...  ││ 소지품 3/200 [정렬]│
+## │ 스탯 상자   │                 │ 등급 ...  ││ 소지품 3/200      │
 ## └────────────┘                 └──────────┘└──────────────────┘
 ## ```
 ## - **장비 창은 왼쪽 끝**, 인벤토리는 오른쪽 끝, 상세 창은 인벤토리 바로 왼쪽이다.
@@ -1670,7 +1670,8 @@ func _build_bag_window(panel: PanelContainer) -> void:
 		tabs.add_child(tab)
 		_tab_buttons.append(tab)
 
-	# 소지품 수 · 정렬 · 장비 창 여닫기
+	# 소지품 수 — 장비·정렬 단추는 뺐다 (2026-09-30 요청). 정렬은 창을 열 때마다 저절로 하고,
+	# 장비 창은 인벤토리와 같이 열린다
 	var foot := HBoxContainer.new()
 	foot.add_theme_constant_override("separation", 8)
 	side.add_child(foot)
@@ -1679,8 +1680,6 @@ func _build_bag_window(panel: PanelContainer) -> void:
 	_bag_head.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_bag_head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	foot.add_child(_bag_head)
-	foot.add_child(_inv_button("장비", _toggle_gear))
-	foot.add_child(_inv_button("정렬", _on_bag_sort))
 
 	var coins := HBoxContainer.new()
 	coins.add_theme_constant_override("separation", 8)
@@ -1691,7 +1690,7 @@ func _build_bag_window(panel: PanelContainer) -> void:
 	coins.add_child(_bag_gold)
 
 
-## 창 안의 작은 단추 (정렬·장비·장착·물약 ±·자동사냥 위/아래 …) — 던전 창의 입장 단추처럼
+## 창 안의 작은 단추 (장착·강화·물약 ±·자동사냥 위/아래 …) — 던전 창의 입장 단추처럼
 ## **청록 돌판 단추 조각(`ui_button`) + 주황빛 금 글자** (2026-09-29, 그 전엔 둥근 금테).
 ## 조각은 83px 높이라 40px 단추에 여백 28 로 늘이면 모서리가 겹친다. 그래서 **조각을 단추
 ## 높이로 한 번 줄여**(`_small_button_texture`) 좌우 끝을 그대로 쓴다
@@ -2066,7 +2065,7 @@ func _toggle_bag() -> void:
 		_redraw_bag()
 
 
-## 장비 창만 여닫는다 (자기 X, 인벤토리의 "장비" 단추)
+## 장비 창만 여닫는다 (자기 X). 다시 열려면 인벤토리를 다시 연다 — "장비" 단추는 뺐다
 func _toggle_gear() -> void:
 	_gear_panel.visible = not _gear_panel.visible
 	if _gear_panel.visible:

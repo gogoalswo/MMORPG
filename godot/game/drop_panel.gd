@@ -8,7 +8,7 @@ extends PanelContainer
 ##
 ##   돌판 틀(ui_dungeon_card) ─┬─ [문장][존 이름][X]
 ##                             ├─ 금
-##                             └─ 스크롤 ─┬─ "등장 몬스터" — 종류마다 [이름 Lv.n] / 체력 · 공격 · 방어
+##                             └─ 스크롤 ─┬─ "등장 몬스터" — 종류마다 [이름 · 치명타 저항] / 체력 · 공격 · 방어
 ##                                        ├─ 등급 머리 [등급 이름 (등급 색)]
 ##                                        │  격자 3칸 × 2줄 — 슬롯 6종 [등급 테 아이콘][이름]
 ##                                        ├─ (다음 등급)
@@ -153,7 +153,7 @@ func close_panel() -> void:
 	visible = false
 
 
-## 몬스터 한 칸 — 윗줄 이름 · 레벨(보스면 표시), 아랫줄 능력치. 값은 몬스터 표(`monsters.json`) 그대로다
+## 몬스터 한 칸 — 윗줄 이름(보스면 표시) · 치명타 저항, 아랫줄 능력치. 값은 몬스터 표(`monsters.json`) 그대로다
 func _monster_cell(kind: Dictionary) -> Control:
 	var cell := PanelContainer.new()
 	cell.name = "Monster"
@@ -165,12 +165,11 @@ func _monster_cell(kind: Dictionary) -> Control:
 	top.add_theme_constant_override("separation", 12)
 	column.add_child(top)
 	top.add_child(_label(str(kind.get("name", "")), HEAD_FONT, GatePanel.PAGE_TITLE_COLOR))
-	var level := "Lv.%d" % int(kind.get("level", 1))
-	if bool(kind.get("boss", false)):
-		level += "  보스"
-	var level_label := _label(level, NAME_FONT, GatePanel.CARD_SUB_COLOR)
-	level_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	top.add_child(level_label)
+	# **레벨은 적지 않는다** (2026-09-30 요청: "몬스터 레벨은 표기하지 마"). 보스만 옅은 글자로 표시한다.
+	# 이 칸이 늘어나 치명타 저항을 오른쪽 끝으로 민다
+	var tag := _label("보스" if bool(kind.get("boss", false)) else "", NAME_FONT, GatePanel.CARD_SUB_COLOR)
+	tag.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(tag)
 	# 치명타 저항 — 때리는 쪽 치확에서 빼는 %p (`critResist`, 100레벨 사냥터부터). 능력치 줄에 넣으면
 	# 뒤 사냥터(체력 백만 단위)에서 창 폭을 넘어 윗줄 오른쪽에 둔다 (2026-09-30 요청)
 	var resist := _label("치명타 저항 %s%%" % String.num(float(kind.get("critResist", 0.0)) * 100.0, 1),

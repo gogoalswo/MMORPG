@@ -963,6 +963,9 @@ func _check_gate_drops(panel: GatePanel) -> void:
 				_fail("몬스터 %s 가 떨구는 %d등급이 드랍 창에 없다" % [spot.kind, g])
 	for label in drops.find_children("*", "Label", true, false):
 		# 몬스터 치명타 저항은 능력치라 % 로 적는다 (드랍 확률이 아니다)
+		# 몬스터 레벨은 적지 않는다 (2026-09-30 요청: "몬스터 레벨은 표기하지 마")
+		if "Lv." in (label as Label).text:
+			_fail("드랍 창에 레벨이 적혀 있다: '%s'" % label.text)
 		if "%" in (label as Label).text and label.name != "CritResist":
 			_fail("드랍 창에 확률이 적혀 있다: '%s'" % label.text)
 	# 등장 몬스터 — 종류마다 한 칸, 능력치는 몬스터 표 그대로

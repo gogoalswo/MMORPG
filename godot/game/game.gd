@@ -261,7 +261,8 @@ const MOB_BAR_MS := 5000
 ## 켠다** — 상태(`attack`)로 틀면 사거리 안에 서 있는 내내 3.73초짜리 클립이
 ## 준비 자세부터 감겨, 맞고 있는 동안 한 번도 안 휘두르는 것으로 보인다 (2026-09-24)
 var _mob_swing_until: Dictionary = {}
-## 오우거 `Attack` 에서 첫 할퀴기가 시작되는 자리(초). 길이는 서버 경직
+## 오우거 `Attack` 에서 첫 할퀴기가 시작되는 자리(초). 손이 닿는 건 1.00초라, 판정이 휘두르기를
+## 알리고 0.2초 뒤(`monsterHitDelayMs`)에 피해를 넣는다. 저레벨 여섯(mob_moves.py)도 1.00 에 친다. 길이는 서버 경직
 ## (`monsterSwingMs` 0.65초)과 같다 → docs/features/characters-and-animation.md
 const MOB_SWING_FROM := 0.8
 ## 마지막으로 일어난 일 한 줄 (맞았다·레벨 올랐다)
@@ -511,6 +512,9 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			_dungeon_panel.visible = false
 		&"aoe":
 			_show_aoe(payload)
+		&"mobSwing":
+			# 몬스터가 휘두르기 시작했다 — 피해(`hit`)는 손이 닿는 0.2초 뒤에 따로 온다
+			_swing_mob(str(payload.get("id", "")))
 		&"skillRange":
 			# 판정은 늘 보낸다. 켜 뒀을 때만 그린다
 			if _show_range:
@@ -4856,8 +4860,6 @@ func _show_hit(payload: Dictionary) -> void:
 	# 나뿐이므로 때린 사람을 따로 가리지 않는다 (서버가 붙으면 source 를 본다)
 	if not on_me:
 		_mob_bar_until[str(payload.get("target", ""))] = Time.get_ticks_msec() + MOB_BAR_MS
-	else:
-		_swing_mob(str(payload.get("source", "")))
 	var body: Node3D = null
 	if on_me:
 		body = _player
@@ -4883,8 +4885,10 @@ func _show_hit(payload: Dictionary) -> void:
 	_feel_hit(payload, on_me, body)
 
 
-## 몬스터가 나를 때렸다. 첫 할퀴기 구간을 **처음부터 다시** 튼다 — 서버가 세워 두는
-## 시간(`monsterSwingMs`)만큼만. 범위 공격이 터진 것도 여기로 온다 (보스는 그 뒤 선다)
+## 몬스터가 휘두르기 시작했다(`mobSwing`). 첫 할퀴기 구간을 **처음부터 다시** 튼다 — 서버가 세워 두는
+## 시간(`monsterSwingMs`)만큼만. 범위 공격이 터진 것도 여기로 온다 (보스는 그 뒤 선다).
+## **피해 알림에서 틀지 않는다** (2026-09-30) — 피해는 손이 닿는 순간(클립 1.0초) 오므로 거기서
+## 0.8초부터 틀면 숫자가 뜬 뒤에 할퀴기가 나온다
 func _swing_mob(id: String) -> void:
 	var node: Node3D = _mob_nodes.get(id, null)
 	if id == "" or not node is Rig:

@@ -13,10 +13,17 @@ extends SceneTree
 ## 오우거 `Attack` 첫 할퀴기 (0.90~1.05초) 의 한가운데
 const CLAW_AT := 0.97
 const FRAMES := 360
+## 손이 닿는 클립 자리 (오우거 할퀴기 정점 · 저레벨 여섯의 치는 키) — shared `MONSTER_HIT_DELAY_MS` 와 같이 고친다
+const HIT_CLIP_AT := 1.0
+## 한 프레임(16ms) + 틱 어긋남
+const HIT_SLACK := 0.06
 
 var _failed := 0
 var _hits := 0
 var _mob_id := ""
+var _rig: Rig
+## 피해가 온 순간 `Attack` 클립 자리 — 손이 닿는 1.0초 근처여야 한다 (2026-09-30)
+var _hit_at: Array = []
 
 
 func _init() -> void:
@@ -65,6 +72,7 @@ func _run() -> void:
 	game._transport.event.connect(_on_event)
 
 	var rig: Rig = game._mob_nodes[_mob_id]
+	_rig = rig
 	var claws := 0
 	var before := -1.0
 	for i in FRAMES:
@@ -83,12 +91,21 @@ func _run() -> void:
 	# 마지막 한 대는 할퀴기 전에 끝날 수 있다
 	elif claws < _hits - 1:
 		_fail("서버는 %d대 때렸는데 화면은 %d번만 휘둘렀다" % [_hits, claws])
+	# **숫자가 할퀴기와 같이 떠야 한다** — 전에는 피해가 먼저 오고 그 알림에서 클립을 0.8초부터 틀어서
+	# 숫자가 늘 0.2초 먼저 떴다 ("몬스터 액션이랑 데미지 입히는 타이밍이 안 맞아")
+	for at in _hit_at:
+		if absf(float(at) - HIT_CLIP_AT) > HIT_SLACK:
+			_fail("피해가 온 순간 공격 클립이 %.2f초 — 손이 닿는 %.2f초 근처여야 한다" % [at, HIT_CLIP_AT])
+			break
+	print("  피해가 온 순간 공격 클립 자리: %s" % ", ".join(_hit_at.map(func(t): return "%.2f" % t)))
 	_done()
 
 
 func _on_event(name: StringName, payload: Dictionary) -> void:
 	if name == &"hit" and str(payload.get("source", "")) == _mob_id:
 		_hits += 1
+		var anim: AnimationPlayer = _rig._anim
+		_hit_at.append(anim.current_animation_position if anim.current_animation == "Attack" else -1.0)
 
 
 func _done() -> void:

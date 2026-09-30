@@ -131,6 +131,14 @@ func _case_attack() -> void:
 	var me: Dictionary = s[1]
 	var full: int = me.hp
 	w.step(1.0 / 60.0)
+	# 휘두르기부터 알리고 **손이 닿는 0.2초 뒤에** 맞는다 (MONSTER_HIT_DELAY_MS, 2026-09-30)
+	var swung := w.drain_events().any(func(e): return e.get("type") == "mobSwing")
+	if not swung:
+		_fail("사거리 안인데 휘두르지 않았다")
+	if int(me.hp) != full:
+		_fail("휘두르는 순간 맞았다 — 손이 닿는 %dms 뒤에 맞아야 한다" % Combat.monster_hit_delay_ms())
+	OS.delay_msec(Combat.monster_hit_delay_ms() + 20)
+	w.step(1.0 / 60.0)
 	var taken := full - int(me.hp)
 	if taken <= 0:
 		_fail("사거리 안인데 안 때렸다")
@@ -210,6 +218,9 @@ func _case_death_and_revive() -> void:
 	var s := _setup(-6.0, -3.0, -6.0, -1.5)
 	var w: World = s[0]
 	var me: Dictionary = s[1]
+	# 휘두르고(첫 틱) 손이 닿는 순간(0.2초 뒤)에 체력 1. 먼저 1로 두면 그 사이 자동 물약이 마신다
+	w.step(1.0 / 60.0)
+	OS.delay_msec(Combat.monster_hit_delay_ms() + 20)
 	me.hp = 1
 	w.step(1.0 / 60.0)
 	if not bool(me.dead):

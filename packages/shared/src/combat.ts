@@ -85,8 +85,8 @@ export const ATTACK_ROOT_MS = 400;
 export const POTION_COOLDOWN_MS = 10_000;
 /** 한 병이 채우는 몫 — 최대 HP 의 이 비율 (2026-09-26 요청 "물약 한번 마시면 10% 차도록") */
 export const POTION_HEAL_RATIO = 0.1;
-/** 자동으로 마시는 기준의 처음 값(HP %). 0 이면 자동으로 안 마신다 (2026-09-26 요청 "초기값 70%") */
-export const POTION_AUTO_DEFAULT = 70;
+/** 자동으로 마시는 기준의 처음 값(HP %). 0 이면 자동으로 안 마신다 (2026-09-26 요청 "초기값 70%" → 2026-09-30 요청으로 90%) */
+export const POTION_AUTO_DEFAULT = 90;
 /** 설정 창에서 한 번 누를 때 움직이는 폭(%p)과 상한 */
 export const POTION_AUTO_STEP = 10;
 export const POTION_AUTO_MAX = 90;

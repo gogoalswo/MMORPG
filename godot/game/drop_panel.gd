@@ -4,13 +4,15 @@ extends PanelContainer
 ## 사냥터 드랍 창 — 차원문 창에서 사냥터 줄의 **느낌표**를 누르면 그 사냥터에서 떨어지는 것을
 ## 보인다 (2026-09-30 요청: "포탈UI에서 각 사냥터별로 느낌표 눌러서, 드랍되는 아이템 표시하는 UI").
 ## 내용은 판정이 굴리는 것 그대로다 (`Items.zone_drops`) — 표를 따로 두지 않는다.
+## **확률은 적지 않는다** (같은 날 요청: "확률은 넣지마. 그리고 등장 몬스터 능력치도 표시해").
 ##
-##   돌판 틀(ui_dungeon_card) ─┬─ [문장][존 이름][Lv.a~b][X]
+##   돌판 틀(ui_dungeon_card) ─┬─ [문장][존 이름][X]
 ##                             ├─ 금
-##                             └─ 스크롤 ─┬─ 등급 머리 [등급 이름 (등급 색)] ··· [킬당 x%]
+##                             └─ 스크롤 ─┬─ "등장 몬스터" — 종류마다 [이름 Lv.n] / 체력 · 공격 · 방어
+##                                        ├─ 등급 머리 [등급 이름 (등급 색)]
 ##                                        │  격자 3칸 × 2줄 — 슬롯 6종 [등급 테 아이콘][이름]
 ##                                        ├─ (다음 등급)
-##                                        └─ "그 밖에" — 골드 폭 · 크리스탈 확률
+##                                        └─ "그 밖에" — 골드 폭 · 크리스탈
 ##
 ## 차원문 창(`GatePanel`)의 아이 노드지만 **`top_level`** 이라 목록 칸을 따르지 않고 화면 가운데에
 ## 앵커로 선다. 차원문 창이 닫히면 같이 사라진다 (보이기는 부모를 따른다)
@@ -26,7 +28,6 @@ const COLUMNS := 3
 const ICON := 48
 const NAME_FONT := 20
 const HEAD_FONT := 24
-const CHANCE_FONT := 20
 const GAP := 8
 
 ## 판정에서 그대로 빼 온 내용 (테스트용) · 지금 보이는 존
@@ -34,7 +35,6 @@ var drops: Dictionary = {}
 var zone_id := ""
 
 var _title: Label
-var _levels: Label
 var _list: VBoxContainer
 var _scroll: ScrollContainer
 var _drag: DragScroll
@@ -82,10 +82,8 @@ func _build() -> void:
 	head.add_child(emblem)
 	_title = _label("", GatePanel.PAGE_TITLE_SIZE, GatePanel.PAGE_TITLE_COLOR)
 	_title.name = "Title"
+	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(_title)
-	_levels = _label("", CHANCE_FONT, GatePanel.CARD_SUB_COLOR)
-	_levels.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	head.add_child(_levels)
 	# 닫기 X — 차원문 창과 같은 조각. 닫으면 차원문 목록으로 돌아간다
 	var close := Button.new()
 	close.name = "Close"
@@ -125,22 +123,25 @@ func show_zone(id: String) -> void:
 		return
 	zone_id = id
 	_title.text = str(GameData.zone(id).get("name", id))
-	var levels: Vector2i = drops.levels
-	_levels.text = "Lv.%d" % levels.x if levels.x == levels.y else "Lv.%d~%d" % [levels.x, levels.y]
 	for child in _list.get_children():
 		_list.remove_child(child)
 		child.queue_free()
-	for entry in drops.grades:
-		_add_grade(int(entry.grade), float(entry.chance))
-	_add_head("그 밖에", GatePanel.CARD_SUB_COLOR, "")
+	_add_head("등장 몬스터", GatePanel.CARD_SUB_COLOR)
+	var mobs := VBoxContainer.new()
+	mobs.name = "Monsters"
+	mobs.add_theme_constant_override("separation", GAP)
+	for kind in drops.kinds:
+		mobs.add_child(_monster_cell(GameData.monster_kind(str(kind))))
+	_list.add_child(mobs)
+	for grade in drops.grades:
+		_add_grade(int(grade))
+	_add_head("그 밖에", GatePanel.CARD_SUB_COLOR)
 	var misc := _grid()
 	var gold: Vector2i = drops.gold
 	misc.add_child(_cell("gold", "골드 %d~%d" % [gold.x, gold.y], GatePanel.CELL_LINE, GatePanel.TEXT_COLOR))
-	var crystal := Items.crystal_id()
-	misc.add_child(_cell(
-		crystal, "%s %s%%" % [Items.stack_name({"id": crystal}), percent(float(drops.crystal))],
-		GatePanel.CELL_LINE, GatePanel.TEXT_COLOR
-	))
+	if bool(drops.crystal):
+		var crystal := Items.crystal_id()
+		misc.add_child(_cell(crystal, Items.stack_name({"id": crystal}), GatePanel.CELL_LINE, GatePanel.TEXT_COLOR))
 	_list.add_child(misc)
 	_scroll.scroll_vertical = 0
 	_drag.forget()
@@ -152,10 +153,34 @@ func close_panel() -> void:
 	visible = false
 
 
-## 등급 하나 — 머리 줄(등급 이름 · 킬당 확률) + 슬롯 6종 칸
-func _add_grade(grade: int, chance: float) -> void:
+## 몬스터 한 칸 — 윗줄 이름 · 레벨(보스면 표시), 아랫줄 능력치. 값은 몬스터 표(`monsters.json`) 그대로다
+func _monster_cell(kind: Dictionary) -> Control:
+	var cell := PanelContainer.new()
+	cell.name = "Monster"
+	cell.add_theme_stylebox_override("panel", _cell_box())
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 2)
+	cell.add_child(column)
+	var top := HBoxContainer.new()
+	top.add_theme_constant_override("separation", 12)
+	column.add_child(top)
+	top.add_child(_label(str(kind.get("name", "")), HEAD_FONT, GatePanel.PAGE_TITLE_COLOR))
+	var level := "Lv.%d" % int(kind.get("level", 1))
+	if bool(kind.get("boss", false)):
+		level += "  보스"
+	top.add_child(_label(level, NAME_FONT, GatePanel.CARD_SUB_COLOR))
+	var stats := _label("체력 %s     공격 %s     방어 %s" % [
+		number(int(kind.get("maxHp", 0))), number(int(kind.get("attack", 0))), number(int(kind.get("defense", 0))),
+	], NAME_FONT, GatePanel.TEXT_COLOR)
+	stats.name = "Stats"
+	column.add_child(stats)
+	return cell
+
+
+## 등급 하나 — 머리 줄(등급 이름, 등급 색) + 슬롯 6종 칸
+func _add_grade(grade: int) -> void:
 	var tint := ChatLog.grade_text_color(grade)
-	_add_head(Items.grade_name(grade), tint, "킬당 %s%%" % percent(chance))
+	_add_head(Items.grade_name(grade), tint)
 	var grid := _grid()
 	for slot in Items.slots():
 		var item := Items.get_item(Items.item_id(grade, str(slot)))
@@ -166,16 +191,11 @@ func _add_grade(grade: int, chance: float) -> void:
 	_list.add_child(grid)
 
 
-## 머리 줄 — 왼쪽 이름, 오른쪽 옅은 금빛 부제
-func _add_head(text: String, color: Color, note: String) -> void:
-	var row := HBoxContainer.new()
-	row.name = "Head"
-	var name_label := _label(text, HEAD_FONT, color)
-	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(name_label)
-	if note != "":
-		row.add_child(_label(note, CHANCE_FONT, GatePanel.CARD_SUB_COLOR))
-	_list.add_child(row)
+## 머리 줄 — 칸 무리의 이름
+func _add_head(text: String, color: Color) -> void:
+	var head := _label(text, HEAD_FONT, color)
+	head.name = "Head"
+	_list.add_child(head)
 
 
 ## 칸 격자. **칸을 다 채운 뒤에 목록에 넣는다** — `DragScroll` 은 목록에 들어오는 순간의
@@ -194,12 +214,7 @@ func _cell(icon_name: String, text: String, edge: Color, text_color: Color) -> C
 	var cell := PanelContainer.new()
 	cell.name = "Cell"
 	cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var cell_box := StyleBoxFlat.new()
-	cell_box.bg_color = GatePanel.CELL_BG
-	cell_box.border_color = GatePanel.CELL_LINE
-	cell_box.set_border_width_all(1)
-	cell_box.set_content_margin_all(6)
-	cell.add_theme_stylebox_override("panel", cell_box)
+	cell.add_theme_stylebox_override("panel", _cell_box())
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	cell.add_child(row)
@@ -226,6 +241,15 @@ func _cell(icon_name: String, text: String, edge: Color, text_color: Color) -> C
 	return cell
 
 
+func _cell_box() -> StyleBox:
+	var box := StyleBoxFlat.new()
+	box.bg_color = GatePanel.CELL_BG
+	box.border_color = GatePanel.CELL_LINE
+	box.set_border_width_all(1)
+	box.set_content_margin_all(6)
+	return box
+
+
 func _label(text: String, font_size: int, color: Color) -> Label:
 	var label := Label.new()
 	label.text = text
@@ -236,10 +260,11 @@ func _label(text: String, font_size: int, color: Color) -> Label:
 	return label
 
 
-## 확률(0~1)을 퍼센트 글자로 — 유효 숫자 세 자리쯤 (4.44 · 0.958 · 0.0483 · 0.01)
-static func percent(chance: float) -> String:
-	var p := chance * 100.0
-	if p <= 0.0:
-		return "0"
-	var digits := maxi(2, 2 - floori(log(p) / log(10.0)))
-	return String.num(p, digits)
+## 세 자리마다 쉼표 (1137758 → 1,137,758) — 뒤 사냥터 몬스터 체력이 백만 단위다
+static func number(value: int) -> String:
+	var digits := str(absi(value))
+	var out := ""
+	while digits.length() > 3:
+		out = "," + digits.substr(digits.length() - 3) + out
+		digits = digits.substr(0, digits.length() - 3)
+	return ("-" if value < 0 else "") + digits + out

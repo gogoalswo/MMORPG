@@ -78,30 +78,22 @@ CROSS = pose(GUARD,
              lh=(0.09, -0.10, 0.80),
              rf=(-0.10, 0.09, 0.10), rfYaw=0, rfPitch=25)
 
-# 연속 발차기 — **평타** (2026-09-29 요청: "새로운 연속 발차기 애니메이션을 만들어. 공속이 빨라지면
-# 그만큼 애니메이션을 빠르게 재생해"). 칠 때마다 오른발(뒷발) · 왼발(앞발) 앞차기를 번갈아 찬다.
-# 무릎을 접어 올렸다(0.06) 곧게 뻗어 명치 높이를 차고(0.12 = 맞는 순간) 다시 접어 싸움 자세로.
-# 고도는 공속만큼 배속으로 튼다(`swing.speed` = 1 + 공속) — Lv.200 이면 7.2배라 한 번에 0.08초
-KICK_R_CHAMBER = pose(GUARD,
-                      hips=(0.02, 0.0, -0.02), hipsR=(0, 0, 4),
-                      spine=(-4, 0, 6), head=(2, 0, -8),
-                      lh=(0.12, -0.16, 0.76), rh=(-0.13, -0.02, 0.74),
-                      rf=(-0.08, -0.08, 0.36), rfPole=(0, -1, 0.6), rfYaw=0, rfPitch=-20)
-KICK_R_EXTEND = pose(KICK_R_CHAMBER,
-                     hips=(0.02, -0.03, -0.02), hipsR=(0, 0, 10),
-                     spine=(-10, 0, 8), head=(6, 0, -12),
-                     rh=(-0.17, 0.04, 0.72),
-                     rf=(-0.06, -0.44, 0.50), rfPole=(0, -0.3, 1), rfPitch=-10)
-KICK_L_CHAMBER = pose(GUARD,
-                      hips=(-0.02, 0.02, -0.02), hipsR=(0, 0, -20),
-                      spine=(-4, 0, -10), head=(2, 0, 24),
-                      lh=(0.13, -0.04, 0.75), rh=(-0.06, -0.14, 0.76),
-                      lf=(0.09, -0.20, 0.36), lfPole=(0, -1, 0.6), lfPitch=-20)
-KICK_L_EXTEND = pose(KICK_L_CHAMBER,
-                     hips=(-0.02, -0.01, -0.02), hipsR=(0, 0, -24),
-                     spine=(-10, 0, -12), head=(6, 0, 28),
-                     lh=(0.16, 0.02, 0.73),
-                     lf=(0.08, -0.48, 0.50), lfPole=(0, -0.3, 1), lfPitch=-10)
+# 높은 옆차기 — **평타** (2026-09-30 요청: 태권도 사진을 주며 "두 번째 스크린샷처럼 발로 차는 모션으로
+# 바꿔봐". 그 전 앞차기는 "마음에 안 들어"). 몸을 오른쪽으로 크게 틀어 왼옆구리가 앞을 보고, 상체를
+# 뒤로 젖히며 **앞발(왼발)을 머리 높이로 곧게** 뻗는다. 딛은 오른다리는 편다. 두 주먹은 가슴 앞.
+# 고도는 공속만큼 배속으로 튼다(`swing.speed` = 1 + 공속). 빠르면 무릎을 든 채 이어 찬다(`HighKickLoop`)
+HK_CHAMBER = pose(GUARD,
+                  hips=(-0.03, 0.05, 0.0), hipsR=(-4, -10, -60),
+                  spine=(-6, 0, -12), head=(4, 0, 55),
+                  lh=(0.06, -0.10, 0.76), lhPole=(0.7, 0.2, -1),
+                  rh=(-0.08, -0.04, 0.72), rhPole=(-0.7, 0.2, -1),
+                  lf=(0.06, -0.06, 0.60), lfPole=(0, -1, 0.8), lfPitch=-20,
+                  rf=(-0.10, 0.10, 0.078), rfYaw=-60)
+HK_EXTEND = pose(HK_CHAMBER,
+                 hips=(-0.04, 0.07, 0.0), hipsR=(-6, -25, -72),
+                 spine=(-18, 0, -14), head=(14, 0, 62),
+                 lh=(0.05, -0.08, 0.78), rh=(-0.10, 0.00, 0.70),
+                 lf=(0.05, -0.24, 0.96), lfPole=(0, -0.3, 1), lfPitch=-10)
 
 # 할퀴기 — 넓은 자세에서 오른손·왼손·오른손으로 앞을 가로질러 긁는다.
 # 이펙트의 첫 줄기가 캐릭터 오른쪽에서 왼쪽으로 가고 번갈아 돈다 (`SkillFx.local_point`)
@@ -390,13 +382,20 @@ CLIPS = {
             (0.40, GUARD, "BEZIER"), (0.60, GUARD, "BEZIER")],
     "Cross": [(0.0, GUARD, "LINEAR"), (0.10, CROSS, "BEZIER"), (0.20, CROSS, "BEZIER"),
               (0.42, GUARD, "BEZIER"), (0.60, GUARD, "BEZIER")],
-    # 평타 — 번갈아 찬다. 0.12 가 맞는 순간, 0.45 에 싸움 자세로 돌아와 0.60 까지 선다
-    "KickR": [(0.0, GUARD, "LINEAR"), (0.06, KICK_R_CHAMBER, "LINEAR"),
-              (0.12, KICK_R_EXTEND, "BEZIER"), (0.18, KICK_R_EXTEND, "BEZIER"),
-              (0.28, KICK_R_CHAMBER, "BEZIER"), (0.45, GUARD, "BEZIER"), (0.60, GUARD, "BEZIER")],
-    "KickL": [(0.0, GUARD, "LINEAR"), (0.06, KICK_L_CHAMBER, "LINEAR"),
-              (0.12, KICK_L_EXTEND, "BEZIER"), (0.18, KICK_L_EXTEND, "BEZIER"),
-              (0.28, KICK_L_CHAMBER, "BEZIER"), (0.45, GUARD, "BEZIER"), (0.60, GUARD, "BEZIER")],
+    # 평타 — 높은 옆차기. **세 벌이고 길이가 모두 0.9 = 격투가 기본 간격**이라, 공속만큼 배속으로 틀면
+    # 다음 대가 오는 때에 딱 끝난다. 0.16(시작)·0.07(이어 차기) 이 맞는 순간
+    # - HighKick     느릴 때(배속 2 미만) 한 대 — 무릎 들고(0.08) 차고(0.16) 접고(0.36) 내려와 선다(0.60)
+    # - HighKickIn   빠를 때 첫 대 — 차고 나서 **무릎을 든 채** 끝난다
+    # - HighKickLoop 빠를 때 이어 차기 — 든 무릎에서 뻗고(0.07) 접어(0.24) 든 채 기다린다
+    "HighKick": [(0.0, GUARD, "BEZIER"), (0.08, HK_CHAMBER, "LINEAR"),
+                 (0.16, HK_EXTEND, "BEZIER"), (0.24, HK_EXTEND, "BEZIER"),
+                 (0.36, HK_CHAMBER, "BEZIER"), (0.60, GUARD, "BEZIER"), (0.90, GUARD, "BEZIER")],
+    "HighKickIn": [(0.0, GUARD, "BEZIER"), (0.08, HK_CHAMBER, "LINEAR"),
+                   (0.16, HK_EXTEND, "BEZIER"), (0.24, HK_EXTEND, "BEZIER"),
+                   (0.36, HK_CHAMBER, "BEZIER"), (0.90, HK_CHAMBER, "BEZIER")],
+    "HighKickLoop": [(0.0, HK_CHAMBER, "LINEAR"), (0.07, HK_EXTEND, "BEZIER"),
+                     (0.12, HK_EXTEND, "BEZIER"), (0.24, HK_CHAMBER, "BEZIER"),
+                     (0.90, HK_CHAMBER, "BEZIER")],
     "Claw": [(0.0, CLAW_R_WIND, "LINEAR"), (0.10, CLAW_R_DONE, "LINEAR"),
              (0.18, CLAW_L_DONE, "LINEAR"), (0.28, CLAW_R_LAST, "BEZIER"),
              (0.46, CLAW_R_LAST, "BEZIER"), (0.75, GUARD, "BEZIER"), (1.0, "IDLE", "BEZIER")],
@@ -640,7 +639,7 @@ def report(poser, name, keys):
         poser.apply(spec)
         pb = poser.pb
         parts = []
-        for bone in ("LeftHand", "RightHand", "LeftFoot", "RightFoot"):
+        for bone in ("Head", "LeftHand", "RightHand", "LeftFoot", "RightFoot"):
             h = pb[bone].head
             parts.append(f"{bone}=({h.x:+.2f},{h.y:+.2f},{h.z:+.2f})")
         low = min(pb[b].tail.z for b in ("LeftToeBase", "RightToeBase"))

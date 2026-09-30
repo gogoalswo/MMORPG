@@ -202,9 +202,11 @@ func _check_moves(game: Node3D) -> void:
 	var rig: Rig = game._player
 	var me: String = game._transport.my_id()
 	var cases := [
-		# 평타 — 왼발·오른발 앞차기를 번갈아, **판정이 준 배속으로** (공속 +620% 면 7.2배)
-		[&"swing", {"id": me, "root_ms": 400}, "KickL", 1.0],
-		[&"swing", {"id": me, "root_ms": 125, "speed": 7.2}, "KickR", 7.2],
+		# 평타 — 높은 옆차기, **판정이 준 배속으로** (공속 +620% 면 7.2배). 빠르면 첫 대는 차고 무릎을
+		# 든 채 끝내고(In), 곧이어 오는 대는 든 무릎에서 찬다(Loop). 느리면 한 대마다 내려와 선다
+		[&"swing", {"id": me, "root_ms": 125, "speed": 7.2, "ms": 125}, "HighKickIn", 7.2],
+		[&"swing", {"id": me, "root_ms": 125, "speed": 7.2, "ms": 125}, "HighKickLoop", 7.2],
+		[&"swing", {"id": me, "root_ms": 400, "speed": 1.0, "ms": 900}, "HighKick", 1.0],
 		[&"skill", {"id": me, "skill": "frost_pillar", "root_ms": 400}, "FrostStomp"],
 		[&"skill", {"id": me, "skill": "thunder_fall", "root_ms": 400}, "Thunder"],
 		[&"skill", {"id": me, "skill": "nova_fist", "root_ms": 750, "delay_ms": 750}, "NovaFist"],
@@ -229,7 +231,7 @@ func _check_moves(game: Node3D) -> void:
 	if rig._playing != "Idle":
 		_fail("동작이 끝났는데 대기가 아니라 %s" % rig._playing)
 	else:
-		print("  동작: 평타 앞차기 좌우 번갈아(공속 배속), 스킬마다 제 동작, 끝나면 대기")
+		print("  동작: 평타 높은 옆차기(빠르면 무릎 든 채 이어 차기 · 공속 배속), 스킬마다 제 동작, 끝나면 대기")
 
 	# 맞으면 움찔한다 — 서 있을 때는 튼다
 	var hit := {"target": me, "target_kind": "player", "amount": 5, "killed": false}

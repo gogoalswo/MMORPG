@@ -470,6 +470,8 @@ func attack(player_id: String) -> void:
 	_events.append({
 		"type": "swing", "id": player_id, "root_ms": root,
 		"speed": float(stats.attackCooldown) / maxf(1.0, float(cooldown)),
+		# 다음 대까지의 간격 — 화면이 "이어 차기" 인지 가린다 (`game.gd` `_kick_clip`)
+		"ms": cooldown,
 	})
 
 	var picked := _pick_targets(player, float(stats.attackRange), _attack_arc(), 1)

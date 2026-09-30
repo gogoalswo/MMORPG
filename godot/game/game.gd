@@ -172,10 +172,19 @@ const RUN_SPEED_EPS := 0.5
 var _last_delta := 0.0
 ## 공격 동작을 언제까지 트나 (서버가 준 경직 시간)
 var _swing_until := 0
-## 블렌더로 지은 동작 (`scripts/blender/fighter_moves.py`). 평타는 **오른발·왼발 앞차기를
-## 번갈아** 찬다 (2026-09-29 요청: "새로운 연속 발차기 애니메이션을 만들어" — 그 전엔 잽·스트레이트).
-## 공속만큼 배속으로 튼다(`swing.speed`). 스킬은 스킬마다 하나다. 클립이 없으면 옛 `Attack` 으로 돌아간다
-const SWING_CLIPS := ["KickR", "KickL"]
+## 블렌더로 지은 동작 (`scripts/blender/fighter_moves.py`). 평타는 **높은 옆차기**다
+## (2026-09-30 요청: 태권도 사진을 주며 "발로 차는 모션으로 바꿔봐" — 그 전엔 앞차기 좌우 번갈아,
+## 그 전엔 잽·스트레이트). 세 벌 모두 길이 0.9초 = 기본 간격이라 **공속만큼 배속**(`swing.speed`)으로
+## 틀면 다음 대가 오는 때에 끝난다. 고르는 것은 `_kick_clip`. 스킬은 스킬마다 하나다
+const KICK_FULL := "HighKick"
+const KICK_IN := "HighKickIn"
+const KICK_LOOP := "HighKickLoop"
+const SWING_CLIPS := [KICK_FULL, KICK_IN, KICK_LOOP]
+## 이 배속부터 **무릎을 든 채 이어 찬다** — 초당 8번 차는데 매번 발을 내렸다 올리면 발을 구르는
+## 것으로 보인다. 2배(간격 450ms, 질풍각 4단계)보다 느리면 한 대마다 내려와 선다
+const KICK_CHAIN_SPEED := 2.0
+## 지난 평타 시각 — 한 간격의 1.5배 안에 다음 대가 오면 이어 차기다
+var _last_kick_at := -100000
 const SKILL_CLIPS := {
 	"rising_kick": "Claw", "thunder_fall": "Thunder",
 	"sky_breaker": "SkyBreaker", "frost_pillar": "FrostStomp",
@@ -495,7 +504,8 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 				_swings += 1
 				# **공속만큼 빨리 찬다** (2026-09-29 요청: "공속이 빨라지면 그만큼 애니메이션을 빠르게
 				# 재생해") — 판정이 실어 보낸 배속(= 기본 간격 / 지금 간격). Lv.200 이면 7.2배
-				_start_move(SWING_CLIPS[_swings % SWING_CLIPS.size()], float(payload.get("speed", 1.0)))
+				var speed := float(payload.get("speed", 1.0))
+				_start_move(_kick_clip(speed, int(payload.get("ms", 900))), speed)
 		&"lunge":
 			# 날라차기 — 나는 동안과 내려앉는 동안 달리기로 끊기지 않게 막는다
 			_swing_until = Time.get_ticks_msec() + int(payload.get("ms", 700))
@@ -4650,6 +4660,18 @@ func _move(dir: Vector2, delta: float) -> void:
 
 
 ## 동작을 건다. 실제로 트는 건 다음 `_play_player_clip` 이다 — 이벤트는 그리기 전에 온다
+## 평타 옆차기 셋 중 무엇을 틀까 — 느리면 한 대마다 내려와 서고(`KICK_FULL`), 빠르면 첫 대는
+## 차고 무릎을 든 채 끝내며(`KICK_IN`) 이어지는 대는 든 무릎에서 뻗는다(`KICK_LOOP`).
+## 이어지는지는 **지난 대가 한 간격의 1.5배 안이었나**로 본다 — 멈췄다 다시 치면 첫 대부터
+func _kick_clip(speed: float, interval_ms: int) -> String:
+	var now := Time.get_ticks_msec()
+	var chained := now - _last_kick_at <= int(interval_ms * 1.5)
+	_last_kick_at = now
+	if speed < KICK_CHAIN_SPEED:
+		return KICK_FULL
+	return KICK_LOOP if chained else KICK_IN
+
+
 func _start_move(clip: String, speed := 1.0) -> void:
 	if not _player is Rig:
 		return

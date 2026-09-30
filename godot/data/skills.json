@@ -544,7 +544,7 @@
     {
       "id": "iron_leg",
       "job": "fighter",
-      "name": "철각",
+      "name": "철각 1단",
       "description": "다리를 쇠처럼 단련해 한 대가 무거워진다.",
       "stat": "attack",
       "perRank": 0.1,
@@ -554,7 +554,7 @@
     {
       "id": "steel_leg",
       "job": "fighter",
-      "name": "강철각",
+      "name": "철각 2단",
       "description": "쇠를 넘어 강철이 된 다리가 더 깊이 박힌다.",
       "stat": "attack",
       "perRank": 0.2,
@@ -566,7 +566,7 @@
     {
       "id": "diamond_leg",
       "job": "fighter",
-      "name": "금강각",
+      "name": "철각 3단",
       "description": "부서지지 않는 다리로 온 체중을 싣는다.",
       "stat": "attack",
       "perRank": 0.4,
@@ -578,7 +578,7 @@
     {
       "id": "mountain_leg",
       "job": "fighter",
-      "name": "태산각",
+      "name": "철각 4단",
       "description": "태산을 무너뜨릴 무게가 한 발에 실린다.",
       "stat": "attack",
       "perRank": 0.8,
@@ -590,7 +590,7 @@
     {
       "id": "light_step",
       "job": "fighter",
-      "name": "경공",
+      "name": "경공 1단",
       "description": "몸이 가벼워 더 빨리 달린다.",
       "stat": "moveSpeed",
       "perRank": 0.2,
@@ -600,7 +600,7 @@
     {
       "id": "keen_eye",
       "job": "fighter",
-      "name": "급소 간파",
+      "name": "급소 간파 1단",
       "description": "급소가 눈에 들어와 치명타가 잦아진다.",
       "stat": "crit",
       "perRank": 0.1,
@@ -610,7 +610,7 @@
     {
       "id": "vital_strike",
       "job": "fighter",
-      "name": "급소 강타",
+      "name": "급소 강타 1단",
       "description": "급소를 더 깊이 찬다.",
       "stat": "critDamage",
       "perRank": 0.2,
@@ -620,7 +620,7 @@
     {
       "id": "armor_break",
       "job": "fighter",
-      "name": "파갑",
+      "name": "파갑 1단",
       "description": "방어를 꿰뚫고 들어간다.",
       "stat": "penetration",
       "perRank": 0.1,
@@ -630,7 +630,7 @@
     {
       "id": "deadly_kick",
       "job": "fighter",
-      "name": "필살각",
+      "name": "급소 간파 2단",
       "description": "급소를 꿰뚫는 눈이 트여 치명타가 더 잦아진다.",
       "stat": "crit",
       "perRank": 0.2,
@@ -641,7 +641,7 @@
     {
       "id": "ultimate",
       "job": "fighter",
-      "name": "극의",
+      "name": "급소 강타 2단",
       "description": "무의 끝에 닿아 치명타가 한층 무거워진다.",
       "stat": "critDamage",
       "perRank": 0.5,

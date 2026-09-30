@@ -243,6 +243,20 @@ test('레벨 도달 패시브 — 그 레벨에 한 번만 열린다', () => {
   assert.equal(new Set(PASSIVES.map((p) => p.id)).size, PASSIVES.length, '패시브 id 가 겹친다');
 });
 
+test('레벨 패시브 이름은 계열 첫 칸 이름 + "N단" — "철각 1단" → "철각 4단"', () => {
+  const byId = new Map(PASSIVES.map((p) => [p.id, p]));
+  for (const p of PASSIVES.filter((each) => each.maxRank === 1)) {
+    let root = p;
+    let step = 1;
+    while (root.requires) {
+      root = byId.get(root.requires)!;
+      step += 1;
+    }
+    const base = root.name.replace(/ 1단$/, '');
+    assert.equal(p.name, `${base} ${step}단`, `${p.id} 이름`);
+  }
+});
+
 test('뒷 패시브는 같은 스탯의 앞 패시브에 잇는다 — 공격력 10 → 40 → 80 → 120 · 치확 50 → 150 · 치피 70 → 200', () => {
   const byId = new Map(PASSIVES.map((p) => [p.id, p]));
   const chains = PASSIVES.filter((p) => p.requires).map((p) => [byId.get(p.requires!)?.everyLevels, p.everyLevels, p.stat]);

@@ -224,6 +224,12 @@ static func passive_effect(p: Dictionary, rank: int) -> String:
 	]
 
 
+## 나무 칸 하나의 이름 — 레벨 패시브는 표의 이름("철각 2단"), 여러 단계인 것(질풍각)은 "질풍각 N단"
+## (2026-09-30 요청: "000 1단 이런식으로 이름 붙여")
+static func passive_title(p: Dictionary, step: int) -> String:
+	return str(p.get("name", "")) if passive_once(p) else "%s %d단" % [str(p.get("name", "")), step]
+
+
 ## 한 번 배우면 끝인 패시브인가 — 레벨 도달 패시브(`maxRank` 1). `everyLevels` 가 곧 여는 레벨이다
 static func passive_once(p: Dictionary) -> bool:
 	return int(p.get("maxRank", 0)) == 1

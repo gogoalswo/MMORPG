@@ -54,12 +54,14 @@ const CRIT_REST := 1.12
 ## 한 자리에서만 뜨면 연타가 한 덩어리로 겹쳐 못 읽는다. 몸 상자를 화면 기준으로
 ## 좌우 `SPREAD_SIDE` m · 위 `SPREAD_TOP` m 만큼 넓힌 판 안에서 고르고, 아래는 몸
 ## 높이의 `SPREAD_LOW` 에서 끊는다 (발밑은 땅·그림자에 묻힌다).
-## **몸이 작아도 판은 `SPREAD_MIN` 보다 작지 않다** — 숫자 한 개가 폭 2m(80~100px)라,
-## 슬라임 폭(0.5m)으로 벌리면 몇 px 밖에 안 벌어져 한 덩어리로 보였다 (찍어 보고 찾았다)
-const SPREAD_SIDE := 0.9
-const SPREAD_TOP := 0.7
-const SPREAD_LOW := 0.2
-const SPREAD_MIN := Vector2(1.4, 1.8)
+## **몸에 붙어야 한다** — 좌우 0.9m·위 0.7m·최소 판 1.4×1.8m 로 넓혔더니 키 1.1m
+## 몬스터에서 숫자가 땅 위 2.5m 까지 올라가 "너무 멀리 나와" 라는 말을 들었다
+## (2026-09-30). 지금은 몸 상자 바로 바깥까지만 벗어난다. 몸 폭은 대각선이 아니라
+## 긴 변으로 잰다 (대각선은 화면에서 보이는 폭보다 넓다)
+const SPREAD_SIDE := 0.2
+const SPREAD_TOP := 0.25
+const SPREAD_LOW := 0.35
+const SPREAD_MIN := Vector2(0.8, 1.0)
 ## 몸을 못 재면(기둥도 없을 때) 이만한 몸으로 친다
 const SPREAD_BODY := Vector2(0.9, 1.6)
 ## 후보를 이만큼 뽑아 **방금 뜬 숫자들과 가장 먼 것**을 고른다. 그냥 무작위면
@@ -171,7 +173,7 @@ func _scatter(body: Node3D) -> void:
 	var height := SPREAD_BODY.y
 	var bottom := position.y - height * 0.6
 	if box.size != Vector3.ZERO:
-		width = Vector2(box.size.x, box.size.z).length()
+		width = maxf(box.size.x, box.size.z)
 		height = box.size.y
 		bottom = box.position.y
 	width = maxf(width, SPREAD_MIN.x)

@@ -1483,7 +1483,7 @@ func _case_bag(game: Node3D) -> void:
 		if game._enhance.visible:
 			_fail("강화 팝업 X 를 눌렀는데 그대로다")
 
-	# 장비 창은 따로 닫고 다시 연다 (자기 X · 인벤토리의 "장비" 단추)
+	# 장비 창은 따로 닫고 다시 연다 (자기 X · `_toggle_gear` — "장비" 단추는 뺐다)
 	var gear_mark: Control = game._gear_panel.find_child("close", true, false)
 	if gear_mark == null:
 		_fail("장비 창에 닫기 X 가 없다")
@@ -1495,7 +1495,7 @@ func _case_bag(game: Node3D) -> void:
 		game._toggle_gear()
 		await process_frame
 		if not game._gear_panel.visible:
-			_fail("'장비' 단추로 장비 창이 다시 안 열렸다")
+			_fail("_toggle_gear 로 장비 창이 다시 안 열렸다")
 
 	game._toggle_bag()
 	await process_frame

@@ -168,11 +168,13 @@ test('한 마리 잡는 동안 HP 를 10% 쯤 잃는다 ★★', () => {
   // 2026-09-30 지시: "한 마리 잡는동안 체력을 10% 정도 잃게 만들면 좋겠는데?" 그 전에는
   // "한 무리(3~6마리 동시) 정리에 HP 50%" 로 역산해서, 한 마리씩 서 있는 사냥터에서는
   // 0.4~1.8% 밖에 안 잃었다. 기준은 그 레벨 격투가(기준 장비 + 열린 패시브 전부).
-  // 표는 앞 레벨보다 안 낮아지게 구웠으므로(누적 최대) 위로만 조금 넘친다
+  // 표는 앞 레벨보다 안 낮아지게 구웠으므로(누적 최대) 위로만 조금 넘친다.
+  // 아래로는 25% 까지 둔다 — 질풍각을 2레벨마다 열면서(2026-09-30) 10레벨 사이 구간을 더 빨리 잡아
+  // 7.7~9.5% 가 됐는데, 사용자가 몬스터 표를 다시 굽지 않고 "그대로 둔다" 로 정했다
   for (let level = 1; level <= MAX_LEVEL; level++) {
     const loss = hpLossPerKill(level);
     assert.ok(
-      loss >= HP_LOSS_PER_KILL * (1 - DESIGN_DRIFT) && loss <= HP_LOSS_PER_KILL * (1 + DESIGN_DRIFT),
+      loss >= HP_LOSS_PER_KILL * 0.75 && loss <= HP_LOSS_PER_KILL * (1 + DESIGN_DRIFT),
       `Lv${level}: 한 마리에 HP ${(loss * 100).toFixed(1)}%`
     );
   }

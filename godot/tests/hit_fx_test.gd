@@ -157,7 +157,7 @@ func _case_visible(game: Node3D, mob: Dictionary) -> void:
 		waited += 1
 
 
-## 치명타는 숫자가 더 크고 오른쪽 위에 작은 `Cri` 가 붙는다 — 읽지 않아도 크기로 안다
+## 치명타는 숫자가 더 크고 오른쪽 위에 작은 `CRITICAL` 가 붙는다 — 읽지 않아도 크기로 안다
 func _case_crit(game: Node3D, mob: Dictionary) -> void:
 	game._on_event(&"hit", _hit(mob, 91, true, false))
 	await process_frame
@@ -167,8 +167,8 @@ func _case_crit(game: Node3D, mob: Dictionary) -> void:
 		return
 	if fx._number.text != "91":
 		_fail("치명타 숫자가 '91' 이 아니다 (%s)" % fx._number.text)
-	if not fx._cri.visible or fx._cri.text != "Cri" or fx._cri.offset.x <= 0.0 or fx._cri.offset.y <= 0.0:
-		_fail("치명타 숫자 오른쪽 위에 'Cri' 가 없다 (보임 %s, 자리 %s)" % [fx._cri.visible, fx._cri.offset])
+	if not fx._cri.visible or fx._cri.text != "CRITICAL" or fx._cri.offset.x <= 0.0 or fx._cri.offset.y <= 0.0:
+		_fail("치명타 숫자 오른쪽 위에 'CRITICAL' 이 없다 (보임 %s, 자리 %s)" % [fx._cri.visible, fx._cri.offset])
 	if fx._number.font != DamageFont.crit(null):
 		_fail("치명타 숫자가 그라데이션 글꼴(DamageFont.crit)이 아니다")
 	await process_frame

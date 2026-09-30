@@ -19,8 +19,8 @@ extends RefCounted
 ## 그 아틀라스로 고도의 이미지 폰트 가져오기(`ResourceImporterImageFont`)와 같은
 ## 방식의 `FontFile` 을 만든다.
 
-## 구울 글자. 피해·회복 `+`·치명타 표시 `Cri`
-const CHARS := "0123456789+!-Cri"
+## 구울 글자. 피해·회복 `+`·치명타 표시 `CRITICAL`
+const CHARS := "0123456789+!-CRITAL"
 ## 구울 글자 크기(px). `Label3D.font_size` 도 이것을 쓴다
 const SIZE := 64
 ## 테두리 굵기(텍스트 서버 외곽선 크기)

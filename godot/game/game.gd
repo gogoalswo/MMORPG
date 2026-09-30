@@ -3895,7 +3895,8 @@ func _redraw_skills() -> void:
 	_redraw_upgrades(me)
 
 
-## 고른 패시브를 왼쪽 칸에 적고 [습득] 을 맞춘다. **레벨이 되면 공짜** — 되는지는 장부가 다시 본다.
+## 고른 패시브를 왼쪽 칸에 적고 [습득]/[레벨업] 을 맞춘다. **레벨이 되면 공짜** — 되는지는 장부가 다시 본다.
+## 단추 글자는 처음 배울 때(0단계)만 "습득", 그 뒤로는 "레벨업" (2026-09-30 요청)
 ## 초당 타수는 지금 스탯(`me.stats`, 패시브가 이미 더해진 것)과 한 단계 더 배운 뒤를 나란히 적는다
 func _draw_passive(me: Dictionary, passive: Dictionary) -> void:
 	var id := str(passive.id)
@@ -3906,8 +3907,10 @@ func _draw_passive(me: Dictionary, passive: Dictionary) -> void:
 	var per := float(passive.perRank)
 	var open := Skills.passive_open(passive, level)
 	_skill_name.text = str(passive.get("name", id))
-	_skill_info.text = "패시브 · %d / %d 단계\n공격 속도 +%d%%\n%d레벨마다 +%d%%" % [
-		rank, top, roundi(rank * per * 100.0), every, roundi(per * 100.0),
+	# 공속은 "현재 단계 / 다음 단계" 두 줄 — "N레벨마다 +M%" 줄은 뺐다 (2026-09-30 요청)
+	var next := "없음" if rank >= top else "공격 속도 +%d%%" % roundi((rank + 1) * per * 100.0)
+	_skill_info.text = "패시브 · %d / %d 단계\n현재 단계 : 공격 속도 +%d%%\n다음 단계 : %s" % [
+		rank, top, roundi(rank * per * 100.0), next,
 	]
 	var stats: Dictionary = me.get("stats", {})
 	var base := float(stats.get("attackCooldown", 900))
@@ -3922,6 +3925,7 @@ func _draw_passive(me: Dictionary, passive: Dictionary) -> void:
 		_skill_state.text = "습득할 수 있습니다"
 	else:
 		_skill_state.text = "%d레벨에 다음 단계가 열립니다" % ((rank + 1) * every)
+	_passive_learn.text = "습득" if rank == 0 else "레벨업"
 	_passive_learn.disabled = rank >= open
 	_passive_dot.visible = rank < open
 

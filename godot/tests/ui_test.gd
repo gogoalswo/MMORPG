@@ -320,6 +320,7 @@ func _run_scene() -> void:
 	await _case_dungeon(game)
 	await _case_trial(game)
 	await _case_home(game)
+	await _case_death(game)
 
 	if _failed == 0:
 		print("UI: 전부 통과")
@@ -835,6 +836,8 @@ func _case_raid_death(game: Node3D) -> void:
 		_fail("토벌에서 쓰러졌는데 실패 결과창이 아니다: 보임 %s '%s' '%s' 처치 줄 %s 보상 %d" % [
 			result.visible, result._title.text, result._verdict.text, result._count.visible, result.reward_count()])
 		return
+	if game._death_panel.visible:
+		_fail("던전에서 쓰러지면 결과창만 떠야 하는데 사망 창도 떴다")
 	game._unhandled_input(_mouse(Vector2(200, 400), true))
 	await process_frame
 	if not bool(me.get("dead", false)):
@@ -2409,3 +2412,60 @@ func _case_home(game: Node) -> void:
 		_fail("마을에 왔는데 마을가기 단추가 남아 있다")
 	else:
 		print("  마을가기: %s → %s" % [from, game._shown_zone])
+
+
+## 사냥터에서 쓰러짐 → 사망 창 · 그 자리에 묘비 · 화면을 눌러도 안 살아남 · 확인 → 마을에서 되살아남
+## · 사냥터에 돌아가면 묘비가 그 자리에 다시 선다 (2026-09-30)
+func _case_death(game: Node) -> void:
+	game._on_gate_pick("meadow")
+	for i in 5:
+		await process_frame
+	var world: World = game._transport._world
+	var snap: Dictionary = world.snapshot()
+	var me: Dictionary = snap.players[game._transport.my_id()]
+	var at := Vector2(float(me.x), float(me.z))
+	world._hit_player(me, snap.monsters[0], 1e9)
+	for i in 3:
+		await process_frame
+	var panel: DeathPanel = game._death_panel
+	if not panel.visible or game._dungeon_result.visible:
+		_fail("사냥터에서 쓰러졌는데 사망 창이 없다: 사망 창 %s · 결과창 %s" % [panel.visible, game._dungeon_result.visible])
+		return
+	if not game.get_viewport().get_visible_rect().encloses(panel.get_global_rect()):
+		_fail("사망 창이 화면 밖으로 넘친다: %s" % panel.get_global_rect())
+	var font: Font = load(FONT)
+	for label in panel.find_children("*", "Label", true, false):
+		for ch in (label as Label).text:
+			if ch != " " and not font.has_char(ch.unicode_at(0)):
+				_fail("사망 창 글자 '%s' 가 폰트에 없다" % ch)
+	if _tomb_near(game, at) == null:
+		_fail("쓰러진 자리 %s 에 묘비가 없다" % at)
+	game._unhandled_input(_mouse(Vector2(200, 400), true))
+	await process_frame
+	if not bool(me.get("dead", false)) or not panel.visible:
+		_fail("사망 창이 떠 있는데 화면을 눌러 되살아났다 — 확인으로만")
+	panel.confirm_button().pressed.emit()
+	for i in 5:
+		await process_frame
+	me = world.snapshot().players[game._transport.my_id()]
+	if bool(me.get("dead", false)) or game._shown_zone != GameData.start_zone() or panel.visible:
+		_fail("확인을 눌렀는데 마을에서 안 살아났다: 죽음 %s · %s · 창 %s" % [me.get("dead"), game._shown_zone, panel.visible])
+		return
+	if _tomb_near(game, at) != null:
+		_fail("마을에 사냥터 묘비가 섰다")
+	game._on_gate_pick("meadow")
+	for i in 5:
+		await process_frame
+	if _tomb_near(game, at) == null:
+		_fail("사냥터에 돌아왔는데 묘비가 없다")
+	else:
+		print("  사냥터에서 쓰러짐 → 사망 창 · 묘비 → 확인 → 마을 → 돌아가면 묘비 그대로")
+
+
+## 존 노드 밑에서 (x, z) 자리 묘비를 찾는다
+func _tomb_near(game: Node, at: Vector2) -> Node3D:
+	for child in game._zone_node.get_children():
+		if child is Node3D and child.name.begins_with("Tomb") \
+				and Vector2(child.position.x, child.position.z).distance_to(at) < 0.01:
+			return child
+	return null

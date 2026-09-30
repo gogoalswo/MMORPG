@@ -356,6 +356,11 @@ var _home_button: Button
 ## 시련의 탑 시계(마을가기 밑의 "남은 시간 · 처치 k / 7" 줄)와 **모든 던전의 결과창** (docs/features/dungeons.md "결과창")
 var _trial_hud: Label
 var _dungeon_result: DungeonResult
+## 사냥터·마을에서 쓰러지면 뜨는 사망 창 — 확인 → 마을에서 되살아나기 (death_panel.gd)
+var _death_panel: DeathPanel
+## 쓰러진 자리 `{zone, x, z}` — 묘비(tomb.gd)를 세운다. **메모리에만 두고 저장하지 않는다**
+## (2026-09-30 요청: "묘비는 게임 껐다 켜면 사라지게")
+var _tombs: Array[Dictionary] = []
 var _skill_panel: PanelContainer
 ## 스킬창. 틀은 한 번 짓고 `_redraw_skills` 가 채운다
 var _skill_big: PanelContainer
@@ -516,7 +521,8 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			if str(payload.get("id", "")) == _transport.my_id():
 				_start_move(LUNGE_CLIP, float(payload.get("speed", 1.0)))
 		&"died":
-			_last_event = "쓰러졌습니다 — 아무 데나 눌러 마을에서 되살아나기"
+			_last_event = "쓰러졌습니다 — 확인을 누르면 마을에서 되살아납니다"
+			_plant_tomb()
 			_target = Vector3.INF
 			_holding = false
 			_target_mob = ""
@@ -4095,6 +4101,12 @@ func _build_npc_panel() -> void:
 	top.add_child(_dungeon_result)
 	_dungeon_result.confirmed.connect(_on_result_confirmed)
 
+	# 사망 창 — 확인을 누르면 마을에서 되살아난다. 띄우는 건 `_refresh_status` 가 상태로 한다
+	_death_panel = DeathPanel.make(_frame_box)
+	_death_panel.theme = _ui_root.theme
+	top.add_child(_death_panel)
+	_death_panel.confirmed.connect(func() -> void: _transport.send(&"revive", {}))
+
 
 func _show_npc(payload: Dictionary) -> void:
 	var role := str(payload.get("role", ""))
@@ -4268,6 +4280,10 @@ func _build_zone(zone_id: String) -> void:
 	_mob_bars.clear()
 	_mob_bar_until.clear()
 	_mob_swing_until.clear()
+	# 이 존에서 쓰러졌던 자리의 묘비. _zone_node 밑이라 존을 떠나면 같이 사라지고, 돌아오면 다시 선다
+	for tomb in _tombs:
+		if str(tomb.zone) == zone_id:
+			_zone_node.add_child(Tomb.create(tomb.x, _ground_y(tomb.x, tomb.z), tomb.z))
 
 	var world_env := WorldEnvironment.new()
 	world_env.environment = environment_for(env)
@@ -4386,11 +4402,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	# 터치는 기본 설정이 마우스로 바꿔 주므로 이 한 줄이 폰도 덮는다
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		_holding = false
-		# 죽어 있으면 어딜 눌러도 부활 요청이다 — 던전 결과창이 떠 있으면 그 "확인" 으로만
+		# 죽어 있으면 화면을 눌러도 아무 일 없다 — 되살아나기는 사망 창(던전이면 결과창)의 "확인" 으로만
 		if _am_dead():
-			if _dungeon_result.visible:
-				return
-			_transport.send(&"revive", {})
 			return
 		var hit := _ground_point(event.position)
 		if hit == Vector3.INF:
@@ -4602,6 +4615,17 @@ func _process(delta: float) -> void:
 
 
 ## 눌러 둔 자리로 향하는 방향을 만들어 보낸다. **요청일 뿐이고 판정은 World 가 한다.**
+## 쓰러진 자리에 묘비를 세우고 기억해 둔다 (`_tombs` — 저장하지 않는다). 존을 다시 지을 때도 세운다
+func _plant_tomb() -> void:
+	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
+	if me.is_empty() or _zone_node == null:
+		return
+	var x := float(me.x)
+	var z := float(me.z)
+	_tombs.append({"zone": _shown_zone, "x": x, "z": z})
+	_zone_node.add_child(Tomb.create(x, _ground_y(x, z), z))
+
+
 func _am_dead() -> bool:
 	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
 	return bool(me.get("dead", false))
@@ -5155,6 +5179,9 @@ func _aoe_material(alpha: float) -> StandardMaterial3D:
 ## 왼쪽 위 상태판을 스냅샷에 맞춘다. 레벨·체력·경험치는 **여기 한 곳에서만** 그린다
 func _refresh_status(me: Dictionary) -> void:
 	_level_label.text = "Lv.%d" % int(me.level)
+	# 사망 창은 **상태로** 띄운다 — `died` 사건 없이 죽은 채 저장된 캐릭터로 들어와도 뜬다.
+	# 던전에서 쓰러졌으면 결과창("실패")이 대신 뜬다
+	_death_panel.visible = bool(me.get("dead", false)) and not _dungeon_result.visible
 	_redraw_char(me)
 	var max_hp := maxf(1.0, float(me.stats.maxHp))
 	_hp_bar.max_value = max_hp

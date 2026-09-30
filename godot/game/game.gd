@@ -183,12 +183,17 @@ var _swing_until := 0
 ## 블렌더로 지은 동작 (`scripts/blender/fighter_moves.py`). 평타는 **옆차기로 든 발로 뺨 치듯 좌우로**
 ## 친다 (2026-09-30 요청: "느릴 때, 빠를 때 구분하지 말고, 아까 스크린샷 보여준 자세에서 뺨 때리듯이
 ## 좌우로 팍팍팍팍" — 그 전엔 높은 옆차기를 느릴 때·빠를 때 나눠 틀었고, 그 전엔 앞차기, 잽·스트레이트).
-## 세 벌 모두 길이 0.9초 = 기본 간격이라 **공속만큼 배속**(`swing.speed`)으로 틀면 다음 대가 오는 때에
+## 네 벌 모두 길이 0.9초 = 기본 간격이라 **공속만큼 배속**(`swing.speed`)으로 틀면 다음 대가 오는 때에
 ## 끝난다. 고르는 것은 `_kick_clip`. 스킬은 스킬마다 하나다
+const KICK_FULL := "KickSlapFull"
 const KICK_IN := "KickSlapIn"
 const KICK_A := "KickSlapA"
 const KICK_B := "KickSlapB"
-const SWING_CLIPS := [KICK_IN, KICK_A, KICK_B]
+const SWING_CLIPS := [KICK_FULL, KICK_IN, KICK_A, KICK_B]
+## 초당 이만큼 미만이면 **한 대마다 치고 제자리로 내려와 선다**(`KICK_FULL`) — 2026-09-30 요청:
+## "공속이 초당 3타 이하 일 떄는 발차기 하고 제자리로 왔다가 다시 발차기 하고 … 4타부터 지금처럼".
+## 질풍각 6단계(초당 3.8타)까지가 내려오고, 7단계(4.2타)부터 발을 든 채 좌우로 친다
+const KICK_CHAIN_HITS := 4.0
 ## 지난 평타 시각 — 한 간격의 1.5배 안에 다음 대가 오면 발을 든 채 이어 친다
 var _last_kick_at := -100000
 ## 이어 칠 때 다음이 A(바깥으로) 인가. 첫 대(`KICK_IN`)는 안쪽에서 끝나니 다음은 A 다
@@ -4887,13 +4892,16 @@ func _move(dir: Vector2, delta: float) -> void:
 
 
 ## 동작을 건다. 실제로 트는 건 다음 `_play_player_clip` 이다 — 이벤트는 그리기 전에 온다
-## 평타 셋 중 무엇을 틀까 — **속도와 상관없이** 첫 대는 발을 들어 올리며 치고(`KICK_IN`), 이어지는
-## 대는 든 발로 바깥(`KICK_A`)·안쪽(`KICK_B`)을 번갈아 친다. 이어지는지는 **지난 대가 한 간격의
-## 1.5배 안이었나**로 본다 — 멈췄다 다시 치면 첫 대부터 (멈추면 든 발은 대기로 섞이며 내려온다)
+## 평타 넷 중 무엇을 틀까. **초당 4타 미만**이면 한 대마다 치고 내려와 선다(`KICK_FULL`).
+## 그보다 빠르면 첫 대는 발을 들어 올리며 치고(`KICK_IN`), 이어지는 대는 든 발로 바깥(`KICK_A`)·
+## 안쪽(`KICK_B`)을 번갈아 친다. 이어지는지는 **지난 대가 한 간격의 1.5배 안이었나**로 본다 —
+## 멈췄다 다시 치면 첫 대부터 (멈추면 든 발은 대기로 섞이며 내려온다)
 func _kick_clip(interval_ms: int) -> String:
 	var now := Time.get_ticks_msec()
 	var chained := now - _last_kick_at <= int(interval_ms * 1.5)
 	_last_kick_at = now
+	if 1000.0 / maxf(1.0, interval_ms) < KICK_CHAIN_HITS:
+		return KICK_FULL
 	if not chained:
 		_kick_to_a = true
 		return KICK_IN

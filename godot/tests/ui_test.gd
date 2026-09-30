@@ -1397,6 +1397,13 @@ func _case_char(game: Node3D) -> void:
 		_fail("최종 공격력 %d ≠ %d × (1 + %s%%)" % [int(me.stats.attack), base, pct])
 	if game._char_grids.size() != game.CHAR_SPLIT.size() + 1:
 		_fail("묶음이 %d개" % game._char_grids.size())
+	# 평타 횟수 — 판정과 같은 간격으로 센 "초당 N회 공격"
+	var tail: Array = game._char_grids[-1].get_children().map(func(label): return label.text)
+	var hits := "초당 %.1f회 공격" % (1000.0 / Combat.effective_cooldown(
+		float(me.stats.attackCooldown), float(me.stats.attackSpeed)))
+	var at := tail.find("평타")
+	if at < 0 or tail[at + 1] != hits:
+		_fail("평타 줄이 %s — %s 여야 한다" % [tail, hits])
 
 	# 자리 — 채팅창 자리(왼쪽·아래 끝을 맞춰)에 채팅창을 덮고 뜬다, 화면 안
 	var box: Rect2 = game._char_panel.get_global_rect()

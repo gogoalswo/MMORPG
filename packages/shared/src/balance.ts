@@ -196,11 +196,18 @@ export const JOB_MULT: Record<JobId, { atk: number; hp: number; df: number; inte
   archer: { atk: 1.35, hp: 0.9, df: 0.85, interval: 1.2 },
 };
 
-/** 역할 배수. 보스는 **설계 보류**라 자리만 잡아 둔 임시값이다 */
+/**
+ * 역할 배수. 보스는 **설계 보류**라 자리만 잡아 둔 임시값이다.
+ *
+ * 보스 공격은 2026-09-30 에 ×5 → **×1** 이다. 일반 몬스터가 "무리 기준" 이라 한 마리가
+ * 약해서 1:1 인 보스만 ×5 로 올려 뒀는데, 일반을 "한 마리당 HP 10%" 로 올리자 ×5 면 같은
+ * 레벨 보스 한 판에 HP 350% 를 잃었다. ×1 이면 한 대는 일반과 같고 HP ×7 만큼 오래 싸워
+ * 한 판에 약 70% (범위 공격 빼고) — 사용자가 고른 안이다.
+ */
 export const ROLE_MULT = {
   normal: { hp: 1, atk: 1 },
   elite: { hp: 3, atk: 2 },
-  boss: { hp: 7, atk: 5 },
+  boss: { hp: 7, atk: 1 },
 } as const;
 export type MonsterRole = keyof typeof ROLE_MULT;
 

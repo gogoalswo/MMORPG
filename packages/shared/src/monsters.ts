@@ -287,10 +287,10 @@ function buildKinds(): Record<string, MonsterKind> {
       accentColor: tier.bodyColor,
       boss: true,
       ...base,
-      // 역할 배수는 설계표를 쓴다 (`ROLE_MULT.boss` — HP ×7 / 공격 ×5).
-      // **보스는 아직 설계 보류**라 이 배수는 자리만 잡아 둔 임시값이다. 일반 몬스터가
-      // 무리 기준으로 역산되어 1마리 공격력이 작으므로, 1:1 로 싸우는 보스는
-      // 공격력을 크게 올려야 위협이 된다
+      // 역할 배수는 설계표를 쓴다 (`ROLE_MULT.boss` — HP ×7 / 공격 ×1).
+      // **보스는 아직 설계 보류**라 이 배수는 자리만 잡아 둔 임시값이다. 공격은 2026-09-30 에
+      // ×5 → ×1 — 일반 몬스터가 "한 마리당 HP 10%" 로 올라 보스 한 대도 이미 충분히 세다.
+      // HP ×7 만큼 오래 싸우니 한 판에 약 70% 를 잃는다 (범위 공격 빼고)
       maxHp: Math.round(base.maxHp * ROLE_MULT.boss.hp),
       attack: Math.round(base.attack * ROLE_MULT.boss.atk),
       // 도망칠 틈은 준다 — 사거리 밖으로 나가면 따라오지 않는다

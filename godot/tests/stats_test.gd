@@ -82,11 +82,12 @@ func _monster_table() -> void:
 		# **2026-09-24 에 HP 를 공격력 축 배수만큼 올렸다** ("등급간 배수를 키워").
 		# 같은 날 방어·HP 축도 같은 배수가 되어 공격력·방어력 열도 설계 비율만큼 올렸다
 		# 2026-09-25 에 HP 를 초반부터 서서히 올려 Lv200 에서 3배 (`3^((L−1)/199)`)
-		{"level": 10, "grade": 1.0, "hp": 75, "atk": 2},
-		{"level": 50, "grade": 1.63, "hp": 308, "atk": 4},
-		{"level": 100, "grade": 3.3, "hp": 3272, "atk": 20},
-		{"level": 150, "grade": 4.97, "hp": 57924, "atk": 192},
-		{"level": 200, "grade": 6.63, "hp": 1278546, "atk": 2547},
+		# 2026-09-30 에 공격력을 "한 마리 잡는 동안 HP 10%" 로 다시 구웠다 (`monsterAttack.ts`)
+		{"level": 10, "grade": 1.0, "hp": 75, "atk": 29},
+		{"level": 50, "grade": 1.63, "hp": 308, "atk": 118},
+		{"level": 100, "grade": 3.3, "hp": 3272, "atk": 419},
+		{"level": 150, "grade": 4.97, "hp": 57924, "atk": 2247},
+		{"level": 200, "grade": 6.63, "hp": 1278546, "atk": 14955},
 	]
 	for row in rows:
 		var level := int(row["level"])
@@ -128,24 +129,20 @@ func _ttk() -> void:
 	print("  동레벨 타수: 초반 %d타 -> 후반 %d타 (6타는 목표, 후반은 넘어도 된다)" % [first, last])
 
 
-## 한 그룹을 정리하는 동안 HP 를 절반쯤 잃는다.
+## 같은 레벨 몬스터 한 대가 기준 플레이어 HP 의 2~15% 다.
 ##
-## **딱 맞지는 않는다** — 2026-09-21 에 몬스터를 고정 표로 바꾸면서 값이 소수
-## 둘째 자리에서 끊겼다. 표를 손으로 고치면 더 벌어지는데 그건 의도된 일이라
-## 폭을 5% 로 둔다 (`balance.test.ts` 의 DESIGN_DRIFT 와 같은 기준이다)
+## 2026-09-30 에 "한 무리 정리에 HP 50%" 대신 **"한 마리 잡는 동안 HP 10%"** 로 공격력을 다시
+## 구웠다 (지시: "한 마리 잡는동안 체력을 10% 정도 잃게"). 격투가 패시브까지 넣은 역산은
+## TS(`monsterAttack.ts` · `balance.test.ts`)가 전수로 본다 — 여기서는 고도가 읽은 표가 한 대에
+## 녹이지도, 간지럽지도 않은지만 본다 (그 전에는 한 대가 HP 의 0.3~0.8% 였다)
 func _group_loss() -> void:
-	for level in [15, 100, 195]:
+	for level in [3, 15, 58, 100, 150, 195]:
 		var ref := Stats.ref_player(level)
 		var m := Stats.monster(level)
 		# 몬스터가 때리는 쪽이라 맞는 쪽 K(`damage_taken`)다 (2026-09-27)
-		var per := Stats.damage_taken(m["atk"], level, ref["df"])
-		var taken: float = per * float(Stats.melee_attackers(level)) * 15.0 / float(m["interval"])
-		# 초반·중반은 Lv1 HP 300 덕에 덜 잃는다 (2026-09-27) — 후반만 설계값 50% 에 묶는다
-		if level < 190:
-			if taken / float(ref["hp"]) >= 0.5:
-				_fail("Lv%d 그룹 HP 손실 %.2f — 초반은 50%% 보다 적어야 한다" % [level, taken / float(ref["hp"])])
-			continue
-		_near("Lv%d 그룹 HP 손실" % level, taken / float(ref["hp"]), 0.5, 0.025)
+		var share: float = Stats.damage_taken(m["atk"], level, ref["df"]) / float(ref["hp"])
+		if share < 0.02 or share > 0.15:
+			_fail("Lv%d 몬스터 한 대가 HP 의 %.1f%% — 2~15%% 여야 한다" % [level, share * 100.0])
 	# 후반 HP 는 2만 근처이고 생존은 감소율이 맡는다 — 초반 30% → Lv200 94%
 	var hp200: float = Stats.ref_player(200)["hp"]
 	if hp200 < 15000.0 or hp200 > 25000.0:

@@ -11,6 +11,8 @@
 | `packages/shared/src/monsters.ts` | 종류 60개 생성 (능력치는 아래 표에서 읽는다) |
 | `packages/shared/src/monsterTable.ts` | ★ **몬스터 능력치 고정 표** — 손으로 고치는 파일 |
 | `scripts/freeze-monsters.mjs` | 그 표를 설계 역산값으로 다시 굽는다 (**사람이 부른다**) |
+| `packages/shared/src/monsterAttack.ts` | ★ 공격력 역산 — "한 마리 잡는 동안 HP 10%" (`HP_LOSS_PER_KILL` · `refFighter` · `hpLossPerKill`) |
+| `scripts/fit-monster-attack.mjs` | 표의 **공격력 열만** 위 역산으로 다시 굽는다 (**사람이 부른다**) |
 | `packages/shared/src/combat.ts` | 레벨 곡선(`expToNext`), 경험치 보상(`expReward`) |
 | `packages/shared/src/combat.test.ts` | 곡선이 감당 범위인지 검사 |
 | `packages/server/src/combat.ts` | 옛 몬스터 AI (idle → chase → attack → 복귀). 이식 원본 |
@@ -64,6 +66,23 @@ monsters.ts 의 statsForLevel          거기서 받아 반올림해 몬스터 �
   `DESIGN_DRIFT`(5%)가 "방어력 = 기준 플레이어의 절반" · "한 그룹에 HP 절반" 을
   느슨하게 대조한다. **표를 크게 고치면 이 폭도 같이 고친다** — 막으라고 둔 게
   아니라 "얼마나 벗어났는지 알려주는" 감시다.
+- **공격력 — "한 마리 잡는 동안 HP 10%"** ★★ (2026-09-30 지시: "전체적으로 몬스터 공격력이 너무
+  낮은 것 같아" → "한 마리 잡는동안 체력을 10% 정도 잃게"). 공격력 열만 `scripts/fit-monster-attack.mjs`
+  로 다시 구웠다 (**사람이 부른다** — 장비·패시브를 바꿔도 저절로 안 따라간다).
+  - 역산식은 `monsterAttack.ts` — 기준은 **그 레벨 격투가**(기준 장비 + 그 레벨까지 열린 패시브 전부,
+    `World.stats_of` 와 같은 식)가 같은 레벨 몬스터를 평타로 잡는 시간(치명타 저항 반영). 그동안 1.5초마다
+    맞아 잃는 HP 가 `HP_LOSS_PER_KILL`(10%)이 되게 푼다. 레벨이 오를 때 반올림 탓에 1~2% 내려가는 자리가
+    있어 **앞 레벨보다 안 낮아지게** 누적 최대로 구웠다.
+  - **왜 올렸나.** 그 전 값은 설계의 "3~6마리(`meleeAttackers`)가 동시에 때려 한 무리 정리에 HP 50%" 에서
+    나왔다. 사냥터는 이제 한 마리씩 떨어져 서 있고(간격 8m · 어그로 3m), 격투가는 질풍각으로 한 마리를
+    2~4초에 잡는다. 거기에 Lv1 HP 300(2026-09-27)까지 겹쳐 **한 마리에 0.4~1.8%** 밖에 안 잃었다.
+  - 결과: Lv1 17.6 · Lv10 29 · Lv50 118 · Lv100 419 · Lv150 2,247 · Lv200 14,955 (전: 2.4 · 2 · 5 · 21 · 192 · 2,547).
+  - **패시브·장비를 바꾸면 이 10% 가 흔들린다** — 테스트가 알려 준다(±5%). 다시 맞추기로 정했을 때만
+    `node scripts/fit-monster-attack.mjs` 를 부른다 (같은 날 철각 계열이 바뀌어 한 번 다시 구웠다).
+    한 대가 HP 의 4~10% 이고, 가만히 맞고만 있으면 16~38초에 쓰러진다.
+  - 그래서 "스킬이 열리는 Lv10·30 에서 한 마리 공격력이 떨어진다" 는 옛 규칙은 없어졌다 — 전 구간이 오른다.
+  - 테스트: `balance.test.ts` "한 마리 잡는 동안 HP 를 10% 쯤 잃는다"(전 레벨 ±5%) · `stats_test.gd` `_group_loss`
+    (고도가 읽은 표로 한 대가 HP 의 2~15%).
 - 지금 표의 값: Lv10 HP 71 · Lv100 1,043 · Lv200 60,224. 동레벨 타수는 초반 7타 → 후반 9타다.
   → [stat-balance.md](stat-balance.md) 6장
 - **치명타 저항 `critResist`** ★ (2026-09-30 지시: "100레벨 이상부터는 몬스터에게 치명타 저항
@@ -81,7 +100,8 @@ monsters.ts 의 statsForLevel          거기서 받아 반올림해 몬스터 �
     (치피는 크고 치확은 아직 100% 밑이라 저항이 곧바로 깎인다) · 190대 −7%.
     이 구간 사냥이 느리다는 말이 나오면 그 칸 저항부터 본다.
   - 테스트: `godot/tests/combat_test.gd` 의 `_crit_resist`.
-- 보스: `maxHp ×8`, `attack ×1.25`, `scale ×1.8`, `boss: true`,
+- 보스: `maxHp ×7`, `attack ×1`(2026-09-30 에 ×5 → ×1 — 일반을 "한 마리당 HP 10%" 로 올려 ×5 면 같은 레벨
+  보스 한 판에 HP 350% 였다. ×1 이면 한 판에 약 70%, 범위 공격 빼고), `scale ×1.8`, `boss: true`,
   그리고 **범위 공격 `aoe: BOSS_AOE`** — 예고하고 터지는 원.
   일반 몬스터에는 붙이지 않는다. 사냥터를 지나다니는 것 자체가 피하기 놀이가
   되면 정작 보스를 만났을 때 특별하지 않다. 규칙은 [combat.md](combat.md).

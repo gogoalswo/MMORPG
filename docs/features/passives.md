@@ -1,4 +1,4 @@
-# 패시브 — 질풍각 (공속 성장) · 레벨 도달 패시브 일곱
+# 패시브 — 질풍각 (공속 성장) · 레벨 도달 패시브 일곱 · 패시브 나무
 
 ## 무엇
 
@@ -39,13 +39,47 @@
 | 50 | `keen_eye` | 급소 간파 | 치명타 확률 +10%p | `crit` 에 더한다 |
 | 70 | `vital_strike` | 급소 강타 | 치명타 피해 +20%p | `critDamage` 에 더한다 |
 | 100 | `armor_break` | 파갑 | 방어력 관통 +10%p | 장비 관통에 더한 뒤 90% 상한 |
-| 150 | `deadly_kick` | 필살각 | 치명타 피해 +30%p | 〃 |
-| 200 | `ultimate` | 극의 | 치명타 피해 +50%p | 〃 — 치피 셋을 합치면 +100% (맨몸 100% → 200%) |
+| 150 | `deadly_kick` | 필살각 | **치명타 확률 +20%p** — 급소 간파 뒤 | `crit` 에 더한다 — 치확 둘을 합치면 +30%p |
+| 200 | `ultimate` | 극의 | 치명타 피해 +50%p — 급소 강타 뒤 | `critDamage` — 치피 둘을 합치면 +70%p |
+
+150레벨 필살각은 처음에 치명타 피해 +30% 였다 — 같은 날 **"150레벨 스킬이 지금 치명타 피해인데 치명타 확률 20% 증가로
+변경해"** 로 바꿨다. 아이콘(`skill_deadly_kick.png`)과 id 는 그대로다(저장이 id 로 단계를 쥔다).
 
 - **모두 더한다.** 공격력을 따로 곱하지 않은 것은 캐릭터 정보 창의 "공격력 증가" 한 줄(장비 % + 패시브)로
   최종이 맞아떨어지게 하려고다. 가방 옆 장비 창은 여전히 **장비 몫만** 적는다.
 - 이동 속도는 캐릭터 정보 창에 줄을 두지 않았다 — 한 줄 더하면 창이 720 높이를 넘는다(`ui_test`).
 - **달리기 동작도 이속만큼 빨리 튼다** (`game.gd` `_run_rate` — 경공이면 1.2배, 2026-09-30 요청). 안 그러면 발이 미끄러진다.
+
+### 패시브 나무 — 칸 하나가 습득 한 번 (2026-09-30)
+
+요청: 그림(레벨 줄마다 칸, 같은 계열은 화살표로 아래로) + "스킬 레벨 버튼을 눌러서 레벨업 하는 방식이 아니라
+다음 스킬을 계속 습득하는 방식으로 … 그 전 단계를 습득해야 다음 단계도 습득할 수 있게".
+
+```
+        질풍각  철각  경공  치확   치피   관통
+Lv.10   [1]    [■]
+          ↓
+Lv.20   [2]
+Lv.30   [3]          [■]
+Lv.50   [5]                [50]
+Lv.70   [7]                  ↓    [70]
+Lv.100  [10]                 ↓      ↓    [■]
+Lv.150  [15]               [150]    ↓
+Lv.200  [20]                      [200]
+```
+
+- **줄은 레벨**(10 · 20 · … · 200, 표에 나오는 레벨 전부), **칸은 계열**. 앞 단계(`requires`)가 있는 패시브는 그
+  패시브의 칸 아래에 선다. 질풍각은 20단계가 한 칸에 20개로 선다 — 칸마다 `N단계` 를 적는다(그림이 같다).
+- **저장 형식은 그대로다** — `passives { id: 단계 }`. 칸 (id, N) 을 배웠다 = 단계 ≥ N. 장부는 여전히 "다음 단계 하나"
+  를 올리므로 **앞 칸을 안 배우면 뒤 칸은 못 배운다**(화면은 `rank + 1 == N` 인 칸에만 [습득] 을 연다).
+  패시브를 스무 개로 쪼개지 않은 것은 저장·서버 처치 검증(`KillCheck`)·치트가 전부 이 사전을 읽어서다.
+- **계열 잇기** — 표의 `requires`: 필살각(150) ← 급소 간파(50), 극의(200) ← 급소 강타(70).
+  장부(`Ledger.learn_passive`)가 `Skills.passive_ready` 로 다시 본다. 레드닷(`passive_learnable`)도 이걸 따른다.
+- 칸 상태(`_tree_state`): 배움 · **지금 습득(레드닷)** · 레벨 모자람(흐림) · 앞 단계부터(흐림).
+  화살표는 위 칸을 배웠으면 금빛(`INV_GOLD_HI`), 아니면 흐린 회색.
+- 창을 열면 **지금 습득할 첫 칸**을 골라 거기로 스크롤한다 (Lv.100 이면 그 칸이 한참 아래라).
+- 단추는 늘 **"습득"** — 한 번 배운 뒤 "레벨업" 으로 바꾸던 것(같은 날 오전 요청)은 이 요청으로 걷었다.
+- 액티브 스킬 격자는 그대로 두고, **칸이 있는 쪽만 보인다** — 격투가는 나무만, 다른 직업은 격자만.
 
 ## 어디
 
@@ -54,18 +88,18 @@
 | `packages/shared/src/skills.ts` | **표** — `PASSIVES`(id · 직업 · 스탯 · `perRank` 0.4 · `everyLevels` 10 · `maxRank` 20) · `passiveRankOpen(p, level)` |
 | `packages/shared/src/skills.test.ts` | "질풍각 — Lv.200 에 격투가가 초당 10번 때린다" (`effectiveCooldown(900, 8) = 100`) |
 | `scripts/export-shared.mjs` | `skills.json` 의 `passives` 로 내보낸다 |
-| `godot/world/skills.gd` | `passives_for(job)` · `passive(id)` · `passive_open(p, level)` · **`passive_learnable`(레드닷)** · `passive_bonus(job, ranks)` · `passive_effect(p, rank)`("공격력 +30%") · `passive_once(p)`(레벨 도달) · `actives_shown(job)` |
+| `godot/world/skills.gd` | `passives_for(job)` · `passive(id)` · `passive_open(p, level)` · **`passive_ready`(앞 단계)** · `passive_can_learn` · **`passive_learnable`(레드닷)** · `passive_bonus(job, ranks)` · `passive_effect(p, rank)`("공격력 +30%") · `passive_once(p)`(레벨 도달) · `actives_shown(job)` |
 | `godot/world/ledger.gd` | **`learn_passive`** — 직업 · 레벨 · 끝 단계를 다시 본다. `KEYS` 에 `passives` |
 | `godot/world/world.gd` | `stats_of(job, level, equipped, passives)` 가 패시브 스탯을 더한다(`passive_*` 로 몫도 내린다) · `_speed_of`(이속) · `learn_passive` 요청 · 저장 복원 · `swing.speed` |
 | `godot/server/ledger_server.gd` · `kill_check.gd` | `OPS` 에 `learn_passive` · 최소 처치 시간도 패시브를 본다 |
 | `godot/world/save.gd` | `passives` `{ id: 단계 }` 저장 (옛 저장은 빈 사전) |
 | `godot/net/local_transport.gd` | `learnPassive` 요청 |
-| `godot/game/game.gd` `_redraw_skills` · `_draw_passive` · `_on_passive_learn` | 스킬창 — 목록 맨 앞에 패시브 칸(`N/20`), 왼쪽 설명(단계 · **현재 단계 : 공격 속도 +N%** · **다음 단계 : 공격 속도 +M%**(끝이면 "없음") · 초당 타수 → 다음 단계), **[습득]** 과 그 위 레드닷. 단추 글자는 0단계일 때만 "습득", 한 번 배운 뒤로는 **"레벨업"** (2026-09-30 요청 — "N레벨마다 +M%" 줄도 이때 뺐다) |
+| `godot/game/game.gd` `_build_tree` · `_redraw_tree` · `_draw_tree_arrows` · `_tree_state` · `_pick_tree` | **패시브 나무** — 레벨 줄 × 계열 칸, 칸마다 `_make_skill_cell`(자리는 `_tree_spot`), 화살표는 나무 `draw`, 끌기·누르기는 `DragScroll`(`_tree_drag`). 상수 `TREE_CELL` 84 · `TREE_GAP` 22 · `TREE_ARROW` 44 · `TREE_LABEL_W` 80 |
+| `godot/game/game.gd` `_draw_passive` · `_on_passive_learn` | 고른 칸의 설명 — "질풍각 N단계" · "패시브 · N레벨 습득" · "효과 : …" · (질풍각) 초당 타수 → 습득하면. 상태 줄 · **[습득]** 과 그 위 레드닷 |
 | `godot/game/game.gd` `_skill_dot` · `_refresh_status` | HUD 스킬 아이콘의 레드닷 — 매 프레임 `passive_learnable` 로 맞춘다 |
 | `public/assets/icons/skill_<id>.png` | 아이콘 여덟 장 (바르코, 스킬 아이콘 참고 그림을 물렸다). 주소는 `fetch-assets.sh`, 고도 목록은 `sync-godot-assets.mjs` |
-| `godot/game/game.gd` `_draw_passive_once` | 레벨 도달 패시브 설명 — "패시브 · N레벨 습득" · "효과 : …", 단추는 늘 "습득", 목록 칸은 "Lv.N 습득" |
 | `godot/tests/passive_test.gd` | 레벨 잠금 · 한 번에 한 단계 · 끝 단계 · 100ms · 옛 공속 옵션 무시 · 저장 · 서버 처치 검증 · **레벨 패시브 스탯 · 경공 이동 거리 ×1.2** |
-| `godot/tests/ui_test.gd` `_case_passive` | 퀵슬롯 스킬 칸 숨김 · 장착 줄/강화 칸 숨김 · 1단계면 단추가 "레벨업"·설명이 현재/다음 단계 두 줄 · [습득] 누르면 단계·간격 · 레드닷 켜짐 → 꺼짐 |
+| `godot/tests/ui_test.gd` `_case_passive` | 퀵슬롯 스킬 칸 숨김 · 장착 줄/강화 칸 숨김 · **나무 칸 수·계열 자리** · 열면 습득할 칸이 골라짐 · 앞 단계 전엔 막힘 · [습득] 누르면 단계·간격 · 레드닷 켜짐 → 꺼짐 · 급소 간파 전엔 필살각 막힘 |
 
 ## 규칙
 
@@ -115,7 +149,8 @@
 - 초당 타수 목표를 바꾸면 `perRank` 를 고친다 (`(900 / 목표간격 - 1) / maxRank`) → `npm run export:godot`.
   `skills.test.ts` 와 `passive_test.gd` 의 100 도 같이 고친다.
 - 격투가 기본 간격(`balance.ts` `JOB_MULT.fighter.interval`)을 바꾸면 위 표가 전부 움직인다.
-- 패시브를 더하면 `PASSIVES` 에 한 줄 (레벨 도달이면 `levelPassive(...)`). 새 스탯이면 `PassiveDef.stat` 타입,
+- 패시브를 더하면 `PASSIVES` 에 한 줄 (레벨 도달이면 `levelPassive(...)`, 같은 스탯 뒤에 이을 거면 끝에 앞 패시브 id —
+  나무에서 그 칸 아래에 선다). 새 스탯이면 `PassiveDef.stat` 타입,
   `Skills.PASSIVE_STAT_NAMES`, `stats_of` 의 `passive_*` 목록과 그 스탯을 더하는 줄을 같이 넣는다.
   레드닷·스킬창은 목록을 그대로 따른다.
 - 레드닷은 **배울 것이 하나라도 있으면** 켜진다 — 테스트가 "다 배웠다" 를 볼 때는 그 레벨의 레벨 패시브도 배워 둔다.

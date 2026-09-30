@@ -595,11 +595,12 @@
       "id": "deadly_kick",
       "job": "fighter",
       "name": "필살각",
-      "description": "한 번 들어간 치명타가 더 아프다.",
-      "stat": "critDamage",
-      "perRank": 0.3,
+      "description": "급소를 꿰뚫는 눈이 트여 치명타가 더 잦아진다.",
+      "stat": "crit",
+      "perRank": 0.2,
       "everyLevels": 150,
-      "maxRank": 1
+      "maxRank": 1,
+      "requires": "keen_eye"
     },
     {
       "id": "ultimate",
@@ -609,7 +610,8 @@
       "stat": "critDamage",
       "perRank": 0.5,
       "everyLevels": 200,
-      "maxRank": 1
+      "maxRank": 1,
+      "requires": "vital_strike"
     }
   ]
 }

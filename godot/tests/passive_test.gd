@@ -149,6 +149,18 @@ func _case_level_passives() -> void:
 	w.learn_passive("me", "vital_strike")
 	if int(me.passives.get("vital_strike", 0)) != 1:
 		_fail("Lv.70 급소 강타가 1 이 아니다: %s" % me.passives)
+	# 계열 잇기 (2026-09-30 요청) — 필살각(Lv.150)은 급소 간파(Lv.50)를 배워야, 극의(Lv.200)는 급소 강타 뒤
+	me.level = 200
+	w.learn_passive("me", "deadly_kick")
+	if int(me.passives.get("deadly_kick", 0)) != 0:
+		_fail("급소 간파 없이 필살각을 배웠다")
+	if Skills.passive_can_learn(Skills.passive("deadly_kick"), 200, {}):
+		_fail("급소 간파 없이도 필살각을 배울 수 있다고 한다 (레드닷이 잘못 켜진다)")
+	w.learn_passive("me", "keen_eye")
+	w.learn_passive("me", "deadly_kick")
+	w.learn_passive("me", "ultimate")
+	if int(me.passives.get("deadly_kick", 0)) != 1 or int(me.passives.get("ultimate", 0)) != 1:
+		_fail("앞 단계를 배웠는데 필살각·극의가 안 배워진다: %s" % me.passives)
 
 	var all := {}
 	for p in Skills.passives_for("fighter"):
@@ -158,7 +170,8 @@ func _case_level_passives() -> void:
 	var want_attack := roundi(float(bare.attack) * 1.3)
 	if int(full.attack) != want_attack:
 		_fail("철각 공격력 %d → %d (×1.3 = %d 여야)" % [bare.attack, full.attack, want_attack])
-	var checks := {"crit": 0.1, "critDamage": 1.0, "penetration": 0.1, "moveSpeed": 0.2}
+	# 치확 50 (+10%) · 150 (+20%, 2026-09-30 에 치피에서 바꿨다) · 치피 70 (+20%) · 200 (+50%)
+	var checks := {"crit": 0.3, "critDamage": 0.7, "penetration": 0.1, "moveSpeed": 0.2}
 	for key in checks:
 		var gained := float(full.get(key, 0.0)) - float(bare.get(key, 0.0))
 		if absf(gained - float(checks[key])) > 1e-6:

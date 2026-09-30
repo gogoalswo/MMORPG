@@ -3111,7 +3111,7 @@ func _white(size: int) -> Texture2D:
 func _fill_skill_cell(cell: PanelContainer, id: String, empty_text: String) -> void:
 	var icon: TextureRect = cell.find_child("icon", true, false)
 	var text: Label = cell.find_child("text", true, false)
-	var texture := _icon("skill_" + id) if id != "" else null
+	var texture := _icon("skill_" + Skills.icon_of(id)) if id != "" else null
 	icon.texture = texture
 	if id == "":
 		text.text = empty_text

@@ -2073,9 +2073,9 @@ func _case_passive(game: Node3D, me: Dictionary) -> void:
 			_fail("보이는 스킬이 없는데 %s 가 보인다" % node)
 	var passive_ids := Skills.passives_for("fighter").map(func(p): return str(p.id))
 	for id in passive_ids:
-		if game._icon("skill_" + str(id)) == null:
-			_fail("패시브 %s 의 아이콘(skill_%s.png)이 없다" % [id, id])
-	# 나무 (2026-09-30 요청) — 칸 하나가 습득 한 번. 질풍각 20칸 + 레벨 패시브 일곱, 격자는 숨는다
+		if game._icon("skill_" + Skills.icon_of(str(id))) == null:
+			_fail("패시브 %s 의 아이콘(skill_%s.png)이 없다" % [id, Skills.icon_of(str(id))])
+	# 나무 (2026-09-30 요청) — 칸 하나가 습득 한 번. 질풍각 20칸 + 레벨 패시브, 격자는 숨는다
 	var cells := 0
 	for p in Skills.passives_for("fighter"):
 		cells += int(p.maxRank)
@@ -2088,7 +2088,7 @@ func _case_passive(game: Node3D, me: Dictionary) -> void:
 	if not Rect2(Vector2.ZERO, screen).encloses(tree_rect) or tree_rect.position.x <= game._skill_big.get_global_rect().end.x:
 		_fail("나무 %s 가 화면 밖이거나 설명 왼쪽이다" % tree_rect)
 	# 같은 계열 뒷 칸은 앞 칸 아래 같은 줄에 선다 — 치확 50 → 150 · 치피 70 → 200
-	for pair in [["keen_eye", "deadly_kick"], ["vital_strike", "ultimate"], ["gale_kicks", "gale_kicks"]]:
+	for pair in [["iron_leg", "steel_leg"], ["diamond_leg", "mountain_leg"], ["keen_eye", "deadly_kick"], ["vital_strike", "ultimate"], ["gale_kicks", "gale_kicks"]]:
 		var up: Dictionary = game._tree_nodes[game._tree_find(pair[0], 1)]
 		var down: Dictionary = game._tree_nodes[game._tree_find(pair[1], 2 if pair[0] == pair[1] else 1)]
 		if up.column != down.column or down.row <= up.row:

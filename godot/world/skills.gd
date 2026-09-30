@@ -170,6 +170,11 @@ static func passives_for(job: String) -> Array:
 	return out
 
 
+## 스킬·패시브의 아이콘 이름 (`skill_<이름>.png`) — 패시브는 표의 `icon`(철각 계열이 철각 그림을 같이 쓴다), 없으면 id
+static func icon_of(id: String) -> String:
+	return str(passive(id).get("icon", id))
+
+
 ## id 로 하나. 없으면 빈 사전
 static func passive(id: String) -> Dictionary:
 	for p in _table().get("passives", []):

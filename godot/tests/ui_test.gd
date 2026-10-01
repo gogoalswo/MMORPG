@@ -607,6 +607,31 @@ func _case_status(game: Node3D) -> void:
 		_fail("메뉴 단추가 오른쪽 위에 안 붙었다: %s / %s" % [skill_rect, bag_rect])
 	if skill_rect.intersects(hp_rect) or skill_rect.intersects(badge):
 		_fail("메뉴 단추가 퀵슬롯 위 묶음과 겹친다")
+	# 평소 줄은 정보 · 스킬 · 가방 · 던전 + ≡ 이고, 나머지는 ≡ 를 눌러 펼치는 판에 선다 (2026-10-01 요청 그림)
+	var bar: Array = []
+	for c in game._menu_bar.get_children():
+		if c.visible:
+			var cap: Label = c.find_child("caption", true, false)
+			bar.append(cap.text if cap else str(c.name))
+	if bar != ["정보", "스킬", "가방", "던전", "MenuOpen"]:
+		_fail("평소 메뉴 줄이 %s" % [bar])
+	if game._menu_sheet.visible:
+		_fail("처음부터 메뉴 판이 펼쳐져 있다")
+	game._menu_open_cell.find_child("hit", true, false).pressed.emit()
+	await process_frame
+	await process_frame
+	var sheet: Rect2 = game._menu_sheet.get_global_rect()
+	if not game._menu_sheet.visible or game._menu_open_cell.visible or not game._menu_close_cell.visible:
+		_fail("≡ 를 눌렀는데 판 %s · ≡ %s · X %s" % [game._menu_sheet.visible, game._menu_open_cell.visible, game._menu_close_cell.visible])
+	elif not Rect2(Vector2.ZERO, screen).encloses(sheet):
+		_fail("펼친 메뉴 판이 화면 밖이다: %s" % sheet)
+	if game._menu_grid.get_child_count() != game._menu_cells.size() - 4:
+		_fail("판 안 단추가 %d개 (%d개여야 한다)" % [game._menu_grid.get_child_count(), game._menu_cells.size() - 4])
+	# 판의 첫 칸은 평소 줄 첫 칸 바로 아래 같은 열이다 (열 간격이 같다)
+	var first_bar: Rect2 = game._menu_cells[0].get_global_rect()
+	var first_grid: Rect2 = (game._menu_grid.get_child(0) as Control).get_global_rect()
+	if absf(first_grid.position.x - first_bar.position.x) > 1.0 or first_grid.position.y <= first_bar.end.y:
+		_fail("판 첫 칸이 줄 첫 칸 아래가 아니다: 줄 %s · 판 %s" % [first_bar, first_grid])
 	# 아이콘 아래 이름 글자 (2026-09-28 요청) — 여섯 단추 모두, 칸 안에서 안 잘리고 아이콘 아래에 붙는다
 	var names := ["정보", "스킬", "강화", "크리스탈", "가방", "던전"]
 	for i in names.size():
@@ -626,6 +651,24 @@ func _case_status(game: Node3D) -> void:
 		elif caption.get_global_rect().position.y < (pics[0] as Control).get_global_rect().end.y:
 			_fail("메뉴 글자 '%s' 가 아이콘과 겹친다: 글자 %s · 아이콘 %s" % [names[i], caption.get_global_rect(), (pics[0] as Control).get_global_rect()])
 
+	# 강화 · 크리스탈은 판 안에 나란히 (강화가 왼쪽)
+	var enh_rect: Rect2 = game._menu_cells[2].get_global_rect()
+	var cry_rect: Rect2 = game._menu_cells[3].get_global_rect()
+	if absf(cry_rect.position.x - enh_rect.end.x - 6.0) > 1.0 or absf(enh_rect.position.y - cry_rect.position.y) > 1.0:
+		_fail("판 안 강화 · 크리스탈이 나란하지 않다: 강화 %s · 크리스탈 %s" % [enh_rect, cry_rect])
+	# 판 안 단추를 누르면 그 창이 열리고 판은 접힌다 — X 로도 접힌다
+	game._menu_cells[3].find_child("hit", true, false).pressed.emit()
+	await process_frame
+	if game._menu_sheet.visible or not game._crystal_panel.visible:
+		_fail("판 안 크리스탈을 눌렀는데 판 %s · 크리스탈 창 %s" % [game._menu_sheet.visible, game._crystal_panel.visible])
+	game._menu_cells[3].find_child("hit", true, false).pressed.emit()
+	await process_frame
+	game._menu_open_cell.find_child("hit", true, false).pressed.emit()
+	game._menu_close_cell.find_child("hit", true, false).pressed.emit()
+	if game._menu_sheet.visible or not game._menu_open_cell.visible:
+		_fail("X 를 눌렀는데 판이 안 접혔다")
+	print("  메뉴: 줄 %s · 판 %s · 판 안 %d칸" % [bar, sheet, game._menu_grid.get_child_count()])
+
 	# 눌러서 창이 열린다
 	game._menu_cells[1].find_child("hit", true, false).pressed.emit()
 	await process_frame
@@ -638,11 +681,8 @@ func _case_status(game: Node3D) -> void:
 		_fail("오른쪽 위 가방 단추를 눌렀는데 가방이 안 열렸다")
 	game._toggle_bag()
 	await process_frame
-	# 크리스탈 — 가방 **바로 왼쪽**. 누르면 인벤토리·장비 창과 크리스탈 창이 같이 뜨고,
+	# 크리스탈 — ≡ 판 안 (2026-10-01 까지는 가방 바로 왼쪽). 누르면 인벤토리·장비 창과 크리스탈 창이 같이 뜨고,
 	# 장비 칸을 누르면 대상이 된다. 다시 누르면 셋 다 닫힌다
-	var cry_rect: Rect2 = game._menu_cells[3].get_global_rect()
-	if absf(bag_rect.position.x - cry_rect.end.x) > 12.0 or absf(cry_rect.position.y - bag_rect.position.y) > 1.0:
-		_fail("크리스탈 단추가 가방 옆이 아니다: 크리스탈 %s · 가방 %s" % [cry_rect, bag_rect])
 	if game._menu_cells[3].find_children("*", "TextureRect", true, false).is_empty():
 		_fail("크리스탈 단추에 그림이 없다 — npm run sync:godot 을 돌렸나 (ui_icon_crystal)")
 	game._menu_cells[3].find_child("hit", true, false).pressed.emit()
@@ -655,10 +695,7 @@ func _case_status(game: Node3D) -> void:
 	await process_frame
 	if game._crystal_panel.visible or game._bag_panel.visible or game._gear_panel.visible:
 		_fail("크리스탈 단추를 다시 눌렀는데 창이 안 닫혔다")
-	# 강화 — 크리스탈 **바로 왼쪽**. 누르면 강화 팝업이 대상 없이 **단일 강화 · 전체** 목록으로 뜬다 (2026-09-28)
-	var enh_rect: Rect2 = game._menu_cells[2].get_global_rect()
-	if absf(cry_rect.position.x - enh_rect.end.x) > 12.0 or absf(enh_rect.position.y - cry_rect.position.y) > 1.0:
-		_fail("강화 단추가 크리스탈 옆이 아니다: 강화 %s · 크리스탈 %s" % [enh_rect, cry_rect])
+	# 강화 — ≡ 판 안 크리스탈 왼쪽. 누르면 강화 팝업이 대상 없이 **단일 강화 · 전체** 목록으로 뜬다 (2026-09-28)
 	game._menu_cells[2].find_child("hit", true, false).pressed.emit()
 	await process_frame
 	var pop: EnhancePopup = game._enhance
@@ -2695,8 +2732,9 @@ func _check_home_button(game: Node) -> void:
 	if not Rect2(Vector2.ZERO, Vector2(1280, 720)).encloses(box) or box.position.y > 40.0 \
 			or absf(box.get_center().x - 640.0) > 2.0:
 		_fail("마을가기 단추가 위쪽 가운데가 아니다: %s" % box)
-	for cell in game._menu_cells:
-		if box.intersects(cell.get_global_rect()):
+	# 판 안 단추는 ≡ 를 눌렀을 때만 보인다 — 보이는 칸만 본다
+	for cell in game._menu_cells + [game._menu_open_cell]:
+		if (cell as Control).is_visible_in_tree() and box.intersects(cell.get_global_rect()):
 			_fail("마을가기 단추가 메뉴 %s 와 겹친다" % cell.get_global_rect())
 	var line: Label = game._label
 	if box.intersects(Rect2(line.global_position, line.get_minimum_size())):

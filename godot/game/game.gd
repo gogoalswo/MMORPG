@@ -124,6 +124,13 @@ const BAR_PAD := 0
 ## 오른쪽 위 메뉴 단추 (스킬·가방). 엄지로 누르니 퀵슬롯과 비슷한 크기다.
 ## **테두리가 없다** — 받은 그림이 그렇다 (2026-09-20). 그래서 아이콘을 거의 꽉 채운다
 const MENU_BTN := 62
+## 평소 줄에 늘 서는 메뉴 — 이름(글자)으로 고른다. 나머지는 ≡ 를 눌러야 펼쳐진다 (2026-10-01 요청 그림:
+## 다른 게임의 메뉴 — 평소엔 아이콘 넷 + ≡, 누르면 판이 펼쳐지고 ≡ 자리가 X)
+const MENU_QUICK := ["정보", "스킬", "가방", "던전"]
+## 펼친 판의 열 수 · 판 안 여백 · 줄 간격
+const MENU_SHEET_COLUMNS := 4
+const MENU_SHEET_PAD := 12
+const MENU_SHEET_ROW_GAP := 10
 ## HUD 위쪽 가운데 "마을가기" 단추 크기
 const HOME_BUTTON_SIZE := Vector2(140, 48)
 const MENU_INSET := 3
@@ -366,8 +373,15 @@ var _auto_rows: VBoxContainer
 var _auto_reset: Button
 ## 창에 지금 그려 둔 순서 — 바뀔 때만 줄을 다시 짓는다 (빈 글자면 다음에 반드시 짓는다)
 var _auto_shown := ""
-## 오른쪽 위 메뉴 단추 둘 (스킬·가방)
+## 오른쪽 위 메뉴 단추 전부 — 순서는 정보 · 스킬 · 강화 · 크리스탈 · 가방 · 던전 · 헬스 · 도감 · (랭킹) · 설정.
+## 평소 줄에 서는 것(`MENU_QUICK`)과 ≡ 를 눌러 펼치는 판에 서는 것으로 나뉜다 (2026-10-01)
 var _menu_cells: Array = []
+## 평소 줄 · 펼친 판 · 판의 칸 격자 · ≡ / X 단추
+var _menu_bar: HBoxContainer
+var _menu_sheet: PanelContainer
+var _menu_grid: GridContainer
+var _menu_open_cell: Control
+var _menu_close_cell: Control
 ## 가방 단추의 빨간 점 (`_add_red_dot`). 장비를 얻으면 켜고, 가방을 열면 끈다
 var _bag_dot: Control
 ## 설계 창 단추 — 오른쪽 맨 아래, 알파 0 (안 보이지만 눌린다)
@@ -2817,9 +2831,13 @@ func _build_skill_bar() -> void:
 	column.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	column.grow_vertical = Control.GROW_DIRECTION_BEGIN
 
+	# ≡ 를 누르면 펼쳐지는 판 — 평소 줄보다 **먼저** 단다 (줄이 판 위에 얹혀 그대로 보인다)
+	_build_menu_sheet()
 	var menu := HBoxContainer.new()
+	menu.name = "MenuBar"
 	menu.add_theme_constant_override("separation", 6)
 	_ui_root.add_child(menu)
+	_menu_bar = menu
 
 	# 오른쪽 위 메뉴. 2026-09-19 에 글자를 뺐다가 **2026-09-28 에 다시 아래에 달았다** —
 	# 그림만으로는 무엇인지 헷갈린다는 요청 ("이런식으로 텍스트 넣도록"). 그림도 같은 날
@@ -2852,8 +2870,28 @@ func _build_skill_bar() -> void:
 	# 설정 — 메뉴 맨 끝 (2026-09-30 요청 "볼륨 조절 하는 기능 추가해"). 지금은 소리 크기만 있다.
 	# 그림(`ui_icon_settings`)은 아직 없어서 이름 글자만 선다
 	_menu_cells.append(_icon_button("ui_icon_settings", "설정", _toggle_sound_panel, MENU_BTN, true))
+	# 평소 줄엔 `MENU_QUICK` 넷만, 나머지는 펼친 판의 격자로 (2026-10-01 요청 그림)
 	for cell in _menu_cells:
-		menu.add_child(cell)
+		var hit: Button = cell.get_node("hit")
+		if hit.tooltip_text in MENU_QUICK:
+			menu.add_child(cell)
+		else:
+			_menu_grid.add_child(cell)
+			# 판 안 단추를 누르면 그 창이 열리고 판은 접힌다
+			hit.pressed.connect(_close_menu)
+	# 줄 맨 오른쪽 ≡ — 누르면 판이 펼쳐지고 그 자리에 X 가 선다. 글자 줄이 없어 아이콘 높이(위)에 맞춘다
+	_menu_open_cell = _icon_button("ui_icon_menu", "메뉴", _toggle_menu, MENU_BTN)
+	_menu_open_cell.name = "MenuOpen"
+	_menu_close_cell = _icon_button("ui_icon_menu_close", "닫기", _toggle_menu, MENU_BTN)
+	_menu_close_cell.name = "MenuClose"
+	for each: Control in [_menu_open_cell, _menu_close_cell]:
+		each.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		menu.add_child(each)
+	_menu_close_cell.visible = false
+	# 판 맨 위는 평소 줄이 얹히는 자리 — 줄 크기를 그대로 따라간다
+	var room: Control = _menu_sheet.find_child("bar_room", true, false)
+	room.custom_minimum_size = menu.get_combined_minimum_size()
+	menu.resized.connect(func() -> void: room.custom_minimum_size = menu.size)
 	_bag_dot = _add_red_dot(bag_cell)
 	# 배울 수 있는 패시브 단계가 있으면 켠다 — `_refresh_status` 가 매 프레임 맞춘다 (2026-09-29 요청)
 	_skill_dot = _add_red_dot(skill_cell)
@@ -4436,6 +4474,61 @@ func _build_gate_panel() -> void:
 	_codex_panel.visibility_changed.connect(func(): codex_back.visible = _codex_panel.visible)
 	top.add_child(_codex_panel)
 	_close_button(_codex_panel, _toggle_codex, 0)
+
+
+## ≡ 를 눌러 펼치는 메뉴 판 (2026-10-01 요청: "오른쪽 위에 x버튼을 평소에는 … 3줄 짜리 ui 아이콘 만들고
+## 누르면 … 아이콘 나열되게"). 어두운 판 + 얇은 금테(ui-art-style.md), 맨 위는 평소 줄이 얹히는 빈 자리,
+## 구분선 아래에 나머지 단추가 `MENU_SHEET_COLUMNS` 열로 선다. 열 간격이 평소 줄과 같아 칸이 줄 아래에 맞는다
+func _build_menu_sheet() -> void:
+	_menu_sheet = PanelContainer.new()
+	_menu_sheet.name = "MenuSheet"
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color(0.06, 0.055, 0.045, 0.94)
+	box.border_color = Color(GatePanel.CARD_GOLD, 0.55)
+	box.set_border_width_all(1)
+	box.set_corner_radius_all(6)
+	box.set_content_margin_all(MENU_SHEET_PAD)
+	_menu_sheet.add_theme_stylebox_override("panel", box)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", MENU_SHEET_ROW_GAP)
+	_menu_sheet.add_child(column)
+	var room := Control.new()
+	room.name = "bar_room"
+	room.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(room)
+	var rule := ColorRect.new()
+	rule.color = GatePanel.HEAD_LINE
+	rule.custom_minimum_size = Vector2(0, 1)
+	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(rule)
+	_menu_grid = GridContainer.new()
+	_menu_grid.name = "MenuGrid"
+	_menu_grid.columns = MENU_SHEET_COLUMNS
+	_menu_grid.add_theme_constant_override("h_separation", 6)
+	_menu_grid.add_theme_constant_override("v_separation", MENU_SHEET_ROW_GAP)
+	column.add_child(_menu_grid)
+	_menu_sheet.visible = false
+	_ui_root.add_child(_menu_sheet)
+	# 평소 줄(위·오른쪽 20)을 판 여백만큼 감싼다 — 판 안쪽 왼쪽 끝이 줄 왼쪽 끝과 맞는다
+	_menu_sheet.set_anchors_and_offsets_preset(
+		Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE, 20 - MENU_SHEET_PAD
+	)
+	_menu_sheet.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+
+
+## ≡ / X — 판을 펼치거나 접는다
+func _toggle_menu() -> void:
+	_set_menu_open(not _menu_sheet.visible)
+
+
+func _close_menu() -> void:
+	_set_menu_open(false)
+
+
+func _set_menu_open(on: bool) -> void:
+	_menu_sheet.visible = on
+	_menu_open_cell.visible = not on
+	_menu_close_cell.visible = on
 
 
 func _open_gate() -> void:

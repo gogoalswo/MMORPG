@@ -1437,7 +1437,8 @@ func _build_char_window(panel: PanelContainer) -> void:
 		var grid := GridContainer.new()
 		grid.columns = 2
 		grid.add_theme_constant_override("h_separation", 12)
-		grid.add_theme_constant_override("v_separation", 6)
+		# 4 — "아이템 드랍률" 줄(2026-10-01)을 더하니 6 으로는 창이 화면 위로 25px 넘었다 (간격 13개 × 2px)
+		grid.add_theme_constant_override("v_separation", 4)
 		side.add_child(grid)
 		_char_grids.append(grid)
 

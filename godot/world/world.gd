@@ -1874,12 +1874,13 @@ func fitness_up(player_id: String, kind_id: String, auto: bool) -> void:
 
 ## --- 장비 도감 --- (docs/features/codex.md)
 
-## 도감 창의 **등록** — 가방의 그 장비(등급·부위·강화) 하나를 넣어 칸을 채운다. 판정은 `Ledger.codex_register`
-func codex_register(player_id: String, item_id: String, enhance: int) -> void:
+## 도감 창의 **등록** — 가방의 그 장비(등급·부위·강화) 하나를 넣어 칸을 채운다. `index` 는 창에서 고른 가방 번호
+## (-1 이면 옵션이 가장 적은 것). 판정은 `Ledger.codex_register`
+func codex_register(player_id: String, item_id: String, enhance: int, index: int = -1) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty():
 		return
-	_ledger_call(player, &"codex_register", [item_id, enhance])
+	_ledger_call(player, &"codex_register", [item_id, enhance, index])
 
 
 ## 테스트 단추 — 프로틴 세 종을 `DEBUG_PROTEIN` 개씩 넣는다 (던전을 안 돌고 헬스를 볼 때)

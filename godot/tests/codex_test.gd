@@ -113,6 +113,18 @@ func _case_stack() -> void:
 	w.codex_register("me", Items.item_id(1, "boots"), 0)
 	if me.bag.size() != 1 or (me.bag[0].options as Array).size() != 2:
 		_fail("옵션이 적은 신발이 들어가야 하는데 남은 것 %s" % [me.bag])
+	# 창에서 **고른 칸**(가방 번호)을 넣는다 — 옵션이 많아도 고른 것이 들어간다
+	me.codex = {}
+	me.bag = [poor.duplicate(true), rich.duplicate(true)]
+	w.codex_register("me", Items.item_id(1, "boots"), 0, 1)
+	if me.bag.size() != 1 or (me.bag[0].options as Array).size() != 1:
+		_fail("고른 신발(옵션 둘)이 들어가야 하는데 남은 것 %s" % [me.bag])
+	# 고른 번호에 다른 것이 서 있으면 넣지 않는다
+	me.codex = {}
+	me.bag = [_gear(1, "ring", 0), poor.duplicate(true)]
+	w.codex_register("me", Items.item_id(1, "boots"), 0, 0)
+	if me.bag.size() != 2 or not me.codex.is_empty():
+		_fail("고른 번호가 반지인데 신발 칸이 찼다: %s" % [me.codex])
 
 
 ## 보너스는 장비 % · 헬스와 따로 곱한다. 정보 창용 `codex_*` 도 싣는다
@@ -167,7 +179,7 @@ func _case_save() -> void:
 
 ## 서버 — 요청 표에 있고, 새 계정에 칸이 있고, 처치 검증도 도감 공격력을 본다
 func _case_server() -> void:
-	if str(LedgerServer.OPS.get("codex_register", "")) != "si":
+	if str(LedgerServer.OPS.get("codex_register", "")) != "sii":
 		_fail("서버가 codex_register 요청을 모른다")
 	var ledger := Ledger.fresh("fighter")
 	if not "codex" in Ledger.KEYS or not ledger.has("codex"):
@@ -223,7 +235,7 @@ func _case_panel() -> void:
 	if panel.picked() != ["weapon", 1] or panel.register_button().disabled:
 		_fail("처음 고른 칸 %s · 단추 꺼짐 %s" % [panel.picked(), panel.register_button().disabled])
 	var asked: Array = []
-	panel.register_requested.connect(func(id: String, enhance: int) -> void: asked.append([id, enhance]))
+	panel.register_requested.connect(func(id: String, enhance: int, index: int) -> void: asked.append([id, enhance, index]))
 	panel.register_button().pressed.emit()
 	# 찬 칸을 고르면 단추가 꺼진다
 	(panel.find_child("cell_weapon_0", true, false) as Button).pressed.emit()
@@ -234,8 +246,32 @@ func _case_panel() -> void:
 	if panel.grade() != 4 or panel.picked() != ["ring", 3]:
 		_fail("영웅 탭: 등급 %d · 고른 칸 %s" % [panel.grade(), panel.picked()])
 	panel.register_button().pressed.emit()
-	if asked != [[Items.item_id(1, "weapon"), 1], [Items.item_id(4, "ring"), 3]]:
+	if asked != [[Items.item_id(1, "weapon"), 1, 0], [Items.item_id(4, "ring"), 3, 1]]:
 		_fail("단추가 낸 요청 %s" % [asked])
+	# 넣을 장비 고르기 — 같은 칸에 맞는 장비가 둘이면 목록에 둘, 처음엔 옵션 적은 것, 눌러서 바꾼다
+	var many := _gear(2, "armor", 4)
+	many.options = [{"kind": "crit", "value": 5}, {"kind": "critDamage", "value": 9}]
+	var few := _gear(2, "armor", 4)
+	few.options = [{"kind": "crit", "value": 2}]
+	panel.refresh({"codex": {}, "bag": [_gear(3, "ring", 0), many, few]})
+	(panel.find_child("tab_2", true, false) as Button).pressed.emit()
+	(panel.find_child("cell_armor_4", true, false) as Button).pressed.emit()
+	if panel.choices() != [1, 2] or panel.choice() != 2:
+		_fail("넣을 장비 목록 %s · 고른 것 %d (옵션 적은 2번이어야 한다)" % [panel.choices(), panel.choice()])
+	var row: Control = panel.find_child("choice_1", true, false)
+	if row == null:
+		_fail("넣을 장비 줄이 없다")
+	else:
+		row.get_node("hit").pressed.emit()
+		if panel.choice() != 1:
+			_fail("1번 줄을 눌렀는데 고른 것이 %d" % panel.choice())
+		var line: Label = panel.find_child("choice_1", true, false).find_child("options", true, false)
+		if not line.text.contains("·"):
+			_fail("옵션 둘이 한 줄에 안 적혔다: '%s'" % line.text)
+	asked.clear()
+	panel.register_button().pressed.emit()
+	if asked != [[Items.item_id(2, "armor"), 4, 1]]:
+		_fail("고른 갑옷을 넣는 요청이 아니다: %s" % [asked])
 	# 기준 화면(1280x720)에 들어가나 — 돌판 틀 여백(카드 34 · 안 30)을 뺀 알맹이로 본다
 	var inner := panel.get_combined_minimum_size()
 	if inner.x > 1280.0 - 128.0 or inner.y > 720.0 - 128.0:

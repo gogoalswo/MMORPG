@@ -4463,8 +4463,8 @@ func _build_gate_panel() -> void:
 	# 도감 창도 같은 층·같은 결이다 → docs/features/codex.md
 	_codex_panel = CodexPanel.make(_frame_box, _icon)
 	_codex_panel.theme = _ui_root.theme
-	_codex_panel.register_requested.connect(func(item_id: String, enhance: int) -> void:
-		_transport.send(&"codexRegister", {"id": item_id, "enhance": enhance})
+	_codex_panel.register_requested.connect(func(item_id: String, enhance: int, index: int) -> void:
+		_transport.send(&"codexRegister", {"id": item_id, "enhance": enhance, "index": index})
 	)
 	var codex_back := ColorRect.new()
 	codex_back.name = "CodexBack"

@@ -645,6 +645,10 @@ func _window(game: Node3D, which: String) -> void:
 		player["codex"] = {item.call("weapon"): 0b111, item.call("armor"): 0b1, item.call("ring"): 0b11}
 		player["bag"] = [
 			{"id": item.call("weapon"), "grade": 3, "enhance": 3, "options": []},
+			{"id": item.call("weapon"), "grade": 3, "enhance": 3, "options": [
+				{"kind": "crit", "value": 6}, {"kind": "critDamage", "value": 12}, {"kind": "penetration", "value": 3},
+			]},
+			{"id": item.call("weapon"), "grade": 3, "enhance": 3, "count": 2, "options": [{"kind": "crit", "value": 2}]},
 			{"id": item.call("helmet"), "grade": 3, "enhance": 0, "options": []},
 			{"id": Items.item_id(5, "boots"), "grade": 5, "enhance": 2, "options": []},
 		]

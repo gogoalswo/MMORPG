@@ -248,9 +248,10 @@ func fitness_up(p: Dictionary, kind_id: String, auto: int = 0) -> void:
 
 ## 도감 창의 **등록** — 가방에서 `item_id`(등급·부위) +`enhance` 장비 **하나를 넣어(소모)** 그 칸을 채운다
 ## (2026-10-01 요청: "각 등급 0강부터 9강까지 등록할 수 있는 도감"). **끼고 있는 것은 안 받는다** —
-## 가방만 뒤진다. 같은 장비가 여러 칸이면 **옵션 줄이 가장 적은 것**을 넣는다 (좋은 것을 남긴다).
-## 겹친 칸이면 하나만 뗀다
-func codex_register(p: Dictionary, item_id: String, enhance: int) -> void:
+## 가방만 뒤진다. `index` 는 도감 창에서 **고른 가방 번호** — 그 칸이 이 등급·부위·강화가 맞는지 다시 본다
+## (2026-10-01 요청 "등록할 때 어떤 아이템 넣을건지 선택하는 UI"). -1 이면 같은 장비 중
+## **옵션 줄이 가장 적은 것**을 넣는다 (좋은 것을 남긴다). 겹친 칸이면 하나만 뗀다
+func codex_register(p: Dictionary, item_id: String, enhance: int, index: int = -1) -> void:
 	var item := Items.get_item(item_id)
 	if item.is_empty() or enhance < 0 or enhance > Codex.max_enhance():
 		return
@@ -260,12 +261,20 @@ func codex_register(p: Dictionary, item_id: String, enhance: int) -> void:
 		_notice("%s 은 이미 도감에 있습니다" % label)
 		return
 	var pick := -1
-	for index in p.bag.size():
-		var stack: Dictionary = p.bag[index]
+	if index >= 0:
+		# 고른 칸 — 그사이 가방이 바뀌어 다른 것이 서 있으면 넣지 않는다
+		if index < p.bag.size() and str(p.bag[index].get("id", "")) == item_id \
+				and int(p.bag[index].get("enhance", 0)) == enhance:
+			pick = index
+		else:
+			_notice("고른 %s 이 가방에 없습니다" % label)
+			return
+	for at in p.bag.size() if index < 0 else 0:
+		var stack: Dictionary = p.bag[at]
 		if str(stack.get("id", "")) != item_id or int(stack.get("enhance", 0)) != enhance:
 			continue
 		if pick < 0 or (stack.get("options", []) as Array).size() < (p.bag[pick].get("options", []) as Array).size():
-			pick = index
+			pick = at
 	if pick < 0:
 		_notice("가방에 %s 이 없습니다" % label)
 		return

@@ -163,6 +163,14 @@ func _case_stats() -> void:
 
 
 func _case_drop() -> void:
+	# 아이템 드랍률 옵션은 확률에 **곱한다** (2026-10-01 요청: "100% 증가면 원래 10%짜리가 20%되게")
+	_eq("드랍률 +100% 면 10% → 20%", Items.with_drop_bonus(0.1, 1.0), 0.2)
+	_eq("드랍률은 100% 를 안 넘는다", Items.with_drop_bonus(0.6, 1.0), 1.0)
+	_eq("장비 드롭 확률도 두 배", snappedf(Items.drop_chance(20, 1.0) / Items.drop_chance(20), 0.0001), 2.0)
+	var ring := {"id": "g7_r", "enhance": 0, Items.option_tiers()[0].key: [{"kind": "dropRate", "value": 25.0}]}
+	_eq("드랍률 옵션 → 장비 합계", Items.equipment_stats({"ring": ring}).dropRate, 0.25)
+	_eq("드랍률 옵션 7등급 범위", [Items.option_range("dropRate", 7).min, Items.option_range("dropRate", 7).max], [13.0, 25.0])
+
 	# 떨어지는 장비는 **잡은 사람이 쓸 수 있는 것만** 고른다
 	var rng := RandomNumberGenerator.new()
 	var drops := 0

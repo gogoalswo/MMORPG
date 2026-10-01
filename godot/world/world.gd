@@ -2484,6 +2484,9 @@ static func stats_of(
 		float(gear.get("penetration", 0.0)) + stats.passive_penetration, 0.0,
 		float(c.get("penetrationCap", 0.9))
 	)
+	# 아이템 드랍률 — 상한 없음 (확률이 100% 를 넘으면 `Items.with_drop_bonus` 가 자른다).
+	# 판정은 `Ledger.kill` 이 장부의 장비로 따로 센다. 여기 값은 캐릭터 정보 창이 적는 것이다
+	stats["dropRate"] = float(gear.get("dropRate", 0.0))
 	return stats
 
 

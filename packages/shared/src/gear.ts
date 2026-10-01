@@ -418,7 +418,8 @@ export type OptionKind =
   | 'attackSpeed'
   | 'maxHp'
   | 'cooldown'
-  | 'penetration';
+  | 'penetration'
+  | 'dropRate';
 
 /**
  * **뽑히는 옵션 — 다섯 종.** 공속은 2026-09-29 에 뺐다 (요청: "장비 옵션에 공속은 제거할꺼야") —
@@ -431,6 +432,7 @@ export const OPTION_KINDS: OptionKind[] = [
   'maxHp',
   'cooldown',
   'penetration',
+  'dropRate',
 ];
 
 /**
@@ -475,6 +477,11 @@ export const OPTION_MAX_VALUE: Record<OptionKind, number> = {
   // 넘는데 수치 줄여. 옵션 하나당 최대 15퍼센트고"). ×50 이라 7등급 한 줄이 8~15% 다
   // (그 전 83~165%). 1차·2차가 다 관통이면 두 줄이 더해진다 — 상한 90% 는 그대로다
   penetration: 0.3,
+  // **아이템 드랍률 (2026-10-01)** ★ — 요청: "아이템 옵션으로 아이템드랍률 증가 옵션 만들어.
+  // 100% 증가면 원래 10%짜리가 20%되게". 드롭 확률에 `× (1 + 합계)` 로 곱한다(`dropChanceFor`).
+  // 전투 축이 아니라 DPS 역산이 없다 — 체력과 같은 0.5 라 7등급 한 줄이 13~25% 다.
+  // 0.4 로 잡으면 정수로 끊기면서 5→6등급이 "하위 30%" 검사(17%)에 걸린다
+  dropRate: 0.5,
 };
 
 /**

@@ -341,6 +341,8 @@ static func empty_stats() -> Dictionary:
 		"crit": 0.0, "critDamage": 0.0, "attackSpeed": 0.0,
 		# 옵션으로만 붙는 두 축 — 쿨타임 감소와 방어력 관통
 		"cooldown": 0.0, "penetration": 0.0,
+		# 아이템 드랍률 증가 (1.0 = +100% → 10% 가 20%) — `drop_chance` 가 곱한다
+		"dropRate": 0.0,
 	}
 
 
@@ -373,6 +375,7 @@ static func stack_stats(stack: Dictionary) -> Dictionary:
 			"critDamage": total.critDamage += value / 100.0
 			"cooldown": total.cooldown += value / 100.0
 			"penetration": total.penetration += value / 100.0
+			"dropRate": total.dropRate += value / 100.0
 	return total
 
 
@@ -460,11 +463,18 @@ static func grade_drop_rate(grade: int) -> float:
 ##
 ## 2026-09-21 까지는 `dropChance` 평면값 0.14 였다. 설계값(`GEAR_DROP_RATE`)은
 ## `balance.json` 에 있기만 하고 판정이 안 읽고 있었다 → docs/features/items.md
-static func drop_chance(monster_level: int) -> float:
+static func drop_chance(monster_level: int, drop_bonus := 0.0) -> float:
 	var sum := 0.0
 	for g in drop_grades(monster_level):
 		sum += grade_drop_rate(int(g))
-	return sum
+	return with_drop_bonus(sum, drop_bonus)
+
+
+## **아이템 드랍률 옵션을 건 확률** ★ (2026-10-01) — 원래 확률 × (1 + 합계).
+## 요청: "100% 증가면 원래 10%짜리가 20%되게" — 더하기가 아니라 **곱하기**다.
+## 장비·크리스탈 둘 다 건다. 등급 비는 그대로다 — `roll_grade` 는 손대지 않는다 (`items.ts` 와 같다)
+static func with_drop_bonus(chance: float, drop_bonus: float) -> float:
+	return minf(1.0, chance * (1.0 + maxf(0.0, drop_bonus)))
 
 
 ## 그 사냥터 안에서 등급 하나 — **설계의 등급별 드랍률 비 그대로.**
@@ -490,16 +500,17 @@ static func roll_grade(roll: float, monster_level: int) -> int:
 ## 처치 보상을 굴린다.
 ## **떨어지는 장비는 잡은 사람이 쓸 수 있는 것만 고른다** — 못 쓰는 무기가
 ## 가방을 채우면 정리하는 게 일이 된다
-static func roll_drop(monster_level: int, job: String, rng: RandomNumberGenerator) -> Dictionary:
+## `drop_bonus` 는 장비의 아이템 드랍률 합계(1.0 = +100%) — `with_drop_bonus`
+static func roll_drop(monster_level: int, job: String, rng: RandomNumberGenerator, drop_bonus := 0.0) -> Dictionary:
 	# ±30% 흔들어 매번 같은 숫자가 나오지 않게 한다
 	var gold := maxi(1, roundi(gold_base(monster_level) * (0.7 + rng.randf() * 0.6)))
 
 	# 크리스탈은 장비와 **따로** 굴린다. 순서는 골드 → 장비 → (슬롯 → 등급 → 옵션) → 크리스탈
 	# — `items.ts` 와 같은 순서라야 같은 씨앗에서 같은 것이 나온다
 	var drop := {"gold": gold}
-	if rng.randf() < drop_chance(monster_level):
+	if rng.randf() < drop_chance(monster_level, drop_bonus):
 		drop["item"] = _roll_gear_drop(monster_level, rng)
-	if rng.randf() < crystal_drop_chance():
+	if rng.randf() < with_drop_bonus(crystal_drop_chance(), drop_bonus):
 		drop["crystal"] = 1
 	return drop
 

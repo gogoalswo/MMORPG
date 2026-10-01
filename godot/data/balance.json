@@ -1490,7 +1490,8 @@
       "critDamage",
       "maxHp",
       "cooldown",
-      "penetration"
+      "penetration",
+      "dropRate"
     ],
     "optionMaxValue": {
       "crit": 1.5,
@@ -1498,7 +1499,8 @@
       "attackSpeed": 1.2,
       "maxHp": 0.5,
       "cooldown": 1,
-      "penetration": 0.3
+      "penetration": 0.3,
+      "dropRate": 0.5
     },
     "optionCount": [
       [

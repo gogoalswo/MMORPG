@@ -236,7 +236,14 @@ func _case_panel() -> void:
 		_fail("처음 고른 칸 %s · 단추 꺼짐 %s" % [panel.picked(), panel.register_button().disabled])
 	var asked: Array = []
 	panel.register_requested.connect(func(id: String, enhance: int, index: int) -> void: asked.append([id, enhance, index]))
+	var picker: CodexPicker = panel.picker()
+	# [등록] 은 바로 넣지 않고 **고르기 창**을 연다 → 창의 [등록] 이 요청을 낸다
 	panel.register_button().pressed.emit()
+	if not picker.visible or picker.choices() != [0] or picker.choice() != 0 or not asked.is_empty():
+		_fail("등록 → 고르기 창: 보임 %s · 후보 %s · 고른 것 %d · 요청 %s" % [picker.visible, picker.choices(), picker.choice(), asked])
+	picker.confirm_button().pressed.emit()
+	if picker.visible:
+		_fail("고르기 창의 등록을 눌렀는데 창이 남았다")
 	# 찬 칸을 고르면 단추가 꺼진다
 	(panel.find_child("cell_weapon_0", true, false) as Button).pressed.emit()
 	if not panel.register_button().disabled:
@@ -246,32 +253,46 @@ func _case_panel() -> void:
 	if panel.grade() != 4 or panel.picked() != ["ring", 3]:
 		_fail("영웅 탭: 등급 %d · 고른 칸 %s" % [panel.grade(), panel.picked()])
 	panel.register_button().pressed.emit()
+	picker.confirm_button().pressed.emit()
 	if asked != [[Items.item_id(1, "weapon"), 1, 0], [Items.item_id(4, "ring"), 3, 1]]:
 		_fail("단추가 낸 요청 %s" % [asked])
-	# 넣을 장비 고르기 — 같은 칸에 맞는 장비가 둘이면 목록에 둘, 처음엔 옵션 적은 것, 눌러서 바꾼다
+
+	# 고르기 창 — 같은 칸에 맞는 장비가 둘이면 둘, 처음엔 옵션 줄(1·2·3차 합)이 적은 것, 눌러서 바꾼다.
+	# **2·3차도 보인다** (2026-10-01 지적 "2,3차 옵션은 안 보이자나")
 	var many := _gear(2, "armor", 4)
-	many.options = [{"kind": "crit", "value": 5}, {"kind": "critDamage", "value": 9}]
+	many.options = [{"kind": "crit", "value": 5}]
+	many.options2 = [{"kind": "critDamage", "value": 9}]
 	var few := _gear(2, "armor", 4)
 	few.options = [{"kind": "crit", "value": 2}]
 	panel.refresh({"codex": {}, "bag": [_gear(3, "ring", 0), many, few]})
 	(panel.find_child("tab_2", true, false) as Button).pressed.emit()
 	(panel.find_child("cell_armor_4", true, false) as Button).pressed.emit()
-	if panel.choices() != [1, 2] or panel.choice() != 2:
-		_fail("넣을 장비 목록 %s · 고른 것 %d (옵션 적은 2번이어야 한다)" % [panel.choices(), panel.choice()])
-	var row: Control = panel.find_child("choice_1", true, false)
-	if row == null:
-		_fail("넣을 장비 줄이 없다")
-	else:
-		row.get_node("hit").pressed.emit()
-		if panel.choice() != 1:
-			_fail("1번 줄을 눌렀는데 고른 것이 %d" % panel.choice())
-		var line: Label = panel.find_child("choice_1", true, false).find_child("options", true, false)
-		if not line.text.contains("·"):
-			_fail("옵션 둘이 한 줄에 안 적혔다: '%s'" % line.text)
-	asked.clear()
 	panel.register_button().pressed.emit()
+	await process_frame
+	if picker.choices() != [1, 2] or picker.choice() != 2:
+		_fail("후보 %s · 고른 것 %d (옵션 적은 2번이어야 한다)" % [picker.choices(), picker.choice()])
+	var card: Control = picker.find_child("choice_1", true, false)
+	if card == null:
+		_fail("고르기 창에 1번 칸이 없다")
+	else:
+		var second: Control = card.find_child("tier_2_0", true, false)
+		var third: Control = card.find_child("tier_3", true, false)
+		if second == null or not (second.get_node("value") as Label).text.contains("치명타"):
+			_fail("2차 옵션 줄이 안 보인다")
+		if third == null or (third.get_node("value") as Label).text != "비어 있음":
+			_fail("3차 줄이 '비어 있음' 이 아니다")
+		card.get_node("hit").pressed.emit()
+		if picker.choice() != 1:
+			_fail("1번 칸을 눌렀는데 고른 것이 %d" % picker.choice())
+	asked.clear()
+	picker.confirm_button().pressed.emit()
 	if asked != [[Items.item_id(2, "armor"), 4, 1]]:
 		_fail("고른 갑옷을 넣는 요청이 아니다: %s" % [asked])
+	# 취소는 아무것도 안 낸다
+	panel.register_button().pressed.emit()
+	(picker.find_child("cancel", true, false) as Button).pressed.emit()
+	if picker.visible or asked.size() != 1:
+		_fail("취소했는데 창 %s · 요청 %s" % [picker.visible, asked])
 	# 기준 화면(1280x720)에 들어가나 — 돌판 틀 여백(카드 34 · 안 30)을 뺀 알맹이로 본다
 	var inner := panel.get_combined_minimum_size()
 	if inner.x > 1280.0 - 128.0 or inner.y > 720.0 - 128.0:

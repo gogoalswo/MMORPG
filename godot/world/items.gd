@@ -239,6 +239,14 @@ static func shown_options(lines: Array) -> Array:
 	return lines.filter(func(option): return str(option.get("kind", "")) != "attackSpeed")
 
 
+## 장비 한 벌의 옵션 줄 수 — 1·2·3차를 다 센다 (도감에 넣을 것을 고를 때 "가장 적은 것")
+static func option_lines(stack: Dictionary) -> int:
+	var count := 0
+	for tier in option_tiers():
+		count += shown_options(stack.get(str(tier.key), [])).size()
+	return count
+
+
 static func describe_option(option: Dictionary) -> String:
 	var label: Dictionary = _t().get("optionLabel", {})
 	# 저장된 옛 아이템의 공격력·방어력 옵션 — 지금 표에 없어 영어 키가 찍혔다 (2026-09-23).

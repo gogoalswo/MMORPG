@@ -153,7 +153,7 @@ export interface PassiveDef {
   /** 몇 레벨마다 한 단계가 열리나 */
   everyLevels: number;
   maxRank: number;
-  /** 먼저 끝까지 배워야 하는 패시브 — 스킬창에서 그 칸 아래로 화살표가 이어진다 */
+  /** 먼저 끝까지 배워야 하는 패시브 — 스킬창에서는 같은 칸(계열)의 다음 단계가 된다 */
   requires?: string;
   /** 아이콘 이름 (`skill_<icon>.png`). 없으면 id — 철각 계열 뒤 셋은 철각 그림을 같이 쓴다 */
   icon?: string;

@@ -30,9 +30,6 @@ const CELL := 62.0
 const CELL_GAP := 6
 const NAME_WIDTH := 92.0
 const PICK_ICON := 52.0
-## 넣을 장비 목록의 한 줄 — 그림 크기 · 줄 사이
-const CHOICE_ICON := 44.0
-const CHOICE_GAP := 6
 const BUTTON_MARGIN := 28
 const SINK := 3
 
@@ -68,13 +65,9 @@ var _pick_name: Label
 var _pick_gain: Label
 var _pick_have: Label
 var _register_button: Button
-## 넣을 장비 목록 (2026-10-01 요청 "등록할 때 어떤 아이템 넣을건지 선택하는 UI") — 고른 칸에 맞는 가방 칸들
-var _choice_scroll: ScrollContainer
-var _choice_list: VBoxContainer
-var _choice_drag: DragScroll
-## 목록에서 고른 가방 번호 · 지금 목록에 선 가방 번호들 (-1 / 빈 배열이면 없다)
-var _choice := -1
-var _choice_bag: Array = []
+## 등록할 장비 선택 창 — [등록] 을 누르면 이 창 위에 뜬다 (codex_picker.gd, 2026-10-01 요청
+## "가방에서 선택하는 UI를 따로 만들어 … 2,3차 옵션은 안 보이자나")
+var _picker: CodexPicker
 
 
 ## `frame_box` · `icon` 은 `game.gd` 것을 받는다 (헬스 창과 같다)
@@ -123,6 +116,13 @@ func _build() -> void:
 	column.add_child(body)
 	body.add_child(_build_grid())
 	body.add_child(_build_side())
+	# 등록할 장비 선택 창 — 맨 뒤에 달아 모든 것 위에 뜬다
+	_picker = CodexPicker.make(_frame_box, _icon)
+	_picker.picked.connect(func(index: int) -> void:
+		if not _pick.is_empty():
+			register_requested.emit(Items.item_id(_grade, str(_pick[0])), int(_pick[1]), index)
+	)
+	add_child(_picker)
 
 
 ## 왼쪽 — 강화 머리줄 + 부위 여섯 줄 × 칸 열
@@ -215,6 +215,10 @@ func _build_side() -> Control:
 	_progress.name = "progress"
 	_progress.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(_progress)
+	var gap := Control.new()
+	gap.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.add_child(gap)
+
 	column.add_child(_head("선택한 칸"))
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 14)
@@ -245,18 +249,6 @@ func _build_side() -> Control:
 	_pick_have.name = "pick_have"
 	_pick_have.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(_pick_have)
-	# 넣을 장비 — 같은 등급·부위·강화라도 옵션이 다르다. 줄을 눌러 고르고 [등록] (끌어서 내린다)
-	_choice_scroll = ScrollContainer.new()
-	_choice_scroll.name = "choices"
-	_choice_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_choice_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_choice_scroll.get_v_scroll_bar().custom_minimum_size.x = GatePanel.BAR_WIDTH
-	column.add_child(_choice_scroll)
-	_choice_list = VBoxContainer.new()
-	_choice_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_choice_list.add_theme_constant_override("separation", CHOICE_GAP)
-	_choice_scroll.add_child(_choice_list)
-	_choice_drag = DragScroll.attach(_choice_scroll, _choice_list, CHOICE_GAP)
 
 	_register_button = Button.new()
 	_register_button.name = "register"
@@ -284,6 +276,7 @@ func open() -> void:
 
 func close_panel() -> void:
 	visible = false
+	_picker.close()
 
 
 ## 장부가 바뀌면 다시 그린다 — `game.gd` 가 매 프레임 부른다. 같으면 안 짓는다
@@ -291,9 +284,7 @@ func refresh(me: Dictionary) -> void:
 	_me = me
 	if not visible:
 		return
-	var seen := "%d|%s|%s|%d|%s|%s" % [
-		_grade, _auto_pick, _pick, _choice, me.get("codex", {}), _bag_key(me.get("bag", []))
-	]
+	var seen := "%d|%s|%s|%s|%s" % [_grade, _auto_pick, _pick, me.get("codex", {}), _bag_key(me.get("bag", []))]
 	if seen == _seen:
 		return
 	_seen = seen
@@ -361,23 +352,13 @@ func _pick_cell(slot: String, enhance: int) -> void:
 func _on_register() -> void:
 	if _pick.is_empty():
 		return
-	register_requested.emit(Items.item_id(_grade, str(_pick[0])), int(_pick[1]), _choice)
+	# 넣을 장비는 따로 뜨는 창에서 고른다 — 1·2·3차 옵션을 다 보고 고른다 (codex_picker.gd)
+	_picker.open(Items.item_id(_grade, str(_pick[0])), int(_pick[1]), _me.get("bag", []))
 
 
-## 넣을 장비 목록에서 고른 가방 번호 · 목록에 선 가방 번호들 — 테스트가 본다
-func choice() -> int:
-	return _choice
-
-
-func choices() -> Array:
-	return _choice_bag
-
-
-## 넣을 장비 한 줄을 눌렀다
-func _select_choice(index: int) -> void:
-	_choice = index
-	_seen = ""
-	refresh(_me)
+## 등록할 장비 선택 창 — 테스트가 본다
+func picker() -> CodexPicker:
+	return _picker
 
 
 func _redraw() -> void:
@@ -450,101 +431,18 @@ func _redraw_pick(codex: Dictionary, owned: Dictionary) -> void:
 	_pick_gain.text = "%s +%s%%" % [Codex.stat_name(Codex.slot_stat(slot)), _pct(Codex.cell_value(_grade, enhance))]
 	var count := int(owned.get("%s:%d" % [item_id, enhance], 0))
 	var filled := Codex.has(codex, item_id, enhance)
-	_redraw_choices([] if filled else _matching(item_id, enhance))
 	if filled:
 		_pick_have.text = "등록 완료"
 		_pick_have.add_theme_color_override("font_color", GOLD)
 	elif count > 0:
-		_pick_have.text = "넣을 장비를 고르세요 (가방에 %d개)" % count
+		_pick_have.text = "가방에 %d개 보유" % count
 		_pick_have.add_theme_color_override("font_color", OK)
 	else:
 		_pick_have.text = "가방에 없습니다"
 		_pick_have.add_theme_color_override("font_color", WARN)
-	var can := not filled and count > 0 and _choice >= 0
+	var can := not filled and count > 0
 	_register_button.disabled = not can
 	_register_button.modulate = Color.WHITE if can else Color(1, 1, 1, 0.45)
-
-
-## 고른 칸에 넣을 수 있는 가방 번호들 — 가방 순서 그대로
-func _matching(item_id: String, enhance: int) -> Array:
-	var out: Array = []
-	var bag: Array = _me.get("bag", [])
-	for index in bag.size():
-		if str(bag[index].get("id", "")) == item_id and int(bag[index].get("enhance", 0)) == enhance:
-			out.append(index)
-	return out
-
-
-## 넣을 장비 목록을 다시 짓는다. 고른 것이 목록에 없으면(칸을 바꿨다 · 넣어서 사라졌다)
-## **옵션 줄이 가장 적은 것**을 고른다 — 장부의 기본(`index` -1)과 같은 것이다
-func _redraw_choices(indices: Array) -> void:
-	_choice_bag = indices
-	_choice_drag.forget()
-	for child in _choice_list.get_children():
-		_choice_list.remove_child(child)
-		child.queue_free()
-	var bag: Array = _me.get("bag", [])
-	if not _choice in indices:
-		_choice = -1
-		for index in indices:
-			if _choice < 0 or _options_of(bag[index]).size() < _options_of(bag[_choice]).size():
-				_choice = index
-	for index in indices:
-		_choice_list.add_child(_choice_row(bag[index], index, index == _choice))
-
-
-func _options_of(stack: Dictionary) -> Array:
-	return Items.shown_options(stack.get("options", []))
-
-
-## 한 줄 — 그림 · 이름(+강화 · 겹친 개수) · 옵션. 고른 줄은 금빛 테. 누르는 것은 덮개 `hit`
-## (`DragScroll` 이 끌기와 누르기를 가른다)
-func _choice_row(stack: Dictionary, index: int, chosen: bool) -> Control:
-	var row := PanelContainer.new()
-	row.name = "choice_%d" % index
-	var box := StyleBoxFlat.new()
-	box.bg_color = Color(0.86, 0.78, 0.5, 0.1) if chosen else Color(0.03, 0.03, 0.03, 0.7)
-	box.border_color = GOLD if chosen else GatePanel.CELL_LINE
-	box.set_border_width_all(2 if chosen else 1)
-	box.set_corner_radius_all(4)
-	box.set_content_margin_all(6)
-	row.add_theme_stylebox_override("panel", box)
-	var line := HBoxContainer.new()
-	line.add_theme_constant_override("separation", 10)
-	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(line)
-	var art := TextureRect.new()
-	art.custom_minimum_size = Vector2(CHOICE_ICON, CHOICE_ICON)
-	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	art.texture = _icon.call("%s_g%d" % [_pick[0], _grade]) if _icon.is_valid() else null
-	line.add_child(art)
-	var words := VBoxContainer.new()
-	words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	words.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	words.add_theme_constant_override("separation", 0)
-	line.add_child(words)
-	var item := Items.get_item(str(stack.get("id", "")))
-	var title := "%s +%d" % [str(item.get("name", "")), int(stack.get("enhance", 0))]
-	if int(stack.get("count", 1)) > 1:
-		title += "  ×%d" % int(stack.count)
-	words.add_child(_label(title, 18, IVORY if chosen else DIM))
-	var options: Array = []
-	for option in _options_of(stack):
-		options.append(Items.describe_option(option))
-	var detail := _label("옵션 없음" if options.is_empty() else "  ·  ".join(options), 15, NEXT if chosen else FAINT)
-	detail.name = "options"
-	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	detail.custom_minimum_size = Vector2(SIDE_WIDTH - 120, 0)
-	words.add_child(detail)
-	var hit := Button.new()
-	hit.name = "hit"
-	hit.flat = true
-	hit.focus_mode = Control.FOCUS_NONE
-	hit.pressed.connect(_select_choice.bind(index))
-	row.add_child(hit)
-	return row
 
 
 ## 가방 → `{ "아이템 id:강화": 개수 }` — 장비만 센다 (재료는 칸이 없다)

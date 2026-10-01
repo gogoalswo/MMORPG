@@ -629,7 +629,7 @@ const WINDOW_TOGGLES := {
 	"char": "_toggle_char", "rank": "_toggle_rank", "potion": "_toggle_potion_panel",
 	"auto": "_toggle_auto_panel", "debug": "_toggle_debug",
 	# ≡ 를 눌러 펼친 메뉴 판 · 장비 도감 (2026-10-01)
-	"menu": "_toggle_menu", "codex": "_toggle_codex",
+	"menu": "_toggle_menu", "codex": "_toggle_codex", "codex_pick": "_toggle_codex",
 }
 
 
@@ -639,7 +639,7 @@ func _window(game: Node3D, which: String) -> void:
 	var player: Dictionary = game._transport._world._players[game._transport.my_id()]
 	player["level"] = LEVEL
 	player["skill_points"] = 99
-	if which == "codex":
+	if which.begins_with("codex"):
 		# 칸이 비어 보이지 않게 — 희귀 몇 칸을 채우고, 넣을 수 있는 장비 몇 개를 가방에 둔다
 		var item := func(slot: String) -> String: return Items.item_id(3, slot)
 		player["codex"] = {item.call("weapon"): 0b111, item.call("armor"): 0b1, item.call("ring"): 0b11}
@@ -647,16 +647,20 @@ func _window(game: Node3D, which: String) -> void:
 			{"id": item.call("weapon"), "grade": 3, "enhance": 3, "options": []},
 			{"id": item.call("weapon"), "grade": 3, "enhance": 3, "options": [
 				{"kind": "crit", "value": 6}, {"kind": "critDamage", "value": 12}, {"kind": "penetration", "value": 3},
-			]},
+			], "options2": [{"kind": "dropRate", "value": 9}]},
 			{"id": item.call("weapon"), "grade": 3, "enhance": 3, "count": 2, "options": [{"kind": "crit", "value": 2}]},
 			{"id": item.call("helmet"), "grade": 3, "enhance": 0, "options": []},
 			{"id": Items.item_id(5, "boots"), "grade": 5, "enhance": 2, "options": []},
 		]
 		game._transport._world._refresh_stats(player)
 	if which in WINDOW_TOGGLES:
-		if which == "codex":
+		if which.begins_with("codex"):
 			game._codex_panel._pick_grade(3)
 		game.call(WINDOW_TOGGLES[which])
+		# 등록할 장비 선택 창 — 희귀 무기 +3 칸에서 [등록]
+		if which == "codex_pick":
+			game._codex_panel._pick_cell("weapon", 3)
+			game._codex_panel._on_register()
 	elif which == "skills":
 		for skill in Skills.for_job(str(player.get("job", "fighter"))).slice(0, 4):
 			game._transport.send(&"learnSkill", {"skill": skill})

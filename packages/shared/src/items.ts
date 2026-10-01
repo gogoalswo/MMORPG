@@ -368,6 +368,7 @@ export const OPTION_LABEL: Record<OptionKind, string> = {
   maxHp: '체력',
   cooldown: '쿨타임 감소',
   penetration: '방어력 관통',
+  dropRate: '아이템 드랍률',
 };
 
 /**
@@ -682,6 +683,8 @@ export interface ItemStats {
   cooldown: number;
   /** 방어력 관통 (0.1 = 상대 방어력 10% 무시). **옵션으로만 붙는다** */
   penetration: number;
+  /** 아이템 드랍률 증가 (1 = +100% → 10% 가 20%). **옵션으로만 붙는다** — `dropChanceFor` 가 곱한다 */
+  dropRate: number;
 }
 
 export function emptyStats(): ItemStats {
@@ -694,6 +697,7 @@ export function emptyStats(): ItemStats {
     attackSpeed: 0,
     cooldown: 0,
     penetration: 0,
+    dropRate: 0,
   };
 }
 
@@ -721,6 +725,7 @@ export function stackStats(stack: ItemStack): ItemStats {
       case 'attackSpeed': total.attackSpeed += option.value / 100; break;
       case 'cooldown': total.cooldown += option.value / 100; break;
       case 'penetration': total.penetration += option.value / 100; break;
+      case 'dropRate': total.dropRate += option.value / 100; break;
     }
   }
   return total;
@@ -741,6 +746,7 @@ export function equipmentStats(
     total.crit += one.crit;
     total.critDamage += one.critDamage;
     total.attackSpeed += one.attackSpeed;
+    total.dropRate += one.dropRate;
   }
   return total;
 }
@@ -775,8 +781,19 @@ export function equipmentStats(
  *
  * `GEAR_DROP_RATE` 는 **퍼센트 단위**라 100 으로 나눈다. 0.2963 = 0.2963% 다.
  */
-export function dropChanceFor(monsterLevel: number): number {
-  return dropGradesFor(monsterLevel).reduce((sum, g) => sum + gearDropRate(g), 0);
+export function dropChanceFor(monsterLevel: number, dropBonus = 0): number {
+  const base = dropGradesFor(monsterLevel).reduce((sum, g) => sum + gearDropRate(g), 0);
+  return withDropBonus(base, dropBonus);
+}
+
+/**
+ * **아이템 드랍률 옵션을 건 확률** ★ (2026-10-01) — 원래 확률 × (1 + 합계).
+ * 요청: "100% 증가면 원래 10%짜리가 20%되게" — 더하기(10%p + 100%p)가 아니라 **곱하기**다.
+ * 장비·크리스탈 둘 다 건다(둘 다 가방에 드는 아이템이다). 창 안의 등급 비는 안 바뀐다 —
+ * 붙는 것은 "떨어지나" 한 번이고 "무슨 등급이냐" 는 `rollGrade` 가 그대로 고른다
+ */
+export function withDropBonus(chance: number, dropBonus: number): number {
+  return Math.min(1, chance * (1 + Math.max(0, dropBonus)));
 }
 
 /**
@@ -862,7 +879,12 @@ export interface Drop {
  *
  * rng 를 받는 이유는 테스트에서 결과를 고정하기 위해서다.
  */
-export function rollDrop(monsterLevel: number, job: JobId, rng: () => number = Math.random): Drop {
+export function rollDrop(
+  monsterLevel: number,
+  job: JobId,
+  rng: () => number = Math.random,
+  dropBonus = 0
+): Drop {
   const base = 2 + monsterLevel * 1.5;
   // ±30% 흔들어 매번 같은 숫자가 나오지 않게 한다
   const gold = Math.max(1, Math.round(base * (0.7 + rng() * 0.6)));
@@ -870,8 +892,9 @@ export function rollDrop(monsterLevel: number, job: JobId, rng: () => number = M
   // 크리스탈은 장비와 **따로** 굴린다. 순서는 골드 → 장비 → (슬롯 → 등급 → 옵션) → 크리스탈
   // — 고도 `items.gd` 도 같은 순서라야 같은 씨앗에서 같은 것이 나온다
   const drop: Drop = { gold };
-  if (rng() < dropChanceFor(monsterLevel)) drop.item = rollGearDrop(monsterLevel, rng);
-  if (rng() < CRYSTAL_DROP_CHANCE) drop.crystal = 1;
+  // `dropBonus` 는 장비의 아이템 드랍률 합계(1 = +100%) — `withDropBonus`
+  if (rng() < dropChanceFor(monsterLevel, dropBonus)) drop.item = rollGearDrop(monsterLevel, rng);
+  if (rng() < withDropBonus(CRYSTAL_DROP_CHANCE, dropBonus)) drop.crystal = 1;
   return drop;
 }
 

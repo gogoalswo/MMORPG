@@ -2211,6 +2211,7 @@ func _redraw_char(me: Dictionary) -> void:
 		["평타", "초당 %.1f회 공격" % _attacks_per_second(stats)],
 		["쿨타임 감소", "%.0f%%" % (float(stats.get("cooldown", 0.0)) * 100.0)],
 		["방어력 관통", "%.0f%%" % (float(stats.get("penetration", 0.0)) * 100.0)],
+		["아이템 드랍률", "+%.0f%%" % (float(stats.get("dropRate", 0.0)) * 100.0)],
 		# 같은 레벨 몬스터에게 맞을 때 원래 피해의 몇 % 가 들어오나 (2026-09-27). 후반 감소율이
 		# 90% 대라 "감소율 94 → 95%" 는 1%p 로 보여도 받는 피해는 17% 준다 — 그래서 이쪽을 보인다
 		["받는 피해", "%.1f%%" % (_taken_share(int(me.get("level", 1)), float(stats.get("defense", 0))) * 100.0)],

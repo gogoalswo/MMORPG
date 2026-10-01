@@ -744,7 +744,8 @@
     "critDamage",
     "maxHp",
     "cooldown",
-    "penetration"
+    "penetration",
+    "dropRate"
   ],
   "optionMin": 1,
   "optionMax": 1,
@@ -790,7 +791,8 @@
     "attackSpeed": "공격 속도",
     "maxHp": "체력",
     "cooldown": "쿨타임 감소",
-    "penetration": "방어력 관통"
+    "penetration": "방어력 관통",
+    "dropRate": "아이템 드랍률"
   },
   "legacyOptionLabel": {
     "attack": "공격력",

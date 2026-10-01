@@ -120,7 +120,9 @@ func kill(p: Dictionary, target: Dictionary) -> void:
 		_check_dungeon_clear(p, target)
 		return
 	# 보상을 굴린다. **굴리는 쪽은 언제나 판정하는 쪽이다**
-	var loot := Items.roll_drop(int(target.level), str(p.job), rng)
+	# 끼운 장비의 **아이템 드랍률** 옵션 합계를 건다 (2026-10-01) — 판정하는 쪽의 장부로 센다
+	var drop_bonus := float(Items.equipment_stats(p.get("equipped", {})).get("dropRate", 0.0))
+	var loot := Items.roll_drop(int(target.level), str(p.job), rng, drop_bonus)
 	p.gold = int(p.gold) + int(loot.gold)
 	var event := {"type": "loot", "gold": loot.gold}
 	if loot.has("item") and give(p, loot.item):

@@ -4,6 +4,7 @@ import type { ItemBonus } from './items.ts';
 import {
   slotLabel,
   dropChanceFor,
+  withDropBonus,
   EQUIP_SLOTS,
   GRADE_MAX,
   GRADE_MIN,
@@ -273,6 +274,23 @@ test('드롭은 항상 골드를 주고, 아이템은 가끔 준다', () => {
   assert.ok(withItem.item, '확률 안에 들었는데 아이템이 없다');
 });
 
+test('아이템 드랍률 옵션은 확률에 곱한다 — 100% 면 10% 가 20%', () => {
+  // 2026-10-01 요청: "100% 증가면 원래 10%짜리가 20%되게 설계하고"
+  assert.equal(withDropBonus(0.1, 1), 0.2);
+  assert.equal(withDropBonus(0.1, 0), 0.1);
+  assert.equal(withDropBonus(0.6, 1), 1, '100% 를 넘지 않는다');
+  assert.ok(Math.abs(dropChanceFor(20, 1) - dropChanceFor(20) * 2) < 1e-12);
+  // 옵션 한 줄 → 능력치 합계 (퍼센트 포인트 정수 → 비율)
+  const stack = { id: itemId(7, 'ring'), enhance: 0, options: [{ kind: 'dropRate' as const, value: 25 }] };
+  assert.equal(stackStats(stack).dropRate, 0.25);
+  assert.equal(equipmentStats({ ring: stack }).dropRate, 0.25);
+  // 원래 확률 밖이라 안 떨어질 굴림이 배율 안으로 들어오면 떨어진다
+  const roll = dropChanceFor(20) * 1.5;
+  assert.equal(rollDrop(20, 'archer', fixed(0.5, roll, 0, 0)).item, undefined);
+  assert.ok(rollDrop(20, 'archer', fixed(0.5, roll, 0, 0), 1).item, '+100% 인데 안 떨어졌다');
+  assert.deepEqual(optionRange('dropRate', 7), { min: 13, max: 25 });
+});
+
 test('드랍률이 설계값이다 — 평면 14% 가 아니다', () => {
   // 2026-09-21 지적: "md 파일 준걸로는 1등급 드랍률 0.3% 라고 했는데 지금은 왜
   // 말도 안 되게 높은거지?" — 설계값이 balance.json 에 있기만 하고 판정이 안
@@ -521,7 +539,7 @@ test('굴린 값은 그 등급의 범위 안에 있다', () => {
   }
 });
 
-test('옵션은 다섯 종이고 전부 퍼센트다', () => {
+test('옵션은 여섯 종이고 전부 퍼센트다', () => {
   // 2026-09-20 요청: 공속·치명타 확률·치명타 데미지·HP·쿨타임 감소·방어력 관통.
   // **공격력·방어력은 뺐다** — 슬롯 기본 수치가 이미 담당하므로 옵션으로 또 주면
   // "같은 것을 두 번" 이다. **공속은 2026-09-29 에 뺐다** — 패시브 질풍각에서만 온다
@@ -529,6 +547,7 @@ test('옵션은 다섯 종이고 전부 퍼센트다', () => {
     'cooldown',
     'crit',
     'critDamage',
+    'dropRate',
     'maxHp',
     'penetration',
   ]);

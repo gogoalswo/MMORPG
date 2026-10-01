@@ -52,6 +52,8 @@ static func write(zone_id: String, player: Dictionary) -> void:
 		# 헬스 — 프로틴 `{power, defense, health}` 과 운동 단계 `{bench, deadlift, squat}`. 없던 칸이라 옛 저장은 빈 사전
 		"proteins": player.get("proteins", {}),
 		"fitness": player.get("fitness", {}),
+		# 장비 도감 `{ 아이템 id: 채운 강화 비트 }` — 없던 칸이라 옛 저장은 빈 사전
+		"codex": player.get("codex", {}),
 		# 물약을 저절로 마시는 기준(HP %) — 없던 칸이라 옛 저장은 처음 값(90)으로 읽힌다
 		"potion_pct": player.get("potion_pct", 90),
 		# 자동 사냥 스킬 순서 — 없던 칸이라 옛 저장은 빈 목록(쿨타임 긴 순)으로 읽힌다

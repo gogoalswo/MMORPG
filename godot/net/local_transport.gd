@@ -164,6 +164,8 @@ func send(message: StringName, payload: Dictionary) -> void:
 			)
 		&"fitnessUp":
 			_world.fitness_up(MY_ID, str(payload.get("kind", "")), bool(payload.get("auto", false)))
+		&"codexRegister":
+			_world.codex_register(MY_ID, str(payload.get("id", "")), int(payload.get("enhance", -1)))
 		&"debugProtein":
 			_world.debug_protein(MY_ID)
 		&"debugSkillExp":

@@ -321,6 +321,9 @@ func join(player_id: String) -> void:
 		# 운동 단계 `{bench, deadlift, squat}`. 헬스 창에서 프로틴을 넣어 단계를 올린다 (`fitness_up`)
 		"proteins": kept.get("proteins", {}).duplicate(),
 		"fitness": kept.get("fitness", {}).duplicate(),
+		# --- 장비 도감 (docs/features/codex.md) --- `{ 아이템 id: 채운 강화 비트 }`. 도감 창에서 가방의
+		# 장비를 넣어 채운다 (`codex_register`)
+		"codex": kept.get("codex", {}).duplicate(),
 	}
 	_refresh_stats(_players[player_id])
 
@@ -1508,6 +1511,8 @@ func restore(player_id: String) -> bool:
 			stages[str(kind.id)] = clampi(int(raw_fitness[str(kind.id)]), 0, Fitness.max_stage())
 	player.proteins = proteins
 	player.fitness = stages
+	# 장비 도감 — 없던 칸이라 옛 저장은 빈 사전. 표에 있는 장비 id 만, 비트는 +0 ~ +9 안으로
+	player.codex = Codex.clean(saved.get("codex", {}))
 	# 물약을 저절로 마시는 기준 — 없던 칸이라 옛 저장은 처음 값으로 읽힌다
 	set_potion_pct(player_id, int(saved.get("potion_pct", player.potion_pct)))
 
@@ -1865,6 +1870,16 @@ func fitness_up(player_id: String, kind_id: String, auto: bool) -> void:
 	if player.is_empty():
 		return
 	_ledger_call(player, &"fitness_up", [kind_id, 1 if auto else 0])
+
+
+## --- 장비 도감 --- (docs/features/codex.md)
+
+## 도감 창의 **등록** — 가방의 그 장비(등급·부위·강화) 하나를 넣어 칸을 채운다. 판정은 `Ledger.codex_register`
+func codex_register(player_id: String, item_id: String, enhance: int) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	_ledger_call(player, &"codex_register", [item_id, enhance])
 
 
 ## 테스트 단추 — 프로틴 세 종을 `DEBUG_PROTEIN` 개씩 넣는다 (던전을 안 돌고 헬스를 볼 때)
@@ -2426,7 +2441,8 @@ func _hit_monster(player: Dictionary, target: Dictionary, attack: float, skill_i
 ## 저레벨 캐릭이 고등급 장비를 껴도 상위 사냥터에서 죽어 **게이팅이 자동으로 걸린다**
 func _refresh_stats(player: Dictionary) -> void:
 	player.stats = stats_of(
-		str(player.job), int(player.level), player.equipped, player.get("passives", {}), player.get("fitness", {})
+		str(player.job), int(player.level), player.equipped, player.get("passives", {}), player.get("fitness", {}),
+		player.get("codex", {})
 	)
 	player.hp = mini(int(player.hp), int(player.stats.maxHp))
 
@@ -2439,8 +2455,10 @@ func _speed_of(player: Dictionary) -> float:
 ## 스탯 계산 알맹이 — 서버의 처치 검증(`KillCheck`)도 같은 값을 쓴다
 ## `passives` 는 배운 패시브 단계 `{ id: 단계 }` — **공속은 여기서만 온다** (질풍각, 2026-09-29)
 ## `fitness` 는 헬스 운동 단계 `{ id: 단계 }` — 공격력·방어력·체력에 **장비 % 와 따로 곱한다** (fitness.md)
+## `codex` 는 장비 도감 `{ 아이템 id: 채운 강화 비트 }` — 헬스와 같은 셋에 **또 따로 곱한다** (codex.md)
 static func stats_of(
-	job: String, level: int, equipped: Dictionary, passives: Dictionary = {}, fitness: Dictionary = {}
+	job: String, level: int, equipped: Dictionary, passives: Dictionary = {}, fitness: Dictionary = {},
+	codex: Dictionary = {}
 ) -> Dictionary:
 	var stats := Combat.stats_for(job, level)
 	var gear := Items.equipment_stats(equipped)
@@ -2466,6 +2484,12 @@ static func stats_of(
 		stats["fitness_" + key] = float(fit[key])
 		if float(fit[key]) > 0.0:
 			stats[key] = maxi(0 if key == "defense" else 1, roundi(float(stats[key]) * (1.0 + float(fit[key]) / 100.0)))
+	# 장비 도감 — 헬스와 같은 방식으로 **따로 곱한다** (`codex_*` 는 캐릭터 정보 창용)
+	var book := Codex.stat_bonus(codex)
+	for key in ["attack", "defense", "maxHp"]:
+		stats["codex_" + key] = float(book[key])
+		if float(book[key]) > 0.0:
+			stats[key] = maxi(0 if key == "defense" else 1, roundi(float(stats[key]) * (1.0 + float(book[key]) / 100.0)))
 	# **상한이 없다** ★ (2026-09-23 지시: "상한 없애."). 치확 100% 면 늘 치명타,
 	# 공속은 `cooldown / (1 + 공속)` 이라 얼마든 올라가도 0 으로 안 나뉜다.
 	# 가방 옆 장비 창은 **장비 몫만** 적는다 (2026-09-28 요청) — 더하기 전 장비 합계를 같이 내린다

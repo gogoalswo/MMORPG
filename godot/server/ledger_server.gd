@@ -32,6 +32,8 @@ const OPS := {
 	"trial_clear": "s",
 	# 헬스 — 운동 id · 자동(1)이냐 한 번(0)이냐. 확률은 서버가 굴린다
 	"fitness_up": "si",
+	# 장비 도감 — 아이템 id(등급·부위) · 강화. 가방에서 하나를 넣어 칸을 채운다
+	"codex_register": "si",
 }
 
 var store: AccountStore

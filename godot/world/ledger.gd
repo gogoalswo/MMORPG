@@ -3,7 +3,7 @@ extends RefCounted
 
 ## 장부 판정 한 벌 — **값이 생기고 없어지는 것**만 여기서 정한다 (docs/features/server.md).
 ## 드롭·경험치·레벨·골드·가방·장비·강화·크리스탈·스킬·스킬 강화·스킬 경험치·전직·한 번 주기·
-## 헬스(프로틴·운동 단계).
+## 헬스(프로틴·운동 단계)·장비 도감.
 ##
 ## 나중에 붙일 서버(고도 헤드리스)가 **이 파일을 그대로** 불러 판정한다. 그래서 여기에는
 ## 자리·체력·몬스터·NPC 거리 같은 **전투 쪽 값을 들이지 않는다** — 그건 기기에만 있다.
@@ -17,7 +17,7 @@ extends RefCounted
 const KEYS := [
 	"job", "level", "exp", "gold", "skills", "skill_points", "passives",
 	"skill_upgrades", "skill_upgrade_exp", "skill_exp", "bag", "equipped", "granted",
-	"diamonds", "proteins", "fitness",
+	"diamonds", "proteins", "fitness", "codex",
 ]
 
 ## **첫 선물** — 새 캐릭터가 한 번만 받는 것 `[[표시, 묶음], …]`. 로컬은 `LocalTransport.open` 이,
@@ -45,6 +45,7 @@ static func fresh(job: String) -> Dictionary:
 		"bag": [], "equipped": {}, "granted": [],
 		"diamonds": 0,
 		"proteins": {}, "fitness": {},
+		"codex": {},
 	}
 
 
@@ -239,6 +240,47 @@ func fitness_up(p: Dictionary, kind_id: String, auto: int = 0) -> void:
 		_notice("%s %d번 두드렸지만 실패 — %s이 모자랍니다" % [str(kind.name), tries, str(kind.proteinName)])
 	else:
 		_notice("%s %d단계 실패" % [str(kind.name), stage + 1])
+
+
+## --- 장비 도감 (docs/features/codex.md) ---
+
+## 도감 창의 **등록** — 가방에서 `item_id`(등급·부위) +`enhance` 장비 **하나를 넣어(소모)** 그 칸을 채운다
+## (2026-10-01 요청: "각 등급 0강부터 9강까지 등록할 수 있는 도감"). **끼고 있는 것은 안 받는다** —
+## 가방만 뒤진다. 같은 장비가 여러 칸이면 **옵션 줄이 가장 적은 것**을 넣는다 (좋은 것을 남긴다).
+## 겹친 칸이면 하나만 뗀다
+func codex_register(p: Dictionary, item_id: String, enhance: int) -> void:
+	var item := Items.get_item(item_id)
+	if item.is_empty() or enhance < 0 or enhance > Codex.max_enhance():
+		return
+	var codex: Dictionary = p.get("codex", {})
+	var label := "%s +%d" % [str(item.name), enhance]
+	if Codex.has(codex, item_id, enhance):
+		_notice("%s 은 이미 도감에 있습니다" % label)
+		return
+	var pick := -1
+	for index in p.bag.size():
+		var stack: Dictionary = p.bag[index]
+		if str(stack.get("id", "")) != item_id or int(stack.get("enhance", 0)) != enhance:
+			continue
+		if pick < 0 or (stack.get("options", []) as Array).size() < (p.bag[pick].get("options", []) as Array).size():
+			pick = index
+	if pick < 0:
+		_notice("가방에 %s 이 없습니다" % label)
+		return
+	var count := int(p.bag[pick].get("count", 1))
+	if count > 1:
+		p.bag[pick].count = count - 1
+	else:
+		p.bag.remove_at(pick)
+	codex[item_id] = int(codex.get(item_id, 0)) | (1 << enhance)
+	p.codex = codex
+	var stat := Codex.slot_stat(str(item.slot))
+	var gain := Codex.cell_value(int(item.grade), enhance)
+	events.append({
+		"type": "codexResult", "id": item_id, "enhance": enhance, "stat": stat, "gain": gain,
+	})
+	_notice("도감 등록 — %s · %s +%s%%" % [label, Codex.stat_name(stat), String.num(gain, 2)])
+	_inventory_changed(p)
 
 
 ## --- 유료 재화 (docs/features/server.md "유료 재화") ---

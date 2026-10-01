@@ -585,9 +585,10 @@ func _case_status(game: Node3D) -> void:
 	# 오른쪽 위 메뉴 — 화면 안, 묶음과 안 겹침.
 	# 정보 · 스킬 · 강화 · 크리스탈 · 가방 · 던전 (강화·크리스탈은 2026-09-24 에 가방 왼쪽에,
 	# 정보는 2026-09-25 에 맨 앞에 더했다). 설계는 2026-09-28 에 오른쪽 맨 아래로 뺐다 — 아래에서 본다.
-	# 헬스는 2026-09-30 에 던전 옆에 더했다 (docs/features/fitness.md). 설정(소리)은 같은 날 맨 끝에
-	if game._menu_cells.size() != 8:
-		_fail("오른쪽 위 단추가 8개여야 하는데 %d개" % game._menu_cells.size())
+	# 헬스는 2026-09-30 에 던전 옆에 더했다 (docs/features/fitness.md). 설정(소리)은 같은 날 맨 끝에.
+	# 도감은 2026-10-01 에 헬스 옆에 더했다 (docs/features/codex.md)
+	if game._menu_cells.size() != 9:
+		_fail("오른쪽 위 단추가 9개여야 하는데 %d개" % game._menu_cells.size())
 		return
 	# 설계 단추 — 오른쪽 맨 아래 모서리에 붙고, 알파 0 이라 안 보이지만 누르면 창이 열린다
 	var design_rect: Rect2 = game._design_cell.get_global_rect()

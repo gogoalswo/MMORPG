@@ -67,6 +67,10 @@ import {
   FITNESS_KINDS,
   FITNESS_MAX_STAGE,
   FITNESS_STEPS,
+  CODEX_SLOT_STAT,
+  CODEX_STAT_NAMES,
+  CODEX_MAX_ENHANCE,
+  CODEX_CELLS,
   GROUND_KINDS,
   GROUND_LOOKS,
   ITEMS,
@@ -141,6 +145,13 @@ export function buildData() {
       kinds: FITNESS_KINDS,
       maxStage: FITNESS_MAX_STAGE,
       steps: FITNESS_STEPS,
+    },
+    // 장비 도감 — 부위가 올리는 능력치와 칸 몫 표 `[등급-1][강화]`. 장부(`Ledger.codex_register`)와 도감 창이 읽는다
+    'codex.json': {
+      slotStat: CODEX_SLOT_STAT,
+      statNames: CODEX_STAT_NAMES,
+      maxEnhance: CODEX_MAX_ENHANCE,
+      cells: CODEX_CELLS,
     },
     // 밸런스 설계(stat-balance.md)의 수치. **아직 게임이 안 읽는다** — 판정은
     // 여전히 combat.json 으로 돈다. 설계 문서 9장 순서대로 stats.gd 가 먼저 서야 한다

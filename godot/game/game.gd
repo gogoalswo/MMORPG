@@ -384,6 +384,8 @@ var _death_panel: DeathPanel
 var _tombs: Array[Dictionary] = []
 ## 헬스 창 — 던전 창과 같은 층(10) · 전체 화면 (fitness_panel.gd)
 var _fitness_panel: FitnessPanel
+## 장비 도감 창 — 헬스 창과 같은 층(10) · 전체 화면 (codex_panel.gd)
+var _codex_panel: CodexPanel
 var _skill_panel: PanelContainer
 ## 스킬창. 틀은 한 번 짓고 `_redraw_skills` 가 채운다
 var _skill_big: PanelContainer
@@ -643,6 +645,8 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			_dungeon_result.visible = false
 		&"fitnessResult":
 			_fitness_panel.show_result(payload)
+		&"codexResult":
+			_codex_panel.show_result(payload)
 		&"dungeonResult":
 			# 성공이든 실패든 결과창. 걷던 곳·자동 사냥 겨냥을 멈춘다 — 확인을 누르면 마을로 나간다
 			# (쓰러졌으면 마을에서 되살아난다 — `_on_result_confirmed`)
@@ -2175,7 +2179,7 @@ func _toggle_char() -> void:
 
 ## 캐릭터 정보 — 값은 판정(`world.gd` `_refresh_stats`)이 내려준 그대로 적는다.
 ## 기본(`base_*`)은 레벨 맨몸 값, 증가(`gear_*`)는 장비 % 합계, 헬스(`fitness_*`)는 헬스 %,
-## 최종은 셋을 곱한 판정 값이다.
+## 도감(`codex_*`)은 도감 %, 최종은 넷을 곱한 판정 값이다.
 ## 화면이 공식을 다시 돌리지 않는다 — 돌리면 반올림이 어긋나 최종이 1 씩 틀려 보인다
 ## **`_refresh_status` 가 매 프레임 부른다** — 레벨업·장비가 가방을 닫은 채로도 바로 보인다.
 ## 줄 글자가 지난번과 같으면 표를 다시 짓지 않는다
@@ -2190,14 +2194,17 @@ func _redraw_char(me: Dictionary) -> void:
 		# 공격력 증가는 장비 % 에 패시브 철각(+30%)을 더한 합이다 — 최종이 그 합으로 곱해진다
 		var gear := float(stats.get("gear_" + key, 0.0)) + float(stats.get("passive_" + key, 0.0)) * 100.0
 		var fit := float(stats.get("fitness_" + key, 0.0))
+		var book := float(stats.get("codex_" + key, 0.0))
 		groups.append([
 			["기본 " + name, "%d" % int(stats.get("base_" + key, final))],
 			# 헬스 몫은 장비 % 와 따로 곱한다 (docs/features/fitness.md) — **줄을 늘리지 않고** 증가 줄
 			# 끝에 붙인다. 줄 셋을 더했더니 창이 화면(720) 위아래로 넘쳤다 (ui_test). 0 이면 안 붙인다
 			[
 				name + " 증가",
-				_bonus_text(key, gear) + ("  헬스 +%d%%" % int(fit) if fit > 0.0 else ""),
-				INV_GOLD_HI if gear > 0.0 or fit > 0.0 else INV_DIM,
+				# 도감 몫(docs/features/codex.md)도 같은 줄 끝에 — 0.01% 단위라 소수 둘째 자리까지 적는다
+				_bonus_text(key, gear) + ("  헬스 +%d%%" % int(fit) if fit > 0.0 else "")
+					+ ("  도감 +%s%%" % String.num(book, 2) if book > 0.0 else ""),
+				INV_GOLD_HI if gear > 0.0 or fit > 0.0 or book > 0.0 else INV_DIM,
 			],
 			["최종 " + name, "%d" % final, INV_GOLD_HI],
 		])
@@ -2835,6 +2842,8 @@ func _build_skill_bar() -> void:
 		_icon_button("ui_icon_dungeon", "던전", _toggle_dungeon, MENU_BTN, true),
 		# 헬스 — 던전 옆 (2026-09-30). 던전에서 받은 프로틴을 넣는 곳이라 붙여 둔다. 그림은 쇠 덤벨
 		_icon_button("ui_icon_fitness", "헬스", _toggle_fitness, MENU_BTN, true),
+		# 장비 도감 — 헬스 옆 (2026-10-01). 그림은 펼친 책(`ui_icon_codex`) — 없으면 이름 글자만 선다
+		_icon_button("ui_icon_codex", "도감", _toggle_codex, MENU_BTN, true),
 	]
 	# 랭킹 — 던전 옆. **서버에 붙었을 때만** 선다 (혼자 노는 판에는 견줄 사람이 없다).
 	# 그림은 월계관 두른 금 트로피(`ui_icon_rank`)
@@ -4411,10 +4420,28 @@ func _build_gate_panel() -> void:
 	top.add_child(_fitness_panel)
 	_close_button(_fitness_panel, _toggle_fitness, 0)
 
+	# 도감 창도 같은 층·같은 결이다 → docs/features/codex.md
+	_codex_panel = CodexPanel.make(_frame_box, _icon)
+	_codex_panel.theme = _ui_root.theme
+	_codex_panel.register_requested.connect(func(item_id: String, enhance: int) -> void:
+		_transport.send(&"codexRegister", {"id": item_id, "enhance": enhance})
+	)
+	var codex_back := ColorRect.new()
+	codex_back.name = "CodexBack"
+	codex_back.color = DungeonPanel.CARD_DARK
+	codex_back.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	codex_back.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	codex_back.visible = false
+	top.add_child(codex_back)
+	_codex_panel.visibility_changed.connect(func(): codex_back.visible = _codex_panel.visible)
+	top.add_child(_codex_panel)
+	_close_button(_codex_panel, _toggle_codex, 0)
+
 
 func _open_gate() -> void:
 	_dungeon_panel.visible = false
 	_fitness_panel.visible = false
+	_codex_panel.visible = false
 	_gate_panel.open(_shown_zone)
 
 
@@ -4425,6 +4452,7 @@ func _toggle_dungeon() -> void:
 		return
 	_gate_panel.visible = false
 	_fitness_panel.visible = false
+	_codex_panel.visible = false
 	_dungeon_panel.open(_shown_zone)
 
 
@@ -4435,8 +4463,21 @@ func _toggle_fitness() -> void:
 		return
 	_gate_panel.visible = false
 	_dungeon_panel.visible = false
+	_codex_panel.visible = false
 	_fitness_panel.refresh(_me())
 	_fitness_panel.open()
+
+
+## 도감 단추. 열려 있으면 닫는다. 차원문·던전·헬스 창과 한 층이라 그 셋을 닫고 연다
+func _toggle_codex() -> void:
+	if _codex_panel.visible:
+		_codex_panel.close_panel()
+		return
+	_gate_panel.visible = false
+	_dungeon_panel.visible = false
+	_fitness_panel.visible = false
+	_codex_panel.refresh(_me())
+	_codex_panel.open()
 
 
 ## 문을 눌렀다. **거리와 상관없이 바로 창을 연다** (2026-09-18 요청: "포탈까지
@@ -5452,6 +5493,7 @@ func _refresh_status(me: Dictionary) -> void:
 	_death_panel.visible = bool(me.get("dead", false)) and not _dungeon_result.visible
 	_redraw_char(me)
 	_fitness_panel.refresh(me)
+	_codex_panel.refresh(me)
 	var max_hp := maxf(1.0, float(me.stats.maxHp))
 	_hp_bar.max_value = max_hp
 	_hp_bar.value = float(me.hp)

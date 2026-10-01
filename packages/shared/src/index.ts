@@ -12,4 +12,5 @@ export * from './zone.ts';
 export * from './zones.ts';
 export * from './dungeons.ts';
 export * from './fitness.ts';
+export * from './codex.ts';
 export * from './store.ts';

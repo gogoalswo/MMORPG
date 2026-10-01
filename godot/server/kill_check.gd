@@ -37,7 +37,7 @@ const KNOWN_UPGRADE_KEYS := [
 static func min_ms(ledger: Dictionary, kind: Dictionary) -> float:
 	var stats := World.stats_of(
 		str(ledger.job), int(ledger.level), ledger.get("equipped", {}), ledger.get("passives", {}),
-		ledger.get("fitness", {})
+		ledger.get("fitness", {}), ledger.get("codex", {})
 	)
 	var k := Stats.k_of(int(ledger.level))
 	var defense := float(kind.get("defense", 0)) * (1.0 - float(stats.get("penetration", 0.0)))

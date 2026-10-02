@@ -116,6 +116,9 @@ const LEVEL_BADGE := 50
 ## 막대 높이. **글자가 들어갈 만큼은 남겨야 한다** — 반으로 줄이면서 안쪽 여백
 ## (`BAR_PAD`)도 같이 줄였다 (2026-09-20)
 const HP_BAR_H := 22
+## 막대 길이. 맨 아래 줄 **물약과 자동사냥 사이**에 서면서 줄 너비를 못 따라가게 돼 정해 준다
+## (2026-10-02 요청 "HP바 길이를 지금의 1.5배로" — 그 전 길이는 물약~자동사냥 줄 147px 이었다)
+const HP_BAR_W := 220
 ## 막대 테두리 그림에서 테가 차지하는 두께 (9조각 여백). 얇은 선이라 작게 준다
 const BAR_FRAME_MARGIN := 5
 ## (채움은 직사각이라 여백이 필요 없다 — 홈이 `clip_children` 으로 잘라 준다)
@@ -163,7 +166,7 @@ const SPIN_SPEED := 1.6
 ## (2026-09-20). 테가 없으니 커도 스킬 칸으로 안 보인다
 const AUTO_CELL := 64
 const AUTO_INSET := 13
-## 퀵슬롯 줄과 자동사냥 칸 사이를 얼마나 띄우나
+## 체력 막대와 양옆 칸(물약·자동사냥) 사이를 얼마나 띄우나
 const AUTO_GAP := 8
 ## 고리를 칸 바닥에서 얼마나 띄우나 (글자 자리)
 const SPIN_LIFT := 13
@@ -357,10 +360,6 @@ var _potion_cooling := false
 var _potion_panel: PanelContainer
 var _potion_pct_label: Label
 var _potion_slider: HSlider
-## 소리 설정 창 (메뉴 "설정") — 전체 볼륨. 값은 기기 설정(`SoundSettings`)이다
-var _sound_panel: PanelContainer
-var _sound_label: Label
-var _sound_slider: HSlider
 ## 테스트 스위치 단추 — 이름 → Button
 var _switch_buttons: Dictionary = {}
 ## 테스트 무적 단추. 글자는 **스냅샷(me.invincible)** 만 보고 그린다 (자동사냥과 같다)
@@ -408,6 +407,8 @@ var _codex_panel: CodexPanel
 var _store_panel: StorePanel
 ## 강화 창을 도감 [강화] 로 열었나 — 닫으면 도감으로 돌아간다 (`_back_to_codex`)
 var _enhance_from_codex := false
+## 설정 창 (메뉴 "설정") — 헬스 창과 같은 층(10) · 전체 화면 · 탭 소리 / 아이템 습득 (settings_panel.gd)
+var _settings_panel: SettingsPanel
 var _skill_panel: PanelContainer
 ## 스킬창. 틀은 한 번 짓고 `_redraw_skills` 가 채운다
 var _skill_big: PanelContainer
@@ -830,7 +831,6 @@ func _build_persistent() -> void:
 	_build_rank_panel()
 	_build_sandbag_panel()
 	_build_potion_panel()
-	_build_sound_panel()
 	_build_debug_panel()
 	_enhance = EnhancePopup.make(self)
 	_ui_root.add_child(_enhance)
@@ -854,7 +854,6 @@ func _build_persistent() -> void:
 	_close_button(_rank_panel, _toggle_rank, 0)
 	_close_button(_sandbag_panel, _toggle_sandbag, 0)
 	_close_button(_potion_panel, _toggle_potion_panel, 0)
-	_close_button(_sound_panel, _toggle_sound_panel, 0)
 	_close_button(_npc_panel, func() -> void: _npc_panel.visible = false, 0)
 
 
@@ -3183,7 +3182,7 @@ func _stack_label(stack: Dictionary) -> String:
 	return text
 
 
-## HUD 하단. **가운데에 퀵슬롯 4칸**, 오른쪽 아래에 자동사냥·스킬·가방 단추.
+## HUD 하단. **맨 아래 줄에 물약 · 체력 막대(위에 레벨 배지) · 자동사냥**, 그 위에 퀵슬롯 4칸.
 ##
 ## 퀵슬롯은 스킬 아이콘을 칸 테두리(ui_skill_slot)에 넣고, 쿨타임이 남았으면
 ## 시계 방향으로 걷히는 어둠과 남은 초를 얹는다. 빈 칸은 "+" — 눌러도 아무 일 없다.
@@ -3191,40 +3190,60 @@ func _stack_label(stack: Dictionary) -> String:
 ## **앵커로 자리를 잡는다** (UI 는 조각을 앵커로 조립한다). 자식을 다 넣은 뒤에
 ## 최소 크기로 오프셋을 맞추고, 양쪽으로 자라게 해서 해상도가 바뀌어도 가운데에 남는다
 func _build_skill_bar() -> void:
-	# 아래 가운데 한 묶음 — 위에서부터 레벨 배지 · 경험치 % · 체력 막대 · 퀵슬롯
-	# (2026-09-20 요청). 왼쪽 위에 따로 있던 상태판을 여기로 내렸다.
-	# 세로 상자에 담아야 막대가 퀵슬롯 줄과 같은 길이로 늘어난다
+	# 아래 가운데 한 묶음 (2026-09-20 요청 — 왼쪽 위에 따로 있던 상태판을 여기로 내렸다).
+	# **맨 아래 줄이 [물약] [레벨 배지 / 체력 막대] [자동사냥]** 이다 (2026-10-02 요청 "HP를
+	# 아래로 내리고, 왼쪽에 물약 오른쪽에 자동사냥. 레벨은 지금처럼 HP위에"). 그 전에는
+	# 막대가 [물약·퀵슬롯·자동사냥] 줄 위에 그 줄 길이로 깔렸다. 퀵슬롯 줄은 그 위에 따로 선다
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 4)
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_ui_root.add_child(column)
 
 	_build_exp_gauge()
-	_build_level_badge(column)
 
-	var hp := _make_bar(HP_BAR_H, Color("#c33122"), 12)
-	_hp_bar = hp["bar"]
-	_hp_text = hp["text"]
-	column.add_child(hp["frame"])
+	# **보이는 액티브 스킬이 없으면 줄째 숨긴다** (2026-09-29 요청: "퀵슬롯 … 숨김 처리해") —
+	# 격투가는 평타만 쓴다. 스킬 표의 `hidden` 을 풀면 줄이 곧바로 돌아온다
+	var quick_row := HBoxContainer.new()
+	quick_row.add_theme_constant_override("separation", 5)
+	quick_row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	quick_row.visible = Skills.actives_shown(World.DEFAULT_JOB)
+	column.add_child(quick_row)
 
 	var dock := HBoxContainer.new()
 	dock.add_theme_constant_override("separation", 5)
 	column.add_child(dock)
-	_bar_buttons.clear()
 	_build_potion_cell(dock)
+
+	# 가운데 — 배지를 막대 바로 위에 얹는다. 양옆 칸과 **바닥을 맞추고**, 막대 아래에 여백을
+	# 줘서 막대 가운데가 칸 가운데 높이에 온다
+	var middle := VBoxContainer.new()
+	middle.add_theme_constant_override("separation", 4)
+	middle.size_flags_vertical = Control.SIZE_SHRINK_END
+	middle.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dock.add_child(middle)
+	_build_level_badge(middle)
+
+	var hp := _make_bar(HP_BAR_H, Color("#c33122"), 12)
+	_hp_bar = hp["bar"]
+	_hp_text = hp["text"]
+	(hp["frame"] as Control).custom_minimum_size.x = HP_BAR_W
+	var hp_pad := MarginContainer.new()
+	hp_pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hp_pad.add_theme_constant_override("margin_bottom", int((AUTO_CELL - HP_BAR_H) / 2.0))
+	hp_pad.add_child(hp["frame"])
+	middle.add_child(hp_pad)
+
+	_bar_buttons.clear()
 	for slot in int(GameData.combat().get("skillBarSize", 4)):
 		var cell := _make_skill_cell(QUICK_CELL, "ui_quick_slot", _on_bar_pressed.bind(slot), QUICK_MARGIN)
 		cell.find_child("key", true, false).text = str(slot + 1)
-		# **보이는 액티브 스킬이 없으면 숨긴다** (2026-09-29 요청: "퀵슬롯 … 숨김 처리해") —
-		# 격투가는 평타만 쓴다. 스킬 표의 `hidden` 을 풀면 칸이 곧바로 돌아온다
 		cell.visible = Skills.actives_shown(World.DEFAULT_JOB)
-		dock.add_child(cell)
+		quick_row.add_child(cell)
 		_bar_buttons.append(cell)
 		_bar_cooling.append(false)
 
-	# 자동사냥도 같은 칸이다 — 엄지가 퀵슬롯과 같은 높이에서 닿는다 (2026-09-19 요청).
-	# 켜지면 칸 위에서 화살표 고리가 돈다
-	# 퀵슬롯에서 한 뼘 띄운다 — 붙여 두면 다섯 번째 스킬 칸으로 보인다
+	# 자동사냥 칸 — 막대 오른쪽 (2026-10-02). 켜지면 칸 위에서 화살표 고리가 돈다.
+	# 막대에서 한 뼘 띄운다
 	var gap := Control.new()
 	gap.custom_minimum_size = Vector2(AUTO_GAP, 0)
 	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -3244,6 +3263,7 @@ func _build_skill_bar() -> void:
 	var auto_badge: MarginContainer = _auto_cell.find_child("badge", true, false).get_parent().get_parent()
 	# 칸이 작아진 뒤로는 바닥에 바짝 붙인다 — 가운데로 올라오면 검 손잡이와 겹친다
 	auto_badge.add_theme_constant_override("margin_bottom", 4)
+	_auto_cell.size_flags_vertical = Control.SIZE_SHRINK_END
 	dock.add_child(_auto_cell)
 
 	_auto_spin = TextureRect.new()
@@ -3313,9 +3333,9 @@ func _build_skill_bar() -> void:
 	# 그림은 월계관 두른 금 트로피(`ui_icon_rank`)
 	if _transport.online():
 		_menu_cells.append(_icon_button("ui_icon_rank", "랭킹", _toggle_rank, MENU_BTN, true))
-	# 설정 — 메뉴 맨 끝 (2026-09-30 요청 "볼륨 조절 하는 기능 추가해"). 지금은 소리 크기만 있다.
-	# 그림은 톱니바퀴(`ui_icon_settings`, 2026-10-02)
-	_menu_cells.append(_icon_button("ui_icon_settings", "설정", _toggle_sound_panel, MENU_BTN, true))
+	# 설정 — 메뉴 맨 끝 (2026-09-30 요청 "볼륨 조절 하는 기능 추가해"). 2026-10-02 에 전체 화면 창이 됐다
+	# — 탭 소리 / 아이템 습득. 그림은 톱니바퀴(`ui_icon_settings`)
+	_menu_cells.append(_icon_button("ui_icon_settings", "설정", _toggle_settings, MENU_BTN, true))
 	# 평소 줄엔 `MENU_QUICK` 넷만, 나머지는 펼친 판의 격자로 (2026-10-01 요청 그림)
 	for cell in _menu_cells:
 		var hit: Button = cell.get_node("hit")
@@ -3385,10 +3405,9 @@ func _build_skill_bar() -> void:
 	_design_cell.grow_vertical = Control.GROW_DIRECTION_BEGIN
 
 
-## 물약 칸 — **퀵슬롯 왼쪽** (2026-09-26 요청: 처음엔 오른쪽 옆이었다가 "물약을 퀵슬롯 왼쪽에 두고").
+## 물약 칸 — **체력 막대 왼쪽** (2026-10-02 요청. 그 전엔 퀵슬롯 왼쪽이었다 — 2026-09-26).
 ## 누르면 마시고, 오른쪽 위 "설정" 으로 저절로 마실 HP % 를 고른다. 쿨타임은 스킬 칸과 같은
-## 어둠·바늘로 돈다 (`_refresh_potion`). 퀵슬롯과 `AUTO_GAP` 만큼 띄운다 — 붙이면 다섯 번째
-## 스킬 칸으로 보인다 (자동사냥 칸에서 받은 지적과 같다)
+## 어둠·바늘로 돈다 (`_refresh_potion`). 막대와 `AUTO_GAP` 만큼 띄운다
 func _build_potion_cell(dock: HBoxContainer) -> void:
 	_potion_cell = _make_skill_cell(QUICK_CELL, "ui_quick_slot", _drink_potion, QUICK_MARGIN)
 	_potion_cell.name = "potion"
@@ -3399,7 +3418,14 @@ func _build_potion_cell(dock: HBoxContainer) -> void:
 		_potion_cell.find_child("text", true, false).text = "물약"
 	# 칸의 누름(hit)보다 **뒤에** 얹어야 이 단추가 먼저 눌린다
 	_potion_cell.add_child(_cell_setting("potion_setting", _toggle_potion_panel))
-	dock.add_child(_potion_cell)
+	# 자동사냥 칸(`AUTO_CELL`)과 **같은 너비 자리**에 가운데로 앉힌다 — 양옆이 같아야 막대가
+	# 화면 가운데에 오고, 칸 가운데 높이도 자동사냥과 맞는다 (2026-10-02)
+	var seat := CenterContainer.new()
+	seat.custom_minimum_size = Vector2(AUTO_CELL, AUTO_CELL)
+	seat.size_flags_vertical = Control.SIZE_SHRINK_END
+	seat.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	seat.add_child(_potion_cell)
+	dock.add_child(seat)
 
 	var gap := Control.new()
 	gap.custom_minimum_size = Vector2(AUTO_GAP, 0)
@@ -4957,6 +4983,22 @@ func _build_gate_panel() -> void:
 	_store_panel.visibility_changed.connect(func(): store_back.visible = _store_panel.visible)
 	top.add_child(_store_panel)
 	_close_button(_store_panel, _toggle_store, 0)
+	# 설정 창도 같은 층·같은 결이다 → docs/features/hud.md "설정 창"
+	_settings_panel = SettingsPanel.make(_frame_box, _inv_button)
+	_settings_panel.theme = _ui_root.theme
+	_settings_panel.loot_skip_changed.connect(func(grades: Array) -> void:
+		_transport.send(&"lootSkip", {"grades": grades})
+	)
+	var settings_back := ColorRect.new()
+	settings_back.name = "SettingsBack"
+	settings_back.color = DungeonPanel.CARD_DARK
+	settings_back.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	settings_back.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	settings_back.visible = false
+	top.add_child(settings_back)
+	_settings_panel.visibility_changed.connect(func(): settings_back.visible = _settings_panel.visible)
+	top.add_child(_settings_panel)
+	_close_button(_settings_panel, _toggle_settings, 0)
 
 
 ## ≡ 를 눌러 펼치는 메뉴 판 (2026-10-01 요청: "오른쪽 위에 x버튼을 평소에는 … 3줄 짜리 ui 아이콘 만들고
@@ -5019,6 +5061,7 @@ func _open_gate() -> void:
 	_fitness_panel.visible = false
 	_codex_panel.visible = false
 	_store_panel.visible = false
+	_settings_panel.visible = false
 	_gate_panel.open(_shown_zone)
 
 
@@ -5032,6 +5075,7 @@ func _toggle_dungeon() -> void:
 	_codex_panel.visible = false
 	_sandbag_panel.visible = false
 	_store_panel.visible = false
+	_settings_panel.visible = false
 	_dungeon_panel.entries = _dungeon_entries()
 	_dungeon_panel.open(_shown_zone)
 
@@ -5061,6 +5105,7 @@ func _toggle_fitness() -> void:
 	_codex_panel.visible = false
 	_sandbag_panel.visible = false
 	_store_panel.visible = false
+	_settings_panel.visible = false
 	_fitness_panel.refresh(_me())
 	_fitness_panel.open()
 
@@ -5075,6 +5120,7 @@ func _toggle_codex() -> void:
 	_fitness_panel.visible = false
 	_sandbag_panel.visible = false
 	_store_panel.visible = false
+	_settings_panel.visible = false
 	_codex_panel.refresh(_me())
 	_codex_panel.open()
 
@@ -5088,9 +5134,25 @@ func _toggle_store() -> void:
 	_dungeon_panel.visible = false
 	_fitness_panel.visible = false
 	_sandbag_panel.visible = false
+	_settings_panel.visible = false
 	if _codex_panel.visible:
 		_codex_panel.close_panel()
 	_store_panel.open()
+
+
+## 설정 단추. 열려 있으면 닫는다. 헬스·도감 창과 한 층이라 그 넷을 닫고 연다
+func _toggle_settings() -> void:
+	if _settings_panel.visible:
+		_settings_panel.close_panel()
+		return
+	_gate_panel.visible = false
+	_dungeon_panel.visible = false
+	_fitness_panel.visible = false
+	_sandbag_panel.visible = false
+	_store_panel.visible = false
+	_codex_panel.visible = false
+	_settings_panel.refresh(_me())
+	_settings_panel.open()
 
 
 ## 문을 눌렀다. **거리와 상관없이 바로 창을 연다** (2026-09-18 요청: "포탈까지
@@ -6139,6 +6201,7 @@ func _refresh_status(me: Dictionary) -> void:
 	_redraw_char(me)
 	_fitness_panel.refresh(me)
 	_codex_panel.refresh(me)
+	_settings_panel.refresh(me)
 	var max_hp := maxf(1.0, float(me.stats.maxHp))
 	_hp_bar.max_value = max_hp
 	_hp_bar.value = float(me.hp)
@@ -6206,74 +6269,6 @@ func _refresh_potion(me: Dictionary) -> void:
 		_potion_pct_label.text = "HP %d%% 이하" % pct if pct > 0 else "자동 끔"
 		# 신호 없이 옮긴다 — 신호를 내면 받은 값을 다시 보내는 되먹임이 된다
 		_potion_slider.set_value_no_signal(pct)
-
-
-## 소리 설정 창 — 전체 볼륨을 -/+ (10 씩)와 슬라이더로 고른다. 0 이 "소리 끔".
-## 판정이 아니라 기기 설정이라 서버에 보내지 않고 `SoundSettings` 가 바로 걸고 저장한다
-func _build_sound_panel() -> void:
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_ui_root.add_child(center)
-	_sound_panel = _window_panel()
-	_sound_panel.name = "sound_panel"
-	center.add_child(_sound_panel)
-
-	var side := VBoxContainer.new()
-	side.custom_minimum_size = Vector2(300, 0)
-	side.add_theme_constant_override("separation", 12)
-	_sound_panel.add_child(side)
-	_stone_title(side, "소리 설정", 20, "ui_icon_settings")
-	side.add_child(_inv_label("전체 볼륨 — 0 이면 소리를 끈다", 14, INV_TEXT))
-
-	var row := HBoxContainer.new()
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 12)
-	side.add_child(row)
-	# ASCII "-" — 빼기 기호(U+2212)는 한글 폰트 부분집합에 없다 (물약 창과 같다)
-	var down := _inv_button("-", _sound_step.bind(-1))
-	down.name = "sound_down"
-	row.add_child(down)
-	_sound_label = _inv_label("", 20, INV_GOLD_HI)
-	_sound_label.custom_minimum_size = Vector2(110, 0)
-	_sound_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	row.add_child(_sound_label)
-	var up := _inv_button("+", _sound_step.bind(1))
-	up.name = "sound_up"
-	row.add_child(up)
-
-	_sound_slider = HSlider.new()
-	_sound_slider.name = "sound_slider"
-	_sound_slider.min_value = 0
-	_sound_slider.max_value = SoundSettings.MAX
-	_sound_slider.step = SoundSettings.STEP
-	_sound_slider.tick_count = SoundSettings.MAX / SoundSettings.STEP + 1
-	_sound_slider.ticks_on_borders = true
-	_sound_slider.custom_minimum_size = Vector2(0, 32)
-	_sound_slider.value_changed.connect(func(value: float) -> void: _set_sound(roundi(value)))
-	side.add_child(_sound_slider)
-	_show_sound(SoundSettings.volume())
-
-
-func _toggle_sound_panel() -> void:
-	_sound_panel.visible = not _sound_panel.visible
-	if _sound_panel.visible:
-		_sound_panel.get_parent().move_to_front()
-		_show_sound(SoundSettings.volume())
-
-
-func _sound_step(dir: int) -> void:
-	_set_sound(SoundSettings.volume() + dir * SoundSettings.STEP)
-
-
-func _set_sound(value: int) -> void:
-	_show_sound(SoundSettings.set_volume(value))
-
-
-## 글자와 손잡이를 건 값에 맞춘다 — 손잡이는 신호 없이 (신호를 내면 다시 거는 되먹임이 된다)
-func _show_sound(value: int) -> void:
-	_sound_label.text = "%d%%" % value if value > 0 else "소리 끔"
-	_sound_slider.set_value_no_signal(value)
 
 
 func _drink_potion() -> void:

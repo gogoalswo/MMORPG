@@ -57,6 +57,8 @@ static func write(zone_id: String, player: Dictionary) -> void:
 		"sandbag": player.get("sandbag", {}),
 		# 던전 하루 입장 `{ 종류 id: {day, count} }` — 없던 칸이라 옛 저장은 빈 사전
 		"dungeon_entries": player.get("dungeon_entries", {}),
+		# 안 주울 장비 등급 — 없던 칸이라 옛 저장은 빈 목록(다 줍는다)
+		"loot_skip": player.get("loot_skip", []),
 		# 물약을 저절로 마시는 기준(HP %) — 없던 칸이라 옛 저장은 처음 값(90)으로 읽힌다
 		"potion_pct": player.get("potion_pct", 90),
 	}, "\t"))

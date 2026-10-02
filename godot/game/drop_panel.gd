@@ -194,7 +194,8 @@ func _add_grade(grade: int) -> void:
 	head.add_theme_constant_override("separation", 14)
 	head.add_child(_label(Items.grade_name(grade), HEAD_FONT, tint))
 	# 확률 (2026-10-02 요청: "아이템 드랍 정보에 확률 표기해놔") — 드랍률 옵션을 걸기 전 값
-	var chance := _label("1마리당 %s" % percent(float(drops.chances.get(grade, 0.0))), NAME_FONT, GatePanel.CARD_SUB_COLOR)
+	# 앞에 "1마리당" 을 붙였다가 뺐다 (같은 날 요청: "1마리당 텍스트는 제거해") — 숫자만 적는다
+	var chance := _label(percent(float(drops.chances.get(grade, 0.0))), NAME_FONT, GatePanel.CARD_SUB_COLOR)
 	chance.name = "Chance"
 	head.add_child(chance)
 	_list.add_child(head)

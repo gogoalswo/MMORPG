@@ -252,8 +252,8 @@
     범위는 대상 등급의 `option_range`. 표는 `Items.option_odds(tier, grade)`.
   - **수치 단계** 표: 1 ~ 5단계 확률(40 · 30 · 20 · 8 · 2%) — `Items.option_step_odds()` 가 `optionStepWeights` 를 비율로 바꾼다.
   - 둘 다 굴림 함수(`roll_tier_options` · `roll_option_value`)와 **같은 표를 읽는다** — 수치를 바꾸면 창도 따라간다.
-  - 장비 창이 안 뜨니 **착용 중인 장비는 이 창에서 고를 수 없다** (인벤토리 칸만). 판정(`useCrystal where=equip`)은 그대로 남겼다.
-    크리스탈 창 X 를 누르면 인벤토리가 떠 있을 때 장비 창이 돌아온다.
+  - 장비 창이 안 떠도 **착용 중인 장비를 고를 수 있다** — 인벤토리 목록 맨 앞에 "착용" 칸으로 서 있다
+    ([inventory-equipment.md](inventory-equipment.md) "낀 장비도 목록에"). 크리스탈 창 X 를 누르면 인벤토리가 떠 있을 때 장비 창이 돌아온다.
 - **처음 들어오면 크리스탈 30개가 한 번 들어온다** (2026-09-23 요청 "가방에 30개 넣어").
   `LocalTransport.open` 이 `World.grant_once(…, "crystal30", …)` 를 부르고, 받았다는 표시가
   저장의 `granted` 목록에 남아 다시 들어와도 또 주지 않는다. 가방이 꽉 찼으면 다음 접속에

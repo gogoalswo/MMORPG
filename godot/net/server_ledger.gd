@@ -19,6 +19,8 @@ signal failed(reason: String)
 signal chat(line: Dictionary)
 ## 랭킹 답 `{top: [{rank, name, level, exp}], me: {rank, level, exp}, total}`
 signal ranked(board: Dictionary)
+## 샌드백 랭킹전 이번 주 순위 `{top, me, total, week, ends_at}` (docs/features/sandbag.md)
+signal sandbag_ranked(board: Dictionary)
 ## 결제 결과 — `{t:"purchased", product, diamonds, already?}` 이거나 `{t:"error", reason, product}`.
 ## **`purchased` 를 받은 뒤에만** 기기가 그 구매를 소모(consume)한다 — 소모해야 같은 상품을 또 산다
 signal purchase_done(result: Dictionary)
@@ -63,6 +65,14 @@ func say(text: String) -> bool:
 	if not ready or text.strip_edges().is_empty():
 		return false
 	_ws.send_text(JSON.stringify({"t": "chat", "text": text}))
+	return true
+
+
+## 샌드백 랭킹전 순위를 묻는다 — 답은 `sandbag_ranked` 로 온다
+func ask_sandbag_rank() -> bool:
+	if not ready:
+		return false
+	_ws.send_text(JSON.stringify({"t": "sandbagRank"}))
 	return true
 
 
@@ -139,12 +149,17 @@ func _on_message(raw: Variant) -> void:
 			name = str(message.get("name", name))
 			_welcome(int(message.get("last_req", 0)))
 			welcomed.emit(message.get("ledger", {}))
+			# 들어오며 정산된 것(샌드백 랭킹전 주간 보상) — 결과와 같은 길로 흘린다
+			if not message.get("events", []).is_empty():
+				replied.emit(message.get("ledger", {}), message.get("events", []))
 			for line in message.get("chat", []):
 				chat.emit(line)
 		"chat":
 			chat.emit(message)
 		"rank":
 			ranked.emit(message)
+		"sandbagRank":
+			sandbag_ranked.emit(message)
 		"purchased":
 			replied.emit(message.get("ledger", {}), message.get("events", []))
 			purchase_done.emit(message)

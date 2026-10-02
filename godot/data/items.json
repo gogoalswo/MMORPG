@@ -767,13 +767,15 @@
       "tier": 2,
       "key": "options2",
       "count": 1,
-      "source": "crystal"
+      "source": "crystal",
+      "material": "crystal"
     },
     {
       "tier": 3,
       "key": "options3",
-      "count": 0,
-      "source": null
+      "count": 1,
+      "source": "yellowCrystal",
+      "material": "yellow_crystal"
     }
   ],
   "materials": {
@@ -781,6 +783,11 @@
       "id": "crystal",
       "name": "크리스탈",
       "desc": "장비의 2차 옵션을 다시 굴린다"
+    },
+    "yellow_crystal": {
+      "id": "yellow_crystal",
+      "name": "옐로우 크리스탈",
+      "desc": "장비의 3차 옵션을 다시 굴린다"
     }
   },
   "crystalId": "crystal",

@@ -100,6 +100,15 @@ import {
   GRADE_COLOR,
   DIAMOND_PRODUCTS,
 } from '../packages/shared/src/index.ts';
+import {
+  SANDBAG_ZONE,
+  SANDBAG_KIND,
+  SANDBAG_COUNTDOWN_SECONDS,
+  SANDBAG_SECONDS,
+  SANDBAG_REWARDS,
+  SANDBAG_WEEK_SHIFT_SECONDS,
+  WEEK_SECONDS,
+} from '../packages/shared/src/sandbag.ts';
 // `index.ts` 가 gear.ts 를 다시 내보내지 않는다 — 설계 표는 직접 가져온다
 import { GEAR_DROP_RATE } from '../packages/shared/src/gear.ts';
 
@@ -116,13 +125,23 @@ export function buildData() {
       fieldOrder: FIELD_ORDER,
       // 던전 창이 읽는다 — 종류 셋과 단계별 존 id·보스 (dungeons.ts)
       dungeons: DUNGEON_TYPES,
+      // 샌드백 랭킹전 (sandbag.ts) — 존 · 카운트 · 재는 시간 · 주 경계 · 순위 보상
+      sandbag: {
+        zone: SANDBAG_ZONE,
+        countdown: SANDBAG_COUNTDOWN_SECONDS,
+        seconds: SANDBAG_SECONDS,
+        weekShift: SANDBAG_WEEK_SHIFT_SECONDS,
+        weekSeconds: WEEK_SECONDS,
+        rewards: SANDBAG_REWARDS,
+      },
       zones: ZONES,
       groundKinds: GROUND_KINDS,
       groundLooks: GROUND_LOOKS,
     },
     // heights 는 모델을 얼마나 키울지 정한다 (모델 높이는 1 로 정규화돼 있다)
     'monsters.json': {
-      kinds: MONSTER_KINDS,
+      // 샌드백은 몬스터 표(60종) 밖의 과녁이라 여기서 붙인다 (sandbag.ts)
+      kinds: { ...MONSTER_KINDS, [SANDBAG_KIND.id]: SANDBAG_KIND },
       heights: BEAST_HEIGHT,
       heightDefault: BEAST_HEIGHT_DEFAULT,
     },

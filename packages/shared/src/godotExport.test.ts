@@ -26,10 +26,11 @@ for (const [name, value] of Object.entries(data)) {
 }
 
 test('내보낸 개수가 문서와 맞는다', () => {
-  // 마을 1 + 사냥터 23 + 토벌 던전 20단계 + 시련의 탑 20단계 (dungeons.ts).
+  // 마을 1 + 사냥터 23 + 토벌 던전 20단계 + 시련의 탑 20단계 (dungeons.ts) + 샌드백 랭킹전 1 (sandbag.ts).
   // 사냥터는 티어 20개인데 저레벨 셋이 종마다 한 곳씩 갈라져 23곳이다 (zones.ts 의 weak)
-  assert.equal(Object.keys(data['zones.json'].zones).length, 64, '존 64곳');
-  assert.equal(Object.keys(data['monsters.json'].kinds).length, 60, '몬스터 60종');
+  assert.equal(Object.keys(data['zones.json'].zones).length, 65, '존 65곳');
+  // 몬스터 60종 + 샌드백 (몬스터 표 밖에서 붙인다)
+  assert.equal(Object.keys(data['monsters.json'].kinds).length, 61, '몬스터 60종 + 샌드백');
   assert.equal(Object.keys(data['skills.json'].skills).length, 27, '스킬 27종');
 });
 

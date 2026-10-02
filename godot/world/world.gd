@@ -324,8 +324,16 @@ func join(player_id: String) -> void:
 		# --- 장비 도감 (docs/features/codex.md) --- `{ 아이템 id: 채운 강화 비트 }`. 도감 창에서 가방의
 		# 장비를 넣어 채운다 (`codex_register`)
 		"codex": kept.get("codex", {}).duplicate(),
+		# 샌드백 랭킹전 `{week, best, unpaid?}` — 그 주 최고 기록 (docs/features/sandbag.md)
+		"sandbag": kept.get("sandbag", {}).duplicate(true),
 	}
 	_refresh_stats(_players[player_id])
+	# 샌드백 랭킹전 — 들어오면 샌드백을 보고 선다. 평타는 정면 부채꼴 안만 치므로 등을 지고 서면 헛손질한다
+	for monster in _monsters:
+		if bool(monster.get("dummy", false)):
+			var me: Dictionary = _players[player_id]
+			me.rot = atan2(float(monster.x) - float(me.x), float(monster.z) - float(me.z))
+			break
 
 
 func leave(player_id: String) -> void:
@@ -385,6 +393,7 @@ func step(delta: float) -> void:
 	var now := Time.get_ticks_msec()
 	_respawn(now)
 	_check_run_time(now)
+	_check_sandbag_week(now)
 	_run_landings(now)
 	_run_lunges(delta, now)
 	_run_combos(now)
@@ -439,6 +448,7 @@ func _move_to(target: String) -> void:
 	for who in _players:
 		join(who)
 	_events.append({"type": "zone", "zone": target})
+	_check_sandbag_week(Time.get_ticks_msec(), true)
 
 
 ## 밖으로 내보내는 상태. 읽기 전용으로 쓴다.
@@ -464,6 +474,9 @@ func attack(player_id: String) -> void:
 
 	var now := Time.get_ticks_msec()
 	if now < int(player.next_attack_at):
+		return
+	# 샌드백 랭킹전의 카운트 동안은 못 친다 — 시작 신호 전에 넣은 피해는 세지 않으니 헛손질이다
+	if _counting_down(now):
 		return
 	# **스킬 시전 중에는 기본 공격도 못 한다** (2026-09-24 요청). 경직(0.4초)이 풀려도
 	# 스킬 동작은 1초 넘게 남는데, 그 틈에 휘두르면 동작이 끊긴다 (`cast` 의 `cast_until`)
@@ -876,6 +889,9 @@ func _kill(player: Dictionary, target: Dictionary, now: int) -> void:
 ## 존을 열 때 — 던전 단계면 판을 연다. 시련은 들어온 순간부터 시계가 돈다 (서버도 `enter` 부터 센다)
 func _start_run() -> void:
 	_run = {}
+	if zone_id == Sandbag.zone():
+		_start_sandbag()
+		return
 	var stage := GameData.dungeon_stage(zone_id)
 	if stage.is_empty():
 		return
@@ -900,7 +916,7 @@ func _start_run() -> void:
 ## 한 마리 잡았다 — 토벌은 보스면 성공(스킬 경험치는 `Ledger.kill` 이 이미 줬다), 시련은 시간 안이면
 ## 세고 다 채우면 성공(크리스탈은 장부에 청한다)
 func _count_run_kill(player: Dictionary, target: Dictionary, now: int) -> void:
-	if _run.is_empty() or str(_run.result) != "":
+	if _run.is_empty() or str(_run.result) != "" or str(_run.dungeon) == "sandbag":
 		return
 	if str(_run.dungeon) != "trial":
 		if bool(target.get("boss", false)):
@@ -919,7 +935,94 @@ func _count_run_kill(player: Dictionary, target: Dictionary, now: int) -> void:
 func _check_run_time(now: int) -> void:
 	if _run.is_empty() or str(_run.result) != "" or not _run.has("ends_at") or now < int(_run.ends_at):
 		return
+	if str(_run.dungeon) == "sandbag":
+		_finish_sandbag()
+		return
 	_finish_run("fail")
+
+
+## --- 샌드백 랭킹전 --- (docs/features/sandbag.md)
+
+## 존을 열 때 — 들어온 순간부터 카운트(3초)가 돌고, 끝나면 재는 시간(15초)이 돈다
+func _start_sandbag() -> void:
+	var now := Time.get_ticks_msec()
+	var starts := now + Sandbag.countdown_ms()
+	_run = {
+		"zone": zone_id,
+		"dungeon": "sandbag",
+		"name": str(zone.get("name", "샌드백 랭킹전")),
+		"stage": 0,
+		"skill_exp": 0, "crystals": 0, "protein": 0,
+		"damage": 0,
+		"starts_at": starts,
+		"ends_at": starts + Sandbag.play_ms(),
+		"result": "",
+	}
+
+
+## 카운트 중인가 — 이 동안은 평타·스킬이 막힌다
+func _counting_down(now: int) -> bool:
+	return str(_run.get("dungeon", "")) == "sandbag" and str(_run.result) == "" and now < int(_run.starts_at)
+
+
+## 샌드백에 넣은 피해를 센다 — 재는 시간 안에 들어간 것만
+func _count_sandbag_damage(damage: int, now: int) -> void:
+	if str(_run.get("dungeon", "")) != "sandbag" or str(_run.result) != "":
+		return
+	if now < int(_run.starts_at) or now >= int(_run.ends_at):
+		return
+	_run.damage = int(_run.damage) + damage
+
+
+## 재는 시간이 끝났다 — 기록을 장부에 남기고 결과창을 띄운다. 실패는 없다(얼마를 넣든 기록이다).
+## 장부가 기록을 남기기 전에 주가 지났는지 먼저 본다 — 지난 기록을 정산하지 않고 덮으면 보상이 사라진다
+func _finish_sandbag() -> void:
+	var damage := int(_run.damage)
+	_check_sandbag_week(Time.get_ticks_msec(), true)
+	var best := damage
+	var new_best := false
+	for id in _players:
+		var mine: Dictionary = _players[id].get("sandbag", {})
+		var before := int(mine.get("best", 0)) if int(mine.get("week", -1)) == _ledger.sandbag_week() else 0
+		new_best = damage > before
+		_ledger_call(_players[id], &"sandbag_record", [damage])
+		# 로컬은 장부가 바로 고쳤다. 서버에 붙어 있으면 아직 옛 값이라 큰 쪽을 적는다 — 답(`sandbagRecord`)이 오면 창이 고친다
+		best = maxi(maxi(before, damage), int(_players[id].get("sandbag", {}).get("best", 0)))
+	_run.result = "clear"
+	_events.append({
+		"type": "dungeonResult", "dungeon": "sandbag", "name": _run.name, "stage": 0,
+		"result": "clear", "kills": 0, "need": 0, "skill_exp": 0, "crystals": 0, "protein": 0,
+		"damage": damage, "best": best, "new_best": new_best,
+	})
+
+
+var _next_week_check := 0
+
+## 지금 주 번호 — 장부의 시계로 (테스트가 바꿔 끼운다)
+func sandbag_week() -> int:
+	return _ledger.sandbag_week()
+
+
+## 장부의 시계를 바꿔 끼운다 (테스트 — 주를 넘긴다)
+func set_unix_clock(clock: Callable) -> void:
+	_ledger.unix_now = clock
+
+## **주가 바뀌었으면 지난주를 정산한다** (로컬만) — 혼자 노는 판이라 순위는 늘 1위다.
+## 서버에 붙어 있으면 서버가 모든 계정을 줄 세워 정산하므로 여기서는 안 한다 (`LedgerServer`).
+## 1초에 한 번만 본다. `force` 면 바로 — 못 받은 보상(가방이 꽉 찼던 것) 다시 넣기도 이때만 해 본다
+## (매초 해 보면 "가방이 가득 차…" 가 매초 뜬다). 존을 옮길 때·불러올 때·판이 끝날 때 부른다
+func _check_sandbag_week(now: int, force := false) -> void:
+	if remote != null or (not force and now < _next_week_check):
+		return
+	_next_week_check = now + 1000
+	var week := _ledger.sandbag_week()
+	for id in _players:
+		var player: Dictionary = _players[id]
+		var mine: Dictionary = player.get("sandbag", {})
+		if not mine.is_empty() and int(mine.get("week", week)) < week:
+			_ledger_call(player, &"sandbag_close_week", [1])
+		elif force and mine.has("unpaid"):
+			_ledger_call(player, &"sandbag_pay")
 
 
 ## 던전에서 쓰러졌다 — 어느 던전이든 실패
@@ -977,7 +1080,7 @@ func drain_events() -> Array:
 func _step_monsters(delta: float, now: int) -> void:
 	_fill_grid()
 	for monster in _monsters:
-		if int(monster.hp) <= 0:
+		if int(monster.hp) <= 0 or bool(monster.get("dummy", false)):
 			continue
 
 		# --- 휘두른 손이 닿는 순간 --- 휘두르기를 알린 뒤 `MONSTER_HIT_DELAY_MS` 가 지나야 피해가
@@ -1364,6 +1467,8 @@ static func make_monster(
 		"scale": scale,
 		"color": kind.get("bodyColor", "#888888"),
 		"boss": bool(kind.get("boss", false)),
+		# 과녁(샌드백) — 안 죽고 안 움직이고 안 때린다. 맞은 피해는 판이 센다 (`_hit_monster`)
+		"dummy": bool(kind.get("dummy", false)),
 		"level": int(kind.get("level", 1)),
 		"max_hp": int(kind.get("maxHp", 1)),
 		"hp": int(kind.get("maxHp", 1)),
@@ -1513,6 +1618,9 @@ func restore(player_id: String) -> bool:
 	player.fitness = stages
 	# 장비 도감 — 없던 칸이라 옛 저장은 빈 사전. 표에 있는 장비 id 만, 비트는 +0 ~ +9 안으로
 	player.codex = Codex.clean(saved.get("codex", {}))
+	# 샌드백 랭킹전 — 없던 칸이라 옛 저장은 빈 사전. 주가 지났으면 `_check_sandbag_week` 가 정산한다
+	var raw_sandbag: Variant = saved.get("sandbag", {})
+	player.sandbag = Ledger.from_json(raw_sandbag) if raw_sandbag is Dictionary else {}
 	# 물약을 저절로 마시는 기준 — 없던 칸이라 옛 저장은 처음 값으로 읽힌다
 	set_potion_pct(player_id, int(saved.get("potion_pct", player.potion_pct)))
 
@@ -1539,6 +1647,8 @@ func restore(player_id: String) -> bool:
 	if not player.dead:
 		player.x = clampf(float(saved.get("x", player.x)), -half_size, half_size)
 		player.z = clampf(float(saved.get("z", player.z)), -half_size, half_size)
+	# 꺼 둔 사이 주가 바뀌었으면 지난주 샌드백 기록을 정산한다 (로컬만)
+	_check_sandbag_week(Time.get_ticks_msec(), true)
 	return true
 
 
@@ -1972,15 +2082,18 @@ func debug_reset_upgrades(player_id: String) -> void:
 	_notice("테스트: 스킬 강화를 전부 뗐다")
 
 
-## 테스트 단추 — 크리스탈을 가방에 넣는다. 한 칸에 겹친다 (`_give`)
-func debug_crystals(player_id: String, count: int) -> void:
+## 테스트 단추 — 크리스탈을 가방에 넣는다. 한 칸에 겹친다 (`_give`).
+## `material` 이 옐로우 크리스탈이면 그것을 (2026-10-02 — 랭킹전 보상으로만 들어와서 시험할 길이 없다)
+func debug_crystals(player_id: String, count: int, material: String = "") -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty() or count <= 0:
 		return
-	if not _give(player, {"id": Items.crystal_id(), "count": count}):
+	if not Items.is_material(material):
+		material = Items.crystal_id()
+	if not _give(player, {"id": material, "count": count}):
 		return
 	_inventory_changed(player)
-	_notice("테스트: 크리스탈 %d개를 넣었다" % count)
+	_notice("테스트: %s %d개를 넣었다" % [Items.stack_name({"id": material}), count])
 
 
 ## **설계 창의 레벨 단추** — 레벨만 맞추고 **장비는 건드리지 않는다** (2026-09-26 요청:
@@ -2090,6 +2203,8 @@ func cast(player_id: String, skill_id: String, aim_id := "") -> void:
 		return
 
 	var now := Time.get_ticks_msec()
+	if _counting_down(now):
+		return  # 샌드백 랭킹전 카운트 중 (`attack` 과 같다)
 	# **시전 중에는 다른 스킬을 못 쓴다** (2026-09-24 요청). 쿨타임은 스킬마다 따로라
 	# 막지 않으면 연달아 눌러 앞 동작을 끊고, 판정도 동작 하나에 둘이 겹친다.
 	# 쿨타임을 돌리기 전에 거른다 — 거절된 스킬의 쿨타임이 돌면 안 된다
@@ -2409,7 +2524,12 @@ func _hit_monster(player: Dictionary, target: Dictionary, attack: float, skill_i
 	if crit:
 		damage = roundi(damage * (1.0 + float(stats.critDamage)))
 
-	target.hp = maxi(0, int(target.hp) - damage)
+	# **샌드백은 안 죽는다** — 체력은 그대로 두고 넣은 피해만 센다 (docs/features/sandbag.md)
+	var dummy := bool(target.get("dummy", false))
+	if dummy:
+		_count_sandbag_damage(damage, Time.get_ticks_msec())
+	else:
+		target.hp = maxi(0, int(target.hp) - damage)
 	_events.append({
 		"type": "hit",
 		"target": target.id,
@@ -2421,6 +2541,8 @@ func _hit_monster(player: Dictionary, target: Dictionary, attack: float, skill_i
 		"x": target.x,
 		"z": target.z,
 	})
+	if dummy:
+		return
 	if target.hp <= 0:
 		_kill(player, target, Time.get_ticks_msec())
 	# **맞으면 때린 사람을 쫓는다** (2026-09-29) — 어그로를 3m 로 좁혀서, 이게 없으면 멀리서
@@ -2584,12 +2706,13 @@ func unequip(player_id: String, slot: String) -> void:
 ## --- 크리스탈 ---
 
 ## 크리스탈로 **2차 옵션을 통째로 다시 굴린다** (`Ledger.use_crystal`). 가방(`where = "bag"`,
-## `key` = 가방 번호)과 끼고 있는 것(`"equip"`, `key` = 슬롯) 둘 다 된다. NPC 가 필요 없다
-func use_crystal(player_id: String, where: String, key: Variant) -> void:
+## `key` = 가방 번호)과 끼고 있는 것(`"equip"`, `key` = 슬롯) 둘 다 된다. NPC 가 필요 없다.
+## `tier` 3 이면 옐로우 크리스탈로 **3차**를 굴린다 (2026-10-02)
+func use_crystal(player_id: String, where: String, key: Variant, tier: int = 2) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty():
 		return
-	_ledger_call(player, &"use_crystal", [where, key])
+	_ledger_call(player, &"use_crystal", [where, key, tier])
 
 
 ## 그 역할의 NPC 가 닿는 거리에 있나. **살 때마다 다시 잰다** —

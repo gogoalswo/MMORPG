@@ -28,6 +28,8 @@ const FILES := {
 	"mob_mantis": "mob_mantis.glb",
 	"mob_scorpion": "mob_scorpion.glb",
 	"mob_kobold": "mob_kobold.glb",
+	# 샌드백 랭킹전의 과녁 (2026-10-02) — 움직이지 않는 바르코 모델. 클립이 없어 `play` 는 그냥 지나간다
+	"sandbag": "varco_sandbag.glb",
 	# 마을 NPC — 키는 zones.ts 의 NpcDef.look. 바르코 원화 → 3D → 리깅 → 대기 하나
 	"merchant": "npc_merchant.glb",
 	"smith": "npc_smith.glb",

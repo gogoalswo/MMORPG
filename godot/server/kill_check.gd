@@ -35,6 +35,22 @@ const KNOWN_UPGRADE_KEYS := [
 
 ## 그 몬스터를 잡는 데 걸리는 최소 시간(ms) — 이보다 빨리 잡았다는 보고는 거절한다. 0 이면 한 방도 된다
 static func min_ms(ledger: Dictionary, kind: Dictionary) -> float:
+	var pace := _pace(ledger, kind)
+	var hp := float(kind.get("maxHp", 1))
+	if hp <= pace.burst or pace.rate <= 0.0:
+		return 0.0
+	return (hp - pace.burst) / pace.rate
+
+
+## `window_ms` 동안 이 캐릭터가 그 과녁에 넣을 수 있는 **피해의 상한** — 샌드백 랭킹전 기록을 대 본다
+## (docs/features/sandbag.md). 처치 시간과 같은 식이라 실제보다 늘 크다. 거기에 `HEADROOM` 만큼 더 봐준다
+static func max_damage(ledger: Dictionary, kind: Dictionary, window_ms: float) -> float:
+	var pace := _pace(ledger, kind)
+	return (pace.burst + pace.rate * (window_ms + SLACK_MS)) / HEADROOM
+
+
+## 한꺼번에 넣는 것(`burst`)과 1ms 당 넣는 것(`rate`) — 위 둘이 같이 쓴다
+static func _pace(ledger: Dictionary, kind: Dictionary) -> Dictionary:
 	var stats := World.stats_of(
 		str(ledger.job), int(ledger.level), ledger.get("equipped", {}), ledger.get("passives", {}),
 		ledger.get("fitness", {}), ledger.get("codex", {})
@@ -76,11 +92,7 @@ static func min_ms(ledger: Dictionary, kind: Dictionary) -> float:
 		var cast := power * per_power + hits
 		burst += cast
 		rate += cast / every
-
-	var hp := float(kind.get("maxHp", 1))
-	if hp <= burst or rate <= 0.0:
-		return 0.0
-	return (hp - burst) / rate
+	return {"burst": burst, "rate": rate}
 
 
 ## 보고를 받아도 되나 — 몬스터가 나올 수 있게 된 뒤로 `elapsed_ms` 가 지났다

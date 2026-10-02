@@ -113,6 +113,28 @@ func write_order(key: String, order: Dictionary) -> bool:
 	return DirAccess.rename_absolute(temp, _order_path(key)) == OK
 
 
+## 샌드백 랭킹전 — **닫힌 주의 순위** `{계정 id: 순위}` 를 주마다 파일 하나로 굳혀 둔다
+## (docs/features/sandbag.md "서버 정산"). 한 번 쓰면 바뀌지 않는다
+func find_sandbag_ranks(week: int) -> Dictionary:
+	var path := _dir.path_join("sandbag").path_join("%d.json" % week)
+	if not FileAccess.file_exists(path):
+		return {}
+	var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
+	return Ledger.from_json(parsed) if typeof(parsed) == TYPE_DICTIONARY else {}
+
+
+func write_sandbag_ranks(week: int, ranks: Dictionary) -> bool:
+	DirAccess.make_dir_recursive_absolute(_dir.path_join("sandbag"))
+	var path := _dir.path_join("sandbag").path_join("%d.json" % week)
+	var temp := path + ".tmp"
+	var file := FileAccess.open(temp, FileAccess.WRITE)
+	if file == null:
+		return false
+	file.store_string(JSON.stringify(ranks))
+	file.close()
+	return DirAccess.rename_absolute(temp, path) == OK
+
+
 func _order_path(key: String) -> String:
 	return _dir.path_join("orders").path_join(key + ".json")
 

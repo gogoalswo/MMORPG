@@ -59,7 +59,8 @@ func _case_tiers() -> void:
 	var counts: Array = []
 	for row in Items.option_tiers():
 		counts.append([int(row.tier), str(row.key), int(row.count)])
-	_eq("차수 표", counts, [[1, "options", 1], [2, "options2", 1], [3, "options3", 0]])
+	# 3차는 2026-10-02 에 열었다 — 옐로우 크리스탈 (sandbag_test 가 굴리는 것까지 본다)
+	_eq("차수 표", counts, [[1, "options", 1], [2, "options2", 1], [3, "options3", 1]])
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7
 	for grade in range(1, 8):
@@ -68,7 +69,7 @@ func _case_tiers() -> void:
 		var span := Items.option_range(str(second[0].kind), grade)
 		if float(second[0].value) < span.min or float(second[0].value) > span.max:
 			_fail("%d등급 2차가 범위 밖: %s" % [grade, second[0]])
-		_eq("3차는 비어 있다", Items.roll_tier_options(3, grade, rng).size(), 0)
+		_eq("3차는 1줄", Items.roll_tier_options(3, grade, rng).size(), 1)
 	if Items.get_material(Items.crystal_id()).get("name", "") != "크리스탈":
 		_fail("크리스탈 표가 없다")
 	if not Items.get_item(Items.crystal_id()).is_empty():

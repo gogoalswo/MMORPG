@@ -713,22 +713,24 @@ test('옵션 글은 새 이름으로 나온다', () => {
   assert.equal(describeOption({ kind: 'penetration', value: 3.3 }), '방어력 관통 +3.3%');
 });
 
-test('옵션 차수 — 1차 1줄(드랍) · 2차 1줄(크리스탈) · 3차 비움', () => {
+test('옵션 차수 — 1차 1줄(드랍) · 2차 1줄(크리스탈) · 3차 1줄(옐로우 크리스탈)', () => {
   // 2026-09-23 지시: "1차만 드랍으로 나오게 하고 2차는 크리스탈로 붙이는 시스템. 3차는 비어둬"
+  // 2026-10-02 — 3차를 열었다: "3차 옵션 재료 만들자 / 옐로우 크리스탈"
   assert.deepEqual(
-    OPTION_TIERS.map((t) => [t.tier, t.key, t.count, t.source]),
+    OPTION_TIERS.map((t) => [t.tier, t.key, t.count, t.source, t.material]),
     [
-      [1, 'options', 1, 'drop'],
-      [2, 'options2', 1, 'crystal'],
-      [3, 'options3', 0, null],
+      [1, 'options', 1, 'drop', undefined],
+      [2, 'options2', 1, 'crystal', 'crystal'],
+      [3, 'options3', 1, 'yellowCrystal', 'yellow_crystal'],
     ]
   );
+  assert.equal(getMaterial('yellow_crystal')!.name, '옐로우 크리스탈');
   for (let grade = GRADE_MIN; grade <= GRADE_MAX; grade++) {
     const second = rollTierOptions(2, grade, Math.random);
     assert.equal(second.length, 1, `${grade}등급 2차는 1줄`);
     const { min, max } = optionRange(second[0]!.kind, grade);
     assert.ok(second[0]!.value >= min && second[0]!.value <= max, '2차도 장비 등급 범위 안');
-    assert.deepEqual(rollTierOptions(3, grade, Math.random), [], '3차는 비어 있다');
+    assert.equal(rollTierOptions(3, grade, Math.random).length, 1, `${grade}등급 3차는 1줄`);
   }
 });
 

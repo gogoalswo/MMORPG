@@ -288,7 +288,7 @@ export interface ItemStack {
   options?: ItemOption[];
   /** **2차 옵션** — 크리스탈로 붙인다. 쓸 때마다 통째로 다시 굴린다 (`OPTION_TIERS`) */
   options2?: ItemOption[];
-  /** **3차 옵션** — 자리만 있다. 붙이는 방법이 아직 없다 */
+  /** **3차 옵션** — 옐로우 크리스탈로 붙인다. 2차와 같은 규칙 (`OPTION_TIERS`, 2026-10-02) */
   options3?: ItemOption[];
   /** 재료(크리스탈)만 겹쳐 쌓는다. 장비는 늘 1 */
   count?: number;
@@ -465,14 +465,17 @@ export interface OptionTier {
   key: OptionTierKey;
   /** 붙는 줄 수. 0 이면 빈 차수 */
   count: number;
-  /** 어디서 붙나 — `drop`(드랍·상점) · `crystal` · 없음 */
-  source: 'drop' | 'crystal' | null;
+  /** 어디서 붙나 — `drop`(드랍·상점) · `crystal`(크리스탈) · `yellowCrystal`(옐로우 크리스탈) · 없음 */
+  source: 'drop' | 'crystal' | 'yellowCrystal' | null;
+  /** 붙이는 재료 id — 크리스탈 창이 차수를 이것으로 찾는다. 드랍 차수는 없다 */
+  material?: string;
 }
 
 export const OPTION_TIERS: OptionTier[] = [
   { tier: 1, key: 'options', count: OPTION_MAX, source: 'drop' },
-  { tier: 2, key: 'options2', count: 1, source: 'crystal' },
-  { tier: 3, key: 'options3', count: 0, source: null },
+  { tier: 2, key: 'options2', count: 1, source: 'crystal', material: 'crystal' },
+  // 3차 — 2026-10-02 에 열었다 ("3차 옵션 재료 만들자 / 옐로우 크리스탈"). 샌드백 랭킹전 보상으로만 들어온다
+  { tier: 3, key: 'options3', count: 1, source: 'yellowCrystal', material: 'yellow_crystal' },
 ];
 
 export function optionTier(tier: number): OptionTier | undefined {
@@ -499,7 +502,7 @@ export function rollTierOptions(
 // ---------------------------------------------------------------- 재료 (크리스탈)
 
 /**
- * **재료** — 장비가 아닌 가방 물건. 지금은 크리스탈 하나다.
+ * **재료** — 장비가 아닌 가방 물건. 크리스탈(2차)과 옐로우 크리스탈(3차) 둘이다.
  *
  * `ITEMS`(장비 42종) 에 넣지 않는다 — 넣으면 슬롯·등급·능력치를 묻는 자리마다
  * "장비가 아니면" 을 걸어야 한다. 가방에는 `{ id, count }` 로 겹쳐 쌓인다.
@@ -515,12 +518,19 @@ export interface MaterialDef {
 }
 
 export const CRYSTAL_ID = 'crystal';
+/** 3차 옵션 재료 (2026-10-02) — 몬스터는 안 떨군다. 샌드백 랭킹전 주간 보상 (sandbag.ts) */
+export const YELLOW_CRYSTAL_ID = 'yellow_crystal';
 
 export const MATERIALS: Record<string, MaterialDef> = {
   [CRYSTAL_ID]: {
     id: CRYSTAL_ID,
     name: '크리스탈',
     desc: '장비의 2차 옵션을 다시 굴린다',
+  },
+  [YELLOW_CRYSTAL_ID]: {
+    id: YELLOW_CRYSTAL_ID,
+    name: '옐로우 크리스탈',
+    desc: '장비의 3차 옵션을 다시 굴린다',
   },
   // 스킬 경험치북(skill_book_1~3)은 2026-09-28 에 없앴다 — 던전 클리어로 스킬 경험치가
   // 바로 쌓인다 (dungeons.ts 의 skillExp). 옛 저장의 책은 불러올 때 버려진다

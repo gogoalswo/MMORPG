@@ -138,7 +138,8 @@
 | | `{t:"error", id?, reason}` — `no_hello` · `no_id` · `stale` · `unknown_op` · `bad_args` · `unknown_type` · `bad_message` · `store_failed` |
 
 `OPS`(받는 요청과 인자 모양): `enter` · `kill` · `learn_skill` · `feed_upgrade` · `equip` · `unequip` · `sort_bag` ·
-`use_crystal` · `buy` · `sell` · `enhance` · `enhance_many` · `trial_clear`. JSON 숫자는 실수로 오므로 모양대로 바꾸고,
+`use_crystal`(어디 · 번호/슬롯 · **차수** 2/3) · `buy` · `sell` · `enhance` · `enhance_many` · `trial_clear` · `sandbag_record`
+(→ [sandbag.md](sandbag.md) "서버가 기록을 믿는 근거"). JSON 숫자는 실수로 오므로 모양대로 바꾸고,
 모양이 틀리면 `bad_args`.
 
 - **`kill` 은 `{kind, zone, id}` 만 받는다** — 레벨·경험치·보스 여부는 `Ledger.kill` 이 몬스터 표에서
@@ -232,6 +233,9 @@ godot --headless --path godot --script server/server_main.gd -- --port=8765 --da
   내 줄은 청록(채팅창 경험치 색). 경험치는 그 레벨의 % 로 적는다(`Combat.exp_to_next`). 표가
   넘치면 창 안에서 굴린다(360px).
 - 처치 수 같은 다른 판은 아직 없다 — 늘리면 `_board_row` 에 값을 더하고 판마다 줄 세운 것을 따로 둔다.
+- **샌드백 랭킹전은 판이 따로다** (2026-10-02) — `{t:"sandbagRank"}` → `{t:"sandbagRank", top: [{rank, name, best}], me, total, week, ends_at}`.
+  이번 주 줄(`_sandbag_board`)은 주가 바뀌면 비우고, 닫힌 주의 순위는 `sandbag/<주>.json` 에 굳혀 정산에 쓴다.
+  welcome 에 `events`(정산 알림)가 실릴 수 있다 → [sandbag.md](sandbag.md).
 
 ## 유료 재화 — 다이아 (7단계) ★
 

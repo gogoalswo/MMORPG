@@ -27,6 +27,7 @@ three.js 웹 클라이언트를 **고도 엔진으로 갈아타는 중**이다. 
 | `godot/server/` | **서버**(고도 헤드리스) — 웹소켓 · 게스트 계정 · 계정당 JSON 파일 · `ledger.gd` 로 판정. 기기는 `net/server_ledger.gd` 로 붙는다(주소가 있고 일반 모드일 때) → [server.md](server.md) |
 | `godot/world/ledger.gd` | **장부 판정** — 드롭·경험치·골드·가방·강화·스킬. `World` 는 `_ledger_call` 로만 부른다. 나중에 서버가 같은 파일로 판정한다 → [server.md](server.md) |
 | `godot/world/game_data.gd` | `data/*.json` 로더 |
+| `godot/world/sandbag.gd` | ★ 샌드백 랭킹전 규칙 읽기 — 주 번호 · 순위 보상 (2026-10-02) → [sandbag.md](sandbag.md) |
 | `godot/world/save.gd` | `user://save.json` — 혼자 노는 저장 |
 | `godot/net/transport.gd` | 화면과 판정 사이의 유일한 통로 |
 | `godot/net/local_transport.gd` | 서버 없이 `World` 를 이 자리에서 돌린다 |

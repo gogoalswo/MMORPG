@@ -27,8 +27,8 @@ signal register_requested(item_id: String, enhance: int, index: int)
 signal register_all_requested
 ## [강화] — 고른 칸을 채우려고 가방 번호 `index` 의 장비를 `goal` 까지 올리는 강화 창을 띄운다 (game.gd 가 연다)
 signal enhance_requested(index: int, goal: int)
-## 자동 등록 설정 창에서 켤 등급 목록 전체 → `codexAuto` (주울 때 장부가 넣는다)
-signal auto_changed(grades: Array)
+## 자동 등록 설정 창 — 등급 하나의 넣을 부위 목록(비면 그 등급을 끈다) → `codexAutoGrade` (주울 때 장부가 넣는다)
+signal auto_changed(grade: int, slots: Array)
 ## 자동 등록 설정 창에서 막을 1차 옵션 종류 목록 전체 → `codexAutoBlock`
 signal auto_block_changed(kinds: Array)
 ## 그 등급 탭을 보고 나왔다 → `codexSeen` (자동 등록으로 새로 찬 칸의 빨간 점을 지운다)
@@ -146,7 +146,7 @@ func _build() -> void:
 	done.custom_minimum_size = Vector2(160, 56)
 	done.size_flags_horizontal = Control.SIZE_SHRINK_END
 	_auto_sheet = CodexAutoSheet.make(done)
-	_auto_sheet.changed.connect(func(grades: Array) -> void: auto_changed.emit(grades))
+	_auto_sheet.changed.connect(func(grade: int, slots: Array) -> void: auto_changed.emit(grade, slots))
 	_auto_sheet.blocked_changed.connect(func(kinds: Array) -> void: auto_block_changed.emit(kinds))
 	add_child(_auto_sheet)
 	# 숨으면(X · 다른 창 · 강화 창으로 넘어감) 보던 탭의 새 칸 표시를 지운다 — 본 것이다

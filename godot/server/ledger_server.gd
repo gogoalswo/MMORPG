@@ -46,9 +46,10 @@ const OPS := {
 	# 설정 — 안 주울 장비 등급 목록. 장부가 표에 있는 등급만 남긴다
 	"set_loot_skip": "a",
 	# 도감 자동 등록을 켠 등급 목록 (주울 때 장부가 넣는다) · 그 등급 탭을 봤다(새 칸 빨간 점 지우기, 0 이면 전부)
-	"set_codex_auto": "a",
-	# 도감 자동 등록에서 막을 1차 옵션 종류 목록
-	"set_codex_auto_block": "a",
+	# 도감 자동 등록 — 등급 · 넣을 부위 목록(글자, 비면 그 등급을 끈다)
+	"set_codex_auto_grade": "iw",
+	# 도감 자동 등록에서 막을 1차 옵션 종류 목록 (글자)
+	"set_codex_auto_block": "w",
 	"codex_seen": "i",
 }
 
@@ -507,6 +508,16 @@ func _args(shape: String, raw: Variant) -> Variant:
 					"kind": str(value.get("kind", "")), "zone": str(value.get("zone", "")),
 					"id": str(value.get("id", "")),
 				})
+			# 글자 목록 — 부위 · 옵션 종류. 뜻은 장부가 표로 다시 본다
+			"w":
+				if typeof(value) != TYPE_ARRAY:
+					return null
+				var words: Array = []
+				for each in value:
+					if typeof(each) != TYPE_STRING:
+						return null
+					words.append(each)
+				out.append(words)
 			"a":
 				if typeof(value) != TYPE_ARRAY:
 					return null

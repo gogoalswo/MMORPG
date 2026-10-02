@@ -53,8 +53,9 @@ static func fresh(job: String) -> Dictionary:
 		"dungeon_entries": {},
 		# 안 주울 장비 등급 `[등급, …]` — 설정 창 "아이템 습득" 탭 (`set_loot_skip`). 비어 있으면 다 줍는다
 		"loot_skip": [],
-		# 도감 자동 등록을 켠 장비 등급 `[등급, …]` — 도감 창 "자동 등록 설정" (`set_codex_auto`). 비어 있으면 다 끔
-		"codex_auto": [],
+		# 도감 자동 등록 `{ "등급": [넣을 부위, …] }` — 도감 창 "자동 등록 설정" (`set_codex_auto_grade`).
+		# 등급이 없으면 그 등급은 끔. 비어 있으면 다 끔
+		"codex_auto": {},
 		# 자동 등록에서 막을 1차 옵션 종류 `[종류, …]` — 이 옵션이 붙은 장비는 주워도 안 넣는다 (`set_codex_auto_block`)
 		"codex_auto_block": [],
 		# 자동 등록으로 새로 찬 칸 `{ 아이템 id: 강화 비트 }` — 도감 빨간 점. 그 탭을 보고 나오면 지운다(`codex_seen`)
@@ -491,7 +492,8 @@ func _codex_auto(p: Dictionary, at: int) -> void:
 	var stack: Dictionary = p.bag[at]
 	var item_id := str(stack.get("id", ""))
 	var item := Items.get_item(item_id)
-	if item.is_empty() or not (int(item.grade) in codex_auto(p)) or Items.is_locked(stack) \
+	# 켠 등급의 **고른 종류(부위)만** (2026-10-02 요청 "등급마다 아이템 종류도 선택할 수 있게")
+	if item.is_empty() or not (str(item.slot) in codex_auto_slots(p, int(item.grade))) or Items.is_locked(stack) \
 			or int(stack.get("count", 1)) > 1:
 		return
 	# 막아 둔 1차 옵션이 붙었으면 넣지 않는다 (2026-10-02 요청 "치명타 옵션이 있을 경우 등록 안 되게 막는거야")
@@ -529,9 +531,18 @@ func _codex_auto(p: Dictionary, at: int) -> void:
 	_inventory_changed(p)
 
 
-## 도감 자동 등록을 켤 장비 등급 — 도감 창 "자동 등록 설정". 표에 있는 등급만, 겹치지 않게, 작은 것부터
-func set_codex_auto(p: Dictionary, grades: Array) -> void:
-	p.codex_auto = clean_grades(grades)
+## 도감 자동 등록 — **등급 하나**의 넣을 종류(부위) 목록을 정한다. 비면 그 등급을 끈다.
+## 표에 있는 등급 · 부위만, 부위는 표 순서로 (도감 창 "자동 등록 설정" 의 등급 줄)
+func set_codex_auto_grade(p: Dictionary, grade: int, slots: Array) -> void:
+	if grade < 1 or grade > int(Items._t().get("gradeMax", 7)):
+		return
+	var table := codex_auto(p)
+	var kept := clean_slots(slots)
+	if kept.is_empty():
+		table.erase(str(grade))
+	else:
+		table[str(grade)] = kept
+	p.codex_auto = table
 
 
 ## 자동 등록에서 막을 1차 옵션 종류 — 도감 "자동 등록 설정" 창. 표에 있는 종류만, 겹치지 않게, 표 순서로
@@ -556,10 +567,44 @@ static func clean_option_kinds(raw: Variant) -> Array:
 	return out
 
 
-## 자동 등록을 켠 등급 — 옛 계정·옛 저장에는 칸이 없다(빈 목록 = 다 끔)
-static func codex_auto(p: Dictionary) -> Array:
-	var raw: Variant = p.get("codex_auto", [])
-	return raw if raw is Array else []
+## 자동 등록 표 `{ "등급": [부위, …] }` (다듬은 새 사전) — 옛 계정·옛 저장에는 칸이 없다(빈 사전 = 다 끔)
+static func codex_auto(p: Dictionary) -> Dictionary:
+	return clean_codex_auto(p.get("codex_auto", {}))
+
+
+## 그 등급에서 자동 등록할 부위 — 끈 등급이면 빈 목록
+static func codex_auto_slots(p: Dictionary, grade: int) -> Array:
+	return codex_auto(p).get(str(grade), [])
+
+
+## 자동 등록 표를 다듬는다. **옛 모양(켠 등급 목록 `[3, 5]`, 2026-10-02 첫 판)은 그 등급의 전 부위**로 읽는다
+static func clean_codex_auto(raw: Variant) -> Dictionary:
+	var out := {}
+	if raw is Array:
+		for grade in clean_grades(raw):
+			out[str(grade)] = Items.slots().duplicate()
+		return out
+	if not raw is Dictionary:
+		return out
+	var top := int(Items._t().get("gradeMax", 7))
+	for key in raw:
+		var grade := int(str(key)) if str(key).is_valid_int() else 0
+		var slots := clean_slots(raw[key])
+		if grade >= 1 and grade <= top and not slots.is_empty():
+			out[str(grade)] = slots
+	return out
+
+
+## 표에 있는 부위만, 겹치지 않게, 표 순서로
+static func clean_slots(raw: Variant) -> Array:
+	var out: Array = []
+	if not raw is Array:
+		return out
+	var asked: Array = raw.map(func(each: Variant) -> String: return str(each))
+	for slot in Items.slots():
+		if str(slot) in asked:
+			out.append(str(slot))
+	return out
 
 
 ## 자동 등록으로 새로 찬 칸 `{ 아이템 id: 강화 비트 }` — 도감 빨간 점 (옛 장부는 빈 사전)

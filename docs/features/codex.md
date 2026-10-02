@@ -25,8 +25,8 @@
 | `godot/net/local_transport.gd` | `codexRegister {id, enhance}` |
 | `godot/game/codex_panel.gd` `CodexPanel` | ★ **도감 창** (아래 "창") · [강화] → `enhance_requested` (아래 "강화 단추") |
 | `godot/game/codex_picker.gd` `CodexPicker` | ★ **등록할 장비 선택 창** — [등록] 을 누르면 도감 창 위에 뜬다 (아래 "고르기 창") |
-| `godot/game/codex_auto.gd` `CodexAutoSheet` | ★ **자동 등록 설정 창** — 오른쪽 칸 맨 아래 [자동 등록 설정], 왼쪽 등급 일곱 · 오른쪽 1차 옵션 다섯 ON/OFF (아래 "주울 때 자동 등록") |
-| `godot/world/ledger.gd` `_codex_auto` · `set_codex_auto` · `codex_seen` | ★ **주울 때 자동 등록** 판정 · 켠 등급(`codex_auto`) · 새 칸 표시(`codex_new`) 지우기 |
+| `godot/game/codex_auto.gd` `CodexAutoSheet` | ★ **자동 등록 설정 창** — 오른쪽 칸 맨 아래 [자동 등록 설정], 등급 일곱 줄(ON/OFF + 부위 칩 여섯) · 1차 옵션 칩 다섯 (아래 "주울 때 자동 등록") |
+| `godot/world/ledger.gd` `_codex_auto` · `set_codex_auto_grade` · `set_codex_auto_block` · `codex_seen` | ★ **주울 때 자동 등록** 판정 · 등급별 부위(`codex_auto`) · 막은 옵션(`codex_auto_block`) · 새 칸 표시(`codex_new`) 지우기 |
 | `godot/world/items.gd` `option_lines` | 장비 한 벌의 옵션 줄 수(1·2·3차 합) — 장부의 기본 고르기와 고르기 창이 같이 쓴다 |
 | `godot/game/game.gd` `_toggle_codex` · `_build_gate_panel` · `_redraw_char` | 메뉴 판의 "도감", 창을 헬스 창과 같은 층(10)에, `codexResult` → `show_result`, 캐릭터 정보 창 증가 줄 아래 풀이 `도감 N%` |
 | `godot/tests/codex_test.gd` | 표 · 등록(소모 · 두 번 · 없는 것 · 끼운 것) · 겹친 칸 · 옵션 적은 것부터 · 곱하기 · 저장 · 서버 · 창 |
@@ -192,24 +192,31 @@
 
 ```
  오른쪽 칸 맨 아래  [ 자동 등록 설정 ][ 등록 ]        ← 옛 [자동 등록] 자리 (처음엔 탭 줄 오른쪽이었다)
-        ┌──────────────── 자동 등록 설정 ────────────────┐
-        │ ◆ 켠 등급의 장비를 주우면 …                       │
-        │ ◆ 끈 1차 옵션이 붙은 장비는 켠 등급이어도 넣지 않습니다 │
-        │  등급                    │  1차 옵션                 │
-        │  일반   [ ON ][ OFF ]    │  치명타 확률 [ ON ][ OFF ] │   ← 설정 창과 같은 스위치(`SettingsPanel.make_switch`)
-        │  … 태초                  │  … 아이템 드랍률           │
-        │                                         [ 닫기 ]  │
+  ┌──────────────────────── 자동 등록 설정 (폭 980) ────────────────────────┐
+  │ ◆ 켠 등급의 고른 종류 장비를 주우면 바로 도감에 넣습니다 — …                 │
+  │  등급 · 아이템 종류                                                      │
+  │  일반  [ ON ][ OFF ]   [무기][갑옷][투구][신발][목걸이][반지]               │ ← 스위치 = `SettingsPanel.make_switch`
+  │  … 태초                                                                 │   칩: 밝으면 넣는다 · 어두우면 뺀다
+  │  1차 옵션 — 어둡게 끈 옵션이 붙은 장비는 켠 등급이어도 넣지 않습니다         │
+  │  [치명타 확률][치명타 데미지][체력][방어력 관통][아이템 드랍률]              │
+  │                                                              [ 닫기 ]  │
 ```
 
+- **등급마다 종류(부위)를 고른다** (같은 날 요청: "등급마다 아이템 종류도 선택할 수 있게") — 장부 칸 `codex_auto` 는
+  `{ "등급": [넣을 부위, …] }`(처음엔 빈 사전 = 다 끔). 요청은 **등급 하나씩** `codexAutoGrade {grade, slots}` →
+  `set_codex_auto_grade`(서버 `"iw"`) · 저장에 남는다. 목록이 비면 그 등급은 꺼진다.
+  - 등급 스위치 ON → 그 등급의 **전 부위**, OFF → 비운다. 칩을 누르면 그 부위만 넣고 뺀다(마지막 하나를 빼면 꺼진다,
+    꺼진 등급의 칩을 누르면 그 부위만 켠 채 켜진다). 꺼진 등급의 칩은 흐리게 그린다.
+  - 다듬기 `Ledger.clean_codex_auto` — 표에 있는 등급 · 부위만, 부위는 표 순서. **첫 판(같은 날 아침)의 모양 `[등급, …]`
+    은 그 등급의 전 부위로 읽는다** — 그 사이 저장한 기기가 있다.
 - **1차 옵션으로 막는다** (같은 날 요청: "등급 및 1차 옵션도 선택해서 넣을 수 있게. 예를들어 치명타 옵션이 있을 경우
-  등록 안 되게 막는거야") — 옵션 종류마다 ON(넣는다) / OFF(막는다), 처음엔 다 ON. 장부 칸 `codex_auto_block`(막은 종류 목록) ·
-  요청 `codexAutoBlock {kinds}` → `set_codex_auto_block`(서버 `"a"`) · 저장에 남는다. 다듬기는 `Ledger.clean_option_kinds`
+  등록 안 되게 막는거야") — 옵션 칩마다 밝으면 넣는다 / 어두우면 막는다, 처음엔 다 밝다. 장부 칸 `codex_auto_block`(막은 종류 목록) ·
+  요청 `codexAutoBlock {kinds}` → `set_codex_auto_block`(서버 `"w"`) · 저장에 남는다. 다듬기는 `Ledger.clean_option_kinds`
   (표 `optionKinds` 에 있는 것만, 표 순서). 막은 옵션이 **1차(`options`)에 붙은** 장비는 켠 등급이어도 가방에 그대로 둔다.
   등급과 따로 고른다(등급마다 옵션을 따로 두지 않았다 — 막고 싶은 옵션은 대개 등급을 가리지 않는다).
-
-- **켜는 것은 등급마다** — 장부 칸 `codex_auto`(켠 등급 목록, 처음엔 다 끔) · 요청 `codexAuto {grades}` →
-  `set_codex_auto`(서버 `OPS` 의 `"a"`) · 저장에 남는다. 가방에서 무엇이 사라지는지가 바뀌므로 **장부**다
-  (설정 창의 습득 등급 `loot_skip` 과 같은 길, 목록 다듬기도 같은 `Ledger.clean_grades`).
+- ★ **서버 인자 `"w"`(글자 목록)** — `"a"` 는 **숫자 목록만** 받는다. 처음엔 옵션 막기를 `"a"` 로 적어 서버에 붙으면
+  `bad_args` 로 거절될 뻔했다. 부위·옵션 종류처럼 글자 목록은 `"w"` 로 적는다 (`LedgerServer._args`).
+- 가방에서 무엇이 사라지는지가 바뀌므로 둘 다 **장부**다 (설정 창의 습득 등급 `loot_skip` 과 같은 길).
 - **판정은 `Ledger.kill` 이 장비를 가방에 넣은 바로 뒤** (`_codex_auto`). 노리는 칸은 **지금 강화 이상에서 가장 낮은
   빈 칸**(`Codex.next_empty`):
   - 그 단계가 비었으면 바로 넣는다.

@@ -47,6 +47,26 @@ static func has(codex: Dictionary, item_id: String, enhance: int) -> bool:
 	return (int(codex.get(item_id, 0)) >> enhance) & 1 == 1
 
 
+## **자동 등록**이 넣을 가방 번호 — 아직 빈 칸마다 하나, 같은 칸의 장비가 여럿이면 **옵션 줄(1·2·3차 합)이 가장
+## 적은 것** (`Ledger.codex_register` 의 기본과 같은 셈 — 좋은 것을 남긴다). 번호 오름차순.
+## 장부(`Ledger.codex_register_all`)와 확인 창(`CodexPicker.open_all`)이 같이 쓴다 → codex.md "자동 등록"
+static func auto_picks(codex: Dictionary, bag: Array) -> Array:
+	var best := {}
+	for at in bag.size():
+		var stack: Dictionary = bag[at]
+		var item_id := str(stack.get("id", ""))
+		var enhance := int(stack.get("enhance", 0))
+		if Items.get_item(item_id).is_empty() or enhance < 0 or enhance > max_enhance() \
+				or has(codex, item_id, enhance):
+			continue
+		var key := "%s:%d" % [item_id, enhance]
+		if not best.has(key) or Items.option_lines(stack) < Items.option_lines(bag[best[key]]):
+			best[key] = at
+	var out: Array = best.values()
+	out.sort()
+	return out
+
+
 ## 찬 칸 수 — `grade` 를 주면 그 등급만
 static func filled(codex: Dictionary, grade: int = 0) -> int:
 	var count := 0

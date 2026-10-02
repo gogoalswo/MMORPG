@@ -13,6 +13,7 @@ func _init() -> void:
 	_case_table()
 	_case_register()
 	_case_stack()
+	_case_all()
 	_case_stats()
 	_case_save()
 	_case_server()
@@ -127,6 +128,43 @@ func _case_stack() -> void:
 		_fail("고른 번호가 반지인데 신발 칸이 찼다: %s" % [me.codex])
 
 
+## 자동 등록 — 등급 가리지 않고 넣을 수 있는 칸 전부, 칸마다 하나, 옵션 적은 것부터. 찬 칸 · 끼운 것 · 재료는 그대로
+func _case_all() -> void:
+	var s := _me()
+	var w: World = s[0]
+	var me: Dictionary = s[1]
+	var rich := _gear(5, "boots", 7)
+	rich.options = [{"kind": "crit", "value": 5}, {"kind": "attack", "value": 3}]
+	var poor := _gear(5, "boots", 7)
+	poor.options = [{"kind": "crit", "value": 1}]
+	me.codex = {Items.item_id(2, "helmet"): 1}
+	me.equipped = {"armor": _gear(3, "armor", 0)}
+	me.bag = [
+		_gear(1, "weapon", 0, 3), rich, _gear(2, "helmet", 0), {"id": "없는것", "count": 4}, poor, _gear(7, "ring", 9),
+	]
+	w.codex_register_all("me")
+	for cell in [[1, "weapon", 0], [5, "boots", 7], [7, "ring", 9]]:
+		if not Codex.has(me.codex, Items.item_id(cell[0], cell[1]), cell[2]):
+			_fail("자동 등록인데 %s 칸이 안 찼다: %s" % [cell, me.codex])
+	if Codex.filled(me.codex) != 4 or Codex.has(me.codex, Items.item_id(3, "armor"), 0):
+		_fail("자동 등록 뒤 찬 칸 %d (4 여야 한다) · 끼운 갑옷 %s" % [
+			Codex.filled(me.codex), Codex.has(me.codex, Items.item_id(3, "armor"), 0)
+		])
+	# 남는 것: 겹친 무기 2 · 옵션 많은 신발 · 이미 찬 투구 · 재료
+	var left: Array = []
+	for stack in me.bag:
+		left.append("%s+%d*%d/%d" % [stack.id, int(stack.get("enhance", 0)), int(stack.get("count", 1)), (stack.get("options", []) as Array).size()])
+	var want := ["%s+0*2/0" % Items.item_id(1, "weapon"), "%s+7*1/2" % Items.item_id(5, "boots"),
+		"%s+0*1/0" % Items.item_id(2, "helmet"), "없는것+0*4/0"]
+	if left != want:
+		_fail("자동 등록 뒤 가방 %s (바라는 것 %s)" % [left, want])
+	# 넣을 것이 없으면 아무것도 안 바뀐다
+	var before: Dictionary = me.codex.duplicate()
+	w.codex_register_all("me")
+	if me.codex != before or me.bag.size() != 4:
+		_fail("넣을 것이 없는데 바뀌었다: %s · 가방 %d" % [me.codex, me.bag.size()])
+
+
 ## 보너스는 장비 % · 헬스와 따로 곱한다. 정보 창용 `codex_*` 도 싣는다
 func _case_stats() -> void:
 	var codex := {Items.item_id(7, "weapon"): Codex.full_mask(), Items.item_id(7, "armor"): 1, Items.item_id(1, "boots"): 2}
@@ -181,6 +219,8 @@ func _case_save() -> void:
 func _case_server() -> void:
 	if str(LedgerServer.OPS.get("codex_register", "")) != "sii":
 		_fail("서버가 codex_register 요청을 모른다")
+	if not LedgerServer.OPS.has("codex_register_all") or str(LedgerServer.OPS.codex_register_all) != "":
+		_fail("서버가 codex_register_all 요청을 모른다")
 	var ledger := Ledger.fresh("fighter")
 	if not "codex" in Ledger.KEYS or not ledger.has("codex"):
 		_fail("장부 칸·새 계정에 codex 가 없다")
@@ -293,6 +333,36 @@ func _case_panel() -> void:
 	(picker.find_child("cancel", true, false) as Button).pressed.emit()
 	if picker.visible or asked.size() != 1:
 		_fail("취소했는데 창 %s · 요청 %s" % [picker.visible, asked])
+	# 자동 등록 — 단추 → 들어갈 것 전부를 늘어놓은 확인 창 → [등록] 이 요청 하나를 낸다. 넣을 게 없으면 단추가 꺼진다
+	var all_asked := [0]
+	panel.register_all_requested.connect(func() -> void: all_asked[0] += 1)
+	panel.refresh({"codex": {}, "bag": [_gear(3, "ring", 0), many, few, _gear(6, "weapon", 2)]})
+	await process_frame
+	if panel.auto_button().disabled:
+		_fail("넣을 장비가 있는데 자동 등록 단추가 꺼져 있다")
+	panel.auto_button().pressed.emit()
+	if not picker.visible or not picker.is_all() or picker.choices() != [0, 2, 3] or all_asked[0] != 0:
+		_fail("자동 등록 확인 창: 보임 %s · 전부 %s · 후보 %s (옵션 적은 갑옷 2번) · 요청 %d" % [
+			picker.visible, picker.is_all(), picker.choices(), all_asked[0]
+		])
+	# 확인 창에서는 하나를 고르지 않는다 — 눌러도 그대로, [등록] 은 전부
+	var first: Control = picker.find_child("choice_0", true, false)
+	if first != null:
+		first.get_node("hit").pressed.emit()
+	picker.confirm_button().pressed.emit()
+	if picker.visible or all_asked[0] != 1 or asked.size() != 1:
+		_fail("자동 등록 확인 → 창 %s · 자동 요청 %d · 한 칸 요청 %d" % [picker.visible, all_asked[0], asked.size()])
+	# 그 뒤 [등록] 은 다시 하나 고르는 창이다
+	(panel.find_child("tab_2", true, false) as Button).pressed.emit()
+	(panel.find_child("cell_armor_4", true, false) as Button).pressed.emit()
+	panel.register_button().pressed.emit()
+	if picker.is_all() or picker.choice() != 2:
+		_fail("자동 등록 뒤 [등록] 이 하나 고르는 창이 아니다: 전부 %s · 고른 것 %d" % [picker.is_all(), picker.choice()])
+	picker.close()
+	panel.refresh({"codex": {Items.item_id(3, "ring"): 1}, "bag": [_gear(3, "ring", 0)]})
+	await process_frame
+	if not panel.auto_button().disabled:
+		_fail("넣을 장비가 없는데 자동 등록 단추가 켜져 있다")
 	# 기준 화면(1280x720)에 들어가나 — 돌판 틀 여백(카드 34 · 안 30)을 뺀 알맹이로 본다
 	var inner := panel.get_combined_minimum_size()
 	if inner.x > 1280.0 - 128.0 or inner.y > 720.0 - 128.0:

@@ -23,6 +23,8 @@ extends PanelContainer
 
 ## `index` 는 넣을 장비 목록에서 고른 가방 번호 (장부가 다시 본다)
 signal register_requested(item_id: String, enhance: int, index: int)
+## [자동 등록] → 확인 창의 [등록] — 넣을 수 있는 칸 전부 (고르는 것은 장부가 다시 한다)
+signal register_all_requested
 
 const SIDE_WIDTH := 340.0
 const STONE_IN := 30
@@ -65,6 +67,8 @@ var _pick_name: Label
 var _pick_gain: Label
 var _pick_have: Label
 var _register_button: Button
+## 넣을 수 있는 칸을 **전부** 채우는 단추 (2026-10-02 요청 "도감에 자동 등록 버튼 만들어") — 등급을 가리지 않는다
+var _auto_button: Button
 ## 등록할 장비 선택 창 — [등록] 을 누르면 이 창 위에 뜬다 (codex_picker.gd, 2026-10-01 요청
 ## "가방에서 선택하는 UI를 따로 만들어 … 2,3차 옵션은 안 보이자나")
 var _picker: CodexPicker
@@ -122,6 +126,7 @@ func _build() -> void:
 		if not _pick.is_empty():
 			register_requested.emit(Items.item_id(_grade, str(_pick[0])), int(_pick[1]), index)
 	)
+	_picker.picked_all.connect(func() -> void: register_all_requested.emit())
 	add_child(_picker)
 
 
@@ -250,20 +255,32 @@ func _build_side() -> Control:
 	_pick_have.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(_pick_have)
 
-	_register_button = Button.new()
-	_register_button.name = "register"
-	_register_button.text = "등록"
-	_register_button.custom_minimum_size = Vector2(0, 56)
-	_register_button.focus_mode = Control.FOCUS_NONE
-	GatePanel.paint_button_text(_register_button, 24)
-	_register_button.add_theme_stylebox_override("normal", _button_box(false))
-	_register_button.add_theme_stylebox_override("hover", _button_box(false))
-	_register_button.add_theme_stylebox_override("disabled", _button_box(false))
-	_register_button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
-	_register_button.add_theme_stylebox_override("pressed", _button_box(true))
-	_register_button.pressed.connect(_on_register)
-	column.add_child(_register_button)
+	# [자동 등록] · [등록] 한 줄 — 창 높이를 늘리지 않는다 (1280x720 틀 안)
+	var buttons := HBoxContainer.new()
+	buttons.add_theme_constant_override("separation", 10)
+	column.add_child(buttons)
+	_auto_button = _side_button("auto_register", "자동 등록", _on_register_all)
+	buttons.add_child(_auto_button)
+	_register_button = _side_button("register", "등록", _on_register)
+	buttons.add_child(_register_button)
 	return side
+
+
+func _side_button(node_name: String, text: String, on_press: Callable) -> Button:
+	var button := Button.new()
+	button.name = node_name
+	button.text = text
+	button.custom_minimum_size = Vector2(0, 56)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.focus_mode = Control.FOCUS_NONE
+	GatePanel.paint_button_text(button, 22)
+	button.add_theme_stylebox_override("normal", _button_box(false))
+	button.add_theme_stylebox_override("hover", _button_box(false))
+	button.add_theme_stylebox_override("disabled", _button_box(false))
+	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	button.add_theme_stylebox_override("pressed", _button_box(true))
+	button.pressed.connect(on_press)
+	return button
 
 
 ## --- 여닫기 · 그리기 ---
@@ -302,6 +319,10 @@ func picked() -> Array:
 
 func register_button() -> Button:
 	return _register_button
+
+
+func auto_button() -> Button:
+	return _auto_button
 
 
 ## 빨간 점이 켜진 탭 (등급 번호) — 테스트가 본다
@@ -356,6 +377,12 @@ func _on_register() -> void:
 	_picker.open(Items.item_id(_grade, str(_pick[0])), int(_pick[1]), _me.get("bag", []))
 
 
+## [자동 등록] — 바로 넣지 않고 들어갈 장비 전부를 확인 창에 늘어놓는다 (넣으면 가방에서 사라진다)
+func _on_register_all() -> void:
+	var bag: Array = _me.get("bag", [])
+	_picker.open_all(bag, Codex.auto_picks(_me.get("codex", {}), bag))
+
+
 ## 등록할 장비 선택 창 — 테스트가 본다
 func picker() -> CodexPicker:
 	return _picker
@@ -392,6 +419,10 @@ func _redraw() -> void:
 
 	_redraw_effects(codex)
 	_redraw_pick(codex, owned)
+	# 자동 등록은 등급을 가리지 않는다 — 어느 탭이든 빨간 점이 하나라도 있으면 켠다
+	var any := not dotted_tabs().is_empty()
+	_auto_button.disabled = not any
+	_auto_button.modulate = Color.WHITE if any else Color(1, 1, 1, 0.45)
 
 
 ## 획득 효과 — 도감 전체의 능력치 셋, 줄 끝에 이 등급 몫(하늘색)

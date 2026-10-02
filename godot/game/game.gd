@@ -261,6 +261,14 @@ var _stuck_since := 0
 var _holding := false
 ## 누르고 있는 화면 점. 끌면 `_input` 이 옮긴다
 var _hold_at := Vector2.ZERO
+## 클릭 이펙트(`_marker`)가 뜬 지 몇 초 됐나, 누르고 있을 때 다음 것까지 몇 초 남았나.
+## 고리는 **한 번 퍼지며 사라지는 이펙트**다 — 예전엔 도착할 때까지 남아 있었고,
+## 누르고 있으면 매 프레임 손가락 밑으로 옮겨 붙어 안 없어지는 것처럼 보였다.
+## 누르는 동안은 `CLICK_FX_EVERY` 마다 다시 띄운다 (2026-10-02 요청)
+var _marker_age := 0.0
+var _marker_next := 0.0
+const CLICK_FX_EVERY := 0.8
+const CLICK_FX_LIFE := 0.5
 var _seq := 0
 var _half_size := 0.0
 ## 이 존의 지형. 없으면(`null`) 평평한 바닥이다 — 높이는 `_ground_y` 로만 읽는다
@@ -737,6 +745,8 @@ func _build_persistent() -> void:
 	ring_mat.albedo_color = Color("#4aa8ff")
 	ring_mat.emission_enabled = true
 	ring_mat.emission = Color("#4aa8ff")
+	# 사라질 때 흐려지게 — `_tick_marker` 가 알파를 내린다
+	ring_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_marker.material_override = ring_mat
 	_marker.visible = false
 	add_child(_marker)
@@ -5186,6 +5196,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			_hold_at = event.position
 			_stuck_at = Vector3.INF
 			_set_target(hit)
+			_pulse_marker()
+			_marker_next = CLICK_FX_EVERY
 
 
 ## 걸어갈 바닥 점을 잡고 표시를 그 자리에 세운다.
@@ -5198,8 +5210,27 @@ func _set_target(hit: Vector3) -> void:
 	var z := clampf(hit.z, -_half_size, _half_size)
 	hit = Vector3(x, _ground_y(x, z), z)
 	_target = hit
-	_marker.position = hit + Vector3(0, 0.05, 0)
+
+
+## 클릭 이펙트를 지금 목표 자리에 한 번 띄운다. 퍼지며 흐려지는 건 `_tick_marker`
+func _pulse_marker() -> void:
+	_marker.position = _target + Vector3(0, 0.05, 0)
+	_marker_age = 0.0
+	_marker.scale = Vector3.ONE * 0.6
 	_marker.visible = true
+
+
+## 띄운 클릭 이펙트를 `CLICK_FX_LIFE` 동안 0.6 → 1.2 배로 퍼뜨리며 흐리게 하고 끈다
+func _tick_marker(delta: float) -> void:
+	if not _marker.visible:
+		return
+	_marker_age += delta
+	var t := _marker_age / CLICK_FX_LIFE
+	if t >= 1.0:
+		_marker.visible = false
+		return
+	_marker.scale = Vector3.ONE * lerpf(0.6, 1.2, t)
+	(_marker.material_override as StandardMaterial3D).albedo_color.a = 1.0 - t * t
 
 
 ## 화면의 그 점이 차원문 아치에 닿나
@@ -5362,6 +5393,7 @@ func _process(delta: float) -> void:
 	_tick_aoe()
 	_tick_range(delta)
 	_tick_learn_hold(delta)
+	_tick_marker(delta)
 	if _auto_spin != null and _auto_spin.visible:
 		# PanelContainer 가 자식 크기를 칸에 맞춰 다시 잡는다 — 축은 그때마다 가운데로
 		_auto_spin.pivot_offset = _auto_spin.size / 2.0
@@ -5407,6 +5439,10 @@ func _send_input(delta: float) -> void:
 		var hit := _ground_point(_hold_at)
 		if hit != Vector3.INF:
 			_set_target(hit)
+			_marker_next -= delta
+			if _marker_next <= 0.0:
+				_pulse_marker()
+				_marker_next += CLICK_FX_EVERY
 	if _target == Vector3.INF:
 		return
 	var me := _my_position()

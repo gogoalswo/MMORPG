@@ -40,6 +40,10 @@ const PORTAL_LOOK := 2.4
 ## 문까지의 거리. 게임 각(요 45·피치 42)은 그대로 두고 가까이만 당긴다 —
 ## 소용돌이가 화면에서 작으면 찍어도 못 읽는다 (CLAUDE.md 의 "확인이 되는 크기로")
 const PORTAL_DISTANCE := 9.0
+## `click` 으로 찍을 때. 시간을 `CLICK_SLOW` 로 늦춰 누른 채 1.2초쯤을 고르게 나눈다 —
+## 0.8초 간격을 봐야 해서 스킬용 `SLOW` 로는 너무 오래 걸린다
+const CLICK_SLOW := 0.25
+const CLICK_SHOTS := [2, 6, 12, 20, 26, 32]
 ## 몇 프레임째를 찍나. 소용돌이는 계속 돌므로 한 바퀴를 고르게 나눈다
 const PORTAL_SHOTS := [4, 12, 20, 28]
 ## `hud` 로 찍을 때. 고리가 도는지 보려면 몇 프레임 떨어뜨려 찍어야 한다
@@ -118,6 +122,10 @@ func _run() -> void:
 		await _range(game, skill.trim_prefix("range:"))
 		return
 
+	# 땅을 누르고 있는 동안의 클릭 이펙트 — 퍼지며 사라지고 0.8초마다 다시 뜨나
+	if skill == "click":
+		await _click(game, shots if args.size() > 1 and str(args[1]) != "" else CLICK_SHOTS)
+		return
 	# 몬스터를 한 대로 잡는다 — 피해 숫자와 `+n EXP` 가 겹치지 않는지 본다
 	if skill == "kill":
 		await _kill(game)
@@ -227,6 +235,35 @@ func _run() -> void:
 	sheet.resize(int(sheet.get_width() * 0.6), int(sheet.get_height() * 0.6), Image.INTERPOLATE_BILINEAR)
 	sheet.save_png("res://../logs/shot_sheet.png")
 	print("logs/shot_sheet.png  (가운데를 잘라 3열로 붙인 것)")
+	quit(0)
+
+
+## 땅을 누른 채로 두고 클릭 이펙트를 찍는다. 장마다 이펙트 나이·크기·알파를 같이 적는다
+func _click(game: Node3D, shots: Array) -> void:
+	var size := root.get_visible_rect().size
+	Engine.time_scale = CLICK_SLOW
+	# 판에 붙는 가운데 안, 마을 차원문(캐릭터 위쪽)을 피한 오른쪽 아래 바닥
+	game._unhandled_input(_press_event(Vector2(size.x * 0.6, size.y * 0.62)))
+	var began := Time.get_ticks_msec()
+	var frame := 0
+	var taken := 0
+	var sheet: Image = null
+	while taken < shots.size():
+		await process_frame
+		frame += 1
+		if frame in shots:
+			await RenderingServer.frame_post_draw
+			var img := root.get_texture().get_image()
+			img.save_png("res://../logs/shot_%02d.png" % frame)
+			sheet = _add_to_sheet(sheet, img, taken)
+			taken += 1
+			var m: MeshInstance3D = game._marker
+			print("logs/shot_%02d.png  (게임 %.2f초 · 이펙트 %s · 나이 %.2f · 배율 %.2f · 알파 %.2f)" % [
+				frame, float(Time.get_ticks_msec() - began) * 0.001 * CLICK_SLOW,
+				"보임" if m.visible else "꺼짐", game._marker_age, m.scale.x,
+				(m.material_override as StandardMaterial3D).albedo_color.a])
+	sheet.save_png("res://../logs/shot_sheet.png")
+	print("logs/shot_sheet.png")
 	quit(0)
 
 

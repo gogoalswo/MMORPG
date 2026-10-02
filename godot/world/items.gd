@@ -276,6 +276,46 @@ static func option_step_odds() -> Array:
 	return weights.map(func(w) -> float: return float(w) / total)
 
 
+## 옵션 확률 창의 줄 — **화면에 찍히는 수치마다** 한 번 굴려 그것이 붙을 확률(종류 확률 포함, 다 더하면 1).
+## 2026-10-02 요청: "치명타 4%가 나올 확률 몇 % 이런식으로 단계별로 하나씩 작성해".
+## 수치는 소수 한 자리로 저장되고(`roll_option_value`) 화면은 정수로 자른다(`describe_option`) —
+## 그래서 화면의 N 은 굴린 값이 [N-0.05, N+0.95) 에 들 때다. 수치가 `ODDS_SINGLE_MAX`(10)개 이하면
+## 하나씩 한 줄이고, 넘으면(태초 치명타 데미지는 76개) **같은 단계에 드는 정수를 한 줄(`from ~ to`)로 묶는다**
+const ODDS_SINGLE_MAX := 10
+
+static func option_value_odds(tier: int, grade: int) -> Array:
+	var shares: Array = option_step_odds()
+	var steps := shares.size()
+	var out: Array = []
+	for row in option_odds(tier, grade):
+		var low := float(row.min)
+		var high := float(row.max)
+		var width := (high - low) / steps
+		var start := out.size()
+		var single := int(high) - int(low) + 1 <= ODDS_SINGLE_MAX
+		for n in range(int(low), int(high) + 1):
+			var top := float(n) + 0.95 if n < int(high) else high + 1.0
+			var share := 0.0
+			for s in steps:
+				if width <= 0.0:
+					share = 1.0 if n == int(low) else 0.0
+					break
+				var a := low + width * s
+				share += float(shares[s]) * maxf(0.0, minf(a + width, top) - maxf(a, n - 0.05)) / width
+			if share <= 0.0:
+				continue
+			var step := clampi(int((n - low) / width), 0, steps - 1) if width > 0.0 else 0
+			if not single and out.size() > start and int(out[-1].step) == step:
+				out[-1].to = n
+				out[-1].chance += share * float(row.chance)
+			else:
+				out.append({
+					"kind": row.kind, "label": row.label, "step": step,
+					"from": n, "to": n, "chance": share * float(row.chance),
+				})
+	return out
+
+
 ## 화면에 적을 옵션 줄 — **뽑기에서 뺀 종류(공속·쿨감)는 숨긴다** (2026-09-29 요청: "장비 옵션에
 ## 공속은 제거할꺼야", 2026-10-02 요청: "장비 옵션에 쿨타임감소 제거해"). 저장된 옛 아이템에 줄은
 ## 남아 있지만 계산(`stack_stats`)도 무시한다

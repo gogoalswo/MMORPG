@@ -131,7 +131,7 @@ const BAR_PAD := 0
 const MENU_BTN := 62
 ## 평소 줄에 늘 서는 메뉴 — 이름(글자)으로 고른다. 나머지는 ≡ 를 눌러야 펼쳐진다 (2026-10-01 요청 그림:
 ## 다른 게임의 메뉴 — 평소엔 아이콘 넷 + ≡, 누르면 판이 펼쳐지고 ≡ 자리가 X)
-const MENU_QUICK := ["정보", "스킬", "가방", "던전"]
+const MENU_QUICK := ["정보", "스킬", "가방", "상점"]
 ## 펼친 판의 열 수 · 판 안 여백 · 줄 간격
 const MENU_SHEET_COLUMNS := 4
 const MENU_SHEET_PAD := 12
@@ -3352,8 +3352,13 @@ func _build_skill_bar() -> void:
 	# 줄 맨 오른쪽 ≡ — 누르면 판이 펼쳐지고 그 자리에 X 가 선다. 글자 줄이 없어 아이콘 높이(위)에 맞춘다
 	_menu_open_cell = _icon_button("ui_icon_menu", "메뉴", _toggle_menu, MENU_BTN)
 	_menu_open_cell.name = "MenuOpen"
-	_menu_close_cell = _icon_button("ui_icon_menu_close", "닫기", _toggle_menu, MENU_BTN)
+	# X 는 창 닫기와 같은 그림(`ui_close`, 2026-10-02 요청 — 엇갈린 두 검 대신). 칸은 ≡ 와 같은 62 로
+	# 두어 바꿔 서도 줄 폭이 그대로이고, 그림만 창 X(`CLOSE_BTN`) 크기로 줄인다
+	_menu_close_cell = _icon_button("ui_close", "닫기", _toggle_menu, MENU_BTN)
 	_menu_close_cell.name = "MenuClose"
+	var close_inset: MarginContainer = _menu_close_cell.get_node("inset")
+	for side in ["left", "right", "top", "bottom"]:
+		close_inset.add_theme_constant_override("margin_" + side, MENU_INSET + int((MENU_BTN - CLOSE_BTN) / 2.0))
 	for each: Control in [_menu_open_cell, _menu_close_cell]:
 		each.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		menu.add_child(each)

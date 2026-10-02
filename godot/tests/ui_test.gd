@@ -571,13 +571,14 @@ func _case_status(game: Node3D) -> void:
 		_fail("메뉴 단추가 오른쪽 위에 안 붙었다: %s / %s" % [skill_rect, bag_rect])
 	if skill_rect.intersects(hp_rect) or skill_rect.intersects(badge):
 		_fail("메뉴 단추가 퀵슬롯 위 묶음과 겹친다")
-	# 평소 줄은 정보 · 스킬 · 가방 · 던전 + ≡ 이고, 나머지는 ≡ 를 눌러 펼치는 판에 선다 (2026-10-01 요청 그림)
+	# 평소 줄은 정보 · 스킬 · 가방 · 상점 + ≡ 이고, 나머지(던전 포함)는 ≡ 를 눌러 펼치는 판에 선다
+	# (2026-10-01 요청 그림, 2026-10-02 던전 ↔ 상점)
 	var bar: Array = []
 	for c in game._menu_bar.get_children():
 		if c.visible:
 			var cap: Label = c.find_child("caption", true, false)
 			bar.append(cap.text if cap else str(c.name))
-	if bar != ["정보", "스킬", "가방", "던전", "MenuOpen"]:
+	if bar != ["정보", "스킬", "가방", "상점", "MenuOpen"]:
 		_fail("평소 메뉴 줄이 %s" % [bar])
 	if game._menu_sheet.visible:
 		_fail("처음부터 메뉴 판이 펼쳐져 있다")
@@ -587,6 +588,18 @@ func _case_status(game: Node3D) -> void:
 	var sheet: Rect2 = game._menu_sheet.get_global_rect()
 	if not game._menu_sheet.visible or game._menu_open_cell.visible or not game._menu_close_cell.visible:
 		_fail("≡ 를 눌렀는데 판 %s · ≡ %s · X %s" % [game._menu_sheet.visible, game._menu_open_cell.visible, game._menu_close_cell.visible])
+	# X 는 창 닫기와 같은 그림이고(엇갈린 검이 아니다), 칸은 ≡ 와 같은 크기다 (2026-10-02 요청)
+	var x_pics: Array = game._menu_close_cell.find_children("*", "TextureRect", true, false)
+	if x_pics.is_empty() or (x_pics[0] as TextureRect).texture != game._icon("ui_close"):
+		_fail("메뉴 X 가 창 닫기 그림(ui_close)이 아니다")
+	if game._menu_close_cell.size != game._menu_open_cell.size:
+		_fail("메뉴 X 칸 %s 가 ≡ 칸 %s 와 다르다" % [game._menu_close_cell.size, game._menu_open_cell.size])
+	var dungeon_in_sheet := false
+	for c in game._menu_grid.get_children():
+		var cap: Label = c.find_child("caption", true, false)
+		dungeon_in_sheet = dungeon_in_sheet or (cap != null and cap.text == "던전")
+	if not dungeon_in_sheet:
+		_fail("펼친 메뉴 판에 던전이 없다")
 	elif not Rect2(Vector2.ZERO, screen).encloses(sheet):
 		_fail("펼친 메뉴 판이 화면 밖이다: %s" % sheet)
 	if game._menu_grid.get_child_count() != game._menu_cells.size() - 4:
@@ -682,14 +695,12 @@ func _case_status(game: Node3D) -> void:
 	print("  퀵슬롯 위: %s · %s · 체력 %s (막대 %.0fpx · 게이지 %.0fpx)" % [game._level_label.text, game._exp_text.text, game._hp_text.text, hp_rect.size.x, gauge.size.x])
 
 
-## 던전 — 가방 옆 단추 → 종류 셋 → 단계 목록 → 들어가면 보스 한 마리 (docs/features/dungeons.md)
+## 던전 — ≡ 판 안 단추 → 종류 셋 → 단계 목록 → 들어가면 보스 한 마리 (docs/features/dungeons.md)
 func _case_dungeon(game: Node3D) -> void:
 	var panel: DungeonPanel = game._dungeon_panel
-	var bag_rect: Rect2 = game._menu_cells[4].get_global_rect()
-	var cell_rect: Rect2 = game._menu_cells[5].get_global_rect()
-	# 가방 **바로 옆**이다 (2026-09-23 요청)
-	if absf(cell_rect.position.x - bag_rect.end.x) > 12.0 or absf(cell_rect.position.y - bag_rect.position.y) > 1.0:
-		_fail("던전 단추가 가방 옆이 아니다: 가방 %s · 던전 %s" % [bag_rect, cell_rect])
+	# ≡ 를 눌러 펼치는 판 안이다 (2026-10-02 요청 — 평소 줄 그 자리는 상점). 그 전엔 가방 바로 옆이었다
+	if game._menu_cells[5].get_parent() != game._menu_grid:
+		_fail("던전 단추가 메뉴 판 안이 아니다")
 	# 글자가 아니라 그림(ui_icon_dungeon)이 나와야 한다
 	if game._menu_cells[5].find_children("*", "TextureRect", true, false).is_empty():
 		_fail("던전 단추에 그림이 없다 — npm run sync:godot 을 돌렸나 (ui_icon_dungeon)")

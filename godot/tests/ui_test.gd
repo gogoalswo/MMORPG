@@ -957,6 +957,10 @@ func _case_sandbag(game: Node3D) -> void:
 	var rewards: GridContainer = panel.find_child("SandbagRewards", true, false)
 	if rewards == null or rewards.get_child_count() != Sandbag.table().rewards.size() * 2:
 		_fail("보상 표가 일곱 줄이 아니다")
+	# 입장은 내 기록 글자와 한 줄, 던전 입장만큼 크다 (2026-10-02 "입장 버튼이 너무 작아 … 텍스트 옆에")
+	var sb_enter: Button = panel.find_child("SandbagEnter", true, false)
+	if sb_enter.get_parent() != game._sandbag_note.get_parent() or sb_enter.size.x < DungeonPanel.ENTER_SIZE.x - 1:
+		_fail("입장이 글자 옆이 아니거나 작다: %s" % sb_enter.size)
 	if not game._sandbag_note.text.contains("이번 주 기록 없음") or not game._sandbag_note.text.contains("정산까지"):
 		_fail("혼자 처음 열면 기록 없음 · 정산까지: '%s'" % game._sandbag_note.text)
 	var seen: String = game._sandbag_note.text

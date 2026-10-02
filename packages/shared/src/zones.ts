@@ -97,10 +97,17 @@ const FIELDS: FieldTheme[] = [
   { id: 'thicket', name: '사마귀 둥지', ground: 'soil', sky: '#5f6b63', grassDark: '#2f3a28', grassLight: '#4a5936', dirtLight: '#6b5f49', dim: 0.55 },
   { id: 'scorpion_den', name: '전갈 소굴', weak: true, ground: 'sand', sky: '#cdb897', grassDark: '#7a6a44', grassLight: '#9a885a', dirtLight: '#c09f6c', dim: 0.15 },
   { id: 'canyon', name: '코볼트 야영지', ground: 'dirt', sky: '#c4b39a', grassDark: '#6b6142', grassLight: '#8a7d55', dirtLight: '#b09468', dim: 0.2 },
+  // 약한 종 다섯 곳 더 (2026-10-02 요청 "사냥터 5개 더 추가해") — 티어 3~7 의 약한 종은 종만 있고
+  // 사냥터가 없었다. 저레벨 여섯 곳처럼 이름은 몬스터에서 따고, 겉모습은 같은 티어 사냥터를 조금 비튼다
+  { id: 'ashhound_lair', name: '잿빛사냥개 굴', weak: true, ground: 'dirt', sky: '#55525a', grassDark: '#3e3b44', grassLight: '#545060', dirtLight: '#6e6874', dim: 0.6 },
   { id: 'waste', name: '잿빛 황야', ground: 'dirt', sky: '#4a4750', grassDark: '#3a3740', grassLight: '#4e4a55', dirtLight: '#655f6c', dim: 0.7 },
+  { id: 'bug_marsh', name: '늪지벌레 습지', weak: true, ground: 'grass', sky: '#76836f', grassDark: '#3b4a31', grassLight: '#536442', dirtLight: '#62624b', dim: 0.5 },
   { id: 'mire', name: '안개 늪', ground: 'grass', sky: '#6d7a6a', grassDark: '#37452f', grassLight: '#4d5c3d', dirtLight: '#5b5b46', dim: 0.6 },
+  { id: 'wolf_ridge', name: '서리늑대 능선', weak: true, ground: 'snow', sky: '#d2dfe8', grassDark: '#75878e', grassLight: '#9cafb6', dirtLight: '#afbabe', dim: 0.1 },
   { id: 'frostmoor', name: '서리 고원', ground: 'snow', sky: '#c8d8e4', grassDark: '#6d7f86', grassLight: '#93a6ae', dirtLight: '#a5b1b6', dim: 0.15 },
+  { id: 'bear_forest', name: '검은곰 숲', weak: true, ground: 'grass', sky: '#434c41', grassDark: '#243020', grassLight: '#3a4a31', dirtLight: '#524838', dim: 0.7 },
   { id: 'blackwood', name: '검은 삼림', ground: 'grass', sky: '#39423a', grassDark: '#1f2a1c', grassLight: '#33422c', dirtLight: '#4a4133', dim: 0.8 },
+  { id: 'ruin_outpost', name: '수호병 초소', weak: true, ground: 'cobble', sky: '#979590', grassDark: '#555a4d', grassLight: '#737866', dirtLight: '#8c8676', dim: 0.3 },
   { id: 'ruins', name: '무너진 성터', ground: 'cobble', sky: '#8f8d86', grassDark: '#4f5348', grassLight: '#6c705f', dirtLight: '#847e6e', dim: 0.35 },
   { id: 'redsand', name: '붉은 사막', ground: 'sand', sky: '#d8b98a', grassDark: '#9c7c4a', grassLight: '#bd9a63', dirtLight: '#d4aa72', dim: 0.1 },
   // 금 간 마른 땅을 하얗게 물들이면 소금 평원이 된다

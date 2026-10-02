@@ -392,11 +392,11 @@ frame.add_child(border)         # 채움 **다음**에 붙여야 위로 온다
 | 도감 | 방패 문장이 든 펼친 책 (2026-10-01, [codex.md](codex.md)) | `ui_icon_codex` |
 | 샌드백 | 받침에 선 가죽 샌드백 — 도감 옆 (2026-10-02, [sandbag.md](sandbag.md)). 세 장 중 둘째(단순한 실루엣) | `ui_icon_sandbag` |
 | 상점 | 끈 묶은 가죽 돈주머니 · 동전 둘셋 — 샌드백 옆 (2026-10-02, [store.md](store.md)). 세 장 모두 한 줄기로 나와 동전이 가장 차분한 셋째 | `ui_icon_shop` |
-| 설정 | 톱니바퀴 (2026-10-02, 아래 "설정 창") | `ui_icon_settings` |
 | 메뉴 ≡ | 놋쇠 막대 셋 — 평소 줄 맨 오른쪽 (2026-10-01, 아래 "메뉴 판") | `ui_icon_menu` |
 | 메뉴 X | 엇갈린 두 검 — 판이 펼쳐지면 ≡ 자리에 선다 | `ui_icon_menu_close` |
 | 설계 | 두루마리 도면 위 컴퍼스 | `ui_icon_design` |
 | 랭킹 | 받침 달린 트로피 | `ui_icon_rank` |
+| 설정 | 톱니바퀴 — 메뉴 맨 끝 (2026-10-02, 아래 "설정 창"). 세 장 중 셋째(팔레트 거리가 가장 작다) | `ui_icon_settings` |
 | 자동사냥 | 장검 둘이 X자 | `ui_icon_auto` |
 | 물약 | 코르크 막은 둥근 병 | `ui_icon_potion` |
 
@@ -577,7 +577,10 @@ frame.add_child(border)         # 채움 **다음**에 붙여야 위로 온다
 - **판정이 아니라 기기 설정이다** ★ — 서버에 보내지 않고, 캐릭터 저장(`save.gd`, 판정 값만)에도
   넣지 않는다. `user://settings.cfg` 의 `[sound] volume` 에 둔다 (웹은 브라우저마다 따로).
   게임을 켤 때 `_ready` 가 저장된 값을 버스에 건다.
-- 아이콘 `ui_icon_settings` — 톱니바퀴 (2026-10-02, HUD 아이콘 기준 프롬프트 그대로 세 장 중 고른 것).
+- **아이콘 `ui_icon_settings` 는 톱니바퀴다** (2026-10-02 요청 "HUD에서 설정 아이콘이 없어. 바르코로 만들어서 적용해").
+  그 전엔 그림이 없어 네모가 비고 이름 글자 "설정" 만 섰다. [ui-art-style.md](ui-art-style.md) "HUD 아이콘 기준" 의
+  완성 프롬프트 그대로(`<무엇>` = `a single sturdy old cogwheel gear with thick rounded teeth and a round hub`,
+  `<쓰임>` = `Settings`), 참고 그림 둘, 세 장 — 셋 다 팔레트 띠 없이 같은 줄기로 나왔다.
 
 ## 설정 창 (2026-10-02) ★
 

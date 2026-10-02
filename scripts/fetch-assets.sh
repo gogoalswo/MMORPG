@@ -388,8 +388,7 @@ fetch_icon 48c32df95c8cead1a978cd760ed10188 ui_icon_fitness   # 헬스 — 쇠 �
 fetch_icon 3949117dc4a7ca950e5e3fc4d7d24511 ui_icon_codex      # 도감 — 방패 문장이 든 펼친 책 (셋째)
 fetch_icon 0bbe15a738943ef1a7f19dce90697c1f ui_icon_menu       # 메뉴 ≡ — 놋쇠 막대 셋 (둘째 — 첫째는 팔레트 띠를 그려 왔다)
 fetch_icon 46b4480f8aee31a1a7098d5646b1e1cb ui_icon_menu_close # 메뉴 X — 엇갈린 두 검 (첫째)
-# 2026-10-02 — 설정 단추 (HUD 아이콘 기준 프롬프트 그대로, 세 장 중 첫째 — 실루엣이 가장 굵다)
-fetch_icon 59067c460033b72997fb5f6966cf8209 ui_icon_settings   # 설정 — 톱니바퀴
+fetch_icon 3c42607da64a0fab94246aa8ce10c5c3 ui_icon_settings   # 설정 — 톱니바퀴 (세 장 중 셋째, 팔레트 거리 20.4). 2026-10-02 HUD 아이콘 기준 프롬프트 그대로
 # 헬스 창 (2026-09-30, docs/features/fitness.md) — 사용자가 준 다른 게임의 탈리스만 강화 창 스크린샷에서
 # 가운데 문장만 잘라(160px JPEG, fe3678d7…jpg) 물려 뽑았다. 운동마다 두 장 중 고른 것
 fetch_icon 1956152cf5db17044edd2234d687f0b5 ui_fitness_bench    # 벤치프레스 — 붉은 법랑 · 금 부조 사람이 누워 바벨을 민다 (2026-10-02 교체, 첫째)

@@ -1,5 +1,5 @@
 import { ZONE_SIZE, type GateDef, type GroundKind, type ZoneDef, type ZoneEnv } from './zone.ts';
-import { monsterIdFor, tierLevels } from './monsters.ts';
+import { beyondIdFor, monsterIdFor, tierLevels } from './monsters.ts';
 import { dungeonZones } from './dungeons.ts';
 import { SANDBAG_ZONE_DEF } from './sandbag.ts';
 
@@ -85,6 +85,8 @@ interface FieldTheme {
    * 약한 종 사냥터는 같은 티어 강한 쪽 바로 앞에 적는다 (`FIELD_MOBS` 가 순서로 티어를 센다)
    */
   weak?: true;
+  /** **만렙 너머** 사냥터 번호(0부터) — 몬스터가 `beyondIdFor` 다. 티어를 닫지 않는다 (`monsters.ts` 의 `BEYOND`) */
+  beyond?: number;
 }
 
 const FIELDS: FieldTheme[] = [
@@ -115,6 +117,13 @@ const FIELDS: FieldTheme[] = [
   { id: 'rift', name: '균열 지대', ground: 'lava', sky: '#4a3358', grassDark: '#332a3d', grassLight: '#473a52', dirtLight: '#523f5c', dim: 0.75 },
   { id: 'abyssgate', name: '심연의 문턱', ground: 'cobble', sky: '#25303c', grassDark: '#1e2730', grassLight: '#2c3846', dirtLight: '#333d48', dim: 0.9 },
   { id: 'endland', name: '종말의 대지', ground: 'lava', sky: '#2e1d22', grassDark: '#26191d', grassLight: '#37232a', dirtLight: '#3d282e', dim: 0.95 },
+  // 만렙 너머 다섯 곳 (2026-10-02 요청 "사냥터 5개 더 추가해 — 현재 마지막 사냥터 이후"). 만렙 200 그대로라
+  // 몬스터는 전부 Lv200 이고 HP·공격력 배수로 세진다 (monsters.ts 의 BEYOND, 줄 순서 = beyond 번호)
+  { id: 'voidshore', name: '공허의 해안', beyond: 0, ground: 'sand', sky: '#2a3040', grassDark: '#1c2230', grassLight: '#2a3244', dirtLight: '#3a4256', dim: 0.85 },
+  { id: 'starfall', name: '별이 진 폐허', beyond: 1, ground: 'cobble', sky: '#3a3c58', grassDark: '#24263a', grassLight: '#33354e', dirtLight: '#4a4c66', dim: 0.8 },
+  { id: 'bloodmoon', name: '핏빛 달의 평원', beyond: 2, ground: 'dirt', sky: '#4a1e22', grassDark: '#331417', grassLight: '#4a1d21', dirtLight: '#5c262b', dim: 0.85 },
+  { id: 'oblivion', name: '망각의 회랑', beyond: 3, ground: 'cobble', sky: '#28282c', grassDark: '#1c1c1f', grassLight: '#2a2a2e', dirtLight: '#3a3a3f', dim: 0.92 },
+  { id: 'chaosthrone', name: '혼돈의 왕좌', beyond: 4, ground: 'lava', sky: '#2e1838', grassDark: '#221028', grassLight: '#331a3c', dirtLight: '#3f2248', dim: 0.95 },
 ];
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -183,14 +192,16 @@ export function fieldSpots(index: number): [number, number][] {
  */
 const FIELD_MOBS: [number, 0 | 1][] = (() => {
   let tier = 0;
-  return FIELDS.map((theme): [number, 0 | 1] => (theme.weak ? [tier, 0] : [tier++, 1]));
+  // 만렙 너머 사냥터는 티어 밖이라 [-1, 1] 로 둔다 — buildField 가 beyond 를 먼저 본다
+  return FIELDS.map((theme): [number, 0 | 1] => (theme.beyond !== undefined ? [-1, 1] : theme.weak ? [tier, 0] : [tier++, 1]));
 })();
 
 function buildField(theme: FieldTheme, index: number): ZoneDef {
   const [tier, slot] = FIELD_MOBS[index]!;
-  const level = tierLevels(tier)[slot];
-  // 자리 씨앗 — 강한 종 사냥터는 예전 번호(티어) 그대로라 배치가 안 바뀐다. 약한 종은 100 번대
-  const spots = fieldSpots(slot === 1 ? tier : 100 + tier);
+  const beyond = theme.beyond;
+  const kind = beyond !== undefined ? beyondIdFor(beyond) : monsterIdFor(tierLevels(tier)[slot]);
+  // 자리 씨앗 — 강한 종 사냥터는 예전 번호(티어) 그대로라 배치가 안 바뀐다. 약한 종은 100 번대, 만렙 너머는 200 번대
+  const spots = fieldSpots(beyond !== undefined ? 200 + beyond : slot === 1 ? tier : 100 + tier);
 
   // 도착 지점은 맵 한가운데 하나뿐이다. 사슬 포탈이 없어졌으니 "어느 문으로
   // 들어왔나"를 따질 일이 없고, 이름 붙은 스폰(from_west 등)도 같이 사라졌다.
@@ -203,7 +214,7 @@ function buildField(theme: FieldTheme, index: number): ZoneDef {
     // "마을가기" 단추로 간다 (docs/features/hud.md "마을가기")
     // 맵 전체에 한 마리씩 (위 fieldSpots). 보스는 없다
     monsters: spots.map(([x, z]) => ({
-      kind: monsterIdFor(level), x, z, radius: 0, count: 1, respawnMs: 10000,
+      kind, x, z, radius: 0, count: 1, respawnMs: 10000,
     })),
     env: envFor(theme),
   };

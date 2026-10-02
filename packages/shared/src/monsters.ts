@@ -169,6 +169,43 @@ const TIERS: TierDef[] = [
   { names: ['종말의 사자', '최후의 포식자'], bodyColor: '#5a1f28', accentColor: '#2c0d12', look: 'varco_ogre5' }, // 종말의 대지
 ];
 
+/**
+ * **만렙 너머 사냥터 몬스터** — 종말의 대지(Lv198) 뒤 다섯 곳에 한 종씩 (2026-10-02).
+ *
+ * 요청: "사냥터 5개 더 추가해 — 현재 마지막 사냥터 이후". 만렙은 200 그대로 두기로 했다(사용자가
+ * 골랐다) — 그래서 레벨은 전부 200 이고, **Lv200 표 값에 `power` 를 곱해** 점점 세진다.
+ * - HP·공격력만 곱한다. 방어력까지 곱하면 피해가 감쇠식에서 빠르게 0 쪽으로 눌려 "안 아픈데 안 죽는"
+ *   몬스터가 된다. 경험치는 HP 에서 나오니 같이 늘지만 만렙이라 쓸 일이 없다.
+ * - 드랍·치명타 저항은 레벨(200)을 따른다 — Lv200 몬스터와 같다.
+ * - 배수는 고정 표다 (몬스터 능력치는 역산하지 않는다 — monsters-progression.md). 안 맞으면 여기를 고친다.
+ */
+interface BeyondDef {
+  name: string;
+  bodyColor: string;
+  accentColor: string;
+  look: string;
+  /** Lv200 HP·공격력에 곱하는 배수 */
+  power: number;
+}
+
+export const BEYOND_LEVEL = 200;
+
+const BEYOND: BeyondDef[] = [
+  { name: '공허 파수꾼', bodyColor: '#3b4660', accentColor: '#1a2030', look: 'varco_ogre1', power: 1.2 }, // 공허의 해안
+  { name: '추락한 별괴물', bodyColor: '#6a6f8f', accentColor: '#2e3048', look: 'varco_ogre2', power: 1.4 }, // 별이 진 폐허
+  { name: '핏빛 광전사', bodyColor: '#7a2228', accentColor: '#3a0e12', look: 'varco_ogre3', power: 1.6 }, // 핏빛 달의 평원
+  { name: '망각의 집행자', bodyColor: '#4a4a4f', accentColor: '#202024', look: 'varco_ogre4', power: 1.8 }, // 망각의 회랑
+  { name: '혼돈의 화신', bodyColor: '#5b2a6e', accentColor: '#240f2e', look: 'varco_ogre5', power: 2.0 }, // 혼돈의 왕좌
+];
+
+/** 만렙 너머 사냥터 수 */
+export const BEYOND_COUNT = BEYOND.length;
+
+/** 만렙 너머 i 번째(0부터) 몬스터 id — `mob200` 뒤에 번호를 붙인다 */
+export function beyondIdFor(index: number): string {
+  return monsterIdFor(BEYOND_LEVEL) + '_' + (index + 1);
+}
+
 /** 티어 번호(0부터)에 들어가는 두 레벨 — 3·8 / 13·18 / 23·28 … */
 export function tierLevels(index: number): [number, number] {
   const base = index * 10;
@@ -302,6 +339,23 @@ function buildKinds(): Record<string, MonsterKind> {
       // 보스만 범위 공격을 한다. 일반 몬스터까지 하면 사냥터를 지나다니는 것
       // 자체가 피하기 놀이가 되어, 정작 보스를 만났을 때 특별하지 않다.
       aoe: BOSS_AOE,
+    };
+  });
+
+  BEYOND.forEach((def, index) => {
+    const id = beyondIdFor(index);
+    const base = statsForLevel(BEYOND_LEVEL, true);
+    out[id] = {
+      id,
+      name: def.name,
+      level: BEYOND_LEVEL,
+      look: def.look,
+      bodyColor: def.bodyColor,
+      accentColor: def.accentColor,
+      ...base,
+      maxHp: Math.round(base.maxHp * def.power),
+      attack: Math.round(base.attack * def.power),
+      expReward: Math.round(base.expReward * def.power),
     };
   });
   return out;

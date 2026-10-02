@@ -144,7 +144,7 @@ test('몬스터 경직은 공격 간격보다 짧다 — 때리는 사이에 쫓
 // 곡선은 숫자 하나만 바꿔도 체감이 크게 달라지는데, 플레이로 확인하려면 몇 시간이
 // 걸린다. 그래서 "1 → 만렙까지 몇 마리를 잡아야 하는가" 를 계산으로 붙잡아 둔다.
 
-import { MONSTER_KINDS } from './monsters.ts';
+import { BEYOND_COUNT, MONSTER_KINDS, beyondIdFor } from './monsters.ts';
 import { RUN_SPEED } from './constants.ts';
 import {
   buildPlayer,
@@ -166,9 +166,11 @@ test('필요 경험치는 레벨이 오를수록 늘어난다', () => {
 
 test('몬스터 레벨이 5 간격으로 놓여 있다', () => {
   // 간격이 벌어지면 그 사이 레벨에서 경험치 감쇠가 커져 레벨당 마릿수가 튄다
-  // 보스는 사냥터마다 한 마리씩 따로 끼어 있으므로 간격 검사에서 뺀다
+  // 보스는 사냥터마다 한 마리씩 따로 끼어 있으므로 간격 검사에서 뺀다.
+  // 만렙 너머 몬스터(Lv200, 배수로 세진다)도 레벨 곡선 밖이라 뺀다
+  const beyond = new Set(Array.from({ length: BEYOND_COUNT }, (_, i) => beyondIdFor(i)));
   const levels = Object.values(MONSTER_KINDS)
-    .filter((k) => !k.boss)
+    .filter((k) => !k.boss && !beyond.has(k.id))
     .map((k) => k.level)
     .sort((a, b) => a - b);
   for (let i = 1; i < levels.length; i++) {

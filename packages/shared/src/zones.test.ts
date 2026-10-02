@@ -85,13 +85,15 @@ test('차원문 목록이 세상의 모든 존을 덮는다', () => {
 });
 
 test('사냥터 순서가 몬스터 레벨 순서와 같다', () => {
-  // 순서가 어긋나면 레벨 곡선 계산이 통째로 틀어진다
-  let previous = 0;
+  // 순서가 어긋나면 레벨 곡선 계산이 통째로 틀어진다.
+  // 만렙 너머 사냥터는 레벨이 전부 200 이라 같은 레벨이면 HP 가 올라야 한다 (monsters.ts 의 BEYOND)
+  let previous = [0, 0];
   for (const id of FIELD_ORDER) {
-    const levels = (getZone(id).monsters ?? []).map((m) => MONSTER_KINDS[m.kind]!.level);
-    const lowest = Math.min(...levels);
-    assert.ok(lowest > previous, `${id} 가 앞 사냥터보다 낮은 레벨대다`);
-    previous = lowest;
+    const kinds = (getZone(id).monsters ?? []).map((m) => MONSTER_KINDS[m.kind]!);
+    const weakest = kinds.reduce((a, b) => (b.level < a.level || (b.level === a.level && b.maxHp < a.maxHp) ? b : a));
+    const rises = weakest.level > previous[0]! || (weakest.level === previous[0] && weakest.maxHp > previous[1]!);
+    assert.ok(rises, `${id} 가 앞 사냥터보다 약하다`);
+    previous = [weakest.level, weakest.maxHp];
   }
 });
 

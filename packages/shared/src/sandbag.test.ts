@@ -7,6 +7,7 @@ import {
   SANDBAG_SECONDS,
   SANDBAG_RANK_REFRESH_SECONDS,
   SANDBAG_ZONE,
+  sandbagDay,
   sandbagReward,
   sandbagWeek,
 } from './sandbag.ts';
@@ -39,6 +40,14 @@ test('주는 월요일 0시(한국)에 바뀐다', () => {
   assert.equal(sandbagWeek(monday) - sandbagWeek(monday - 1), 1);
   assert.equal(sandbagWeek(monday + 7 * 86400 - 1), sandbagWeek(monday));
   assert.equal(sandbagWeek(monday + 7 * 86400), sandbagWeek(monday) + 1);
+});
+
+test('날짜별 기록의 날은 0시(한국)에 바뀌고, 월요일 0시는 주 경계와 같다', () => {
+  const monday = Date.UTC(2026, 9, 4, 15, 0, 0) / 1000;
+  assert.equal(sandbagDay(monday) - sandbagDay(monday - 1), 1);
+  assert.equal(sandbagDay(monday + 86400 - 1), sandbagDay(monday));
+  // 날 번호 × 86400 은 그날 한국 날짜의 UTC 0시 — 고도가 날짜 글자를 이렇게 읽는다
+  assert.equal(new Date(sandbagDay(monday) * 86400 * 1000).toISOString().slice(0, 10), '2026-10-05');
 });
 
 test('순위 보상 — 줄이 빈틈없이 이어지고 순위가 낮을수록 적다', () => {

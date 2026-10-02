@@ -52,7 +52,7 @@
 | `godot/game/sound_settings.gd` | **소리 크기** (`SoundSettings`) — Master 버스 볼륨 0~100, `user://settings.cfg` 에 저장. 아래 "소리 설정" |
 | `godot/game/game.gd` | `_build_sound_panel` · `_sound_step` · `_set_sound` · `_show_sound` — 메뉴 "설정" 으로 뜨는 소리 창 |
 | `godot/tests/ui_test.gd` | `_case_sound` — 설정 단추로 창 · +/− · 슬라이더가 버스 볼륨을 바꾸고 0 이면 음소거 |
-| `godot/tests/potion_test.gd` | 저절로 마시기 · 쿨타임 10초 · 직접 마시기 · 기준 자르기 · 저장 |
+| `godot/tests/potion_test.gd` | 저절로 마시기 · 쿨타임 5초 · 직접 마시기 · 기준 자르기 · 저장 |
 | `godot/tests/ui_test.gd` | `_case_potion` — 퀵슬롯 옆 자리 · 설정 창 +/− · 눌러서 마시고 쿨타임이 돈다. `_case_auto_no_setting` — 자동사냥 칸에 설정 단추가 없다 |
 | `godot/game/chat_log.gd` | **채팅창** (`ChatLog`) — 왼쪽 아래 구석, 장비 획득·강화·말을 한 줄씩 적는다. 아래 "채팅창" |
 | `godot/game/exp_toast.gd` | **경험치 알림** (`ExpToast`) — 오른쪽 아래, 잠깐 떴다 사라진다. 아래 "경험치 알림" |
@@ -548,7 +548,7 @@ frame.add_child(border)         # 채움 **다음**에 붙여야 위로 온다
   칸 아래 배지가 지금 기준(`HP 90%` / `자동 끔`)을 적는다. 값은 `potionPct` 요청으로 보내고
   **판정(`set_potion_pct`)이 잘라서** 스냅샷으로 돌아온 값만 그린다 (자동사냥 칸과 같은 규칙).
 - **수치**는 shared `combat.ts` 의 `POTION_*` → `combat.json` 의 `potion*`:
-  쿨타임 10초 · 한 병에 **최대 HP 10%** · 처음 기준 **90%** · 폭 10 · 상한 90.
+  쿨타임 **5초** (2026-10-02 요청으로 10초에서 줄였다) · 한 병에 **최대 HP 10%** · 처음 기준 **90%** · 폭 10 · 상한 90.
   (처음에는 30% · 50% 였다 — 같은 날 "초기값 70%로 하고 물약 한번 마시면 10% 차도록" 요청으로 바꿨다. 2026-09-30 에 "물약 사용 기본 설정을 90%로" 요청으로 90% 가 됐다.)
 - **개수는 세지 않는다** — 요청에 개수·구매가 없었다. 쿨타임만 막는다. 상점에서 사게 하려면
   아이템·가방 칸이 같이 흔들린다 ([items.md](items.md), [npc-town.md](npc-town.md)).

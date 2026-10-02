@@ -1,6 +1,6 @@
 extends SceneTree
 
-## 물약 판정 — 저절로 마시기 · 쿨타임 10초 · 직접 마시기 · 기준(HP %) 자르기 · 저장.
+## 물약 판정 — 저절로 마시기 · 쿨타임 5초 · 직접 마시기 · 기준(HP %) 자르기 · 저장.
 ## 화면(물약 칸·설정 창)은 `ui_test.gd` 의 `_case_potion` 이 본다.
 ##
 ##   godot --headless --path godot --script tests/potion_test.gd
@@ -71,8 +71,8 @@ func _case_auto() -> void:
 	if int(me.hp) != mini(max_hp, before + heal):
 		_fail("회복이 %d → %d 다 (최대 %d 의 %d 를 채워야 한다)" % [before, int(me.hp), max_hp, heal])
 	var cool := int(me.potion_ready_at) - now
-	if absi(cool - int(rules.get("potionCooldownMs", 0))) > 50 or int(rules.get("potionCooldownMs", 0)) != 10000:
-		_fail("쿨타임이 %dms 다 (10초여야 한다)" % cool)
+	if absi(cool - int(rules.get("potionCooldownMs", 0))) > 50 or int(rules.get("potionCooldownMs", 0)) != 5000:
+		_fail("쿨타임이 %dms 다 (5초여야 한다)" % cool)
 
 	# 쿨타임 중에는 또 떨어져도 안 마신다
 	me.hp = max_hp / 10

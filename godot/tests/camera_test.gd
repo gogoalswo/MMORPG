@@ -32,9 +32,16 @@ func _case_values() -> void:
 	_eq("요", CameraRig.YAW, PI / 4)
 	# 거리만 웹(40)에서 1.5배 당겼다
 	_eq("거리", CameraRig.DISTANCE, 40.0 / 1.5, 1e-3)
+	# 거리 세 단계 — 지금 거리가 2단계(기본)다 (2026-10-02)
+	_eq("2단계 = 기본 거리", CameraRig.zoom_distance(1), CameraRig.DISTANCE)
+	if CameraRig.ZOOM_STEPS.size() != 3 or CameraRig.ZOOM_DEFAULT != 1:
+		_fail("카메라 거리는 3단계, 기본은 2단계여야 한다")
+	if not (CameraRig.zoom_distance(0) < CameraRig.zoom_distance(1) and CameraRig.zoom_distance(1) < CameraRig.zoom_distance(2)):
+		_fail("1단계 < 2단계 < 3단계 순으로 멀어져야 한다")
 
 
 func _run_scene() -> void:
+	_save_zoom(CameraRig.ZOOM_DEFAULT)
 	root.add_child(load("res://main.tscn").instantiate())
 	await process_frame
 	var game: Node3D = root.get_node("Game")
@@ -84,6 +91,24 @@ func _run_scene() -> void:
 	else:
 		print("  눌러서 %.2f m 이동 — 각도가 바뀌어도 그대로다" % moved)
 
+	# 채팅창 위 카메라 단추 — 누를 때마다 2 → 3 → 1 → 2, 거리는 미끄러져 따라가고 단계는 남는다
+	var button: Control = game._camera_button
+	var chat: Rect2 = game._chat.get_global_rect()
+	var box: Rect2 = button.get_global_rect()
+	if absf(box.position.x - chat.position.x) > 1.0 or box.end.y > chat.position.y or box.end.y < chat.position.y - 20:
+		_fail("카메라 단추가 채팅창 바로 위(왼쪽 끝)가 아니다: %s, 채팅창 %s" % [box, chat])
+	if game._camera_step_label.text != "2":
+		_fail("처음 단계 숫자가 2 가 아니다: %s" % game._camera_step_label.text)
+	var hit: Button = button.get_node("hit")
+	for want in [2, 0, 1]:
+		hit.pressed.emit()
+		# 프레임 수가 아니라 시간으로 — 헤드리스는 프레임이 빨라 90 프레임이면 덜 미끄러진다
+		await create_timer(1.2).timeout
+		_eq("%d단계 거리" % (want + 1), (cam.position - cam._focus).length(), CameraRig.zoom_distance(want), 0.1)
+		if game._camera_step_label.text != str(want + 1) or CameraRig.saved_zoom_step() != want:
+			_fail("%d단계를 눌렀는데 숫자 %s · 저장 %d" % [want + 1, game._camera_step_label.text, CameraRig.saved_zoom_step()])
+
+	_save_zoom(CameraRig.ZOOM_DEFAULT)
 	Save.clear()
 	if _failed == 0:
 		print("카메라: 전부 통과")
@@ -91,3 +116,11 @@ func _run_scene() -> void:
 	else:
 		print("카메라: %d개 실패" % _failed)
 		quit(1)
+
+
+## 기기 설정의 카메라 단계를 맞춰 둔다 — 앞선 실행이 남긴 단계에 흔들리지 않게
+func _save_zoom(step: int) -> void:
+	var cfg := ConfigFile.new()
+	cfg.load(SoundSettings.PATH)
+	cfg.set_value("camera", "zoom", step)
+	cfg.save(SoundSettings.PATH)

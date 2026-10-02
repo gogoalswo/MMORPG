@@ -376,11 +376,7 @@ func _redraw() -> void:
 
 	for index in _tabs.size():
 		_paint_tab(_tabs[index], index == _kind)
-		var other: Dictionary = kinds[index]
-		var other_stage := int(stages.get(str(other.id), 0))
-		var other_cost := int(Fitness.step(other_stage + 1).get("cost", 0))
-		(_tab_dots[index] as Control).visible = other_stage < Fitness.max_stage() \
-			and other_cost > 0 and int(have.get(str(other.protein), 0)) >= other_cost
+		(_tab_dots[index] as Control).visible = Fitness.can_up(_me, str(kinds[index].id))
 	for index in _page_dots.size():
 		var dot_box := StyleBoxFlat.new()
 		dot_box.bg_color = GOLD if index == _kind else FAINT

@@ -37,6 +37,8 @@ const OPS := {
 	"fitness_up": "si",
 	# 장비 도감 — 아이템 id(등급·부위) · 강화 · 고른 가방 번호(-1 이면 옵션 적은 것). 가방에서 하나를 넣어 칸을 채운다
 	"codex_register": "sii",
+	# 설정 — 안 주울 장비 등급 목록. 장부가 표에 있는 등급만 남긴다
+	"set_loot_skip": "a",
 }
 
 var store: AccountStore

@@ -116,6 +116,9 @@ const LEVEL_BADGE := 50
 ## 막대 높이. **글자가 들어갈 만큼은 남겨야 한다** — 반으로 줄이면서 안쪽 여백
 ## (`BAR_PAD`)도 같이 줄였다 (2026-09-20)
 const HP_BAR_H := 22
+## 막대 길이. 맨 아래 줄 **물약과 자동사냥 사이**에 서면서 줄 너비를 못 따라가게 돼 정해 준다
+## (2026-10-02 요청 "HP바 길이를 지금의 1.5배로" — 그 전 길이는 물약~자동사냥 줄 147px 이었다)
+const HP_BAR_W := 220
 ## 막대 테두리 그림에서 테가 차지하는 두께 (9조각 여백). 얇은 선이라 작게 준다
 const BAR_FRAME_MARGIN := 5
 ## (채움은 직사각이라 여백이 필요 없다 — 홈이 `clip_children` 으로 잘라 준다)
@@ -163,7 +166,7 @@ const SPIN_SPEED := 1.6
 ## (2026-09-20). 테가 없으니 커도 스킬 칸으로 안 보인다
 const AUTO_CELL := 64
 const AUTO_INSET := 13
-## 퀵슬롯 줄과 자동사냥 칸 사이를 얼마나 띄우나
+## 체력 막대와 양옆 칸(물약·자동사냥) 사이를 얼마나 띄우나
 const AUTO_GAP := 8
 ## 고리를 칸 바닥에서 얼마나 띄우나 (글자 자리)
 const SPIN_LIFT := 13
@@ -377,6 +380,8 @@ var _skill_list_toggle: Button
 var _auto_cell: PanelContainer
 ## 물약 칸 뒤 · 자동사냥 칸 앞의 틈 — 샌드백 존에서 칸과 같이 숨긴다 (`_refresh_sandbag_dock`)
 var _potion_gap: Control
+## 물약 칸을 감싼 자리 (`_build_potion_cell`) — 샌드백 존에서 칸과 같이 숨긴다
+var _potion_seat: Control
 var _auto_gap: Control
 ## 켜져 있는 동안 칸 위에서 도는 화살표 고리
 var _auto_spin: TextureRect
@@ -3186,7 +3191,7 @@ func _stack_label(stack: Dictionary) -> String:
 	return text
 
 
-## HUD 하단. **가운데에 퀵슬롯 4칸**, 오른쪽 아래에 자동사냥·스킬·가방 단추.
+## HUD 하단. **맨 아래 줄에 물약 · 체력 막대(위에 레벨 배지) · 자동사냥**, 그 위에 퀵슬롯 4칸.
 ##
 ## 퀵슬롯은 스킬 아이콘을 칸 테두리(ui_skill_slot)에 넣고, 쿨타임이 남았으면
 ## 시계 방향으로 걷히는 어둠과 남은 초를 얹는다. 빈 칸은 "+" — 눌러도 아무 일 없다.
@@ -3194,40 +3199,62 @@ func _stack_label(stack: Dictionary) -> String:
 ## **앵커로 자리를 잡는다** (UI 는 조각을 앵커로 조립한다). 자식을 다 넣은 뒤에
 ## 최소 크기로 오프셋을 맞추고, 양쪽으로 자라게 해서 해상도가 바뀌어도 가운데에 남는다
 func _build_skill_bar() -> void:
-	# 아래 가운데 한 묶음 — 위에서부터 레벨 배지 · 경험치 % · 체력 막대 · 퀵슬롯
-	# (2026-09-20 요청). 왼쪽 위에 따로 있던 상태판을 여기로 내렸다.
-	# 세로 상자에 담아야 막대가 퀵슬롯 줄과 같은 길이로 늘어난다
+	# 아래 가운데 한 묶음 (2026-09-20 요청 — 왼쪽 위에 따로 있던 상태판을 여기로 내렸다).
+	# **맨 아래 줄이 [물약] [레벨 배지 / 체력 막대] [자동사냥]** 이다 (2026-10-02 요청 "HP를
+	# 아래로 내리고, 왼쪽에 물약 오른쪽에 자동사냥. 레벨은 지금처럼 HP위에"). 그 전에는
+	# 막대가 [물약·퀵슬롯·자동사냥] 줄 위에 그 줄 길이로 깔렸다. 퀵슬롯 줄은 그 위에 따로 선다
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 4)
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_ui_root.add_child(column)
 
 	_build_exp_gauge()
-	_build_level_badge(column)
+
+	# **보이는 액티브 스킬이 없으면 줄째 숨긴다** (2026-09-29 요청: "퀵슬롯 … 숨김 처리해") —
+	# 격투가는 평타만 쓴다. 스킬 표의 `hidden` 을 풀면 줄이 곧바로 돌아온다
+	var quick_row := HBoxContainer.new()
+	quick_row.add_theme_constant_override("separation", 5)
+	quick_row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	quick_row.visible = Skills.actives_shown(World.DEFAULT_JOB)
+	column.add_child(quick_row)
+
+	var dock := HBoxContainer.new()
+	dock.add_theme_constant_override("separation", 5)
+	# 샌드백 존에서 양옆 칸을 숨겨도 막대가 가운데에 남게 (`_refresh_sandbag_dock`)
+	dock.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.add_child(dock)
+	_build_potion_cell(dock)
+
+	# 가운데 — 배지를 막대 바로 위에 얹는다. 양옆 칸과 **바닥을 맞추고**, 막대 아래에 여백을
+	# 줘서 막대 가운데가 칸 가운데 높이에 온다
+	var middle := VBoxContainer.new()
+	middle.add_theme_constant_override("separation", 4)
+	middle.size_flags_vertical = Control.SIZE_SHRINK_END
+	middle.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dock.add_child(middle)
+	_build_level_badge(middle)
 
 	var hp := _make_bar(HP_BAR_H, Color("#c33122"), 12)
 	_hp_bar = hp["bar"]
 	_hp_text = hp["text"]
-	column.add_child(hp["frame"])
+	(hp["frame"] as Control).custom_minimum_size.x = HP_BAR_W
+	var hp_pad := MarginContainer.new()
+	hp_pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hp_pad.add_theme_constant_override("margin_bottom", int((AUTO_CELL - HP_BAR_H) / 2.0))
+	hp_pad.add_child(hp["frame"])
+	middle.add_child(hp_pad)
 
-	var dock := HBoxContainer.new()
-	dock.add_theme_constant_override("separation", 5)
-	column.add_child(dock)
 	_bar_buttons.clear()
-	_build_potion_cell(dock)
 	for slot in int(GameData.combat().get("skillBarSize", 4)):
 		var cell := _make_skill_cell(QUICK_CELL, "ui_quick_slot", _on_bar_pressed.bind(slot), QUICK_MARGIN)
 		cell.find_child("key", true, false).text = str(slot + 1)
-		# **보이는 액티브 스킬이 없으면 숨긴다** (2026-09-29 요청: "퀵슬롯 … 숨김 처리해") —
-		# 격투가는 평타만 쓴다. 스킬 표의 `hidden` 을 풀면 칸이 곧바로 돌아온다
 		cell.visible = Skills.actives_shown(World.DEFAULT_JOB)
-		dock.add_child(cell)
+		quick_row.add_child(cell)
 		_bar_buttons.append(cell)
 		_bar_cooling.append(false)
 
-	# 자동사냥도 같은 칸이다 — 엄지가 퀵슬롯과 같은 높이에서 닿는다 (2026-09-19 요청).
-	# 켜지면 칸 위에서 화살표 고리가 돈다
-	# 퀵슬롯에서 한 뼘 띄운다 — 붙여 두면 다섯 번째 스킬 칸으로 보인다
+	# 자동사냥 칸 — 막대 오른쪽 (2026-10-02). 켜지면 칸 위에서 화살표 고리가 돈다.
+	# 막대에서 한 뼘 띄운다
 	_auto_gap = Control.new()
 	_auto_gap.custom_minimum_size = Vector2(AUTO_GAP, 0)
 	_auto_gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -3247,6 +3274,7 @@ func _build_skill_bar() -> void:
 	var auto_badge: MarginContainer = _auto_cell.find_child("badge", true, false).get_parent().get_parent()
 	# 칸이 작아진 뒤로는 바닥에 바짝 붙인다 — 가운데로 올라오면 검 손잡이와 겹친다
 	auto_badge.add_theme_constant_override("margin_bottom", 4)
+	_auto_cell.size_flags_vertical = Control.SIZE_SHRINK_END
 	dock.add_child(_auto_cell)
 
 	_auto_spin = TextureRect.new()
@@ -3388,10 +3416,9 @@ func _build_skill_bar() -> void:
 	_design_cell.grow_vertical = Control.GROW_DIRECTION_BEGIN
 
 
-## 물약 칸 — **퀵슬롯 왼쪽** (2026-09-26 요청: 처음엔 오른쪽 옆이었다가 "물약을 퀵슬롯 왼쪽에 두고").
+## 물약 칸 — **체력 막대 왼쪽** (2026-10-02 요청. 그 전엔 퀵슬롯 왼쪽이었다 — 2026-09-26).
 ## 누르면 마시고, 오른쪽 위 "설정" 으로 저절로 마실 HP % 를 고른다. 쿨타임은 스킬 칸과 같은
-## 어둠·바늘로 돈다 (`_refresh_potion`). 퀵슬롯과 `AUTO_GAP` 만큼 띄운다 — 붙이면 다섯 번째
-## 스킬 칸으로 보인다 (자동사냥 칸에서 받은 지적과 같다)
+## 어둠·바늘로 돈다 (`_refresh_potion`). 막대와 `AUTO_GAP` 만큼 띄운다
 func _build_potion_cell(dock: HBoxContainer) -> void:
 	_potion_cell = _make_skill_cell(QUICK_CELL, "ui_quick_slot", _drink_potion, QUICK_MARGIN)
 	_potion_cell.name = "potion"
@@ -3402,7 +3429,15 @@ func _build_potion_cell(dock: HBoxContainer) -> void:
 		_potion_cell.find_child("text", true, false).text = "물약"
 	# 칸의 누름(hit)보다 **뒤에** 얹어야 이 단추가 먼저 눌린다
 	_potion_cell.add_child(_cell_setting("potion_setting", _toggle_potion_panel))
-	dock.add_child(_potion_cell)
+	# 자동사냥 칸(`AUTO_CELL`)과 **같은 너비 자리**에 가운데로 앉힌다 — 양옆이 같아야 막대가
+	# 화면 가운데에 오고, 칸 가운데 높이도 자동사냥과 맞는다 (2026-10-02)
+	var seat := CenterContainer.new()
+	seat.custom_minimum_size = Vector2(AUTO_CELL, AUTO_CELL)
+	seat.size_flags_vertical = Control.SIZE_SHRINK_END
+	seat.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	seat.add_child(_potion_cell)
+	dock.add_child(seat)
+	_potion_seat = seat
 
 	_potion_gap = Control.new()
 	_potion_gap.custom_minimum_size = Vector2(AUTO_GAP, 0)
@@ -5147,7 +5182,7 @@ func _refresh_sandbag_dock() -> void:
 	if _auto_cell == null:
 		return
 	var shown := _shown_zone != Sandbag.zone()
-	for node in [_potion_cell, _potion_gap, _auto_gap, _auto_cell]:
+	for node in [_potion_seat, _potion_gap, _auto_gap, _auto_cell]:
 		node.visible = shown
 	if not shown:
 		_potion_panel.visible = false

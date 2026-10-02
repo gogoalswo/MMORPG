@@ -43,6 +43,8 @@ const OPS := {
 	"codex_register": "sii",
 	# 장비 도감 자동 등록 — 넣을 수 있는 칸 전부 (고르는 것도 장부가 한다)
 	"codex_register_all": "",
+	# 설정 — 안 주울 장비 등급 목록. 장부가 표에 있는 등급만 남긴다
+	"set_loot_skip": "a",
 }
 
 var store: AccountStore

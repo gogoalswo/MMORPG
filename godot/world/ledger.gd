@@ -17,7 +17,7 @@ extends RefCounted
 const KEYS := [
 	"job", "level", "exp", "gold", "skills", "skill_points", "passives",
 	"skill_upgrades", "skill_upgrade_exp", "skill_exp", "bag", "equipped", "granted",
-	"diamonds", "proteins", "fitness", "codex", "sandbag", "dungeon_entries",
+	"diamonds", "proteins", "fitness", "codex", "sandbag", "dungeon_entries", "loot_skip",
 ]
 
 ## **첫 선물** — 새 캐릭터가 한 번만 받는 것 `[[표시, 묶음], …]`. 로컬은 `LocalTransport.open` 이,
@@ -50,6 +50,8 @@ static func fresh(job: String) -> Dictionary:
 		"sandbag": {},
 		# 던전 하루 입장 (docs/features/dungeons.md "하루 한 번") — `{ 종류 id: {day, count} }`
 		"dungeon_entries": {},
+		# 안 주울 장비 등급 `[등급, …]` — 설정 창 "아이템 습득" 탭 (`set_loot_skip`). 비어 있으면 다 줍는다
+		"loot_skip": [],
 	}
 
 
@@ -130,7 +132,9 @@ func kill(p: Dictionary, target: Dictionary) -> void:
 	var loot := Items.roll_drop(int(target.level), str(p.job), rng, drop_bonus)
 	p.gold = int(p.gold) + int(loot.gold)
 	var event := {"type": "loot", "gold": loot.gold}
-	if loot.has("item") and give(p, loot.item):
+	# 설정에서 끈 등급은 **가방에 넣지 않는다** (2026-10-02 요청: "습득할 아이템도 설정할 수 있는 옵션").
+	# 굴림은 그대로 다 한다 — 거른다고 굴림 순서가 바뀌면 같은 씨앗에서 다른 것이 나온다
+	if loot.has("item") and not (int(loot.item.grade) in loot_skip(p)) and give(p, loot.item):
 		event["item"] = loot.item
 	# 크리스탈은 장비와 따로 떨어진다 — 가방에서는 한 칸에 겹친다
 	if loot.has("crystal"):
@@ -650,6 +654,32 @@ func toggle_lock(p: Dictionary, where: String, key: Variant) -> void:
 		stack.locked = true
 		_notice("%s 잠금" % item.name)
 	_inventory_changed(p)
+
+
+## 안 주울 장비 등급을 정한다 — 설정 창 "아이템 습득" 탭. 표에 있는 등급만, 겹치지 않게, 작은 것부터
+func set_loot_skip(p: Dictionary, grades: Array) -> void:
+	p.loot_skip = clean_loot_skip(grades)
+
+
+## 안 주울 등급 목록 — 옛 계정·옛 저장에는 칸이 없다(빈 목록 = 다 줍는다)
+static func loot_skip(p: Dictionary) -> Array:
+	var raw: Variant = p.get("loot_skip", [])
+	return raw if raw is Array else []
+
+
+static func clean_loot_skip(raw: Variant) -> Array:
+	var out: Array = []
+	if not raw is Array:
+		return out
+	var top := int(Items._t().get("gradeMax", 7))
+	for each in raw:
+		if not (each is int or each is float):
+			continue
+		var grade := int(each)
+		if grade >= 1 and grade <= top and not (grade in out):
+			out.append(grade)
+	out.sort()
+	return out
 
 
 ## 가방을 정렬한다 — 높은 등급이 앞, 같은 등급이면 슬롯 순서(무기 → 반지),

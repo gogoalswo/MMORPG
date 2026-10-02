@@ -142,7 +142,8 @@
 | | `{t:"error", id?, reason}` — `no_hello` · `no_id` · `stale` · `unknown_op` · `bad_args` · `unknown_type` · `bad_message` · `store_failed` |
 
 `OPS`(받는 요청과 인자 모양): `enter` · `kill` · `learn_skill` · `feed_upgrade` · `equip` · `unequip` · `sort_bag` ·
-`use_crystal`(어디 · 번호/슬롯 · **차수** 2/3) · `buy` · `sell` · `enhance` · `enhance_many` · `trial_clear` · `sandbag_record`
+`use_crystal`(어디 · 번호/슬롯 · **차수** 2/3) · `buy` · `sell` · `enhance` · `enhance_many` · `trial_clear` · `sandbag_record` ·
+`set_loot_skip`(안 주울 장비 등급 목록 → [hud.md](hud.md) "설정 창")
 (→ [sandbag.md](sandbag.md) "서버가 기록을 믿는 근거"). JSON 숫자는 실수로 오므로 모양대로 바꾸고,
 모양이 틀리면 `bad_args`.
 

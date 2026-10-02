@@ -325,6 +325,8 @@ func join(player_id: String) -> void:
 		"sandbag": kept.get("sandbag", {}).duplicate(true),
 		# 던전 하루 입장 `{ 종류 id: {day, count} }` (docs/features/dungeons.md "하루 한 번")
 		"dungeon_entries": kept.get("dungeon_entries", {}).duplicate(true),
+		# 안 주울 장비 등급 — 설정 창 "아이템 습득" 탭 (`set_loot_skip`). 저장에 남는다
+		"loot_skip": Ledger.clean_loot_skip(kept.get("loot_skip", [])),
 	}
 	_refresh_stats(_players[player_id])
 	# 샌드백 랭킹전 — 들어오면 샌드백을 보고 선다. 평타는 정면 부채꼴 안만 치므로 등을 지고 서면 헛손질한다
@@ -1646,6 +1648,8 @@ func restore(player_id: String) -> bool:
 	player.dungeon_entries = Ledger.from_json(raw_entries) if raw_entries is Dictionary else {}
 	# 물약을 저절로 마시는 기준 — 없던 칸이라 옛 저장은 처음 값으로 읽힌다
 	set_potion_pct(player_id, int(saved.get("potion_pct", player.potion_pct)))
+	# 안 주울 장비 등급 — 없던 칸이라 옛 저장은 빈 목록(다 줍는다)
+	player.loot_skip = Ledger.clean_loot_skip(saved.get("loot_skip", []))
 
 	# 가방·장비도 되살린다. **옛 id 는 지금 id 로 옮긴다** (2026-09-21 에 단계 축을
 	# 없앴다) — 갈 자리가 없는 것만 버린다. 등급은 아이템이 들고 있으므로
@@ -2702,6 +2706,14 @@ func equip(player_id: String, index: int) -> void:
 	if player.is_empty():
 		return
 	_ledger_call(player, &"equip", [index])
+
+
+## 안 주울 장비 등급 (`Ledger.set_loot_skip`) — 설정 창 "아이템 습득" 탭
+func set_loot_skip(player_id: String, grades: Array) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	_ledger_call(player, &"set_loot_skip", [grades])
 
 
 ## 가방을 정렬한다 (`Ledger.sort_bag`)

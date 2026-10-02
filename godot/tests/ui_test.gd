@@ -1323,10 +1323,23 @@ func _case_fitness_dot(game: Node3D) -> void:
 	game._refresh_status(me)
 	if game._fitness_dot.visible:
 		_fail("끝 단계인데 헬스에 빨간 점이 떠 있다")
+	var was_codex_new = me.get("codex_new", {})
+	me.codex_new = {}
+	game._refresh_status(me)
+	if game._menu_dot.visible:
+		_fail("판 안에 켜진 점이 없는데 ≡ 에 빨간 점이 떠 있다")
+	# 도감 · 헬스가 아닌 판 안 칸의 점도 ≡ 를 켠다 — 점을 이름으로 찾는지 본다
+	var extra: Control = game._add_red_dot(game._menu_grid.get_child(0))
+	extra.visible = true
+	game._refresh_status(me)
+	me.codex_new = was_codex_new
+	if not game._menu_dot.visible:
+		_fail("판 안 칸(%s)에 빨간 점이 켜졌는데 ≡ 에는 꺼져 있다" % game._menu_grid.get_child(0).name)
+	extra.get_parent().free()
 	me.proteins = was_proteins
 	me.fitness = was_fitness
 	game._refresh_status(me)
-	print("  헬스 빨간 점: 강화할 수 있으면 헬스 · ≡ 에 켜진다")
+	print("  헬스 빨간 점: 강화할 수 있으면 헬스 · ≡ 에 켜진다 · 판 안 어느 점이든 ≡ 에 켜진다")
 
 
 func _case_bag(game: Node3D) -> void:

@@ -723,6 +723,17 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			_fitness_panel.show_result(payload)
 		&"codexResult":
 			_codex_panel.show_result(payload)
+		&"codexAuto":
+			# 주울 때 자동 등록(·자동 강화)도 채팅창에 남긴다 — 사냥 중이라 위 한 줄은 금방 지나간다
+			var piece := "%s +%d" % [str(payload.get("name", "")), int(payload.get("level", 0))]
+			var tries := int(payload.get("tries", 0))
+			var climbed := " (강화 %d번)" % tries if tries > 0 else ""
+			match str(payload.get("result", "")):
+				"register":
+					_chat.add_line("도감 등록", "%s%s · %s +%s%%" % [piece, climbed,
+						Codex.stat_name(str(payload.get("stat", ""))), String.num(float(payload.get("gain", 0.0)), 2)], INV_GOLD_HI)
+				"destroy": _chat.add_line("도감 강화 실패", piece + " 파괴", INV_WARN)
+				_: _chat.add_line("도감 강화 중단", piece + " 골드 부족", INV_TEXT)
 		&"dungeonResult":
 			# 성공이든 실패든 결과창. 걷던 곳·자동 사냥 겨냥을 멈춘다 — 확인을 누르면 마을로 나간다
 			# (쓰러졌으면 마을에서 되살아난다 — `_on_result_confirmed`)
@@ -6477,11 +6488,14 @@ func _refresh_status(me: Dictionary) -> void:
 	_skill_dot.visible = Skills.passive_learnable(str(me.job), int(me.level), me.get("passives", {}))
 	_codex_dot.visible = not Ledger.codex_new(me).is_empty()
 	_fitness_dot.visible = Fitness.any_up(me)
-	# 도감 · 헬스가 펼친 판 안(≡ 를 눌러야 보인다)에 있을 때만 ≡ 에도 켠다
+	# 펼친 판 안(≡ 를 눌러야 보인다)에 켜진 빨간 점이 하나라도 있으면 ≡ 에도 켠다.
+	# 점을 손으로 나열하지 않고 이름(`red_dot`)으로 찾는다 — 판에 점이 새로 붙어도 따로 잇지 않아도 된다
+	# (2026-10-02 요청 "햄버거 메뉴 안에 레드닷이 있는 경우에 햄버거 메뉴에도 레드닷 띄워")
 	_menu_dot.visible = false
-	for dot: Control in [_codex_dot, _fitness_dot]:
-		if dot.visible and _menu_grid.is_ancestor_of(dot):
+	for dot: Control in _menu_grid.find_children("red_dot", "", true, false):
+		if dot.visible:
 			_menu_dot.visible = true
+			break
 	_hp_text.text = "%d / %d" % [int(me.hp), int(max_hp)]
 	# 다음 레벨까지 필요한 양. 만렙이면 0 이 와서 0 으로 나누게 된다
 	var need := maxi(1, Combat.exp_to_next(int(me.level)))

@@ -138,10 +138,12 @@ func show_zone(id: String) -> void:
 	_add_head("그 밖에", GatePanel.CARD_SUB_COLOR)
 	var misc := _grid()
 	var gold: Vector2i = drops.gold
-	misc.add_child(_cell("gold", "골드 %d~%d" % [gold.x, gold.y], GatePanel.CELL_LINE, GatePanel.TEXT_COLOR))
+	# 골드는 잡으면 늘 나온다 (`roll_drop` 이 확률 없이 준다)
+	misc.add_child(_cell("gold", "골드 %d~%d\n100%%" % [gold.x, gold.y], GatePanel.CELL_LINE, GatePanel.TEXT_COLOR))
 	if bool(drops.crystal):
 		var crystal := Items.crystal_id()
-		misc.add_child(_cell(crystal, Items.stack_name({"id": crystal}), GatePanel.CELL_LINE, GatePanel.TEXT_COLOR))
+		misc.add_child(_cell(crystal, "%s\n%s" % [Items.stack_name({"id": crystal}), percent(float(drops.crystal_chance))],
+			GatePanel.CELL_LINE, GatePanel.TEXT_COLOR))
 	_list.add_child(misc)
 	_scroll.scroll_vertical = 0
 	_drag.forget()
@@ -184,10 +186,18 @@ func _monster_cell(kind: Dictionary) -> Control:
 	return cell
 
 
-## 등급 하나 — 머리 줄(등급 이름, 등급 색) + 슬롯 6종 칸
+## 등급 하나 — 머리 줄(등급 이름, 등급 색 + 몬스터 한 마리당 확률) + 슬롯 6종 칸
 func _add_grade(grade: int) -> void:
 	var tint := ChatLog.grade_text_color(grade)
-	_add_head(Items.grade_name(grade), tint)
+	var head := HBoxContainer.new()
+	head.name = "GradeHead"
+	head.add_theme_constant_override("separation", 14)
+	head.add_child(_label(Items.grade_name(grade), HEAD_FONT, tint))
+	# 확률 (2026-10-02 요청: "아이템 드랍 정보에 확률 표기해놔") — 드랍률 옵션을 걸기 전 값
+	var chance := _label("1마리당 %s" % percent(float(drops.chances.get(grade, 0.0))), NAME_FONT, GatePanel.CARD_SUB_COLOR)
+	chance.name = "Chance"
+	head.add_child(chance)
+	_list.add_child(head)
 	var grid := _grid()
 	for slot in Items.slots():
 		var item := Items.get_item(Items.item_id(grade, str(slot)))
@@ -265,6 +275,16 @@ func _label(text: String, font_size: int, color: Color) -> Label:
 	label.add_theme_font_size_override("font_size", font_size)
 	label.add_theme_color_override("font_color", color)
 	return label
+
+
+## 확률(0~1)을 % 글자로 — 유효 숫자 세 자리 (0.04444 → 4.44%, 0.002838 → 0.284%, 0.0001 → 0.01%).
+## 1% 아래는 소수점 둘째 자리로 끊으면 0.05% 가 0.0483% 와 0.0466% 를 가리지 못한다
+static func percent(chance: float) -> String:
+	var value := chance * 100.0
+	if value <= 0.0:
+		return "0%"
+	var decimals := maxi(2, 2 - int(floor(log(value) / log(10.0))))
+	return String.num(value, decimals) + "%"
 
 
 ## 세 자리마다 쉼표 (1137758 → 1,137,758) — 뒤 사냥터 몬스터 체력이 백만 단위다

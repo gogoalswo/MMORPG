@@ -13,7 +13,7 @@
 | `godot/game/portal_swirl.gd` | `PortalSwirl` — 아치 구멍에서 **빨려들어가는 소용돌이**. 나선 팔 5개 + 끌려드는 알갱이 + 가운데 빛 |
 | `godot/game/gate_panel.gd` | `GatePanel` — 창(`PanelContainer`). 조각은 가방창과 같은 `ui_panel`·`ui_button`·`ui_close`. 목록은 **끌어서** 내리고 줄 전체가 누르는 자리다(`_on_list_input`·`_row_at`). 고르면 `picked(zone_id)` |
 | `godot/game/drop_panel.gd` | `DropPanel` — **사냥터 드랍 창.** 줄 끝 느낌표를 누르면 뜬다. 차원문 창의 `top_level` 아이 노드 |
-| `godot/world/items.gd` | `Items.zone_drops(zone_id)` — 그 존의 몬스터 종류와 떨어지는 것(등급·골드 폭·크리스탈). **판정 표 그대로, 확률은 안 돌려준다** |
+| `godot/world/items.gd` | `Items.zone_drops(zone_id)` — 그 존의 몬스터 종류·레벨과 떨어지는 것(등급·골드 폭·크리스탈)과 **킬당 확률**(`chances` · `crystal_chance`). 판정 표 그대로 |
 | `godot/game/dungeon_panel.gd` | **던전 창이 이 창을 물려받는다** — 줄은 `_add_row`, 제목은 `_title`. 여기를 고치면 던전 창도 같이 바뀐다 → [dungeons.md](dungeons.md) |
 | `godot/game/game.gd` | `_gate_tapped`(누름 판정) · `_on_gate_tapped`(거리와 상관없이 연다 — 창이 뜨는 길은 이것뿐) · `_open_gate` · `_on_gate_pick`(`travel` 요청) |
 | `scripts/build-item-icons.mjs` | 줄 아이콘(`ui_gate_here`·`ui_gate_go`)을 128px 로 굽는다 → `public/assets/icons/` |
@@ -130,8 +130,12 @@ NinePatchRect (panel.png, 여백 PATCH=12) ─ 앵커: 가로 가운데 WIDTH=52
 - **내용은 판정이 굴리는 것 그대로다** (`Items.zone_drops`). `roll_drop` 이 내는 것은 골드 · 장비 · 크리스탈
   셋뿐이고, 장비 등급은 **몬스터 레벨로** 찾으므로(`drop_grades`) 그 존 몬스터들의 창을 합친다. 표를 따로
   두면 등급 창을 고칠 때마다 두 곳이 어긋난다.
-- **확률은 적지 않는다** (2026-09-30 요청: "확률은 넣지마"). 첫 판은 등급마다 "킬당 x%" 와 크리스탈 0.01% 를
-  적었다. 크리스탈은 `crystal_drop_chance` 가 0 보다 클 때 칸만 낸다.
+- **확률을 적는다** (2026-10-02 요청: "아이템 드랍 정보에 확률 표기해놔"). 2026-09-30 에 "확률은 넣지마" 로
+  뺐던 것을 되살렸다. 등급 머리 줄 옆에 `1마리당 x%`(`GradeHead` 의 `Chance`), 크리스탈 칸에 `crystal_drop_chance`,
+  골드 칸에 100%(잡으면 늘 준다). 값은 `Items.zone_drops` 의 `chances` — 등급 하나의 킬당 확률은 레벨과 상관없이
+  `grade_drop_rate` 라 창을 고쳐도 그대로 맞는다. **드랍률 옵션을 걸기 전 값이다.**
+  글자는 `DropPanel.percent` — 유효 숫자 세 자리(4.44% · 0.958% · 0.0483% · 0.01%). 1% 아래를 소수 둘째 자리로
+  끊으면 초월 0.0483% 가 0.05% 로 뭉개진다. 크리스탈은 `crystal_drop_chance` 가 0 보다 클 때 칸만 낸다.
 - **등장 몬스터 능력치** — 존의 `monsters` 에 나오는 종류마다 한 칸: 이름(보스면 "보스") / 체력 · 공격 ·
   방어. **레벨은 적지 않는다** (같은 날 요청: "몬스터 레벨은 표기하지 마" — 처음엔 이름 옆에 `Lv.n` 이 있었다). 값은 `monsters.json` 그대로, 세 자리 쉼표(`DropPanel.number`) — 뒤 사냥터 체력이 백만 단위다.
   **치명타 저항**(`critResist`, 100레벨 사냥터부터)은 아랫줄 능력치 바로 옆에 `치명타 저항 N%` 로 적는다
@@ -151,7 +155,7 @@ NinePatchRect (panel.png, 여백 PATCH=12) ─ 앵커: 가로 가운데 WIDTH=52
 - 결은 던전 보상 칸 그대로다 (어두운 평판 + 가는 선, 아이콘 칸 테만 등급 색). 몬스터 칸이 붙어 두 등급
   사냥터는 1280×720 에서 조금 넘친다(내용 591 / 칸 499px) — `DragScroll` 로 끌어서 내린다.
 - 검사는 `ui_test` 의 `_check_gate_drops` — 마을 줄엔 없음 · 미끄러지면 안 뜸 · 등급마다 6칸에 그림 ·
-  % 글자가 없음 · 몬스터 칸 수와 능력치가 표 그대로 · 몬스터가 떨구는 등급이 다 있음 ·
+  등급 확률이 판정값 그대로 · 크리스탈 확률 · 몬스터 칸 수와 능력치가 표 그대로 · 몬스터가 떨구는 등급이 다 있음 ·
   마지막 사냥터 맨 위가 최고 등급 · X. 스크롤은 `_scroll_drops` 가 **화면에 입력을 넣어** 끌기·휠로 본다
   (목록 함수를 직접 부르면 입력이 겹친 창·`top_level` 을 지나 창까지 오는지 못 본다).
 
@@ -196,6 +200,18 @@ NinePatchRect (panel.png, 여백 PATCH=12) ─ 앵커: 가로 가운데 WIDTH=52
 바르코 3D 는 **1×1×1 로 정규화, 원점이 한가운데**로 나온다. `Portal.create` 가
 받침 폭 = 2 × 반지름(문 판정 원)으로 늘리고 바닥에 앉히고, 정면(+z)을 카메라
 쪽(`CameraRig.YAW`)으로 돌린다. 움직이지 않는 모델이라 `Rig` 을 거치지 않는다.
+
+### 줄의 추천 레벨 (2026-10-02)
+
+요청: "포탈 눌렀을 때 나오는 UI에 사냥터에 추천 레벨 적어두고". 사냥터 줄의 느낌표 왼쪽에 `추천 Lv.N`
+(`GatePanel._add_level`, 이름 `Level`, `LEVEL_FONT` 22 · 느낌표와 틈 `LEVEL_GAP` 14). 마을 줄엔 없다.
+
+- **값은 그 사냥터 몬스터 레벨이다** (`Items.zone_drops(...).levels.x`, 여럿이면 가장 낮은 것). 밸런스가 "같은
+  레벨 몬스터 한 마리 4초"(`balance.ts` `KILL_SECONDS`)로 짜여 있어 따로 표를 두지 않았다 — 몬스터 레벨을
+  바꾸면 저절로 따라간다.
+- 드랍 창의 "몬스터 레벨은 적지 않는다" 와 별개다 — 그건 몬스터 칸 이야기고, 이건 사냥터 줄이다.
+- 창 폭(520)은 던전 창이 물려받아 그대로 뒀다. 이름이 가장 긴 줄과의 틈을 `ui_test` 의 `_check_gate_levels` 가
+  재서 겹치면 실패한다.
 
 ### 문 아래 글자 "사냥터 이동" (2026-10-02)
 

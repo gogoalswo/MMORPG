@@ -362,30 +362,43 @@ func _case_sound(game: Node3D) -> void:
 		return
 	cell.find_child("hit", true, false).pressed.emit()
 	await process_frame
-	var panel: Control = game._sound_panel
-	if not panel.visible:
-		_fail("설정을 눌렀는데 소리 창이 안 떴다")
+	var panel: SettingsPanel = game._settings_panel
+	if not panel.visible or panel.tab_index() != 0:
+		_fail("설정을 눌렀는데 설정 창(소리 탭)이 안 떴다")
 	var bus := AudioServer.get_bus_index("Master")
-	game._set_sound(50)
+	var label := panel.sound_label()
+	panel.set_sound(50)
 	panel.find_child("sound_up", true, false).pressed.emit()
 	await process_frame
-	if SoundSettings.volume() != 60 or game._sound_label.text != "60%" \
+	if SoundSettings.volume() != 60 or label.text != "60%" \
 			or absf(AudioServer.get_bus_volume_db(bus) - linear_to_db(0.6)) > 0.01:
 		_fail("+ 를 눌렀는데 볼륨 %d · 글자 '%s' · %.2fdB" % [
-			SoundSettings.volume(), game._sound_label.text, AudioServer.get_bus_volume_db(bus)])
+			SoundSettings.volume(), label.text, AudioServer.get_bus_volume_db(bus)])
 	var slider: HSlider = panel.find_child("sound_slider", true, false)
 	slider.value = 0
 	await process_frame
-	if SoundSettings.volume() != 0 or not AudioServer.is_bus_mute(bus) or game._sound_label.text != "소리 끔":
+	if SoundSettings.volume() != 0 or not AudioServer.is_bus_mute(bus) or label.text != "소리 끔":
 		_fail("슬라이더를 0 으로 끌었는데 음소거가 아니다 (볼륨 %d · 글자 '%s')" % [
-			SoundSettings.volume(), game._sound_label.text])
+			SoundSettings.volume(), label.text])
 	panel.find_child("sound_down", true, false).pressed.emit()
 	if SoundSettings.volume() != 0:
 		_fail("0 아래로 내려갔다: %d" % SoundSettings.volume())
-	game._set_sound(before)
+	panel.set_sound(before)
 	if AudioServer.is_bus_mute(bus):
 		_fail("되돌렸는데 음소거가 남았다")
-	game._toggle_sound_panel()
+	# 아이템 습득 탭 — 줄을 누르면 장부에 들어가고 글자가 바뀐다 (판정은 settings_test)
+	panel.pick_tab(1)
+	(panel.find_child("loot_1", true, false) as Button).pressed.emit()
+	await process_frame
+	await process_frame
+	if Ledger.loot_skip(game._me()) != [1] or panel.loot_state(1) != "안 줍기":
+		_fail("일반 줄을 눌렀는데 장부 %s · 글자 '%s'" % [Ledger.loot_skip(game._me()), panel.loot_state(1)])
+	(panel.find_child("loot_1", true, false) as Button).pressed.emit()
+	await process_frame
+	if Ledger.loot_skip(game._me()) != []:
+		_fail("다시 눌렀는데 장부가 안 비었다: %s" % [Ledger.loot_skip(game._me())])
+	panel.pick_tab(0)
+	game._toggle_settings()
 
 
 func _case_potion(game: Node3D) -> void:

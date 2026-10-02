@@ -2125,6 +2125,35 @@ func _case_discard(game: Node3D) -> void:
 	if popup._view.size() != 3 or not popup.picked.is_empty():
 		_fail("버린 뒤 목록이 안 따라왔다: %d · %s" % [popup._view.size(), popup.picked])
 	print("  버리기: 창 %s · 남은 가방 %d" % [popup.panel.get_global_rect(), me.bag.size()])
+	popup.close()
+	await process_frame
+	# 상세 창 "버리기" — 잠근 것은 꺼지고, 누르면 목록 창 없이 확인 창만 뜨고, 취소하면 그대로, 확인하면 하나 버린다
+	var locked_at: int = me.bag.find_custom(func(s: Dictionary) -> bool: return Items.is_locked(s))
+	await _tap_cell(game._bag_drag, game._bag_scroll, game._bag_grid, game._bag_view.find(locked_at))
+	await process_frame
+	var single: Button = game._detail_discard
+	if not single.is_visible_in_tree() or not single.disabled:
+		_fail("잠근 장비인데 상세 창 버리기가 없거나 켜져 있다 (%s · %s)" % [single.is_visible_in_tree(), single.disabled])
+	var detail_rect: Rect2 = game._detail_panel.get_global_rect()
+	if not detail_rect.encloses(single.get_global_rect()):
+		_fail("상세 창 버리기 단추가 창 밖으로 나갔다: %s · %s" % [single.get_global_rect(), detail_rect])
+	var free_at: int = me.bag.find_custom(func(s: Dictionary) -> bool: return DiscardPopup.can_discard(s))
+	await _tap_cell(game._bag_drag, game._bag_scroll, game._bag_grid, game._bag_view.find(free_at))
+	await process_frame
+	if single.disabled:
+		_fail("버릴 수 있는 장비인데 상세 창 버리기가 꺼져 있다")
+	single.pressed.emit()
+	if not popup.visible or not popup.confirm.visible or popup.panel.visible:
+		_fail("상세 창 버리기가 확인 창만 띄우지 않았다 (%s · %s · %s)" % [popup.visible, popup.confirm.visible, popup.panel.visible])
+	(popup.confirm.find_child("Cancel", true, false) as Button).pressed.emit()
+	if popup.visible or me.bag.size() != 5:
+		_fail("취소했는데 창이 남았거나 버려졌다")
+	single.pressed.emit()
+	(popup.confirm.find_child("Yes", true, false) as Button).pressed.emit()
+	await process_frame
+	if popup.visible or me.bag.size() != 4 or game._detail_panel.visible:
+		_fail("상세 창 버리기 확인 뒤: 창 %s · 가방 %d · 상세 %s" % [popup.visible, me.bag.size(), game._detail_panel.visible])
+	popup.open()
 	game._toggle_bag()
 	if popup.visible:
 		_fail("가방을 닫았는데 버리기 창이 남았다")

@@ -488,6 +488,7 @@ var _learn_gap := 0.0
 var _bag_action: Button
 var _enhance_button: Button  # 상세 창 "강화" — 장비를 고르면 뜨고, 누르면 강화 팝업을 연다
 var _lock_button: Button  # 상세 창 "잠금" / "잠금 해제" — 장비를 고르면 뜬다 (`_toggle_lock`)
+var _detail_discard: Button  # 상세 창 "버리기" — 가방 장비만, 잠그면 꺼진다 (`_discard_picked`)
 ## 강화 팝업 — 화면 가운데, 뒤를 어둡게 덮는다. 한 개 · 같은 아이템 · 같은 등급, 자동 강화
 ## → `enhance_popup.gd`
 var _enhance: EnhancePopup
@@ -1629,6 +1630,15 @@ func _build_detail_window(panel: PanelContainer) -> void:
 	buttons.add_child(_enhance_button)
 	_bag_action = _inv_button("-", _on_bag_action)
 	buttons.add_child(_bag_action)
+	# 버리기 (2026-10-02 요청) — 넷째 단추는 240 폭에 안 들어가 아랫줄 왼쪽(잠금 밑)에 둔다.
+	# "장착" 밑에 두면 잘못 누르기 쉽다 — 그래도 확인 창을 거친다
+	var lower := HBoxContainer.new()
+	lower.add_theme_constant_override("separation", 6)
+	side.add_child(lower)
+	_detail_discard = _inv_button("버리기", _discard_picked)
+	_detail_discard.name = "DiscardButton"
+	lower.visible = false
+	lower.add_child(_detail_discard)
 
 
 ## 아이템 한 벌을 보여 주는 틀 — 등급(머리 줄) · 이름 · 종류 · 상태 · 큰 칸 · 아이템 정보 표.
@@ -2938,6 +2948,7 @@ func _show_bag_detail() -> void:
 	var stack := _picked_stack()
 	_enhance_button.visible = not Items.get_item(str(stack.get("id", ""))).is_empty()
 	_lock_button.visible = _enhance_button.visible
+	_detail_discard.get_parent().visible = _enhance_button.visible
 	if stack.is_empty():
 		_detail_panel.visible = false
 		_bag_action.text = "-"
@@ -2979,6 +2990,8 @@ func _show_bag_detail() -> void:
 	_enhance_button.disabled = not can or locked
 	_lock_button.text = "잠금 해제" if locked else "잠금"
 	_fit_button_text(_lock_button, 18)
+	# 낀 것은 벗어야, 잠근 것은 풀어야 버린다 — 판정(`Ledger.discard`)도 둘 다 건너뛴다
+	_detail_discard.disabled = worn or locked
 
 	if fits:
 		_bag_action.text = "해제" if worn else "장착"
@@ -3307,6 +3320,13 @@ func _toggle_lock() -> void:
 		"key": str(Items.slots()[int(_bag_pick.index)]) if worn else _picked_bag_index(),
 	})
 	_redraw_bag()
+
+
+## 상세 창 "버리기" — 고른 가방 장비 하나를 확인 창을 거쳐 버린다 (버리기 창의 확인 창을 빌린다)
+func _discard_picked() -> void:
+	if str(_bag_pick.get("where", "")) == "equip":
+		return
+	_discard.ask_one(_picked_bag_index(), _detail_name.text)
 
 
 ## 상세 창 "강화" — 고른 장비로 강화 팝업을 연다. 대상은 **가방 번호**로 잡는다

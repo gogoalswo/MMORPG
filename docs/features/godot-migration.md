@@ -46,7 +46,9 @@ three.js 웹 클라이언트를 **고도 엔진으로 갈아타는 중**이다. 
 | `godot/game/hurt_flash.gd` | 내가 맞았을 때 화면 가장자리 비네트 |
 | `godot/game/camera_rig.gd` | 고정각 쿼터뷰 카메라. `shake(세기, 시간)` — 화면 흔들림 (각은 그대로, 자리만 떤다. 지금은 천붕각만 쓴다 → [skills.md](skills.md)) |
 | `godot/world/build.gd` | 빌드 표시와 "새 빌드 있음" 확인 |
-| `scripts/sync-godot-assets.mjs` | `public/assets` → `godot/assets` 복사. 모델은 텍스처를 줄여 넣는다 (`npm run sync:godot`) |
+| `scripts/sync-godot-assets.mjs` | `public/assets` → `godot/assets` 복사. 모델은 텍스처를 줄여 넣는다 (`npm run sync:godot`). 목록에 있는데 파일이 없거나 커밋 안 됐으면 실패 |
+| `scripts/check-godot-assets.mjs` | 고도 코드·데이터가 부르는 에셋이 위 목록에 다 있는지 본다. `test:godot` 이 부른다 |
+| `.claude/hooks/session-start.sh` | 클라우드 세션이 열릴 때 `npm install` · 동기화 · `--import` 를 미리 해 둔다 (원격에서만) |
 | `scripts/shrink-glb-textures.mjs` | `.glb` 안 텍스처를 512px 로 줄인다 |
 | `scripts/build-item-icons.mjs` | 바르코 아이콘 원본의 배경을 걷고 128px 로 굽는다 → `public/assets/icons` |
 | `scripts/build-korean-font.py` | 한글 폰트를 완성형 2350자로 줄인다. 결과물은 커밋한다 |
@@ -141,6 +143,27 @@ TS 에 남으니 표가 어긋나면 `npm test` 가 잡는다. 전부 GDScript �
 가방 창 아이콘과 창을 짓는 그림(`ui_*`)은 같은 파일의 `ICONS` 다. **이쪽은 커밋한다**
 — 128~384px PNG 열다섯 장이 합쳐 376KB 라 이력에 남겨도 부담이 없고, 원본(1024²)만
 커밋하지 않는다 → [inventory-equipment.md](inventory-equipment.md) 의 "아이콘".
+
+### 병합 전에 에셋이 빠지지 않게 ★ (2026-10-02)
+
+"병합하려는데 에셋이 없어 테스트가 깨진다" 가 잦았다. 원인이 셋 겹쳐 있었다.
+
+| 함정 | 증상 | 막은 곳 |
+|---|---|---|
+| 새 컨테이너에 `godot/assets` · `node_modules` 가 없다 | `test:godot` 만 돌리면 12개 실패, `sync:godot` 은 모듈을 못 찾아 죽음 | `godot-test.sh` 가 `npm ci`(없거나 lock 보다 낡으면) → 동기화를 스스로 한다 · 세션 시작 훅이 미리 해 둔다 |
+| 에셋 없이 한 번 돌아 굳은 임포트 캐시 | 동기화한 뒤에도 9개가 "모델이 없다" | `godot-test.sh` 가 `godot/assets` 가 캐시보다 새로우면 다시 임포트한다 |
+| 에셋 등록 누락 | 테스트는 통과, **배포 화면에서만** 그림이 빠짐 (`_icon()` 은 조용히 null, 모델은 기둥) | 동기화: 목록에 있는데 없음·커밋 안 됨 → 실패. `check-godot-assets.mjs`: 코드가 부르는데 목록에 없음 → 실패 |
+
+CI 는 `fetch-assets.sh` 를 안 돌리고 **커밋된 `public/assets` 만** 쓴다. 그래서 받아 둔 파일로
+세션에서 통과해도 배포에서는 빠졌다 — 상점 아이콘이 그랬다 (`4be1a5c`).
+
+**에셋을 새로 넣을 때:** `public/assets/…` 에 넣고 커밋 · `sync-godot-assets.mjs` 목록에 이름 ·
+(원본이 바르코면) `fetch-assets.sh` 에 주소. 하나라도 빠지면 이제 `test:godot` 이 이름을 대며 멈춘다.
+
+`check-godot-assets.mjs` 가 이름을 모으는 규칙은 둘이다 — 코드 문자열(확장자 붙은 것 · `"ui_…"` ·
+`_icon("…")`)과 데이터 규칙(`skill_<icon_of>` · 재료 id · `<슬롯>_g<등급>`). **`game.gd` 에서
+아이콘 이름을 조립하는 규칙을 바꾸면 이 스크립트도 같이 고친다.** 직업이 늘면 `JOBS` 에 더하고,
+일부러 그림 없이 두는 것은 `NO_ASSET` 에 이유와 함께 적는다.
 
 ### 텍스처를 512px 로 줄여서 넣는다 ★
 

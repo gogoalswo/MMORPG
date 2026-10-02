@@ -14,7 +14,8 @@ import { copyFileSync, mkdirSync, statSync, existsSync, readFileSync, writeFileS
 import { shrinkGlb } from './shrink-glb-textures.mjs';
 import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { execFileSync } from 'node:child_process';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -158,7 +159,8 @@ type="CompressedTexture2D"
 compress/mode=0
 `;
 
-const jobs = [
+/** 무엇을 어디서 어디로. `scripts/check-godot-assets.mjs` 가 같은 목록으로 등록 누락을 본다 */
+export const jobs = [
   {
     names: MODELS,
     from: join(ROOT, 'public', 'assets', 'models'),
@@ -174,11 +176,40 @@ const jobs = [
   { names: SFX, from: join(ROOT, 'public', 'assets', 'sfx'), to: join(ROOT, 'godot', 'assets', 'sfx') },
 ];
 
-let copied = 0;
-for (const job of jobs) copied += await run(job);
-console.log(`${copied}개 새로 복사했다 -> godot/assets/`);
+/**
+ * **목록에 있는데 원본이 없거나 커밋이 안 됐으면 실패한다** ★ (2026-10-02).
+ * 예전에는 "건너뛴다" 한 줄만 찍고 지나가서, 세션에서는 받아 둔 파일로 통과하고
+ * 배포(CI)에서는 그림이 빠졌다 — 상점 아이콘이 그랬다 (`4be1a5c`).
+ * CI 는 `fetch-assets.sh` 를 안 돌리고 **커밋된 `public/assets`** 만 쓴다.
+ *
+ *   --quiet   몇 개 복사했는지와 문제만 찍는다 (`npm run test:godot` · 세션 시작 훅이 쓴다)
+ */
+const quiet = process.argv.includes('--quiet');
+const problems = [];
 
-async function run({ names, from, to, shrink, lossless }) {
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const tracked = trackedFiles();
+  let copied = 0;
+  for (const job of jobs) copied += await run(job, tracked);
+  if (!quiet || copied > 0) console.log(`${copied}개 새로 복사했다 -> godot/assets/`);
+  if (problems.length > 0) {
+    console.log(`\n에셋 ${problems.length}개가 배포에 안 들어간다 — public/assets 에 넣고 커밋한다:`);
+    for (const p of problems) console.log(`  ${p}`);
+    process.exit(1);
+  }
+}
+
+/** git 이 아는 public/assets 파일. git 이 없으면 null — 그때는 커밋 여부를 안 본다 */
+function trackedFiles() {
+  try {
+    const out = execFileSync('git', ['ls-files', '-z', 'public/assets'], { cwd: ROOT, encoding: 'utf8' });
+    return new Set(out.split('\0').filter(Boolean));
+  } catch {
+    return null;
+  }
+}
+
+async function run({ names, from, to, shrink, lossless }, tracked) {
   mkdirSync(to, { recursive: true });
   // 원본이 안 바뀌었으면 다시 쓰지 않는다. 고도가 매번 다시 임포트하지 않게.
   // 줄인 파일은 크기가 원본과 다르므로 무엇으로 만들었는지를 따로 적어 둔다.
@@ -190,10 +221,12 @@ async function run({ names, from, to, shrink, lossless }) {
 
   for (const name of names) {
     const src = join(from, name);
+    const rel = src.slice(ROOT.length + 1).replaceAll('\\', '/');
     if (!existsSync(src)) {
-      console.log(`${name.padEnd(24)} 원본이 없다 — 건너뛴다`);
+      problems.push(`${rel} — 파일이 없다`);
       continue;
     }
+    if (tracked && !tracked.has(rel)) problems.push(`${rel} — 커밋 안 됨 (git add)`);
     const dst = join(to, name);
     if (lossless && name.endsWith('.png') && !existsSync(`${dst}.import`)) {
       writeFileSync(`${dst}.import`, LOSSLESS_IMPORT);
@@ -201,7 +234,7 @@ async function run({ names, from, to, shrink, lossless }) {
     const hash = createHash('sha1').update(readFileSync(src)).digest('hex');
     const key = `${hash}:${shrink ? MAX_TEXTURE : 0}`;
     if (existsSync(dst) && stamp[name] === key) {
-      console.log(`${name.padEnd(24)} 그대로`);
+      if (!quiet) console.log(`${name.padEnd(24)} 그대로`);
       continue;
     }
 
@@ -212,7 +245,7 @@ async function run({ names, from, to, shrink, lossless }) {
     const before = statSync(src).size / 1048576;
     const after = statSync(dst).size / 1048576;
     const note = shrink ? ` (원본 ${before.toFixed(1)}MB, 텍스처 ${MAX_TEXTURE}px)` : '';
-    console.log(`${name.padEnd(24)} ${after.toFixed(1)}MB${note}`);
+    if (!quiet) console.log(`${name.padEnd(24)} ${after.toFixed(1)}MB${note}`);
   }
 
   writeFileSync(stampPath, JSON.stringify(stamp, null, 2) + '\n');

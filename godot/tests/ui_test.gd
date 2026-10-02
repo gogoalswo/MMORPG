@@ -1173,7 +1173,8 @@ func _check_gate_drops(panel: GatePanel) -> void:
 	for i in mini(heads.size(), grades.size()):
 		var chance := (heads[i].get_node("Chance") as Label).text
 		var want_chance := DropPanel.percent(Items.grade_drop_rate(int(grades[i])))
-		if not chance.ends_with(want_chance):
+		# 숫자만 적는다 — "1마리당" 은 뺐다 (2026-10-02 요청)
+		if chance != want_chance:
 			_fail("%d등급 확률이 '%s' — '%s' 여야 한다" % [grades[i], chance, want_chance])
 	if DropPanel.percent(0.04444) != "4.44%" or DropPanel.percent(0.000483) != "0.0483%" or DropPanel.percent(0.0001) != "0.01%":
 		_fail("확률 글자가 어긋난다: %s %s %s" % [DropPanel.percent(0.04444), DropPanel.percent(0.000483), DropPanel.percent(0.0001)])

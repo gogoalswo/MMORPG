@@ -2676,7 +2676,7 @@ func _show_bag_detail() -> void:
 	var locked := Items.is_locked(stack)
 	_enhance_button.disabled = not can or locked
 	_lock_button.text = "잠금 해제" if locked else "잠금"
-	_lock_button.add_theme_font_size_override("font_size", 15 if locked else 18)
+	_fit_button_text(_lock_button, 18)
 
 	if fits:
 		_bag_action.text = "해제" if worn else "장착"
@@ -4235,6 +4235,22 @@ func _stone_pick_box() -> StyleBox:
 
 
 ## 단추 글자를 던전 창의 입장 단추처럼 금빛으로 (막히면 흐린 회색)
+## 글자가 단추 폭(`INV_BUTTON.x`)에 들어가도록 `largest` 부터 한 칸씩 줄인다. 글자가 넘치면 단추가
+## 넘쳐 옆 단추를 덮는다 — "잠금 해제" 를 15 로 박아 뒀더니 웹에서 76px 를 넘어 "강화" 를 덮었다 (2026-10-02 캡처).
+## 헤드리스는 15 가 들어간다고 쟀다 — **웹 글꼴 폭이 조금 더 넓다.** 그래서 외곽선 양쪽과 여유 4px 를 더 빼고 재며
+## ("잠금 해제" 는 13 — 헤드리스 51px, 웹이 20% 넓어도 단추 안쪽 64px 에 든다),
+## `clip_text` 로 단추 밖에는 아예 안 그린다 (어긋나도 옆을 덮지 않는다)
+func _fit_button_text(button: Button, largest: int) -> void:
+	button.clip_text = true
+	var font := button.get_theme_font("font")
+	var room := INV_BUTTON.x - button.get_theme_stylebox("normal").get_minimum_size().x \
+			- 2.0 * button.get_theme_constant("outline_size") - 4.0
+	var size := largest
+	while size > 10 and font.get_string_size(button.text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x > room:
+		size -= 1
+	button.add_theme_font_size_override("font_size", size)
+
+
 func _gold_text(button: Button, size: int = 26) -> Button:
 	return GatePanel.paint_button_text(button, size)
 

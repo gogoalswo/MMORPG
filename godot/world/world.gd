@@ -362,6 +362,12 @@ func input_move(player_id: String, seq: int, dx: float, dz: float, dt: float) ->
 		player.last_seq = seq
 		return
 
+	# **샌드백 존에서는 발을 못 옮긴다** (2026-10-02 요청 "샌드백 입장하면 이동도 내가 못 하게 막아").
+	# 서서 치기만 하는 판이다. `_take_manual` 보다 앞이라 조이스틱을 밀어도 자동사냥이 안 꺼진다
+	if str(_run.get("dungeon", "")) == "sandbag":
+		player.last_seq = seq
+		return
+
 	var now := Time.get_ticks_msec()
 	# **사람이 몰면 사람이 이긴다.** 자동 사냥은 손을 뗀다 (_take_manual).
 	# 휘두르는 중이라 발이 묶여 있어도 먼저 잡는다 — 안 그러면 경직(400ms)마다
@@ -1006,7 +1012,7 @@ func _drive_sandbag_auto(now: int) -> void:
 			set_auto(id, true)
 
 
-## 카운트 중인가 — 이 동안은 평타·스킬이 막힌다
+## 카운트 중인가 — 이 동안은 평타·스킬이 막힌다 (걷기는 판 내내 `input_move` 가 막는다)
 func _counting_down(now: int) -> bool:
 	return str(_run.get("dungeon", "")) == "sandbag" and str(_run.result) == "" and now < int(_run.starts_at)
 

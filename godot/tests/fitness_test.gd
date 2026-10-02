@@ -254,9 +254,27 @@ func _case_panel() -> void:
 	next.pressed.emit()
 	if panel.kind_id() != "bench":
 		_fail("스쿼트 다음 꺾쇠가 벤치프레스로 돌아가지 않는다: %s" % panel.kind_id())
+	# 문장 이펙트 — 성공은 문장 뒤 빛줄기 · 앞 반짝이, 실패는 앞판 하나가 문장을 바래게 했다가 되돌린다
+	var emblem: Control = panel.find_child("emblem", true, false)
+	var holder := emblem.get_parent()
+	panel.show_result({"type": "fitnessResult", "kind": "bench", "result": "success"})
+	var order: Array = holder.get_children().map(func(n: Node) -> String: return str(n.name))
+	if order.slice(0, 3) != ["fx_rays", "emblem", "fx_sparks"]:
+		_fail("성공 이펙트 자리 %s (빛줄기 · 문장 · 반짝이 순이어야 한다)" % [order])
+	panel.show_result({"type": "fitnessResult", "kind": "bench", "result": "fail"})
+	var smoke: Array = holder.get_children().filter(func(n: Node) -> bool: return n is FitnessFx and n.kind != "")
+	if smoke.size() != 1 or smoke[0].kind != "smoke":
+		_fail("실패면 앞 연출을 걷고 연기 하나만 — %s" % [smoke.map(func(n: Node) -> String: return n.kind)])
+	else:
+		smoke[0]._process(0.1)
+		if emblem.modulate.r > 0.8:
+			_fail("실패인데 문장이 안 바랬다 %s" % emblem.modulate)
+		smoke[0]._process(FitnessFx.SMOKE_TIME)
+		if emblem.modulate != Color.WHITE or emblem.position.x != 0.0:
+			_fail("연출이 끝났는데 문장이 안 돌아왔다 %s · %s" % [emblem.modulate, emblem.position])
 	# 기준 화면(1280x720)에 들어가나 — 돌판 틀의 여백(카드 34 · 안 30)을 뺀 알맹이 최소 크기로 본다
 	var inner := panel.get_combined_minimum_size()
 	if inner.x > 1280.0 or inner.y > 720.0:
 		_fail("헬스 창 최소 크기 %s 가 화면(1280x720)보다 크다" % inner)
 	panel.queue_free()
-	print("  창: 제목 · 획득 효과 → · 단추 꺼짐 · 탭 빨간 점 · 강화/자동 요청 · 꺾쇠로 돌기 · 최소 크기 %s" % inner)
+	print("  창: 제목 · 획득 효과 → · 단추 꺼짐 · 탭 빨간 점 · 강화/자동 요청 · 꺾쇠로 돌기 · 문장 이펙트 · 최소 크기 %s" % inner)

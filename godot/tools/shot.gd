@@ -16,6 +16,7 @@ extends SceneTree
 ##   npm run shot:godot -- sky_breaker 2,9,20,45,90,150   찍을 프레임을 준다
 ##                                        (긴 이펙트는 기본 0.36초로 모자란다)
 ##   npm run shot:godot -- enhance        강화 팝업 다중 강화 한 바퀴 (logs/shot_enhance.png)
+##   npm run shot:godot -- fitness        헬스 창 문장 이펙트 성공 · 실패 (logs/shot_fitness.png)
 ##   npm run shot:godot -- fist           주먹 기운 등급 1~7 (logs/shot_sheet.png)
 ##   npm run shot:godot -- fist:enhance   강화 단계별 오로라 — 희귀·태초 +5~+9
 ##
@@ -139,6 +140,10 @@ func _run() -> void:
 	# 강화 팝업의 다중 강화 한 바퀴 — 숫자 슬라이드 · 성공 반짝임 · 실패 X 와 깨짐
 	if skill == "enhance":
 		await _enhance(game)
+		return
+	# 헬스 창 문장 이펙트 — 성공(빛줄기 · 반짝이) 한 줄, 실패(금 · 연기) 한 줄
+	if skill == "fitness":
+		await _fitness(game)
 		return
 
 	# 주먹 기운 — 등급 일곱을 차례로 끼워 캐릭터 둘레를 가까이 찍는다
@@ -765,6 +770,42 @@ func _portal(game: Node3D) -> void:
 			img.save_png("res://../logs/shot_%02d.png" % frame)
 			taken += 1
 			print("logs/shot_%02d.png" % frame)
+	quit(0)
+
+
+## 헬스 강화 문장 이펙트를 늦춰서 찍는다 (`npm run shot:godot -- fitness`). 문장 둘레만 잘라
+## 위 줄 성공 · 아래 줄 실패, 시간 순으로 셋씩 붙인다 → docs/features/fitness.md
+const FITNESS_TIMES := [0.06, 0.25, 0.6]
+
+
+func _fitness(game: Node3D) -> void:
+	game._toggle_fitness()
+	for i in 6:
+		await process_frame
+	var panel: FitnessPanel = game._fitness_panel
+	var holder: Control = panel.find_child("emblem", true, false).get_parent()
+	var box := holder.get_global_rect().grow(110).intersection(Rect2(Vector2.ZERO, root.get_visible_rect().size))
+	Engine.time_scale = SLOW
+	var sheet: Image = null
+	for row in 2:
+		panel.show_result({"type": "fitnessResult", "kind": "bench", "result": "success" if row == 0 else "fail"})
+		var taken := 0
+		while taken < FITNESS_TIMES.size():
+			await process_frame
+			var clocks: Array = holder.get_children().filter(func(n: Node) -> bool: return n is FitnessFx and n.kind != "").map(func(n: Node) -> float: return n._t)
+			if clocks.is_empty() or float(clocks.max()) < float(FITNESS_TIMES[taken]):
+				continue
+			await RenderingServer.frame_post_draw
+			var img := root.get_texture().get_image().get_region(Rect2i(box))
+			if sheet == null:
+				sheet = Image.create(img.get_width() * 3, img.get_height() * 2, false, img.get_format())
+			sheet.blit_rect(img, Rect2i(Vector2i.ZERO, img.get_size()), Vector2i(taken * img.get_width(), row * img.get_height()))
+			print("  %s %d장 — %.2f초" % ["성공" if row == 0 else "실패", taken + 1, float(clocks.max())])
+			taken += 1
+		for i in 3:
+			await process_frame
+	sheet.save_png("res://../logs/shot_fitness.png")
+	print("logs/shot_fitness.png  (위 성공 · 아래 실패, 시간 순)")
 	quit(0)
 
 

@@ -251,10 +251,13 @@ static func roll_tier_options(tier: int, grade: int, rng: RandomNumberGenerator)
 	return out
 
 
-## 화면에 적을 옵션 줄 — **뽑기에서 뺀 종류(공속)는 숨긴다** (2026-09-29 요청: "장비 옵션에 공속은
-## 제거할꺼야"). 저장된 옛 아이템에 줄은 남아 있지만 계산(`stack_stats`)도 무시한다
+## 화면에 적을 옵션 줄 — **뽑기에서 뺀 종류(공속·쿨감)는 숨긴다** (2026-09-29 요청: "장비 옵션에
+## 공속은 제거할꺼야", 2026-10-02 요청: "장비 옵션에 쿨타임감소 제거해"). 저장된 옛 아이템에 줄은
+## 남아 있지만 계산(`stack_stats`)도 무시한다
+const DROPPED_OPTIONS := ["attackSpeed", "cooldown"]
+
 static func shown_options(lines: Array) -> Array:
-	return lines.filter(func(option): return str(option.get("kind", "")) != "attackSpeed")
+	return lines.filter(func(option): return not (str(option.get("kind", "")) in DROPPED_OPTIONS))
 
 
 ## 장비 한 벌의 옵션 줄 수 — 1·2·3차를 다 센다 (도감에 넣을 것을 고를 때 "가장 적은 것")
@@ -405,7 +408,7 @@ static func stack_stats(stack: Dictionary) -> Dictionary:
 			"maxHp": total.maxHp += value
 			"crit": total.crit += value / 100.0
 			"critDamage": total.critDamage += value / 100.0
-			"cooldown": total.cooldown += value / 100.0
+			# 쿨감은 2026-10-02 에 옵션에서 뺐다 — 옛 줄은 무시한다 (`DROPPED_OPTIONS`)
 			"penetration": total.penetration += value / 100.0
 			"dropRate": total.dropRate += value / 100.0
 	return total

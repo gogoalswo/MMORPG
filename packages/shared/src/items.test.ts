@@ -544,9 +544,9 @@ test('굴린 값은 그 등급의 범위 안에 있다', () => {
 test('옵션은 여섯 종이고 전부 퍼센트다', () => {
   // 2026-09-20 요청: 공속·치명타 확률·치명타 데미지·HP·쿨타임 감소·방어력 관통.
   // **공격력·방어력은 뺐다** — 슬롯 기본 수치가 이미 담당하므로 옵션으로 또 주면
-  // "같은 것을 두 번" 이다. **공속은 2026-09-29 에 뺐다** — 패시브 질풍각에서만 온다
+  // "같은 것을 두 번" 이다. **공속은 2026-09-29 에 뺐다** — 패시브 질풍각에서만 온다.
+  // **쿨감은 2026-10-02 에 뺐다** (요청: "장비 옵션에 쿨타임감소 제거해")
   assert.deepEqual([...OPTION_KINDS].sort(), [
-    'cooldown',
     'crit',
     'critDamage',
     'dropRate',
@@ -653,7 +653,8 @@ test('옵션이 능력치에 실제로 더해진다', () => {
   // 나머지는 비율로 담긴다 — 화면과 판정이 다른 단위를 쓰면 언젠가 어긋난다
   assert.ok(Math.abs(rolled.crit - 0.07) < 1e-9, `치명타가 ${rolled.crit}`);
   assert.ok(Math.abs(rolled.attackSpeed - 0.04) < 1e-9);
-  assert.ok(Math.abs(rolled.cooldown - 0.03) < 1e-9, `쿨감이 ${rolled.cooldown}`);
+  // 쿨감은 옵션에서 뺐다 — 옛 줄이 남아 있어도 안 더한다
+  assert.equal(rolled.cooldown, 0, `옛 쿨감 줄이 ${rolled.cooldown} 를 더했다`);
   assert.ok(Math.abs(rolled.penetration - 0.06) < 1e-9, `관통이 ${rolled.penetration}`);
 });
 
@@ -711,7 +712,6 @@ test('드롭에는 옵션이 함께 굴려진다', () => {
 
 test('옵션 글은 새 이름으로 나온다', () => {
   assert.equal(describeOption({ kind: 'crit', value: 7 }), '치명타 +7%');
-  assert.equal(describeOption({ kind: 'cooldown', value: 1.2 }), '쿨타임 감소 +1.2%');
   assert.equal(describeOption({ kind: 'penetration', value: 3.3 }), '방어력 관통 +3.3%');
 });
 

@@ -73,9 +73,13 @@
 - 옛 축의 잔재: `MAX_DROP_GRADE` 는 이제 그냥 7(=전부)이다. 이름만 남았다.
 
 ### 랜덤 옵션 ★
-- 종류 6개: `crit` 치명타 확률 / `critDamage` 치명타 데미지 /
-  `maxHp` 체력 / `cooldown` 스킬 쿨타임 감소 / `penetration` 방어력 관통 /
+- 종류 5개: `crit` 치명타 확률 / `critDamage` 치명타 데미지 /
+  `maxHp` 체력 / `penetration` 방어력 관통 /
   `dropRate` **아이템 드랍률** (2026-10-01, 아래 "아이템 드랍률 옵션").
+  **`cooldown` 스킬 쿨타임 감소는 2026-10-02 에 뺐다** (요청: "장비 옵션에 쿨타임감소 제거해") — 공속과
+  같은 방식이다: 뽑기 목록(`OPTION_KINDS`)에서 빠졌고, 옛 아이템에 남은 쿨감 줄은 계산(`Items.stack_stats`)·
+  표시(`Items.shown_options` 의 `DROPPED_OPTIONS`)에서 무시한다 — 저장은 그대로다. 캐릭터 정보 창의
+  "쿨타임 감소" 줄도 뺐다 (늘 0% 라서). 판정 쪽 `cooldownCap`·`stats.cooldown` 자리는 0 으로 남겨 뒀다.
   **`attackSpeed` 공격 속도는 2026-09-29 에 뺐다** (요청: "장비 옵션에 공속은 제거할꺼야") — 공속은
   패시브 질풍각에서만 온다 → [passives.md](passives.md). 뽑기 목록(`OPTION_KINDS`)에서 빠졌고, 옛 아이템에
   남은 공속 줄은 **계산(`Items.stack_stats`)·표시(`Items.shown_options`)에서 무시한다** — 저장은 그대로다.

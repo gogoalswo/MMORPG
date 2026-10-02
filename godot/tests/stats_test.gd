@@ -279,7 +279,7 @@ func _new_axes() -> void:
 	else:
 		print("  관통 50%%: 피해 %.1f -> %.1f" % [plain, pierced])
 
-	# 쿨감 — 옵션이 붙으면 스탯에 실려야 한다
+	# 관통은 스탯에 실리고, 옛 쿨감 줄은 무시한다 (2026-10-02 요청: "장비 옵션에 쿨타임감소 제거해")
 	me.equipped = {
 		"ring": {
 			"id": "g1_r", "grade": 1, "enhance": 0,
@@ -287,8 +287,8 @@ func _new_axes() -> void:
 		}
 	}
 	w._refresh_stats(me)
-	if float(me.stats.get("cooldown", 0.0)) <= 0.0:
-		_fail("쿨감이 스탯에 안 실렸다")
+	if float(me.stats.get("cooldown", 0.0)) != 0.0:
+		_fail("옛 쿨감 옵션이 스탯에 실렸다")
 	if float(me.stats.get("penetration", 0.0)) <= 0.0:
 		_fail("관통이 스탯에 안 실렸다")
 

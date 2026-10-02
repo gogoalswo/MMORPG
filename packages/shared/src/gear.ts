@@ -423,14 +423,14 @@ export type OptionKind =
 
 /**
  * **뽑히는 옵션 — 다섯 종.** 공속은 2026-09-29 에 뺐다 (요청: "장비 옵션에 공속은 제거할꺼야") —
- * 공속은 격투가 패시브 질풍각에서만 온다 (docs/features/passives.md). 타입에는 `attackSpeed` 가
- * 남아 있다: 옛 아이템에 붙은 줄을 읽어야 해서다. 계산(`items.gd` `stack_stats`)과 표시는 그 줄을 무시한다
+ * 공속은 격투가 패시브 질풍각에서만 온다 (docs/features/passives.md). **쿨감은 2026-10-02 에 뺐다**
+ * (요청: "장비 옵션에 쿨타임감소 제거해"). 타입에는 `attackSpeed`·`cooldown` 이 남아 있다: 옛 아이템에
+ * 붙은 줄을 읽어야 해서다. 계산(`items.gd` `stack_stats`)과 표시(`shown_options`)는 그 줄을 무시한다
  */
 export const OPTION_KINDS: OptionKind[] = [
   'crit',
   'critDamage',
   'maxHp',
-  'cooldown',
   'penetration',
   'dropRate',
 ];

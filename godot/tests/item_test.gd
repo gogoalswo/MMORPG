@@ -143,7 +143,7 @@ func _case_stats() -> void:
 	_eq("강화 +5 기본 공격 %", snappedf(Items.base_bonus(item, 5).attack, 0.1), 15.6)
 
 	# 옵션은 공격력을 안 준다 — 슬롯 기본 수치가 이미 담당하기 때문이다.
-	# 대신 기본이 안 건드리는 축(쿨감·관통)과 치확·치피·공속·HP 가 붙는다
+	# 대신 기본이 안 건드리는 관통과 치확·치피·HP 가 붙는다. 쿨감은 2026-10-02 에 뺐다 — 옛 줄은 무시한다
 	var stack := {
 		"id": "g1_w", "grade": 1, "enhance": 5,
 		"options": [
@@ -156,7 +156,9 @@ func _case_stats() -> void:
 	_eq("물건 하나 공격 %", snappedf(stats.attack, 0.1), 15.6)
 	_eq("물건 하나 치명타", snappedf(stats.crit, 0.001), 0.007)
 	_eq("물건 하나 관통", snappedf(stats.penetration, 0.001), 0.014)
-	_eq("물건 하나 쿨감", snappedf(stats.cooldown, 0.001), 0.004)
+	_eq("옛 쿨감 줄은 무시", snappedf(stats.cooldown, 0.001), 0.0)
+	_eq("옛 쿨감 줄은 화면에서 숨김", Items.shown_options(stack.options).size(), 2)
+	_eq("쿨감은 뽑히는 목록에 없다", "cooldown" in GameData.load_table("items").get("optionKinds", []), false)
 	print("  물건 하나: 공격 %.1f%%, 치확 %.3f, 관통 %.3f, 쿨감 %.3f" % [
 		stats.attack, stats.crit, stats.penetration, stats.cooldown
 	])

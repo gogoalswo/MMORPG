@@ -639,14 +639,14 @@ func _case_status(game: Node3D) -> void:
 		_fail("오른쪽 위 가방 단추를 눌렀는데 가방이 안 열렸다")
 	game._toggle_bag()
 	await process_frame
-	# 크리스탈 — ≡ 판 안 (2026-10-01 까지는 가방 바로 왼쪽). 누르면 인벤토리·장비 창과 크리스탈 창이 같이 뜨고,
-	# 장비 칸을 누르면 대상이 된다. 다시 누르면 셋 다 닫힌다
+	# 크리스탈 — ≡ 판 안 (2026-10-01 까지는 가방 바로 왼쪽). 누르면 인벤토리와 크리스탈 창이 같이 뜨고
+	# **장비 창은 안 뜬다** (2026-10-02 — 그 자리는 옵션 확률 창). 다시 누르면 다 닫힌다
 	if game._menu_cells[3].find_children("*", "TextureRect", true, false).is_empty():
 		_fail("크리스탈 단추에 그림이 없다 — npm run sync:godot 을 돌렸나 (ui_icon_crystal)")
 	game._menu_cells[3].find_child("hit", true, false).pressed.emit()
 	await process_frame
-	if not (game._crystal_panel.visible and game._bag_panel.visible and game._gear_panel.visible) or game._detail_panel.visible:
-		_fail("크리스탈 단추 — 크리스탈 %s · 가방 %s · 장비 %s · 상세 %s" % [game._crystal_panel.visible, game._bag_panel.visible, game._gear_panel.visible, game._detail_panel.visible])
+	if not (game._crystal_panel.visible and game._bag_panel.visible) or game._gear_panel.visible or game._detail_panel.visible or game._odds_panel.visible:
+		_fail("크리스탈 단추 — 크리스탈 %s · 가방 %s · 장비 %s · 상세 %s · 확률 %s" % [game._crystal_panel.visible, game._bag_panel.visible, game._gear_panel.visible, game._detail_panel.visible, game._odds_panel.visible])
 	else:
 		print("  가방 옆 크리스탈: %s" % game._crystal_hint.text)
 	game._menu_cells[3].find_child("hit", true, false).pressed.emit()
@@ -1537,6 +1537,8 @@ func _case_bag(game: Node3D) -> void:
 		_fail("크리스탈 창이 떴는데 칸에 '사용' 이 남았다")
 	if not game._crystal_roll.disabled:
 		_fail("대상을 안 골랐는데 굴리기가 켜져 있다")
+	if game._gear_panel.visible or game._odds_panel.visible:
+		_fail("크리스탈 창을 열었는데 장비 창 %s · 대상 없이 확률 창 %s" % [game._gear_panel.visible, game._odds_panel.visible])
 	var crystal_box: Rect2 = game._crystal_panel.get_global_rect()
 	var inv_box: Rect2 = game._bag_panel.get_global_rect()
 	if not Rect2(Vector2.ZERO, Vector2(1280, 720)).encloses(crystal_box):
@@ -1551,6 +1553,22 @@ func _case_bag(game: Node3D) -> void:
 		_fail("장비 칸을 눌렀는데 대상이 안 잡혔다")
 	if not game._bag_grid.get_child(1).get_node("pick").visible:
 		_fail("크리스탈 대상 칸에 금테가 없다")
+	# 옵션 확률 창 (2026-10-02) — 종류마다 확률 · 범위, 수치 5단계 확률
+	var kinds: Array = Items.option_odds(2, 2)
+	var odds_text := ""
+	for label in game._odds_kinds.get_children() + game._odds_steps.get_children():
+		odds_text += label.text + " "
+	var odds_box: Rect2 = game._odds_panel.get_global_rect()
+	if not game._odds_panel.visible:
+		_fail("대상을 골랐는데 옵션 확률 창이 안 떴다")
+	elif game._odds_kinds.get_child_count() != (kinds.size() + 1) * 3 or game._odds_steps.get_child_count() != 6 * 2:
+		_fail("확률 표 칸 수가 %d · %d" % [game._odds_kinds.get_child_count(), game._odds_steps.get_child_count()])
+	elif not odds_text.contains("%s 20%%" % kinds[0].label) or not odds_text.contains("5단계 (최고) 2%"):
+		_fail("확률 표가 '%s'" % odds_text)
+	elif not Rect2(Vector2.ZERO, Vector2(1280, 720)).encloses(odds_box) or odds_box.intersects(game._crystal_panel.get_global_rect()):
+		_fail("확률 창 자리가 %s (크리스탈 %s)" % [odds_box, game._crystal_panel.get_global_rect()])
+	else:
+		print("  옵션 확률: %s" % odds_text.strip_edges())
 	game._on_crystal_roll()
 	await process_frame
 	var necklace: Dictionary = me.bag[1]
@@ -1575,8 +1593,8 @@ func _case_bag(game: Node3D) -> void:
 		_fail("대상 이름이 '%s'" % game._crystal_name.text)
 	game._close_crystal()
 	await process_frame
-	if game._crystal_panel.visible:
-		_fail("크리스탈 창 X 를 눌렀는데 그대로다")
+	if game._crystal_panel.visible or game._odds_panel.visible:
+		_fail("크리스탈 창 X 를 눌렀는데 그대로다 (확률 창 %s)" % game._odds_panel.visible)
 	print("  크리스탈: 사용 → 창 → 칸 고르기 → 굴리기 두 번 — %s" % Items.describe_option(me.bag[0].options2[0]))
 
 	# 테스트 단추 — 건틀릿(무기)이 등급마다 하나씩 들어오고, 그림이 있으면 등급별 그림을 쓴다

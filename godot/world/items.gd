@@ -251,6 +251,31 @@ static func roll_tier_options(tier: int, grade: int, rng: RandomNumberGenerator)
 	return out
 
 
+## 크리스탈 창 왼쪽 **옵션 확률 창**(2026-10-02)에 적을 표 — 그 차수·등급에서 붙을 수 있는 종류마다
+## 확률과 범위. 종류는 `roll_tier_options` 처럼 **고르게** 뽑으니 확률은 줄 수 / 종류 수다
+static func option_odds(tier: int, grade: int) -> Array:
+	var kinds: Array = _t().get("optionKinds", [])
+	var label: Dictionary = _t().get("optionLabel", {})
+	var count := mini(int(option_tier(tier).get("count", 1)), kinds.size())
+	var out: Array = []
+	for kind in kinds:
+		var span := option_range(str(kind), grade)
+		out.append({
+			"kind": str(kind), "label": str(label.get(kind, kind)),
+			"chance": float(count) / kinds.size(), "min": float(span.min), "max": float(span.max),
+		})
+	return out
+
+
+## 수치 5단계의 확률(합 1) — `roll_option_value` 가 쓰는 `optionStepWeights` 를 비율로 바꾼 것
+static func option_step_odds() -> Array:
+	var weights: Array = _t().get("optionStepWeights", [1])
+	var total := 0.0
+	for w in weights:
+		total += float(w)
+	return weights.map(func(w) -> float: return float(w) / total)
+
+
 ## 화면에 적을 옵션 줄 — **뽑기에서 뺀 종류(공속·쿨감)는 숨긴다** (2026-09-29 요청: "장비 옵션에
 ## 공속은 제거할꺼야", 2026-10-02 요청: "장비 옵션에 쿨타임감소 제거해"). 저장된 옛 아이템에 줄은
 ## 남아 있지만 계산(`stack_stats`)도 무시한다

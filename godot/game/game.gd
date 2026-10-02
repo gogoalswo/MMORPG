@@ -507,6 +507,13 @@ var _crystal_target: Dictionary = {}
 ## 어느 재료로 굴리나 — 2 = 크리스탈(2차), 3 = 옐로우 크리스탈(3차, 2026-10-02). 창 위 단추 둘로 바꾼다
 var _crystal_tier := 2
 var _crystal_tabs: Array[Button] = []
+## 옵션 확률 창 (2026-10-02 요청: "왼쪽에 장착장 띄우지 말고, 장비 선택하면 어떠한 옵션이 몇 퍼센트
+## 확률로 붙는지 UI 만들어서 띄워") — 크리스탈 창이 떠 있는 동안 **장비 창 자리(왼쪽 끝)**에 뜬다.
+## 대상을 골랐을 때만 보인다. 표는 `Items.option_odds` · `option_step_odds`
+var _odds_panel: PanelContainer
+var _odds_head: Label
+var _odds_kinds: GridContainer
+var _odds_steps: GridContainer
 ## 장비 창(왼쪽 끝)과 상세 창(인벤토리 왼쪽). 인벤토리는 `_bag_panel` 이다
 var _gear_panel: PanelContainer
 var _detail_panel: PanelContainer
@@ -1296,6 +1303,11 @@ func _build_bag_panel() -> void:
 	row.add_child(_gear_panel)
 	_build_gear_window(_gear_panel)
 
+	# 옵션 확률 창 — 크리스탈 창이 떠 있으면 장비 창 대신 이 자리에 뜬다
+	_odds_panel = _window_panel()
+	row.add_child(_odds_panel)
+	_build_odds_window(_odds_panel)
+
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1698,6 +1710,75 @@ func _build_crystal_window(panel: PanelContainer) -> void:
 	foot.add_child(_crystal_have)
 	_crystal_roll = _inv_button("굴리기", _on_crystal_roll)
 	foot.add_child(_crystal_roll)
+
+
+## 옵션 확률 창 — 머리 줄(대상 등급 · 차수) · 옵션 종류 표(옵션 · 확률 · 범위) · 수치 단계 표(단계 · 확률)
+func _build_odds_window(panel: PanelContainer) -> void:
+	var side := VBoxContainer.new()
+	side.custom_minimum_size = Vector2(DETAIL_W, 0)
+	side.add_theme_constant_override("separation", 8)
+	panel.add_child(side)
+
+	_stone_title(side, "옵션 확률", 22, "ui_icon_crystal")
+	_odds_head = _inv_label("", 18, INV_GOLD)
+	_odds_head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	side.add_child(_odds_head)
+
+	for part in [["옵션 종류", 3], ["수치 단계", 2]]:
+		side.add_child(_inv_label(str(part[0]), 20, INV_GOLD))
+		var rule := ColorRect.new()
+		rule.color = INV_RULE
+		rule.custom_minimum_size = Vector2(0, 1)
+		side.add_child(rule)
+		var grid := GridContainer.new()
+		grid.columns = int(part[1])
+		grid.add_theme_constant_override("h_separation", 12)
+		grid.add_theme_constant_override("v_separation", 6)
+		side.add_child(grid)
+		if part[1] == 3:
+			_odds_kinds = grid
+		else:
+			_odds_steps = grid
+
+	var note := _inv_label("종류를 고르게 하나 뽑고, 범위를 5등분한 단계를 위 확률로 골라 그 안에서 수치를 굴립니다.", 15, INV_DIM)
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	side.add_child(note)
+
+
+## 옵션 확률 창을 채운다 — 대상 등급의 범위와 지금 고른 재료(차수)의 확률
+func _redraw_odds(grade: int) -> void:
+	var material_name := str(Items.get_material(Items.tier_material(_crystal_tier)).get("name", "크리스탈"))
+	_odds_head.text = "%s 장비 · %d차 옵션 (%s)" % [Items.grade_name(grade), _crystal_tier, material_name]
+	_odds_head.add_theme_color_override("font_color", _grade_tint(grade))
+
+	var kinds: Array = [["옵션", "확률", "범위", INV_DIM]]
+	for row in Items.option_odds(_crystal_tier, grade):
+		kinds.append([row.label, _odds_percent(row.chance), "%d ~ %d%%" % [int(row.min), int(row.max)], INV_TEXT])
+	var steps: Array = [["단계", "확률", INV_DIM]]
+	var odds: Array = Items.option_step_odds()
+	for step in odds.size():
+		var tag := " (최저)" if step == 0 else (" (최고)" if step == odds.size() - 1 else "")
+		steps.append(["%d단계%s" % [step + 1, tag], _odds_percent(odds[step]), INV_GOLD_HI if step == odds.size() - 1 else INV_TEXT])
+	for pair in [[_odds_kinds, kinds], [_odds_steps, steps]]:
+		var grid: GridContainer = pair[0]
+		for child in grid.get_children():
+			grid.remove_child(child)
+			child.queue_free()
+		for row in pair[1]:
+			var tint: Color = row[row.size() - 1]
+			for col in row.size() - 1:
+				var label := _inv_label(str(row[col]), 17, tint)
+				if col == 0:
+					label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				else:
+					label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+				grid.add_child(label)
+
+
+## 0.2 → "20%", 1/6 → "16.7%"
+func _odds_percent(ratio: float) -> String:
+	var value := ratio * 100.0
+	return "%d%%" % roundi(value) if is_equal_approx(value, roundf(value)) else "%.1f%%" % value
 
 
 ## 인벤토리 창 — 머리 줄 · 격자와 오른쪽 세로 탭 · 소지품 수와 정렬 · 동전
@@ -2152,6 +2233,7 @@ func _toggle_bag() -> void:
 	_bag_pick = {}
 	_detail_panel.visible = false
 	_crystal_panel.visible = false
+	_odds_panel.visible = false
 	_char_panel.visible = false
 	_crystal_target = {}
 	_bag_drag.forget()
@@ -2631,7 +2713,9 @@ func _toggle_crystal() -> void:
 	_enhance.hide_now()
 	_enhance_from_codex = false
 	_bag_panel.visible = open
-	_gear_panel.visible = open
+	# 장비 창은 안 띄운다 — 그 자리는 옵션 확률 창이 쓴다 (2026-10-02)
+	_gear_panel.visible = false
+	_odds_panel.visible = false
 	_bag_pick = {}
 	_detail_panel.visible = false
 	_crystal_panel.visible = open
@@ -2645,6 +2729,8 @@ func _toggle_crystal() -> void:
 ## 크리스탈 창 X — 상세 창으로 돌아가지 않고 둘 다 닫는다 (칸을 다시 누르면 상세가 뜬다)
 func _close_crystal() -> void:
 	_crystal_panel.visible = false
+	_odds_panel.visible = false
+	_gear_panel.visible = _bag_panel.visible  # 가방에서 "사용" 으로 열었으면 장비 창이 돌아온다
 	_crystal_target = {}
 	_bag_pick = {}
 	_show_bag_detail()
@@ -2957,6 +3043,7 @@ func _redraw_crystal() -> void:
 		tab.modulate = Color.WHITE if int(tab.get_meta("tier")) == _crystal_tier else Color(1, 1, 1, 0.45)
 	var stack := _stack_at(_crystal_target)
 	var item := Items.get_item(str(stack.get("id", "")))
+	_odds_panel.visible = not item.is_empty()
 	if item.is_empty():
 		_crystal_target = {}
 		_crystal_name.text = "대상 없음"
@@ -2964,7 +3051,7 @@ func _redraw_crystal() -> void:
 		_crystal_kind.text = ""
 		_fill_cell(_crystal_icon, {}, "", "")
 		_fill_detail_rows([], _crystal_info)
-		_crystal_hint.text = "장비나 인벤토리에서 장비 칸을 누르세요.\n%d차 옵션 1줄을 새로 굴립니다." % _crystal_tier
+		_crystal_hint.text = "인벤토리에서 장비 칸을 누르세요.\n%d차 옵션 1줄을 새로 굴립니다." % _crystal_tier
 		_crystal_roll.disabled = true
 		return
 
@@ -2975,6 +3062,7 @@ func _redraw_crystal() -> void:
 	var worn := str(_crystal_target.get("where", "")) == "equip"
 	_crystal_kind.text = "%s · %s" % [Items.grade_name(grade), "착용 중" if worn else "보유 중"]
 	_fill_cell(_crystal_icon, stack, "", _item_icon(stack))
+	_redraw_odds(grade)
 
 	var rows: Array = []
 	for tier in Items.option_tiers():
@@ -3084,6 +3172,7 @@ func _on_bag_action() -> void:
 		_bag_pick = {}
 		_crystal_target = {}
 		_crystal_panel.visible = true
+		_gear_panel.visible = false  # 장비 창 자리는 옵션 확률 창이 쓴다 (2026-10-02)
 		_redraw_bag()
 		return
 	if str(_bag_pick.get("where", "")) == "equip":

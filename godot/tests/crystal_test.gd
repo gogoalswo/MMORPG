@@ -13,6 +13,7 @@ var _failed := 0
 func _init() -> void:
 	Save.clear()
 	_case_tiers()
+	_case_odds()
 	_case_drop()
 	_case_stack()
 	_case_use_bag()
@@ -49,6 +50,22 @@ func _world() -> Array:
 	var me: Dictionary = w.snapshot().players["me"]
 	me.bag.clear()
 	return [w, me]
+
+
+## 옵션 확률 창의 표 (2026-10-02) — 종류 확률을 다 더하면 줄 수(1), 단계 확률은 1, 범위는 `option_range` 그대로
+func _case_odds() -> void:
+	for tier in [2, 3]:
+		var rows: Array = Items.option_odds(tier, 7)
+		var sum := 0.0
+		for row in rows:
+			sum += float(row.chance)
+			var span := Items.option_range(str(row.kind), 7)
+			if float(row.min) != float(span.min) or float(row.max) != float(span.max) or str(row.label) == str(row.kind):
+				_fail("확률 표 %s 줄이 %s (범위 %s)" % [row.kind, row, span])
+		_eq("%d차 종류 확률 합" % tier, snappedf(sum, 0.001), float(Items.option_tier(tier).count))
+	var steps: Array = Items.option_step_odds()
+	_eq("단계 수", steps.size(), 5)
+	_eq("1단계 확률", snappedf(float(steps[0]), 0.001), 0.4)
 
 
 func _crystal(count: int) -> Dictionary:

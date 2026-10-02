@@ -74,6 +74,8 @@ const INV_RULE := Color("#4a4234")
 const INV_PICK := Color("#e8b449")
 ## 못 하는 것 — 착용 레벨이 모자란 장비의 "착용 Lv" 줄과 "레벨 부족" 글자
 const INV_WARN := Color("#d9644f")
+## 가방 목록에 같이 보이는 낀 장비의 "착용" 글자 — 금빛 "잠금" 과 구별되는 옅은 초록
+const INV_WORN := Color("#9fd889")
 ## 가방 격자 칸 사이
 const BAG_GRID_GAP := 4
 ## 세로 스크롤바가 먹는 폭
@@ -1985,6 +1987,22 @@ func _make_cell(on_press: Callable, size: int = CELL) -> PanelContainer:
 	lock.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cell.add_child(lock)
 
+	# 가방 목록에 같이 보이는 **낀 장비** — 오른쪽 위에 "착용" (2026-10-02). 잠금(왼쪽 위)·
+	# 강화 배지(오른쪽 아래)와 안 겹친다. 켜고 끄는 건 `_redraw_bag` 의 가방 칸뿐이다
+	var worn := Label.new()
+	worn.name = "worn"
+	worn.visible = false
+	worn.text = "착용"
+	worn.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	worn.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	worn.size_flags_vertical = Control.SIZE_FILL
+	worn.add_theme_font_size_override("font_size", 13)
+	worn.add_theme_color_override("font_color", INV_WORN)
+	worn.add_theme_color_override("font_outline_color", Color.BLACK)
+	worn.add_theme_constant_override("outline_size", 4)
+	worn.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cell.add_child(worn)
+
 	# 고른 칸 — 받은 그림처럼 밝은 금테를 덮는다
 	var pick := Panel.new()
 	pick.name = "pick"
@@ -2128,10 +2146,7 @@ func _tab_keeps(stack: Dictionary) -> bool:
 ## 크리스탈 창이 떠 있으면 **장비 칸은 크리스탈 대상이 된다** — 재료·빈칸은 무시한다
 func _pick_bag(where: String, index: int) -> void:
 	if _crystal_panel.visible:
-		var at := index
-		if where == "bag":
-			at = int(_bag_view[index]) if index >= 0 and index < _bag_view.size() else -1
-		var target := {"where": where, "index": at}
+		var target := _view_target(index) if where == "bag" else {"where": where, "index": index}
 		if not Items.get_item(str(_stack_at(target).get("id", ""))).is_empty():
 			_crystal_target = target
 			_redraw_bag()
@@ -2140,6 +2155,12 @@ func _pick_bag(where: String, index: int) -> void:
 		_on_bag_action()
 		return
 	_bag_pick = {"where": where, "index": index}
+	# 가방 목록의 낀 장비 — **장비 칸을 고른 것과 같게** 다룬다(상세 · 해제 · 강화 · 잠금이 같은
+	# 길을 탄다). 금테·"해제" 글자를 얹을 가방 칸 번호만 `cell` 로 따로 적는다
+	if where == "bag":
+		var target := _view_target(index)
+		if str(target.get("where", "")) == "equip":
+			_bag_pick = {"where": "equip", "index": int(target.index), "cell": index}
 	if _picked_stack().is_empty():
 		_bag_pick = {}
 	_show_bag_detail()
@@ -2723,18 +2744,28 @@ func _redraw_bag() -> void:
 	if not _stat_labels.is_empty():
 		_stat_labels[0].get_parent().get_parent().visible = any
 
-	# 가방 — 탭으로 거른 것만. 보이는 칸이 가방 몇 번째인지 적어 둔다
+	# 가방 — 탭으로 거른 것만. 보이는 칸이 가방 몇 번째인지 적어 둔다.
+	# **낀 장비도 맨 앞에 슬롯 순서로 보인다** (2026-10-02 요청: "장착중인 아이템은 인벤토리
+	# 목록에 안 보이는데, 보이게") — 가방 번호 대신 음수 `-1 - 슬롯 번호` 로 적는다(`_view_target`).
+	# 가방 칸을 차지하지는 않으므로 `소지품 n/200` 에는 안 센다
 	_bag_view.clear()
+	for index in slots.size():
+		var worn: Dictionary = equipped.get(str(slots[index]), {})
+		if not worn.is_empty() and _tab_keeps(worn):
+			_bag_view.append(-1 - index)
 	for index in bag.size():
 		if _tab_keeps(bag[index]):
 			_bag_view.append(index)
 	_fit_cells(_bag_grid, maxi(BAG_COLUMNS * BAG_ROWS, _bag_view.size()), "bag")
 	for index in _bag_grid.get_child_count():
-		var stack: Dictionary = bag[_bag_view[index]] if index < _bag_view.size() else {}
+		var target := _view_target(index)
+		var stack: Dictionary = _stack_at(target) if not target.is_empty() else {}
 		var icon_name := ""
 		if not stack.is_empty():
 			icon_name = _item_icon(stack)
-		_fill_cell(_bag_grid.get_child(index), stack, "", icon_name)
+		var cell: PanelContainer = _bag_grid.get_child(index)
+		_fill_cell(cell, stack, "", icon_name)
+		cell.get_node("worn").visible = str(target.get("where", "")) == "equip" and not stack.is_empty()
 
 	_show_bag_detail()
 
@@ -2860,7 +2891,7 @@ func _fill_item_view(view: Dictionary, stack: Dictionary, worn: bool, fits: bool
 ## 장비 창 칸·크리스탈 대상 고르기 중에는 얹지 않는다
 func _show_cell_action() -> void:
 	var on := not _crystal_panel.visible and _bag_action.text != "-" \
-		and str(_bag_pick.get("where", "")) == "bag"
+		and (str(_bag_pick.get("where", "")) == "bag" or _bag_pick.has("cell"))
 	for index in _bag_grid.get_child_count():
 		var act: Label = _bag_grid.get_child(index).get_node("act")
 		act.visible = on and _is_picked("bag", index)
@@ -3041,13 +3072,25 @@ func _bonus_text(key: String, value: float) -> String:
 func _is_picked(where: String, index: int) -> bool:
 	# 크리스탈 창이 떠 있으면 금테는 **크리스탈 대상**에 두른다 (가방은 칸 → 가방 번호로 바꿔 댄다)
 	if _crystal_panel.visible:
-		if str(_crystal_target.get("where", "")) != where:
-			return false
-		var at := index
-		if where == "bag":
-			at = int(_bag_view[index]) if index < _bag_view.size() else -1
-		return int(_crystal_target.get("index", -1)) == at
+		var target := _view_target(index) if where == "bag" else {"where": where, "index": index}
+		return not target.is_empty() \
+			and str(_crystal_target.get("where", "")) == str(target.where) \
+			and int(_crystal_target.get("index", -1)) == int(target.index)
+	# 가방 목록에서 고른 낀 장비 — 그 가방 칸에 금테 (장비 창 칸에도 아래 줄로 같이 두른다)
+	if where == "bag" and _bag_pick.has("cell"):
+		return int(_bag_pick.cell) == index
 	return str(_bag_pick.get("where", "")) == where and int(_bag_pick.get("index", -1)) == index
+
+
+## 가방 목록 칸이 가리키는 것 — `{"where": "bag", "index": 가방 번호}` 또는
+## 낀 장비면 `{"where": "equip", "index": 슬롯 번호}`. 빈칸이면 `{}`
+func _view_target(index: int) -> Dictionary:
+	if index < 0 or index >= _bag_view.size():
+		return {}
+	var at := int(_bag_view[index])
+	if at < 0:
+		return {"where": "equip", "index": -1 - at}
+	return {"where": "bag", "index": at}
 
 
 ## 고른 칸이 가방 몇 번째인가. **탭으로 걸러 놔서 칸 번호와 다르다**
@@ -3055,7 +3098,8 @@ func _picked_bag_index() -> int:
 	var index := int(_bag_pick.get("index", -1))
 	if index < 0 or index >= _bag_view.size():
 		return -1
-	return int(_bag_view[index])
+	# 낀 장비 칸(음수)은 가방 번호가 아니다 — 그 칸을 고르면 `_pick_bag` 이 "equip" 으로 바꿔 둔다
+	return maxi(-1, int(_bag_view[index]))
 
 
 func _picked_stack() -> Dictionary:

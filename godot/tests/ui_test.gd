@@ -1358,7 +1358,7 @@ func _case_bag(game: Node3D) -> void:
 	me.bag.append({"id": "g1_w", "grade": 1, "enhance": 2, "options": []})
 	game._redraw_bag()
 	await process_frame
-	var first: PanelContainer = game._bag_grid.get_child(0)
+	var first: PanelContainer = _bag_cell(game, 0)
 	if first.get_node("badge").text == "":
 		_fail("가방 첫 칸에 배지가 안 붙었다")
 	elif not first.get_node("badge").text.contains("+2"):
@@ -1424,7 +1424,7 @@ func _case_bag(game: Node3D) -> void:
 		_fail("'장착' 판이 칸을 안 덮는다: 높이 %.0f (그림 %.0f)" % [act.size.y, first.get_node("icon").size.y])
 	if not act.visible or act.text != "장착":
 		_fail("고른 칸에 '장착' 이 안 얹혔다 (%s '%s')" % [act.visible, act.text])
-	if game._bag_grid.get_child(1).get_node("act").visible:
+	if _bag_cell(game, 1).get_node("act").visible:
 		_fail("안 고른 칸에도 글자가 얹혔다")
 	first.get_node("hit").pressed.emit()
 	for i in 3:
@@ -1478,7 +1478,7 @@ func _case_bag(game: Node3D) -> void:
 	var worn_ring: Dictionary = me.equipped.get("ring", {})
 	game._redraw_bag()
 	await process_frame
-	var high: PanelContainer = game._bag_grid.get_child(0)
+	var high: PanelContainer = _bag_cell(game, 0)
 	high.get_node("hit").pressed.emit()
 	await process_frame
 	var high_act: Label = high.get_node("act")
@@ -1518,7 +1518,7 @@ func _case_bag(game: Node3D) -> void:
 	me.bag.append({"id": "g2_n", "grade": 2, "enhance": 0, "options": []})
 	game._redraw_bag()
 	await process_frame
-	game._bag_grid.get_child(0).get_node("hit").pressed.emit()
+	_bag_cell(game, 0).get_node("hit").pressed.emit()
 	await process_frame
 	if game._bag_action.text != "사용" or game._bag_action.disabled:
 		_fail("크리스탈을 골랐는데 단추가 '%s'" % game._bag_action.text)
@@ -1526,15 +1526,15 @@ func _case_bag(game: Node3D) -> void:
 		_fail("크리스탈 상세 이름이 '%s'" % game._detail_name.text)
 	if game._enhance_button.visible:
 		_fail("재료(크리스탈)를 골랐는데 강화 단추가 떠 있다")
-	var use_act: Label = game._bag_grid.get_child(0).get_node("act")
+	var use_act: Label = _bag_cell(game, 0).get_node("act")
 	if not use_act.visible or use_act.text != "사용":
 		_fail("크리스탈 칸에 '사용' 이 안 얹혔다 (%s '%s')" % [use_act.visible, use_act.text])
 	# 아이콘(바르코, 2026-09-23)을 받았으면 칸에 글자 대신 그림이 뜬다
-	var crystal_cell: PanelContainer = game._bag_grid.get_child(0)
+	var crystal_cell: PanelContainer = _bag_cell(game, 0)
 	if game._icon("crystal") != null and crystal_cell.get_node("text").text != "":
 		_fail("크리스탈 그림이 있는데 칸에 글자가 찍혔다")
 
-	game._bag_grid.get_child(0).get_node("hit").pressed.emit()  # 한 번 더 누르면 사용
+	_bag_cell(game, 0).get_node("hit").pressed.emit()  # 한 번 더 누르면 사용
 	await process_frame
 	await process_frame
 	if not game._crystal_panel.visible or game._detail_panel.visible:
@@ -1551,11 +1551,11 @@ func _case_bag(game: Node3D) -> void:
 		_fail("크리스탈 창이 인벤토리 바로 왼쪽이 아니다: %s / %s" % [crystal_box, inv_box])
 
 	# 장비 칸을 누르면 대상이 된다 — 상세 창은 안 뜬다
-	game._bag_grid.get_child(1).get_node("hit").pressed.emit()
+	_bag_cell(game, 1).get_node("hit").pressed.emit()
 	await process_frame
 	if game._crystal_roll.disabled or game._detail_panel.visible:
 		_fail("장비 칸을 눌렀는데 대상이 안 잡혔다")
-	if not game._bag_grid.get_child(1).get_node("pick").visible:
+	if not _bag_cell(game, 1).get_node("pick").visible:
 		_fail("크리스탈 대상 칸에 금테가 없다")
 	game._on_crystal_roll()
 	await process_frame
@@ -1606,7 +1606,7 @@ func _case_bag(game: Node3D) -> void:
 				if game._icon(want) != null and got != want:
 					_fail("%d등급 %s 아이콘이 '%s' (%s 여야 한다)" % [g, slot, got, want])
 		# 태초는 +9 — 상세 창 큰 칸 오른쪽 아래에 나와야 한다
-		game._pick_bag("bag", 6)
+		game._pick_bag("bag", game._bag_view.find(6))
 		await process_frame
 		var big: String = game._detail_icon.get_node("badge").text
 		if big != "+9":
@@ -1616,7 +1616,7 @@ func _case_bag(game: Node3D) -> void:
 			_fail("+9 인데 강화 단추가 %s/%s" % [game._enhance_button.visible, game._enhance_button.disabled])
 		# 일반(+0)을 골라 "강화" 를 누르면 **팝업**이 화면 가운데 뜬다 (2026-09-23 요청
 		# "강화 ui창을 따로 만들어. 강화 버튼 누르면 팝업이 나오게") — 성공률 90%·파괴가 적혀 있다
-		game._pick_bag("bag", 0)
+		game._pick_bag("bag", game._bag_view.find(0))
 		await process_frame
 		if not game._enhance_button.visible or game._enhance_button.disabled:
 			_fail("+0 장비인데 강화 단추가 %s/%s" % [game._enhance_button.visible, game._enhance_button.disabled])
@@ -1899,7 +1899,7 @@ func _case_lock(game: Node3D) -> void:
 	game._toggle_bag()
 	await process_frame
 	await process_frame
-	await _tap_cell(game._bag_drag, game._bag_scroll, game._bag_grid, 0)
+	await _tap_cell(game._bag_drag, game._bag_scroll, game._bag_grid, game._bag_view.find(0))
 	await process_frame
 	var lock: Button = game._lock_button
 	if not lock.is_visible_in_tree() or lock.text != "잠금":
@@ -1907,7 +1907,7 @@ func _case_lock(game: Node3D) -> void:
 	lock.pressed.emit()
 	await process_frame
 	await process_frame
-	var cell: PanelContainer = game._bag_grid.get_child(0)
+	var cell: PanelContainer = _bag_cell(game, 0)
 	if not Items.is_locked(me.bag[0]):
 		_fail("잠금 단추를 눌렀는데 장부가 안 잠겼다")
 	if not cell.get_node("lock").visible:
@@ -2067,11 +2067,12 @@ func _case_compare(game: Node3D) -> void:
 	await process_frame
 	await process_frame
 
-	# 가방을 열면 정렬된다 (희귀도 → 종류 → 강화) — 칸 번호는 id 로 찾는다
+	# 가방을 열면 정렬된다 (희귀도 → 종류 → 강화) — 칸 번호는 id 로 찾는다.
+	# 낀 장비가 목록 맨 앞에 서므로(2026-10-02) 가방 번호를 **보이는 칸 번호**로 바꿔 댄다
 	var at := func(id: String) -> int:
 		for i in me.bag.size():
 			if str(me.bag[i].id) == id:
-				return i
+				return game._bag_view.find(i)
 		return -1
 	# 반지를 고르면 — 낀 반지가 비교 창에 뜬다 (칸은 창에 입력을 넣어 누른다)
 	await _tap_cell(game._bag_drag, game._bag_scroll, game._bag_grid, at.call("g1_r"))
@@ -2110,7 +2111,7 @@ func _case_compare(game: Node3D) -> void:
 		_fail("낀 신발이 없는데 비교 창이 떴다")
 	# 다시 반지 → 뜨고, 빈칸을 누르면 상세 창과 같이 닫힌다
 	await _tap_cell(game._bag_drag, game._bag_scroll, game._bag_grid, at.call("g1_r"))
-	await _tap_cell(game._bag_drag, game._bag_scroll, game._bag_grid, 5)
+	await _tap_cell(game._bag_drag, game._bag_scroll, game._bag_grid, game._bag_view.size())
 	if compare.visible or game._detail_panel.visible:
 		_fail("빈칸을 눌렀는데 비교 %s · 상세 %s" % [compare.visible, game._detail_panel.visible])
 	# 장비 창의 낀 칸을 고르면 비교하지 않는다 (그것 자체가 낀 것이다)
@@ -2118,6 +2119,32 @@ func _case_compare(game: Node3D) -> void:
 	await process_frame
 	if compare.visible:
 		_fail("낀 반지를 골랐는데 비교 창이 떴다")
+
+	# 낀 장비도 **인벤토리 목록에 보인다** (2026-10-02 요청) — 맨 앞에 "착용" 을 얹고,
+	# 누르면 장비 칸을 고른 것과 같다(착용 중 · "해제" · 비교 없음)
+	game._redraw_bag()
+	var worn_cell: int = game._bag_view.find(-1 - Items.slots().find("ring"))
+	if worn_cell < 0:
+		_fail("낀 반지가 인벤토리 목록에 없다: %s" % str(game._bag_view))
+	else:
+		var mark: Label = game._bag_grid.get_child(worn_cell).get_node("worn")
+		if not mark.visible:
+			_fail("목록의 낀 반지 칸에 '착용' 이 안 보인다")
+		if game._bag_grid.get_child(at.call("g1_r")).get_node("worn").visible:
+			_fail("가방의 반지 칸에 '착용' 이 붙었다")
+		await _tap_cell(game._bag_drag, game._bag_scroll, game._bag_grid, worn_cell)
+		if game._detail_state.text != "착용 중" or game._bag_action.text != "해제" or compare.visible:
+			_fail("목록의 낀 반지를 골랐는데 '%s' · 단추 '%s' · 비교 %s" % [game._detail_state.text, game._bag_action.text, compare.visible])
+		if not game._bag_grid.get_child(worn_cell).get_node("act").visible:
+			_fail("목록의 낀 반지 칸에 '해제' 가 안 얹혔다")
+		# 한 번 더 누르면 벗는다 — 가방 칸과 같은 손길
+		await _tap_cell(game._bag_drag, game._bag_scroll, game._bag_grid, worn_cell)
+		for i in 3:
+			await process_frame
+		if not me.equipped.get("ring", {}).is_empty():
+			_fail("목록의 낀 반지를 두 번 눌렀는데 안 벗겨졌다")
+		else:
+			print("  낀 장비도 목록에: 칸 %d '착용' → 고르면 '해제' → 두 번 눌러 벗음" % worn_cell)
 
 	me.bag.clear()
 	me.bag.append_array(kept_bag)
@@ -2156,6 +2183,11 @@ func _drag_list(name: String, _drag: DragScroll, list: ScrollContainer, grid: Co
 
 
 ## 끌지 않고 i 번째 칸 가운데를 눌렀다 뗀다 — 스크롤된 채로 보이는 칸이어야 한다
+## 가방 N번이 보이는 칸. **낀 장비가 목록 맨 앞에 서서**(2026-10-02) 칸 번호와 가방 번호가 어긋난다
+func _bag_cell(game: Node3D, index: int) -> PanelContainer:
+	return game._bag_grid.get_child(game._bag_view.find(index))
+
+
 func _tap_cell(_drag: DragScroll, list: ScrollContainer, grid: Container, i: int) -> void:
 	var at: Vector2 = grid.get_child(i).get_global_rect().get_center()
 	_push_move(at, 0)

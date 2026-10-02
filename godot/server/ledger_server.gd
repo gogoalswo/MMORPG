@@ -32,6 +32,8 @@ const OPS := {
 	"use_crystal": "ski",
 	"buy": "s",
 	"sell": "i",
+	# 버리기 — 가방 번호 목록. 장비만 · 잠근 것은 장부가 건너뛴다
+	"discard": "a",
 	"enhance": "sk",
 	"enhance_many": "ai",
 	"trial_clear": "s",

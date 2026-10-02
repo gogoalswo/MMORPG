@@ -486,6 +486,9 @@ var _lock_button: Button  # 상세 창 "잠금" / "잠금 해제" — 장비를 
 ## 강화 팝업 — 화면 가운데, 뒤를 어둡게 덮는다. 한 개 · 같은 아이템 · 같은 등급, 자동 강화
 ## → `enhance_popup.gd`
 var _enhance: EnhancePopup
+## 버리기 창 — 인벤토리 아래 줄 "버리기" (`discard_popup.gd`)
+var _discard: DiscardPopup
+var _bag_discard: Button
 ## 크리스탈 창 — 크리스탈을 고르고 "사용" 을 누르면 상세 창 자리에 뜬다.
 ## 떠 있는 동안 장비 칸을 누르면 그 장비가 대상이 된다 (`_crystal_target`)
 var _crystal_panel: PanelContainer
@@ -663,6 +666,8 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 		&"inventory":
 			if _bag_panel.visible:
 				_redraw_bag()
+			if _discard.visible:
+				_discard.redraw()
 			if _npc_panel.visible:
 				_npc_panel.redraw()
 		&"skillBar":
@@ -862,6 +867,11 @@ func _build_persistent() -> void:
 		func(head: String, text: String, good: bool) -> void:
 			_chat.add_line(head, text, INV_GOLD_HI if good else INV_WARN)
 	)
+	# 강화 팝업의 단추(잠기면 회색)를 빌려 쓰므로 그 뒤에 짓는다
+	_discard = DiscardPopup.make(self)
+	_ui_root.add_child(_discard)
+	_discard.discarded.connect(_on_discard)
+	_discard.closed.connect(_redraw_bag)
 
 	# **모든 창의 닫기는 오른쪽 위 X 하나로 통일한다** (2026-09-20 요청).
 	# 창이 다 지어진 뒤에 얹어야 자식 맨 뒤라 창 위에 그려진다
@@ -1868,7 +1878,12 @@ func _build_bag_window(panel: PanelContainer) -> void:
 	_add_icon(coins, "gold", 28)
 	_bag_gold = _inv_label("", 18, INV_GOLD)
 	_bag_gold.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_bag_gold.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	coins.add_child(_bag_gold)
+	# 버리기 (2026-10-02 요청) — 버리기 창(전체 · 개별 · 등급별 고르기)을 띄운다
+	_bag_discard = _inv_button("버리기", _open_discard)
+	_bag_discard.name = "Discard"
+	coins.add_child(_bag_discard)
 
 
 ## 창 안의 작은 단추 (장착·강화·물약 ±·자동사냥 위/아래 …) — 던전 창의 입장 단추처럼
@@ -2266,6 +2281,7 @@ func _pick_bag(where: String, index: int) -> void:
 func _toggle_bag() -> void:
 	var open := not _bag_panel.visible
 	_enhance.hide_now()
+	_discard.hide_now()
 	_enhance_from_codex = false
 	_bag_panel.visible = open
 	_gear_panel.visible = open
@@ -2750,6 +2766,7 @@ func _close_detail() -> void:
 func _toggle_crystal() -> void:
 	var open := not _crystal_panel.visible
 	_enhance.hide_now()
+	_discard.hide_now()
 	_enhance_from_codex = false
 	_bag_panel.visible = open
 	# 장비 창은 안 띄운다 — 그 자리는 옵션 확률 창이 쓴다 (2026-10-02)
@@ -2781,6 +2798,23 @@ func _on_auto_equip() -> void:
 	_crystal_target = {}
 	_transport.send(&"autoEquip", {})
 	_show_bag_detail()
+	_redraw_bag()
+
+
+## 버리기 창을 연다 — 고른 칸·상세 창은 비운다 (버리면 가방 번호가 바뀐다)
+func _open_discard() -> void:
+	_bag_pick = {}
+	_crystal_target = {}
+	_show_bag_detail()
+	_redraw_bag()
+	_discard.open()
+
+
+## 버리기 창의 [버리기] — 장부가 장비만 · 잠그지 않은 것만 버린다 (`Ledger.discard`)
+func _on_discard(indices: Array) -> void:
+	_bag_pick = {}
+	_crystal_target = {}
+	_transport.send(&"discard", {"indices": indices})
 	_redraw_bag()
 
 

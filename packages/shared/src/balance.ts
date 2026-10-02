@@ -55,8 +55,13 @@ export const FIELD_SPAN = 10;
  * **HP 는 2026-09-27 에 100 → 300** ★ (지시: "레벨 1때 기본 체력을 300으로 올려. 지금 1레벨부터
  * 몬스터한테 너무 죽어서 안되겠어" — 고른 안: "후반 2만은 유지"). 그래서 HP 만 성장률이 따로다
  * (`HP_GROWTH`) — Lv200 맨몸은 그대로 5,146 이라 후반 HP 약 2만은 안 바뀌고, 초반·중반만 단단해진다.
+ *
+ * **2026-10-02 에 모든 레벨 ×1.5** ★ (`HP_SCALE`, 지시: "몬스터한테 너무 잘 죽는 것 같아. 체력을
+ * 레벨별로 1.5배"). Lv1 300 → 450, Lv200 5,146 → 7,719. 끝값(`HP_TOP`)도 같이 곱해서 성장률
+ * (`HP_GROWTH`)은 그대로다 — `HP_BASE` 만 올리면 Lv200 이 안 움직인다. 몬스터는 고정 표라 안 따라온다.
  */
-export const HP_BASE = 300;
+export const HP_SCALE = 1.5;
+export const HP_BASE = 300 * HP_SCALE;
 export const ATK_BASE = 20;
 export const DEF_BASE = 20;
 
@@ -73,8 +78,8 @@ export const DEF_BASE = 20;
  */
 export const GROWTH = 0.02;
 
-/** Lv200 맨몸 HP — HP 를 300 으로 올리기 전 곡선(100 × 1.02^199)의 끝값에 묶는다 */
-export const HP_TOP = 100 * (1 + GROWTH) ** (MAX_LEVEL - 1);
+/** Lv200 맨몸 HP — HP 를 300 으로 올리기 전 곡선(100 × 1.02^199)의 끝값에 묶는다, × `HP_SCALE` */
+export const HP_TOP = 100 * HP_SCALE * (1 + GROWTH) ** (MAX_LEVEL - 1);
 /**
  * HP 만의 레벨당 성장률 — Lv1 `HP_BASE` 에서 Lv200 `HP_TOP` 에 닿는 복리 (약 1.44%).
  * 공격·방어는 그대로 `GROWTH` 다. HP 는 이제 장비 %·강화보다 감소율이 생존을 맡아서

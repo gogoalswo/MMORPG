@@ -14,13 +14,17 @@
  * **표는 여전히 고정이다** — 이 파일은 `scripts/fit-monster-attack.mjs` 가 **사람이 부를 때만**
  * 쓴다 (`monsterTable.ts` 의 공격력 열을 덮어쓴다). 테스트는 표가 여기서 얼마나 벗어났는지 본다.
  */
-import { MON_ATTACK_INTERVAL, damage, damageTaken, defK, gearTotals, monster, refWorn } from './balance.ts';
+import { HP_SCALE, MON_ATTACK_INTERVAL, damage, damageTaken, defK, gearTotals, monster, refWorn } from './balance.ts';
 import { effectiveCooldown, statsFor } from './combat.ts';
 import { monsterCritResist } from './monsters.ts';
 import { PASSIVES, passiveRankOpen } from './skills.ts';
 
-/** 같은 레벨 몬스터 한 마리를 잡는 동안 잃는 HP 비율 */
-export const HP_LOSS_PER_KILL = 0.1;
+/**
+ * 같은 레벨 몬스터 한 마리를 잡는 동안 잃는 HP 비율 — 10% 였는데 2026-10-02 에 HP 를 ×1.5
+ * (`HP_SCALE`) 하면서 약 6.7% 가 됐다. 여기서 나눠 둬야 표를 다시 구워도 몬스터 공격력이
+ * 1.5배로 따라 올라 그 변경을 지우지 않는다
+ */
+export const HP_LOSS_PER_KILL = 0.1 / HP_SCALE;
 
 /** 그 레벨 격투가 — 기준 장비 + 그 레벨까지 열린 패시브 전부 (`World.stats_of` 와 같은 식) */
 export function refFighter(level: number) {

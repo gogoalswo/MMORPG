@@ -282,9 +282,12 @@ func _chip(node_name: String, text: String, size: Vector2) -> Button:
 	return chip
 
 
-## `live` 가 아니면(등급이 꺼졌다) 흐리게 — 눌러서 고를 수는 있다
-func _paint_chip(chip: Button, on: bool, live: bool) -> void:
-	chip.set_meta("on", on)
+## `live` 가 아니면(등급이 꺼졌다) **값과 관계없이 꺼진 칩처럼** 어두운 판 + 흐리게 — 종류 칩(꺼지면 비어서 어둡다)과
+## 옵션 칩(꺼져도 넣을 옵션 값이 남는다)이 같은 색이어야 한다 (2026-10-02 지적 "OFF … 버튼 색상이 달라").
+## 값(`on` 메타)은 그대로 둔다 — 등급을 다시 켜면 남은 값대로 밝아진다. 눌러서 고를 수는 있다
+func _paint_chip(chip: Button, value: bool, live: bool) -> void:
+	chip.set_meta("on", value)
+	var on := value and live
 	var box := StyleBoxFlat.new()
 	box.bg_color = Color("#3b3226") if on else Color("#121110")
 	box.border_color = Color("#6e5c3d") if on else Color("#29261f")

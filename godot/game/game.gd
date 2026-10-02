@@ -4993,19 +4993,22 @@ func _toggle_dungeon() -> void:
 	_codex_panel.visible = false
 	_sandbag_panel.visible = false
 	_store_panel.visible = false
-	_dungeon_panel.spent = _spent_dungeons()
+	_dungeon_panel.entries = _dungeon_entries()
 	_dungeon_panel.open(_shown_zone)
 
 
-## 오늘 입장을 다 쓴 던전 종류 `{ 종류 id: true }` — 던전 창이 카드·입장 단추를 막는다 (dungeons.md "하루 한 번")
-func _spent_dungeons() -> Dictionary:
+## 던전 종류마다 오늘 입장 `{ 종류 id: Vector2i(남은, 하루) }` — 던전 창이 카드에 적고, 다 쓴 종류는
+## 입장을 누르면 "입장 횟수가 다 소모 되었습니다." (dungeons.md "하루 한 번"). 제한 없는 종류는 빠진다
+func _dungeon_entries() -> Dictionary:
 	var me := _me()
 	var day := Ledger.day_of(Time.get_unix_time_from_system())
 	var out := {}
 	for type in GameData.dungeons():
 		var stages: Array = type.get("stages", [])
-		if not stages.is_empty() and Ledger.dungeon_entries_left(me, str(stages[0].zone), day) == 0:
-			out[str(type.id)] = true
+		var limit := int(type.get("daily", 0))
+		if stages.is_empty() or limit <= 0:
+			continue
+		out[str(type.id)] = Vector2i(Ledger.dungeon_entries_left(me, str(stages[0].zone), day), limit)
 	return out
 
 

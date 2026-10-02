@@ -3037,7 +3037,7 @@ func _fill_item_view(view: Dictionary, stack: Dictionary, worn: bool, fits: bool
 		var value := float(bonus.get(key, 0.0))
 		if value > 0.0:
 			rows.append([DETAIL_BONUS[key], _bonus_text(key, value)])
-	# 옵션은 **차수별로** 적는다 — 1차(드랍) · 2차(크리스탈) · 3차(비어 있음)
+	# 옵션은 **차수별로** 적는다 — 1차(드랍) · 2차(크리스탈) · 3차(옐로우 크리스탈)
 	for tier in Items.option_tiers():
 		var head := "%d차 옵션" % int(tier.tier)
 		var lines: Array = Items.shown_options(stack.get(str(tier.key), []))
@@ -3046,6 +3046,7 @@ func _fill_item_view(view: Dictionary, stack: Dictionary, worn: bool, fits: bool
 		if lines.is_empty():
 			match str(tier.get("source", "")):
 				"crystal": rows.append([head, "크리스탈로 붙임"])
+				"yellowCrystal": rows.append([head, "옐로우 크리스탈로 붙임"])
 				"drop": pass
 				_: rows.append([head, "비어 있음"])
 	_fill_detail_rows(rows, view.info)

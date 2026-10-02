@@ -43,8 +43,10 @@
 - 메인 탭을 바꾸면 서브는 **첫째로** 돌아간다.
 - 카드 한 장 = `{name, note?, icon?, price}` — `price` 는 원 정수, `KRW 55,000` 으로 적는다. `icon` 은 `_icon` 이 찾는
   이름(없으면 그림 자리만 빈다).
-- 메뉴 그림 `ui_icon_shop` 은 **아직 없다** — 설정 단추처럼 이름 글자만 선다. 만들면 HUD 아이콘 기준
-  ([ui-art-style.md](ui-art-style.md) "HUD 아이콘 기준 (2026-09-29)") 프롬프트로 바르코에서 뽑는다.
+- 메뉴 그림 `ui_icon_shop` 은 **끈 묶은 가죽 돈주머니**다 (2026-10-02 요청 "상점 아이콘도 바르코로 만들어").
+  HUD 아이콘 기준([ui-art-style.md](ui-art-style.md) "HUD 아이콘 기준 (2026-09-29)") 프롬프트에 `<무엇>` 만
+  `a plump leather coin pouch tied shut with a cord at the neck, two or three coins resting at its base` 로,
+  참고 그림 둘을 물려 세 장 → 셋째. 해시는 `scripts/fetch-assets.sh`.
 
 ## 상품을 붙일 때
 

@@ -3245,7 +3245,7 @@ func _build_skill_bar() -> void:
 		_icon_button("ui_icon_codex", "도감", _toggle_codex, MENU_BTN, true),
 		# 샌드백 랭킹전 — 도감 옆 (2026-10-02 요청 "HUD 별도 단추"). 그림은 받침에 선 가죽 샌드백
 		_icon_button("ui_icon_sandbag", "샌드백", _toggle_sandbag, MENU_BTN, true),
-		# 상점 — 샌드백 옆 (2026-10-02 요청, store.md). 그림(`ui_icon_shop`)은 아직 없어서 이름 글자만 선다
+		# 상점 — 샌드백 옆 (2026-10-02 요청, store.md). 그림은 끈 묶은 가죽 돈주머니(`ui_icon_shop`)
 		_icon_button("ui_icon_shop", "상점", _toggle_store, MENU_BTN, true),
 	]
 	# 랭킹 — 던전 옆. **서버에 붙었을 때만** 선다 (혼자 노는 판에는 견줄 사람이 없다).

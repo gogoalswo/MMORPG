@@ -256,4 +256,5 @@ func _local_sandbag_board() -> Dictionary:
 	return {
 		"t": "sandbagRank", "top": top, "me": {"rank": 1 if best > 0 else 0, "best": best},
 		"total": top.size(), "week": week, "ends_at": Sandbag.week_end(week), "local": true,
+		"days": mine.get("days", []), "today": _world.sandbag_day(),
 	}

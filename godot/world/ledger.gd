@@ -193,8 +193,9 @@ func trial_clear(p: Dictionary, zone_id: String) -> void:
 
 ## --- 샌드백 랭킹전 (docs/features/sandbag.md) ---
 ##
-## 장부에 남는 것은 `sandbag = {week, best, unpaid?}` 하나다 — **그 주의 최고 기록**과, 주가 바뀌어
-## 정산됐는데 가방이 꽉 차 못 받은 보상 `{week, rank, best, crystals}`.
+## 장부에 남는 것은 `sandbag = {week, best, unpaid?, days?}` 하나다 — **그 주의 최고 기록**과, 주가 바뀌어
+## 정산됐는데 가방이 꽉 차 못 받은 보상 `{week, rank, best, crystals}`, 그리고 **날짜별 최고** `[{day, best}]`
+## (최근 7일 · 주가 바뀌어도 이어진다 — `Sandbag.add_day`).
 ## 순위는 장부가 모른다 — 로컬은 혼자라 1위(`World`), 서버는 모든 계정을 줄 세워 넘겨준다(`LedgerServer`)
 
 ## 지금 몇째 주인가 — 판정하는 쪽의 시계. 테스트는 바꿔 끼워 주를 넘긴다
@@ -203,6 +204,11 @@ var unix_now: Callable = func() -> float: return Time.get_unix_time_from_system(
 
 func sandbag_week() -> int:
 	return Sandbag.week(float(unix_now.call()))
+
+
+## 오늘이 며칠째인가 — 날짜별 기록의 날 (한국 0시)
+func sandbag_day() -> int:
+	return Sandbag.day(float(unix_now.call()))
 
 
 ## --- 던전 하루 입장 --- (docs/features/dungeons.md "하루 한 번")
@@ -256,9 +262,13 @@ func sandbag_record(p: Dictionary, damage: int) -> void:
 	var mine: Dictionary = p.get("sandbag", {})
 	if int(mine.get("week", -1)) != now:
 		var unpaid: Variant = mine.get("unpaid")
+		var days: Variant = mine.get("days")
 		mine = {"week": now, "best": 0}
 		if unpaid != null:
 			mine["unpaid"] = unpaid
+		if days != null:
+			mine["days"] = days
+	mine["days"] = Sandbag.add_day(mine.get("days", []), sandbag_day(), damage)
 	var best := int(mine.get("best", 0))
 	var new_best := damage > best
 	if new_best:
@@ -283,6 +293,8 @@ func sandbag_close_week(p: Dictionary, rank: int) -> void:
 		}
 	elif mine.has("unpaid"):
 		closed["unpaid"] = mine.unpaid  # 더 오래된 못 받은 것이 남아 있으면 지킨다
+	if mine.has("days"):
+		closed["days"] = mine.days  # 날짜별 기록은 주를 넘어 이어진다
 	p.sandbag = closed
 	sandbag_pay(p)
 

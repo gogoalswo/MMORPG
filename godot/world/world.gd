@@ -1024,6 +1024,10 @@ func sandbag_week() -> int:
 	return _ledger.sandbag_week()
 
 
+func sandbag_day() -> int:
+	return _ledger.sandbag_day()
+
+
 ## 장부의 시계를 바꿔 끼운다 (테스트 — 주를 넘긴다)
 func set_unix_clock(clock: Callable) -> void:
 	_ledger.unix_now = clock

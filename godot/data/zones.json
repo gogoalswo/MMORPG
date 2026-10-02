@@ -298,6 +298,9 @@
     "rankRefresh": 60,
     "weekShift": 291600,
     "weekSeconds": 604800,
+    "dayShift": 32400,
+    "daySeconds": 86400,
+    "historyDays": 7,
     "rewards": [
       {
         "from": 1,

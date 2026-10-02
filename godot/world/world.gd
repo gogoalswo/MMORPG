@@ -461,14 +461,17 @@ func _use_dungeon_entry(player: Dictionary, target: String) -> bool:
 	return false
 
 
-## 존을 옮긴다. 있는 존인지는 부르는 쪽이 봤다
+## 존을 옮긴다. 있는 존인지는 부르는 쪽이 봤다.
+## ★ **던전에서 나오면 체력을 가득 채운다** (2026-10-02 요청) — `join` 끝의 `_refresh_stats` 로
+## 최대 체력이 정해진 뒤에 채운다. 쓰러져 있으면 그대로 둔다 (되살아나기가 따로 채운다)
 func _move_to(target: String) -> void:
+	var from_dungeon := not GameData.dungeon_type_of(zone_id).is_empty()
 	open(target)
 	for who in _players:
 		join(who)
 		# 마을로 오면 체력을 가득 채운다 (2026-10-02 요청). 죽은 사람은 사망 창의 `revive` 가 채운다
 		var player: Dictionary = _players[who]
-		if target == GameData.start_zone() and not bool(player.get("dead", false)):
+		if (from_dungeon or target == GameData.start_zone()) and not bool(player.get("dead", false)):
 			player["hp"] = int(player.stats.maxHp)
 	_events.append({"type": "zone", "zone": target})
 	_check_sandbag_week(Time.get_ticks_msec(), true)

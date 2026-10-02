@@ -181,6 +181,9 @@ const ICON_DIR := "res://assets/icons/"
 const BAG_TABS := ["전체", "무기", "방어구", "장신구"]
 ## 스탯 상자에 놓는 여섯 개. 순서가 `_redraw_bag` 의 목록과 같아야 한다
 const STAT_NAMES := ["공격력", "방어력", "체력", "치명타", "치명타 피해", "공격 속도"]
+## 장비 창 스탯 상자 높이 — **줄 수와 상관없이 고정이다** (2026-10-02 요청: "옵션 줄 갯수에 따라
+## 크기가 변경되는데, 크기를 잡아놔. 지금보다 좀 더 크게"). 세 줄(17px 글자)이 다 차도 남는 높이다
+const STAT_BOX_HEIGHT := 130
 ## 캐릭터 정보 창에서 **기본 → 증가 % → 최종** 으로 푸는 스탯. 이름은 `DETAIL_BONUS` 를 쓴다
 const CHAR_SPLIT := ["attack", "defense", "maxHp"]
 
@@ -550,6 +553,7 @@ var _icon_cache: Dictionary = {}
 var _gear_cells: Array = []
 var _bag_level: Label
 var _stat_labels: Array = []
+var _stat_box: PanelContainer
 var _tab_buttons: Array = []
 ## 지금 고른 탭 (BAG_TABS 의 번호)
 var _bag_tab := 0
@@ -1450,7 +1454,9 @@ func _build_gear_window(panel: PanelContainer) -> void:
 	# 스탯 상자 — 여섯 개를 두 줄씩 세 단으로. 바탕은 칸과 같은 움푹한 판이다
 	var box := PanelContainer.new()
 	box.add_theme_stylebox_override("panel", _stone_cell_box(12))
+	box.custom_minimum_size = Vector2(0, STAT_BOX_HEIGHT)
 	side.add_child(box)
+	_stat_box = box
 	var grid := GridContainer.new()
 	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", 18)
@@ -2835,15 +2841,12 @@ func _redraw_bag() -> void:
 		var text := _bonus_text("crit" if key == "critDamage" else key, gear)
 		shown.append("%s %s" % [STAT_NAMES[index], text])
 	# **0% 인 줄은 숨긴다** (같은 날 요청) — 격자가 숨은 칸을 건너뛰어 남은 줄이 앞으로 당겨진다.
-	# 하나도 안 남으면(맨몸) 빈 판이 남지 않게 상자째 숨긴다
-	var any := false
+	# 상자는 숨기지 않는다 — 높이가 `STAT_BOX_HEIGHT` 로 고정이라 줄이 몇 개든(맨몸이라 0줄이어도)
+	# 위의 장착 칸·캐릭터가 움직이지 않는다 (2026-10-02 요청)
 	for index in _stat_labels.size():
 		var label: Label = _stat_labels[index]
 		label.text = str(shown[index])
 		label.visible = not label.text.ends_with(" +0%")
-		any = any or label.visible
-	if not _stat_labels.is_empty():
-		_stat_labels[0].get_parent().get_parent().visible = any
 
 	# 가방 — 탭으로 거른 것만. 보이는 칸이 가방 몇 번째인지 적어 둔다.
 	# **낀 장비도 맨 앞에 슬롯 순서로 보인다** (2026-10-02 요청: "장착중인 아이템은 인벤토리

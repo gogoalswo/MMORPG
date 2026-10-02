@@ -183,7 +183,6 @@ func trial_clear(p: Dictionary, zone_id: String) -> void:
 		_notice("가방이 가득 차 크리스탈을 받지 못했습니다")
 		return
 	events.append({"type": "trialReward", "stage": int(stage.stage), "crystal": count})
-	_give_proteins(p, Fitness.dungeon_reward(stage))
 
 
 ## --- 샌드백 랭킹전 (docs/features/sandbag.md) ---

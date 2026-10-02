@@ -23,11 +23,11 @@
 | 파일 | 역할 |
 |---|---|
 | `packages/shared/src/fitness.ts` | **표 원본** — 운동 셋(`FITNESS_KINDS`), 단계 확률(`FITNESS_CHANCE`), 몫(`FITNESS_GAIN_BY_BAND`), 비용(`FITNESS_COST_BASE` · `FITNESS_COST_GROWTH`), 던전 보상(`DUNGEON_PROTEIN_PER_STAGE`). `FITNESS_STEPS` 로 단계 20개를 만든다 |
-| `packages/shared/src/dungeons.ts` | 던전 단계마다 `protein` = 단계 × 5 (토벌 · 시련 둘 다) |
+| `packages/shared/src/dungeons.ts` | 던전 단계마다 `protein` = 단계 × 5 (**토벌만** — 시련의 탑은 0, 크리스탈만 준다 · 2026-10-02) |
 | `packages/shared/src/fitness.test.ts` | 표 모양(확률 ↓ · 비용 ↑ · 끝 +50%) · 기댓값 · 던전 보상 |
 | `scripts/export-shared.mjs` | `godot/data/fitness.json` 으로 내보낸다 (`kinds` · `maxStage` · `steps`) |
 | `godot/world/fitness.gd` `Fitness` | 표 읽기 — `kind` · `step` · `bonus` · `stat_bonus`(장부 → `{attack, defense, maxHp}` %) · `dungeon_reward` |
-| `godot/world/ledger.gd` `fitness_up` · `_give_proteins` | ★ **판정.** 장부 칸 `proteins` · `fitness`(`KEYS`), 던전 클리어(`_check_dungeon_clear`)·시련 통과(`trial_clear`)에서 프로틴을 준다 |
+| `godot/world/ledger.gd` `fitness_up` · `_give_proteins` | ★ **판정.** 장부 칸 `proteins` · `fitness`(`KEYS`), 토벌 던전 클리어(`_check_dungeon_clear`)에서 프로틴을 준다 (시련 통과 `trial_clear` 는 크리스탈만) |
 | `godot/world/world.gd` `stats_of` | 보너스를 **장비 % 와 따로 곱한다.** `fitness_attack` · `fitness_defense` · `fitness_maxHp` 를 같이 싣는다 |
 | `godot/world/world.gd` `fitness_up` · `debug_protein` · `restore` | 요청 → 장부, 테스트 단추(프로틴 세 종 +1만), 저장 되살리기(표에 있는 것만 · 끝 단계 안으로) |
 | `godot/world/save.gd` | `proteins` · `fitness` 칸 (없던 칸이라 옛 저장은 빈 사전) |

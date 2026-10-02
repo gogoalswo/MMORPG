@@ -39,10 +39,11 @@ test('헬스 — 단계 표: 확률은 내려가고 비용은 오르며 끝 단�
   assert.ok(Math.abs(fitnessExpectedCost() - 38_700) < 1_000, `기댓값 ${Math.round(fitnessExpectedCost())}`);
 });
 
-test('헬스 — 던전 단계마다 프로틴 = 단계 × 5 (토벌 · 시련의 탑 둘 다)', () => {
+test('헬스 — 던전 단계마다 프로틴 = 단계 × 5 (토벌만, 시련의 탑은 크리스탈만)', () => {
   for (const type of DUNGEON_TYPES.filter((t) => t.open)) {
     for (const stage of type.stages) {
-      assert.equal(stage.protein, stage.stage * DUNGEON_PROTEIN_PER_STAGE, `${type.id} ${stage.stage}단계`);
+      const want = type.id === 'trial' ? 0 : stage.stage * DUNGEON_PROTEIN_PER_STAGE;
+      assert.equal(stage.protein, want, `${type.id} ${stage.stage}단계`);
     }
   }
 });

@@ -41,6 +41,9 @@ const CARD_SUB_SIZE := 20
 ## 막힌 카드는 통째로 이만큼 어둡게
 const LOCKED_TINT := Color(0.5, 0.5, 0.5)
 const OPEN_TEXT := "입장 가능"
+## 하루 한 번인 던전을 오늘 들어간 뒤 (docs/features/dungeons.md "하루 한 번")
+const SPENT_TEXT := "오늘 입장 완료"
+const SPENT_ENTER_TEXT := "입장 완료"
 
 ## 단계 창 — 화면에서 차지하는 크기, 칸 폭
 const STAGE_SIZE := Vector2(1060, 600)
@@ -74,6 +77,9 @@ var _stage_close: Button
 var _rewards: GridContainer
 var _boss: VBoxContainer
 var _enter: Button
+## 오늘 입장을 다 쓴 종류 `{ 종류 id: true }` — 여는 쪽(`game.gd` `_toggle_dungeon`)이 장부에서 채운다.
+## 막기만 한다 — 세는 것은 장부다 (`World.travel` → `Ledger.dungeon_enter`)
+var spent := {}
 
 
 static func make(frame_box := Callable(), icon := Callable(), item_icon := Callable()) -> DungeonPanel:
@@ -248,7 +254,8 @@ func _add_card(type: Dictionary) -> Button:
 	gap.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	text.add_child(gap)
-	text.add_child(_status(OPEN_TEXT if on else LOCKED, CARD_GOLD if on else HERE_COLOR))
+	var used := on and spent.has(id)
+	text.add_child(_status(SPENT_TEXT if used else (OPEN_TEXT if on else LOCKED), CARD_GOLD if on and not used else HERE_COLOR))
 
 	# 위 장식 — 틀 윗변에 걸쳐 솟는다
 	var crest := TextureRect.new()
@@ -460,7 +467,9 @@ func _select(zone_id: String) -> void:
 	for child in _boss.get_children():
 		_boss.remove_child(child)
 		child.queue_free()
-	_enter.disabled = zone_id == ""
+	var used := spent.has(_type)
+	_enter.disabled = zone_id == "" or used
+	_enter.text = SPENT_ENTER_TEXT if used else ENTER_TEXT
 	var stage := _stage_def(zone_id)
 	if stage.is_empty():
 		return
@@ -551,7 +560,7 @@ func _stage_def(zone_id: String) -> Dictionary:
 
 
 func _on_enter() -> void:
-	if _stage == "" or _stage == _here:
+	if _stage == "" or _stage == _here or spent.has(_type):
 		return
 	super._on_pick(_stage)
 

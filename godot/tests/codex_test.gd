@@ -367,6 +367,31 @@ func _case_panel() -> void:
 	await process_frame
 	if not panel.auto_button().disabled:
 		_fail("넣을 장비가 없는데(찬 칸 · 잠근 것뿐) 자동 등록 단추가 켜져 있다")
+	# [강화] — 고른 칸을 채울 장비: 목표 아래에서 가장 가까운 것, 같으면 옵션 줄 적은 것, 잠근 것 · 목표 이상은 빼고
+	var rich := _gear(2, "boots", 3)
+	rich.options = [{"kind": "crit", "value": 5}]
+	var shut := _gear(2, "boots", 4)
+	shut.locked = true
+	var bag := [_gear(2, "boots", 1), rich, _gear(2, "boots", 3), shut, _gear(2, "boots", 6), _gear(3, "boots", 3)]
+	var boots := Items.item_id(2, "boots")
+	if Codex.enhance_source(bag, boots, 5) != 2 or Codex.enhance_source(bag, boots, 2) != 0 \
+			or Codex.enhance_source(bag, boots, 1) != -1:
+		_fail("강화할 장비 %d (2) · %d (0) · %d (-1)" % [
+			Codex.enhance_source(bag, boots, 5), Codex.enhance_source(bag, boots, 2), Codex.enhance_source(bag, boots, 1)
+		])
+	var lifts: Array = []
+	panel.enhance_requested.connect(func(index: int, goal: int) -> void: lifts.append([index, goal]))
+	panel.refresh({"codex": {boots: 1 << 7}, "bag": bag})
+	(panel.find_child("tab_2", true, false) as Button).pressed.emit()
+	if not panel.enhance_button().disabled:
+		_fail("칸을 직접 누르기 전인데 강화 단추가 켜져 있다")
+	(panel.find_child("cell_boots_7", true, false) as Button).pressed.emit()
+	if not panel.enhance_button().disabled:
+		_fail("이미 찬 칸인데 강화 단추가 켜져 있다")
+	(panel.find_child("cell_boots_5", true, false) as Button).pressed.emit()
+	panel.enhance_button().pressed.emit()
+	if lifts != [[2, 5]]:
+		_fail("강화 단추가 낸 요청 %s (가방 2번을 +5 까지)" % [lifts])
 	# 기준 화면(1280x720)에 들어가나 — 돌판 틀 여백(카드 34 · 안 30)을 뺀 알맹이로 본다
 	var inner := panel.get_combined_minimum_size()
 	if inner.x > 1280.0 - 128.0 or inner.y > 720.0 - 128.0:

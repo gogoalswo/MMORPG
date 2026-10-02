@@ -17,7 +17,7 @@ extends RefCounted
 const KEYS := [
 	"job", "level", "exp", "gold", "skills", "skill_points", "passives",
 	"skill_upgrades", "skill_upgrade_exp", "skill_exp", "bag", "equipped", "granted",
-	"diamonds", "proteins", "fitness", "codex", "sandbag",
+	"diamonds", "proteins", "fitness", "codex", "sandbag", "dungeon_entries",
 ]
 
 ## **첫 선물** — 새 캐릭터가 한 번만 받는 것 `[[표시, 묶음], …]`. 로컬은 `LocalTransport.open` 이,
@@ -48,6 +48,8 @@ static func fresh(job: String) -> Dictionary:
 		"codex": {},
 		# 샌드백 랭킹전 (docs/features/sandbag.md) — `{week, best, unpaid?}` 그 주 최고 기록과 못 받은 주간 보상
 		"sandbag": {},
+		# 던전 하루 입장 (docs/features/dungeons.md "하루 한 번") — `{ 종류 id: {day, count} }`
+		"dungeon_entries": {},
 	}
 
 
@@ -197,6 +199,50 @@ var unix_now: Callable = func() -> float: return Time.get_unix_time_from_system(
 
 func sandbag_week() -> int:
 	return Sandbag.week(float(unix_now.call()))
+
+
+## --- 던전 하루 입장 --- (docs/features/dungeons.md "하루 한 번")
+## 장부에 남는 것은 `dungeon_entries = { 종류 id: {day, count} }` — 마지막으로 들어간 날과 그날 들어간 수.
+## 날이 바뀌면 그 칸은 저절로 0 으로 읽힌다 (지우지 않는다)
+
+## 오늘이 며칠째인가 — 한국 시각 5시에 하나 오른다 (`dungeons.ts` 의 `dungeonDay` 와 같은 식)
+func dungeon_day() -> int:
+	return day_of(float(unix_now.call()))
+
+
+static func day_of(unix_seconds: float) -> int:
+	var t: Dictionary = GameData.zones().get("dungeonDay", {})
+	return floori((unix_seconds + float(t.get("shift", 14400))) / float(t.get("seconds", 86400)))
+
+
+## 오늘 이 존(던전 단계)에 몇 번 더 들어갈 수 있나. **횟수 제한이 없는 존은 -1** (사냥터 · 마을 · 샌드백)
+static func dungeon_entries_left(p: Dictionary, zone_id: String, day: int) -> int:
+	var type := GameData.dungeon_type_of(zone_id)
+	var limit := int(type.get("daily", 0))
+	if limit <= 0:
+		return -1
+	var mine: Dictionary = p.get("dungeon_entries", {}).get(str(type.id), {})
+	var used := int(mine.get("count", 0)) if int(mine.get("day", -1)) == day else 0
+	return maxi(0, limit - used)
+
+
+## 던전에 들어간다 — 오늘 입장을 하나 쓴다. 다 썼으면 알리고 false. 제한이 없는 존은 늘 true.
+## **들어가는 순간 센다** — 깨든 쓰러지든 나가든 그날 입장은 쓴 것이다
+func dungeon_enter(p: Dictionary, zone_id: String) -> bool:
+	var day := dungeon_day()
+	var left := dungeon_entries_left(p, zone_id, day)
+	if left < 0:
+		return true
+	var type := GameData.dungeon_type_of(zone_id)
+	if left == 0:
+		_notice("%s 은(는) 오늘 이미 들어갔습니다 — 5시에 다시 열립니다" % str(type.get("name", "던전")))
+		return false
+	if not p.has("dungeon_entries") or not p.dungeon_entries is Dictionary:
+		p["dungeon_entries"] = {}
+	var mine: Dictionary = p.dungeon_entries.get(str(type.id), {})
+	var used := int(mine.get("count", 0)) if int(mine.get("day", -1)) == day else 0
+	p.dungeon_entries[str(type.id)] = {"day": day, "count": used + 1}
+	return true
 
 
 ## 이번 판의 기록을 남긴다 — 그 주 최고보다 높으면 갈아 끼운다. 주가 지났으면 **정산을 먼저 해야 한다**

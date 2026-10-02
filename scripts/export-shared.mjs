@@ -64,6 +64,8 @@ import {
   START_ZONE,
   FIELD_ORDER,
   DUNGEON_TYPES,
+  DUNGEON_DAY_SECONDS,
+  DUNGEON_DAY_SHIFT_SECONDS,
   FITNESS_KINDS,
   FITNESS_MAX_STAGE,
   FITNESS_STEPS,
@@ -125,6 +127,8 @@ export function buildData() {
       fieldOrder: FIELD_ORDER,
       // 던전 창이 읽는다 — 종류 셋과 단계별 존 id·보스 (dungeons.ts)
       dungeons: DUNGEON_TYPES,
+      // 던전 하루 입장의 날 경계 — 한국 시각 0시 (dungeons.ts `dungeonDay`)
+      dungeonDay: { seconds: DUNGEON_DAY_SECONDS, shift: DUNGEON_DAY_SHIFT_SECONDS },
       // 샌드백 랭킹전 (sandbag.ts) — 존 · 카운트 · 재는 시간 · 주 경계 · 순위 보상
       sandbag: {
         zone: SANDBAG_ZONE,
@@ -213,9 +217,10 @@ export function buildData() {
       gradeMin: GRADE_MIN,
       gradeMax: GRADE_MAX,
       maxDropGrade: MAX_DROP_GRADE,
-      // 사냥터(1~20)마다 나오는 등급들 — 고도는 표만 읽고 역산하지 않는다.
-      // 칸 0 은 안 쓴다(사냥터 번호가 1부터다)
-      dropGrades: [[], ...Array.from({ length: 20 }, (_, i) => dropGradesFor(i * 10 + 1))],
+      // 몬스터 레벨(1~200)마다 나오는 등급들 — 고도는 표만 읽고 역산하지 않는다.
+      // 사냥터 번호가 아니라 레벨로 찾는다: 고급·희귀를 구간 중간에서 앞당겼다
+      // (items.ts `DROP_GRADE_FROM`). 칸 0 은 안 쓴다(레벨이 1부터다)
+      dropGrades: [[], ...Array.from({ length: 200 }, (_, i) => dropGradesFor(i + 1))],
       optionKinds: OPTION_KINDS,
       optionMin: OPTION_MIN,
       optionMax: OPTION_MAX,

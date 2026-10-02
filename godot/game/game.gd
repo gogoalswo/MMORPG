@@ -369,12 +369,6 @@ var _skill_list_toggle: Button
 var _auto_cell: PanelContainer
 ## 켜져 있는 동안 칸 위에서 도는 화살표 고리
 var _auto_spin: TextureRect
-## 자동사냥 설정 창 — 스킬을 쓸 순서를 위/아래로 바꾼다 (`_auto_move`)
-var _auto_panel: PanelContainer
-var _auto_rows: VBoxContainer
-var _auto_reset: Button
-## 창에 지금 그려 둔 순서 — 바뀔 때만 줄을 다시 짓는다 (빈 글자면 다음에 반드시 짓는다)
-var _auto_shown := ""
 ## 오른쪽 위 메뉴 단추 전부 — 순서는 정보 · 스킬 · 강화 · 크리스탈 · 가방 · 던전 · 헬스 · 도감 · (랭킹) · 설정.
 ## 평소 줄에 서는 것(`MENU_QUICK`)과 ≡ 를 눌러 펼치는 판에 서는 것으로 나뉜다 (2026-10-01)
 var _menu_cells: Array = []
@@ -402,6 +396,8 @@ var _tombs: Array[Dictionary] = []
 var _fitness_panel: FitnessPanel
 ## 장비 도감 창 — 헬스 창과 같은 층(10) · 전체 화면 (codex_panel.gd)
 var _codex_panel: CodexPanel
+## 강화 창을 도감 [강화] 로 열었나 — 닫으면 도감으로 돌아간다 (`_back_to_codex`)
+var _enhance_from_codex := false
 var _skill_panel: PanelContainer
 ## 스킬창. 틀은 한 번 짓고 `_redraw_skills` 가 채운다
 var _skill_big: PanelContainer
@@ -822,12 +818,12 @@ func _build_persistent() -> void:
 	_build_sandbag_panel()
 	_build_potion_panel()
 	_build_sound_panel()
-	_build_auto_panel()
 	_build_debug_panel()
 	_enhance = EnhancePopup.make(self)
 	_ui_root.add_child(_enhance)
 	_enhance.acted.connect(_on_enhance_acted)
 	_enhance.closed.connect(_redraw_bag)
+	_enhance.closed.connect(_back_to_codex)
 	_enhance.finished.connect(
 		func(head: String, text: String, good: bool) -> void:
 			_chat.add_line(head, text, INV_GOLD_HI if good else INV_WARN)
@@ -846,7 +842,6 @@ func _build_persistent() -> void:
 	_close_button(_sandbag_panel, _toggle_sandbag, 0)
 	_close_button(_potion_panel, _toggle_potion_panel, 0)
 	_close_button(_sound_panel, _toggle_sound_panel, 0)
-	_close_button(_auto_panel, _toggle_auto_panel, 0)
 	_close_button(_npc_panel, func() -> void: _npc_panel.visible = false, 0)
 
 
@@ -2138,6 +2133,7 @@ func _pick_bag(where: String, index: int) -> void:
 func _toggle_bag() -> void:
 	var open := not _bag_panel.visible
 	_enhance.hide_now()
+	_enhance_from_codex = false
 	_bag_panel.visible = open
 	_gear_panel.visible = open
 	_bag_pick = {}
@@ -2560,6 +2556,7 @@ func _close_detail() -> void:
 func _toggle_crystal() -> void:
 	var open := not _crystal_panel.visible
 	_enhance.hide_now()
+	_enhance_from_codex = false
 	_bag_panel.visible = open
 	_gear_panel.visible = open
 	_bag_pick = {}
@@ -3043,6 +3040,7 @@ func _toggle_lock() -> void:
 func _open_enhance() -> void:
 	if Items.get_item(str(_picked_stack().get("id", ""))).is_empty():
 		return
+	_enhance_from_codex = false
 	var worn := str(_bag_pick.get("where", "")) == "equip"
 	_enhance.open({
 		"where": "equip" if worn else "bag",
@@ -3056,7 +3054,27 @@ func _toggle_enhance() -> void:
 	if _enhance.visible:
 		_enhance.close()
 		return
+	_enhance_from_codex = false
 	_enhance.open({})
+
+
+## 도감 [강화] — 그 칸을 채울 장비(가방 번호 `index`)를 고르고 **목표를 그 칸의 강화 단계로** 잡은 단일 강화 창을 띄운다
+## (2026-10-02 요청). 강화 창은 도감 창(층 10) 아래 층이라 도감을 잠시 감추고, X 로 닫으면 도감으로 돌아온다
+func _open_enhance_from_codex(index: int, goal: int) -> void:
+	_codex_panel.close_panel()
+	_enhance_from_codex = true
+	_bag_pick = {}
+	_enhance.open({"where": "bag", "index": index})
+	_enhance.set_goal(goal)
+
+
+## 강화 창을 X 로 닫았다 — 도감에서 열었으면 도감을 다시 연다 (고른 칸·탭은 그대로다)
+func _back_to_codex() -> void:
+	if not _enhance_from_codex:
+		return
+	_enhance_from_codex = false
+	_codex_panel.refresh(_me())
+	_codex_panel.open()
 
 
 ## 강화 팝업이 한 개를 두드린 뒤 — **고른 칸은 결과를 따라간다.** 부서졌거나 일괄로 가방이
@@ -3171,8 +3189,6 @@ func _build_skill_bar() -> void:
 	_auto_cell.add_child(spin_pad)
 	# 아이콘 바로 위, 글자 아래로 넣는다 — 맨 뒤에 두면 고리가 글자를 덮는다
 	_auto_cell.move_child(spin_pad, 1)
-	# 오른쪽 위 "설정" — 스킬을 쓸 순서를 정한다 (2026-09-27 요청). 물약 칸과 같은 단추다
-	_auto_cell.add_child(_cell_setting("auto_setting", _toggle_auto_panel))
 
 	# 경험치 띠 위로 한 뼘 띄운다 — 16 으로 두었더니 칸 아래가 띠에 가렸다 (2026-09-26 요청)
 	column.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM, Control.PRESET_MODE_MINSIZE, EXP_GAUGE_H + 8)
@@ -4816,6 +4832,7 @@ func _build_gate_panel() -> void:
 	_codex_panel.register_requested.connect(func(item_id: String, enhance: int, index: int) -> void:
 		_transport.send(&"codexRegister", {"id": item_id, "enhance": enhance, "index": index})
 	)
+	_codex_panel.enhance_requested.connect(_open_enhance_from_codex)
 	_codex_panel.register_all_requested.connect(func() -> void:
 		_transport.send(&"codexRegisterAll", {})
 	)
@@ -4902,7 +4919,20 @@ func _toggle_dungeon() -> void:
 	_fitness_panel.visible = false
 	_codex_panel.visible = false
 	_sandbag_panel.visible = false
+	_dungeon_panel.spent = _spent_dungeons()
 	_dungeon_panel.open(_shown_zone)
+
+
+## 오늘 입장을 다 쓴 던전 종류 `{ 종류 id: true }` — 던전 창이 카드·입장 단추를 막는다 (dungeons.md "하루 한 번")
+func _spent_dungeons() -> Dictionary:
+	var me := _me()
+	var day := Ledger.day_of(Time.get_unix_time_from_system())
+	var out := {}
+	for type in GameData.dungeons():
+		var stages: Array = type.get("stages", [])
+		if not stages.is_empty() and Ledger.dungeon_entries_left(me, str(stages[0].zone), day) == 0:
+			out[str(type.id)] = true
+	return out
 
 
 ## 헬스 단추. 열려 있으면 닫는다. 차원문·던전 창과 한 층이라 그 둘을 닫고 연다
@@ -6166,113 +6196,6 @@ func _potion_step(dir: int) -> void:
 	_transport.send(&"potionPct", {"pct": pct})
 
 
-## 자동사냥 설정 창 — 자동 사냥이 **퀵슬롯의 스킬을 볼 순서**를 위/아래로 바꾼다
-## (2026-09-27 요청: "스킬 우선 순위를 설정할 수 있도록, 기본은 쿨타임이 가장 긴 스킬부터").
-## 순서는 판정과 같은 `Skills.auto_order` 로 그린다 — 정한 것이 없으면 쿨타임 긴 순이다.
-## 값은 `autoPriority` 로 보내고 **스냅샷(me.auto_priority)만 보고** 다시 그린다
-func _build_auto_panel() -> void:
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_ui_root.add_child(center)
-	_auto_panel = _window_panel()
-	_auto_panel.name = "auto_panel"
-	center.add_child(_auto_panel)
-
-	var side := VBoxContainer.new()
-	side.custom_minimum_size = Vector2(380, 0)
-	side.add_theme_constant_override("separation", 12)
-	_auto_panel.add_child(side)
-	_stone_title(side, "자동사냥 스킬 순서", 20, "ui_icon_auto")
-	side.add_child(_inv_label("위에 있는 스킬부터 쓴다", 14, INV_TEXT))
-	side.add_child(_inv_label("쿨타임이 돌고 사거리 안에 든 첫 스킬이 나간다", 12, INV_GOLD))
-	_auto_rows = VBoxContainer.new()
-	_auto_rows.add_theme_constant_override("separation", 8)
-	side.add_child(_auto_rows)
-	# 정한 순서를 지우고 기본(쿨타임이 긴 것부터)으로 돌린다
-	_auto_reset = _inv_button("쿨타임 긴 순으로", func() -> void: _transport.send(&"autoPriority", {"ids": []}))
-	_auto_reset.name = "auto_reset"
-	_auto_reset.size_flags_horizontal = Control.SIZE_SHRINK_END
-	side.add_child(_auto_reset)
-
-
-func _toggle_auto_panel() -> void:
-	_auto_panel.visible = not _auto_panel.visible
-	if _auto_panel.visible:
-		_auto_panel.get_parent().move_to_front()
-		_auto_shown = ""
-		_redraw_auto_panel(_me())
-
-
-## 순서가 바뀌었을 때만 줄을 다시 짓는다 — 매 프레임 지으면 누르는 단추가 사라진다
-func _redraw_auto_panel(me: Dictionary) -> void:
-	var priority: Array = me.get("auto_priority", [])
-	var order := Skills.auto_order(str(me.get("job", "")), me.get("skill_bar", []), priority)
-	_auto_reset.disabled = priority.is_empty()
-	var key := str(order)
-	if key == _auto_shown:
-		return
-	_auto_shown = key
-	# 떼어 내고 지운다 — 트리에 남아 있으면 새 줄 이름(`auto_row_N`)이 겹쳐 바뀐다
-	for child in _auto_rows.get_children():
-		_auto_rows.remove_child(child)
-		child.queue_free()
-	if order.is_empty():
-		_auto_rows.add_child(_inv_label("퀵슬롯에 스킬을 올리면 여기서 순서를 정한다", 14, INV_TEXT))
-		return
-	for index in order.size():
-		_auto_rows.add_child(_auto_row(index, str(order[index]), order.size()))
-
-
-## 한 줄 — 순번 · 아이콘 · 이름과 쿨타임 · 위/아래. 맨 위는 "위", 맨 아래는 "아래" 가 잠긴다
-func _auto_row(index: int, id: String, count: int) -> HBoxContainer:
-	var row := HBoxContainer.new()
-	row.name = "auto_row_%d" % index
-	row.add_theme_constant_override("separation", 10)
-	var number := _inv_label(str(index + 1), 20, INV_GOLD_HI)
-	number.custom_minimum_size = Vector2(22, 0)
-	number.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	row.add_child(number)
-	var cell := _make_skill_cell(QUICK_CELL, "ui_quick_slot", func() -> void: pass, QUICK_MARGIN)
-	_fill_skill_cell(cell, id, "")
-	row.add_child(cell)
-	var skill: Dictionary = Skills.all().get(id, {})
-	var words := VBoxContainer.new()
-	words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	words.alignment = BoxContainer.ALIGNMENT_CENTER
-	words.add_child(_inv_label(str(skill.get("name", id)), 16, INV_TEXT))
-	words.add_child(_inv_label("쿨타임 %s초" % _secs_text(int(skill.get("cooldown", 0))), 12, INV_GOLD))
-	row.add_child(words)
-	var up := _inv_button("위", _auto_move.bind(index, -1))
-	up.name = "up"
-	up.disabled = index == 0
-	row.add_child(up)
-	var down := _inv_button("아래", _auto_move.bind(index, 1))
-	down.name = "down"
-	down.disabled = index == count - 1
-	row.add_child(down)
-	return row
-
-
-## 1000 → "1", 1500 → "1.5"
-func _secs_text(ms: int) -> String:
-	return str(ms / 1000) if ms % 1000 == 0 else "%.1f" % (ms / 1000.0)
-
-
-## 한 칸 올리거나 내린다. **지금 보이는 순서 전체**를 보낸다 — 쿨타임 순으로 서 있던 것도
-## 그 자리 그대로 굳는다. 새로 올린 스킬은 판정이 그 뒤에 쿨타임 순으로 붙인다
-func _auto_move(index: int, dir: int) -> void:
-	var me := _me()
-	var order := Skills.auto_order(str(me.get("job", "")), me.get("skill_bar", []), me.get("auto_priority", []))
-	var other := index + dir
-	if index < 0 or other < 0 or other >= order.size():
-		return
-	var moved = order[index]
-	order[index] = order[other]
-	order[other] = moved
-	_transport.send(&"autoPriority", {"ids": order})
-
-
 ## 쿨타임이 끝났다 — 칸이 번쩍이며 살짝 튀었다 가라앉는다
 func _flash_ready(cell: PanelContainer) -> void:
 	var flash: ColorRect = cell.find_child("flash", true, false)
@@ -6291,8 +6214,6 @@ func _flash_ready(cell: PanelContainer) -> void:
 ## (2026-09-28 요청) — 켜는 순간 발 밑에 떠서 클릭 이펙트로 읽혔고, 마을처럼
 ## 잡을 것이 없는 곳에서는 고리만 뜬 채 서 있는 것처럼 보였다
 func _refresh_auto(me: Dictionary) -> void:
-	if _auto_panel.visible:
-		_redraw_auto_panel(me)
 	var on := bool(me.get("auto", false))
 	# 켜져 있는 동안만 고리가 보이고 돈다 (_process). 끄면 각도를 되돌려
 	# 다음에 켤 때 늘 같은 자리에서 시작한다

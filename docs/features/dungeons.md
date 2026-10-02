@@ -46,7 +46,9 @@
 | `packages/shared/src/dungeons.ts` | **표.** `DUNGEON_TYPES`(종류 셋·열림·단계) · `dungeonZones(gate)`(단계마다 존) · `DUNGEON_ZONES` · 시련의 탑 상수(`TRIAL_*`) · `trialSpots` |
 | `godot/world/world.gd` | **던전 한 판** — `_run` · `_start_run`(존을 열 때) · `_count_run_kill`(`_kill` 에서 — 토벌 보스 · 시련 마릿수) · `_check_run_time`(`step` 에서, 시련 30초) · `_fail_run_on_death`(`_hit_player` 에서) · `_finish_run`(`dungeonResult` 이벤트) · 스냅숏의 `dungeon` |
 | `godot/world/game_data.gd` | `dungeon_type_of(zone)` — 결과창 제목의 종류 이름 |
-| `godot/world/ledger.gd` | `trial_clear` — 통과하면 크리스탈 단계 × 1 (`trialReward` 이벤트) |
+| `godot/world/ledger.gd` | `trial_clear` — 통과하면 크리스탈 그 단계 표 값(2 ~ 15, `trialReward` 이벤트) · ★ **하루 입장** `dungeon_day` · `day_of` · `dungeon_entries_left` · `dungeon_enter` (칸 `dungeon_entries`) |
+| `godot/world/world.gd` `_use_dungeon_entry` · `_kill` · `restore` | 입장 때 하루 입장을 쓴다(서버에 붙으면 막기만) · 던전 몬스터는 안 되살린다 · 던전 안에서 끝낸 저장은 그 자리로 안 돌아간다 |
+| `godot/server/ledger_server.gd` `_enter` · `_check_kill` | 서버의 하루 입장(`daily_used`) · 던전 몬스터 두 번 처치 거절(`once_per_entry`) |
 | `godot/server/ledger_server.gd` | `OPS` 의 `trial_clear` · `_check_trial` — 서버가 인정한 처치를 30초 안으로 다시 센다 |
 | `godot/game/dungeon_result.gd` | `DungeonResult` — **모든 던전**의 결과창(성공/실패 · 시련만 처치 수 · 보상 · **확인**) |
 | `godot/tests/dungeon_run_test.gd` | 시련: 좁은 맵·열 마리·시계 · 7마리째 통과(크리스탈 +N, 결과 한 번) · 30초 지나면 실패 · 나가면 시계 없음. 토벌: 보스 처치 → 성공(스킬 경험치). 둘 다 쓰러지면 바로 실패 |
@@ -87,21 +89,49 @@
   2026-09-28 에 맵을 반으로 줄이고 차원문을 화면 맨 위(-9, -9)로 옮기면서, 나가는 길이 보스
   앞이 되지 않게 사냥터 몬스터와 같은 아래쪽으로 옮겼다. **맵이 작아 보스 인식 범위(3 + 18
   = 21)가 도착 지점까지 닿는다** — 들어서면 보스가 달려온다 (예전엔 밖이었다).
-- 잡으면 15분 뒤에 다시 선다(사냥터와 같다). 바로 다시 싸우려면 나갔다가 창으로
-  다시 들어온다 — `World.open` 이 존을 열 때마다 몬스터를 새로 세운다.
+- **잡아도 다시 서지 않는다** (2026-10-02) — 들어가는 것이 하루 한 번이라서다. 아래 "하루 한 번".
 - **2026-09-29 — 스킬 경험치는 화면에서 숨긴다** (요청: "던전의 스킬 경험치 숨김 처리해"). 격투가에게 보이는
   스킬이 없어서다(`Skills.actives_shown`). 단계 창·결과창의 보상 칸과 클리어 알림의 수가 빠지고, 토벌 보상 칸은
   **비어 보인다.** 판정은 그대로 쌓는다 → [passives.md](passives.md).
 - **클리어 보상 = 스킬 경험치 N단계 × 1000** (2026-09-28, `DUNGEON_SKILL_EXP_PER_STAGE` →
   단계의 `skillExp`). 보스를 잡을 때마다 `World._check_dungeon_clear` 가 캐릭터의
   `skill_exp` 에 더하고, 스킬창에서 강화에 넣는다 → [skill-upgrades.md](skill-upgrades.md).
-  잡을 때마다 받으므로 반복 횟수에 제한이 없다.
+  ★ **하루 한 번**이라 하루에 한 번 받는다 (2026-10-02 전에는 제한이 없었다).
 - **던전에서는 스킬 경험치와 헬스 프로틴만 준다** ★ (2026-09-29 요청: "다른 보상 다 빼고 스킬 경험치만
   주도록" → 2026-09-30 에 **프로틴 세 종 각 단계 × 5개**를 더했다 — [fitness.md](fitness.md)).
   ★ 2026-10-02 에 **시련의 탑에서는 프로틴을 뺐다** ("크리스탈 던전에 … 크리스탈만 주도록") — 프로틴은 토벌만.
   장비·크리스탈(시련 통과 보상은 예외)·골드·캐릭터 경험치(그래서 레벨업·스킬 포인트도)가 없다 —
   `Ledger.kill` 이 존이 던전 단계(`GameData.dungeon_stage`)면 `_check_dungeon_clear` 만 부르고
   돌아간다. 사냥터 보스를 그대로 써도 드롭 표를 건드리지 않은 것은 이 분기 덕이다.
+
+### 하루 한 번 ★★ (2026-10-02)
+
+요청: "토벌 던전을 하루에 한 번 입장할 수 있게 만들어. 시련의 탑도 마찬가지로 하루에 한 번" →
+"시간 카운트를 한국 시간 5시로 해".
+
+| 항목 | 값 | 어디 |
+|---|---|---|
+| 횟수 | **종류마다 하루 1번** — 단계와 상관없이 토벌 하나·시련 하나. 보물 창고(닫힘)는 0 = 제한 없음 | `DungeonType.daily` · `DUNGEON_DAILY_ENTRIES` |
+| 날 경계 | **한국 시각 5시** — 날 번호 = ⌊(유닉스 초 + 4시간) ÷ 하루⌋ | `dungeonDay` · `DUNGEON_DAY_SHIFT_SECONDS` → `zones.json` 의 `dungeonDay` · `Ledger.day_of` |
+| 장부 칸 | `dungeon_entries = { 종류 id: {day, count} }` — 날이 바뀌면 저절로 0 으로 읽힌다(지우지 않는다) | `Ledger.KEYS` · `fresh` · `World.join` · `Save` · `restore` |
+
+- **들어가는 순간 센다** — 깨든 쓰러지든 마을가기로 나가든 그날 입장은 쓴 것이다. 그래야 "들어가 보고
+  어려우면 나왔다가 다시" 가 안 된다.
+- **판정하는 쪽이 센다.** 로컬은 `World.travel` → `_use_dungeon_entry` → `Ledger.dungeon_enter`. 서버에 붙으면
+  기기는 제 장부 사본으로 **막기만** 하고, 세는 것은 `enter` 를 받은 `LedgerServer._enter` 다(다 썼으면 `daily_used`,
+  그 존의 명단이 안 생겨 처치가 `wrong_zone` 으로 거절된다).
+- 막히면 알림 "토벌 던전 은(는) 오늘 이미 들어갔습니다 — 5시에 다시 열립니다". 던전 창은 열 때(`game.gd`
+  `_spent_dungeons` → `DungeonPanel.spent`) 다 쓴 종류의 카드 아래를 **"오늘 입장 완료"**(어두운 글자)로,
+  단계 창의 입장 단추를 **"입장 완료"**(눌리지 않음)로 바꾼다. 카드는 눌려서 단계·보상은 볼 수 있다.
+- **던전 몬스터는 되살아나지 않는다** — 원래 15분 뒤에 다시 섰는데, 그러면 안에서 기다려 보스를 또 잡는다.
+  기기는 `World._kill` 이 `respawn_at` 을 0 으로 두고(되살릴 것 없음), 서버는 같은 개체를 또 보고하면
+  `_check_kill` 이 `once_per_entry` 로 거절한다.
+- **던전 안에서 끝낸 저장은 그 자리로 돌아가지 않는다** (`World.restore`) — 다시 열면 몬스터가 새로 서서
+  입장을 안 쓰고 한 판을 더 하게 된다. 시작 존(마을)에서 시작한다.
+- 테스트: `dungeon_run_test` `_case_daily`(토벌·시련 따로 · 두 번째는 막힘 · 다음 날 다시 · 보스 안 되살아남),
+  `server_test` `_case_trial_check`(같은 날 두 번째 `enter` 는 `daily_used` · 다음 날은 된다),
+  `zones.test.ts`(하루 1회 · 4:59:59 → 5:00 에 날이 바뀌고 자정에는 안 바뀐다).
+- 헬스 끝까지 약 390판([fitness.md](fitness.md)) = 토벌만으로는 **약 390일**이다.
 
 ### 시련의 탑 — 30초 안에 7마리 ★★ (2026-09-29)
 
@@ -111,11 +141,15 @@
 | 항목 | 값 | 어디 |
 |---|---|---|
 | 통과 | **30초 안에 7마리** | `TRIAL_SECONDS` · `TRIAL_KILLS` |
-| 단계 | 20 (`trial_01` … `trial_20`) — N단계 = N번째 사냥터의 **강한 일반 몬스터**(`tierLevels(N-1)[1]`, Lv.10N-2) | `TRIAL_STAGES` |
+| 단계 | ★ **7** (`trial_01` … `trial_07`, 2026-10-02 에 20 → 7) — 사냥터 20곳에 고르게 걸친다: k단계 = `TRIAL_FIELDS[k-1]`(0 · 3 · 6 · 10 · 13 · 16 · 19)번째 사냥터의 **강한 일반 몬스터**(`tierLevels(i)[1]`) → Lv.8 · 38 · 68 · 108 · 138 · 168 · 198 | `TRIAL_STAGES` · `TRIAL_FIELDS` |
 | 맵 | **30**(이동 가능 ±11) — 사냥터 66 의 절반이 안 된다. 차원문 없음 | `TRIAL_ZONE_SIZE` |
 | 몬스터 | 도착 지점(0, 0)을 두른 **반경 7 원에 10마리**, 한 자리 한 마리, 시험 동안 안 되살아남(15분) | `TRIAL_MONSTERS` · `TRIAL_RING` · `trialSpots` |
-| 보상 | 통과하면 **크리스탈 N단계 × 1개** (실패하면 없음). 잡는 몬스터의 평소 드롭·경험치는 그대로 | `TRIAL_CRYSTALS_PER_STAGE` · `Ledger.trial_clear` |
+| 보상 | 통과하면 **크리스탈 2 · 3 · 5 · 7 · 9 · 12 · 15개** (실패하면 없음). 잡는 몬스터의 평소 드롭·경험치는 그대로 | `TRIAL_CRYSTALS` · `Ledger.trial_clear` |
 
+- ★ **7단계 · 크리스탈 2 ~ 15** (2026-10-02 요청: "단계를 7단계로 줄이고 1단계는 2개, 7단계는 15개 … 그 사이는
+  알아서"). 사이 값은 뒤로 갈수록 한 단계 몫이 커지게(+1 · +2 · +2 · +2 · +3 · +3) 했다 — 단계마다 몬스터가
+  약 30레벨씩 뛰어 뒤 단계일수록 넘기 어렵다. 몬스터를 앞 일곱 사냥터에서 고르면 끝이 Lv.68 이라 높은 레벨에는
+  시련이 없어서 20곳에 고르게 걸쳤다. 존이 13곳 줄어 `godotExport.test.ts` 의 존 수는 52 다.
 - **7마리는 설계의 "동레벨 한 마리 4초"에서 나왔다** ([stat-balance.md](stat-balance.md) 7장 `KILL_SECONDS`) —
   30 ÷ 4 = 7.5. 동레벨 평타만으로는 7~9타 × 0.7초라 5~6마리이고, **스킬을 섞어야** 통과한다.
   사냥터의 4초에는 다음 몬스터까지 8m 걷는 시간(약 1.7초)이 들어 있는데, 좁은 맵에서는 그게 거의 빠져서
@@ -280,7 +314,7 @@
 
 - 종류를 열 때: `DUNGEON_TYPES` 에 단계를 채우고 `open: true` → `npm run export:godot`
   → `npm test` · `npm run test:godot`. `ui_test` 의 "토벌만 열리고" 검사도 같이 고친다.
-- 존 개수가 바뀌므로 `godotExport.test.ts` 의 존 수(지금 65 = 마을 1 + 사냥터 20 + 토벌 20 + 시련 20 + 전직 시험 4)도 고친다.
+- 존 개수가 바뀌므로 `godotExport.test.ts` 의 존 수(지금 52 — 2026-10-02 에 시련이 20 → 7단계로 줄었다)도 고친다.
 - 시련의 규칙(초·마릿수·보상)을 바꾸면 `dungeons.ts` 의 `TRIAL_*` 만 고치고 `npm run export:godot` — 기기·장부·서버가
   전부 표(`seconds` · `kills` · `crystals`)를 읽는다. 마릿수를 올리면 `TRIAL_MONSTERS` 가 그보다 많은지 테스트가 본다.
 - 보스를 던전 전용으로 세게 만들고 싶으면 몬스터 표(`monsters.ts`)에 종을 따로 만든다 —

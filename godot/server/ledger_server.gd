@@ -504,12 +504,17 @@ func _args(shape: String, raw: Variant) -> Variant:
 	return out
 
 
-## 존에 들어왔다. **게임에 있는 입장 규칙만 본다** — 지금은 막는 규칙이 없다 (`World.travel`.
-## 전직 시험 존은 2026-09-29 에 전직째로 없앴다). 들어올 때마다 명단을 새로 센다 —
+## 존에 들어왔다. **게임에 있는 입장 규칙만 본다** (`World.travel`) — 지금은 던전 하루 입장 하나다
+## (docs/features/dungeons.md "하루 한 번"). 들어올 때마다 명단을 새로 센다 —
 ## 기기도 존을 다시 열면 몬스터를 새로 놓는다
 func _enter(account: Dictionary, zone: String) -> String:
 	if not GameData.zones().get("zones", {}).has(zone):
 		return "no_zone"
+	# 다 썼으면 막는다 — 막힌 존의 처치는 명단이 없어(`wrong_zone`) 보상이 안 나간다.
+	# 먼저 대 보고 되는 것만 장부에 적는다 — 알림이 남으면 다음 계정 답에 섞인다
+	if Ledger.dungeon_entries_left(account.ledger, zone, ledger.dungeon_day()) == 0:
+		return "daily_used"
+	ledger.dungeon_enter(account.ledger, zone)
 	_hunts[account.id] = {"zone": zone, "entered_at": int(clock.call()), "roster": World.roster(zone), "killed": {}}
 	return ""
 
@@ -527,6 +532,9 @@ func _check_kill(account: Dictionary, target: Dictionary) -> String:
 	var now := int(clock.call())
 	var available := float(hunt.entered_at)
 	if hunt.killed.has(target.id):
+		# 하루 한 번인 던전은 한 번 들어와 한 번 잡는다 — 기기도 되살리지 않는다 (`World._kill`)
+		if int(GameData.dungeon_type_of(str(hunt.zone)).get("daily", 0)) > 0:
+			return "once_per_entry"
 		available = float(hunt.killed[target.id]) + float(entry.respawn_ms)
 		if now + KillCheck.SLACK_MS < available:
 			return "not_respawned"

@@ -175,10 +175,11 @@ func _case_drop() -> void:
 	var rng := RandomNumberGenerator.new()
 	var drops := 0
 	# **20,000번 돌린다.** 설계 드랍률을 붙이고 나서 Lv35 는 340마리에 하나라
-	# 200번으로는 0개가 나와 아무것도 확인이 안 된다 (2026-09-21)
+	# 200번으로는 0개가 나와 아무것도 확인이 안 된다 (2026-09-21).
+	# Lv10 으로 굴린다 — Lv35 는 2026-10-02 부터 고급도 나와 "1등급만" 을 못 본다
 	for seed_value in 20000:
 		rng.seed = seed_value
-		var loot := Items.roll_drop(35, "fighter", rng)
+		var loot := Items.roll_drop(10, "fighter", rng)
 		if int(loot.gold) < 1:
 			_fail("골드가 0 이다")
 			return
@@ -193,28 +194,29 @@ func _case_drop() -> void:
 		if def.has("job"):
 			_fail("직업을 타는 장비가 떨어졌다: %s" % loot.item.id)
 			return
-		# 등급이 곧 요구 레벨이다. Lv35 는 사냥터 4 라 1등급(요구 Lv1)만 나온다
+		# 등급이 곧 요구 레벨이다. Lv10 은 1등급(요구 Lv1)만 나온다 (고급은 Lv16 부터)
 		if int(def.level) != 1:
 			_fail("등급이 안 맞다: %s (요구 레벨 %d)" % [loot.item.id, def.level])
 			return
-		# **사냥터가 등급을 정한다** — Lv35 는 사냥터 4 라 1등급만 나와야 한다
-		if not (int(loot.item.grade) in Items.drop_grades(35)):
-			_fail("사냥터 4 에서 %d등급이 떨어졌다" % loot.item.grade)
+		# **사냥터가 등급을 정한다** — Lv10 은 1등급만 나와야 한다
+		if not (int(loot.item.grade) in Items.drop_grades(10)):
+			_fail("Lv10 에서 %d등급이 떨어졌다" % loot.item.grade)
 			return
 	if drops == 0:
 		_fail("20,000번 돌렸는데 하나도 안 떨어졌다")
 	# 판정값과 맞나 — 1등급 설계 2.222% × 배율 2 = 4.444% (items.md "드랍 확률은 설계값이다")
-	var by_design := Items.drop_chance(35)
+	var by_design := Items.drop_chance(10)
 	var measured := float(drops) / 20000.0
 	if absf(measured - by_design) > by_design * 0.35:
 		_fail("드랍률이 %.4f%% 여야 하는데 %.4f%%" % [by_design * 100.0, measured * 100.0])
 	else:
 		print("  드롭 20,000번: %d개 (%.4f%%, 설계 %.4f%%) — 전부 %s등급" % [
-			drops, measured * 100.0, by_design * 100.0, str(Items.drop_grades(35))
+			drops, measured * 100.0, by_design * 100.0, str(Items.drop_grades(10))
 		])
 
 	# 사냥터마다 나오는 등급이 다르다. 표는 shared 가 만들고 여기는 읽기만 한다
-	var want := {1: [1], 45: [1, 2], 75: [2, 3], 105: [3, 4], 135: [4, 5], 165: [5, 6], 195: [6, 7]}
+	# 고급은 사마귀 둥지(Lv16~), 희귀는 서리 고원(Lv51~)부터 (2026-10-02)
+	var want := {1: [1], 13: [1], 18: [1, 2], 48: [1, 2], 58: [2, 3], 75: [2, 3], 105: [3, 4], 135: [4, 5], 165: [5, 6], 195: [6, 7]}
 	for level in want:
 		if Items.drop_grades(int(level)) != want[level]:
 			_fail("Lv%d 등급이 %s 인데 %s 여야 한다" % [level, Items.drop_grades(int(level)), want[level]])

@@ -1117,6 +1117,7 @@ func _check_gate_drops(panel: GatePanel) -> void:
 	await process_frame
 	if panel.row(0).get_node_or_null("Info") != null:
 		_fail("마을 줄에 느낌표가 있다 — 마을은 떨어지는 것이 없다")
+	await _check_gate_levels(panel)
 	var badge := panel.row(1).get_node_or_null("Info") as Control
 	if badge == null:
 		_fail("사냥터 줄에 느낌표가 없다")
@@ -1160,12 +1161,25 @@ func _check_gate_drops(panel: GatePanel) -> void:
 			if not grades.has(int(g)):
 				_fail("몬스터 %s 가 떨구는 %d등급이 드랍 창에 없다" % [spot.kind, g])
 	for label in drops.find_children("*", "Label", true, false):
-		# 몬스터 치명타 저항은 능력치라 % 로 적는다 (드랍 확률이 아니다)
 		# 몬스터 레벨은 적지 않는다 (2026-09-30 요청: "몬스터 레벨은 표기하지 마")
 		if "Lv." in (label as Label).text:
 			_fail("드랍 창에 레벨이 적혀 있다: '%s'" % label.text)
-		if "%" in (label as Label).text and label.name != "CritResist":
-			_fail("드랍 창에 확률이 적혀 있다: '%s'" % label.text)
+	# 등급마다 확률 — 판정이 굴리는 값 그대로 (2026-10-02 요청: "아이템 드랍 정보에 확률 표기해놔")
+	var heads := drops._list.find_children("GradeHead*", "HBoxContainer", false, false)
+	if heads.size() != grades.size():
+		_fail("등급 머리 줄 %d개 — 등급 %d개여야 한다" % [heads.size(), grades.size()])
+	for i in mini(heads.size(), grades.size()):
+		var chance := (heads[i].get_node("Chance") as Label).text
+		var want_chance := DropPanel.percent(Items.grade_drop_rate(int(grades[i])))
+		if not chance.ends_with(want_chance):
+			_fail("%d등급 확률이 '%s' — '%s' 여야 한다" % [grades[i], chance, want_chance])
+	if DropPanel.percent(0.04444) != "4.44%" or DropPanel.percent(0.000483) != "0.0483%" or DropPanel.percent(0.0001) != "0.01%":
+		_fail("확률 글자가 어긋난다: %s %s %s" % [DropPanel.percent(0.04444), DropPanel.percent(0.000483), DropPanel.percent(0.0001)])
+	var misc_text := ""
+	for label in grids[grids.size() - 1].find_children("Name", "Label", true, false):
+		misc_text += (label as Label).text + " "
+	if Items.crystal_drop_chance() > 0.0 and not DropPanel.percent(Items.crystal_drop_chance()) in misc_text:
+		_fail("크리스탈 칸에 확률이 없다: '%s'" % misc_text)
 	# 등장 몬스터 — 종류마다 한 칸, 능력치는 몬스터 표 그대로
 	var mobs: Array = drops._list.get_node("Monsters").get_children()
 	var kinds: Array = drops.drops.get("kinds", [])
@@ -3236,3 +3250,32 @@ func _tomb_near(game: Node, at: Vector2) -> Node3D:
 				and Vector2(child.position.x, child.position.z).distance_to(at) < 0.01:
 			return child
 	return null
+
+
+## 사냥터 줄의 추천 레벨 (2026-10-02 요청: "사냥터에 추천 레벨 적어두고") — 그 사냥터 몬스터 레벨이고,
+## 이름 글자와 느낌표 어느 쪽과도 겹치지 않아야 한다. 마을 줄엔 없다
+func _check_gate_levels(panel: GatePanel) -> void:
+	await process_frame
+	if panel.row(0).get_node_or_null("Level") != null:
+		_fail("마을 줄에 추천 레벨이 있다")
+	var tightest := INF
+	for i in range(1, panel.row_count()):
+		var row := panel.row(i)
+		var zone := str(row.get_meta("zone", ""))
+		var level := row.get_node_or_null("Level") as Label
+		var want := "추천 Lv.%d" % Items.zone_drops(zone).levels.x
+		if level == null or level.text != want:
+			_fail("%s 줄의 추천 레벨이 '%s' — '%s' 여야 한다" % [zone, level.text if level else "", want])
+			continue
+		var font := row.get_theme_font("font")
+		var box := row.get_theme_stylebox("disabled" if row.disabled else "normal")
+		var name_end := row.global_position.x + box.get_margin(SIDE_LEFT) + GatePanel.ICON \
+			+ row.get_theme_constant("h_separation") + font.get_string_size(row.text, HORIZONTAL_ALIGNMENT_LEFT, -1, GatePanel.FONT_SIZE).x
+		var level_start := level.global_position.x + level.size.x \
+			- font.get_string_size(level.text, HORIZONTAL_ALIGNMENT_LEFT, -1, GatePanel.LEVEL_FONT).x
+		var info := row.get_node("Info") as Control
+		tightest = minf(tightest, level_start - name_end)
+		if level_start < name_end or level.global_position.x + level.size.x > info.global_position.x:
+			_fail("%s 줄의 추천 레벨이 이름(%.0f)이나 느낌표(%.0f)와 겹친다 (%.0f~%.0f)" % [
+				zone, name_end, info.global_position.x, level_start, level.global_position.x + level.size.x])
+	print("  추천 레벨: 사냥터 %d줄 · 이름과 가장 좁은 틈 %.0fpx" % [panel.row_count() - 1, tightest])

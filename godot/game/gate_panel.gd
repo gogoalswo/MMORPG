@@ -100,6 +100,9 @@ const BAR_WIDTH := 18
 ## 줄 끝 느낌표 배지 한 변 · 누르는 자리를 배지 밖으로 넓히는 폭
 const INFO := 36
 const INFO_REACH := 8
+## 추천 레벨 글자 크기와 느낌표와의 틈
+const LEVEL_FONT := 22
+const LEVEL_GAP := 14
 
 var _rows: VBoxContainer
 ## 제목 — 던전 창(`DungeonPanel`)이 고른 종류 이름으로 바꿔 단다
@@ -260,7 +263,32 @@ func _fill(current_zone: String) -> void:
 		var row := _add_row(str(GameData.zone(str(id)).get("name", id)), str(id), here, _here_icon if here else _go_icon)
 		# 사냥터 줄 끝에 느낌표 — 누르면 그 사냥터의 드랍 (마을은 떨어지는 것이 없다)
 		if str(id) != GameData.start_zone():
+			_add_level(row, str(id))
 			_add_info(row)
+
+
+## 느낌표 왼쪽의 추천 레벨 (2026-10-02 요청: "사냥터에 추천 레벨 적어두고").
+## 그 사냥터 몬스터의 레벨이다 — 밸런스가 "같은 레벨 몬스터 한 마리 4초" 기준이라(`balance.ts` `KILL_SECONDS`).
+## 몬스터 레벨이 여럿이면 가장 낮은 것. 줄은 입력을 안 받으니 이것도 받지 않는다
+func _add_level(row: Button, zone_id: String) -> void:
+	var levels = Items.zone_drops(zone_id).get("levels")
+	if levels == null:
+		return
+	var label := Label.new()
+	label.name = "Level"
+	label.text = "추천 Lv.%d" % (levels as Vector2i).x
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	label.add_theme_font_size_override("font_size", LEVEL_FONT)
+	label.add_theme_color_override("font_color", HERE_COLOR if row.disabled else CARD_SUB_COLOR)
+	label.anchor_left = 1.0
+	label.anchor_right = 1.0
+	label.anchor_top = 0.0
+	label.anchor_bottom = 1.0
+	label.offset_right = -ROW_PAD_X - INFO - LEVEL_GAP
+	label.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	row.add_child(label)
 
 
 ## 줄 오른쪽 끝의 느낌표 배지 (2026-09-30 요청: "각 사냥터별로 느낌표 눌러서, 드랍되는 아이템

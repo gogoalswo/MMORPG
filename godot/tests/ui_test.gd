@@ -1897,6 +1897,11 @@ func _case_codex_enhance(game: Node3D) -> void:
 	me.bag.clear()
 	me.bag.append({"id": weapon, "grade": 1, "enhance": 0, "options": []})
 	me.bag.append({"id": weapon, "grade": 1, "enhance": 2, "options": []})
+	# 다중에 안 담겨야 하는 것 — 목표 이상 · 잠근 것 · 다른 장비
+	me.bag.append({"id": weapon, "grade": 1, "enhance": 5, "options": []})
+	me.bag.append({"id": weapon, "grade": 1, "enhance": 1, "options": [], "locked": true})
+	me.bag.append({"id": Items.item_id(1, "armor"), "grade": 1, "enhance": 0, "options": []})
+	me.bag.append({"id": weapon, "grade": 1, "enhance": 4, "options": []})
 	me.codex = {}
 	game._toggle_codex()
 	await process_frame
@@ -1912,8 +1917,12 @@ func _case_codex_enhance(game: Node3D) -> void:
 	var popup: EnhancePopup = game._enhance
 	if not popup.visible or panel.visible:
 		_fail("강화 단추 → 강화 창 %s · 도감 %s (강화 창만 보여야 한다)" % [popup.visible, panel.visible])
-	if popup.mode != "one" or popup.target != {"where": "bag", "index": 1} or popup.goal != 5:
-		_fail("강화 창: 탭 %s · 대상 %s (가방 1번 +2) · 목표 %d (5)" % [popup.mode, popup.target, popup.goal])
+	# 다중 강화 · 같은 아이템 · 목표(+5) 아래 같은 무기 전부(+0 · +2 · +4) 담김 — 가방 4번 +4 가 가장 가깝다
+	if popup.mode != "multi" or popup.filter != "item" or popup.goal != 5 \
+			or popup.target != {"where": "bag", "index": 5} or popup.picked != [0, 1, 5]:
+		_fail("강화 창: 탭 %s (multi) · 목록 %s (item) · 목표 %d (5) · 대상 %s (가방 5번) · 담은 것 %s ([0, 1, 5])" % [
+			popup.mode, popup.filter, popup.goal, popup.target, popup.picked
+		])
 	popup.close()
 	await process_frame
 	if not panel.visible or panel.picked() != ["weapon", 5]:

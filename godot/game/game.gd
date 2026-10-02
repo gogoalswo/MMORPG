@@ -3058,14 +3058,19 @@ func _toggle_enhance() -> void:
 	_enhance.open({})
 
 
-## 도감 [강화] — 그 칸을 채울 장비(가방 번호 `index`)를 고르고 **목표를 그 칸의 강화 단계로** 잡은 단일 강화 창을 띄운다
-## (2026-10-02 요청). 강화 창은 도감 창(층 10) 아래 층이라 도감을 잠시 감추고, X 로 닫으면 도감으로 돌아온다
+## 도감 [강화] — 그 칸을 채울 장비(가방 번호 `index`)를 기준으로 **목표를 그 칸의 강화 단계로** 잡고
+## **다중 강화 · 같은 아이템 · 목표 아래 같은 장비를 전부 담은** 강화 창을 띄운다 (2026-10-02 요청 — 처음엔 단일이었다가
+## 같은 날 "기본 강화 탭이 다중강화로 되고, 동일한 아이템이 다 담긴 상태가 되면 좋겠어"). 목표를 먼저 잡아야
+## 목록이 목표 아래만 거른다. 강화 창은 도감 창(층 10) 아래 층이라 도감을 잠시 감추고, X 로 닫으면 도감으로 돌아온다
 func _open_enhance_from_codex(index: int, goal: int) -> void:
 	_codex_panel.close_panel()
 	_enhance_from_codex = true
 	_bag_pick = {}
 	_enhance.open({"where": "bag", "index": index})
 	_enhance.set_goal(goal)
+	_enhance.pick_mode("multi")
+	_enhance.pick_filter("item")
+	_enhance.pick_all()
 
 
 ## 강화 창을 X 로 닫았다 — 도감에서 열었으면 도감을 다시 연다 (고른 칸·탭은 그대로다)

@@ -41,7 +41,7 @@
   "cooldownCap": 0.9,
   "penetrationCap": 0.9,
   "attackRootMs": 400,
-  "potionCooldownMs": 10000,
+  "potionCooldownMs": 5000,
   "potionHealRatio": 0.1,
   "potionAutoDefault": 90,
   "potionAutoStep": 10,

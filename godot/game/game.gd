@@ -2459,17 +2459,25 @@ func _redraw_char(me: Dictionary) -> void:
 		# 따로 곱한다. 몫은 그 아래 풀이 줄에 `(장비 × 헬스 × 도감)` 으로 적는다 (2026-10-02 요청:
 		# "헬스가 따로 텍스트로 표시 되는데 이렇게 하지마"). 도감은 0.01% 단위라 소수 둘째 자리까지
 		var total := ((1.0 + gear / 100.0) * (1.0 + fit / 100.0) * (1.0 + book / 100.0) - 1.0) * 100.0
-		groups.append([
+		var group: Array = [
 			["기본 " + name, "%d" % int(stats.get("base_" + key, final))],
 			[name + " 증가", _bonus_text(key, total), INV_GOLD_HI if total > 0.0 else INV_DIM],
-			[
-				"(장비 %s × 헬스 %d%% × 도감 %s%%)" % [
-					_bonus_text(key, gear).trim_prefix("+"), int(fit), ("%.2f" % book).rstrip("0").rstrip("."),
-				],
-				"", INV_DIM, "note",
-			],
-			["최종 " + name, "%d" % final, INV_GOLD_HI],
-		])
+		]
+		# 풀이 줄에는 **0% 인 몫을 적지 않는다** (2026-10-02 요청 "0%일 경우에는 표시하지 마") — 적힐 글자로
+		# 가린다(0.004% 가 "0%" 로 찍히지 않게). 셋 다 0 이면 풀이 줄을 넣지 않는다
+		var parts := PackedStringArray()
+		var gear_text := _bonus_text(key, gear).trim_prefix("+")
+		if gear_text != "0%":
+			parts.append("장비 " + gear_text)
+		if int(fit) != 0:
+			parts.append("헬스 %d%%" % int(fit))
+		var book_text := ("%.2f" % book).rstrip("0").rstrip(".")
+		if book_text != "0":
+			parts.append("도감 %s%%" % book_text)
+		if not parts.is_empty():
+			group.append(["(%s)" % " × ".join(parts), "", INV_DIM, "note"])
+		group.append(["최종 " + name, "%d" % final, INV_GOLD_HI])
+		groups.append(group)
 	# 나머지는 맨몸 값이 없거나(0) 고정(치명타 피해 100%)이라 합계 한 줄씩이다
 	groups.append([
 		["치명타", "%.0f%%" % (float(stats.get("crit", 0.0)) * 100.0)],
@@ -4768,6 +4776,9 @@ func _build_gate_panel() -> void:
 	_codex_panel.theme = _ui_root.theme
 	_codex_panel.register_requested.connect(func(item_id: String, enhance: int, index: int) -> void:
 		_transport.send(&"codexRegister", {"id": item_id, "enhance": enhance, "index": index})
+	)
+	_codex_panel.register_all_requested.connect(func() -> void:
+		_transport.send(&"codexRegisterAll", {})
 	)
 	var codex_back := ColorRect.new()
 	codex_back.name = "CodexBack"

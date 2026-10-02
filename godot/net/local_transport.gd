@@ -181,6 +181,8 @@ func send(message: StringName, payload: Dictionary) -> void:
 			_world.codex_register(
 				MY_ID, str(payload.get("id", "")), int(payload.get("enhance", -1)), int(payload.get("index", -1))
 			)
+		&"codexRegisterAll":
+			_world.codex_register_all(MY_ID)
 		&"debugProtein":
 			_world.debug_protein(MY_ID)
 		&"debugSkillExp":

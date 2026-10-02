@@ -41,6 +41,8 @@ const OPS := {
 	"fitness_up": "si",
 	# 장비 도감 — 아이템 id(등급·부위) · 강화 · 고른 가방 번호(-1 이면 옵션 적은 것). 가방에서 하나를 넣어 칸을 채운다
 	"codex_register": "sii",
+	# 장비 도감 자동 등록 — 넣을 수 있는 칸 전부 (고르는 것도 장부가 한다)
+	"codex_register_all": "",
 }
 
 var store: AccountStore

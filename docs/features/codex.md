@@ -17,10 +17,10 @@
 | `packages/shared/src/codex.test.ts` | 부위 둘씩 · 칸 표 모양 · 다 채우면 +56.1% |
 | `scripts/export-shared.mjs` | `godot/data/codex.json` (`slotStat` · `statNames` · `maxEnhance` · `cells`) |
 | `godot/world/codex.gd` `Codex` | 표 읽기 — `cell_value` · `has` · `filled` · `stat_bonus`(장부 → `{attack, defense, maxHp}` %) · `clean`(저장 되살리기) |
-| `godot/world/ledger.gd` `codex_register` | ★ **판정.** 장부 칸 `codex`(`KEYS` · `fresh`) |
+| `godot/world/ledger.gd` `codex_register` · `codex_register_all` | ★ **판정.** 장부 칸 `codex`(`KEYS` · `fresh`) |
 | `godot/world/world.gd` `codex_register` · `stats_of` · `restore` | 요청 → 장부, 보너스를 **헬스 다음에 따로 곱한다**(`codex_*` 도 싣는다), 저장 되살리기 |
 | `godot/world/save.gd` | `codex` 칸 (없던 칸 — 옛 저장은 빈 사전) |
-| `godot/server/ledger_server.gd` `OPS` | `codex_register: "sii"` — 아이템 id · 강화 · 고른 가방 번호(-1 이면 옵션 적은 것) |
+| `godot/server/ledger_server.gd` `OPS` | `codex_register: "sii"` — 아이템 id · 강화 · 고른 가방 번호(-1 이면 옵션 적은 것). `codex_register_all: ""` — 자동 등록 |
 | `godot/server/kill_check.gd` `min_ms` | 처치 검증도 도감 공격력을 본다 (빼면 세진 캐릭터가 "너무 빨리 잡았다" 로 거절된다) |
 | `godot/net/local_transport.gd` | `codexRegister {id, enhance}` |
 | `godot/game/codex_panel.gd` `CodexPanel` | ★ **도감 창** (아래 "창") |
@@ -83,7 +83,7 @@
 
 헬스와 같은 이유 — 장비 % 에 더하면 태초 풀셋 앞에서 안 보인다 ([fitness.md](fitness.md)).
 캐릭터 정보 창은 증가 줄을 세 몫을 곱한 합계 % 로 적고, 그 아래 풀이 줄 `(장비 N% × 헬스 N% × 도감 N%)` 에
-도감 몫(소수 둘째 자리)을 적는다 ([fitness.md](fitness.md)).
+도감 몫(소수 둘째 자리)을 적는다 ([fitness.md](fitness.md)). **0% 인 몫은 풀이 줄에서 뺀다**(셋 다 0 이면 줄이 없다).
 
 ### 창 (`codex_panel.gd`) ★
 
@@ -107,7 +107,7 @@
 - 칸 셋 — **찬 칸**(그림 또렷 · 등급 색 테) · **넣을 수 있는 칸**(그림 반투명 · 청록 테 · 빨간 점) · **빈 칸**(흐림).
   칸 그림은 장비 아이콘(`{부위}_g{등급}`)을 그대로 쓴다 — 새로 그리지 않았다.
 - 칸을 직접 누르기 전에는 **넣을 수 있는 첫 칸**이 저절로 골라진다 — 하나 넣으면 다음 칸으로 넘어간다.
-- 오른쪽 칸의 [등록] 은 바로 넣지 않고 **고르기 창**을 연다 (아래).
+- 오른쪽 칸의 [등록] 은 바로 넣지 않고 **고르기 창**을 연다 (아래). 그 왼쪽 [자동 등록] 은 아래 "자동 등록".
 - 0% 는 "0" 으로 적는다 — `String.num(0.0, 2)` 가 "0.0" 을 돌려 "방어력 +0.0%" 로 찍혔다.
 - 획득 효과는 도감 전체, 괄호(하늘색)는 이 등급 몫.
 - 장부가 바뀌면(`codex` · 가방의 id·강화·개수) `refresh` 가 알아채 다시 그린다. 가방은 옵션까지 문자열로 만들지
@@ -137,6 +137,21 @@
 - 차수 말("N차" · "비어 있음")은 크리스탈 창과 같다.
 - 확인 사진: `npm run shot:godot -- codex_pick` → `logs/shot_codex_pick.png`.
 
+### 자동 등록 ★
+
+요청 (2026-10-02): "도감에 자동 등록 버튼 만들어". 오른쪽 칸 맨 아래 `[자동 등록] [등록]` 한 줄 (창 높이를 늘리지 않는다).
+
+- **등급을 가리지 않고** 넣을 수 있는 칸 전부를 채운다 — 어느 탭에 있든 같다. 탭에 빨간 점이 하나도 없으면 단추가 꺼진다.
+- 칸마다 하나, 같은 칸의 장비가 여럿이면 **옵션 줄(1·2·3차 합)이 가장 적은 것** — 하나 넣기의 기본(-1)과 같은 셈이다.
+  **잠근 장비는 건너뛴다** — 잠근 것만 있으면 단추가 꺼진다.
+  셈은 `Codex.auto_picks(codex, bag)` 하나 — 장부(`Ledger.codex_register_all`)와 확인 창이 같이 쓴다.
+- 누르면 바로 넣지 않고 **고르기 창을 확인 창으로** 연다(`CodexPicker.open_all`) — 들어갈 장비를 전부 금빛 테로
+  늘어놓고(1·2·3차까지 보인다) 제목 "자동 등록 — N칸에 넣습니다". 칸을 눌러도 고르지 않는다. [등록] → `picked_all`
+  → `register_all_requested` → `codexRegisterAll` → 서버 op `codex_register_all`(인자 없음).
+- 장부가 고르기를 **다시 한다** — 그사이 가방이 바뀌었으면 바뀐 가방으로 센다. 뒤 번호부터 떼서 번호가 밀리지 않는다.
+- 칸마다 `codexResult` 를 내고(지금 탭의 칸이 튕긴다), 알림은 한 줄 `도감 자동 등록 — N칸 · 공격력 +x% · …`.
+- 왜 확인을 거치나: 넣은 장비는 사라지고, 한 칸에 하나뿐이면 옵션이 좋아도 그게 들어간다.
+
 ### 그림 (바르코)
 
 `ui_icon_codex` — 방패 문장이 든 펼친 책. **HUD 아이콘 기준 프롬프트 그대로**(세피아 단색조 · 참고 그림 둘,
@@ -147,7 +162,7 @@
 - 장부 칸을 더했으면 `Ledger.KEYS` · `fresh` · `World.join` · `restore` · `save.gd` 를 같이 본다 (헬스와 같다).
 - `World.stats_of` 인자를 바꾸면 `kill_check.gd` 도 같이 — 안 그러면 서버 처치 검증이 어긋난다.
 - 등급·부위 수가 바뀌면 칸 표(`CODEX_CELLS`)와 창의 탭·줄 수가 표에서 따라온다. 강화 끝이 바뀌면 `CODEX_MAX_ENHANCE`.
-- 아직 없는 것: **일괄 등록**(한 번에 넣을 수 있는 칸 전부) — 420칸을 하나씩 누르는 게 번거로우면 붙인다.
+- 하나 넣기와 자동 등록이 칸을 채우는 길은 `Ledger._codex_take` 하나다 — 칸 · 이벤트를 바꾸면 거기만 고친다.
 
 ## 관련
 

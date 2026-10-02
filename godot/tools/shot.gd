@@ -41,7 +41,7 @@ const PORTAL_LOOK := 2.4
 ## 소용돌이가 화면에서 작으면 찍어도 못 읽는다 (CLAUDE.md 의 "확인이 되는 크기로")
 const PORTAL_DISTANCE := 9.0
 ## `click` 으로 찍을 때. 시간을 `CLICK_SLOW` 로 늦춰 누른 채 1.2초쯤을 고르게 나눈다 —
-## 0.8초 간격을 봐야 해서 스킬용 `SLOW` 로는 너무 오래 걸린다
+## 0.5초 간격을 봐야 해서 스킬용 `SLOW` 로는 너무 오래 걸린다
 const CLICK_SLOW := 0.25
 const CLICK_SHOTS := [2, 6, 12, 20, 26, 32]
 ## 몇 프레임째를 찍나. 소용돌이는 계속 돌므로 한 바퀴를 고르게 나눈다
@@ -122,7 +122,7 @@ func _run() -> void:
 		await _range(game, skill.trim_prefix("range:"))
 		return
 
-	# 땅을 누르고 있는 동안의 클릭 이펙트 — 퍼지며 사라지고 0.8초마다 다시 뜨나
+	# 땅을 누르고 있는 동안의 클릭 이펙트 — 퍼지며 사라지고 0.5초마다 다시 뜨나
 	if skill == "click":
 		await _click(game, shots if args.size() > 1 and str(args[1]) != "" else CLICK_SHOTS)
 		return

@@ -69,8 +69,12 @@
    - 스킬·강화 표에 **처치 검증이 모르는 칸**이 생기면 `server_test` 가 실패한다
      (`KNOWN_SKILL_KEYS` · `KNOWN_UPGRADE_KEYS`). 피해를 올리는 효과면 `min_ms` 에 넣는다.
 3. **존 입장 조건** (`zone_locked`). **게임에 있는 규칙만 본다** — 전직 시험은 바로 다음 단계이고
-   레벨이 될 때만 (`World.job_advance` 와 같다). 일반 사냥터·던전은 게임에도 막는 규칙이 없어서
+   레벨이 될 때만 (`World.job_advance` 와 같다). 일반 사냥터는 게임에도 막는 규칙이 없어서
    서버도 안 막는다. 새 규칙을 서버에서 지어내지 않는다.
+   ★ **던전 하루 한 번**(2026-10-02)은 게임 규칙이라 서버도 본다 — `_enter` 가 `Ledger.dungeon_entries_left`
+   로 대 보고 다 썼으면 `daily_used`, 되면 `Ledger.dungeon_enter` 로 장부에 센다(서버에 붙으면 세는 쪽은 서버다).
+   던전 몬스터는 한 번 들어와 한 번만 잡는다 — 같은 개체를 또 보고하면 `_check_kill` 이 `once_per_entry`
+   → [dungeons.md](dungeons.md) "하루 한 번".
 4. **이상치는 기록만 한다.** 거절한 처치는 서버 출력에 `처치 거절 <계정> <이유>` 로 남기고
    보상만 안 준다. 제재는 사람이 한다.
 
@@ -101,7 +105,7 @@
 | `godot/tests/remote_test.gd` | ✔ 실제 웹소켓으로 `World` 를 서버에 붙인다 — welcome(시작 장비·첫 선물·정수) · 처치 · **답을 잃고 다시 붙어도 한 번만 판정** |
 
 `Ledger` 는 **`KEYS` 칸만 만진다**(직업·전직 단계·레벨·경험치·골드·스킬·스킬 포인트·스킬 강화·스킬 경험치·
-가방·장비·`granted`·다이아·헬스 프로틴과 운동 단계 → [fitness.md](fitness.md)). 자리·체력·NPC 거리는 모른다 — NPC 곁인지는 `World` 가 먼저 본다.
+가방·장비·`granted`·다이아·헬스 프로틴과 운동 단계 → [fitness.md](fitness.md) · 던전 하루 입장 `dungeon_entries` → [dungeons.md](dungeons.md)). 자리·체력·NPC 거리는 모른다 — NPC 곁인지는 `World` 가 먼저 본다.
 굴림은 `World._rng` 를 같이 쓴다 (테스트가 씨앗으로 결과를 고정한다).
 
 **`World` 에 남은 장부 변경은 둘뿐이다** — 치트·테스트 모드(`debug_*`·`grant_test_*`, 서버에는

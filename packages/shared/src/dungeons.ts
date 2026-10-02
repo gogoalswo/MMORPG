@@ -8,8 +8,8 @@ import { DUNGEON_PROTEIN_PER_STAGE } from './fitness.ts';
  *   던전 단추 ─┬─ 토벌 던전 ─┬─ 1단계 (첫 티어 보스 Lv.9)
  *              │             ├─ …
  *              │             └─ 20단계
- *              ├─ 시련의 탑 ─┬─ 1단계 (뿔토끼 Lv.8 × 10, 30초에 7마리)
- *              │             └─ … 20단계
+ *              ├─ 시련의 탑 ─┬─ 1단계 (뿔토끼 Lv.8 × 10, 30초에 7마리, 크리스탈 2)
+ *              │             └─ … 7단계 (Lv.198, 크리스탈 15)
  *              └─ (준비 중)
  *
  * **종류는 셋인데 토벌과 시련의 탑을 연다** (토벌 2026-09-23, 시련의 탑 2026-09-29).
@@ -48,7 +48,27 @@ export interface DungeonType {
   name: string;
   /** false 면 창에 이름만 보이고 눌리지 않는다 */
   open: boolean;
+  /**
+   * **하루에 들어갈 수 있는 횟수** — 단계와 상관없이 종류 하나에 센다. 0 이면 제한 없다.
+   * 날은 한국 시각 **5시**에 바뀐다(`DUNGEON_DAY_SHIFT_SECONDS`) → dungeons.md "하루 한 번"
+   */
+  daily: number;
   stages: DungeonStage[];
+}
+
+/**
+ * **하루 한 번** (2026-10-02 요청: "토벌 던전을 하루에 한 번 입장할 수 있게 … 시련의 탑도 마찬가지로").
+ * 날 번호 = ⌊(유닉스 초 + 9시간 − 5시간) ÷ 하루⌋ — **한국 시각 5시**에 하나 오른다 (2026-10-02 요청:
+ * "시간 카운트를 한국 시간 5시로 해"). 0시가 아니라 새벽 5시라 자정 넘어 노는 판이 그 전날로 묶인다.
+ * 들어가는 순간 센다 — 깨든 쓰러지든 나가든 그날 입장은 쓴 것이다.
+ */
+export const DUNGEON_DAILY_ENTRIES = 1;
+export const DUNGEON_DAY_SECONDS = 86400;
+/** 한국 시각(UTC+9)에서 5시를 빼서 5시가 날의 시작이 되게 한다 */
+export const DUNGEON_DAY_SHIFT_SECONDS = (9 - 5) * 3600;
+
+export function dungeonDay(unixSeconds: number): number {
+  return Math.floor((unixSeconds + DUNGEON_DAY_SHIFT_SECONDS) / DUNGEON_DAY_SECONDS);
 }
 
 /**
@@ -76,8 +96,8 @@ export const DUNGEON_ENV: ZoneDef['env'] = {
 /**
  * **던전 클리어 보상 — 스킬 경험치.** N단계를 깨면 N × 1000 (2026-09-28 요청:
  * "1단계는 1000, 2단계는 2000, 3단계는 3000"). 캐릭터에 하나로 쌓이고 스킬창에서
- * 골라 강화에 넣는다 → [skill-upgrades.md]. 잡을 때마다 들어온다 — 보스가 다시 서면
- * (15분 · 나갔다 들어오면 바로) 또 받는다
+ * 골라 강화에 넣는다 → [skill-upgrades.md]. 보스는 **한 번 들어와 한 번** 잡는다 —
+ * 던전 몬스터는 되살아나지 않고, 들어가는 것은 하루 한 번이다 (2026-10-02)
  */
 export const DUNGEON_SKILL_EXP_PER_STAGE = 1000;
 
@@ -101,28 +121,35 @@ const RAID_STAGES: DungeonStage[] = Array.from({ length: BOSS_COUNT }, (_, i) =>
  *
  * - 7마리는 설계의 "동레벨 한 마리 4초"(`KILL_SECONDS`, stat-balance.md 7장)에서 나왔다 —
  *   30 ÷ 4 = 7.5. 동레벨 평타만으로는 5~6마리라 스킬을 섞어야 통과한다.
- * - N단계 = N번째 사냥터의 **강한 일반 몬스터**(`tierLevels(N-1)[1]`, Lv.10N-2). 새 종을 만들지 않는다.
+ * - **7단계** (2026-10-02 요청: "단계를 7단계로 줄이고 1단계는 2개, 7단계는 15개"). 몬스터는 사냥터
+ *   20곳에 고르게 걸친다 — k단계 = `TRIAL_FIELDS[k-1]`번째 사냥터의 **강한 일반 몬스터**
+ *   (`tierLevels(i)[1]`, Lv.8 · 38 · 68 · 108 · 138 · 168 · 198). 앞 일곱 곳만 쓰면 끝이 Lv.68 이라
+ *   높은 레벨에는 시련이 없다. 새 종을 만들지 않는다.
  * - 맵은 `TRIAL_ZONE_SIZE`(30, 이동 가능 ±11) — 사냥터(66)의 절반이 안 된다. 사냥터의 4초에는
  *   다음 몬스터까지 8m 걷는 시간이 들어 있는데, 좁은 맵에서는 그 시간이 거의 빠진다.
  * - 몬스터는 도착 지점을 둘러싼 **반경 `TRIAL_RING` 원에 `TRIAL_MONSTERS` 마리**, 되살아나지
  *   않는다(시험 동안). 7마리보다 셋 많게 둬 한두 마리가 멀리 떠돌아도 모자라지 않다.
  * - 통과 판정은 기기(`World._trial`)가 하고, 크리스탈은 장부(`Ledger.trial_clear`)가 준다.
  *   서버는 들어온 뒤 30초 안에 인정한 처치 수를 제 명단으로 다시 센다 (server.md).
- * - 보상 = 단계 × `TRIAL_CRYSTALS_PER_STAGE` 개 (사용자가 고른 안: "단계 × 1개"). **크리스탈만** 준다 —
- *   프로틴은 2026-10-02 에 뺐다 ("크리스탈 던전에 … 크리스탈만 주도록").
+ * - 보상 = `TRIAL_CRYSTALS[k-1]` 개 — 2 · 3 · 5 · 7 · 9 · 12 · 15. 양 끝은 사용자가 정했고(2 · 15) 사이는
+ *   뒤로 갈수록 한 단계 몫이 커지게 했다(+1 · +2 · +2 · +2 · +3 · +3) — 단계마다 몬스터가 30레벨씩 뛰어
+ *   뒤 단계일수록 넘기 어렵다. **크리스탈만** 준다 — 프로틴은 2026-10-02 에 뺐다 ("크리스탈 던전에 … 크리스탈만 주도록").
  * - 차원문이 없다 — 나가는 길은 결과창 **확인**(마을로)과 HUD **마을가기** 다.
  */
 export const TRIAL_KILLS = 7;
 export const TRIAL_SECONDS = 30;
-export const TRIAL_CRYSTALS_PER_STAGE = 1;
+/** 단계별 크리스탈 — 길이가 곧 단계 수다 */
+export const TRIAL_CRYSTALS = [2, 3, 5, 7, 9, 12, 15];
+/** 단계별 사냥터 번호(0부터) — 0 ~ 19 를 고르게 (`round(k × 19 ÷ 6)`) */
+export const TRIAL_FIELDS = TRIAL_CRYSTALS.map((_, k) => Math.round((k * (BOSS_COUNT - 1)) / (TRIAL_CRYSTALS.length - 1)));
 export const TRIAL_ZONE_SIZE = 30;
 export const TRIAL_MONSTERS = 10;
 export const TRIAL_RING = 7;
 
 const trialZoneId = (stage: number) => `trial_${String(stage).padStart(2, '0')}`;
 
-const TRIAL_STAGES: DungeonStage[] = Array.from({ length: BOSS_COUNT }, (_, i) => {
-  const level = tierLevels(i)[1];
+const TRIAL_STAGES: DungeonStage[] = TRIAL_FIELDS.map((field, i) => {
+  const level = tierLevels(field)[1];
   return {
     zone: trialZoneId(i + 1),
     stage: i + 1,
@@ -132,7 +159,7 @@ const TRIAL_STAGES: DungeonStage[] = Array.from({ length: BOSS_COUNT }, (_, i) =
     protein: 0,
     kills: TRIAL_KILLS,
     seconds: TRIAL_SECONDS,
-    crystals: (i + 1) * TRIAL_CRYSTALS_PER_STAGE,
+    crystals: TRIAL_CRYSTALS[i],
   };
 });
 
@@ -145,17 +172,17 @@ export function trialSpots(): [number, number][] {
 }
 
 export const DUNGEON_TYPES: DungeonType[] = [
-  { id: 'raid', name: '토벌 던전', open: true, stages: RAID_STAGES },
-  { id: 'trial', name: '시련의 탑', open: true, stages: TRIAL_STAGES },
-  { id: 'treasure', name: '보물 창고', open: false, stages: [] },
+  { id: 'raid', name: '토벌 던전', open: true, daily: DUNGEON_DAILY_ENTRIES, stages: RAID_STAGES },
+  { id: 'trial', name: '시련의 탑', open: true, daily: DUNGEON_DAILY_ENTRIES, stages: TRIAL_STAGES },
+  { id: 'treasure', name: '보물 창고', open: false, daily: 0, stages: [] },
 ];
 
 /**
  * 던전 단계마다 존 하나. 문은 `zones.ts` 가 넘겨준다 — 모든 존이 같은 자리·같은 문을
  * 써야 해서(`zones.test.ts`) 그 규칙을 한 곳에 둔다. **문이 있어야 나온다.**
  *
- * 보스는 한 번 잡으면 15분 뒤에 다시 선다(사냥터와 같다). 다시 싸우려면 나갔다가
- * 던전 창으로 다시 들어온다 — `World.open` 이 존을 열 때마다 몬스터를 새로 세운다.
+ * 몬스터의 `respawnMs`(15분)는 남아 있지만 **던전에서는 되살아나지 않는다** — 하루 한 번 들어와
+ * 한 번 잡는다 (`World._kill` · 서버 `_check_kill`, 2026-10-02).
  */
 export function dungeonZones(gate: () => GateDef): ZoneDef[] {
   const out: ZoneDef[] = [];

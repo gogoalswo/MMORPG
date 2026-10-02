@@ -4863,7 +4863,20 @@ func _toggle_dungeon() -> void:
 	_fitness_panel.visible = false
 	_codex_panel.visible = false
 	_sandbag_panel.visible = false
+	_dungeon_panel.spent = _spent_dungeons()
 	_dungeon_panel.open(_shown_zone)
+
+
+## 오늘 입장을 다 쓴 던전 종류 `{ 종류 id: true }` — 던전 창이 카드·입장 단추를 막는다 (dungeons.md "하루 한 번")
+func _spent_dungeons() -> Dictionary:
+	var me := _me()
+	var day := Ledger.day_of(Time.get_unix_time_from_system())
+	var out := {}
+	for type in GameData.dungeons():
+		var stages: Array = type.get("stages", [])
+		if not stages.is_empty() and Ledger.dungeon_entries_left(me, str(stages[0].zone), day) == 0:
+			out[str(type.id)] = true
+	return out
 
 
 ## 헬스 단추. 열려 있으면 닫는다. 차원문·던전 창과 한 층이라 그 둘을 닫고 연다

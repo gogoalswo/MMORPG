@@ -34,6 +34,39 @@ static func week_end(week_no: int) -> float:
 	return float(week_no + 1) * float(t.get("weekSeconds", 604800)) - float(t.get("weekShift", 0))
 
 
+## 날 번호 — **한국 0시**에 하나 오른다. `sandbag.ts` 의 `sandbagDay` 와 같은 식이다 (날짜별 기록)
+static func day(unix_seconds: float) -> int:
+	var t := table()
+	return floori((unix_seconds + float(t.get("dayShift", 32400))) / float(t.get("daySeconds", 86400)))
+
+
+## 날짜별 기록을 며칠 두나 (오늘 포함) — 7
+static func history_days() -> int:
+	return int(table().get("historyDays", 7))
+
+
+## 날짜별 기록 `[{day, best}]` 에 이 판을 얹는다 — 그날 최고보다 크면 갈아 끼우고, `today` 에서
+## 보관 일수를 넘긴 날은 버린다. 새 날이 앞(최근 → 옛날)
+static func add_day(days: Array, today: int, damage: int) -> Array:
+	var best := damage
+	for row in days:
+		if int(row.get("day", -1)) == today:
+			best = maxi(best, int(row.get("best", 0)))
+	var out: Array = [{"day": today, "best": best}]
+	for row in days:
+		var d := int(row.get("day", -1))
+		if d != today and d > today - history_days() and d < today:
+			out.append({"day": d, "best": int(row.get("best", 0))})
+	out.sort_custom(func(a, b): return int(a.day) > int(b.day))
+	return out
+
+
+## 날 번호 → "10월 2일 (목)". 날 번호 × 하루 = 그날 한국 날짜의 UTC 0시라 UTC 로 읽으면 그 날짜다
+static func day_label(day_no: int) -> String:
+	var date := Time.get_date_dict_from_unix_time(day_no * int(table().get("daySeconds", 86400)))
+	return "%d월 %d일 (%s)" % [int(date.month), int(date.day), "일월화수목금토"[int(date.weekday)]]
+
+
 ## 순위 → 옐로우 크리스탈 개수. 순위가 없으면(0) 0
 static func reward(rank: int) -> int:
 	if rank < 1:

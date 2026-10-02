@@ -952,8 +952,12 @@ func _case_sandbag(game: Node3D) -> void:
 		_fail("샌드백 결과창: 보임 %s '%s' '%s'" % [result.visible, result._verdict.text, result._count.text])
 	if count.visible or game._trial_hud.visible:
 		_fail("결과가 났는데 카운트·시계가 남았다")
+	# 보상 설명칸은 없다 (2026-10-02 요청 "결과창에서 보상 설명칸 제거해")
+	if result._reward_head.visible or result._rewards.visible or result._reward_rule.visible:
+		_fail("샌드백 결과창에 보상 칸이 남았다")
 	for label in result.find_children("*", "Label", true, false):
 		seen += label.text
+	seen += "날짜별 기록 일월화수목금토"
 	var font: Font = load(FONT)
 	var missing := ""
 	for ch in seen:
@@ -967,6 +971,10 @@ func _case_sandbag(game: Node3D) -> void:
 	await process_frame
 	if not game._sandbag_note.text.contains("1위"):
 		_fail("기록 뒤 다시 열면 1위: '%s'" % game._sandbag_note.text)
+	# 날짜별 기록 — 일곱 날 · 맨 위가 오늘이고 방금 기록
+	var day_cells: Array = game._sandbag_days.get_children().filter(func(c): return not c.is_queued_for_deletion())
+	if day_cells.size() != Sandbag.history_days() * 2 or (day_cells[1] as Label).text != "1,234":
+		_fail("날짜별 기록: %d칸 '%s'" % [day_cells.size(), (day_cells[1] as Label).text if day_cells.size() > 1 else ""])
 	game._toggle_sandbag()
 	result.confirm_button().pressed.emit()
 	for i in 5:

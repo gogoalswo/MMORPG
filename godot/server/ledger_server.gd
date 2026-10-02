@@ -332,6 +332,8 @@ func _sandbag_rank(session: Dictionary) -> Dictionary:
 	return {
 		"t": "sandbagRank", "top": top, "me": mine, "total": _sandbag_order.size(),
 		"week": _sandbag_week, "ends_at": Sandbag.week_end(_sandbag_week),
+		# 날짜별 기록 — 내 장부의 최근 7일과 서버 시계의 오늘 (docs/features/sandbag.md "날짜별 기록")
+		"days": account.get("sandbag", {}).get("days", []), "today": ledger.sandbag_day(),
 	}
 
 

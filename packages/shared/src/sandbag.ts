@@ -92,3 +92,16 @@ export const WEEK_SECONDS = 7 * 86400;
 export function sandbagWeek(unixSeconds: number): number {
   return Math.floor((unixSeconds + SANDBAG_WEEK_SHIFT_SECONDS) / WEEK_SECONDS);
 }
+
+/**
+ * 날짜별 기록 — **하루 최고 한 판**을 날마다 남기고, **최근 7일**(오늘 포함)만 둔다 (2026-10-02 요청
+ * "매일 가장 강한 기록 날짜별로 기록하고, 최대 일주일"). 날은 **한국 0시**에 바뀐다 — 주 경계와 같은 시계.
+ * 고도도 같은 식이다 (`Sandbag.day`)
+ */
+export const SANDBAG_DAY_SHIFT_SECONDS = 9 * 3600;
+export const DAY_SECONDS = 86400;
+export const SANDBAG_HISTORY_DAYS = 7;
+
+export function sandbagDay(unixSeconds: number): number {
+  return Math.floor((unixSeconds + SANDBAG_DAY_SHIFT_SECONDS) / DAY_SECONDS);
+}

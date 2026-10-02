@@ -51,12 +51,13 @@ func _eq(label: String, got: int, want: int) -> void:
 func _base() -> void:
 	var one := Stats.base(1)
 	# 2026-09-27: Lv1 HP 100 → 300. HP 만 성장률이 따로라 Lv200 은 그대로 5,146
-	_near("Lv1 HP", one["hp"], 300.0)
+	# 2026-10-02: 모든 레벨 ×1.5 (`HP_SCALE`, combat.md) — Lv1 450, Lv200 7,718
+	_near("Lv1 HP", one["hp"], 450.0)
 	_near("Lv1 공격", one["atk"], 20.0)
 	_near("Lv1 방어", one["df"], 20.0)
 
 	var top := Stats.base(Stats.max_level())
-	_eq("Lv200 맨몸 HP", roundi(top["hp"]), 5146)
+	_eq("Lv200 맨몸 HP", roundi(top["hp"]), 7718)
 	_eq("Lv200 맨몸 공격", roundi(top["atk"]), 1029)
 	_eq("Lv200 맨몸 방어", roundi(top["df"]), 1029)
 
@@ -145,7 +146,8 @@ func _group_loss() -> void:
 			_fail("Lv%d 몬스터 한 대가 HP 의 %.1f%% — 2~15%% 여야 한다" % [level, share * 100.0])
 	# 후반 HP 는 2만 근처이고 생존은 감소율이 맡는다 — 초반 30% → Lv200 94%
 	var hp200: float = Stats.ref_player(200)["hp"]
-	if hp200 < 15000.0 or hp200 > 25000.0:
+	# 2026-10-02 에 HP 를 모든 레벨 ×1.5 — 범위도 같이 곱한다 (balance.test.ts 와 같다)
+	if hp200 < 15000.0 * 1.5 or hp200 > 25000.0 * 1.5:
 		_fail("Lv200 기준 HP %d 가 2만 근처가 아니다" % roundi(hp200))
 	_near("Lv1 맞는 쪽 감소율", Stats.def_reduce(1), 0.3)
 	_near("Lv200 맞는 쪽 감소율", Stats.def_reduce(200), 0.94)

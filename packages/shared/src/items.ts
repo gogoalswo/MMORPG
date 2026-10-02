@@ -42,7 +42,7 @@ import {
   gradeOf as gearGradeOf,
   enhanceMultiplier as gearEnhanceMultiplier,
   slotStats,
-  dropGrades as gearDropGrades,
+  topGradeAt,
   GEAR_DROP_RATE,
 } from './gear.ts';
 
@@ -849,10 +849,31 @@ function gearDropRate(grade: number): number {
  * 어느 사냥터에서 뚫나" 를 정해 둔다(2·5·8·11·14·17·20). **착용 레벨보다 한
  * 구간 위**라, 착용 레벨이 돼도 바로는 못 얻고 한 사냥터 더 올라가 이전
  * 등급으로 뚫어야 한다. 그게 상향 압력의 정체다.
+ *
+ * **고급·희귀는 앞당겼다** (`DROP_GRADE_FROM`, 2026-10-02) — 아래 참고.
  */
 export function dropGradesFor(monsterLevel: number): number[] {
-  return gearDropGrades(fieldOf(monsterLevel));
+  let top = topGradeAt(fieldOf(monsterLevel));
+  for (const [g, from] of Object.entries(DROP_GRADE_FROM)) {
+    if (monsterLevel >= from) top = Math.max(top, Number(g));
+  }
+  return top <= 1 ? [1] : [top - 1, top];
 }
+
+/**
+ * 등급이 **나오기 시작하는 몬스터 레벨** — 설계(`dropField`)보다 앞당긴 등급만 적는다. ★
+ *
+ * 2026-10-02 요청: "고급 등급이 너무 늦게 나와. 사마귀 둥지부터는 고급 등급 아이템
+ * 나오게 설정해. 그리고 희귀 등급은 서리 고원부터 나오게 만들어." 설계는 고급 Lv41 ·
+ * 희귀 Lv71 이었다(사냥터 23곳에선 안개 늪 · 무너진 성터).
+ *
+ * 10레벨 구간(`fieldOf`)으로는 못 나눈다 — 버섯 군락지(Lv13)와 사마귀 둥지(Lv18)가
+ * 같은 구간 2 라서다. 그래서 레벨로 적는다: 사마귀 둥지 자리 Lv16~20 의 첫 레벨 16,
+ * 서리 고원 자리 Lv51~60 의 첫 레벨 51. 창은 그대로 "그 등급과 바로 아래 하나" 라
+ * 서리 고원부터는 1등급이 안 나온다. 설계 원본 `dropField` 는 `balance.test.ts` 가
+ * 공식과 대조하므로 그대로 두고 판정에서만 덮는다 (`GEAR_DROP_OVERRIDE` 와 같은 방식).
+ */
+export const DROP_GRADE_FROM: Readonly<Record<number, number>> = { 2: 16, 3: 51 };
 
 /**
  * 굴림값(0~1)에서 드롭 등급 하나 — **그 몬스터가 선 사냥터 안에서만.**

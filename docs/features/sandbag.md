@@ -35,7 +35,7 @@
 | `packages/shared/src/zones.ts` | `ZONES` 에 샌드백 존을 넣는다 |
 | `scripts/export-shared.mjs` | `zones.json` 의 `sandbag`(규칙) · `monsters.json` 의 `kinds.sandbag`(몬스터 60종 밖에서 붙인다) |
 | `godot/world/sandbag.gd` | `Sandbag` — 표 읽기 · `week` · `week_end` · `day` · `add_day`(날짜별 기록 얹기 · 7일 넘은 날 버리기) · `day_label` · `reward` · `reward_label` |
-| `godot/world/world.gd` | **판** — `_start_sandbag`(존을 열 때) · `_counting_down`(평타·스킬 막기) · `_drive_sandbag_auto`(재는 동안 자동사냥 켜기) · `_count_sandbag_damage`(`_hit_monster` 에서) · `_finish_sandbag`(시간 끝 → 기록 · 결과) · `_check_sandbag_week`(로컬 정산) · `join` 이 샌드백을 보고 서게 |
+| `godot/world/world.gd` | **판** — `_start_sandbag`(존을 열 때) · `input_move`(샌드백 존이면 안 걷는다) · `_counting_down`(평타·스킬 막기) · `_drive_sandbag_auto`(재는 동안 자동사냥 켜기) · `_count_sandbag_damage`(`_hit_monster` 에서) · `_finish_sandbag`(시간 끝 → 기록 · 결과) · `_check_sandbag_week`(로컬 정산) · `join` 이 샌드백을 보고 서게 |
 | `godot/world/ledger.gd` | **장부** — `sandbag` 칸 `{week, best, unpaid?, days?}` · `sandbag_record` · `sandbag_close_week(순위)` · `sandbag_pay` · `sandbag_day` |
 | `godot/server/ledger_server.gd` | **서버** — `OPS.sandbag_record` · `_check_sandbag`(들어온 지 18초 · 한 판 한 번 · 상한) · `_sandbag_board`(이번 주) · `_ranks_of`(닫힌 주를 파일로 굳힘) · `_settle_sandbag`(hello · op 마다) · `_sandbag_rank`(내 `days` · `today` 도 싣는다) |
 | `godot/server/kill_check.gd` | `max_damage` — 처치 시간과 같은 식으로 "15초에 넣을 수 있는 피해의 상한" |
@@ -46,7 +46,7 @@
 | `godot/game/rig.gd` | `FILES.sandbag` → `varco_sandbag.glb` (클립 없음) |
 | `public/assets/models/varco_sandbag.glb` | 바르코 모델 (원화 → 3D, **원점 바닥**, 텍스처 1024). 주소는 `fetch-assets.sh` |
 | `public/assets/icons/ui_icon_sandbag.png` | 메뉴 단추 그림 (HUD 아이콘 기준 프롬프트 그대로, 세 장 중 둘째) |
-| `godot/tests/sandbag_test.gd` | 존 · 카운트 중 막힘 · 끝나면 저절로 침 · 결과 뒤 멈춤 · 센 피해 = 맞은 피해 · 안 죽고 안 움직임 · 결과 한 번 · 낮은 기록은 최고를 안 덮음 · 로컬 주 정산(1위 30개 · 한 번만 · 가방 꽉 차면 남겼다 준다) · 날짜별 기록(하루 최고 · 다음 날 · 주 정산에도 남음 · 7일 넘으면 버림 · 날짜 글자) · 저장 · 옐로우 크리스탈 3차 · 서버(18초 · 상한 · 한 번 · 순위 · 굳힌 순위로 정산 · 새 주 비움) |
+| `godot/tests/sandbag_test.gd` | 존 · 카운트 중 막힘 · 걷기 막힘(카운트 · 재는 동안 · 자동사냥 안 꺼짐) · 끝나면 저절로 침 · 결과 뒤 멈춤 · 센 피해 = 맞은 피해 · 안 죽고 안 움직임 · 결과 한 번 · 낮은 기록은 최고를 안 덮음 · 로컬 주 정산(1위 30개 · 한 번만 · 가방 꽉 차면 남겼다 준다) · 날짜별 기록(하루 최고 · 다음 날 · 주 정산에도 남음 · 7일 넘으면 버림 · 날짜 글자) · 저장 · 옐로우 크리스탈 3차 · 서버(18초 · 상한 · 한 번 · 순위 · 굳힌 순위로 정산 · 새 주 비움) |
 | `godot/tests/ui_test.gd` | `_case_sandbag` — 메뉴 → 창(전체 화면 · 설명 한 줄 · 보상 일곱 줄 · 기록 없음 · 100줄이면 굴린다) → 입장 → 카운트 "3" · 물약·자동사냥 칸 숨김 → 누적 피해 → 결과창(보상 칸 없음) → 다시 열면 1위 · 날짜별 기록 맨 위가 방금 기록 → 확인 → 마을 · 글자가 폰트에 있나 |
 
 ## 규칙
@@ -54,7 +54,11 @@
 ### 판 — 3초 카운트 → 15초 ★
 
 - 존을 열면(`World.open` → `_start_run` → `_start_sandbag`) `starts_at = 지금 + 3초`, `ends_at = starts_at + 15초`.
-- **카운트 동안은 평타·스킬이 막힌다**(`attack`·`cast` 머리의 `_counting_down`). 걷기는 된다.
+- **카운트 동안은 평타·스킬이 막힌다**(`attack`·`cast` 머리의 `_counting_down`).
+- **샌드백 존에서는 판 내내 걷지 못한다** (2026-10-02 요청 "샌드백 입장하면 이동도 내가 못 하게 막아"). `input_move` 가
+  존이 샌드백이면 순번만 갱신하고 돌려보낸다 — `_take_manual` 보다 앞이라 조이스틱을 밀어도 자동사냥이 안 꺼진다.
+  자동사냥은 `input_move` 를 거치지 않고 걷지만 샌드백이 사거리 안이라 걸을 일이 없다(평타에 실린 짧은 전진 0.07m 는 그대로다).
+  처음엔 "걷기는 된다" 였다.
 - **카운트가 끝나면 저절로 친다** (2026-10-02 요청 "물약이랑 자동사냥 버튼 없애고, 카운트 끝나면 자동으로 공격하도록").
   `step` 의 `_drive_sandbag_auto` 가 재는 동안 매 틱 자동사냥(`set_auto`)을 켠다 — 평소 자동사냥과 같은 `_drive_auto`
   라 스킬 순서·평타·날라차기가 그대로다. 결과가 나면 `_finish_sandbag` 이 끄고, 존을 옮기면 `join` 이 끈다.

@@ -18,6 +18,7 @@ const KEYS := [
 	"job", "level", "exp", "gold", "skills", "skill_points", "passives",
 	"skill_upgrades", "skill_upgrade_exp", "skill_exp", "bag", "equipped", "granted",
 	"diamonds", "proteins", "fitness", "codex", "sandbag", "dungeon_entries", "loot_skip",
+	"codex_auto", "codex_new",
 ]
 
 ## **첫 선물** — 새 캐릭터가 한 번만 받는 것 `[[표시, 묶음], …]`. 로컬은 `LocalTransport.open` 이,
@@ -52,6 +53,10 @@ static func fresh(job: String) -> Dictionary:
 		"dungeon_entries": {},
 		# 안 주울 장비 등급 `[등급, …]` — 설정 창 "아이템 습득" 탭 (`set_loot_skip`). 비어 있으면 다 줍는다
 		"loot_skip": [],
+		# 도감 자동 등록을 켠 장비 등급 `[등급, …]` — 도감 창 "자동 등록 설정" (`set_codex_auto`). 비어 있으면 다 끔
+		"codex_auto": [],
+		# 자동 등록으로 새로 찬 칸 `{ 아이템 id: 강화 비트 }` — 도감 빨간 점. 그 탭을 보고 나오면 지운다(`codex_seen`)
+		"codex_new": {},
 	}
 
 
@@ -134,14 +139,19 @@ func kill(p: Dictionary, target: Dictionary) -> void:
 	var event := {"type": "loot", "gold": loot.gold}
 	# 설정에서 끈 등급은 **가방에 넣지 않는다** (2026-10-02 요청: "습득할 아이템도 설정할 수 있는 옵션").
 	# 굴림은 그대로 다 한다 — 거른다고 굴림 순서가 바뀌면 같은 씨앗에서 다른 것이 나온다
+	var got_at := -1
 	if loot.has("item") and not (int(loot.item.grade) in loot_skip(p)) and give(p, loot.item):
 		event["item"] = loot.item
+		got_at = p.bag.size() - 1  # 장비는 늘 맨 뒤에 붙는다 — 뒤에 오는 크리스탈도 번호를 밀지 않는다
 	# 크리스탈은 장비와 따로 떨어진다 — 가방에서는 한 칸에 겹친다
 	if loot.has("crystal"):
 		var crystal := {"id": Items.crystal_id(), "count": int(loot.crystal)}
 		if give(p, crystal):
 			event["crystal"] = int(loot.crystal)
 	events.append(event)
+	# 도감 자동 등록 — 켜 둔 등급이면 주운 그 자리에서 넣는다 (모자란 강화는 두드려 올린다)
+	if got_at >= 0:
+		_codex_auto(p, got_at)
 
 	var gained := Combat.exp_reward(int(target.level), int(p.level), float(target.exp_reward))
 	var before := int(p.level)
@@ -444,8 +454,9 @@ func codex_register_all(p: Dictionary) -> void:
 	_inventory_changed(p)
 
 
-## 가방 `at` 번 장비 하나를 떼어(겹쳤으면 개수만) 그 칸을 채우고 `codexResult` 를 낸다 → `{stat, gain}`
-func _codex_take(p: Dictionary, codex: Dictionary, at: int) -> Dictionary:
+## 가방 `at` 번 장비 하나를 떼어(겹쳤으면 개수만) 그 칸을 채우고 `codexResult` 를 낸다 → `{stat, gain}`.
+## `auto` 면 주울 때 자동 등록이다 — 새로 찬 칸(`codex_new`)에 적어 빨간 점을 켠다
+func _codex_take(p: Dictionary, codex: Dictionary, at: int, auto: bool = false) -> Dictionary:
 	var stack: Dictionary = p.bag[at]
 	var item_id := str(stack.get("id", ""))
 	var enhance := int(stack.get("enhance", 0))
@@ -457,12 +468,84 @@ func _codex_take(p: Dictionary, codex: Dictionary, at: int) -> Dictionary:
 		p.bag.remove_at(at)
 	codex[item_id] = int(codex.get(item_id, 0)) | (1 << enhance)
 	p.codex = codex
+	if auto:
+		var marks := codex_new(p)
+		marks[item_id] = int(marks.get(item_id, 0)) | (1 << enhance)
+		p.codex_new = marks
 	var stat := Codex.slot_stat(str(item.slot))
 	var gain := Codex.cell_value(int(item.grade), enhance)
 	events.append({
-		"type": "codexResult", "id": item_id, "enhance": enhance, "stat": stat, "gain": gain,
+		"type": "codexResult", "id": item_id, "enhance": enhance, "stat": stat, "gain": gain, "auto": auto,
 	})
 	return {"stat": stat, "gain": gain}
+
+
+## **주울 때 자동 등록** — 켜 둔 등급(`codex_auto`)의 장비를 주우면 바로 넣는다 (2026-10-02 요청: "아이템을
+## 습득했는데 도감에 등록할 수 있으면 바로 등록하고, 강화 수치가 부족하면 1단계부터 쭉 강화해서 해당 단계까지
+## 강화 성공하면 등록"). 노리는 칸은 **지금 강화 이상에서 가장 낮은 빈 칸**(`Codex.next_empty`) — 비었으면 그대로
+## 넣고, 찼으면 그 단계까지 **한 단계씩** 두드린다. 강화와 같은 판정(`_roll_once`)이라 **실패하면 부서진다.**
+## 빈 칸이 없으면 가방에 그대로 둔다. 잠근 것 · 겹친 칸은 건드리지 않는다 → codex.md "주울 때 자동 등록"
+func _codex_auto(p: Dictionary, at: int) -> void:
+	var stack: Dictionary = p.bag[at]
+	var item_id := str(stack.get("id", ""))
+	var item := Items.get_item(item_id)
+	if item.is_empty() or not (int(item.grade) in codex_auto(p)) or Items.is_locked(stack) \
+			or int(stack.get("count", 1)) > 1:
+		return
+	var codex: Dictionary = p.get("codex", {})
+	var level := int(stack.get("enhance", 0))
+	var goal := Codex.next_empty(codex, item_id, level)
+	if goal < 0:
+		return
+	var tries := 0
+	while level < goal:
+		var result := _roll_once(p, item, level)
+		if result == "short":
+			break
+		tries += 1
+		if result == "destroy":
+			p.bag.remove_at(at)
+			_notice("도감 자동 강화 실패 — %s +%d 에서 부서졌습니다" % [item.name, level])
+			_inventory_changed(p)
+			return
+		if result == "success":
+			level += 1
+	stack.enhance = level
+	if level < goal:
+		_notice("도감 자동 강화 — 골드가 모자라 %s +%d 에서 멈췄습니다" % [item.name, level])
+		_inventory_changed(p)
+		return
+	var got := _codex_take(p, codex, at, true)
+	var climbed := " (강화 %d번)" % tries if tries > 0 else ""
+	_notice("도감 자동 등록 — %s +%d%s · %s +%s%%" % [
+		item.name, level, climbed, Codex.stat_name(str(got.stat)), String.num(float(got.gain), 2)])
+	_inventory_changed(p)
+
+
+## 도감 자동 등록을 켤 장비 등급 — 도감 창 "자동 등록 설정". 표에 있는 등급만, 겹치지 않게, 작은 것부터
+func set_codex_auto(p: Dictionary, grades: Array) -> void:
+	p.codex_auto = clean_grades(grades)
+
+
+## 자동 등록을 켠 등급 — 옛 계정·옛 저장에는 칸이 없다(빈 목록 = 다 끔)
+static func codex_auto(p: Dictionary) -> Array:
+	var raw: Variant = p.get("codex_auto", [])
+	return raw if raw is Array else []
+
+
+## 자동 등록으로 새로 찬 칸 `{ 아이템 id: 강화 비트 }` — 도감 빨간 점 (옛 장부는 빈 사전)
+static func codex_new(p: Dictionary) -> Dictionary:
+	var raw: Variant = p.get("codex_new", {})
+	return raw if raw is Dictionary else {}
+
+
+## 도감 창에서 그 등급 탭을 보고 나왔다 — 그 등급의 새 칸 표시(빨간 점)를 지운다. 0 이면 전부
+func codex_seen(p: Dictionary, grade: int) -> void:
+	var marks := codex_new(p)
+	for id in marks.keys():
+		if grade == 0 or int(Items.get_item(str(id)).get("grade", 0)) == grade:
+			marks.erase(id)
+	p.codex_new = marks
 
 
 ## --- 유료 재화 (docs/features/server.md "유료 재화") ---
@@ -670,7 +753,7 @@ func toggle_lock(p: Dictionary, where: String, key: Variant) -> void:
 
 ## 안 주울 장비 등급을 정한다 — 설정 창 "아이템 습득" 탭. 표에 있는 등급만, 겹치지 않게, 작은 것부터
 func set_loot_skip(p: Dictionary, grades: Array) -> void:
-	p.loot_skip = clean_loot_skip(grades)
+	p.loot_skip = clean_grades(grades)
 
 
 ## 안 주울 등급 목록 — 옛 계정·옛 저장에는 칸이 없다(빈 목록 = 다 줍는다)
@@ -679,7 +762,7 @@ static func loot_skip(p: Dictionary) -> Array:
 	return raw if raw is Array else []
 
 
-static func clean_loot_skip(raw: Variant) -> Array:
+static func clean_grades(raw: Variant) -> Array:
 	var out: Array = []
 	if not raw is Array:
 		return out

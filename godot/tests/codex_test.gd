@@ -302,31 +302,33 @@ func _case_auto_loot() -> void:
 	ledger._codex_auto(p, 0)
 	if p.bag.size() != 1 or int(p.bag[0].enhance) != 4:
 		_fail("넣을 칸이 없는데 장비가 바뀌었다 %s" % [p.bag])
-	# 막아 둔 1차 옵션이 붙었으면 넣지 않는다 — 다른 옵션이면 넣는다 (2026-10-02 "치명타 옵션이 있을 경우 등록 안 되게")
+	# 활성화된 1차 옵션이 붙은 것만 넣는다 — 등급마다 (2026-10-02 "옵션도 활성화 된 옵션만 자동등록하는걸로 바꿔")
 	ledger.set_codex_auto_grade(p, 1, Items.slots())
-	# 등급마다 따로 막는다 (2026-10-02 "등급마다 옵션 설정할 수 있게") — 일반은 치명타·드랍률, 고급은 체력
-	ledger.set_codex_auto_block(p, 1, ["dropRate", "없는것", "crit", "crit"])
-	ledger.set_codex_auto_block(p, 2, ["maxHp"])
-	ledger.set_codex_auto_block(p, 9, ["crit"])
-	if Ledger.codex_auto_block(p) != {"1": ["crit", "dropRate"], "2": ["maxHp"]}:
-		_fail("다듬은 막을 옵션 표 %s" % [Ledger.codex_auto_block(p)])
-	# 옛 모양(전 등급 공통 목록)은 모든 등급에 같은 목록
-	if Ledger.codex_auto_block({"codex_auto_block": ["penetration"]}).get("6", []) != ["penetration"]:
-		_fail("옛 모양 막은 옵션을 등급마다 못 읽었다")
+	var every := Ledger.clean_option_kinds(Items._t().get("optionKinds", []))
+	if Ledger.codex_auto_option_kinds(p, 1) != every:
+		_fail("정하지 않은 등급은 전 옵션이어야 하는데 %s" % [Ledger.codex_auto_option_kinds(p, 1)])
+	ledger.set_codex_auto_options(p, 1, ["maxHp", "없는것", "dropRate", "maxHp"])
+	ledger.set_codex_auto_options(p, 2, [])
+	ledger.set_codex_auto_options(p, 9, ["crit"])
+	if Ledger.codex_auto_options(p) != {"1": ["maxHp", "dropRate"], "2": []}:
+		_fail("다듬은 넣을 옵션 표 %s (빈 목록도 남아야 한다)" % [Ledger.codex_auto_options(p)])
+	# 옛 칸(막을 옵션)은 전 옵션 − 막은 것 — 공통 목록이면 모든 등급, 등급 표면 그 등급만
+	var old_common := Ledger.codex_auto_options({"codex_auto_block": ["penetration"]})
+	var old_graded := Ledger.codex_auto_options({"codex_auto_block": {"4": ["crit"]}})
+	if "penetration" in old_common.get("6", every) or old_common.get("6", []).size() != every.size() - 1 \
+			or "crit" in old_graded.get("4", every) or old_graded.has("3"):
+		_fail("옛 막은 옵션 읽기 — 공통 %s · 등급 %s" % [old_common, old_graded])
 	var critty := _gear(1, "boots", 0)
 	critty.options = [{"kind": "crit", "value": 1.0}]
 	p.bag = [critty]
 	ledger._codex_auto(p, 0)
 	if p.bag.size() != 1 or Codex.has(p.codex, Items.item_id(1, "boots"), 0):
-		_fail("치명타를 막았는데 치명타 장비가 도감에 들어갔다")
+		_fail("일반에서 치명타를 안 켰는데 치명타 장비가 도감에 들어갔다")
 	critty.options = [{"kind": "maxHp", "value": 1.0}]
 	ledger._codex_auto(p, 0)
 	if not p.bag.is_empty() or not Codex.has(p.codex, Items.item_id(1, "boots"), 0):
-		_fail("일반에서 막지 않은 체력 옵션 장비가 안 들어갔다")
-	ledger.set_codex_auto_block(p, 1, [])
-	ledger.set_codex_auto_block(p, 2, [])
-	if not Ledger.codex_auto_block(p).is_empty():
-		_fail("다 비웠는데 막은 옵션 표가 남았다 %s" % [Ledger.codex_auto_block(p)])
+		_fail("일반에서 켠 체력 옵션 장비가 안 들어갔다")
+	ledger.set_codex_auto_options(p, 1, every)
 	# 잠근 것은 건드리지 않는다
 	var locked := _gear(1, "ring", 0)
 	locked.locked = true
@@ -377,7 +379,7 @@ func _case_auto_save() -> void:
 	var w: World = s[0]
 	w.set_codex_auto_grade("me", 5, ["ring"])
 	w.set_codex_auto_grade("me", 2, ["weapon", "boots"])
-	w.set_codex_auto_block("me", 4, ["penetration"])
+	w.set_codex_auto_options("me", 4, ["penetration"])
 	var me: Dictionary = w.snapshot().players["me"]
 	me.codex_new = {Items.item_id(2, "helmet"): 4}
 	w.save("me")
@@ -386,10 +388,10 @@ func _case_auto_save() -> void:
 	again.restore("me")
 	var back: Dictionary = again.snapshot().players["me"]
 	if back.codex_auto != {"2": ["weapon", "boots"], "5": ["ring"]} or back.codex_new != {Items.item_id(2, "helmet"): 4} \
-			or back.codex_auto_block != {"4": ["penetration"]}:
-		_fail("불러온 자동 등록 %s · 새 칸 %s · 막은 옵션 %s" % [back.codex_auto, back.codex_new, back.codex_auto_block])
-	if str(LedgerServer.OPS.get("set_codex_auto_block", "")) != "iw":
-		_fail("서버가 set_codex_auto_block 요청을 모른다")
+			or back.codex_auto_options != {"4": ["penetration"]}:
+		_fail("불러온 자동 등록 %s · 새 칸 %s · 넣을 옵션 %s" % [back.codex_auto, back.codex_new, back.codex_auto_options])
+	if str(LedgerServer.OPS.get("set_codex_auto_options", "")) != "iw":
+		_fail("서버가 set_codex_auto_options 요청을 모른다")
 	again.codex_seen("me", 2)
 	if not again.snapshot().players["me"].codex_new.is_empty():
 		_fail("World.codex_seen 이 장부에 안 닿았다")
@@ -399,7 +401,7 @@ func _case_auto_save() -> void:
 	var server := LedgerServer.new(AccountStore.new("user://codex_test_accounts"))
 	if server._args("iw", [3.0, ["weapon", "ring"]]) != [3, ["weapon", "ring"]] or server._args("w", [[1]]) != null:
 		_fail("서버 글자 목록 인자 %s · %s" % [server._args("iw", [3.0, ["weapon", "ring"]]), server._args("w", [[1]])])
-	for key in ["codex_auto", "codex_auto_block", "codex_new"]:
+	for key in ["codex_auto", "codex_auto_options", "codex_new"]:
 		if not key in Ledger.KEYS or not Ledger.fresh("fighter").has(key):
 			_fail("장부 칸·새 계정에 %s 가 없다" % key)
 
@@ -579,19 +581,24 @@ func _case_panel() -> void:
 	var sheet_size := (sheet.find_child("sheet", true, false) as Control).get_combined_minimum_size()
 	if sheet_size.x > 1280.0 or sheet_size.y > 720.0:
 		_fail("자동 등록 설정 창 %s 가 화면(1280x720)보다 크다" % sheet_size)
-	# 1차 옵션 — 등급마다, 처음엔 다 꺼짐(막지 않음). **켜면(활성화) 그 옵션을 막는다**
-	var blocks: Array = []
-	panel.auto_block_changed.connect(func(grade: int, kinds: Array) -> void: blocks.append([grade, kinds]))
-	if sheet.option_blocked(3, "crit"):
-		_fail("처음인데 희귀 치명타 옵션이 막혀 있다")
-	(sheet.find_child("block_3_crit", true, false) as Button).pressed.emit()
-	panel.refresh({"codex": {}, "bag": [], "codex_auto": {"3": ["armor"]}, "codex_auto_block": {"3": ["crit"]}})
-	(sheet.find_child("block_3_maxHp", true, false) as Button).pressed.emit()
-	(sheet.find_child("block_5_crit", true, false) as Button).pressed.emit()
-	if blocks != [[3, ["crit"]], [3, ["crit", "maxHp"]], [5, ["crit"]]] \
-			or not sheet.option_blocked(3, "crit") or sheet.option_blocked(3, "maxHp") or sheet.option_blocked(5, "crit"):
+	# 1차 옵션 — 등급마다, 처음엔 다 켜짐. **켠(활성화) 옵션만 넣는다** — 칩은 넣을 목록 전체를 요청한다
+	var picks: Array = []
+	panel.auto_options_changed.connect(func(grade: int, kinds: Array) -> void: picks.append([grade, kinds]))
+	var every := Ledger.clean_option_kinds(Items._t().get("optionKinds", []))
+	if not sheet.option_on(3, "crit"):
+		_fail("처음인데 희귀 치명타 옵션이 꺼져 있다")
+	(sheet.find_child("option_3_crit", true, false) as Button).pressed.emit()
+	var no_crit: Array = every.filter(func(kind: String) -> bool: return kind != "crit")
+	panel.refresh({"codex": {}, "bag": [], "codex_auto": {"3": ["armor"]}, "codex_auto_options": {"3": ["maxHp"]}})
+	(sheet.find_child("option_3_crit", true, false) as Button).pressed.emit()
+	if picks != [[3, no_crit], [3, ["crit", "maxHp"]]] \
+			or sheet.option_on(3, "crit") or not sheet.option_on(3, "maxHp") or not sheet.option_on(5, "crit"):
 		_fail("옵션 칩 요청 %s · 희귀 치명타 %s · 희귀 체력 %s · 전설 치명타 %s" % [
-			blocks, sheet.option_blocked(3, "crit"), sheet.option_blocked(3, "maxHp"), sheet.option_blocked(5, "crit")])
+			picks, sheet.option_on(3, "crit"), sheet.option_on(3, "maxHp"), sheet.option_on(5, "crit")])
+	# 등급을 켜면 전 옵션도 켠다
+	(sheet.find_child("auto_6", true, false).get_node("on") as Button).pressed.emit()
+	if picks.back() != [6, every]:
+		_fail("등급을 켰는데 전 옵션 요청이 아니다 %s" % [picks.back()])
 	# 등급 탭 — 고른 탭의 쪽만 보인다, 켠 등급 탭에 금빛 점
 	sheet.pick_grade(5)
 	if not (sheet.find_child("page_5", true, false) as Control).visible \

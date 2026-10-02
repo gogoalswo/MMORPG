@@ -12,17 +12,17 @@ extends Control
 ##   │  자동 등록                               [ ON ][ OFF ]  │
 ##   │  아이템 종류 — 활성화 된 종류만 자동으로 등록합니다          │
 ##   │  [무기][갑옷][투구][신발][목걸이][반지]                    │ ← 켜면(밝음) 넣는다
-##   │  1차 옵션 — 활성화 된 옵션은 자동으로 등록하지 않습니다.     │
-##   │  [치명타][치명타 데미지][체력][방어력 관통][아이템 드랍률]    │ ← 켜면(밝음) 막는다
+##   │  1차 옵션 — 활성화 된 옵션만 자동으로 등록합니다            │
+##   │  [치명타][치명타 데미지][체력][방어력 관통][아이템 드랍률]    │ ← 켜면(밝음) 넣는다
 ##   │                                               [ 닫기 ]  │
 ##
 ## 일곱 등급을 한 화면에 줄로 늘어놓으면 옵션 칩까지 720 높이에 안 들어가 **등급 탭**으로 나눴다.
-## 값은 **장부**(`codex_auto` · `codex_auto_block`)다 — 이 창은 요청만 내고 장부 값을 그린다.
+## 값은 **장부**(`codex_auto` · `codex_auto_options`)다 — 이 창은 요청만 내고 장부 값을 그린다.
 
 ## 등급 하나의 넣을 부위 목록(비면 그 등급을 끈다) — `game.gd` 가 `codexAutoGrade` 로 보낸다
 signal changed(grade: int, slots: Array)
-## 등급 하나의 막을 1차 옵션 목록 — `game.gd` 가 `codexAutoBlock` 으로 보낸다
-signal blocked_changed(grade: int, kinds: Array)
+## 등급 하나의 넣을 1차 옵션 목록 — `game.gd` 가 `codexAutoOptions` 로 보낸다
+signal options_changed(grade: int, kinds: Array)
 
 const WIDTH := 860.0
 const CHIP := Vector2(120, 42)
@@ -144,13 +144,13 @@ func _build(close_button: Button) -> void:
 			chips[str(slot)] = chip
 		_chips[grade] = chips
 
-		page.add_child(_head("1차 옵션 — 활성화 된 옵션은 자동으로 등록하지 않습니다."))
+		page.add_child(_head("1차 옵션 — 활성화 된 옵션만 자동으로 등록합니다"))
 		var options := HBoxContainer.new()
 		options.add_theme_constant_override("separation", 8)
 		page.add_child(options)
 		var option_chips := {}
 		for kind in Items._t().get("optionKinds", []):
-			var chip := _chip("block_%d_%s" % [grade, kind], str(labels.get(kind, kind)), OPTION_CHIP)
+			var chip := _chip("option_%d_%s" % [grade, kind], str(labels.get(kind, kind)), OPTION_CHIP)
 			chip.pressed.connect(_toggle_option.bind(grade, str(kind)))
 			options.add_child(chip)
 			option_chips[str(kind)] = chip
@@ -190,20 +190,20 @@ func refresh(me: Dictionary) -> void:
 	if not visible:
 		return
 	var table := Ledger.codex_auto(me)
-	var blocks := Ledger.codex_auto_block(me)
-	var seen := "%d|%s|%s" % [_grade, table, blocks]
+	var options := Ledger.codex_auto_options(me)
+	var seen := "%d|%s|%s" % [_grade, table, options]
 	if seen == _seen:
 		return
 	_seen = seen
 	for grade in _tabs:
 		var slots: Array = table.get(str(grade), [])
-		var blocked: Array = blocks.get(str(grade), [])
+		var allowed := Ledger.codex_auto_option_kinds(me, grade)
 		_paint_tab(_tabs[grade], grade == _grade, grade, not slots.is_empty())
 		SettingsPanel.paint_switch(_switches[grade], not slots.is_empty())
 		for slot in _chips[grade]:
 			_paint_chip(_chips[grade][slot], slot in slots, not slots.is_empty())
 		for kind in _option_chips[grade]:
-			_paint_chip(_option_chips[grade][kind], kind in blocked, not slots.is_empty())
+			_paint_chip(_option_chips[grade][kind], kind in allowed, not slots.is_empty())
 
 
 ## 고른 탭 · 그 등급이 켜졌나 · 그 부위를 넣나 · 그 옵션을 막나 — 테스트가 본다
@@ -219,16 +219,18 @@ func slot_on(grade: int, slot: String) -> bool:
 	return bool(_chips[grade][slot].get_meta("on", false))
 
 
-func option_blocked(grade: int, kind: String) -> bool:
+func option_on(grade: int, kind: String) -> bool:
 	return bool(_option_chips[grade][kind].get_meta("on", false))
 
 
-## 등급 스위치 — 켜면 그 등급의 전 부위, 끄면 비운다
+## 등급 스위치 — 켜면 그 등급의 전 부위 · 전 옵션, 끄면 부위를 비운다(옵션은 그대로 둔다)
 func _set_grade(grade: int, on: bool) -> void:
 	var lit := not Ledger.codex_auto_slots(_me, grade).is_empty()
 	if on == lit:
 		return
 	changed.emit(grade, Items.slots().duplicate() if on else [])
+	if on:
+		options_changed.emit(grade, Ledger.clean_option_kinds(Items._t().get("optionKinds", [])))
 
 
 ## 부위 칩 — 그 등급의 목록에서 넣고 뺀다. 마지막 하나를 빼면 그 등급이 꺼진다
@@ -241,14 +243,14 @@ func _toggle_slot(grade: int, slot: String) -> void:
 	changed.emit(grade, Ledger.clean_slots(slots))
 
 
-## 옵션 칩 — 켜면(활성화) 그 옵션이 붙은 장비를 막는다
+## 옵션 칩 — 켜면(활성화) 그 옵션이 붙은 장비를 넣는다
 func _toggle_option(grade: int, kind: String) -> void:
-	var kinds: Array = Ledger.codex_auto_block_kinds(_me, grade).duplicate()
+	var kinds: Array = Ledger.codex_auto_option_kinds(_me, grade).duplicate()
 	if kind in kinds:
 		kinds.erase(kind)
 	else:
 		kinds.append(kind)
-	blocked_changed.emit(grade, Ledger.clean_option_kinds(kinds))
+	options_changed.emit(grade, Ledger.clean_option_kinds(kinds))
 
 
 ## 등급 탭 — 등급 색 글자, 고른 탭만 밝게 + 금빛 밑줄. 켠 등급은 오른쪽 위 금빛 점

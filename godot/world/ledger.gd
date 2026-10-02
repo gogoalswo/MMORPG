@@ -18,7 +18,7 @@ const KEYS := [
 	"job", "level", "exp", "gold", "skills", "skill_points", "passives",
 	"skill_upgrades", "skill_upgrade_exp", "skill_exp", "bag", "equipped", "granted",
 	"diamonds", "proteins", "fitness", "codex", "sandbag", "dungeon_entries", "loot_skip",
-	"loot_skip_slots", "loot_skip_options", "codex_auto", "codex_auto_block", "codex_new",
+	"loot_skip_slots", "loot_skip_options", "codex_auto", "codex_auto_options", "codex_new",
 ]
 
 ## **첫 선물** — 새 캐릭터가 한 번만 받는 것 `[[표시, 묶음], …]`. 로컬은 `LocalTransport.open` 이,
@@ -59,9 +59,9 @@ static func fresh(job: String) -> Dictionary:
 		# 도감 자동 등록 `{ "등급": [넣을 부위, …] }` — 도감 창 "자동 등록 설정" (`set_codex_auto_grade`).
 		# 등급이 없으면 그 등급은 끔. 비어 있으면 다 끔
 		"codex_auto": {},
-		# 자동 등록에서 막을 1차 옵션 `{ "등급": [종류, …] }` — 그 등급에서 이 옵션이 붙은 장비는 주워도 안 넣는다
-		# (`set_codex_auto_block`)
-		"codex_auto_block": {},
+		# 자동 등록할 1차 옵션 `{ "등급": [종류, …] }` — 그 등급에서 **이 옵션이 붙은 장비만** 넣는다
+		# (`set_codex_auto_options`). 등급이 없으면 전 옵션
+		"codex_auto_options": {},
 		# 자동 등록으로 새로 찬 칸 `{ 아이템 id: 강화 비트 }` — 도감 빨간 점. 그 탭을 보고 나오면 지운다(`codex_seen`)
 		"codex_new": {},
 	}
@@ -501,11 +501,11 @@ func _codex_auto(p: Dictionary, at: int) -> void:
 	if item.is_empty() or not (str(item.slot) in codex_auto_slots(p, int(item.grade))) or Items.is_locked(stack) \
 			or int(stack.get("count", 1)) > 1:
 		return
-	# 그 등급에서 막아 둔 1차 옵션이 붙었으면 넣지 않는다 (2026-10-02 요청 "치명타 옵션이 있을 경우 등록 안 되게
-	# 막는거야" → "등급마다 옵션 설정할 수 있게")
-	var blocked := codex_auto_block_kinds(p, int(item.grade))
+	# 그 등급에서 고른(활성화된) 1차 옵션이 붙은 것만 넣는다 (2026-10-02 요청 "치명타 옵션이 있을 경우 등록 안 되게"
+	# → "등급마다 옵션 설정할 수 있게" → "옵션도 활성화 된 옵션만 자동등록하는걸로 바꿔")
+	var allowed := codex_auto_option_kinds(p, int(item.grade))
 	for option in stack.get("options", []):
-		if option is Dictionary and str(option.get("kind", "")) in blocked:
+		if option is Dictionary and not (str(option.get("kind", "")) in allowed):
 			return
 	var codex: Dictionary = p.get("codex", {})
 	var level := int(stack.get("enhance", 0))
@@ -551,45 +551,46 @@ func set_codex_auto_grade(p: Dictionary, grade: int, slots: Array) -> void:
 	p.codex_auto = table
 
 
-## 자동 등록에서 막을 1차 옵션 — **등급 하나**의 종류 목록을 정한다. 비면 그 등급은 다 넣는다.
-## 표에 있는 종류만, 겹치지 않게, 표 순서로 (도감 "자동 등록 설정" 창의 그 등급 탭)
-func set_codex_auto_block(p: Dictionary, grade: int, kinds: Array) -> void:
+## 자동 등록할 1차 옵션 — **등급 하나**의 종류 목록을 정한다. **비어도 그대로 둔다**(그 등급은 옵션이 붙은 장비를
+## 하나도 안 넣는다). 표에 있는 종류만, 겹치지 않게, 표 순서로 (도감 "자동 등록 설정" 창의 그 등급 탭)
+func set_codex_auto_options(p: Dictionary, grade: int, kinds: Array) -> void:
 	if grade < 1 or grade > int(Items._t().get("gradeMax", 7)):
 		return
-	var table := codex_auto_block(p)
-	var kept := clean_option_kinds(kinds)
-	if kept.is_empty():
-		table.erase(str(grade))
-	else:
-		table[str(grade)] = kept
-	p.codex_auto_block = table
+	var table := codex_auto_options(p)
+	table[str(grade)] = clean_option_kinds(kinds)
+	p.codex_auto_options = table
+	p.erase("codex_auto_block")
 
 
-## 막은 1차 옵션 표 `{ "등급": [종류, …] }` (다듬은 새 사전) — 옛 계정·옛 저장에는 칸이 없다(빈 사전 = 다 넣는다).
-## **옛 모양 `[종류, …]`(같은 날 낮, 전 등급 공통)은 모든 등급에 같은 목록**으로 읽는다
-static func codex_auto_block(p: Dictionary) -> Dictionary:
-	var raw: Variant = p.get("codex_auto_block", {})
+## 자동 등록할 1차 옵션 표 `{ "등급": [종류, …] }` (다듬은 새 사전). **등급이 없으면 전 옵션**이다.
+## 옛 칸 `codex_auto_block`(같은 날 낮 — 막을 옵션, `[종류]` 전 등급 공통 또는 `{등급: [종류]}`)만 있으면
+## **전 옵션 − 막은 것**으로 읽는다
+static func codex_auto_options(p: Dictionary) -> Dictionary:
 	var out := {}
 	var top := int(Items._t().get("gradeMax", 7))
-	if raw is Array:
-		var kinds := clean_option_kinds(raw)
-		if not kinds.is_empty():
-			for grade in range(1, top + 1):
-				out[str(grade)] = kinds.duplicate()
+	var raw: Variant = p.get("codex_auto_options", null)
+	if raw is Dictionary:
+		for key in raw:
+			var grade := int(str(key)) if str(key).is_valid_int() else 0
+			if grade >= 1 and grade <= top:
+				out[str(grade)] = clean_option_kinds(raw[key])
 		return out
-	if not raw is Dictionary:
-		return out
-	for key in raw:
-		var grade := int(str(key)) if str(key).is_valid_int() else 0
-		var kinds := clean_option_kinds(raw[key])
-		if grade >= 1 and grade <= top and not kinds.is_empty():
-			out[str(grade)] = kinds
+	var old: Variant = p.get("codex_auto_block", {})
+	var every: Array = clean_option_kinds(Items._t().get("optionKinds", []))
+	for grade in range(1, top + 1):
+		var blocked: Array = []
+		if old is Array:
+			blocked = clean_option_kinds(old)
+		elif old is Dictionary:
+			blocked = clean_option_kinds(old.get(str(grade), []))
+		if not blocked.is_empty():
+			out[str(grade)] = every.filter(func(kind: String) -> bool: return not (kind in blocked))
 	return out
 
 
-## 그 등급에서 막은 1차 옵션 종류 — 없으면 빈 목록(다 넣는다)
-static func codex_auto_block_kinds(p: Dictionary, grade: int) -> Array:
-	return codex_auto_block(p).get(str(grade), [])
+## 그 등급에서 자동 등록할 1차 옵션 종류 — 정하지 않았으면 전 옵션
+static func codex_auto_option_kinds(p: Dictionary, grade: int) -> Array:
+	return codex_auto_options(p).get(str(grade), clean_option_kinds(Items._t().get("optionKinds", [])))
 
 
 static func clean_option_kinds(raw: Variant) -> Array:

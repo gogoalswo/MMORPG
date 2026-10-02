@@ -442,6 +442,7 @@ var _debug_text: Label
 var _debug_level := 100
 var _bag_head: Label
 var _bag_gold: Label
+var _bag_auto: Button
 var _bag_sum: Label
 var _bag_grid: GridContainer
 var _bag_scroll: ScrollContainer
@@ -1740,6 +1741,10 @@ func _build_bag_window(panel: PanelContainer) -> void:
 	_bag_head.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_bag_head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	foot.add_child(_bag_head)
+	# 자동 장착 (2026-10-02 요청) — 부위마다 전투력이 가장 높아지는 것을 장부가 고른다
+	_bag_auto = _inv_button("자동장착", _on_auto_equip)
+	_bag_auto.name = "AutoEquip"
+	foot.add_child(_bag_auto)
 
 	var coins := HBoxContainer.new()
 	coins.add_theme_constant_override("separation", 8)
@@ -2500,6 +2505,15 @@ func _close_crystal() -> void:
 	_crystal_target = {}
 	_bag_pick = {}
 	_show_bag_detail()
+
+
+## 자동 장착 — 가방 번호가 바뀌니 정렬처럼 고른 칸을 비운다 (`Ledger.auto_equip`)
+func _on_auto_equip() -> void:
+	_bag_pick = {}
+	_crystal_target = {}
+	_transport.send(&"autoEquip", {})
+	_show_bag_detail()
+	_redraw_bag()
 
 
 func _on_bag_sort() -> void:

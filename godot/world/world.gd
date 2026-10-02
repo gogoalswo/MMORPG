@@ -2696,6 +2696,14 @@ func sort_bag(player_id: String) -> void:
 	_ledger_call(player, &"sort_bag")
 
 
+## 부위마다 가장 좋은 것으로 낀다 (`Ledger.auto_equip`)
+func auto_equip(player_id: String) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	_ledger_call(player, &"auto_equip")
+
+
 func unequip(player_id: String, slot: String) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty():

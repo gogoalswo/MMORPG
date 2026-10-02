@@ -1305,6 +1305,12 @@ func _case_bag_dot(game: Node3D) -> void:
 	game._toggle_bag()
 	if dot.visible:
 		_fail("가방을 열었는데 빨간 점이 안 꺼졌다")
+	game._toggle_bag()
+	# 주운 그 자리에서 도감 자동 등록으로 빠졌으면 가방에 없다 — 점을 켜지 않는다
+	game._on_event(&"loot", {"gold": 5, "item": {"id": "g3_w", "grade": 3, "enhance": 0}, "kept": false})
+	if dot.visible:
+		_fail("도감 자동 등록으로 가방에 안 들어왔는데 빨간 점이 켜졌다")
+	game._toggle_bag()
 	game._on_event(&"loot", {"gold": 5, "item": {"id": "g3_w", "grade": 3, "enhance": 0}})
 	if dot.visible:
 		_fail("가방을 보고 있는데 빨간 점이 켜졌다")

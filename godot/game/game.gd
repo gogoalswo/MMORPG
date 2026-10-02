@@ -664,8 +664,9 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 					payload.get("gold", 0), Items.get_item(got).get("name", got)
 				]
 				_chat.add_item(str(Items.get_item(got).get("name", got)), int(payload.item.get("grade", 1)))
-				# 가방을 보고 있으면 이미 본 것이다 — 닫혀 있을 때만 점을 켠다
-				if not _bag_panel.visible:
+				# 가방을 보고 있으면 이미 본 것이다 — 닫혀 있을 때만 점을 켠다.
+				# 도감 자동 등록으로 곧장 빠졌으면(`kept: false`) 가방에 없으니 켜지 않는다
+				if not _bag_panel.visible and bool(payload.get("kept", true)):
 					_bag_dot.visible = true
 			if int(payload.get("crystal", 0)) > 0:
 				_chat.add_line("재료 획득", Items.stack_name({"id": Items.crystal_id()}), INV_TEXT)

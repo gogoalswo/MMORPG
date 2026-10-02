@@ -1812,6 +1812,16 @@ func _case_bag_drag(game: Node3D) -> void:
 	elif int(game._bag_pick.get("index", -1)) != BAG_TAP_CELL:
 		_fail("%d 번 칸을 눌렀는데 %s 가 골라졌다" % [BAG_TAP_CELL, game._bag_pick])
 
+	# 껐다 켜면 맨 위로 (2026-10-02 요청: "껐다 켜면 스크롤이 맨 위로") — 끌어 내린 채로 닫는다
+	if game._bag_scroll.scroll_vertical <= 0:
+		_fail("가방을 끌었는데 스크롤이 그대로 맨 위다 — 다시 열기 검사를 못 한다")
+	game._toggle_bag()
+	await process_frame
+	game._toggle_bag()
+	await process_frame
+	if game._bag_scroll.scroll_vertical != 0:
+		_fail("가방을 껐다 켰는데 스크롤이 %d 에 남았다" % game._bag_scroll.scroll_vertical)
+
 	# 강화 목록(다중 강화) — 끈 뒤 누른 칸이 담겨야 한다
 	var pop: EnhancePopup = game._enhance
 	pop.open({"where": "bag", "index": 0})

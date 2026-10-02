@@ -369,6 +369,7 @@ func _build_stages() -> void:
 	middle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	middle.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	cols.add_child(middle)
+	DragScroll.top_on_open(middle)
 	_rewards = GridContainer.new()
 	_rewards.columns = 2
 	_rewards.size_flags_horizontal = Control.SIZE_EXPAND_FILL

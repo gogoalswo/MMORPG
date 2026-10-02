@@ -60,6 +60,11 @@
 
 - 한 벌만 둔다 — `DragScroll.attach(목록, 격자, 칸 사이)` 를 붙이면 된다. 지금
   **가방(`_bag_drag`)·스킬 목록(`_skill_drag`)·강화 목록(`EnhancePopup.list_drag`)**.
+- **창을 다시 열면 맨 위로** 간다 (2026-10-02 요청: "스킬 UI 껐다 켜면 스크롤이 맨 위로").
+  `DragScroll.top_on_open(목록)` 이 `visibility_changed`(부모가 숨고 보일 때 자식까지 온다)에서
+  `scroll_vertical = 0` 으로 되돌린다. `attach` 가 같이 붙이고, 끌기가 없는 목록 — 랭킹 표·던전
+  보상 — 은 직접 부른다. 패시브 나무는 열면서 습득할 칸으로 가는데 그 이동이 `call_deferred` 라
+  이것 다음에 온다. 새 `ScrollContainer` 를 만들면 둘 중 하나를 붙인다.
 - 격자에 들어오는 **칸은 흘려보내고(PASS) 칸 안의 것은 전부 비킨다(IGNORE)**
   (`_let_through`, `child_entered_tree` 에서 — 칸을 나중에 채워도 자동이다).
   처음에는 `hit` 만 비켰는데, **칸 자체(`PanelContainer`, 기본 STOP)가 입력을

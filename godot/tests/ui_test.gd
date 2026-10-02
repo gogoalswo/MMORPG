@@ -867,6 +867,43 @@ func _case_trial(game: Node3D) -> void:
 		_fail("확인을 눌렀는데 마을로 안 나갔다: %s (창 %s)" % [game._shown_zone, result.visible])
 	else:
 		print("  시련의 탑: 시계 '%s' · 실패/성공 결과창 · 확인 → 마을" % hud.text)
+	await _check_spent_entries(game, panel)
+
+
+## 오늘 입장을 다 쓴 뒤 (2026-10-02 요청) — 카드에 "입장 횟수 0 / 1" · 입장 단추는 어둡지만 눌리고 ·
+## 누르면 "입장 횟수가 다 소모 되었습니다." 가 뜨고 떠나지 않는다 (docs/features/dungeons.md "하루 한 번")
+func _check_spent_entries(game: Node3D, panel: DungeonPanel) -> void:
+	game._toggle_dungeon()
+	await process_frame
+	for i in 2:
+		var count: Label = panel.card(i).find_child("Entries", true, false)
+		if count == null or count.text != "입장 횟수 0 / 1":
+			_fail("%d번 카드에 입장 횟수가 없다: '%s'" % [i, count.text if count != null else "없음"])
+	if panel.card(2).find_child("Entries", true, false) != null:
+		_fail("닫힌 보물 창고 카드에 입장 횟수가 붙었다")
+	await _tap_card(panel, 1)
+	var enter := panel.enter_button()
+	if enter.disabled or enter.text != DungeonPanel.SPENT_ENTER_TEXT:
+		_fail("다 쓴 날 입장 단추가 눌려야 하고 '입장 완료' 여야 한다: 막힘 %s '%s'" % [enter.disabled, enter.text])
+	enter.pressed.emit()
+	for i in 2:
+		await process_frame
+	var notice: Label = panel.find_child("EnterNotice", true, false).get_child(0)
+	var font: Font = load(FONT)
+	var missing := ""
+	for ch in notice.text + panel.card(0).find_child("Entries", true, false).text:
+		if ch != " " and not font.has_char(ch.unicode_at(0)):
+			missing += ch
+	if not panel.notice_shown() or notice.text != DungeonPanel.SPENT_NOTICE:
+		_fail("다 쓴 날 입장을 누르면 알림이 떠야 한다: 보임 %s '%s'" % [panel.notice_shown(), notice.text])
+	elif missing != "":
+		_fail("입장 알림 글자가 폰트에 없다: %s" % missing)
+	elif not panel.visible or game._shown_zone != GameData.start_zone():
+		_fail("다 쓴 날 입장을 눌렀는데 떠났다: %s" % game._shown_zone)
+	else:
+		print("  입장 횟수: 카드 '입장 횟수 0 / 1' · 입장 → '%s'" % notice.text)
+	panel.close_panel()
+	await process_frame
 
 
 ## 샌드백 랭킹전 (docs/features/sandbag.md) — 메뉴 판의 "샌드백" → 전체 화면 입장 창(설명 한 줄 · 보상 표 ·

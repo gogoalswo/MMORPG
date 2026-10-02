@@ -44,6 +44,13 @@ const OPEN_TEXT := "입장 가능"
 ## 하루 한 번인 던전을 오늘 들어간 뒤 (docs/features/dungeons.md "하루 한 번")
 const SPENT_TEXT := "오늘 입장 완료"
 const SPENT_ENTER_TEXT := "입장 완료"
+## 카드에 적는 하루 입장 횟수 (남은 / 하루) — 2026-10-02 요청 "입장 횟수 던전별로 적어놓고"
+const ENTRIES_TEXT := "입장 횟수 %d / %d"
+## 다 쓴 날 입장을 누르면 단계 창 가운데에 잠깐 뜬다 — 단추는 눌리게 둔다(막으면 알림을 못 띄운다)
+const SPENT_NOTICE := "입장 횟수가 다 소모 되었습니다."
+const NOTICE_SECONDS := 1.6
+## 다 쓴 날의 입장 단추 — 눌리기는 하지만 어둡게
+const SPENT_ENTER_TINT := Color(0.55, 0.55, 0.55)
 
 ## 단계 창 — 화면에서 차지하는 크기, 칸 폭
 const STAGE_SIZE := Vector2(1060, 600)
@@ -77,9 +84,21 @@ var _stage_close: Button
 var _rewards: GridContainer
 var _boss: VBoxContainer
 var _enter: Button
-## 오늘 입장을 다 쓴 종류 `{ 종류 id: true }` — 여는 쪽(`game.gd` `_toggle_dungeon`)이 장부에서 채운다.
-## 막기만 한다 — 세는 것은 장부다 (`World.travel` → `Ledger.dungeon_enter`)
-var spent := {}
+## 입장 횟수가 다 됐을 때 단계 창 가운데에 뜨는 알림
+var _notice: PanelContainer
+var _notice_tween: Tween
+## 종류마다 오늘 입장 `{ 종류 id: Vector2i(남은, 하루) }` — 여는 쪽(`game.gd` `_toggle_dungeon`)이 장부에서 채운다.
+## 하루 제한이 없는 종류는 빠진다. 막기만 한다 — 세는 것은 장부다 (`World.travel` → `Ledger.dungeon_enter`)
+var entries := {}
+
+
+## 오늘 입장을 다 쓴 종류인가
+func spent(type_id: String) -> bool:
+	return entries.has(type_id) and (entries[type_id] as Vector2i).x <= 0
+
+
+func notice_shown() -> bool:
+	return _notice != null and _notice.visible
 
 
 static func make(frame_box := Callable(), icon := Callable(), item_icon := Callable()) -> DungeonPanel:
@@ -250,11 +269,16 @@ func _add_card(type: Dictionary) -> Button:
 	if not stages.is_empty():
 		levels = "권장 Lv.%d ~ %d" % [int(stages[0].get("level", 0)), int(stages[-1].get("level", 0))]
 	text.add_child(_card_label(levels, CARD_SUB_SIZE, CARD_SUB_COLOR))
+	if on and entries.has(id):
+		var count: Vector2i = entries[id]
+		var entry_label := _card_label(ENTRIES_TEXT % [count.x, count.y], CARD_SUB_SIZE, CARD_SUB_COLOR if count.x > 0 else HERE_COLOR)
+		entry_label.name = "Entries"
+		text.add_child(entry_label)
 	var gap := Control.new()
 	gap.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	text.add_child(gap)
-	var used := on and spent.has(id)
+	var used := on and spent(id)
 	text.add_child(_status(SPENT_TEXT if used else (OPEN_TEXT if on else LOCKED), CARD_GOLD if on and not used else HERE_COLOR))
 
 	# 위 장식 — 틀 윗변에 걸쳐 솟는다
@@ -411,6 +435,26 @@ func _build_stages() -> void:
 	_enter.pressed.connect(_on_enter)
 	right_col.add_child(_enter)
 
+	# 알림 — 창 가운데 위에 얹는다. 누름은 받지 않는다(뒤 단추가 그대로 눌린다)
+	_notice = PanelContainer.new()
+	_notice.name = "EnterNotice"
+	_notice.visible = false
+	_notice.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_notice.set_anchors_preset(Control.PRESET_CENTER)
+	_notice.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_notice.grow_vertical = Control.GROW_DIRECTION_BOTH
+	var notice_box := StyleBoxFlat.new()
+	notice_box.bg_color = Color(CARD_DARK, 0.94)
+	notice_box.border_color = CARD_GOLD
+	notice_box.set_border_width_all(1)
+	notice_box.content_margin_left = 36
+	notice_box.content_margin_right = 36
+	notice_box.content_margin_top = 18
+	notice_box.content_margin_bottom = 18
+	_notice.add_theme_stylebox_override("panel", notice_box)
+	_notice.add_child(_card_label("", CARD_SUB_SIZE + 2, TEXT_COLOR))
+	_stages.add_child(_notice)
+
 
 ## 다른 창과 같은 X 조각 (그림이 없으면 글자 X)
 func _close_button() -> Button:
@@ -431,6 +475,9 @@ func _show_stages(type_id: String) -> void:
 	_forget_hold()
 	_type = type_id
 	_stages.visible = type_id != ""
+	if _notice_tween != null:
+		_notice_tween.kill()
+	_notice.visible = false
 	_clear_rows()
 	if type_id == "":
 		return
@@ -467,9 +514,11 @@ func _select(zone_id: String) -> void:
 	for child in _boss.get_children():
 		_boss.remove_child(child)
 		child.queue_free()
-	var used := spent.has(_type)
-	_enter.disabled = zone_id == "" or used
+	var used := spent(_type)
+	# 다 쓴 날도 눌리게 둔다 — 누르면 "입장 횟수가 다 소모 되었습니다." (`_on_enter`)
+	_enter.disabled = zone_id == ""
 	_enter.text = SPENT_ENTER_TEXT if used else ENTER_TEXT
+	_enter.modulate = SPENT_ENTER_TINT if used else Color.WHITE
 	var stage := _stage_def(zone_id)
 	if stage.is_empty():
 		return
@@ -560,9 +609,25 @@ func _stage_def(zone_id: String) -> Dictionary:
 
 
 func _on_enter() -> void:
-	if _stage == "" or _stage == _here or spent.has(_type):
+	if spent(_type):
+		_show_notice(SPENT_NOTICE)
+		return
+	if _stage == "" or _stage == _here:
 		return
 	super._on_pick(_stage)
+
+
+## 단계 창 가운데에 잠깐 뜨는 알림 — 던전 창이 화면을 다 덮어 HUD 알림이 안 보여서 창 안에 띄운다
+func _show_notice(text: String) -> void:
+	(_notice.get_child(0) as Label).text = text
+	_notice.visible = true
+	_notice.modulate.a = 1.0
+	if _notice_tween != null:
+		_notice_tween.kill()
+	_notice_tween = create_tween()
+	_notice_tween.tween_interval(NOTICE_SECONDS)
+	_notice_tween.tween_property(_notice, "modulate:a", 0.0, 0.4)
+	_notice_tween.tween_callback(func(): _notice.visible = false)
 
 
 ## 그림이 아래로 판 색에 녹는 띠 (위 투명 → 아래 판 색)

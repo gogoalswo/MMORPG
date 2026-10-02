@@ -389,9 +389,9 @@ fetch_icon 0bbe15a738943ef1a7f19dce90697c1f ui_icon_menu       # 메뉴 ≡ — 
 fetch_icon 46b4480f8aee31a1a7098d5646b1e1cb ui_icon_menu_close # 메뉴 X — 엇갈린 두 검 (첫째)
 # 헬스 창 (2026-09-30, docs/features/fitness.md) — 사용자가 준 다른 게임의 탈리스만 강화 창 스크린샷에서
 # 가운데 문장만 잘라(160px JPEG, fe3678d7…jpg) 물려 뽑았다. 운동마다 두 장 중 고른 것
-fetch_icon 4ec79a36a6213fa0bb5736c7e3bfffa7 ui_fitness_bench    # 벤치프레스 — 붉은 법랑 방패 · 벤치 위 바벨 (첫째)
+fetch_icon 1956152cf5db17044edd2234d687f0b5 ui_fitness_bench    # 벤치프레스 — 붉은 법랑 · 금 부조 사람이 누워 바벨을 민다 (2026-10-02 교체, 첫째)
 fetch_icon aee81a9edba4ba23f9291396d876d92a ui_fitness_deadlift # 데드리프트 — 푸른 법랑 · 금 부조 사람이 바벨을 든다 (2026-10-02 교체, 둘째)
-fetch_icon 5c646a86f26a691ce0a8537967201adb ui_fitness_squat    # 스쿼트 — 초록 법랑 · 랙에 걸린 바벨 (둘째)
+fetch_icon 8da772886426cee69112252101ac62cb ui_fitness_squat    # 스쿼트 — 초록 법랑 · 금 부조 사람이 바벨을 지고 앉는다 (2026-10-02 교체, 둘째)
 # 프로틴 세 통을 한 장에 뽑았다 (색만 다르고 결이 같게) — build-item-icons.mjs 의 `SHEETS` 가 셋으로 자른다
 fetch_icon e27e3d5061cc3b8ee7412fa7e4a6c13d ui_protein_sheet    # 빨강 주먹 · 파랑 방패 · 초록 하트 (둘째)
 # 던전 종류 카드 — 받은 그림(다른 게임의 던전 창)을 참고로 물려 뽑은 풍경 · 틀 · 장식

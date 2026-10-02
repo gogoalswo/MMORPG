@@ -68,6 +68,25 @@ static func auto_picks(codex: Dictionary, bag: Array) -> Array:
 	return out
 
 
+## 도감 창 [강화] 가 강화 창에 고를 가방 번호 — 그 칸(`item_id` +`enhance`)을 채우려고 **같은 장비를 목표 아래에서**
+## 끌어올린다. 목표에 **가장 가까운 것**(두드릴 횟수가 적다), 같으면 옵션 줄이 적은 것. 잠근 것은 빼고
+## (장부가 강화를 거절한다), 없으면 -1 → codex.md "강화 단추"
+static func enhance_source(bag: Array, item_id: String, enhance: int) -> int:
+	var best := -1
+	for at in bag.size():
+		var stack: Dictionary = bag[at]
+		var level := int(stack.get("enhance", 0))
+		if str(stack.get("id", "")) != item_id or level >= enhance or Items.is_locked(stack):
+			continue
+		if best < 0:
+			best = at
+			continue
+		var top := int(bag[best].get("enhance", 0))
+		if level > top or (level == top and Items.option_lines(stack) < Items.option_lines(bag[best])):
+			best = at
+	return best
+
+
 ## 찬 칸 수 — `grade` 를 주면 그 등급만
 static func filled(codex: Dictionary, grade: int = 0) -> int:
 	var count := 0

@@ -25,6 +25,8 @@ extends PanelContainer
 signal register_requested(item_id: String, enhance: int, index: int)
 ## [자동 등록] → 확인 창의 [등록] — 넣을 수 있는 칸 전부 (고르는 것은 장부가 다시 한다)
 signal register_all_requested
+## [강화] — 고른 칸을 채우려고 가방 번호 `index` 의 장비를 `goal` 까지 올리는 강화 창을 띄운다 (game.gd 가 연다)
+signal enhance_requested(index: int, goal: int)
 
 const SIDE_WIDTH := 340.0
 const STONE_IN := 30
@@ -69,6 +71,9 @@ var _pick_have: Label
 var _register_button: Button
 ## 넣을 수 있는 칸을 **전부** 채우는 단추 (2026-10-02 요청 "도감에 자동 등록 버튼 만들어") — 등급을 가리지 않는다
 var _auto_button: Button
+## 고른 칸을 채울 장비를 강화 창에 넘기는 단추 (2026-10-02 요청 "도감에서 강화 버튼 만들어. 도감 목록 누르면 강화
+## 버튼 활성화 … 해당 장비를 선택하고 목표 등급 자동 선택 된 상태로 창을 띄워") — 칸을 **직접 눌러야** 켜진다
+var _enhance_button: Button
 ## 등록할 장비 선택 창 — [등록] 을 누르면 이 창 위에 뜬다 (codex_picker.gd, 2026-10-01 요청
 ## "가방에서 선택하는 UI를 따로 만들어 … 2,3차 옵션은 안 보이자나")
 var _picker: CodexPicker
@@ -255,6 +260,9 @@ func _build_side() -> Control:
 	_pick_have.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(_pick_have)
 
+	# [강화] 는 한 줄을 따로 — 셋을 한 줄에 두면 340 칸에 안 들어간다. 높이는 위의 빈 칸(gap)이 내준다
+	_enhance_button = _side_button("enhance", "강화", _on_enhance)
+	column.add_child(_enhance_button)
 	# [자동 등록] · [등록] 한 줄 — 창 높이를 늘리지 않는다 (1280x720 틀 안)
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 10)
@@ -325,6 +333,10 @@ func auto_button() -> Button:
 	return _auto_button
 
 
+func enhance_button() -> Button:
+	return _enhance_button
+
+
 ## 빨간 점이 켜진 탭 (등급 번호) — 테스트가 본다
 func dotted_tabs() -> Array:
 	var out: Array = []
@@ -375,6 +387,23 @@ func _on_register() -> void:
 		return
 	# 넣을 장비는 따로 뜨는 창에서 고른다 — 1·2·3차 옵션을 다 보고 고른다 (codex_picker.gd)
 	_picker.open(Items.item_id(_grade, str(_pick[0])), int(_pick[1]), _me.get("bag", []))
+
+
+## [강화] — 고른 칸의 장비 중 목표에 가장 가까운 것을 그 칸의 강화 단계까지 올리는 강화 창을 띄운다
+func _on_enhance() -> void:
+	var at := _enhance_source()
+	if at >= 0:
+		enhance_requested.emit(at, int(_pick[1]))
+
+
+## 고른 칸을 채울 가방 번호 — 직접 누른 칸이고, 아직 비었고, 같은 장비가 목표 아래에 있어야 한다. 아니면 -1
+func _enhance_source() -> int:
+	if _auto_pick or _pick.is_empty():
+		return -1
+	var item_id := Items.item_id(_grade, str(_pick[0]))
+	if Codex.has(_me.get("codex", {}), item_id, int(_pick[1])):
+		return -1
+	return Codex.enhance_source(_me.get("bag", []), item_id, int(_pick[1]))
 
 
 ## [자동 등록] — 바로 넣지 않고 들어갈 장비 전부를 확인 창에 늘어놓는다 (넣으면 가방에서 사라진다)
@@ -474,6 +503,9 @@ func _redraw_pick(codex: Dictionary, owned: Dictionary) -> void:
 	var can := not filled and count > 0
 	_register_button.disabled = not can
 	_register_button.modulate = Color.WHITE if can else Color(1, 1, 1, 0.45)
+	var lift := _enhance_source() >= 0
+	_enhance_button.disabled = not lift
+	_enhance_button.modulate = Color.WHITE if lift else Color(1, 1, 1, 0.45)
 
 
 ## 가방 → `{ "아이템 id:강화": 개수 }` — 장비만 센다 (재료는 칸이 없다). **잠근 것은 안 센다** —

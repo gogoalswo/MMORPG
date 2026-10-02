@@ -4343,11 +4343,12 @@ func _toggle_skills() -> void:
 		# 들어갔다. 단추 글자가 창 위에 찍혔다 (2026-09-23 캡처)
 		_skill_panel.get_parent().move_to_front()
 		_redraw_skills()
-		# 나무는 열 때마다 **지금 습득할 칸**으로 간다 — Lv.100 이면 그 칸이 한참 아래다
+		# 나무는 열 때마다 **지금 습득할 칸을 고른다** — 스크롤은 맨 위 그대로다.
+		# 예전에는 그 칸까지 내려갔는데 창이 중간부터 시작해 보였다 (2026-10-02 요청:
+		# "스킬창 열 때 스크롤 초기화 시켜")
 		var ready := _tree_ready_index()
 		if ready >= 0:
 			_pick_tree(ready)
-			_tree_scroll.ensure_control_visible.call_deferred(_tree_nodes[ready].cell)
 
 
 func _me() -> Dictionary:

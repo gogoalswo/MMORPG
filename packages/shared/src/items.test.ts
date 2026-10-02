@@ -579,10 +579,12 @@ test('등급이 오르면 옵션 수치가 커진다 — 개수는 1개 고정�
   assert.equal(optionGradeScale(999), optionGradeScale(GRADE_MAX));
 });
 
-test('옵션 수치가 50배다 — 태초 치명타가 38~75%p', () => {
+test('옵션 수치가 50배다 — 태초 치명타가 13~25%p', () => {
   // 2026-09-21 지시: "지금보다 50배 올려. 예를 들어 치명타 확률이 40%~75%".
-  // 최소가 40 이 아니라 38 인 것은 **최대의 정확히 절반**이라서다 (아래 테스트)
-  assert.deepEqual(optionRange('crit', 7), { min: 38, max: 75 });
+  // 2026-10-02 에 치확·치피를 1/3 로 내렸다 ("치명타랑 치명타 데미지를 지금 수치에 1/3로 줄여").
+  // 최소는 **최대의 정확히 절반**이다 (아래 테스트)
+  assert.deepEqual(optionRange('crit', 7), { min: 13, max: 25 });
+  assert.deepEqual(optionRange('critDamage', 7), { min: 25, max: 50 });
   // HP 만 2026-09-27 에 4 → 0.5 로 내렸다 (장비 HP 예산 2550% → 300% 와 같은 비율)
   assert.deepEqual(optionRange('maxHp', 7), { min: 13, max: 25 });
 });

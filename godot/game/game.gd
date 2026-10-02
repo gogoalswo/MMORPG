@@ -375,6 +375,9 @@ var _skill_list_toggle: Button
 ## me.auto** 로만 정한다 — 눌린 것으로 지레 바꾸면 판정이 거절했을 때 화면만
 ## 켜진 채로 남는다
 var _auto_cell: PanelContainer
+## 물약 칸 뒤 · 자동사냥 칸 앞의 틈 — 샌드백 존에서 칸과 같이 숨긴다 (`_refresh_sandbag_dock`)
+var _potion_gap: Control
+var _auto_gap: Control
 ## 켜져 있는 동안 칸 위에서 도는 화살표 고리
 var _auto_spin: TextureRect
 ## 오른쪽 위 메뉴 단추 전부 — 순서는 정보 · 스킬 · 강화 · 크리스탈 · 가방 · 던전 · 헬스 · 도감 · (랭킹) · 설정.
@@ -3164,10 +3167,10 @@ func _build_skill_bar() -> void:
 	# 자동사냥도 같은 칸이다 — 엄지가 퀵슬롯과 같은 높이에서 닿는다 (2026-09-19 요청).
 	# 켜지면 칸 위에서 화살표 고리가 돈다
 	# 퀵슬롯에서 한 뼘 띄운다 — 붙여 두면 다섯 번째 스킬 칸으로 보인다
-	var gap := Control.new()
-	gap.custom_minimum_size = Vector2(AUTO_GAP, 0)
-	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	dock.add_child(gap)
+	_auto_gap = Control.new()
+	_auto_gap.custom_minimum_size = Vector2(AUTO_GAP, 0)
+	_auto_gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dock.add_child(_auto_gap)
 
 	_auto_cell = _make_skill_cell(AUTO_CELL, "ui_quick_slot", _toggle_auto, QUICK_MARGIN)
 	# **테두리를 없앤다** (2026-09-20 요청) — 같은 테를 두르면 퀵슬롯과 구분이 안 된다
@@ -3340,10 +3343,10 @@ func _build_potion_cell(dock: HBoxContainer) -> void:
 	_potion_cell.add_child(_cell_setting("potion_setting", _toggle_potion_panel))
 	dock.add_child(_potion_cell)
 
-	var gap := Control.new()
-	gap.custom_minimum_size = Vector2(AUTO_GAP, 0)
-	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	dock.add_child(gap)
+	_potion_gap = Control.new()
+	_potion_gap.custom_minimum_size = Vector2(AUTO_GAP, 0)
+	_potion_gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dock.add_child(_potion_gap)
 
 
 ## 칸 오른쪽 위 작은 "설정" 단추 — 물약 칸·자동사냥 칸. 칸의 누름(hit)보다 **뒤에**
@@ -5074,6 +5077,18 @@ func _refresh_home_button() -> void:
 		_home_button.visible = _shown_zone != "" and _shown_zone != GameData.start_zone()
 
 
+## 샌드백 존에서는 물약 칸·자동사냥 칸을 숨긴다 (2026-10-02 요청) — 카운트가 끝나면 판정이 저절로 치고
+## (`World._drive_sandbag_auto`), 샌드백은 때리지 않으니 물약도 쓸 일이 없다
+func _refresh_sandbag_dock() -> void:
+	if _auto_cell == null:
+		return
+	var shown := _shown_zone != Sandbag.zone()
+	for node in [_potion_cell, _potion_gap, _auto_gap, _auto_cell]:
+		node.visible = shown
+	if not shown:
+		_potion_panel.visible = false
+
+
 ## "마을가기" 단추 — 차원문 창에서 마을을 고른 것과 같은 `travel` 요청이다 (World 가 다시 본다)
 func _go_village() -> void:
 	_on_gate_pick(GameData.start_zone())
@@ -5120,6 +5135,7 @@ func _build_zone(zone_id: String) -> void:
 	add_child(_zone_node)
 	_shown_zone = zone_id
 	_refresh_home_button()
+	_refresh_sandbag_dock()
 	# 이펙트 셰이더를 미리 굽는다 — 스킬을 처음 쓸 때 멈칫하지 않게 (한 게임에 한 번)
 	if _camera != null:
 		FxWarm.run(self, _camera, _ui_root.theme.default_font if _ui_root != null and _ui_root.theme != null else null)

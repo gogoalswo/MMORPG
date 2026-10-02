@@ -20,7 +20,8 @@
                      │ 내 기록 12,345 · 2위 / 8명   [ 입장 ] │
                      │ 정산까지 3일 5시간                     │
                      └───────────────────────────────────────┘
- 입장 ─▶  (나)  [샌드백]        가운데 큰 글자 3 · 2 · 1 · 시작!
+ 입장 ─▶  (나)  [샌드백]        가운데 큰 글자 3 · 2 · 1 · 시작!   (물약·자동사냥 칸 없음)
+          시작! 부터 누르지 않아도 저절로 친다 (자동사냥)
           시계 줄 "남은 시간 12초   누적 피해 8,420"
  15초 ─▶ 결과창 "샌드백 랭킹전" · 큰 글자 넣은 피해 · "이번 주 최고 N  새 기록!" · 확인 → 마을
 ```
@@ -34,19 +35,19 @@
 | `packages/shared/src/zones.ts` | `ZONES` 에 샌드백 존을 넣는다 |
 | `scripts/export-shared.mjs` | `zones.json` 의 `sandbag`(규칙) · `monsters.json` 의 `kinds.sandbag`(몬스터 60종 밖에서 붙인다) |
 | `godot/world/sandbag.gd` | `Sandbag` — 표 읽기 · `week` · `week_end` · `reward` · `reward_label` |
-| `godot/world/world.gd` | **판** — `_start_sandbag`(존을 열 때) · `_counting_down`(평타·스킬 막기) · `_count_sandbag_damage`(`_hit_monster` 에서) · `_finish_sandbag`(시간 끝 → 기록 · 결과) · `_check_sandbag_week`(로컬 정산) · `join` 이 샌드백을 보고 서게 |
+| `godot/world/world.gd` | **판** — `_start_sandbag`(존을 열 때) · `_counting_down`(평타·스킬 막기) · `_drive_sandbag_auto`(재는 동안 자동사냥 켜기) · `_count_sandbag_damage`(`_hit_monster` 에서) · `_finish_sandbag`(시간 끝 → 기록 · 결과) · `_check_sandbag_week`(로컬 정산) · `join` 이 샌드백을 보고 서게 |
 | `godot/world/ledger.gd` | **장부** — `sandbag` 칸 `{week, best, unpaid?}` · `sandbag_record` · `sandbag_close_week(순위)` · `sandbag_pay` |
 | `godot/server/ledger_server.gd` | **서버** — `OPS.sandbag_record` · `_check_sandbag`(들어온 지 18초 · 한 판 한 번 · 상한) · `_sandbag_board`(이번 주) · `_ranks_of`(닫힌 주를 파일로 굳힘) · `_settle_sandbag`(hello · op 마다) · `_sandbag_rank` |
 | `godot/server/kill_check.gd` | `max_damage` — 처치 시간과 같은 식으로 "15초에 넣을 수 있는 피해의 상한" |
 | `godot/server/account_store.gd` | `find_sandbag_ranks` · `write_sandbag_ranks` — `sandbag/<주>.json` |
 | `godot/net/server_ledger.gd` · `local_transport.gd` | `ask_sandbag_rank` / `sandbag_ranked` · 서버가 없으면 `_local_sandbag_board`(나 하나) |
-| `godot/game/game.gd` | 메뉴 칸 "샌드백" · `_build_sandbag_panel`(전체 화면) · `_toggle_sandbag` · `_fill_sandbag` · `_on_sandbag_enter` · `_draw_sandbag_hud`(가운데 카운트 · 시계 줄) · 이벤트 `sandbagRank` · `sandbagRecord` · `sandbagReward`(채팅) |
+| `godot/game/game.gd` | 메뉴 칸 "샌드백" · `_refresh_sandbag_dock`(샌드백 존에서 물약·자동사냥 칸 숨김) · `_build_sandbag_panel`(전체 화면) · `_toggle_sandbag` · `_fill_sandbag` · `_on_sandbag_enter` · `_draw_sandbag_hud`(가운데 카운트 · 시계 줄) · 이벤트 `sandbagRank` · `sandbagRecord` · `sandbagReward`(채팅) |
 | `godot/game/dungeon_result.gd` | `_show_sandbag` · `show_sandbag_best` · `comma` — 결과창을 같이 쓴다 |
 | `godot/game/rig.gd` | `FILES.sandbag` → `varco_sandbag.glb` (클립 없음) |
 | `public/assets/models/varco_sandbag.glb` | 바르코 모델 (원화 → 3D, **원점 바닥**, 텍스처 1024). 주소는 `fetch-assets.sh` |
 | `public/assets/icons/ui_icon_sandbag.png` | 메뉴 단추 그림 (HUD 아이콘 기준 프롬프트 그대로, 세 장 중 둘째) |
-| `godot/tests/sandbag_test.gd` | 존 · 카운트 중 막힘 · 센 피해 = 맞은 피해 · 안 죽고 안 움직임 · 결과 한 번 · 낮은 기록은 최고를 안 덮음 · 로컬 주 정산(1위 30개 · 한 번만 · 가방 꽉 차면 남겼다 준다) · 저장 · 옐로우 크리스탈 3차 · 서버(18초 · 상한 · 한 번 · 순위 · 굳힌 순위로 정산 · 새 주 비움) |
-| `godot/tests/ui_test.gd` | `_case_sandbag` — 메뉴 → 창(전체 화면 · 설명 한 줄 · 보상 일곱 줄 · 기록 없음 · 100줄이면 굴린다) → 입장 → 카운트 "3" → 누적 피해 → 결과창 → 다시 열면 1위 → 확인 → 마을 · 글자가 폰트에 있나 |
+| `godot/tests/sandbag_test.gd` | 존 · 카운트 중 막힘 · 끝나면 저절로 침 · 결과 뒤 멈춤 · 센 피해 = 맞은 피해 · 안 죽고 안 움직임 · 결과 한 번 · 낮은 기록은 최고를 안 덮음 · 로컬 주 정산(1위 30개 · 한 번만 · 가방 꽉 차면 남겼다 준다) · 저장 · 옐로우 크리스탈 3차 · 서버(18초 · 상한 · 한 번 · 순위 · 굳힌 순위로 정산 · 새 주 비움) |
+| `godot/tests/ui_test.gd` | `_case_sandbag` — 메뉴 → 창(전체 화면 · 설명 한 줄 · 보상 일곱 줄 · 기록 없음 · 100줄이면 굴린다) → 입장 → 카운트 "3" · 물약·자동사냥 칸 숨김 → 누적 피해 → 결과창 → 다시 열면 1위 → 확인 → 마을 · 글자가 폰트에 있나 |
 
 ## 규칙
 
@@ -54,6 +55,11 @@
 
 - 존을 열면(`World.open` → `_start_run` → `_start_sandbag`) `starts_at = 지금 + 3초`, `ends_at = starts_at + 15초`.
 - **카운트 동안은 평타·스킬이 막힌다**(`attack`·`cast` 머리의 `_counting_down`). 걷기는 된다.
+- **카운트가 끝나면 저절로 친다** (2026-10-02 요청 "물약이랑 자동사냥 버튼 없애고, 카운트 끝나면 자동으로 공격하도록").
+  `step` 의 `_drive_sandbag_auto` 가 재는 동안 매 틱 자동사냥(`set_auto`)을 켠다 — 평소 자동사냥과 같은 `_drive_auto`
+  라 스킬 순서·평타·날라차기가 그대로다. 결과가 나면 `_finish_sandbag` 이 끄고, 존을 옮기면 `join` 이 끈다.
+  화면은 샌드백 존에서 **물약 칸 · 자동사냥 칸(과 그 앞뒤 틈)을 숨긴다**(`_refresh_sandbag_dock`, `_build_zone` 에서).
+  샌드백은 때리지 않으니 물약은 쓸 일이 없고, 자동사냥은 판정이 켜므로 단추가 필요 없다.
 - 피해는 `_hit_monster` 한 곳에서 센다 — 평타 · 스킬 · 연타(`_run_combos`) · 지대(`_run_zones`) 전부 거기로 온다.
   `starts_at ≤ 지금 < ends_at` 인 것만. 치명타·관통·공속이 그대로 실린다 — **그게 겨루는 것**이다.
 - `step` 의 `_check_run_time` 이 `ends_at` 을 넘기면 `_finish_sandbag` — 장부에 `sandbag_record(피해)` 를 청하고

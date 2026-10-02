@@ -157,9 +157,11 @@ func kill(p: Dictionary, target: Dictionary) -> void:
 		if give(p, crystal):
 			event["crystal"] = int(loot.crystal)
 	events.append(event)
-	# 도감 자동 등록 — 켜 둔 등급이면 주운 그 자리에서 넣는다 (모자란 강화는 두드려 올린다)
-	if got_at >= 0:
-		_codex_auto(p, got_at)
+	# 도감 자동 등록 — 켜 둔 등급이면 주운 그 자리에서 넣는다 (모자란 강화는 두드려 올린다).
+	# 도감에 들어갔거나 두드리다 부서져 **가방에 안 남았으면** `kept: false` — 화면이 가방 빨간 점을 켜지 않는다
+	# (2026-10-02 요청 "실제 인벤토리에 안 들어오면 레드닷 띄우지마"). 이벤트는 아직 안 나갔다 — 같은 사전을 고친다
+	if got_at >= 0 and _codex_auto(p, got_at):
+		event["kept"] = false
 
 	var gained := Combat.exp_reward(int(target.level), int(p.level), float(target.exp_reward))
 	var before := int(p.level)
@@ -492,26 +494,27 @@ func _codex_take(p: Dictionary, codex: Dictionary, at: int, auto: bool = false) 
 ## 습득했는데 도감에 등록할 수 있으면 바로 등록하고, 강화 수치가 부족하면 1단계부터 쭉 강화해서 해당 단계까지
 ## 강화 성공하면 등록"). 노리는 칸은 **지금 강화 이상에서 가장 낮은 빈 칸**(`Codex.next_empty`) — 비었으면 그대로
 ## 넣고, 찼으면 그 단계까지 **한 단계씩** 두드린다. 강화와 같은 판정(`_roll_once`)이라 **실패하면 부서진다.**
-## 빈 칸이 없으면 가방에 그대로 둔다. 잠근 것 · 겹친 칸은 건드리지 않는다 → codex.md "주울 때 자동 등록"
-func _codex_auto(p: Dictionary, at: int) -> void:
+## 빈 칸이 없으면 가방에 그대로 둔다. 잠근 것 · 겹친 칸은 건드리지 않는다 → codex.md "주울 때 자동 등록".
+## 돌려주는 값: 그 장비가 **가방에서 빠졌나**(넣었거나 부서졌다) — 줍기의 가방 빨간 점을 끈다
+func _codex_auto(p: Dictionary, at: int) -> bool:
 	var stack: Dictionary = p.bag[at]
 	var item_id := str(stack.get("id", ""))
 	var item := Items.get_item(item_id)
 	# 켠 등급의 **고른 종류(부위)만** (2026-10-02 요청 "등급마다 아이템 종류도 선택할 수 있게")
 	if item.is_empty() or not (str(item.slot) in codex_auto_slots(p, int(item.grade))) or Items.is_locked(stack) \
 			or int(stack.get("count", 1)) > 1:
-		return
+		return false
 	# 그 등급에서 고른(활성화된) 1차 옵션이 붙은 것만 넣는다 (2026-10-02 요청 "치명타 옵션이 있을 경우 등록 안 되게"
 	# → "등급마다 옵션 설정할 수 있게" → "옵션도 활성화 된 옵션만 자동등록하는걸로 바꿔")
 	var allowed := codex_auto_option_kinds(p, int(item.grade))
 	for option in stack.get("options", []):
 		if option is Dictionary and not (str(option.get("kind", "")) in allowed):
-			return
+			return false
 	var codex: Dictionary = p.get("codex", {})
 	var level := int(stack.get("enhance", 0))
 	var goal := Codex.next_empty(codex, item_id, level)
 	if goal < 0:
-		return
+		return false
 	var tries := 0
 	while level < goal:
 		var result := _roll_once(p, item, level)
@@ -522,19 +525,20 @@ func _codex_auto(p: Dictionary, at: int) -> void:
 			p.bag.remove_at(at)
 			_notice("도감 자동 강화 실패 — %s +%d 에서 부서졌습니다" % [item.name, level])
 			_inventory_changed(p)
-			return
+			return true
 		if result == "success":
 			level += 1
 	stack.enhance = level
 	if level < goal:
 		_notice("도감 자동 강화 — 골드가 모자라 %s +%d 에서 멈췄습니다" % [item.name, level])
 		_inventory_changed(p)
-		return
+		return false
 	var got := _codex_take(p, codex, at, true)
 	var climbed := " (강화 %d번)" % tries if tries > 0 else ""
 	_notice("도감 자동 등록 — %s +%d%s · %s +%s%%" % [
 		item.name, level, climbed, Codex.stat_name(str(got.stat)), String.num(float(got.gain), 2)])
 	_inventory_changed(p)
+	return true
 
 
 ## 도감 자동 등록 — **등급 하나**의 넣을 종류(부위) 목록을 정한다. 비면 그 등급을 끈다.

@@ -362,11 +362,20 @@ func _case_auto_kill() -> void:
 	if Ledger.codex_auto_slots(p, 5) != Items.slots():
 		_fail("옛 모양 자동 등록을 전 부위로 못 읽었다: %s" % [Ledger.codex_auto_slots(p, 5)])
 	var autos := 0
+	var gone := 0
+	var broke := 0
 	for i in 200:
 		ledger.kill(p, {"kind": kind_id, "zone": ""})
 		for event in ledger.take_events():
 			if event.type == "codexResult" and bool(event.get("auto", false)):
 				autos += 1
+			elif event.type == "loot" and event.has("item") and not bool(event.get("kept", true)):
+				gone += 1
+			elif event.type == "notice" and "부서졌습니다" in str(event.get("text", "")):
+				broke += 1
+	# 도감에 들어갔거나 부서져 가방에 안 남은 것은 `kept: false` 로 나가야 가방 빨간 점이 안 켜진다
+	if gone != autos + broke:
+		_fail("가방에 안 남은 줍기 %d 가 자동 등록 %d + 부서짐 %d 과 다르다" % [gone, autos, broke])
 	if autos == 0 or Codex.filled(p.codex) != autos:
 		_fail("200마리를 잡았는데 자동 등록 %d번 · 찬 칸 %d" % [autos, Codex.filled(p.codex)])
 	if Codex.filled(Ledger.codex_new(p)) != autos:

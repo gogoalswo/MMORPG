@@ -236,6 +236,10 @@ func _case_panel() -> void:
 	panel.refresh({"proteins": {"power": 5, "health": 10}, "fitness": {"bench": 3}})
 	if panel.dotted_tabs() != ["squat"]:
 		_fail("스쿼트만 빨간 점이어야 하는데 %s" % [panel.dotted_tabs()])
+	# HUD 헬스 아이콘 점이 쓰는 판정 — 하나라도 되면 켜진다
+	if not Fitness.any_up({"proteins": {"power": 5, "health": 10}, "fitness": {"bench": 3}}) \
+			or Fitness.any_up({"proteins": {"power": 5}, "fitness": {"bench": 3}}):
+		_fail("Fitness.any_up 이 탭 점과 어긋난다")
 	var tab: Button = panel.find_child("tab_squat", true, false)
 	tab.pressed.emit()
 	if panel.title_text() != "스쿼트 0단계" or panel.up_button().disabled:

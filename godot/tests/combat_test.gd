@@ -40,8 +40,8 @@ func _eq(label: String, got, want) -> void:
 func _stats() -> void:
 	var k1 := Combat.stats_for("fighter", 1)
 	# 2026-09-27: Lv1 HP 300, HP 만 성장률이 따로다 (Lv200 5,146 에 닿는 복리)
-	# 2026-10-02: 모든 레벨 ×1.5 (`HP_SCALE`, combat.md) — Lv1 450
-	_eq("격투가1 체력", k1.maxHp, 450)
+	# 2026-10-02: 모든 레벨 ×1.5 → 같은 날 ×3 (`HP_SCALE`, combat.md) — Lv1 900
+	_eq("격투가1 체력", k1.maxHp, 900)
 	_eq("격투가1 공격", k1.attack, 20)
 	_eq("격투가1 방어", k1.defense, 20)
 	_eq("격투가1 사거리", k1.attackRange, 2.2)
@@ -50,7 +50,7 @@ func _stats() -> void:
 
 	# 레벨 1개는 언제나 +2% — 구간마다 다르면 "장비 비중" 의 기준이 사라진다
 	var k10 := Combat.stats_for("fighter", 10)
-	_eq("격투가10 체력", k10.maxHp, roundi(450.0 * pow(5145.578 / 300.0, 9.0 / 199.0)))
+	_eq("격투가10 체력", k10.maxHp, roundi(900.0 * pow(5145.578 / 300.0, 9.0 / 199.0)))
 	_eq("격투가10 공격", k10.attack, roundi(20.0 * pow(1.02, 9)))
 
 	# 직업은 같은 바탕에 배수만 다르다 — 마법사는 공격 1.35 / HP 0.8 / 방어 0.75

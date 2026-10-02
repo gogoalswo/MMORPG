@@ -59,8 +59,9 @@ export const FIELD_SPAN = 10;
  * **2026-10-02 에 모든 레벨 ×1.5** ★ (`HP_SCALE`, 지시: "몬스터한테 너무 잘 죽는 것 같아. 체력을
  * 레벨별로 1.5배"). Lv1 300 → 450, Lv200 5,146 → 7,719. 끝값(`HP_TOP`)도 같이 곱해서 성장률
  * (`HP_GROWTH`)은 그대로다 — `HP_BASE` 만 올리면 Lv200 이 안 움직인다. 몬스터는 고정 표라 안 따라온다.
+ * **같은 날 다시 ×2 → ×3** (지시: "플레이어 체력 지금보다 2배 더 늘리자"). Lv1 900, Lv200 15,437.
  */
-export const HP_SCALE = 1.5;
+export const HP_SCALE = 3;
 export const HP_BASE = 300 * HP_SCALE;
 export const ATK_BASE = 20;
 export const DEF_BASE = 20;

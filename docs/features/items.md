@@ -174,7 +174,7 @@
   `items.gd` `with_drop_bonus` · `drop_chance` · `roll_drop`. **판정은 `Ledger.kill` 이 장부의
   끼운 장비(`p.equipped`)로 센다.** `World.stats_of` 의 `dropRate` 는 캐릭터 정보 창의
   "아이템 드랍률" 줄이 적는 값일 뿐이다.
-- 차원문 드랍 창(`Items.zone_drops`)은 확률을 안 적어서 바뀐 것이 없다.
+- 차원문 드랍 창(`Items.zone_drops`)은 **옵션을 걸기 전** 확률을 적는다 (2026-10-02 부터) → [portal-ui.md](portal-ui.md).
 
 ### 옵션 차수와 크리스탈 ★★ (2026-09-23)
 지시: **"아이템 랜덤 옵션을 1차 2차 3차로 나누고 1차만 드랍으로 나오게 하고 2차는

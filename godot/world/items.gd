@@ -623,8 +623,9 @@ static func gold_range(monster_level: int) -> Vector2i:
 
 ## 그 사냥터에서 떨어지는 것 — **`roll_drop` 이 굴리는 것 그대로다** (차원문 창의 느낌표가 보인다,
 ## docs/features/portal-ui.md "드랍 창"). 등급 창은 몬스터 레벨로 찾으므로 그 존 몬스터들의 창을 합친다.
-## `{kinds: [몬스터 id], levels: Vector2i, grades: [등급] (높은 등급 먼저), gold: Vector2i, crystal: 나오나}`.
-## **확률은 돌려주지 않는다** — 창에 적지 않는다 (2026-09-30 요청: "확률은 넣지마").
+## `{kinds: [몬스터 id], levels: Vector2i, grades: [등급] (높은 등급 먼저), chances: {등급: 킬당 확률},
+## gold: Vector2i, crystal: 나오나, crystal_chance: 킬당 확률}`. 확률은 0~1 이고 드랍률 옵션을 걸기 전 값이다.
+## 2026-09-30 엔 "확률은 넣지마" 로 뺐다가 2026-10-02 에 "확률 표기해놔" 로 다시 넣었다.
 ## 몬스터가 없는 존(마을)은 빈 사전
 static func zone_drops(zone_id: String) -> Dictionary:
 	var levels: Array = []
@@ -650,9 +651,15 @@ static func zone_drops(zone_id: String) -> Dictionary:
 	seen.reverse()
 	var lo: int = levels[0]
 	var hi: int = levels[levels.size() - 1]
+	# 등급마다 몬스터 한 마리당 확률 (2026-10-02 요청: "아이템 드랍 정보에 확률 표기해놔").
+	# 등급 하나의 킬당 확률은 레벨과 상관없이 `grade_drop_rate` 그대로다 — `drop_chance` 는 창의 합, `roll_grade` 는 그 비로 고른다
+	var chances := {}
+	for g in seen:
+		chances[g] = grade_drop_rate(int(g))
 	return {
-		"kinds": kinds, "levels": Vector2i(lo, hi), "grades": seen,
+		"kinds": kinds, "levels": Vector2i(lo, hi), "grades": seen, "chances": chances,
 		"gold": Vector2i(gold_range(lo).x, gold_range(hi).y), "crystal": crystal_drop_chance() > 0.0,
+		"crystal_chance": crystal_drop_chance(),
 	}
 
 

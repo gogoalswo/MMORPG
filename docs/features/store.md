@@ -2,7 +2,7 @@
 
 ## 무엇
 
-메뉴 판의 **상점** 단추로 여는 전체 화면 창이다. 위에 **메인 카테고리 탭**, 왼쪽에 **서브 카테고리 목록**,
+오른쪽 위 평소 줄의 **상점** 단추(2026-10-02 — 가방 옆, 던전 자리)로 여는 전체 화면 창이다. 위에 **메인 카테고리 탭**, 왼쪽에 **서브 카테고리 목록**,
 오른쪽에 **상품 카드 격자(3열)** 가 선다. **지금은 카테고리만 있고 상품은 없다** — 빈 서브는 "판매 중인 상품이
 없습니다." 한 줄을 띄운다.
 
@@ -30,7 +30,7 @@
 | 파일 | 역할 |
 |---|---|
 | `godot/game/store_panel.gd` `StorePanel` | 창 전부 — `CATEGORIES`(메인 → 서브 표) · 탭 · 서브 줄 · 카드(`_card`) · `set_products` |
-| `godot/game/game.gd` `_toggle_store` · `_build_gate_panel` | 메뉴 판의 "상점"(샌드백 옆), 창을 헬스·도감 창과 같은 층(10)에 · 뒤에 불투명한 판(`StoreBack`) |
+| `godot/game/game.gd` `_toggle_store` · `_build_gate_panel` | 평소 줄의 "상점"(가방 옆, `MENU_QUICK`), 창을 헬스·도감 창과 같은 층(10)에 · 뒤에 불투명한 판(`StoreBack`) |
 | `godot/tests/ui_test.gd` `_case_store` | 메뉴로 열림 · 탭 둘 · 서브 · 빈 안내 · 제목이 X 와 안 겹침 · 상품을 넣으면 카드 · X 로 닫힘 |
 | `godot/tools/shot.gd` | `npm run shot:godot -- store` → `logs/shot_store.png` |
 

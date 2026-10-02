@@ -104,6 +104,21 @@ func _case_countdown() -> void:
 		_fail("카운트 중에 맞았다")
 	if int(w.snapshot().dungeon.damage) != 0:
 		_fail("카운트 중 피해가 셌다")
+	# 걷기도 막힌다 — 카운트 중에도, 재는 동안에도. 밀어도 자동사냥이 안 꺼진다
+	var me: Dictionary = w.snapshot().players.me
+	var at := Vector2(float(me.x), float(me.z))
+	w.input_move("me", 1, 1.0, 0.0, 0.5)
+	if Vector2(float(me.x), float(me.z)).distance_to(at) > 1e-4:
+		_fail("카운트 중에 걸었다")
+	var run: Dictionary = w.snapshot().dungeon
+	run.starts_at = Time.get_ticks_msec() - 1
+	w.step(0.016)
+	at = Vector2(float(me.x), float(me.z))
+	w.input_move("me", 2, 0.0, 1.0, 0.5)
+	if Vector2(float(me.x), float(me.z)).distance_to(at) > 1e-4:
+		_fail("재는 동안 걸었다")
+	if not bool(me.auto):
+		_fail("이동 입력에 자동사냥이 꺼졌다")
 
 
 ## 카운트 동안은 가만히 · 끝나면 누르지 않아도 저절로 친다 · 결과가 나면 멈춘다 · 마을에선 꺼져 있다

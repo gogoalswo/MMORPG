@@ -388,17 +388,24 @@ func _case_sound(game: Node3D) -> void:
 	panel.set_sound(before)
 	if AudioServer.is_bus_mute(bus):
 		_fail("되돌렸는데 음소거가 남았다")
-	# 아이템 습득 탭 — 줄을 누르면 장부에 들어가고 글자가 바뀐다 (판정은 settings_test)
+	# 아이템 습득 탭 — 스위치·칩을 누르면 장부에 들어가고 그림이 바뀐다 (판정은 settings_test)
 	panel.pick_tab(1)
 	(panel.find_child("loot_1", true, false).get_node("off") as Button).pressed.emit()
 	await process_frame
 	await process_frame
-	if Ledger.loot_skip(game._me()) != [1] or panel.loot_state(1) != "OFF":
-		_fail("일반 줄을 눌렀는데 장부 %s · 글자 '%s'" % [Ledger.loot_skip(game._me()), panel.loot_state(1)])
+	if Ledger.loot_slots(game._me())["1"] != [] or panel.loot_state(1) != "OFF":
+		_fail("일반 OFF 를 눌렀는데 장부 %s · 글자 '%s'" % [Ledger.loot_slots(game._me())["1"], panel.loot_state(1)])
 	(panel.find_child("loot_1", true, false).get_node("on") as Button).pressed.emit()
 	await process_frame
-	if Ledger.loot_skip(game._me()) != []:
-		_fail("다시 눌렀는데 장부가 안 비었다: %s" % [Ledger.loot_skip(game._me())])
+	if Ledger.loot_slots(game._me())["1"] != Items.slots():
+		_fail("다시 켰는데 전 부위가 아니다: %s" % [Ledger.loot_slots(game._me())["1"]])
+	(panel.find_child("loot_option_1_crit", true, false) as Button).pressed.emit()
+	await process_frame
+	await process_frame
+	if "crit" in Ledger.loot_options(game._me())["1"] or panel.option_on(1, "crit"):
+		_fail("치명타 칩을 껐는데 장부 %s" % [Ledger.loot_options(game._me())["1"]])
+	(panel.find_child("loot_option_1_crit", true, false) as Button).pressed.emit()
+	await process_frame
 	panel.pick_tab(0)
 	game._toggle_settings()
 
@@ -1173,7 +1180,8 @@ func _check_gate_drops(panel: GatePanel) -> void:
 	for i in mini(heads.size(), grades.size()):
 		var chance := (heads[i].get_node("Chance") as Label).text
 		var want_chance := DropPanel.percent(Items.grade_drop_rate(int(grades[i])))
-		if not chance.ends_with(want_chance):
+		# 숫자만 적는다 — "1마리당" 은 뺐다 (2026-10-02 요청)
+		if chance != want_chance:
 			_fail("%d등급 확률이 '%s' — '%s' 여야 한다" % [grades[i], chance, want_chance])
 	if DropPanel.percent(0.04444) != "4.44%" or DropPanel.percent(0.000483) != "0.0483%" or DropPanel.percent(0.0001) != "0.01%":
 		_fail("확률 글자가 어긋난다: %s %s %s" % [DropPanel.percent(0.04444), DropPanel.percent(0.000483), DropPanel.percent(0.0001)])

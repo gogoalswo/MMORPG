@@ -15,11 +15,12 @@ extends PanelContainer
 ##   │ (왼쪽 세부 목록)│   일반                          [ ON ][ OFF ]  │ ← 두 칸 스위치 (아이템 탭)
 ##
 ## 판은 돌판 틀이 아니라 **어두운 갈색 결**이다 — 그림이 그렇다. 소리는 **기기 설정**(`SoundSettings`)이라
-## 이 창이 바로 건다. 습득은 **장부**(`Ledger.set_loot_skip`) — 이 창은 요청만 내고 장부 값을 그린다.
+## 이 창이 바로 건다. 습득은 **장부**(`Ledger.set_loot_grade` · `set_loot_options`) — 이 창은 요청만 내고 장부 값을 그린다.
 
-## 안 주울 목록 하나 전체 — `field` 는 `grades`(등급) · `slots`(부위) · `options`(1차 옵션 종류).
-## `game.gd` 가 `lootSkip` 으로 `{field: list}` 를 보낸다
-signal loot_skip_changed(field: String, list: Array)
+## 등급 하나의 주울 부위 목록(비면 그 등급을 끈다) — `game.gd` 가 `lootGrade` 로 보낸다
+signal loot_changed(grade: int, slots: Array)
+## 등급 하나의 주울 1차 옵션 목록 — `game.gd` 가 `lootOptions` 로 보낸다
+signal loot_options_changed(grade: int, kinds: Array)
 
 const HEAD_HEIGHT := 50.0
 const TAB_WIDTH := 132.0
@@ -28,6 +29,10 @@ const SIDE_WIDTH := 190.0
 const ROW_HEIGHT := 62.0
 const SWITCH_CELL := Vector2(118, 40)
 const SLIDER_WIDTH := 300.0
+## 습득 쪽의 등급 탭 · 부위 칩 · 옵션 칩 — 도감 자동 등록 설정 창과 같은 크기
+const GRADE_TAB := Vector2(108, 46)
+const CHIP := Vector2(120, 42)
+const OPTION_CHIP := Vector2(150, 42)
 ## X(44) 와 그 왼쪽 틈 — 머리 줄의 "설정" 글자가 X 에 안 걸친다
 const CLOSE_ROOM := 60
 
@@ -48,7 +53,7 @@ const FAINT := Color("#5d574d")
 ## 설정이 늘면 줄만 더한다
 const TABS := [
 	{"id": "env", "name": "환경", "subs": [["sound", "소리"]]},
-	{"id": "item", "name": "아이템", "subs": [["loot", "습득 등급"], ["loot_slot", "습득 부위"], ["loot_option", "습득 옵션"]]},
+	{"id": "item", "name": "아이템", "subs": [["loot", "습득"]]},
 ]
 
 ## 고른 탭 (0 부터) · 그 탭 안에서 고른 세부 (0 부터)
@@ -63,10 +68,13 @@ var _sides: Array = []
 var _pages: Array = []
 var _sound_label: Label
 var _sound_slider: HSlider
-## 등급 → 그 줄의 ON/OFF 스위치 · 부위(슬롯) → 스위치 · 옵션 종류 → 스위치
+## 습득 쪽에서 고른 등급 탭 · 등급 → 탭 · 쪽 · ON/OFF 스위치 · `{부위: 칩}` · `{옵션 종류: 칩}`
+var _loot_grade := 1
+var _loot_tabs := {}
+var _loot_pages := {}
 var _loot_rows := {}
-var _slot_rows := {}
-var _option_rows := {}
+var _slot_chips := {}
+var _option_chips := {}
 var _search: LineEdit
 var _empty: Label
 ## 검색이 거르는 줄 `{node, band, words}`
@@ -153,7 +161,7 @@ func _build() -> void:
 	var pages := VBoxContainer.new()
 	pages.add_theme_constant_override("separation", 10)
 	pad.add_child(pages)
-	_pages = [[_build_sound()], [_build_loot(), _build_loot_slots(), _build_loot_options()]]
+	_pages = [[_build_sound()], [_build_loot()]]
 	for group in _pages:
 		for page in group:
 			pages.add_child(page)
@@ -269,63 +277,94 @@ func _build_sound() -> Control:
 	return page
 
 
-## 아이템 — 장비 등급 일곱 줄 · 부위 여섯 줄 · 1차 옵션 종류 다섯 줄, 줄마다 ON(줍기)/OFF(안 줍기).
-## 셋 다 켜진 장비만 줍는다 (`Ledger.loot_wanted`).
-## 골드·크리스탈은 거르지 않는다 — 크리스탈은 한 칸에 겹쳐 가방을 채우지 않는다
+## 아이템 → 습득 — **도감 자동 등록 설정 창과 같은 모양**이다 (2026-10-02 요청: "설정에 아이템 습득 옵션 있는데, 이 부분도
+## 도감에 자동 등록 설정 참고해서 비슷하게 만들어"). 그 전엔 등급 · 부위 · 옵션이 쪽 셋에 나뉜 전 등급 공통 스위치였다.
+##
+##   │ 아이템 습득                                                      │ ← 띠 머리
+##   │   ◆ 활성화 된 종류 · 옵션의 장비만 가방에 넣습니다 · …             │
+##   │   일반•  고급•  희귀•  영웅•  전설•  초월•  태초•                  │ ← 등급 탭 (켠 등급은 금빛 점)
+##   │   습득                                         [ ON ][ OFF ]    │
+##   │   아이템 종류 — 활성화 된 종류만 습득합니다                         │
+##   │   [무기][갑옷][투구][신발][목걸이][반지]                           │ ← 켜면(밝음) 줍는다
+##   │   1차 옵션 — 활성화 된 옵션만 습득합니다                            │
+##   │   [치명타][치명타 데미지][체력][방어력 관통][아이템 드랍률]           │ ← 켜면(밝음) 줍는다
+##
+## 판정은 `Ledger.loot_wanted`. 골드·크리스탈은 거르지 않는다 — 크리스탈은 한 칸에 겹쳐 가방을 채우지 않는다
 func _build_loot() -> Control:
 	var page := _page("loot_page")
-	var band := _band("주울 장비 등급")
+	var band := _band("아이템 습득")
 	page.add_child(band)
-	page.add_child(_hint("끈 등급의 장비는 떨어져도 가방에 넣지 않습니다 · 골드와 크리스탈은 늘 줍습니다", band))
-	for grade in range(1, _grade_count() + 1):
-		var on_off := make_switch("loot_%d" % grade, func(on: bool) -> void: _set_grade(grade, on))
-		_loot_rows[grade] = on_off
-		var row := _row(Items.grade_name(grade), Items.grade_color(grade), on_off, band, "습득 줍기 장비 등급")
-		row.name = "loot_row_%d" % grade
-		page.add_child(row)
-	return page
+	page.add_child(_hint("활성화 된 종류 · 옵션의 장비만 가방에 넣습니다 · 골드와 크리스탈은 늘 줍습니다", band))
+	# 등급 탭 · 칩 묶음은 검색에서 줄 하나로 다룬다 — 낱말에 등급 · 부위 · 옵션 이름을 다 넣는다
+	var pad := MarginContainer.new()
+	pad.name = "loot_block"
+	pad.add_theme_constant_override("margin_left", 28)
+	pad.add_theme_constant_override("margin_right", 6)
+	pad.add_theme_constant_override("margin_top", 8)
+	page.add_child(pad)
+	var block := VBoxContainer.new()
+	block.add_theme_constant_override("separation", 8)
+	pad.add_child(block)
+	var tabs := HBoxContainer.new()
+	tabs.add_theme_constant_override("separation", 4)
+	block.add_child(tabs)
+	var rule := ColorRect.new()
+	rule.color = GatePanel.HEAD_LINE
+	rule.custom_minimum_size = Vector2(0, 1)
+	block.add_child(rule)
 
-
-## 부위 — 무기 ~ 반지 여섯 줄 (2026-10-02 요청: "등급만 있는데, 부위와 옵션도 설정할 수 있게끔").
-## 한 쪽에 등급과 같이 두면 기준 화면(720)을 넘어서 세부를 나눴다
-func _build_loot_slots() -> Control:
-	var page := _page("loot_slot_page")
-	var slot_band := _band("주울 장비 부위")
-	page.add_child(slot_band)
-	page.add_child(_hint("끈 부위의 장비는 떨어져도 가방에 넣지 않습니다", slot_band))
-	for slot in Items.slots():
-		var slot_id := str(slot)
-		var on_off := make_switch("loot_slot_%s" % slot_id,
-			func(on: bool) -> void: _set_name(&"slots", slot_id, on))
-		_slot_rows[slot_id] = on_off
-		var row := _row(Items.slot_label(slot_id), TEXT, on_off, slot_band, "습득 줍기 장비 부위")
-		row.name = "loot_slot_row_%s" % slot_id
-		page.add_child(row)
-	return page
-
-
-## 옵션 — 드랍에 붙는 1차 옵션 종류(`optionKinds`). 붙은 종류를 끄면 그 장비는 안 줍는다
-func _build_loot_options() -> Control:
-	var page := _page("loot_option_page")
-	var option_band := _band("주울 장비 옵션")
-	page.add_child(option_band)
-	page.add_child(_hint("떨어질 때 붙은 1차 옵션의 종류로 거릅니다 · 끈 옵션이 붙은 장비는 넣지 않습니다", option_band))
 	var labels: Dictionary = Items._t().get("optionLabel", {})
-	for kind in _option_kinds():
-		var on_off := make_switch("loot_option_%s" % kind,
-			func(on: bool) -> void: _set_name(&"options", kind, on))
-		_option_rows[kind] = on_off
-		var row := _row(str(labels.get(kind, kind)), TEXT, on_off, option_band, "습득 줍기 장비 옵션")
-		row.name = "loot_option_row_%s" % kind
-		page.add_child(row)
-	return page
+	var words: Array = ["습득 줍기 장비 등급 종류 부위 옵션"]
+	for grade in range(1, _grade_count() + 1):
+		words.append(Items.grade_name(grade))
+		var tab := make_grade_tab("loot_tab_%d" % grade, grade, pick_loot_grade.bind(grade))
+		tabs.add_child(tab)
+		_loot_tabs[grade] = tab
 
+		var grade_page := VBoxContainer.new()
+		grade_page.name = "loot_grade_%d" % grade
+		grade_page.add_theme_constant_override("separation", 8)
+		block.add_child(grade_page)
+		_loot_pages[grade] = grade_page
+		var row := HBoxContainer.new()
+		var head := _label("습득", 20, TEXT)
+		head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		head.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(head)
+		var on_off := make_switch("loot_%d" % grade, func(on: bool) -> void: _set_grade(grade, on))
+		row.add_child(on_off)
+		grade_page.add_child(row)
+		_loot_rows[grade] = on_off
 
-static func _option_kinds() -> Array:
-	var out: Array = []
+		grade_page.add_child(chip_head("아이템 종류 — 활성화 된 종류만 습득합니다"))
+		var slots := HBoxContainer.new()
+		slots.add_theme_constant_override("separation", 8)
+		grade_page.add_child(slots)
+		var chips := {}
+		for slot in Items.slots():
+			var chip := make_chip("loot_slot_%d_%s" % [grade, slot], Items.slot_label(str(slot)), CHIP)
+			chip.pressed.connect(_toggle_slot.bind(grade, str(slot)))
+			slots.add_child(chip)
+			chips[str(slot)] = chip
+		_slot_chips[grade] = chips
+
+		grade_page.add_child(chip_head("1차 옵션 — 활성화 된 옵션만 습득합니다"))
+		var options := HBoxContainer.new()
+		options.add_theme_constant_override("separation", 8)
+		grade_page.add_child(options)
+		var option_chips := {}
+		for kind in Items._t().get("optionKinds", []):
+			var chip := make_chip("loot_option_%d_%s" % [grade, kind], str(labels.get(kind, kind)), OPTION_CHIP)
+			chip.pressed.connect(_toggle_option.bind(grade, str(kind)))
+			options.add_child(chip)
+			option_chips[str(kind)] = chip
+		_option_chips[grade] = option_chips
+	for slot in Items.slots():
+		words.append(Items.slot_label(str(slot)))
 	for kind in Items._t().get("optionKinds", []):
-		out.append(str(kind))
-	return out
+		words.append(str(labels.get(kind, kind)))
+	_rows.append({"node": pad, "band": band, "words": " ".join(words)})
+	return page
 
 
 func open() -> void:
@@ -343,8 +382,8 @@ func refresh(me: Dictionary) -> void:
 	_me = me
 	if not visible:
 		return
-	var seen := "%d|%d|%s|%s|%s|%s" % [_tab, _sub, Ledger.loot_skip(me), Ledger.loot_skip_slots(me),
-		Ledger.loot_skip_options(me), _search.text]
+	var seen := "%d|%d|%d|%s|%s|%s" % [_tab, _sub, _loot_grade, Ledger.loot_slots(me), Ledger.loot_options(me),
+		_search.text]
 	if seen == _seen:
 		return
 	_seen = seen
@@ -383,48 +422,59 @@ func search_box() -> LineEdit:
 	return _search
 
 
-## 그 등급 줄의 스위치 상태("ON" · "OFF") — 테스트가 본다
+## 습득 쪽의 등급 탭을 고른다
+func pick_loot_grade(grade: int) -> void:
+	_loot_grade = clampi(grade, 1, _loot_tabs.size())
+	_seen = ""
+	refresh(_me)
+
+
+## 습득 쪽에서 고른 등급 · 그 등급 스위치("ON" · "OFF") · 그 부위·옵션 칩이 켜졌나 — 테스트가 본다
+func loot_grade() -> int:
+	return _loot_grade
+
+
 func loot_state(grade: int) -> String:
 	return "ON" if switch_on(_loot_rows[grade]) else "OFF"
 
 
-## 그 부위·옵션 줄의 스위치 상태 — 테스트가 본다
-func slot_state(slot: String) -> String:
-	return "ON" if switch_on(_slot_rows[slot]) else "OFF"
+func slot_on(grade: int, slot: String) -> bool:
+	return bool(_slot_chips[grade][slot].get_meta("on", false))
 
 
-func option_state(kind: String) -> String:
-	return "ON" if switch_on(_option_rows[kind]) else "OFF"
+func option_on(grade: int, kind: String) -> bool:
+	return bool(_option_chips[grade][kind].get_meta("on", false))
 
 
-## 줄 하나를 뒤집어 **목록 전체**를 요청한다. 화면은 장부 답(`refresh`)이 오면 바뀐다
-func toggle_grade(grade: int) -> void:
-	_set_grade(grade, grade in Ledger.loot_skip(_me))
-
-
-func _set_grade(grade: int, pick_up: bool) -> void:
-	var skip := Ledger.loot_skip(_me).duplicate()
-	var picking := not (grade in skip)
-	if pick_up == picking:
+## 등급 스위치 — 켜면 그 등급의 전 부위 · 전 옵션, 끄면 부위를 비운다(옵션은 그대로 둔다). 도감 자동 등록과 같다.
+## 화면은 장부 답(`refresh`)이 오면 바뀐다
+func _set_grade(grade: int, on: bool) -> void:
+	var lit := not (Ledger.loot_slots(_me).get(str(grade), []) as Array).is_empty()
+	if on == lit:
 		return
-	if pick_up:
-		skip.erase(grade)
-	else:
-		skip.append(grade)
-	skip.sort()
-	loot_skip_changed.emit("grades", skip)
+	loot_changed.emit(grade, Items.slots().duplicate() if on else [])
+	if on:
+		loot_options_changed.emit(grade, Ledger.clean_option_kinds(Items._t().get("optionKinds", [])))
 
 
-## 부위·옵션 줄 하나를 바꿔 그 **목록 전체**를 요청한다. 순서는 장부가 표 순서로 다듬는다
-func _set_name(field: StringName, id: String, pick_up: bool) -> void:
-	var skip: Array = (Ledger.loot_skip_slots(_me) if field == &"slots" else Ledger.loot_skip_options(_me)).duplicate()
-	if pick_up == not (id in skip):
-		return
-	if pick_up:
-		skip.erase(id)
+## 부위 칩 — 그 등급의 목록에서 넣고 뺀다. 마지막 하나를 빼면 그 등급이 꺼진다
+func _toggle_slot(grade: int, slot: String) -> void:
+	var slots: Array = (Ledger.loot_slots(_me).get(str(grade), []) as Array).duplicate()
+	if slot in slots:
+		slots.erase(slot)
 	else:
-		skip.append(id)
-	loot_skip_changed.emit(str(field), skip)
+		slots.append(slot)
+	loot_changed.emit(grade, Ledger.clean_slots(slots))
+
+
+## 옵션 칩 — 켜면(활성화) 그 옵션이 붙은 장비를 줍는다
+func _toggle_option(grade: int, kind: String) -> void:
+	var kinds: Array = (Ledger.loot_options(_me).get(str(grade), []) as Array).duplicate()
+	if kind in kinds:
+		kinds.erase(kind)
+	else:
+		kinds.append(kind)
+	loot_options_changed.emit(grade, Ledger.clean_option_kinds(kinds))
 
 
 func _sound_step(dir: int) -> void:
@@ -452,15 +502,18 @@ func _redraw() -> void:
 			(_pages[index][sub] as Control).visible = picked or searching
 	_apply_search()
 	_show_sound(SoundSettings.volume())
-	var skip := Ledger.loot_skip(_me)
-	for grade in _loot_rows:
-		paint_switch(_loot_rows[grade], not (int(grade) in skip))
-	var skip_slots := Ledger.loot_skip_slots(_me)
-	for slot in _slot_rows:
-		paint_switch(_slot_rows[slot], not (slot in skip_slots))
-	var skip_options := Ledger.loot_skip_options(_me)
-	for kind in _option_rows:
-		paint_switch(_option_rows[kind], not (kind in skip_options))
+	var table := Ledger.loot_slots(_me)
+	var options := Ledger.loot_options(_me)
+	for grade in _loot_tabs:
+		var slots: Array = table.get(str(grade), [])
+		var allowed: Array = options.get(str(grade), [])
+		(_loot_pages[grade] as Control).visible = grade == _loot_grade
+		paint_grade_tab(_loot_tabs[grade], grade == _loot_grade, grade, not slots.is_empty())
+		paint_switch(_loot_rows[grade], not slots.is_empty())
+		for slot in _slot_chips[grade]:
+			paint_chip(_slot_chips[grade][slot], slot in slots, not slots.is_empty())
+		for kind in _option_chips[grade]:
+			paint_chip(_option_chips[grade][kind], kind in allowed, not slots.is_empty())
 
 
 ## 검색 — 치는 동안은 모든 탭의 줄을 펼쳐 이름이 맞는 줄만 남긴다. 띠는 아래 줄이 하나라도 남으면 선다
@@ -577,6 +630,103 @@ static func paint_switch(switch: Control, on: bool) -> void:
 
 static func switch_on(switch: Control) -> bool:
 	return bool(switch.get_meta("on", false))
+
+
+## 칩 — 켜면 스위치의 고른 칸과 같은 결(밝은 갈색 판 + 금빛 글자), 끄면 어두운 판 + 흐린 글자.
+## 습득 쪽과 도감 자동 등록 설정 창이 같이 쓴다. 켰나는 `on` 메타에 둔다
+static func make_chip(node_name: String, text: String, size: Vector2) -> Button:
+	var chip := Button.new()
+	chip.name = node_name
+	chip.text = text
+	chip.custom_minimum_size = size
+	chip.focus_mode = Control.FOCUS_NONE
+	chip.add_theme_font_size_override("font_size", 17)
+	paint_chip(chip, false, true)
+	return chip
+
+
+## `live` 가 아니면(등급이 꺼졌다) **값과 관계없이 꺼진 칩처럼** 어두운 판 + 흐리게 — 종류 칩(꺼지면 비어서 어둡다)과
+## 옵션 칩(꺼져도 값이 남는다)이 같은 색이어야 한다 (2026-10-02 지적 "OFF … 버튼 색상이 달라").
+## 값(`on` 메타)은 그대로 둔다 — 등급을 다시 켜면 남은 값대로 밝아진다. 눌러서 고를 수는 있다
+static func paint_chip(chip: Button, value: bool, live: bool) -> void:
+	chip.set_meta("on", value)
+	var on := value and live
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color("#3b3226") if on else Color("#121110")
+	box.border_color = Color("#6e5c3d") if on else Color("#29261f")
+	box.set_border_width_all(1)
+	box.set_corner_radius_all(3)
+	if on:
+		box.shadow_color = Color(0.9, 0.7, 0.35, 0.16)
+		box.shadow_size = 4
+	for state in ["normal", "hover", "pressed", "disabled"]:
+		chip.add_theme_stylebox_override(state, box)
+	chip.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	chip.add_theme_color_override("font_color", GOLD if on else FAINT)
+	chip.add_theme_color_override("font_hover_color", GOLD if on else SUB_TEXT)
+	chip.add_theme_color_override("font_pressed_color", GOLD)
+	chip.modulate = Color.WHITE if live else Color(1, 1, 1, 0.45)
+
+
+## 등급 탭 — 등급 색 글자, 오른쪽 위에 켠 등급 표시(금빛 점 `on_mark`). 그림은 `paint_grade_tab`
+static func make_grade_tab(node_name: String, grade: int, on_press: Callable) -> Button:
+	var tab := Button.new()
+	tab.name = node_name
+	tab.text = Items.grade_name(grade)
+	tab.custom_minimum_size = GRADE_TAB
+	tab.focus_mode = Control.FOCUS_NONE
+	tab.add_theme_font_size_override("font_size", 20)
+	tab.pressed.connect(on_press)
+	var mark := Panel.new()
+	mark.name = "on_mark"
+	mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var dot := StyleBoxFlat.new()
+	dot.bg_color = GatePanel.CARD_GOLD
+	dot.set_corner_radius_all(4)
+	mark.add_theme_stylebox_override("panel", dot)
+	mark.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	mark.offset_left = -14
+	mark.offset_right = -6
+	mark.offset_top = 6
+	mark.offset_bottom = 14
+	tab.add_child(mark)
+	return tab
+
+
+## 고른 탭만 밝게 + 금빛 밑줄. 켠 등급(`lit`)은 오른쪽 위 금빛 점
+static func paint_grade_tab(tab: Button, on: bool, grade: int, lit: bool) -> void:
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color(0.86, 0.78, 0.5, 0.08) if on else Color(0, 0, 0, 0)
+	box.border_color = GatePanel.CARD_GOLD if on else Color(0, 0, 0, 0)
+	box.border_width_bottom = 3
+	box.set_content_margin_all(4)
+	for state in ["normal", "hover", "pressed", "disabled"]:
+		tab.add_theme_stylebox_override(state, box)
+	tab.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	var color := Items.grade_color(grade)
+	tab.add_theme_color_override("font_color", color if on else color.darkened(0.45))
+	tab.add_theme_color_override("font_hover_color", color)
+	tab.add_theme_color_override("font_pressed_color", color)
+	(tab.get_node("on_mark") as Control).visible = lit
+
+
+## 칩 묶음 머리 — 금빛 글자 + 가는 선
+static func chip_head(text: String) -> Control:
+	var head := VBoxContainer.new()
+	head.add_theme_constant_override("separation", 2)
+	var top := Control.new()
+	top.custom_minimum_size = Vector2(0, 6)
+	head.add_child(top)
+	var label := Label.new()
+	label.text = text
+	label.add_theme_font_size_override("font_size", 17)
+	label.add_theme_color_override("font_color", GatePanel.CARD_GOLD)
+	head.add_child(label)
+	var line := ColorRect.new()
+	line.color = GatePanel.HEAD_LINE
+	line.custom_minimum_size = Vector2(0, 1)
+	head.add_child(line)
+	return head
 
 
 ## -/+ — 판 없는 글자 단추

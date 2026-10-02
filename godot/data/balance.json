@@ -1493,8 +1493,8 @@
       "dropRate"
     ],
     "optionMaxValue": {
-      "crit": 1.5,
-      "critDamage": 3,
+      "crit": 0.5,
+      "critDamage": 1,
       "attackSpeed": 1.2,
       "maxHp": 0.5,
       "cooldown": 1,

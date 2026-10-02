@@ -733,7 +733,7 @@ export function stackStats(stack: ItemStack): ItemStats {
       case 'crit': total.crit += option.value / 100; break;
       case 'critDamage': total.critDamage += option.value / 100; break;
       case 'attackSpeed': total.attackSpeed += option.value / 100; break;
-      case 'cooldown': total.cooldown += option.value / 100; break;
+      // 쿨감은 2026-10-02 에 옵션에서 뺐다 — 옛 줄은 무시한다 (`OPTION_KINDS`)
       case 'penetration': total.penetration += option.value / 100; break;
       case 'dropRate': total.dropRate += option.value / 100; break;
     }

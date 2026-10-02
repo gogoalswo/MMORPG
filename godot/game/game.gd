@@ -2531,7 +2531,6 @@ func _redraw_char(me: Dictionary) -> void:
 		# 공속을 실제 평타 횟수로 (2026-09-30 요청: "초당 7.5회 공격 이런식으로") — 판정과 같은
 		# `effective_cooldown` 으로 센다. 질풍각 설명(`_show_passive`)과 같은 계산이다
 		["평타", "초당 %.1f회 공격" % _attacks_per_second(stats)],
-		["쿨타임 감소", "%.0f%%" % (float(stats.get("cooldown", 0.0)) * 100.0)],
 		["방어력 관통", "%.0f%%" % (float(stats.get("penetration", 0.0)) * 100.0)],
 		["아이템 드랍률", "+%.0f%%" % (float(stats.get("dropRate", 0.0)) * 100.0)],
 		# 같은 레벨 몬스터에게 맞을 때 원래 피해의 몇 % 가 들어오나 (2026-09-27). 후반 감소율이

@@ -1452,7 +1452,6 @@
     "crit",
     "critDamage",
     "maxHp",
-    "cooldown",
     "penetration",
     "dropRate"
   ],

@@ -1907,7 +1907,19 @@ func _case_lock(game: Node3D) -> void:
 	var detail: Rect2 = game._detail_panel.get_global_rect()
 	if not detail.encloses(row) or row.size.x > game.ITEM_W + 0.5:
 		_fail("단추 줄이 상세 창을 넓혔거나 밖으로 나갔다: %s / %s" % [row, detail])
-	print("  잠금: 단추 줄 %s · 상세 %s" % [row, detail])
+	# 단추 셋이 76px 그대로이고 서로 안 겹친다 — 글자가 넘치면 단추가 늘어나 옆을 덮는다 (2026-10-02 캡처)
+	var boxes: Array = [lock.get_global_rect(), game._enhance_button.get_global_rect(), game._bag_action.get_global_rect()]
+	for i in boxes.size():
+		if absf((boxes[i] as Rect2).size.x - game.INV_BUTTON.x) > 0.5:
+			_fail("잠근 뒤 단추 %d 폭이 %s" % [i, (boxes[i] as Rect2).size.x])
+		if i > 0 and (boxes[i - 1] as Rect2).end.x > (boxes[i] as Rect2).position.x + 0.5:
+			_fail("잠근 뒤 단추가 겹친다: %s / %s" % [boxes[i - 1], boxes[i]])
+	# 글자 폭이 단추 안쪽에 여유 있게 든다 (웹 글꼴이 헤드리스보다 넓어 15 가 넘쳤다) · 단추 밖에 안 그린다
+	var size := lock.get_theme_font_size("font_size")
+	var text_w := lock.get_theme_font("font").get_string_size(lock.text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	if text_w > game.INV_BUTTON.x - 24.0 or not lock.clip_text:
+		_fail("잠금 해제 글자가 단추에 빠듯하다: 글자 %d · 폭 %.0f · 자르기 %s" % [size, text_w, lock.clip_text])
+	print("  잠금: 단추 줄 %s · 상세 %s · 글자 %d (%.0fpx)" % [row, detail, size, text_w])
 	lock.pressed.emit()
 	await process_frame
 	if Items.is_locked(me.bag[0]) or cell.get_node("lock").visible or game._enhance_button.disabled:

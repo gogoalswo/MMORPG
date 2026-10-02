@@ -57,6 +57,8 @@ const WINDOW_GAP := 8
 ## 인벤토리 오른쪽 세로 탭 한 개, 단추 한 개
 const INV_TAB := Vector2(64, 58)
 const INV_BUTTON := Vector2(76, 40)
+## 샌드백 창 주간 보상 줄의 옐로우 크리스탈 그림 한 변 — 글자(18) 한 줄 높이에 맞춘다
+const SANDBAG_GEM := 26
 ## 창을 던전 결로 (2026-09-28) — 틀 안쪽 여백 · 제목 문장 크기.
 ## 인벤토리 결 조각(`inv_panel`·`inv_slot`·`inv_tab_*`·`inv_button`)은 이때부터 안 쓴다 — 고른 칸 금테만 남았다
 const STONE_PAD := 30
@@ -2275,7 +2277,7 @@ func _build_sandbag_panel() -> void:
 
 	# --- 왼쪽 — 제목 · 설명 · 보상 · 내 기록 · 입장 ---
 	var side := VBoxContainer.new()
-	side.custom_minimum_size = Vector2(420, 0)
+	side.custom_minimum_size = Vector2(480, 0)
 	side.add_theme_constant_override("separation", 10)
 	body.add_child(side)
 	_stone_title(side, "샌드백 랭킹전", 26, "ui_icon_sandbag")
@@ -2289,31 +2291,68 @@ func _build_sandbag_panel() -> void:
 	line.custom_minimum_size = Vector2(0, 1)
 	side.add_child(line)
 
-	# 주간 보상 — 순위 · 개수를 두 벌씩 한 줄에
+	# 주간 보상 — **한 줄에 한 순위**(2026-10-02 요청 "1열 2행으로 만들지 말고, 1열 1행으로").
+	# 개수 앞에 옐로우 크리스탈 그림(`yellow_crystal`, 가방 칸과 같은 그림)
 	side.add_child(_inv_label("주간 보상 — %s" % Items.stack_name({"id": Items.yellow_crystal_id()}), 20, INV_GOLD))
 	var rewards := GridContainer.new()
 	rewards.name = "SandbagRewards"
-	rewards.columns = 4
+	rewards.columns = 2
 	rewards.add_theme_constant_override("h_separation", 18)
-	rewards.add_theme_constant_override("v_separation", 6)
+	rewards.add_theme_constant_override("v_separation", 4)
 	side.add_child(rewards)
+	var crystal := _icon(Items.yellow_crystal_id())
 	for row in Sandbag.table().get("rewards", []):
 		var head := _inv_label(Sandbag.reward_label(row), 18, INV_TEXT)
 		head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		rewards.add_child(head)
-		rewards.add_child(_inv_label("x%d" % int(row.yellowCrystals), 18, INV_GOLD_HI))
+		var prize := HBoxContainer.new()
+		prize.add_theme_constant_override("separation", 6)
+		if crystal != null:
+			var gem := TextureRect.new()
+			gem.name = "SandbagRewardIcon"
+			gem.texture = crystal
+			gem.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			gem.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			gem.custom_minimum_size = Vector2(SANDBAG_GEM, SANDBAG_GEM)
+			gem.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			prize.add_child(gem)
+		var count := _inv_label("x%d" % int(row.yellowCrystals), 18, INV_GOLD_HI)
+		count.custom_minimum_size = Vector2(44, 0)
+		count.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		prize.add_child(count)
+		rewards.add_child(prize)
 
 	var room := Control.new()
 	room.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	room.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	side.add_child(room)
+	# 내 기록 글자와 입장을 **한 줄에** — 단추는 글자 오른쪽, 세로 가운데 (2026-10-02 요청
+	# "입장 버튼이 너무 작아 … 텍스트 옆에 줄 맞춰서"). 단추는 던전 창 입장과 같은 조각·같은 크기
+	var foot := HBoxContainer.new()
+	foot.name = "SandbagFoot"
+	foot.add_theme_constant_override("separation", 16)
+	side.add_child(foot)
 	_sandbag_note = _inv_label("", 18, INV_TEXT)
 	_sandbag_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	side.add_child(_sandbag_note)
-	var enter := _inv_button("입장", _on_sandbag_enter)
+	_sandbag_note.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_sandbag_note.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	foot.add_child(_sandbag_note)
+	var enter := GatePanel.paint_button_text(Button.new(), 28)
 	enter.name = "SandbagEnter"
-	enter.size_flags_horizontal = Control.SIZE_SHRINK_END
-	side.add_child(enter)
+	enter.text = "입장"
+	enter.custom_minimum_size = DungeonPanel.ENTER_SIZE
+	enter.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	enter.focus_mode = Control.FOCUS_NONE
+	for state in ["normal", "hover", "disabled", "focus", "pressed", "hover_pressed"]:
+		var pressed: bool = state.ends_with("pressed")
+		var box: StyleBox = _frame_box("ui_button", GatePanel.BUTTON_MARGIN, 12)
+		box.content_margin_top = 12 + (GatePanel.ROW_SINK if pressed else 0)
+		box.content_margin_bottom = 12 - (GatePanel.ROW_SINK if pressed else 0)
+		if box is StyleBoxTexture:
+			(box as StyleBoxTexture).modulate_color = GatePanel.PRESS_TINT if pressed else Color.WHITE
+		enter.add_theme_stylebox_override(state, box)
+	enter.pressed.connect(_on_sandbag_enter)
+	foot.add_child(enter)
 
 	var split := ColorRect.new()
 	split.color = GatePanel.HEAD_LINE

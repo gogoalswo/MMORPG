@@ -42,6 +42,10 @@ HUD 와 NPC 창이 이것으로 되어 있고, **앞으로 만드는 UI 는 전�
 1. 받은 스크린샷(세력 탑 · 커뮤니티 · 랭킹 트로피 · PVP 검): `https://3d.varco.ai/api/objects/7cb46959217839da3aa126a3a6a909eb.jpg`
 2. 팔레트 띠(위 일곱 색): `https://3d.varco.ai/api/objects/ba3adc8e23e0f960db7f48563bb129da.png`
 
+**노드** (카탈로그를 다시 안 읽어도 되게): `TextInput`(`value` = 프롬프트) → `GenerateImage.prompt`,
+`ImageInput`(`value` = 위 주소) 둘 → `GenerateImage.reference` (**스크린샷을 먼저** 잇는다 — "FIRST REFERENCE"),
+`GenerateImage` 의 intrinsic 은 `count` · `aspectRatio` · `model`. 결과는 `get_output_downloads` 에 `nodeId` 를 줘서 받는다.
+
 **프롬프트** — `GenerateImage`, `nano-banana-pro`, 1:1, **세 장**. `<무엇>` · `<쓰임>` 만 간다
 (정면인 것은 `Slight three-quarter view` 를 `Front view` 로):
 

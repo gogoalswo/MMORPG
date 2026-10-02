@@ -290,6 +290,9 @@ func _case_server() -> void:
 	var bests: Array = board.top.map(func(r): return int(r.best))
 	if bests != [500, 300, 100] or int(board.me.rank) != 2 or int(board.total) != 3:
 		_fail("이번 주 순위가 다르다: %s" % str(board))
+	# 100위까지 싣는다 (2026-10-02 요청 "순위는 100위까지 스크롤 가능하게") — 레벨 랭킹(50)과 따로
+	if LedgerServer.SANDBAG_RANK_TOP != 100:
+		_fail("샌드백 순위는 100위까지")
 
 	# 주가 바뀐다 → 들어오는 계정마다 굳힌 순위로 받는다
 	unix[0] += 7 * 86400.0

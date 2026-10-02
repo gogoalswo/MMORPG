@@ -914,16 +914,17 @@ func _case_trial(game: Node3D) -> void:
 		print("  시련의 탑: 시계 '%s' · 실패/성공 결과창 · 확인 → 마을" % hud.text)
 
 
-## 샌드백 랭킹전 (docs/features/sandbag.md) — 메뉴 판의 "랭킹전" → 입장 창(보상 표 · 혼자면 순위 없음) →
+## 샌드백 랭킹전 (docs/features/sandbag.md) — 메뉴 판의 "샌드백" → 전체 화면 입장 창(설명 한 줄 · 보상 표 ·
+## 혼자면 순위 없음 · 순위는 굴린다) →
 ## 입장 → 가운데 큰 카운트 · 시계 줄 → 15초가 끝나면 결과창(넣은 피해 · 이번 주 최고) → 확인 → 마을
 func _case_sandbag(game: Node3D) -> void:
 	var cell: Control = null
 	for c in game._menu_cells:
 		var cap: Label = c.find_child("caption", true, false)
-		if cap != null and cap.text == "랭킹전":
+		if cap != null and cap.text == "샌드백":
 			cell = c
 	if cell == null:
-		_fail("메뉴에 랭킹전 단추가 없다")
+		_fail("메뉴에 샌드백 단추가 없다")
 		return
 	cell.find_child("hit", true, false).pressed.emit()
 	for i in 3:
@@ -932,8 +933,26 @@ func _case_sandbag(game: Node3D) -> void:
 	if not panel.visible:
 		_fail("랭킹전 단추를 눌렀는데 창이 안 열렸다")
 		return
-	if not panel.get_viewport_rect().encloses(panel.get_global_rect()):
-		_fail("랭킹전 창이 화면 밖으로 넘친다: %s" % panel.get_global_rect())
+	# 전체 화면 (2026-10-02 요청) — 화면을 꽉 채운다
+	if panel.get_global_rect().size != panel.get_viewport_rect().size:
+		_fail("샌드백 창이 전체 화면이 아니다: %s (화면 %s)" % [panel.get_global_rect(), panel.get_viewport_rect().size])
+	var rule: Label = panel.find_child("SandbagRule", true, false)
+	if rule == null or rule.text != "15초 동안 샌드백에 넣은 피해를 겨룹니다.":
+		_fail("설명은 한 줄만: '%s'" % (rule.text if rule != null else "없음"))
+	# 순위가 넘치면 굴린다 — 100줄을 채워 끝까지 내려가나
+	var rows: Array = []
+	for i in 100:
+		rows.append({"rank": i + 1, "name": "이름%d" % i, "best": 100000 - i})
+	game._fill_sandbag({"top": rows, "me": {"rank": 0, "best": 0}, "total": 100, "ends_at": 0.0})
+	await process_frame
+	await process_frame
+	var scroll: ScrollContainer = panel.find_child("SandbagScroll", true, false)
+	var bar := scroll.get_v_scroll_bar()
+	if game._sandbag_grid.get_child_count() != 101 * 3 or bar.max_value <= scroll.size.y:
+		_fail("100위가 굴릴 만큼 안 찼다: 칸 %d · 길이 %.0f / 창 %.0f" % [game._sandbag_grid.get_child_count(), bar.max_value, scroll.size.y])
+	game._toggle_sandbag()
+	game._toggle_sandbag()
+	await process_frame
 	var rewards: GridContainer = panel.find_child("SandbagRewards", true, false)
 	if rewards == null or rewards.get_child_count() != Sandbag.table().rewards.size() * 2:
 		_fail("보상 표가 일곱 줄이 아니다")

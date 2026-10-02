@@ -68,6 +68,8 @@ var _sandbag_board := {}
 var _sandbag_order: Array = []
 var _sandbag_week := -1
 var _sandbag_ranks := {}
+## 샌드백 순위 창에 싣는 윗줄 수 — 100위까지 굴려 본다 (2026-10-02 요청 "순위는 100위까지 스크롤 가능하게")
+const SANDBAG_RANK_TOP := 100
 ## 결제 검증기 — 없으면 결제를 받지 않는다(`store_off`). 실제 서버는 `GooglePlayVerifier`
 var verifier: PurchaseVerifier = null
 ## 검증 중인 결제 `[{session, account, product, key, job}]` 과, 끝난 뒤 **그 연결에만** 보낼 답
@@ -317,7 +319,7 @@ func _sandbag_rank(session: Dictionary) -> Dictionary:
 	var mine := {"rank": 0, "best": 0}
 	for i in _sandbag_order.size():
 		var row: Dictionary = _sandbag_order[i]
-		if i < RANK_TOP:
+		if i < SANDBAG_RANK_TOP:
 			top.append({"rank": i + 1, "name": row.name, "best": row.best})
 		if row.id == account.id:
 			mine = {"rank": i + 1, "best": row.best}

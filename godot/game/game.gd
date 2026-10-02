@@ -2218,66 +2218,98 @@ static func _rank_exp(level: int, exp_now: int) -> String:
 
 ## --- 샌드백 랭킹전 (docs/features/sandbag.md) ---
 
-## 입장 창 — 랭킹 창과 같은 결(돌판 + 금테). 위에서부터 규칙 두 줄 · 주간 보상 표 · 이번 주 순위(굴림) ·
-## 내 기록 · 입장 단추. 화면 가운데 큰 카운트 글자도 여기서 단다
+## 입장 창 — **전체 화면**(2026-10-02 요청 "UI를 전체 화면으로"). 헬스·도감 창과 같은 층(`GateLayer`)·같은 결
+## (돌판 틀 `ui_dungeon_card` + 뒤에 불투명한 판). 왼쪽 칸은 제목 · 설명 한 줄 · 주간 보상 표 · 내 기록 · 입장,
+## 오른쪽은 이번 주 순위(**100위까지 굴린다** — `LedgerServer.SANDBAG_RANK_TOP`). 화면 가운데 큰 카운트 글자도 여기서 단다
 func _build_sandbag_panel() -> void:
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_ui_root.add_child(center)
-	_sandbag_panel = _window_panel()
-	center.add_child(_sandbag_panel)
+	var top: CanvasLayer = get_node("GateLayer")
+	_sandbag_panel = PanelContainer.new()
+	_sandbag_panel.name = "SandbagPanel"
+	_sandbag_panel.visible = false
+	_sandbag_panel.theme = _ui_root.theme
+	_sandbag_panel.add_theme_stylebox_override("panel", _frame_box.call("ui_dungeon_card", GatePanel.CARD_MARGIN, 30))
+	_sandbag_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	# 틀 가장자리가 반투명이라 화면 끝에 게임이 비친다 — 헬스·도감 창처럼 뒤에 판을 한 장 깐다
+	var back := ColorRect.new()
+	back.name = "SandbagBack"
+	back.color = DungeonPanel.CARD_DARK
+	back.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	back.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	back.visible = false
+	top.add_child(back)
+	_sandbag_panel.visibility_changed.connect(func(): back.visible = _sandbag_panel.visible)
+	top.add_child(_sandbag_panel)
 
+	var body := HBoxContainer.new()
+	body.add_theme_constant_override("separation", 28)
+	_sandbag_panel.add_child(body)
+
+	# --- 왼쪽 — 제목 · 설명 · 보상 · 내 기록 · 입장 ---
 	var side := VBoxContainer.new()
-	side.custom_minimum_size = Vector2(DETAIL_W, 0)
-	side.add_theme_constant_override("separation", 8)
-	_sandbag_panel.add_child(side)
-	_stone_title(side, "샌드백 랭킹전", 22, "ui_icon_sandbag")
-	var rule_text := _inv_label("%d초 카운트 뒤 %d초 동안 샌드백에 넣은 피해를 겨룹니다.\n이번 주 최고 기록으로 순위를 매기고 월요일 0시에 정산합니다." % [
-		Sandbag.countdown_ms() / 1000, Sandbag.play_ms() / 1000], 16, INV_DIM)
+	side.custom_minimum_size = Vector2(420, 0)
+	side.add_theme_constant_override("separation", 10)
+	body.add_child(side)
+	_stone_title(side, "샌드백 랭킹전", 26, "ui_icon_sandbag")
+	# 설명은 한 줄만 (2026-10-02 요청 "15초 동안 샌드백에 넣은 피해를 겨룹니다. 이것만 적어")
+	var rule_text := _inv_label("%d초 동안 샌드백에 넣은 피해를 겨룹니다." % (Sandbag.play_ms() / 1000), 18, INV_DIM)
+	rule_text.name = "SandbagRule"
 	rule_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	side.add_child(rule_text)
+	var line := ColorRect.new()
+	line.color = GatePanel.HEAD_LINE
+	line.custom_minimum_size = Vector2(0, 1)
+	side.add_child(line)
 
-	# 주간 보상 — 순위 · 개수를 두 벌씩 한 줄에 (일곱 줄을 세로로 늘어놓으면 창이 화면을 넘는다)
-	side.add_child(_inv_label("주간 보상 — %s" % Items.stack_name({"id": Items.yellow_crystal_id()}), 18, INV_GOLD))
+	# 주간 보상 — 순위 · 개수를 두 벌씩 한 줄에
+	side.add_child(_inv_label("주간 보상 — %s" % Items.stack_name({"id": Items.yellow_crystal_id()}), 20, INV_GOLD))
 	var rewards := GridContainer.new()
 	rewards.name = "SandbagRewards"
 	rewards.columns = 4
-	rewards.add_theme_constant_override("h_separation", 14)
-	rewards.add_theme_constant_override("v_separation", 4)
+	rewards.add_theme_constant_override("h_separation", 18)
+	rewards.add_theme_constant_override("v_separation", 6)
 	side.add_child(rewards)
 	for row in Sandbag.table().get("rewards", []):
-		var head := _inv_label(Sandbag.reward_label(row), 16, INV_TEXT)
+		var head := _inv_label(Sandbag.reward_label(row), 18, INV_TEXT)
 		head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		rewards.add_child(head)
-		rewards.add_child(_inv_label("x%d" % int(row.yellowCrystals), 16, INV_GOLD_HI))
+		rewards.add_child(_inv_label("x%d" % int(row.yellowCrystals), 18, INV_GOLD_HI))
 
-	var rule := ColorRect.new()
-	rule.color = INV_RULE
-	rule.custom_minimum_size = Vector2(0, 1)
-	side.add_child(rule)
-	side.add_child(_inv_label("이번 주 순위", 18, INV_GOLD))
+	var room := Control.new()
+	room.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	room.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	side.add_child(room)
+	_sandbag_note = _inv_label("", 18, INV_TEXT)
+	_sandbag_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	side.add_child(_sandbag_note)
+	var enter := _inv_button("입장", _on_sandbag_enter)
+	enter.name = "SandbagEnter"
+	enter.size_flags_horizontal = Control.SIZE_SHRINK_END
+	side.add_child(enter)
+
+	var split := ColorRect.new()
+	split.color = GatePanel.HEAD_LINE
+	split.custom_minimum_size = Vector2(1, 0)
+	body.add_child(split)
+
+	# --- 오른쪽 — 이번 주 순위 (끌어 굴린다) ---
+	var board := VBoxContainer.new()
+	board.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	board.add_theme_constant_override("separation", 8)
+	body.add_child(board)
+	board.add_child(_inv_label("이번 주 순위", 22, INV_GOLD))
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(0, 170)
+	scroll.name = "SandbagScroll"
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	side.add_child(scroll)
+	board.add_child(scroll)
 	_sandbag_grid = GridContainer.new()
 	_sandbag_grid.columns = 3
 	_sandbag_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_sandbag_grid.add_theme_constant_override("h_separation", 16)
-	_sandbag_grid.add_theme_constant_override("v_separation", 6)
+	_sandbag_grid.add_theme_constant_override("h_separation", 40)
+	_sandbag_grid.add_theme_constant_override("v_separation", 8)
 	scroll.add_child(_sandbag_grid)
-
-	var foot := HBoxContainer.new()
-	foot.add_theme_constant_override("separation", 10)
-	side.add_child(foot)
-	_sandbag_note = _inv_label("", 16, INV_TEXT)
-	_sandbag_note.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_sandbag_note.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	foot.add_child(_sandbag_note)
-	var enter := _inv_button("입장", _on_sandbag_enter)
-	enter.name = "SandbagEnter"
-	foot.add_child(enter)
+	# 휠·손가락 둘 다 굴린다 — 엔진의 끌기는 터치 화면에서만 켜진다 (가방 격자와 같다)
+	DragScroll.attach(scroll, _sandbag_grid, 8)
 
 	# 화면 가운데 큰 카운트 — 판이 도는 동안만 (`_draw_sandbag_hud`)
 	_sandbag_count = Label.new()
@@ -2299,9 +2331,15 @@ func _build_sandbag_panel() -> void:
 ## HUD 단추 — 창을 열 때마다 순위를 새로 묻는다 (남이 치는 동안에도 바뀐다)
 func _toggle_sandbag() -> void:
 	var open := not _sandbag_panel.visible
+	# 같은 층의 전체 화면 창들(차원문 · 던전 · 헬스 · 도감)은 닫는다 — 겹쳐 열려 있으면 닫기 X 가 엉킨다
+	if open:
+		_gate_panel.visible = false
+		_dungeon_panel.visible = false
+		_fitness_panel.visible = false
+		if _codex_panel.visible:
+			_codex_panel.close_panel()
 	_sandbag_panel.visible = open
 	if open:
-		_sandbag_panel.get_parent().move_to_front()
 		_sandbag_note.text = "불러오는 중…"
 		_transport.send(&"sandbagRank", {})
 
@@ -2320,7 +2358,7 @@ func _fill_sandbag(board: Dictionary) -> void:
 	for child in _sandbag_grid.get_children():
 		child.queue_free()
 	for head in ["순위", "이름", "최고 피해"]:
-		_sandbag_grid.add_child(_inv_label(head, 16, INV_DIM))
+		_sandbag_grid.add_child(_inv_label(head, 18, INV_DIM))
 	var me: Dictionary = board.get("me", {})
 	for row in board.get("top", []):
 		var rank := int(row.get("rank", 0))
@@ -2329,9 +2367,9 @@ func _fill_sandbag(board: Dictionary) -> void:
 			tint = ChatLog.EXP
 		elif rank <= 3:
 			tint = INV_GOLD_HI
-		_sandbag_grid.add_child(_inv_label("%d" % rank, 18, tint))
-		_sandbag_grid.add_child(_inv_label(str(row.get("name", "")), 18, tint))
-		_sandbag_grid.add_child(_inv_label(DungeonResult.comma(int(row.get("best", 0))), 18, tint))
+		_sandbag_grid.add_child(_inv_label("%d" % rank, 20, tint))
+		_sandbag_grid.add_child(_inv_label(str(row.get("name", "")), 20, tint))
+		_sandbag_grid.add_child(_inv_label(DungeonResult.comma(int(row.get("best", 0))), 20, tint))
 	var left := maxf(0.0, float(board.get("ends_at", 0.0)) - Time.get_unix_time_from_system())
 	var until := "정산까지 %d일 %d시간" % [int(left / 86400.0), int(fmod(left, 86400.0) / 3600.0)]
 	if int(me.get("rank", 0)) <= 0:
@@ -3055,7 +3093,7 @@ func _build_skill_bar() -> void:
 		# 장비 도감 — 헬스 옆 (2026-10-01). 그림은 펼친 책(`ui_icon_codex`) — 없으면 이름 글자만 선다
 		_icon_button("ui_icon_codex", "도감", _toggle_codex, MENU_BTN, true),
 		# 샌드백 랭킹전 — 도감 옆 (2026-10-02 요청 "HUD 별도 단추"). 그림은 받침에 선 가죽 샌드백
-		_icon_button("ui_icon_sandbag", "랭킹전", _toggle_sandbag, MENU_BTN, true),
+		_icon_button("ui_icon_sandbag", "샌드백", _toggle_sandbag, MENU_BTN, true),
 	]
 	# 랭킹 — 던전 옆. **서버에 붙었을 때만** 선다 (혼자 노는 판에는 견줄 사람이 없다).
 	# 그림은 월계관 두른 금 트로피(`ui_icon_rank`)
@@ -4742,6 +4780,7 @@ func _toggle_dungeon() -> void:
 	_gate_panel.visible = false
 	_fitness_panel.visible = false
 	_codex_panel.visible = false
+	_sandbag_panel.visible = false
 	_dungeon_panel.open(_shown_zone)
 
 
@@ -4753,6 +4792,7 @@ func _toggle_fitness() -> void:
 	_gate_panel.visible = false
 	_dungeon_panel.visible = false
 	_codex_panel.visible = false
+	_sandbag_panel.visible = false
 	_fitness_panel.refresh(_me())
 	_fitness_panel.open()
 
@@ -4765,6 +4805,7 @@ func _toggle_codex() -> void:
 	_gate_panel.visible = false
 	_dungeon_panel.visible = false
 	_fitness_panel.visible = false
+	_sandbag_panel.visible = false
 	_codex_panel.refresh(_me())
 	_codex_panel.open()
 

@@ -1992,6 +1992,9 @@ func _case_store(game: Node3D) -> void:
 	if cell == null:
 		_fail("메뉴에 상점 단추가 없다")
 		return
+	# 그림(`ui_icon_shop`) — 받을 목록에만 넣고 구운 파일을 안 올려 글자만 섰던 적이 있다 (2026-10-02)
+	if cell.find_children("*", "TextureRect", true, false).is_empty():
+		_fail("상점 단추에 그림이 없다 — public/assets/icons/ui_icon_shop.png 를 구워 올렸나")
 	cell.find_child("hit", true, false).pressed.emit()
 	await process_frame
 	await process_frame

@@ -44,6 +44,33 @@ func _case_ledger() -> void:
 	# 옛 계정 — 칸이 없거나 null 이면 다 줍는다
 	if Ledger.loot_skip({}) != [] or Ledger.loot_skip({"loot_skip": null}) != []:
 		_fail("칸이 없는 장부가 빈 목록으로 안 읽힌다")
+	# 부위 · 옵션 — 표에 있는 것만, 겹치지 않게, 표 순서로. 서버는 글자 목록(`w`)으로 받는다
+	for key in ["loot_skip_slots", "loot_skip_options"]:
+		if not key in Ledger.KEYS or p.get(key) != []:
+			_fail("장부 칸·새 계정에 %s 이 없다" % key)
+		if str(LedgerServer.OPS.get("set_" + key, "")) != "w":
+			_fail("서버가 set_%s 요청을 모른다" % key)
+	Ledger.new().set_loot_skip_slots(p, ["ring", "없는칸", "weapon", "ring", 3])
+	if p.loot_skip_slots != ["weapon", "ring"]:
+		_fail("다듬은 부위 목록 %s" % [p.loot_skip_slots])
+	Ledger.new().set_loot_skip_options(p, ["dropRate", "cooldown", "crit"])
+	if p.loot_skip_options != ["crit", "dropRate"]:
+		_fail("다듬은 옵션 목록 %s (뺀 쿨감은 안 남는다)" % [p.loot_skip_options])
+	if Ledger.loot_skip_slots({}) != [] or Ledger.loot_skip_options({"loot_skip_options": null}) != []:
+		_fail("칸이 없는 장부가 부위·옵션 빈 목록으로 안 읽힌다")
+	# 줍기 판정 — 등급 · 부위 · 옵션 셋 다 켜져야. 옵션 없는 장비는 옵션으로 안 거른다
+	var q := {"loot_skip": [], "loot_skip_slots": ["ring"], "loot_skip_options": ["crit"]}
+	var sword := {"id": Items.item_id(3, "weapon"), "grade": 3, "options": [{"kind": "maxHp", "value": 5}]}
+	if not Ledger.loot_wanted(q, sword):
+		_fail("켜 둔 등급·부위·옵션 장비를 안 줍는다")
+	if Ledger.loot_wanted(q, {"id": Items.item_id(3, "ring"), "grade": 3, "options": sword.options}):
+		_fail("끈 부위(반지)를 줍는다")
+	if Ledger.loot_wanted(q, {"id": sword.id, "grade": 3, "options": [{"kind": "crit", "value": 5}]}):
+		_fail("끈 옵션(치명타)이 붙은 장비를 줍는다")
+	if not Ledger.loot_wanted(q, {"id": sword.id, "grade": 3, "options": [{"kind": "crit", "value": 5}, {"kind": "maxHp", "value": 5}]}):
+		_fail("켜 둔 옵션이 하나라도 붙었는데 안 줍는다")
+	if not Ledger.loot_wanted(q, {"id": sword.id, "grade": 3, "options": []}):
+		_fail("옵션 없는 장비를 옵션으로 걸렀다")
 
 
 ## 같은 씨앗으로 200마리 — 다 끄면 장비가 하나도 안 들어오고, 골드·크리스탈은 그대로 받는다
@@ -54,25 +81,35 @@ func _case_kill() -> void:
 			kind_id = str(id)
 			break
 	var results: Array = []
-	for skip in [[], [1, 2, 3, 4, 5, 6, 7]]:
+	var kinds: Array = Items._t().get("optionKinds", [])
+	# 다 줍기 · 등급 다 끔 · 부위 다 끔 · 옵션 다 끔 · 무기만 끔
+	for skip in [{}, {"loot_skip": [1, 2, 3, 4, 5, 6, 7]}, {"loot_skip_slots": Items.slots()},
+			{"loot_skip_options": kinds}, {"loot_skip_slots": ["weapon"]}]:
 		var rng := RandomNumberGenerator.new()
 		rng.seed = 7
 		var ledger := Ledger.new(rng)
 		var p := Ledger.fresh("fighter")
-		p.loot_skip = skip
+		p.merge(skip, true)
 		var gear := 0
+		var weapons := 0
 		for i in 200:
 			ledger.kill(p, {"kind": kind_id, "zone": ""})
 		for stack in p.bag:
 			if not Items.is_material(str(stack.id)):
 				gear += 1
-		results.append({"gear": gear, "gold": int(p.gold)})
-	if int(results[0].gear) == 0:
-		_fail("다 줍는데 200마리에서 장비가 하나도 안 나왔다 — 시험이 아무것도 못 본다")
-	if int(results[1].gear) != 0:
-		_fail("다 껐는데 장비 %d개가 들어왔다" % results[1].gear)
-	if int(results[0].gold) != int(results[1].gold):
-		_fail("거르는데 골드가 달라졌다 (굴림 순서가 바뀌었다): %d ≠ %d" % [results[0].gold, results[1].gold])
+				if str(Items.get_item(str(stack.id)).get("slot", "")) == "weapon":
+					weapons += 1
+		results.append({"gear": gear, "weapons": weapons, "gold": int(p.gold)})
+	if int(results[0].gear) == 0 or int(results[0].weapons) == 0:
+		_fail("다 줍는데 200마리에서 장비(무기)가 안 나왔다 — 시험이 아무것도 못 본다")
+	for at in [1, 2, 3]:
+		if int(results[at].gear) != 0:
+			_fail("%s 다 껐는데 장비 %d개가 들어왔다" % [["", "등급", "부위", "옵션"][at], results[at].gear])
+	if int(results[4].weapons) != 0 or int(results[4].gear) != int(results[0].gear) - int(results[0].weapons):
+		_fail("무기만 껐는데 %s (다 주울 때 %s)" % [results[4], results[0]])
+	for result in results:
+		if int(result.gold) != int(results[0].gold):
+			_fail("거르는데 골드가 달라졌다 (굴림 순서가 바뀌었다): %d ≠ %d" % [result.gold, results[0].gold])
 
 
 ## 저장 — 고른 목록이 남고, 옛 저장(칸 없음)은 다 줍는다
@@ -89,23 +126,39 @@ func _case_save() -> void:
 	again.restore("me")
 	if again.snapshot().players["me"].loot_skip != [2, 5]:
 		_fail("불러온 습득 목록 %s" % [again.snapshot().players["me"].loot_skip])
+	w.set_loot_skip_slots("me", ["boots"])
+	w.set_loot_skip_options("me", ["penetration"])
+	w.save("me")
+	var third := World.new()
+	third.open("village")
+	third.restore("me")
+	var me: Dictionary = third.snapshot().players["me"]
+	if me.loot_skip_slots != ["boots"] or me.loot_skip_options != ["penetration"]:
+		_fail("불러온 부위 %s · 옵션 %s" % [me.loot_skip_slots, me.loot_skip_options])
 
 
 ## 창 — 전체 화면 · 위 탭 둘(+ 왼쪽 세부 목록) · 등급 일곱 줄 ON/OFF · 누르면 목록 전체를 요청 · 검색
 func _case_panel() -> void:
 	var panel := SettingsPanel.make()
 	root.add_child(panel)
-	panel.refresh({"loot_skip": [2]})
+	panel.refresh({"loot_skip": [2], "loot_skip_slots": ["ring"], "loot_skip_options": ["crit"]})
 	panel.open()
 	await process_frame
 	if panel.anchor_right != 1.0 or panel.anchor_bottom != 1.0:
 		_fail("설정 창이 전체 화면이 아니다")
 	var names: Array = []
-	for id in ["tab_env", "tab_item", "sub_sound", "sub_loot"]:
+	for id in ["tab_env", "tab_item", "sub_sound", "sub_loot", "sub_loot_slot", "sub_loot_option"]:
 		var tab: Button = panel.find_child(id, true, false)
 		names.append(tab.text if tab != null else "")
-	if names != ["환경", "아이템", "소리", "습득"]:
+	if names != ["환경", "아이템", "소리", "습득 등급", "습득 부위", "습득 옵션"]:
 		_fail("탭 · 세부 목록 이름 %s" % [names])
+	# 세부를 누르면 그 탭 · 그 쪽만 뜬다
+	(panel.find_child("sub_loot_option", true, false) as Button).pressed.emit()
+	await process_frame
+	if panel.tab_index() != 1 or panel.sub_index() != 2 \
+			or not (panel.find_child("loot_option_page", true, false) as Control).visible \
+			or (panel.find_child("loot_page", true, false) as Control).visible:
+		_fail("'습득 옵션' 을 눌렀는데 탭 %d · 세부 %d" % [panel.tab_index(), panel.sub_index()])
 	panel.pick_tab(1)
 	await process_frame
 	var page: Control = panel.find_child("loot_page", true, false)
@@ -113,13 +166,23 @@ func _case_panel() -> void:
 		_fail("아이템 습득 탭을 골랐는데 그 쪽이 안 보인다")
 	if panel.loot_state(1) != "ON" or panel.loot_state(2) != "OFF":
 		_fail("스위치 %s · %s" % [panel.loot_state(1), panel.loot_state(2)])
+	if panel.slot_state("weapon") != "ON" or panel.slot_state("ring") != "OFF" \
+			or panel.option_state("maxHp") != "ON" or panel.option_state("crit") != "OFF":
+		_fail("부위·옵션 스위치 무기 %s · 반지 %s · 체력 %s · 치명타 %s" % [panel.slot_state("weapon"),
+			panel.slot_state("ring"), panel.option_state("maxHp"), panel.option_state("crit")])
+	if panel.find_child("loot_option_cooldown", true, false) != null:
+		_fail("뺀 옵션(쿨감) 줄이 섰다")
 	var asked: Array = []
-	panel.loot_skip_changed.connect(func(grades: Array) -> void: asked.append(grades))
+	panel.loot_skip_changed.connect(func(field: String, list: Array) -> void: asked.append([field, list]))
 	(panel.find_child("loot_7", true, false).get_node("off") as Button).pressed.emit()
 	# 이미 켠 쪽을 또 누르면 요청하지 않는다
 	(panel.find_child("loot_1", true, false).get_node("on") as Button).pressed.emit()
 	panel.toggle_grade(2)
-	if asked != [[2, 7], []]:
+	(panel.find_child("loot_slot_boots", true, false).get_node("off") as Button).pressed.emit()
+	(panel.find_child("loot_slot_ring", true, false).get_node("on") as Button).pressed.emit()
+	(panel.find_child("loot_option_crit", true, false).get_node("on") as Button).pressed.emit()
+	(panel.find_child("loot_option_maxHp", true, false).get_node("on") as Button).pressed.emit()
+	if asked != [["grades", [2, 7]], ["grades", []], ["slots", ["ring", "boots"]], ["slots", []], ["options", []]]:
 		_fail("스위치를 눌러 낸 요청 %s" % [asked])
 	# 검색 — 모든 탭을 펼쳐 이름이 맞는 줄만 (띠는 남은 줄이 있을 때만)
 	panel.search_box().text = "볼륨"
@@ -138,11 +201,14 @@ func _case_panel() -> void:
 	if panel.search_box().text != "" or not (panel.find_child("sound_page", true, false) as Control).visible \
 			or (panel.find_child("loot_page", true, false) as Control).visible:
 		_fail("탭을 누르면 검색을 비우고 그 탭만 보여야 한다")
-	# 기준 화면(1280x720)에 들어가나 — 아이템 탭(줄이 가장 많다)으로 본다
+	# 기준 화면(1280x720)에 들어가나 — 쪽마다 본다 (줄이 가장 많은 것은 습득 등급)
 	panel.pick_tab(1)
 	await process_frame
 	var inner := panel.get_combined_minimum_size()
-	var page_height := (panel.find_child("loot_page", true, false) as Control).get_combined_minimum_size().y
-	if inner.x > 1280.0 or page_height > 720.0 - 50.0 - 52.0 - 40.0:
-		_fail("설정 창 최소 폭 %.0f · 아이템 쪽 높이 %.0f 가 화면을 넘는다" % [inner.x, page_height])
+	if inner.x > 1280.0:
+		_fail("설정 창 최소 폭 %.0f 가 화면을 넘는다" % inner.x)
+	for id in ["sound_page", "loot_page", "loot_slot_page", "loot_option_page"]:
+		var page_height := (panel.find_child(id, true, false) as Control).get_combined_minimum_size().y
+		if page_height > 720.0 - 50.0 - 52.0 - 40.0:
+			_fail("%s 높이 %.0f 가 화면을 넘는다" % [id, page_height])
 	panel.queue_free()

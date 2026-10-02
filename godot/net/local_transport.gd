@@ -220,7 +220,13 @@ func send(message: StringName, payload: Dictionary) -> void:
 		&"potionPct":
 			_world.set_potion_pct(MY_ID, int(payload.get("pct", 0)))
 		&"lootSkip":
-			_world.set_loot_skip(MY_ID, payload.get("grades", []))
+			# 설정 창이 바꾼 목록 하나만 싣는다 — 등급 · 부위 · 옵션
+			if payload.has("grades"):
+				_world.set_loot_skip(MY_ID, payload.grades)
+			if payload.has("slots"):
+				_world.set_loot_skip_slots(MY_ID, payload.slots)
+			if payload.has("options"):
+				_world.set_loot_skip_options(MY_ID, payload.options)
 		_:
 			push_warning("모르는 메시지: %s" % message)
 

@@ -18,7 +18,7 @@ const KEYS := [
 	"job", "level", "exp", "gold", "skills", "skill_points", "passives",
 	"skill_upgrades", "skill_upgrade_exp", "skill_exp", "bag", "equipped", "granted",
 	"diamonds", "proteins", "fitness", "codex", "sandbag", "dungeon_entries", "loot_skip",
-	"codex_auto", "codex_new",
+	"loot_skip_slots", "loot_skip_options", "codex_auto", "codex_new",
 ]
 
 ## **첫 선물** — 새 캐릭터가 한 번만 받는 것 `[[표시, 묶음], …]`. 로컬은 `LocalTransport.open` 이,
@@ -53,6 +53,9 @@ static func fresh(job: String) -> Dictionary:
 		"dungeon_entries": {},
 		# 안 주울 장비 등급 `[등급, …]` — 설정 창 "아이템 습득" 탭 (`set_loot_skip`). 비어 있으면 다 줍는다
 		"loot_skip": [],
+		# 안 주울 장비 부위 `[슬롯, …]` · 1차 옵션 종류 `[종류, …]` — 같은 탭 (`set_loot_skip_slots` · `_options`)
+		"loot_skip_slots": [],
+		"loot_skip_options": [],
 		# 도감 자동 등록을 켠 장비 등급 `[등급, …]` — 도감 창 "자동 등록 설정" (`set_codex_auto`). 비어 있으면 다 끔
 		"codex_auto": [],
 		# 자동 등록으로 새로 찬 칸 `{ 아이템 id: 강화 비트 }` — 도감 빨간 점. 그 탭을 보고 나오면 지운다(`codex_seen`)
@@ -137,10 +140,11 @@ func kill(p: Dictionary, target: Dictionary) -> void:
 	var loot := Items.roll_drop(int(target.level), str(p.job), rng, drop_bonus)
 	p.gold = int(p.gold) + int(loot.gold)
 	var event := {"type": "loot", "gold": loot.gold}
-	# 설정에서 끈 등급은 **가방에 넣지 않는다** (2026-10-02 요청: "습득할 아이템도 설정할 수 있는 옵션").
-	# 굴림은 그대로 다 한다 — 거른다고 굴림 순서가 바뀌면 같은 씨앗에서 다른 것이 나온다
+	# 설정에서 끈 등급·부위·옵션은 **가방에 넣지 않는다** (2026-10-02 요청: "습득할 아이템도 설정할 수 있는 옵션",
+	# 같은 날 "등급만 있는데, 부위와 옵션도 설정할 수 있게끔"). 굴림은 그대로 다 한다 — 거른다고 굴림 순서가
+	# 바뀌면 같은 씨앗에서 다른 것이 나온다
 	var got_at := -1
-	if loot.has("item") and not (int(loot.item.grade) in loot_skip(p)) and give(p, loot.item):
+	if loot.has("item") and loot_wanted(p, loot.item) and give(p, loot.item):
 		event["item"] = loot.item
 		got_at = p.bag.size() - 1  # 장비는 늘 맨 뒤에 붙는다 — 뒤에 오는 크리스탈도 번호를 밀지 않는다
 	# 크리스탈은 장비와 따로 떨어진다 — 가방에서는 한 칸에 겹친다
@@ -756,10 +760,60 @@ func set_loot_skip(p: Dictionary, grades: Array) -> void:
 	p.loot_skip = clean_grades(grades)
 
 
+## 안 주울 장비 부위를 정한다 — 표의 슬롯만, 겹치지 않게, 표 순서로
+func set_loot_skip_slots(p: Dictionary, slots: Array) -> void:
+	p.loot_skip_slots = clean_names(slots, Items.slots())
+
+
+## 안 주울 1차 옵션 종류를 정한다 — 지금 붙는 종류(`optionKinds`)만
+func set_loot_skip_options(p: Dictionary, kinds: Array) -> void:
+	p.loot_skip_options = clean_names(kinds, Items._t().get("optionKinds", []))
+
+
 ## 안 주울 등급 목록 — 옛 계정·옛 저장에는 칸이 없다(빈 목록 = 다 줍는다)
 static func loot_skip(p: Dictionary) -> Array:
 	var raw: Variant = p.get("loot_skip", [])
 	return raw if raw is Array else []
+
+
+## 안 주울 부위 · 1차 옵션 종류 — 옛 계정에는 칸이 없다(빈 목록 = 다 줍는다)
+static func loot_skip_slots(p: Dictionary) -> Array:
+	var raw: Variant = p.get("loot_skip_slots", [])
+	return raw if raw is Array else []
+
+
+static func loot_skip_options(p: Dictionary) -> Array:
+	var raw: Variant = p.get("loot_skip_options", [])
+	return raw if raw is Array else []
+
+
+## 이 장비를 주울까 — 등급 · 부위 · 1차 옵션 셋 다 켜져 있어야 줍는다.
+## 옵션은 **붙은 종류 중 하나라도 켜져 있으면** 줍는다(드랍은 1차 한 줄이라 그 줄이 정한다).
+## 옵션이 없는 장비는 옵션으로 거르지 않는다
+static func loot_wanted(p: Dictionary, item: Dictionary) -> bool:
+	if int(item.get("grade", 0)) in loot_skip(p):
+		return false
+	if str(Items.get_item(str(item.get("id", ""))).get("slot", "")) in loot_skip_slots(p):
+		return false
+	var lines := Items.shown_options(item.get("options", []))
+	if lines.is_empty():
+		return true
+	var skip := loot_skip_options(p)
+	for option in lines:
+		if not (str(option.get("kind", "")) in skip):
+			return true
+	return false
+
+
+## 이름 목록을 다듬는다 — `allowed` 에 있는 것만, 겹치지 않게, `allowed` 순서로
+static func clean_names(raw: Variant, allowed: Array) -> Array:
+	var out: Array = []
+	if not raw is Array:
+		return out
+	for each in allowed:
+		if str(each) in raw:
+			out.append(str(each))
+	return out
 
 
 static func clean_grades(raw: Variant) -> Array:

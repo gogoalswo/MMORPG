@@ -5197,8 +5197,8 @@ func _build_gate_panel() -> void:
 	# 설정 창도 같은 층·같은 결이다 → docs/features/hud.md "설정 창"
 	_settings_panel = SettingsPanel.make()
 	_settings_panel.theme = _ui_root.theme
-	_settings_panel.loot_skip_changed.connect(func(grades: Array) -> void:
-		_transport.send(&"lootSkip", {"grades": grades})
+	_settings_panel.loot_skip_changed.connect(func(field: String, list: Array) -> void:
+		_transport.send(&"lootSkip", {field: list})
 	)
 	var settings_back := ColorRect.new()
 	settings_back.name = "SettingsBack"

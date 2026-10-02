@@ -327,6 +327,8 @@ func join(player_id: String) -> void:
 		"dungeon_entries": kept.get("dungeon_entries", {}).duplicate(true),
 		# 안 주울 장비 등급 — 설정 창 "아이템 습득" 탭 (`set_loot_skip`). 저장에 남는다
 		"loot_skip": Ledger.clean_grades(kept.get("loot_skip", [])),
+		"loot_skip_slots": Ledger.clean_names(kept.get("loot_skip_slots", []), Items.slots()),
+		"loot_skip_options": Ledger.clean_names(kept.get("loot_skip_options", []), Items._t().get("optionKinds", [])),
 		# 도감 자동 등록을 켠 등급 · 자동 등록으로 새로 찬 칸(빨간 점) — 도감 창 (codex.md "주울 때 자동 등록")
 		"codex_auto": Ledger.clean_grades(kept.get("codex_auto", [])),
 		"codex_new": Codex.clean(kept.get("codex_new", {})),
@@ -1679,6 +1681,8 @@ func restore(player_id: String) -> bool:
 	set_potion_pct(player_id, int(saved.get("potion_pct", player.potion_pct)))
 	# 안 주울 장비 등급 — 없던 칸이라 옛 저장은 빈 목록(다 줍는다)
 	player.loot_skip = Ledger.clean_grades(saved.get("loot_skip", []))
+	player.loot_skip_slots = Ledger.clean_names(saved.get("loot_skip_slots", []), Items.slots())
+	player.loot_skip_options = Ledger.clean_names(saved.get("loot_skip_options", []), Items._t().get("optionKinds", []))
 	# 도감 자동 등록 — 없던 칸이라 옛 저장은 다 끔 · 새 칸 표시 없음
 	player.codex_auto = Ledger.clean_grades(saved.get("codex_auto", []))
 	player.codex_new = Codex.clean(saved.get("codex_new", {}))
@@ -2762,6 +2766,21 @@ func set_loot_skip(player_id: String, grades: Array) -> void:
 	if player.is_empty():
 		return
 	_ledger_call(player, &"set_loot_skip", [grades])
+
+
+## 안 주울 장비 부위 · 1차 옵션 종류 (`Ledger.set_loot_skip_slots` · `_options`) — 같은 탭
+func set_loot_skip_slots(player_id: String, slots: Array) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	_ledger_call(player, &"set_loot_skip_slots", [slots])
+
+
+func set_loot_skip_options(player_id: String, kinds: Array) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	_ledger_call(player, &"set_loot_skip_options", [kinds])
 
 
 ## 가방을 정렬한다 (`Ledger.sort_bag`)

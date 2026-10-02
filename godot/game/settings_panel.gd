@@ -17,8 +17,9 @@ extends PanelContainer
 ## 판은 돌판 틀이 아니라 **어두운 갈색 결**이다 — 그림이 그렇다. 소리는 **기기 설정**(`SoundSettings`)이라
 ## 이 창이 바로 건다. 습득은 **장부**(`Ledger.set_loot_skip`) — 이 창은 요청만 내고 장부 값을 그린다.
 
-## 안 주울 등급 목록 전체 — `game.gd` 가 `lootSkip` 으로 보낸다
-signal loot_skip_changed(grades: Array)
+## 안 주울 목록 하나 전체 — `field` 는 `grades`(등급) · `slots`(부위) · `options`(1차 옵션 종류).
+## `game.gd` 가 `lootSkip` 으로 `{field: list}` 를 보낸다
+signal loot_skip_changed(field: String, list: Array)
 
 const HEAD_HEIGHT := 50.0
 const TAB_WIDTH := 132.0
@@ -47,22 +48,25 @@ const FAINT := Color("#5d574d")
 ## 설정이 늘면 줄만 더한다
 const TABS := [
 	{"id": "env", "name": "환경", "subs": [["sound", "소리"]]},
-	{"id": "item", "name": "아이템", "subs": [["loot", "습득"]]},
+	{"id": "item", "name": "아이템", "subs": [["loot", "습득 등급"], ["loot_slot", "습득 부위"], ["loot_option", "습득 옵션"]]},
 ]
 
-## 고른 탭 (0 부터)
+## 고른 탭 (0 부터) · 그 탭 안에서 고른 세부 (0 부터)
 var _tab := 0
+var _sub := 0
 var _me: Dictionary = {}
 var _seen := ""
 
 var _tabs: Array = []
-## 탭마다 세부 목록 단추 묶음 · 쪽(page)
+## 탭마다 세부 목록 단추 묶음 · 세부마다 쪽(page) — 둘 다 `[탭][세부]`
 var _sides: Array = []
 var _pages: Array = []
 var _sound_label: Label
 var _sound_slider: HSlider
-## 등급 → 그 줄의 ON/OFF 스위치
+## 등급 → 그 줄의 ON/OFF 스위치 · 부위(슬롯) → 스위치 · 옵션 종류 → 스위치
 var _loot_rows := {}
+var _slot_rows := {}
+var _option_rows := {}
 var _search: LineEdit
 var _empty: Label
 ## 검색이 거르는 줄 `{node, band, words}`
@@ -122,9 +126,10 @@ func _build() -> void:
 	side.add_child(side_top)
 	for index in TABS.size():
 		var group: Array = []
-		for sub in TABS[index].subs:
+		for sub_index in TABS[index].subs.size():
+			var sub: Array = TABS[index].subs[sub_index]
 			var button := _side_button(str(sub[0]), str(sub[1]))
-			button.pressed.connect(pick_tab.bind(index))
+			button.pressed.connect(pick_sub.bind(index, sub_index))
 			side.add_child(button)
 			group.append(button)
 		_sides.append(group)
@@ -148,9 +153,10 @@ func _build() -> void:
 	var pages := VBoxContainer.new()
 	pages.add_theme_constant_override("separation", 10)
 	pad.add_child(pages)
-	_pages = [_build_sound(), _build_loot()]
-	for page in _pages:
-		pages.add_child(page)
+	_pages = [[_build_sound()], [_build_loot(), _build_loot_slots(), _build_loot_options()]]
+	for group in _pages:
+		for page in group:
+			pages.add_child(page)
 	_empty = _label("검색 결과가 없습니다", 19, DIM)
 	_empty.name = "search_empty"
 	_empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -263,7 +269,8 @@ func _build_sound() -> Control:
 	return page
 
 
-## 아이템 — 장비 등급 일곱 줄, 줄마다 ON(줍기)/OFF(안 줍기).
+## 아이템 — 장비 등급 일곱 줄 · 부위 여섯 줄 · 1차 옵션 종류 다섯 줄, 줄마다 ON(줍기)/OFF(안 줍기).
+## 셋 다 켜진 장비만 줍는다 (`Ledger.loot_wanted`).
 ## 골드·크리스탈은 거르지 않는다 — 크리스탈은 한 칸에 겹쳐 가방을 채우지 않는다
 func _build_loot() -> Control:
 	var page := _page("loot_page")
@@ -277,6 +284,48 @@ func _build_loot() -> Control:
 		row.name = "loot_row_%d" % grade
 		page.add_child(row)
 	return page
+
+
+## 부위 — 무기 ~ 반지 여섯 줄 (2026-10-02 요청: "등급만 있는데, 부위와 옵션도 설정할 수 있게끔").
+## 한 쪽에 등급과 같이 두면 기준 화면(720)을 넘어서 세부를 나눴다
+func _build_loot_slots() -> Control:
+	var page := _page("loot_slot_page")
+	var slot_band := _band("주울 장비 부위")
+	page.add_child(slot_band)
+	page.add_child(_hint("끈 부위의 장비는 떨어져도 가방에 넣지 않습니다", slot_band))
+	for slot in Items.slots():
+		var slot_id := str(slot)
+		var on_off := make_switch("loot_slot_%s" % slot_id,
+			func(on: bool) -> void: _set_name(&"slots", slot_id, on))
+		_slot_rows[slot_id] = on_off
+		var row := _row(Items.slot_label(slot_id), TEXT, on_off, slot_band, "습득 줍기 장비 부위")
+		row.name = "loot_slot_row_%s" % slot_id
+		page.add_child(row)
+	return page
+
+
+## 옵션 — 드랍에 붙는 1차 옵션 종류(`optionKinds`). 붙은 종류를 끄면 그 장비는 안 줍는다
+func _build_loot_options() -> Control:
+	var page := _page("loot_option_page")
+	var option_band := _band("주울 장비 옵션")
+	page.add_child(option_band)
+	page.add_child(_hint("떨어질 때 붙은 1차 옵션의 종류로 거릅니다 · 끈 옵션이 붙은 장비는 넣지 않습니다", option_band))
+	var labels: Dictionary = Items._t().get("optionLabel", {})
+	for kind in _option_kinds():
+		var on_off := make_switch("loot_option_%s" % kind,
+			func(on: bool) -> void: _set_name(&"options", kind, on))
+		_option_rows[kind] = on_off
+		var row := _row(str(labels.get(kind, kind)), TEXT, on_off, option_band, "습득 줍기 장비 옵션")
+		row.name = "loot_option_row_%s" % kind
+		page.add_child(row)
+	return page
+
+
+static func _option_kinds() -> Array:
+	var out: Array = []
+	for kind in Items._t().get("optionKinds", []):
+		out.append(str(kind))
+	return out
 
 
 func open() -> void:
@@ -294,7 +343,8 @@ func refresh(me: Dictionary) -> void:
 	_me = me
 	if not visible:
 		return
-	var seen := "%d|%s|%s" % [_tab, Ledger.loot_skip(me), _search.text]
+	var seen := "%d|%d|%s|%s|%s|%s" % [_tab, _sub, Ledger.loot_skip(me), Ledger.loot_skip_slots(me),
+		Ledger.loot_skip_options(me), _search.text]
 	if seen == _seen:
 		return
 	_seen = seen
@@ -303,16 +353,26 @@ func refresh(me: Dictionary) -> void:
 
 ## 위 탭을 고른다 — 검색 중이었으면 검색을 비운다
 func pick_tab(index: int) -> void:
+	pick_sub(index, 0)
+
+
+## 왼쪽 세부를 고른다 — 그 탭으로 가서 그 세부의 쪽을 띄운다
+func pick_sub(index: int, sub: int) -> void:
 	_tab = clampi(index, 0, TABS.size() - 1)
+	_sub = clampi(sub, 0, TABS[_tab].subs.size() - 1)
 	if _search.text != "":
 		_search.text = ""
 	_seen = ""
 	refresh(_me)
 
 
-## 고른 탭 (0 환경 · 1 아이템) · 볼륨 글자 · 검색 칸 — 테스트가 본다
+## 고른 탭 (0 환경 · 1 아이템) · 세부 · 볼륨 글자 · 검색 칸 — 테스트가 본다
 func tab_index() -> int:
 	return _tab
+
+
+func sub_index() -> int:
+	return _sub
 
 
 func sound_label() -> Label:
@@ -326,6 +386,15 @@ func search_box() -> LineEdit:
 ## 그 등급 줄의 스위치 상태("ON" · "OFF") — 테스트가 본다
 func loot_state(grade: int) -> String:
 	return "ON" if switch_on(_loot_rows[grade]) else "OFF"
+
+
+## 그 부위·옵션 줄의 스위치 상태 — 테스트가 본다
+func slot_state(slot: String) -> String:
+	return "ON" if switch_on(_slot_rows[slot]) else "OFF"
+
+
+func option_state(kind: String) -> String:
+	return "ON" if switch_on(_option_rows[kind]) else "OFF"
 
 
 ## 줄 하나를 뒤집어 **목록 전체**를 요청한다. 화면은 장부 답(`refresh`)이 오면 바뀐다
@@ -343,7 +412,19 @@ func _set_grade(grade: int, pick_up: bool) -> void:
 	else:
 		skip.append(grade)
 	skip.sort()
-	loot_skip_changed.emit(skip)
+	loot_skip_changed.emit("grades", skip)
+
+
+## 부위·옵션 줄 하나를 바꿔 그 **목록 전체**를 요청한다. 순서는 장부가 표 순서로 다듬는다
+func _set_name(field: StringName, id: String, pick_up: bool) -> void:
+	var skip: Array = (Ledger.loot_skip_slots(_me) if field == &"slots" else Ledger.loot_skip_options(_me)).duplicate()
+	if pick_up == not (id in skip):
+		return
+	if pick_up:
+		skip.erase(id)
+	else:
+		skip.append(id)
+	loot_skip_changed.emit(str(field), skip)
 
 
 func _sound_step(dir: int) -> void:
@@ -365,14 +446,21 @@ func _redraw() -> void:
 	for index in _tabs.size():
 		var on := index == _tab and not searching
 		_paint_tab(_tabs[index], on)
-		for button in _sides[index]:
-			_paint_side(button, on)
-		(_pages[index] as Control).visible = on or searching
+		for sub in _sides[index].size():
+			var picked: bool = on and sub == _sub
+			_paint_side(_sides[index][sub], picked)
+			(_pages[index][sub] as Control).visible = picked or searching
 	_apply_search()
 	_show_sound(SoundSettings.volume())
 	var skip := Ledger.loot_skip(_me)
 	for grade in _loot_rows:
 		paint_switch(_loot_rows[grade], not (int(grade) in skip))
+	var skip_slots := Ledger.loot_skip_slots(_me)
+	for slot in _slot_rows:
+		paint_switch(_slot_rows[slot], not (slot in skip_slots))
+	var skip_options := Ledger.loot_skip_options(_me)
+	for kind in _option_rows:
+		paint_switch(_option_rows[kind], not (kind in skip_options))
 
 
 ## 검색 — 치는 동안은 모든 탭의 줄을 펼쳐 이름이 맞는 줄만 남긴다. 띠는 아래 줄이 하나라도 남으면 선다

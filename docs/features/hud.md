@@ -55,9 +55,9 @@
 | `godot/game/sound_settings.gd` | **소리 크기** (`SoundSettings`) — Master 버스 볼륨 0~100, `user://settings.cfg` 에 저장. 아래 "소리 설정" |
 | `godot/game/settings_panel.gd` | **설정 창** (`SettingsPanel`) — 전체 화면 · 탭 소리 / 아이템 습득. 아래 "설정 창" |
 | `godot/game/game.gd` | `_toggle_settings` — 메뉴 "설정". 헬스·도감 창과 한 층이라 서로 닫는다. 습득 줄을 누르면 `lootSkip` 을 보낸다 |
-| `godot/world/ledger.gd` | `set_loot_skip` · `loot_skip` · `clean_loot_skip` — 안 주울 장비 등급(장부 칸 `loot_skip`). `kill` 이 거른다 |
+| `godot/world/ledger.gd` | `set_loot_skip` · `loot_skip` · `clean_grades` — 안 주울 장비 등급(장부 칸 `loot_skip`). `set_loot_skip_slots` · `set_loot_skip_options` · `clean_names` — 부위 · 1차 옵션 종류(`loot_skip_slots` · `loot_skip_options`). `kill` 이 `loot_wanted` 로 거른다 |
 | `godot/tests/ui_test.gd` | `_case_sound` — 설정 단추로 창 · +/− · 슬라이더가 버스 볼륨을 바꾸고 0 이면 음소거 · 습득 줄이 장부를 바꾼다 |
-| `godot/tests/settings_test.gd` | 장부 칸 · 서버 요청 · 다 끄면 장비 0 · 골드는 그대로(굴림 순서) · 저장 · 창(전체 화면 · 탭 · 줄 요청) |
+| `godot/tests/settings_test.gd` | 장부 칸 · 서버 요청 · `loot_wanted`(등급·부위·옵션) · 등급/부위/옵션 다 끄면 장비 0 · 무기만 끄면 무기만 빠짐 · 골드는 그대로(굴림 순서) · 저장 · 창(전체 화면 · 탭 · 세부 쪽 · 줄 요청 · 쪽마다 720 안) |
 | `godot/tests/potion_test.gd` | 저절로 마시기 · 쿨타임 5초 · 직접 마시기 · 기준 자르기 · 저장 |
 | `godot/tests/ui_test.gd` | `_case_potion` — 퀵슬롯 옆 자리 · 설정 창 +/− · 눌러서 마시고 쿨타임이 돈다. `_case_auto_no_setting` — 자동사냥 칸에 설정 단추가 없다 |
 | `godot/game/chat_log.gd` | **채팅창** (`ChatLog`) — 왼쪽 아래 구석, 장비 획득·강화·말을 한 줄씩 적는다. 아래 "채팅창" |
@@ -625,8 +625,9 @@ frame.add_child(border)         # 채움 **다음**에 붙여야 위로 온다
 │             │    일반                       [ ON ][ OFF ]        │  ← 두 칸 스위치 (아이템 탭)
 ```
 
-- **위 탭 → 왼쪽 세부 목록 → 오른쪽 줄** 셋 자리를 그림대로 둔다. 지금은 `환경 → 소리`, `아이템 → 습득` 하나씩이다 —
-  설정이 늘면 `TABS` 에 세부를 더하고 쪽에 줄을 더한다. 탭·세부 어느 쪽을 눌러도 그 쪽이 뜬다.
+- **위 탭 → 왼쪽 세부 목록 → 오른쪽 줄** 셋 자리를 그림대로 둔다. 지금은 `환경 → 소리`,
+  `아이템 → 습득 등급 · 습득 부위 · 습득 옵션` 이다 — **세부 하나가 쪽 하나**(`_pages[탭][세부]`).
+  설정이 늘면 `TABS` 에 세부와 쪽을 더한다. 탭을 누르면 그 탭의 첫 세부가, 세부를 누르면 그 쪽이 뜬다(`pick_sub`).
 - 고른 탭 — 금빛 글자 + 금 밑줄 + 옅은 금빛 바탕. 고른 세부 — 왼쪽에서 번지는 금빛 + 마름모(글꼴에 ◆ 가 없어 네모를 돌려 그린다).
 - **두 칸 스위치** `SettingsPanel.make_switch` · `paint_switch` — 고른 칸만 밝은 갈색 판 + 금빛 글자 + 옅은 빛.
   누르면 `on_pick(켬?)` 만 내고, 그림은 장부 답을 받아 맞춘다. 도감 자동 등록 설정 창도 이걸 쓴다 ([codex.md](codex.md)).
@@ -638,15 +639,24 @@ frame.add_child(border)         # 채움 **다음**에 붙여야 위로 온다
 - **헬스·도감 창과 같은 층** — 전체 화면 + 뒤에 불투명한 판(`SettingsBack`), X 로 닫는다.
   한 층이라 차원문·던전·헬스·도감 창과 서로 닫는다 (`_toggle_settings` 와 각 토글).
 - **소리** — 위 "소리 설정" 그대로. 기기 설정이라 창이 `SoundSettings` 를 바로 건다.
-- **아이템 → 습득** — 장비 **등급 일곱 줄**(일반 ~ 태초, 등급 색 글자) × ON(줍기)/OFF(안 줍기). 끈 등급의 장비는 떨어져도
-  **가방에 넣지 않는다.** 골드·크리스탈은 거르지 않는다 (크리스탈은 한 칸에 겹쳐 가방을 채우지 않는다).
-  **처음은 다 줍는다.**
+- **아이템 → 습득** — 세 쪽, 줄마다 ON(줍기)/OFF(안 줍기). **처음은 다 줍는다.**
+  - **습득 등급** — 장비 등급 일곱 줄(일반 ~ 태초, 등급 색 글자).
+  - **습득 부위** (2026-10-02 요청: "등급만 있는데, 부위와 옵션도 설정할 수 있게끔") — 슬롯 여섯 줄(무기 ~ 반지, `Items.slots()`).
+  - **습득 옵션** (같은 요청) — 드랍에 붙는 **1차 옵션 종류** 다섯 줄(`optionKinds` — 치명타 · 치명타 데미지 · 체력 ·
+    방어력 관통 · 아이템 드랍률). 뺀 옵션(공속·쿨감)은 줄이 없다.
+  - **셋 다 켜진 장비만 줍는다** (`Ledger.loot_wanted`). 옵션은 **붙은 종류 중 하나라도 켜져 있으면** 줍는다 —
+    드랍은 1차 한 줄이라 그 줄이 정한다. 옵션이 없는 장비는 옵션으로 거르지 않는다.
+  - 골드·크리스탈은 거르지 않는다 (크리스탈은 한 칸에 겹쳐 가방을 채우지 않는다).
+  - **쪽을 나눈 이유** — 한 쪽에 18줄을 다 넣으면 기준 화면(720)을 넘는다 (`settings_test` 가 쪽마다 높이를 잰다).
 - **습득은 장부다** ★ — 가방에 무엇이 들어오는지가 바뀌므로 소리처럼 기기 설정으로 두지 않았다.
   장부 칸 `loot_skip`(안 주울 등급 목록) · 요청 `set_loot_skip`(서버 `OPS` 의 `"a"`) · 저장(`save.gd`)에 남는다.
-  창은 스위치를 누를 때 **목록 전체**를 `lootSkip` 으로 보내고, 스위치는 장부 답이 오면 바뀐다.
+  부위·옵션은 칸 `loot_skip_slots` · `loot_skip_options`(글자 목록), 요청 `set_loot_skip_slots` · `set_loot_skip_options`
+  (서버 `OPS` 의 `"w"` — 글자 목록 모양, 숫자가 섞이면 `bad_args`). 장부가 표에 있는 것만 표 순서로 남긴다(`Ledger.clean_names`).
+  창은 스위치를 누를 때 바뀐 **목록 하나 전체**를 `lootSkip` 으로 보내고(`{grades}` · `{slots}` · `{options}` 중 하나),
+  스위치는 장부 답이 오면 바뀐다.
 - **거른다고 굴림을 건너뛰지 않는다** ★ — `Ledger.kill` 은 드롭(옵션까지)을 다 굴린 뒤 가방에만 안 넣는다.
   굴림 순서가 바뀌면 같은 씨앗에서 다른 것이 나와 서버·로컬이 어긋난다 (`settings_test` 가 골드로 대 본다).
-- 옛 계정·옛 저장에는 칸이 없다 → `Ledger.loot_skip` 이 빈 목록(다 줍는다)으로 읽는다.
+- 옛 계정·옛 저장에는 칸이 없다 → `Ledger.loot_skip` · `loot_skip_slots` · `loot_skip_options` 가 빈 목록(다 줍는다)으로 읽는다.
 
 ## 채팅창 (2026-09-23) ★
 

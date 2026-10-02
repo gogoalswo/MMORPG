@@ -400,6 +400,7 @@ func step(delta: float) -> void:
 	_run_combos(now)
 	_run_zones(now)
 	_step_monsters(delta, now)
+	_drive_sandbag_auto(now)
 	_drive_auto(delta, now)
 	_drive_potions(now)
 	_check_gate()
@@ -460,14 +461,17 @@ func _use_dungeon_entry(player: Dictionary, target: String) -> bool:
 	return false
 
 
-## 존을 옮긴다. 있는 존인지는 부르는 쪽이 봤다
+## 존을 옮긴다. 있는 존인지는 부르는 쪽이 봤다.
+## ★ **던전에서 나오면 체력을 가득 채운다** (2026-10-02 요청) — `join` 끝의 `_refresh_stats` 로
+## 최대 체력이 정해진 뒤에 채운다. 쓰러져 있으면 그대로 둔다 (되살아나기가 따로 채운다)
 func _move_to(target: String) -> void:
+	var from_dungeon := not GameData.dungeon_type_of(zone_id).is_empty()
 	open(target)
 	for who in _players:
 		join(who)
 		# 마을로 오면 체력을 가득 채운다 (2026-10-02 요청). 죽은 사람은 사망 창의 `revive` 가 채운다
 		var player: Dictionary = _players[who]
-		if target == GameData.start_zone() and not bool(player.get("dead", false)):
+		if (from_dungeon or target == GameData.start_zone()) and not bool(player.get("dead", false)):
 			player["hp"] = int(player.stats.maxHp)
 	_events.append({"type": "zone", "zone": target})
 	_check_sandbag_week(Time.get_ticks_msec(), true)
@@ -985,6 +989,17 @@ func _start_sandbag() -> void:
 	}
 
 
+## 재는 시간 동안은 **저절로 친다** (2026-10-02 요청 "카운트 끝나면 자동으로 공격하도록") — 샌드백 존에는
+## 자동사냥 단추가 없으므로 판정이 켠다. 매 틱 보는 것은 늦게 들어온 사람도 켜 주기 위해서다.
+## 끄는 것은 `_finish_sandbag`, 존을 옮기면 `join` 이 끈다
+func _drive_sandbag_auto(now: int) -> void:
+	if str(_run.get("dungeon", "")) != "sandbag" or str(_run.result) != "" or now < int(_run.starts_at):
+		return
+	for id in _players:
+		if not bool(_players[id].get("auto", false)):
+			set_auto(id, true)
+
+
 ## 카운트 중인가 — 이 동안은 평타·스킬이 막힌다
 func _counting_down(now: int) -> bool:
 	return str(_run.get("dungeon", "")) == "sandbag" and str(_run.result) == "" and now < int(_run.starts_at)
@@ -1014,6 +1029,9 @@ func _finish_sandbag() -> void:
 		# 로컬은 장부가 바로 고쳤다. 서버에 붙어 있으면 아직 옛 값이라 큰 쪽을 적는다 — 답(`sandbagRecord`)이 오면 창이 고친다
 		best = maxi(maxi(before, damage), int(_players[id].get("sandbag", {}).get("best", 0)))
 	_run.result = "clear"
+	# 결과창 뒤로 계속 치지 않게 저절로 치던 것을 끈다 (`_drive_sandbag_auto`)
+	for id in _players:
+		set_auto(id, false)
 	_events.append({
 		"type": "dungeonResult", "dungeon": "sandbag", "name": _run.name, "stage": 0,
 		"result": "clear", "kills": 0, "need": 0, "skill_exp": 0, "crystals": 0, "protein": 0,

@@ -1724,10 +1724,13 @@ func _case_char(game: Node3D) -> void:
 	var base := int(Combat.stats_for(str(me.job), int(me.level)).attack)
 	var pct := float(Items.equipment_stats(me.equipped).attack)
 	var rows: Array = []
-	for label in game._char_grids[0].get_children():
-		rows.append(label.text)
+	# 풀이 줄은 폭 0 인 틀 안의 Label — 틀의 글자를 읽는다 (빈 오른쪽 칸은 "")
+	for cell in game._char_grids[0].get_children():
+		rows.append(cell.text if cell is Label else (cell.get_child(0).text if cell.get_child_count() > 0 else ""))
+	# 헬스·도감이 0 이라 증가는 장비 % 그대로, 풀이 줄에 세 몫이 다 적힌다
 	var want := [
 		"기본 공격력", str(base), "공격력 증가", game._bonus_text("attack", pct),
+		"(장비 %s × 헬스 0%% × 도감 0%%)" % game._bonus_text("attack", pct).trim_prefix("+"), "",
 		"최종 공격력", str(int(me.stats.attack)),
 	]
 	if pct <= 0.0:

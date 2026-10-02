@@ -26,7 +26,7 @@
 | `godot/game/codex_panel.gd` `CodexPanel` | ★ **도감 창** (아래 "창") |
 | `godot/game/codex_picker.gd` `CodexPicker` | ★ **등록할 장비 선택 창** — [등록] 을 누르면 도감 창 위에 뜬다 (아래 "고르기 창") |
 | `godot/world/items.gd` `option_lines` | 장비 한 벌의 옵션 줄 수(1·2·3차 합) — 장부의 기본 고르기와 고르기 창이 같이 쓴다 |
-| `godot/game/game.gd` `_toggle_codex` · `_build_gate_panel` · `_redraw_char` | 메뉴 판의 "도감", 창을 헬스 창과 같은 층(10)에, `codexResult` → `show_result`, 캐릭터 정보 창 증가 줄 끝 `도감 +N%` |
+| `godot/game/game.gd` `_toggle_codex` · `_build_gate_panel` · `_redraw_char` | 메뉴 판의 "도감", 창을 헬스 창과 같은 층(10)에, `codexResult` → `show_result`, 캐릭터 정보 창 증가 줄 아래 풀이 `도감 N%` |
 | `godot/tests/codex_test.gd` | 표 · 등록(소모 · 두 번 · 없는 것 · 끼운 것) · 겹친 칸 · 옵션 적은 것부터 · 곱하기 · 저장 · 서버 · 창 |
 | `godot/tools/shot.gd` | `npm run shot:godot -- codex` → `logs/shot_codex.png` (희귀 탭) |
 
@@ -80,7 +80,8 @@
 ```
 
 헬스와 같은 이유 — 장비 % 에 더하면 태초 풀셋 앞에서 안 보인다 ([fitness.md](fitness.md)).
-캐릭터 정보 창은 **줄을 늘리지 않고** 증가 줄 끝에 `도감 +N%`(소수 둘째 자리)를 붙인다 — 창이 720 을 넘는다.
+캐릭터 정보 창은 증가 줄을 세 몫을 곱한 합계 % 로 적고, 그 아래 풀이 줄 `(장비 N% × 헬스 N% × 도감 N%)` 에
+도감 몫(소수 둘째 자리)을 적는다 ([fitness.md](fitness.md)).
 
 ### 창 (`codex_panel.gd`) ★
 

@@ -1036,6 +1036,34 @@ func sell(p: Dictionary, index: int) -> void:
 	_inventory_changed(p)
 
 
+## 버린다 — 가방 번호 목록 (2026-10-02 요청: 가방의 버리기 창). **장비만** 버린다 — 재료(크리스탈)는
+## 창에 안 나오고 여기서도 건너뛴다. **잠근 것은 담겨 와도 건너뛴다** (`Items.is_locked`).
+## 겹친 칸은 통째로 버린다. 받을 것이 없다 — 판매와 달리 골드도 안 준다
+func discard(p: Dictionary, indices: Array) -> void:
+	var chosen: Array = []
+	for value in indices:
+		var at := int(value)
+		if at < 0 or at >= p.bag.size() or chosen.has(at):
+			continue
+		var stack: Dictionary = p.bag[at]
+		if Items.get_item(str(stack.get("id", ""))).is_empty() or Items.is_material(str(stack.get("id", ""))):
+			continue
+		if Items.is_locked(stack):
+			continue
+		chosen.append(at)
+	if chosen.is_empty():
+		_notice("버릴 장비가 없습니다")
+		return
+	chosen.sort()
+	chosen.reverse()  # 뒤에서부터 — 앞 칸 번호가 안 밀린다
+	var pieces := 0
+	for at in chosen:
+		pieces += int(p.bag[at].get("count", 1))
+		p.bag.remove_at(at)
+	_notice("장비 %d개를 버렸습니다" % pieces)
+	_inventory_changed(p)
+
+
 ## --- 강화 ---
 
 ## +level 에서 한 번 굴린다. 비용을 떼고 "success" · "keep" · "destroy", 모자라면 "short"

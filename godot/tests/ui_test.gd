@@ -324,6 +324,7 @@ func _run_scene() -> void:
 	await _case_bag_drag(game)
 	await _case_compare(game)
 	await _case_lock(game)
+	await _case_discard(game)
 	await _case_codex_enhance(game)
 	await _case_store(game)
 	await _case_skills(game)
@@ -1991,6 +1992,86 @@ func _case_lock(game: Node3D) -> void:
 	if Items.is_locked(me.bag[0]) or cell.get_node("lock").visible or game._enhance_button.disabled:
 		_fail("잠금 해제가 안 됐다")
 	game._toggle_bag()
+	me.bag.clear()
+	me.bag.append_array(kept_bag)
+
+
+## 버리기 창 (2026-10-02 요청) — 인벤토리 "버리기" 로 뜨고, 개별 · 등급별 · 전체로 고르고, 확인 창을 거쳐 버린다.
+## 잠근 장비 · 재료는 목록에 안 나온다. 창이 화면 안에 들고, 가방을 닫으면 같이 닫힌다
+func _case_discard(game: Node3D) -> void:
+	var me: Dictionary = game._transport.snapshot().players[game._transport.my_id()]
+	var kept_bag: Array = me.bag.duplicate(true)
+	me.bag.clear()
+	me.bag.append({"id": Items.item_id(1, "weapon"), "grade": 1, "enhance": 0, "options": []})
+	me.bag.append({"id": Items.item_id(1, "armor"), "grade": 1, "enhance": 0, "options": []})
+	me.bag.append({"id": Items.item_id(2, "ring"), "grade": 2, "enhance": 3, "options": []})
+	me.bag.append({"id": Items.item_id(3, "boots"), "grade": 3, "enhance": 0, "options": [], "locked": true})
+	me.bag.append({"id": Items.crystal_id(), "count": 4})
+	me.bag.append({"id": Items.item_id(3, "helmet"), "grade": 3, "enhance": 1, "options": []})
+	game._gate_panel.close_panel()
+	if game._bag_panel.visible:
+		game._toggle_bag()
+	game._toggle_bag()
+	await process_frame
+	var popup: DiscardPopup = game._discard
+	var button: Button = game._bag_discard
+	if not button.is_visible_in_tree() or button.text != "버리기":
+		_fail("인벤토리에 버리기 단추가 없다")
+	# 열 때 정렬하므로 번호는 지금 가방에서 다시 찾는다
+	button.pressed.emit()
+	await process_frame
+	await process_frame
+	if not popup.visible:
+		_fail("버리기 단추를 눌렀는데 창이 안 떴다")
+	var screen: Rect2 = game.get_viewport().get_visible_rect()
+	if not screen.encloses(popup.panel.get_global_rect()):
+		_fail("버리기 창이 화면 밖으로 나갔다: %s" % popup.panel.get_global_rect())
+	if popup._view.size() != 4:
+		_fail("목록은 잠금 · 재료를 뺀 장비 4개여야 한다: %d" % popup._view.size())
+	if not popup.go.disabled:
+		_fail("아무것도 안 골랐는데 [버리기] 가 켜져 있다")
+	# 개별 — 칸을 누르면 금테, 다시 누르면 빠진다
+	await _tap_cell(popup.list_drag, popup.list_grid.get_parent(), popup.list_grid, 0)
+	if popup.picked.size() != 1 or not popup._cells[0].get_node("pick").visible:
+		_fail("칸을 눌렀는데 안 담겼다: %s" % [popup.picked])
+	await _tap_cell(popup.list_drag, popup.list_grid.get_parent(), popup.list_grid, 0)
+	if not popup.picked.is_empty():
+		_fail("다시 눌렀는데 안 빠졌다: %s" % [popup.picked])
+	# 등급별 — 일반 둘 · 다시 누르면 빠진다 · 없는 등급(태초)은 꺼져 있다
+	(popup.grade_buttons[1] as Button).pressed.emit()
+	if popup.picked.size() != 2 or not (popup.grade_buttons[1] as Button).get_node("pick").visible:
+		_fail("일반 등급을 눌렀는데 둘이 안 담겼다: %s" % [popup.picked])
+	if not (popup.grade_buttons[7] as Button).disabled:
+		_fail("가방에 없는 등급 단추가 켜져 있다")
+	(popup.grade_buttons[1] as Button).pressed.emit()
+	if not popup.picked.is_empty():
+		_fail("일반 등급을 다시 눌렀는데 안 빠졌다: %s" % [popup.picked])
+	# 전체 — 다 담고 글자가 "전체 해제", 다시 누르면 비운다
+	popup.all_button.pressed.emit()
+	if popup.picked.size() != 4 or popup.all_button.text != "전체 해제":
+		_fail("전체 선택이 안 됐다: %s · '%s'" % [popup.picked, popup.all_button.text])
+	popup.all_button.pressed.emit()
+	if not popup.picked.is_empty():
+		_fail("전체 해제가 안 됐다")
+	# 고급 하나를 골라 버린다 — 확인 창을 거친다
+	(popup.grade_buttons[2] as Button).pressed.emit()
+	popup.go.pressed.emit()
+	if not popup.confirm.visible or me.bag.size() != 6:
+		_fail("[버리기] 가 확인 없이 버렸거나 확인 창이 안 떴다")
+	(popup.confirm.find_child("Cancel", true, false) as Button).pressed.emit()
+	if popup.confirm.visible or popup.picked.size() != 1:
+		_fail("취소가 확인 창만 닫지 않았다")
+	popup.go.pressed.emit()
+	(popup.confirm.find_child("Yes", true, false) as Button).pressed.emit()
+	await process_frame
+	if me.bag.size() != 5 or me.bag.any(func(s: Dictionary) -> bool: return int(s.get("grade", 0)) == 2):
+		_fail("고급 반지가 안 버려졌다: %s" % [me.bag])
+	if popup._view.size() != 3 or not popup.picked.is_empty():
+		_fail("버린 뒤 목록이 안 따라왔다: %d · %s" % [popup._view.size(), popup.picked])
+	print("  버리기: 창 %s · 남은 가방 %d" % [popup.panel.get_global_rect(), me.bag.size()])
+	game._toggle_bag()
+	if popup.visible:
+		_fail("가방을 닫았는데 버리기 창이 남았다")
 	me.bag.clear()
 	me.bag.append_array(kept_bag)
 

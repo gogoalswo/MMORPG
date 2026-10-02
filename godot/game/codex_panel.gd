@@ -27,6 +27,10 @@ signal register_requested(item_id: String, enhance: int, index: int)
 signal register_all_requested
 ## [강화] — 고른 칸을 채우려고 가방 번호 `index` 의 장비를 `goal` 까지 올리는 강화 창을 띄운다 (game.gd 가 연다)
 signal enhance_requested(index: int, goal: int)
+## 자동 등록 설정 창에서 켤 등급 목록 전체 → `codexAuto` (주울 때 장부가 넣는다)
+signal auto_changed(grades: Array)
+## 그 등급 탭을 보고 나왔다 → `codexSeen` (자동 등록으로 새로 찬 칸의 빨간 점을 지운다)
+signal seen(grade: int)
 
 const SIDE_WIDTH := 340.0
 const STONE_IN := 30
@@ -77,6 +81,9 @@ var _enhance_button: Button
 ## 등록할 장비 선택 창 — [등록] 을 누르면 이 창 위에 뜬다 (codex_picker.gd, 2026-10-01 요청
 ## "가방에서 선택하는 UI를 따로 만들어 … 2,3차 옵션은 안 보이자나")
 var _picker: CodexPicker
+## 자동 등록 설정 창과 그 창을 여는 탭 줄 오른쪽 단추 (codex.md "주울 때 자동 등록")
+var _auto_sheet: CodexAutoSheet
+var _auto_setting: Button
 
 
 ## `frame_box` · `icon` 은 `game.gd` 것을 받는다 (헬스 창과 같다)
@@ -107,13 +114,26 @@ func _build() -> void:
 		var tab := Button.new()
 		tab.name = "tab_%d" % grade
 		tab.text = Items.grade_name(grade)
-		tab.custom_minimum_size = Vector2(120, 54)
+		tab.custom_minimum_size = Vector2(112, 54)
 		tab.focus_mode = Control.FOCUS_NONE
 		tab.add_theme_font_size_override("font_size", 24)
 		tab.pressed.connect(_pick_grade.bind(grade))
 		tabs.add_child(tab)
 		_tabs.append(tab)
 		_tab_dots.append(_red_dot(tab, 6))
+	# 탭 줄 오른쪽 — [자동 등록 설정]. 그 오른쪽은 X 자리라 비워 둔다
+	var fill := Control.new()
+	fill.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tabs.add_child(fill)
+	_auto_setting = _side_button("auto_setting", "자동 등록 설정", _open_auto)
+	_auto_setting.custom_minimum_size = Vector2(184, 50)
+	_auto_setting.size_flags_horizontal = Control.SIZE_SHRINK_END
+	_auto_setting.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	GatePanel.paint_button_text(_auto_setting, 19)
+	tabs.add_child(_auto_setting)
+	var room := Control.new()
+	room.custom_minimum_size = Vector2(56, 0)
+	tabs.add_child(room)
 	var rule := ColorRect.new()
 	rule.color = GatePanel.HEAD_LINE
 	rule.custom_minimum_size = Vector2(0, 1)
@@ -133,6 +153,17 @@ func _build() -> void:
 	)
 	_picker.picked_all.connect(func() -> void: register_all_requested.emit())
 	add_child(_picker)
+	var done := _side_button("done", "닫기", func() -> void: pass)
+	done.custom_minimum_size = Vector2(160, 56)
+	done.size_flags_horizontal = Control.SIZE_SHRINK_END
+	_auto_sheet = CodexAutoSheet.make(done)
+	_auto_sheet.changed.connect(func(grades: Array) -> void: auto_changed.emit(grades))
+	add_child(_auto_sheet)
+	# 숨으면(X · 다른 창 · 강화 창으로 넘어감) 보던 탭의 새 칸 표시를 지운다 — 본 것이다
+	visibility_changed.connect(func() -> void:
+		if not visible:
+			_leave_tab()
+	)
 
 
 ## 왼쪽 — 강화 머리줄 + 부위 여섯 줄 × 칸 열
@@ -294,6 +325,13 @@ func _side_button(node_name: String, text: String, on_press: Callable) -> Button
 ## --- 여닫기 · 그리기 ---
 
 func open() -> void:
+	# 자동 등록으로 새로 찬 칸이 있으면 그 등급 탭으로 연다 — 보던 탭에도 있으면 그대로
+	if not _grade_has_new(_grade):
+		for grade in range(1, _grade_count() + 1):
+			if _grade_has_new(grade):
+				_grade = grade
+				_auto_pick = true
+				break
 	visible = true
 	_seen = ""
 	_redraw()
@@ -302,6 +340,7 @@ func open() -> void:
 func close_panel() -> void:
 	visible = false
 	_picker.close()
+	_auto_sheet.close()
 
 
 ## 장부가 바뀌면 다시 그린다 — `game.gd` 가 매 프레임 부른다. 같으면 안 짓는다
@@ -309,7 +348,9 @@ func refresh(me: Dictionary) -> void:
 	_me = me
 	if not visible:
 		return
-	var seen := "%d|%s|%s|%s|%s" % [_grade, _auto_pick, _pick, me.get("codex", {}), _bag_key(me.get("bag", []))]
+	_auto_sheet.refresh(me)
+	var seen := "%d|%s|%s|%s|%s|%s" % [
+		_grade, _auto_pick, _pick, me.get("codex", {}), Ledger.codex_new(me), _bag_key(me.get("bag", []))]
 	if seen == _seen:
 		return
 	_seen = seen
@@ -346,6 +387,20 @@ func dotted_tabs() -> Array:
 	return out
 
 
+## 자동 등록 설정 창 · 탭 줄의 그 단추 — 테스트가 본다
+func auto_sheet() -> CodexAutoSheet:
+	return _auto_sheet
+
+
+func auto_setting_button() -> Button:
+	return _auto_setting
+
+
+## 그 칸에 빨간 점이 켜졌나 — 넣을 수 있는 칸, 또는 자동 등록으로 새로 찬 칸. 테스트가 본다
+func cell_dot(slot: String, enhance: int) -> bool:
+	return (_cells["%s:%d" % [slot, enhance]].get_node("red_dot") as Control).visible
+
+
 ## 칸 상태 — "filled" · "owned"(가방에 있어 넣을 수 있다) · "empty". 테스트가 본다
 func cell_state(slot: String, enhance: int) -> String:
 	var item_id := Items.item_id(_grade, slot)
@@ -369,6 +424,8 @@ func show_result(event: Dictionary) -> void:
 
 
 func _pick_grade(grade: int) -> void:
+	if grade != _grade:
+		_leave_tab()
 	_grade = clampi(grade, 1, _grade_count())
 	_auto_pick = true
 	_seen = ""
@@ -406,6 +463,26 @@ func _enhance_source() -> int:
 	return Codex.enhance_source(_me.get("bag", []), item_id, int(_pick[1]))
 
 
+## [자동 등록 설정] — 등급마다 ON/OFF 를 고르는 창
+func _open_auto() -> void:
+	_auto_sheet.open(_me)
+
+
+## 보던 탭을 떠난다 — 그 등급에 자동 등록으로 새로 찬 칸이 있었으면 본 것으로 친다(`seen`)
+func _leave_tab() -> void:
+	if _grade_has_new(_grade):
+		seen.emit(_grade)
+
+
+## 그 등급에 자동 등록으로 새로 찬 칸이 있나 (`codex_new`)
+func _grade_has_new(grade: int) -> bool:
+	var marks := Ledger.codex_new(_me)
+	for slot in Items.slots():
+		if int(marks.get(Items.item_id(grade, str(slot)), 0)) != 0:
+			return true
+	return false
+
+
 ## [자동 등록] — 바로 넣지 않고 들어갈 장비 전부를 확인 창에 늘어놓는다 (넣으면 가방에서 사라진다)
 func _on_register_all() -> void:
 	var bag: Array = _me.get("bag", [])
@@ -420,11 +497,13 @@ func picker() -> CodexPicker:
 func _redraw() -> void:
 	var codex: Dictionary = _me.get("codex", {})
 	var owned := _owned(_me.get("bag", []))
+	var marks := Ledger.codex_new(_me)
 
+	# 빨간 점 — 넣을 수 있는 칸이 있거나, 자동 등록으로 새로 찬 칸이 있는 탭
 	for index in _tabs.size():
 		var grade := index + 1
 		_paint_tab(_tabs[index], grade == _grade, grade)
-		(_tab_dots[index] as Control).visible = _grade_has_owned(grade, codex, owned)
+		(_tab_dots[index] as Control).visible = _grade_has_owned(grade, codex, owned) or _grade_has_new(grade)
 
 	# 직접 고르기 전에는 넣을 수 있는 첫 칸 → 없으면 빈 첫 칸 → 다 찼으면 첫 칸
 	if _auto_pick or _pick.is_empty():
@@ -444,7 +523,8 @@ func _redraw() -> void:
 			art.modulate = Color.WHITE if filled else (Color(1, 1, 1, 0.5) if have else Color(0.5, 0.5, 0.5, 0.18))
 			var badge: Label = cell.get_node("badge")
 			badge.add_theme_color_override("font_color", GOLD if filled else (IVORY if have else FAINT))
-			(cell.get_node("red_dot") as Control).visible = have and not filled
+			var fresh := filled and Codex.has(marks, item_id, enhance)
+			(cell.get_node("red_dot") as Control).visible = (have and not filled) or fresh
 
 	_redraw_effects(codex)
 	_redraw_pick(codex, owned)

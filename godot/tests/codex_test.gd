@@ -17,6 +17,9 @@ func _init() -> void:
 	_case_stats()
 	_case_save()
 	_case_server()
+	_case_auto_loot()
+	_case_auto_kill()
+	_case_auto_save()
 	_finish.call_deferred()
 
 
@@ -239,6 +242,123 @@ func _case_server() -> void:
 		_fail("태초 무기·목걸이 줄을 채웠는데 최소 처치 시간이 그대로다: %.0f → %.0fms" % [slow, fast])
 
 
+## 주울 때 자동 등록 (codex.md "주울 때 자동 등록") — 꺼진 등급 · 빈 칸이면 바로 · 찬 칸이면 다음 빈 단계까지
+## 두드린다(성공하면 등록, 실패하면 부서짐) · 빈 칸이 없으면 둔다 · 잠근 것 · 본 표시 지우기
+func _case_auto_loot() -> void:
+	var id := Items.item_id(3, "weapon")
+	var ledger := Ledger.new()
+	var p := Ledger.fresh("fighter")
+	p.bag = [_gear(3, "weapon", 0)]
+	ledger._codex_auto(p, 0)
+	if p.bag.size() != 1 or not p.codex.is_empty():
+		_fail("자동 등록을 안 켰는데 넣었다: 가방 %s · 도감 %s" % [p.bag, p.codex])
+	ledger.set_codex_auto(p, [3, 3, 9, 1.0])
+	if Ledger.codex_auto(p) != [1, 3]:
+		_fail("다듬은 자동 등록 등급이 [1, 3] 이 아니라 %s" % [Ledger.codex_auto(p)])
+	ledger._codex_auto(p, 0)
+	if not p.bag.is_empty() or not Codex.has(p.codex, id, 0) or not Codex.has(Ledger.codex_new(p), id, 0):
+		_fail("+0 빈 칸인데 바로 안 들어갔다: 가방 %s · 도감 %s · 새 칸 %s" % [p.bag, p.codex, p.codex_new])
+	var auto_event := false
+	for event in ledger.take_events():
+		if event.type == "codexResult" and bool(event.get("auto", false)):
+			auto_event = true
+	if not auto_event:
+		_fail("자동 등록이 codexResult(auto) 를 안 냈다")
+	# +0 ~ +2 가 찼다 → +3 까지 두드린다. 씨앗을 돌려 성공과 파괴가 둘 다 나오는지 본다
+	var reached := 0
+	var broke := 0
+	for seed in 40:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = seed
+		var roll := Ledger.new(rng)
+		var q := Ledger.fresh("fighter")
+		q.codex_auto = [3]
+		q.codex = {id: 0b111}
+		q.bag = [_gear(3, "weapon", 0)]
+		roll._codex_auto(q, 0)
+		if not q.bag.is_empty():
+			_fail("씨앗 %d: 두드린 장비가 가방에 남았다 %s" % [seed, q.bag])
+		elif Codex.has(q.codex, id, 3):
+			reached += 1
+			if int(q.codex[id]) != 0b1111 or int(Ledger.codex_new(q).get(id, 0)) != 0b1000:
+				_fail("씨앗 %d: +3 만 새로 차야 하는데 도감 %s · 새 칸 %s" % [seed, q.codex, q.codex_new])
+		else:
+			broke += 1
+			if int(q.codex[id]) != 0b111:
+				_fail("씨앗 %d: 부서졌는데 도감이 바뀌었다 %s" % [seed, q.codex])
+	if reached == 0 or broke == 0:
+		_fail("40 씨앗에서 +3 등록 %d번 · 파괴 %d번 — 둘 다 나와야 한다" % [reached, broke])
+	# 지금 단계 이상이 다 찼으면 가방에 그대로 둔다
+	p.codex[id] = Codex.full_mask()
+	p.bag = [_gear(3, "weapon", 4)]
+	ledger._codex_auto(p, 0)
+	if p.bag.size() != 1 or int(p.bag[0].enhance) != 4:
+		_fail("넣을 칸이 없는데 장비가 바뀌었다 %s" % [p.bag])
+	# 잠근 것은 건드리지 않는다
+	var locked := _gear(1, "ring", 0)
+	locked.locked = true
+	p.bag = [locked]
+	ledger._codex_auto(p, 0)
+	if p.bag.size() != 1 or Codex.has(p.codex, Items.item_id(1, "ring"), 0):
+		_fail("잠근 장비가 도감에 들어갔다")
+	# 본 표시 — 그 등급만 지운다
+	p.codex_new = {id: 1, Items.item_id(1, "ring"): 2}
+	ledger.codex_seen(p, 3)
+	if p.codex_new != {Items.item_id(1, "ring"): 2}:
+		_fail("희귀 탭을 봤는데 새 칸 표시 %s" % [p.codex_new])
+	ledger.codex_seen(p, 0)
+	if not p.codex_new.is_empty():
+		_fail("0 이면 전부 지워야 하는데 %s" % [p.codex_new])
+
+
+## 처치와 이어졌나 — 다 켜고 200마리를 잡으면 자동 등록이 일어난다
+func _case_auto_kill() -> void:
+	var kind_id := ""
+	for id in GameData.load_table("monsters").kinds:
+		if not bool(GameData.load_table("monsters").kinds[id].get("boss", false)):
+			kind_id = str(id)
+			break
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 11
+	var ledger := Ledger.new(rng)
+	var p := Ledger.fresh("fighter")
+	p.codex_auto = [1, 2, 3, 4, 5, 6, 7]
+	var autos := 0
+	for i in 200:
+		ledger.kill(p, {"kind": kind_id, "zone": ""})
+		for event in ledger.take_events():
+			if event.type == "codexResult" and bool(event.get("auto", false)):
+				autos += 1
+	if autos == 0 or Codex.filled(p.codex) != autos:
+		_fail("200마리를 잡았는데 자동 등록 %d번 · 찬 칸 %d" % [autos, Codex.filled(p.codex)])
+	if Codex.filled(Ledger.codex_new(p)) != autos:
+		_fail("새 칸 표시 %d 가 자동 등록 %d 과 다르다" % [Codex.filled(Ledger.codex_new(p)), autos])
+
+
+## 저장 · 서버 — 자동 등록 등급과 새 칸 표시가 남는다, 요청 표에 있다
+func _case_auto_save() -> void:
+	var s := _me()
+	var w: World = s[0]
+	w.set_codex_auto("me", [5, 2])
+	var me: Dictionary = w.snapshot().players["me"]
+	me.codex_new = {Items.item_id(2, "helmet"): 4}
+	w.save("me")
+	var again := World.new()
+	again.open("village")
+	again.restore("me")
+	var back: Dictionary = again.snapshot().players["me"]
+	if back.codex_auto != [2, 5] or back.codex_new != {Items.item_id(2, "helmet"): 4}:
+		_fail("불러온 자동 등록 %s · 새 칸 %s" % [back.codex_auto, back.codex_new])
+	again.codex_seen("me", 2)
+	if not again.snapshot().players["me"].codex_new.is_empty():
+		_fail("World.codex_seen 이 장부에 안 닿았다")
+	if str(LedgerServer.OPS.get("set_codex_auto", "")) != "a" or str(LedgerServer.OPS.get("codex_seen", "")) != "i":
+		_fail("서버가 set_codex_auto · codex_seen 요청을 모른다")
+	for key in ["codex_auto", "codex_new"]:
+		if not key in Ledger.KEYS or not Ledger.fresh("fighter").has(key):
+			_fail("장부 칸·새 계정에 %s 가 없다" % key)
+
+
 ## 창 — 탭 일곱 · 칸 60 · 칸 상태 · 탭 빨간 점 · 등록 단추가 요청을 낸다 · 화면 안
 func _case_panel() -> void:
 	var boxes := func(_name: String, _margin: int, _content: int) -> StyleBox: return StyleBoxFlat.new()
@@ -392,6 +512,38 @@ func _case_panel() -> void:
 	panel.enhance_button().pressed.emit()
 	if lifts != [[2, 5]]:
 		_fail("강화 단추가 낸 요청 %s (가방 2번을 +5 까지)" % [lifts])
+	# 자동 등록 설정 — 탭 줄 단추 → 등급 일곱 ON/OFF 창. 스위치는 목록 전체를 요청하고, 그림은 장부 값을 따른다
+	var autos: Array = []
+	panel.auto_changed.connect(func(grades: Array) -> void: autos.append(grades))
+	panel.auto_setting_button().pressed.emit()
+	var sheet: CodexAutoSheet = panel.auto_sheet()
+	if not sheet.visible or sheet.is_on(3):
+		_fail("자동 등록 설정 창: 보임 %s · 희귀 켜짐 %s" % [sheet.visible, sheet.is_on(3)])
+	(sheet.find_child("auto_3", true, false).get_node("on") as Button).pressed.emit()
+	panel.refresh({"codex": {}, "bag": [], "codex_auto": [3]})
+	(sheet.find_child("auto_7", true, false).get_node("on") as Button).pressed.emit()
+	if autos != [[3], [3, 7]] or not sheet.is_on(3) or sheet.is_on(7):
+		_fail("자동 등록 스위치 요청 %s · 희귀 %s · 태초 %s" % [autos, sheet.is_on(3), sheet.is_on(7)])
+	(sheet.find_child("done", true, false) as Button).pressed.emit()
+	if sheet.visible:
+		_fail("자동 등록 설정 창 [닫기] 를 눌렀는데 남았다")
+	# 새로 찬 칸 — 칸 · 탭에 빨간 점. 탭을 떠나면 그 등급을 봤다고 알린다 (다른 등급은 남는다)
+	var looked: Array = []
+	panel.seen.connect(func(grade: int) -> void: looked.append(grade))
+	var marks := {Items.item_id(5, "armor"): 1 << 2, Items.item_id(6, "ring"): 1}
+	panel.refresh({"codex": marks.duplicate(), "bag": [], "codex_new": marks})
+	(panel.find_child("tab_5", true, false) as Button).pressed.emit()
+	if not panel.cell_dot("armor", 2) or panel.cell_dot("armor", 1) or panel.dotted_tabs() != [5, 6]:
+		_fail("새 칸 빨간 점: 칸 %s · 옆 칸 %s · 탭 %s" % [panel.cell_dot("armor", 2), panel.cell_dot("armor", 1), panel.dotted_tabs()])
+	(panel.find_child("tab_1", true, false) as Button).pressed.emit()
+	panel.close_panel()
+	if looked != [5]:
+		_fail("새 칸이 있는 탭을 떠났는데 알림 %s (전설만)" % [looked])
+	# 다시 열면 새 칸이 남은 탭(초월)으로 연다 — 장부가 전설 표시를 지운 뒤다
+	panel.refresh({"codex": marks.duplicate(), "bag": [], "codex_new": {Items.item_id(6, "ring"): 1}})
+	panel.open()
+	if panel.grade() != 6:
+		_fail("새 칸이 남은 초월 탭으로 안 열렸다: %d" % panel.grade())
 	# 기준 화면(1280x720)에 들어가나 — 돌판 틀 여백(카드 34 · 안 30)을 뺀 알맹이로 본다
 	var inner := panel.get_combined_minimum_size()
 	if inner.x > 1280.0 - 128.0 or inner.y > 720.0 - 128.0:

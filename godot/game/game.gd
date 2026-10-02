@@ -394,6 +394,9 @@ var _menu_open_cell: Control
 var _menu_close_cell: Control
 ## 가방 단추의 빨간 점 (`_add_red_dot`). 장비를 얻으면 켜고, 가방을 열면 끈다
 var _bag_dot: Control
+## 도감 아이콘 · ≡ 의 빨간 점 — 자동 등록으로 새로 찬 도감 칸이 있다 (`codex_new`)
+var _codex_dot: Control
+var _menu_dot: Control
 ## 설계 창 단추 — 오른쪽 맨 아래, 알파 0 (안 보이지만 눌린다)
 var _design_cell: Control
 ## HUD 위쪽 가운데 "마을가기" — 마을 밖에서만 선다 (`_refresh_home_button`)
@@ -3446,6 +3449,8 @@ func _build_skill_bar() -> void:
 	# 받은 그림(리니지풍 칠한 아이콘)대로 일곱 장 전부 갈았다 (docs/features/hud.md "메뉴 아이콘")
 	var bag_cell := _icon_button("ui_icon_bag", "가방", _toggle_bag, MENU_BTN, true)
 	var skill_cell := _icon_button("ui_icon_skill", "스킬", _toggle_skills, MENU_BTN, true)
+	# 장비 도감 — 헬스 옆 (2026-10-01). 그림은 펼친 책(`ui_icon_codex`) — 없으면 이름 글자만 선다
+	var codex_cell := _icon_button("ui_icon_codex", "도감", _toggle_codex, MENU_BTN, true)
 	_menu_cells = [
 		# 캐릭터 정보 — 스킬 왼쪽, 메뉴 맨 앞 (2026-09-25 요청 "상세 정보창을 따로 띄우고
 		# 버튼을 만들어"). 그림은 기사 투구
@@ -3462,8 +3467,8 @@ func _build_skill_bar() -> void:
 		_icon_button("ui_icon_dungeon", "던전", _toggle_dungeon, MENU_BTN, true),
 		# 헬스 — 던전 옆 (2026-09-30). 던전에서 받은 프로틴을 넣는 곳이라 붙여 둔다. 그림은 쇠 덤벨
 		_icon_button("ui_icon_fitness", "헬스", _toggle_fitness, MENU_BTN, true),
-		# 장비 도감 — 헬스 옆 (2026-10-01). 그림은 펼친 책(`ui_icon_codex`) — 없으면 이름 글자만 선다
-		_icon_button("ui_icon_codex", "도감", _toggle_codex, MENU_BTN, true),
+		# 장비 도감 — 헬스 옆 (위에서 만든 칸 — 빨간 점을 단다)
+		codex_cell,
 		# 샌드백 랭킹전 — 도감 옆 (2026-10-02 요청 "HUD 별도 단추"). 그림은 받침에 선 가죽 샌드백
 		_icon_button("ui_icon_sandbag", "샌드백", _toggle_sandbag, MENU_BTN, true),
 		# 상점 — 샌드백 옆 (2026-10-02 요청, store.md). 그림은 끈 묶은 가죽 돈주머니(`ui_icon_shop`)
@@ -3504,6 +3509,10 @@ func _build_skill_bar() -> void:
 	room.custom_minimum_size = menu.get_combined_minimum_size()
 	menu.resized.connect(func() -> void: room.custom_minimum_size = menu.size)
 	_bag_dot = _add_red_dot(bag_cell)
+	# 도감 자동 등록으로 새로 찬 칸이 있으면 도감 아이콘과 ≡ 에 켠다 — 도감은 펼친 판 안이라 ≡ 에도 단다.
+	# `_refresh_status` 가 장부(`codex_new`)로 매 프레임 맞춘다 (codex.md "주울 때 자동 등록")
+	_codex_dot = _add_red_dot(codex_cell)
+	_menu_dot = _add_red_dot(_menu_open_cell)
 	# 배울 수 있는 패시브 단계가 있으면 켠다 — `_refresh_status` 가 매 프레임 맞춘다 (2026-09-29 요청)
 	_skill_dot = _add_red_dot(skill_cell)
 	menu.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE, 20)
@@ -5102,6 +5111,12 @@ func _build_gate_panel() -> void:
 		_transport.send(&"codexRegister", {"id": item_id, "enhance": enhance, "index": index})
 	)
 	_codex_panel.enhance_requested.connect(_open_enhance_from_codex)
+	_codex_panel.auto_changed.connect(func(grades: Array) -> void:
+		_transport.send(&"codexAuto", {"grades": grades})
+	)
+	_codex_panel.seen.connect(func(grade: int) -> void:
+		_transport.send(&"codexSeen", {"grade": grade})
+	)
 	_codex_panel.register_all_requested.connect(func() -> void:
 		_transport.send(&"codexRegisterAll", {})
 	)
@@ -5130,7 +5145,7 @@ func _build_gate_panel() -> void:
 	top.add_child(_store_panel)
 	_close_button(_store_panel, _toggle_store, 0)
 	# 설정 창도 같은 층·같은 결이다 → docs/features/hud.md "설정 창"
-	_settings_panel = SettingsPanel.make(_frame_box, _inv_button)
+	_settings_panel = SettingsPanel.make()
 	_settings_panel.theme = _ui_root.theme
 	_settings_panel.loot_skip_changed.connect(func(grades: Array) -> void:
 		_transport.send(&"lootSkip", {"grades": grades})
@@ -6365,6 +6380,9 @@ func _refresh_status(me: Dictionary) -> void:
 	_hp_bar.max_value = max_hp
 	_hp_bar.value = float(me.hp)
 	_skill_dot.visible = Skills.passive_learnable(str(me.job), int(me.level), me.get("passives", {}))
+	_codex_dot.visible = not Ledger.codex_new(me).is_empty()
+	# 도감이 펼친 판 안(≡ 를 눌러야 보인다)에 있을 때만 ≡ 에도 켠다
+	_menu_dot.visible = _codex_dot.visible and _menu_grid.is_ancestor_of(_codex_dot)
 	_hp_text.text = "%d / %d" % [int(me.hp), int(max_hp)]
 	# 다음 레벨까지 필요한 양. 만렙이면 0 이 와서 0 으로 나누게 된다
 	var need := maxi(1, Combat.exp_to_next(int(me.level)))

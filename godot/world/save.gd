@@ -59,6 +59,9 @@ static func write(zone_id: String, player: Dictionary) -> void:
 		"dungeon_entries": player.get("dungeon_entries", {}),
 		# 안 주울 장비 등급 — 없던 칸이라 옛 저장은 빈 목록(다 줍는다)
 		"loot_skip": player.get("loot_skip", []),
+		# 도감 자동 등록을 켠 등급 · 새로 찬 칸(빨간 점) — 없던 칸이라 옛 저장은 다 끔 · 빈 사전
+		"codex_auto": player.get("codex_auto", []),
+		"codex_new": player.get("codex_new", {}),
 		# 물약을 저절로 마시는 기준(HP %) — 없던 칸이라 옛 저장은 처음 값(90)으로 읽힌다
 		"potion_pct": player.get("potion_pct", 90),
 	}, "\t"))

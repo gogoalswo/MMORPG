@@ -91,15 +91,9 @@ func _case_save() -> void:
 		_fail("불러온 습득 목록 %s" % [again.snapshot().players["me"].loot_skip])
 
 
-## 창 — 전체 화면 · 탭 둘 · 등급 일곱 줄 · 줄을 누르면 목록 전체를 요청한다
+## 창 — 전체 화면 · 위 탭 둘(+ 왼쪽 세부 목록) · 등급 일곱 줄 ON/OFF · 누르면 목록 전체를 요청 · 검색
 func _case_panel() -> void:
-	var boxes := func(_name: String, _margin: int, _content: int) -> StyleBox: return StyleBoxFlat.new()
-	var buttons := func(text: String, on_press: Callable) -> Button:
-		var b := Button.new()
-		b.text = text
-		b.pressed.connect(on_press)
-		return b
-	var panel := SettingsPanel.make(boxes, buttons)
+	var panel := SettingsPanel.make()
 	root.add_child(panel)
 	panel.refresh({"loot_skip": [2]})
 	panel.open()
@@ -107,22 +101,48 @@ func _case_panel() -> void:
 	if panel.anchor_right != 1.0 or panel.anchor_bottom != 1.0:
 		_fail("설정 창이 전체 화면이 아니다")
 	var names: Array = []
-	for id in ["sound", "loot"]:
-		var tab: Button = panel.find_child("tab_%s" % id, true, false)
+	for id in ["tab_env", "tab_item", "sub_sound", "sub_loot"]:
+		var tab: Button = panel.find_child(id, true, false)
 		names.append(tab.text if tab != null else "")
-	if names != ["소리", "아이템 습득"]:
-		_fail("탭 이름 %s" % [names])
+	if names != ["환경", "아이템", "소리", "습득"]:
+		_fail("탭 · 세부 목록 이름 %s" % [names])
 	panel.pick_tab(1)
 	await process_frame
 	var page: Control = panel.find_child("loot_page", true, false)
 	if page == null or not page.visible or (panel.find_child("sound_page", true, false) as Control).visible:
 		_fail("아이템 습득 탭을 골랐는데 그 쪽이 안 보인다")
-	if panel.loot_state(1) != "줍기" or panel.loot_state(2) != "안 줍기":
-		_fail("줄 글자 %s · %s" % [panel.loot_state(1), panel.loot_state(2)])
+	if panel.loot_state(1) != "ON" or panel.loot_state(2) != "OFF":
+		_fail("스위치 %s · %s" % [panel.loot_state(1), panel.loot_state(2)])
 	var asked: Array = []
 	panel.loot_skip_changed.connect(func(grades: Array) -> void: asked.append(grades))
-	(panel.find_child("loot_7", true, false) as Button).pressed.emit()
+	(panel.find_child("loot_7", true, false).get_node("off") as Button).pressed.emit()
+	# 이미 켠 쪽을 또 누르면 요청하지 않는다
+	(panel.find_child("loot_1", true, false).get_node("on") as Button).pressed.emit()
 	panel.toggle_grade(2)
 	if asked != [[2, 7], []]:
-		_fail("줄을 눌러 낸 요청 %s" % [asked])
+		_fail("스위치를 눌러 낸 요청 %s" % [asked])
+	# 검색 — 모든 탭을 펼쳐 이름이 맞는 줄만 (띠는 남은 줄이 있을 때만)
+	panel.search_box().text = "볼륨"
+	panel.search_box().text_changed.emit("볼륨")
+	await process_frame
+	var sound_row: Control = panel.find_child("sound_slider", true, false).get_parent().get_parent().get_parent()
+	var loot_row: Control = panel.find_child("loot_row_1", true, false)
+	if not sound_row.is_visible_in_tree() or loot_row.is_visible_in_tree():
+		_fail("'볼륨' 검색에 볼륨 줄 %s · 일반 줄 %s" % [sound_row.is_visible_in_tree(), loot_row.is_visible_in_tree()])
+	panel.search_box().text = "없는말"
+	panel.search_box().text_changed.emit("없는말")
+	await process_frame
+	if not (panel.find_child("search_empty", true, false) as Control).visible:
+		_fail("맞는 줄이 없는데 '검색 결과가 없습니다' 가 안 섰다")
+	panel.pick_tab(0)
+	if panel.search_box().text != "" or not (panel.find_child("sound_page", true, false) as Control).visible \
+			or (panel.find_child("loot_page", true, false) as Control).visible:
+		_fail("탭을 누르면 검색을 비우고 그 탭만 보여야 한다")
+	# 기준 화면(1280x720)에 들어가나 — 아이템 탭(줄이 가장 많다)으로 본다
+	panel.pick_tab(1)
+	await process_frame
+	var inner := panel.get_combined_minimum_size()
+	var page_height := (panel.find_child("loot_page", true, false) as Control).get_combined_minimum_size().y
+	if inner.x > 1280.0 or page_height > 720.0 - 50.0 - 52.0 - 40.0:
+		_fail("설정 창 최소 폭 %.0f · 아이템 쪽 높이 %.0f 가 화면을 넘는다" % [inner.x, page_height])
 	panel.queue_free()

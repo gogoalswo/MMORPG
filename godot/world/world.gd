@@ -326,7 +326,10 @@ func join(player_id: String) -> void:
 		# 던전 하루 입장 `{ 종류 id: {day, count} }` (docs/features/dungeons.md "하루 한 번")
 		"dungeon_entries": kept.get("dungeon_entries", {}).duplicate(true),
 		# 안 주울 장비 등급 — 설정 창 "아이템 습득" 탭 (`set_loot_skip`). 저장에 남는다
-		"loot_skip": Ledger.clean_loot_skip(kept.get("loot_skip", [])),
+		"loot_skip": Ledger.clean_grades(kept.get("loot_skip", [])),
+		# 도감 자동 등록을 켠 등급 · 자동 등록으로 새로 찬 칸(빨간 점) — 도감 창 (codex.md "주울 때 자동 등록")
+		"codex_auto": Ledger.clean_grades(kept.get("codex_auto", [])),
+		"codex_new": Codex.clean(kept.get("codex_new", {})),
 	}
 	_refresh_stats(_players[player_id])
 	# 샌드백 랭킹전 — 들어오면 샌드백을 보고 선다. 평타는 정면 부채꼴 안만 치므로 등을 지고 서면 헛손질한다
@@ -1675,7 +1678,10 @@ func restore(player_id: String) -> bool:
 	# 물약을 저절로 마시는 기준 — 없던 칸이라 옛 저장은 처음 값으로 읽힌다
 	set_potion_pct(player_id, int(saved.get("potion_pct", player.potion_pct)))
 	# 안 주울 장비 등급 — 없던 칸이라 옛 저장은 빈 목록(다 줍는다)
-	player.loot_skip = Ledger.clean_loot_skip(saved.get("loot_skip", []))
+	player.loot_skip = Ledger.clean_grades(saved.get("loot_skip", []))
+	# 도감 자동 등록 — 없던 칸이라 옛 저장은 다 끔 · 새 칸 표시 없음
+	player.codex_auto = Ledger.clean_grades(saved.get("codex_auto", []))
+	player.codex_new = Codex.clean(saved.get("codex_new", {}))
 
 	# 가방·장비도 되살린다. **옛 id 는 지금 id 로 옮긴다** (2026-09-21 에 단계 축을
 	# 없앴다) — 갈 자리가 없는 것만 버린다. 등급은 아이템이 들고 있으므로
@@ -2044,6 +2050,22 @@ func codex_register(player_id: String, item_id: String, enhance: int, index: int
 	if player.is_empty():
 		return
 	_ledger_call(player, &"codex_register", [item_id, enhance, index])
+
+
+## 도감 자동 등록을 켤 등급 (`Ledger.set_codex_auto`) — 도감 창 "자동 등록 설정". 켜 둔 등급의 장비는 주울 때 들어간다
+func set_codex_auto(player_id: String, grades: Array) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	_ledger_call(player, &"set_codex_auto", [grades])
+
+
+## 도감 그 등급 탭을 보고 나왔다 — 새로 찬 칸의 빨간 점을 지운다 (`Ledger.codex_seen`)
+func codex_seen(player_id: String, grade: int) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	_ledger_call(player, &"codex_seen", [grade])
 
 
 ## 도감 창의 **자동 등록** — 넣을 수 있는 칸을 전부 채운다. 판정은 `Ledger.codex_register_all`

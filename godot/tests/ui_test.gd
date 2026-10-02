@@ -388,12 +388,12 @@ func _case_sound(game: Node3D) -> void:
 		_fail("되돌렸는데 음소거가 남았다")
 	# 아이템 습득 탭 — 줄을 누르면 장부에 들어가고 글자가 바뀐다 (판정은 settings_test)
 	panel.pick_tab(1)
-	(panel.find_child("loot_1", true, false) as Button).pressed.emit()
+	(panel.find_child("loot_1", true, false).get_node("off") as Button).pressed.emit()
 	await process_frame
 	await process_frame
-	if Ledger.loot_skip(game._me()) != [1] or panel.loot_state(1) != "안 줍기":
+	if Ledger.loot_skip(game._me()) != [1] or panel.loot_state(1) != "OFF":
 		_fail("일반 줄을 눌렀는데 장부 %s · 글자 '%s'" % [Ledger.loot_skip(game._me()), panel.loot_state(1)])
-	(panel.find_child("loot_1", true, false) as Button).pressed.emit()
+	(panel.find_child("loot_1", true, false).get_node("on") as Button).pressed.emit()
 	await process_frame
 	if Ledger.loot_skip(game._me()) != []:
 		_fail("다시 눌렀는데 장부가 안 비었다: %s" % [Ledger.loot_skip(game._me())])

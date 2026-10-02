@@ -45,6 +45,9 @@ const OPS := {
 	"codex_register_all": "",
 	# 설정 — 안 주울 장비 등급 목록. 장부가 표에 있는 등급만 남긴다
 	"set_loot_skip": "a",
+	# 도감 자동 등록을 켠 등급 목록 (주울 때 장부가 넣는다) · 그 등급 탭을 봤다(새 칸 빨간 점 지우기, 0 이면 전부)
+	"set_codex_auto": "a",
+	"codex_seen": "i",
 }
 
 var store: AccountStore

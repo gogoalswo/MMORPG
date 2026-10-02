@@ -68,6 +68,15 @@ static func auto_picks(codex: Dictionary, bag: Array) -> Array:
 	return out
 
 
+## **자동 등록**(주울 때)이 노리는 칸 — `from` 강화 이상에서 **가장 낮은 빈 칸**, 다 찼으면 -1.
+## 지금 단계가 비었으면 그대로 넣고, 찼으면 이 단계까지 두드려 올린다 (`Ledger._codex_auto`) → codex.md "주울 때 자동 등록"
+static func next_empty(codex: Dictionary, item_id: String, from: int) -> int:
+	for enhance in range(maxi(from, 0), max_enhance() + 1):
+		if not has(codex, item_id, enhance):
+			return enhance
+	return -1
+
+
 ## 도감 창 [강화] 가 강화 창에 고를 가방 번호 — 그 칸(`item_id` +`enhance`)을 채우려고 **같은 장비를 목표 아래에서**
 ## 끌어올린다. 목표에 **가장 가까운 것**(두드릴 횟수가 적다), 같으면 옵션 줄이 적은 것. 잠근 것은 빼고
 ## (장부가 강화를 거절한다), 없으면 -1 → codex.md "강화 단추"

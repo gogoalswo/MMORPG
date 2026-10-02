@@ -313,3 +313,16 @@ func _case_server() -> void:
 	# 다시 와도 또 안 준다
 	if not _all(send.call(1, "sort_bag", []).get("events", []), "sandbagReward").is_empty():
 		_fail("두 번 정산했다")
+	# 순위는 **1분마다** 다시 센다 (2026-10-02 요청) — 바로 위에서 센 지 1분이 안 됐으면 새 기록이 아직 안 잡힌다
+	if Sandbag.rank_refresh_ms() != 60000:
+		_fail("순위 갱신은 1분마다")
+	send.call(0, "enter", [Sandbag.zone()])
+	now[0] += 18000
+	if not str(send.call(0, "sandbag_record", [200]).get("reason", "")).is_empty():
+		_fail("새 주 기록을 안 받았다")
+	if int(server.handle(sessions[0], {"t": "sandbagRank"}).total) != 0:
+		_fail("1분이 안 됐는데 순위를 다시 셌다")
+	now[0] += Sandbag.rank_refresh_ms()
+	var later: Dictionary = server.handle(sessions[0], {"t": "sandbagRank"})
+	if int(later.total) != 1 or int(later.me.rank) != 1:
+		_fail("1분 뒤에도 새 기록이 순위에 없다: %s" % str(later))

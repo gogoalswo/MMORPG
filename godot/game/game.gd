@@ -2372,7 +2372,29 @@ func _build_sandbag_panel() -> void:
 	board.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	board.add_theme_constant_override("separation", 8)
 	body.add_child(board)
-	board.add_child(_inv_label("이번 주 순위", 22, INV_GOLD))
+	# 제목 오른쪽에 갱신 간격을 적는다 (2026-10-02 요청 "랭킹 갱신은 1분마다 … UI에도 명시해")
+	var board_head := HBoxContainer.new()
+	board.add_child(board_head)
+	var board_title := _inv_label("이번 주 순위", 22, INV_GOLD)
+	board_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	board_head.add_child(board_title)
+	var refresh_note := _inv_label("순위는 %s마다 갱신됩니다" % Sandbag.rank_refresh_label(), 16, INV_DIM)
+	refresh_note.name = "SandbagRefresh"
+	refresh_note.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	board_head.add_child(refresh_note)
+	# 열려 있는 동안 갱신 간격마다 다시 묻는다 — 서버도 그 간격으로만 다시 센다
+	var refresh := Timer.new()
+	refresh.name = "SandbagRefreshTimer"
+	refresh.wait_time = Sandbag.rank_refresh_ms() / 1000.0
+	refresh.timeout.connect(func() -> void:
+		if _sandbag_panel.visible:
+			_transport.send(&"sandbagRank", {}))
+	_sandbag_panel.add_child(refresh)
+	_sandbag_panel.visibility_changed.connect(func() -> void:
+		if _sandbag_panel.visible:
+			refresh.start()
+		else:
+			refresh.stop())
 	var scroll := ScrollContainer.new()
 	scroll.name = "SandbagScroll"
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL

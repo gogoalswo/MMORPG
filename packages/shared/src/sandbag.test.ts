@@ -5,6 +5,7 @@ import {
   SANDBAG_KIND,
   SANDBAG_REWARDS,
   SANDBAG_SECONDS,
+  SANDBAG_RANK_REFRESH_SECONDS,
   SANDBAG_ZONE,
   sandbagReward,
   sandbagWeek,
@@ -16,6 +17,7 @@ test('샌드백 랭킹전 — 3초 카운트 → 15초, 과녁 하나', () => {
   // 2026-10-02 요청: "3초 카운트를 세. 그리고 15초 동안 얼마만큼 데미지를 입히는지 누적해서"
   assert.equal(SANDBAG_COUNTDOWN_SECONDS, 3);
   assert.equal(SANDBAG_SECONDS, 15);
+  assert.equal(SANDBAG_RANK_REFRESH_SECONDS, 60);
   const zone = ZONES[SANDBAG_ZONE]!;
   assert.deepEqual(zone.monsters!.map((m) => [m.kind, m.count]), [[SANDBAG_KIND.id, 1]]);
   assert.equal(zone.gate, undefined, '차원문 없음 — 결과창 확인이 마을로 보낸다');

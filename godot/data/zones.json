@@ -295,6 +295,7 @@
     "zone": "sandbag",
     "countdown": 3,
     "seconds": 15,
+    "rankRefresh": 60,
     "weekShift": 291600,
     "weekSeconds": 604800,
     "rewards": [

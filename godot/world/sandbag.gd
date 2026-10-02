@@ -22,6 +22,17 @@ static func play_ms() -> int:
 	return int(float(table().get("seconds", 15)) * 1000.0)
 
 
+## 이번 주 순위를 다시 세는 간격 — 1분 (2026-10-02 요청). 서버는 이만큼 지나야 다시 줄 세우고, 창은 열려 있는 동안 이만큼마다 다시 묻는다
+static func rank_refresh_ms() -> int:
+	return int(float(table().get("rankRefresh", 60)) * 1000.0)
+
+
+## 창에 적는 갱신 간격 — "1분" · "30초"
+static func rank_refresh_label() -> String:
+	var seconds := rank_refresh_ms() / 1000
+	return "%d분" % (seconds / 60) if seconds % 60 == 0 else "%d초" % seconds
+
+
 ## 주 번호 — 월요일 0시(한국 시각)에 하나 오른다. `sandbag.ts` 의 `sandbagWeek` 와 같은 식이다
 static func week(unix_seconds: float) -> int:
 	var t := table()

@@ -155,6 +155,14 @@ func _case_gate() -> void:
 	if w.zone_id != "meadow":
 		_fail("없는 존으로 옮겨졌다")
 
+	# 마을로 돌아오면 체력이 가득 찬다
+	var hurt: Dictionary = w.snapshot().players["me"]
+	hurt.hp = 1
+	w.travel("me", "village")
+	var back: Dictionary = w.snapshot().players["me"]
+	if int(back.hp) != int(back.stats.maxHp):
+		_fail("마을로 왔는데 체력이 %d / %d" % [int(back.hp), int(back.stats.maxHp)])
+
 
 ## 존 데이터에 적힌 마릿수 (자리마다 count 를 더한다)
 func _spots(zone_id: String) -> int:

@@ -70,6 +70,9 @@ captions or dark background of the references: no text, no letters, no numbers.
 - 모양이 마음에 드는데 색이 튀면 새로 뽑지 말고 **`EditImage` 로 색만 다시 칠한다** — 지시문은 [hud.md](hud.md) "색은 한 줄기".
 - 굽고 나서 **받은 스크린샷 옆에 42px 로 나란히 놓고** 색감이 한 줄기인지, 작게도 읽히는지 본다 (확인용 한 장).
 - 고른 해시는 `scripts/fetch-assets.sh`, 그림 표는 [hud.md](hud.md) "지금은 칠한 반실사 결".
+- ★ **구워서 커밋한다** — 원본을 `assets-src/icons/<이름>.png` 에 두고 `node scripts/build-item-icons.mjs` →
+  `public/assets/icons/<이름>.png` 를 **같이 커밋**하고, `scripts/sync-godot-assets.mjs` 목록에 이름을 넣는다.
+  **CI 는 `fetch-assets.sh` 를 안 돌린다** — 받을 목록에만 넣었더니 배포된 HUD 에 그림 없이 글자만 섰다 (상점, 2026-10-02).
 
 ## 아이콘 결 (2026-09-28) — 옛 기준, 기록
 

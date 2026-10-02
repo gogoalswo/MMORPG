@@ -54,6 +54,7 @@ three.js 웹 클라이언트를 **고도 엔진으로 갈아타는 중**이다. 
 | `godot/export_presets.cfg` | 안드로이드·웹 익스포트 설정. **비밀은 없다** — 아래 "서명" 참고 |
 | `.github/workflows/android.yml` | push 하면 APK 를 구워 Actions 산출물로 올린다 |
 | `.github/workflows/pages.yml` | 웹 빌드를 GitHub Pages **루트**에 올린다 |
+| `godot/web/background_tick.js` | 웹 전용. 탭이 가려져도 게임이 돌게 박자를 대 준다 → 아래 "탭을 옮겨도 멈추지 않는다" |
 | `scripts/export-shared.mjs` | `packages/shared` 의 표를 `godot/data/*.json` 으로 내보낸다 (`npm run export:godot`) |
 | `godot/data/*.json` | 내보낸 결과. **손으로 고치지 않는다** — 고치면 테스트가 잡는다 |
 | `packages/shared/src/godotExport.test.ts` | 위 JSON 이 TS 표와 같은지 전수 검사 |
@@ -496,6 +497,23 @@ Q/E 회전과 줌은 아직 안 옮겼다. 웹 쪽에는 있다.
 화면은 `Transport` 가 준 상태를 **그대로 그린다.** 로컬이라 지연이 0 이라서
 매끄럽다. 서버를 붙이는 단계에서 `networking-state.md` 의 예측·보정을 넣는다.
 그때 손댈 자리는 `game.gd` 의 `_draw_state` 하나다.
+
+### 탭을 옮겨도 멈추지 않는다 ★ (2026-10-02, 웹만)
+
+브라우저는 **가려진 탭의 `requestAnimationFrame` 을 아예 부르지 않는다.** 고도 웹 빌드는
+그 신호로 한 프레임씩 돌아서 `World.step` 까지 멈췄다 — 탭을 옮기면 자동 사냥도 멈췄다.
+
+`godot/web/background_tick.js` 가 `requestAnimationFrame` 을 감싼다. 보일 때는 원래대로
+돌고, **가려지면 Web Worker 의 타이머가 초당 20번 박자를 대 준다.** 본 스레드 타이머로
+대면 안 된다 — 가려진 탭에서는 1초에 한 번, 5분 뒤엔 1분에 한 번으로 묶인다. 워커가
+보내는 메시지는 안 묶인다.
+
+- 엔진 스크립트보다 **먼저** 읽혀야 한다 → `export_presets.cfg` 의 `html/head_include`.
+  파일은 `pages.yml` 이 사이트에 복사한다 (고도 익스포트는 `.js` 를 안 담는다).
+- 가려졌을 때 20fps 인 건 판정만 돌면 돼서다. `delta` 가 커질 뿐 판정은 같다.
+- 크로미움에서 확인했다: 가려진 탭 3초에 원래 0 프레임 → 60 프레임, 6분 넘게 가려도 그대로.
+- **안 되는 곳:** 모바일 브라우저와 모바일 앱은 내려가면 OS 가 통째로 얼린다 — 이걸로 못 막는다.
+  크롬의 메모리 절약 모드가 탭을 내리면(discard) 다시 열 때 새로 읽는다 (저장은 10초마다라 남는다).
 
 ### 한글 폰트 ★
 

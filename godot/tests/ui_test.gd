@@ -2394,15 +2394,32 @@ func _case_passive(game: Node3D, me: Dictionary) -> void:
 	# 창을 열면 지금 습득할 칸(질풍각)이 골라져 있다 — 이름은 배운 단계
 	if game._skill_pick != "gale_kicks" or game._skill_name.text != str(gale.name) + " 1단":
 		_fail("열자마자 질풍각이 골라져야 하는데 %s · '%s'" % [game._skill_pick, game._skill_name.text])
-	# 껐다 켜면 나무도 맨 위로 (2026-10-02 요청) — 습득할 칸으로 내려가지 않는다
-	game._tree_scroll.scroll_vertical = 9999
+	# 껐다 켜면 나무도 맨 위로 (2026-10-02 요청: "스킬창 열 때 스크롤 초기화 시켜") — 습득할 칸이
+	# 맨 아래(마지막 칸만 남긴 Lv.200)여도 그 칸으로 내려가지 않는다
+	var keep_level: int = int(me.level)
+	var keep_ranks: Dictionary = me.passives.duplicate()
+	me.level = 200
+	me.passives = {}
+	for index in game._tree_nodes.size() - 1:
+		for id in game._tree_nodes[index].ids:
+			me.passives[id] = int(Skills.passive(id).maxRank)
+	game._toggle_skills()
 	game._toggle_skills()
 	await process_frame
+	game._tree_scroll.scroll_vertical = 9999
+	if game._tree_scroll.scroll_vertical <= 0 or game._tree_ready_index() != game._tree_nodes.size() - 1:
+		_fail("나무가 안 내려가거나 습득할 칸이 마지막 칸이 아니다 — 다시 열기 검사를 못 한다")
+	game._toggle_skills()
 	game._toggle_skills()
 	await process_frame
 	await process_frame
 	if game._tree_scroll.scroll_vertical != 0:
 		_fail("스킬창을 껐다 켰는데 나무 스크롤이 %d 에 남았다" % game._tree_scroll.scroll_vertical)
+	me.level = keep_level
+	me.passives = keep_ranks
+	game._toggle_skills()
+	game._toggle_skills()
+	await process_frame
 	var tree_rect: Rect2 = game._tree_scroll.get_global_rect()
 	if not Rect2(Vector2.ZERO, screen).encloses(tree_rect) or tree_rect.position.x <= game._skill_big.get_global_rect().end.x:
 		_fail("나무 %s 가 화면 밖이거나 설명 왼쪽이다" % tree_rect)

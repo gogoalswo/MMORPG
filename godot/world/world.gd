@@ -1993,6 +1993,14 @@ func codex_register(player_id: String, item_id: String, enhance: int, index: int
 	_ledger_call(player, &"codex_register", [item_id, enhance, index])
 
 
+## 도감 창의 **자동 등록** — 넣을 수 있는 칸을 전부 채운다. 판정은 `Ledger.codex_register_all`
+func codex_register_all(player_id: String) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	_ledger_call(player, &"codex_register_all")
+
+
 ## 테스트 단추 — 프로틴 세 종을 `DEBUG_PROTEIN` 개씩 넣는다 (던전을 안 돌고 헬스를 볼 때)
 const DEBUG_PROTEIN := 10000
 

@@ -17,6 +17,8 @@ extends Control
 ##   └─────────────────────────────────────────────────────┘
 
 signal picked(index: int)
+## **자동 등록** 확인 — `open_all` 로 연 창의 [등록] (2026-10-02 요청 "도감에 자동 등록 버튼 만들어")
+signal picked_all
 
 const WIDTH := 820.0
 const HEIGHT := 540.0
@@ -42,6 +44,8 @@ var _enhance := 0
 ## 고른 가방 번호 · 늘어놓은 가방 번호들
 var _choice := -1
 var _choices: Array = []
+## 자동 등록 확인으로 열었나 — 늘어놓은 것이 **전부** 들어간다 (하나를 고르지 않는다)
+var _all := false
 
 var _title: Label
 var _scroll: ScrollContainer
@@ -142,6 +146,7 @@ func open(item_id: String, enhance: int, bag: Array) -> void:
 			_choices.append(index)
 	if _choices.is_empty():
 		return
+	_all = false
 	_choice = -1
 	for index in _choices:
 		if _choice < 0 or Items.option_lines(bag[index]) < Items.option_lines(bag[_choice]):
@@ -151,6 +156,26 @@ func open(item_id: String, enhance: int, bag: Array) -> void:
 	_scroll.scroll_vertical = 0
 	visible = true
 	_redraw()
+
+
+## **자동 등록** 확인 — 들어갈 장비(`Codex.auto_picks`, 칸마다 하나)를 **전부** 늘어놓는다.
+## 고르지 않고 [등록] 한 번이면 다 들어간다 — 무엇이 사라지는지 1·2·3차까지 보고 누른다. 없으면 안 연다
+func open_all(bag: Array, picks: Array) -> void:
+	if picks.is_empty():
+		return
+	_bag = bag
+	_choices = picks.duplicate()
+	_all = true
+	_choice = -1
+	_title.text = "자동 등록 — %d칸에 넣습니다" % _choices.size()
+	_scroll.scroll_vertical = 0
+	visible = true
+	_redraw()
+
+
+## 자동 등록 확인으로 열렸나 — 테스트가 본다
+func is_all() -> bool:
+	return _all
 
 
 func close() -> void:
@@ -172,6 +197,10 @@ func confirm_button() -> Button:
 
 
 func _on_confirm() -> void:
+	if _all:
+		close()
+		picked_all.emit()
+		return
 	if _choice < 0:
 		return
 	var index := _choice
@@ -180,6 +209,8 @@ func _on_confirm() -> void:
 
 
 func _select(index: int) -> void:
+	if _all:
+		return
 	_choice = index
 	_redraw()
 
@@ -190,8 +221,8 @@ func _redraw() -> void:
 		_grid.remove_child(child)
 		child.queue_free()
 	for index in _choices:
-		_grid.add_child(_card(_bag[index], index, index == _choice))
-	_confirm.disabled = _choice < 0
+		_grid.add_child(_card(_bag[index], index, _all or index == _choice))
+	_confirm.disabled = not _all and _choice < 0
 
 
 ## 칸 하나 — 그림 · 이름(+강화 · 겹친 개수) · 차수마다 한 줄. 누르는 것은 덮개 `hit`

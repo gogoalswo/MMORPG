@@ -351,11 +351,44 @@ func codex_register(p: Dictionary, item_id: String, enhance: int, index: int = -
 	if pick < 0:
 		_notice("가방에 %s 이 없습니다" % label)
 		return
-	var count := int(p.bag[pick].get("count", 1))
+	var got := _codex_take(p, codex, pick)
+	_notice("도감 등록 — %s · %s +%s%%" % [label, Codex.stat_name(str(got.stat)), String.num(float(got.gain), 2)])
+	_inventory_changed(p)
+
+
+## 도감 창의 **자동 등록** — 가방에서 넣을 수 있는 칸을 **등급 가리지 않고 전부** 채운다 (2026-10-02 요청
+## "도감에 자동 등록 버튼 만들어"). 칸마다 하나, 같은 칸의 장비가 여럿이면 옵션 줄이 가장 적은 것
+## (`Codex.auto_picks` — 확인 창이 늘어놓는 것과 같은 셈). 알림은 한 줄로 모은다
+func codex_register_all(p: Dictionary) -> void:
+	var codex: Dictionary = p.get("codex", {})
+	var picks := Codex.auto_picks(codex, p.bag)
+	if picks.is_empty():
+		_notice("도감에 넣을 장비가 가방에 없습니다")
+		return
+	# 뒤 번호부터 뗀다 — 앞에서 떼면 뒤 번호가 밀린다
+	picks.reverse()
+	var gains := {}
+	for at in picks:
+		var got := _codex_take(p, codex, int(at))
+		gains[got.stat] = float(gains.get(got.stat, 0.0)) + float(got.gain)
+	var parts := PackedStringArray()
+	for stat in gains:
+		parts.append("%s +%s%%" % [Codex.stat_name(str(stat)), String.num(float(gains[stat]), 2)])
+	_notice("도감 자동 등록 — %d칸 · %s" % [picks.size(), " · ".join(parts)])
+	_inventory_changed(p)
+
+
+## 가방 `at` 번 장비 하나를 떼어(겹쳤으면 개수만) 그 칸을 채우고 `codexResult` 를 낸다 → `{stat, gain}`
+func _codex_take(p: Dictionary, codex: Dictionary, at: int) -> Dictionary:
+	var stack: Dictionary = p.bag[at]
+	var item_id := str(stack.get("id", ""))
+	var enhance := int(stack.get("enhance", 0))
+	var item := Items.get_item(item_id)
+	var count := int(stack.get("count", 1))
 	if count > 1:
-		p.bag[pick].count = count - 1
+		stack.count = count - 1
 	else:
-		p.bag.remove_at(pick)
+		p.bag.remove_at(at)
 	codex[item_id] = int(codex.get(item_id, 0)) | (1 << enhance)
 	p.codex = codex
 	var stat := Codex.slot_stat(str(item.slot))
@@ -363,8 +396,7 @@ func codex_register(p: Dictionary, item_id: String, enhance: int, index: int = -
 	events.append({
 		"type": "codexResult", "id": item_id, "enhance": enhance, "stat": stat, "gain": gain,
 	})
-	_notice("도감 등록 — %s · %s +%s%%" % [label, Codex.stat_name(stat), String.num(gain, 2)])
-	_inventory_changed(p)
+	return {"stat": stat, "gain": gain}
 
 
 ## --- 유료 재화 (docs/features/server.md "유료 재화") ---

@@ -460,21 +460,16 @@ static func migrate_id(id: String) -> String:
 	return ""
 
 
-## 그 몬스터가 선 사냥터(1~20). `items.json` 의 `dropGrades` 를 찾는 열쇠다
-static func field_of(monster_level: int) -> int:
-	return clampi(ceili(monster_level / 10.0), 1, 20)
-
-
 ## 그 몬스터가 떨굴 수 있는 등급들 — **사냥터가 정한다.** ★
 ##
 ## 2026-09-21 요청: "지금 상태면 1레벨짜리 잡고 최종템을 먹을수도 있는거자나."
-## 표는 `packages/shared/src/gear.ts` 의 `dropField` 에서 나오고 여기는 읽기만
+## 표는 `packages/shared/src/items.ts` 의 `dropGradesFor` 가 **몬스터 레벨마다**
+## 만들고(고급·희귀는 `DROP_GRADE_FROM` 으로 앞당겼다) 여기는 레벨로 찾기만
 ## 한다 → docs/features/items.md "사냥터가 등급을 정한다"
 ## **정수로 돌려준다** — JSON 숫자는 실수로 들어와서 `1 in [1.0]` 이 false 다
 static func drop_grades(monster_level: int) -> Array:
 	var table: Array = _t().get("dropGrades", [])
-	var field := field_of(monster_level)
-	var row: Array = table[field] if field < table.size() else []
+	var row: Array = table[clampi(monster_level, 1, table.size() - 1)] if table.size() > 1 else []
 	if row.is_empty():
 		return [int(_t().get("gradeMin", 1))]
 	var out: Array = []

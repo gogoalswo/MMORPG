@@ -165,6 +165,8 @@ func send(message: StringName, payload: Dictionary) -> void:
 			_world.unequip(MY_ID, str(payload.get("slot", "")))
 		&"sortBag":
 			_world.sort_bag(MY_ID)
+		&"autoEquip":
+			_world.auto_equip(MY_ID)
 		&"feedUpgrade":
 			_world.feed_upgrade(
 				MY_ID,

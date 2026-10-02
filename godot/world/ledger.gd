@@ -572,6 +572,79 @@ func sort_bag(p: Dictionary) -> void:
 	_inventory_changed(p)
 
 
+## --- 자동 장착 --- (docs/features/inventory-equipment.md "자동 장착")
+
+## 가방과 낀 것 가운데 **부위마다 전투력(`gear_power`)이 가장 높아지는 것**을 낀다 (2026-10-02 요청).
+## 옵션이 축을 넘나들어(목걸이에 체력 옵션 …) 한 부위를 바꾸면 다른 부위의 셈이 흔들리니,
+## 바뀌는 것이 없을 때까지 몇 바퀴 돈다. **더 좋아질 때만 바꾼다** — 같으면 낀 것을 둔다.
+## 착용 레벨이 모자란 것은 후보에서 빠진다. 벗은 것은 가방으로 돌아가고 가방을 정렬한다
+func auto_equip(p: Dictionary) -> void:
+	var worn: Dictionary = p.equipped.duplicate()
+	var picks := {}  # 슬롯 → 고른 가방 번호 (-1 = 원래 끼고 있던 것)
+	var job := str(p.job)
+	var level := int(p.level)
+	for _round in 3:
+		var changed := false
+		for slot in Items.slots():
+			var best := gear_power(p, worn)
+			# 원래 끼고 있던 것도 후보다 — 다른 부위가 바뀐 뒤 다시 나을 수 있다
+			var candidates: Array = []
+			if not p.equipped.get(slot, {}).is_empty():
+				candidates.append(-1)
+			for index in p.bag.size():
+				var item := Items.get_item(str(p.bag[index].get("id", "")))
+				if str(item.get("slot", "")) == slot and Items.can_equip(item, job, level):
+					candidates.append(index)
+			for index in candidates:
+				var trial := worn.duplicate()
+				trial[slot] = p.equipped[slot] if index < 0 else p.bag[index]
+				var power := gear_power(p, trial)
+				if power > best:
+					best = power
+					worn = trial
+					picks[slot] = index
+					changed = true
+		if not changed:
+			break
+
+	var swaps := {}  # 슬롯 → 새로 낄 묶음
+	var taken: Array = []
+	for slot in picks:
+		if int(picks[slot]) >= 0:
+			swaps[slot] = p.bag[int(picks[slot])]
+			taken.append(int(picks[slot]))
+	if swaps.is_empty():
+		_notice("이미 가장 좋은 장비를 끼고 있습니다")
+		return
+	# 번호가 밀리지 않게 뒤에서부터 뺀다. 빼는 수 ≥ 돌려놓는 수라 가방이 넘치지 않는다
+	taken.sort()
+	taken.reverse()
+	for index in taken:
+		p.bag.remove_at(index)
+	for slot in swaps:
+		var before: Dictionary = p.equipped.get(slot, {})
+		if not before.is_empty():
+			p.bag.append(before)
+		p.equipped[slot] = swaps[slot]
+	_notice("자동 장착 — %d부위를 바꿨습니다" % swaps.size())
+	sort_bag(p)  # 벗은 것이 끝에 붙는다 — 창을 열 때처럼 정렬해 둔다 (`_inventory_changed` 도 여기서)
+
+
+## 자동 장착이 견주는 값 — **공격 기대값 × 유효 체력** (같은 레벨 몬스터 기준).
+## 공격 = 공격력 × (1 + 치확(100% 에서 자름) × 치피) × 관통이 몬스터 방어(감소 50%)를 뚫는 몫 `2 / (2 − 관통)`,
+## 유효 체력 = 체력 ÷ 받는 피해 비율 `K / (K + 방어)` (`Stats.def_k_of`).
+## **곱한다** — 더하면 축마다 무게를 따로 정해야 하고, 곱이면 어느 축이 몇 % 오르든 같은 무게다.
+## 쿨타임 감소·드랍률은 전투력에 안 넣는다(격투가는 스킬이 없고, 드랍률은 싸움이 아니다)
+static func gear_power(p: Dictionary, equipped: Dictionary) -> float:
+	var s := World.stats_of(
+		str(p.job), int(p.level), equipped, p.get("passives", {}), p.get("fitness", {}), p.get("codex", {})
+	)
+	var hit := float(s.attack) * (1.0 + clampf(float(s.crit), 0.0, 1.0) * float(s.critDamage))
+	hit *= 2.0 / (2.0 - clampf(float(s.penetration), 0.0, 0.9))
+	var k := Stats.def_k_of(int(p.level))
+	return hit * float(s.maxHp) * (k + maxf(float(s.defense), 0.0)) / k
+
+
 ## --- 크리스탈 ---
 
 ## 크리스탈로 **2차 옵션을 통째로 다시 굴린다** (2026-09-23). 처음 쓰면 붙고, 다시 쓰면

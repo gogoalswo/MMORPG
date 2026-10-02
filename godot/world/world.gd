@@ -466,9 +466,10 @@ func _move_to(target: String) -> void:
 	open(target)
 	for who in _players:
 		join(who)
+		# 마을로 오면 체력을 가득 채운다 (2026-10-02 요청). 죽은 사람은 사망 창의 `revive` 가 채운다
 		var player: Dictionary = _players[who]
-		if from_dungeon and not bool(player.dead):
-			player.hp = int(player.stats.maxHp)
+		if (from_dungeon or target == GameData.start_zone()) and not bool(player.get("dead", false)):
+			player["hp"] = int(player.stats.maxHp)
 	_events.append({"type": "zone", "zone": target})
 	_check_sandbag_week(Time.get_ticks_msec(), true)
 

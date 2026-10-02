@@ -201,6 +201,7 @@
   `World._move_to` 가 떠나는 존이 던전 단계(`GameData.dungeon_type_of`)면 `join` 이 스탯을 다시 잰 뒤
   `hp = maxHp` 로 채운다 — 확인이든 마을가기든 나가는 길 전부가 `travel` → `_move_to` 라서 한 곳이면 된다.
   쓰러져 있으면 건드리지 않는다(되살아나기가 따로 채운다). 샌드백 랭킹전은 던전 표에 없어 해당 없다.
+  같은 날 다른 요청으로 **마을로 와도** 채운다 — 같은 `if` 에 `or target == GameData.start_zone()` 으로 합쳤다.
   확인: `dungeon_run_test.gd` `_case_leave` (체력 1 로 나와도 가득).
 - 전직 시험(`job_1` …)은 던전이 아니라 넣지 않았다 — 던전 창의 종류가 아니다.
 

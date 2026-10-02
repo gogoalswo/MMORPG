@@ -62,10 +62,10 @@ func _case_grade() -> void:
 func _case_options() -> void:
 	# 설계표에서 나온 최대치 (옵션 하나 = DPS +1% 에서 역산)
 	# 2026-09-21 에 옵션 수치를 **50배**로 올렸다 (`OPTION_POWER`) —
-	# 반올림 다음에 곱하므로 태초 치확이 37.5 가 아니라 **40~75** 다
+	# 2026-10-02 에 치확·치피만 1/3 로 내려 태초 치확이 **13~25** 다
 	var crit := Items.option_range("crit", 7)
-	_eq("치명타 옵션 7등급 최소", snappedf(crit.min, 0.1), 38.0)
-	_eq("치명타 옵션 7등급 최대", snappedf(crit.max, 0.1), 75.0)
+	_eq("치명타 옵션 7등급 최소", snappedf(crit.min, 0.1), 13.0)
+	_eq("치명타 옵션 7등급 최대", snappedf(crit.max, 0.1), 25.0)
 	_eq("치명타는 레벨 무관", Items.option_range("crit", 7, 200).max, crit.max)
 	_eq("관통 옵션 7등급 최대", snappedf(Items.option_range("penetration", 7).max, 0.1), 15.0)  # 2026-09-25 에 165 → 15 ("옵션 하나당 최대 15퍼센트")
 	_eq("쿨감 옵션 7등급 최대", snappedf(Items.option_range("cooldown", 7).max, 0.1), 50.0)

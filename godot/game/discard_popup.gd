@@ -39,6 +39,10 @@ var go: Button
 var grade_buttons := {}
 var confirm: Control
 var confirm_text: Label
+## 창 뒤를 덮는 막 — 상세 창에서 하나만 버릴 때는 확인 창 막 한 겹만 쓰려고 감춘다
+var _dim: ColorRect
+## 상세 창 "버리기" 로 열었다 — 목록 창 없이 확인 창만 띄우고, 취소·확인하면 통째로 닫는다
+var _single := false
 
 ## 담은 가방 번호
 var picked: Array = []
@@ -60,10 +64,10 @@ func _build() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	visible = false
-	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.55)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(dim)
+	_dim = ColorRect.new()
+	_dim.color = Color(0, 0, 0, 0.55)
+	_dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(_dim)
 	var center := CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -173,7 +177,7 @@ func _build_confirm() -> void:
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 12)
 	column.add_child(row)
-	var cancel: Button = _button("취소", func() -> void: confirm.visible = false)
+	var cancel: Button = _button("취소", _cancel)
 	cancel.name = "Cancel"
 	cancel.custom_minimum_size.x = 110
 	row.add_child(cancel)
@@ -200,11 +204,36 @@ func close() -> void:
 	closed.emit()
 
 
+## 상세 창 "버리기" (2026-10-02 요청) — 가방 번호 `index` 하나를 목록 창 없이 **확인 창만** 띄워 묻는다.
+## 판정은 같은 `discard {indices}` 다
+func ask_one(index: int, title: String) -> void:
+	if index < 0 or index >= _bag().size() or not can_discard(_bag()[index]):
+		return
+	_single = true
+	picked = [index]
+	panel.visible = false
+	_dim.visible = false
+	visible = true
+	confirm_text.text = "%s\n이 장비를 버립니다" % title
+	confirm.visible = true
+
+
+## 확인 창의 [취소] — 목록 창에서 왔으면 확인 창만, 상세 창에서 왔으면 통째로 닫는다
+func _cancel() -> void:
+	if _single:
+		close()
+		return
+	confirm.visible = false
+
+
 func hide_now() -> void:
 	visible = false
 	confirm.visible = false
 	picked = []
 	list_drag.forget()
+	_single = false
+	panel.visible = true
+	_dim.visible = true
 
 
 func _bag() -> Array:
@@ -281,6 +310,9 @@ func commit() -> void:
 	var indices := picked.duplicate()
 	picked = []
 	discarded.emit(indices)
+	if _single:
+		close()
+		return
 	redraw()
 
 

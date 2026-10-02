@@ -89,6 +89,8 @@ jobs:
             const b = require('./godot/build.json');
             require('fs').writeFileSync('site/build.txt', b.commit + ' ' + b.at + '\n');
           "
+          # 탭을 옮겨도 게임이 돌게 한다. head_include 가 이 파일을 엔진보다 먼저 읽는다
+          cp godot/web/background_tick.js site/
           ls -lh site
 
       - uses: actions/upload-pages-artifact@v3

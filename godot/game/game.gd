@@ -5161,8 +5161,11 @@ func _build_gate_panel() -> void:
 		_transport.send(&"codexRegister", {"id": item_id, "enhance": enhance, "index": index})
 	)
 	_codex_panel.enhance_requested.connect(_open_enhance_from_codex)
-	_codex_panel.auto_changed.connect(func(grades: Array) -> void:
-		_transport.send(&"codexAuto", {"grades": grades})
+	_codex_panel.auto_changed.connect(func(grade: int, slots: Array) -> void:
+		_transport.send(&"codexAutoGrade", {"grade": grade, "slots": slots})
+	)
+	_codex_panel.auto_block_changed.connect(func(kinds: Array) -> void:
+		_transport.send(&"codexAutoBlock", {"kinds": kinds})
 	)
 	_codex_panel.seen.connect(func(grade: int) -> void:
 		_transport.send(&"codexSeen", {"grade": grade})

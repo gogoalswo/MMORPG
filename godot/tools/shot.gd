@@ -627,7 +627,7 @@ func _npc_window(game: Node3D, which: String) -> void:
 ## 단추 하나로 여는 창들 (`npm run shot:godot -- char` …). 던전 결로 옮긴 틀을 보려고 더했다 (2026-09-28)
 const WINDOW_TOGGLES := {
 	"char": "_toggle_char", "rank": "_toggle_rank", "potion": "_toggle_potion_panel",
-	"auto": "_toggle_auto_panel", "debug": "_toggle_debug",
+	"debug": "_toggle_debug",
 	# ≡ 를 눌러 펼친 메뉴 판 · 장비 도감 (2026-10-01)
 	"menu": "_toggle_menu", "codex": "_toggle_codex", "codex_pick": "_toggle_codex",
 }

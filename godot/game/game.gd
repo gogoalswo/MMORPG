@@ -5198,8 +5198,8 @@ func _build_gate_panel() -> void:
 	_codex_panel.auto_changed.connect(func(grade: int, slots: Array) -> void:
 		_transport.send(&"codexAutoGrade", {"grade": grade, "slots": slots})
 	)
-	_codex_panel.auto_block_changed.connect(func(kinds: Array) -> void:
-		_transport.send(&"codexAutoBlock", {"kinds": kinds})
+	_codex_panel.auto_block_changed.connect(func(grade: int, kinds: Array) -> void:
+		_transport.send(&"codexAutoBlock", {"grade": grade, "kinds": kinds})
 	)
 	_codex_panel.seen.connect(func(grade: int) -> void:
 		_transport.send(&"codexSeen", {"grade": grade})

@@ -41,13 +41,13 @@
 | `godot/server/kill_check.gd` | `max_damage` — 처치 시간과 같은 식으로 "15초에 넣을 수 있는 피해의 상한" |
 | `godot/server/account_store.gd` | `find_sandbag_ranks` · `write_sandbag_ranks` — `sandbag/<주>.json` |
 | `godot/net/server_ledger.gd` · `local_transport.gd` | `ask_sandbag_rank` / `sandbag_ranked` · 서버가 없으면 `_local_sandbag_board`(나 하나) |
-| `godot/game/game.gd` | 메뉴 칸 "샌드백" · `_refresh_sandbag_dock`(샌드백 존에서 물약·자동사냥 칸 숨김) · `_build_sandbag_panel`(전체 화면) · `_toggle_sandbag` · `_fill_sandbag` · `_fill_sandbag_days`(날짜별 기록) · `_on_sandbag_enter` · `_draw_sandbag_hud`(가운데 카운트 · 시계 줄) · 이벤트 `sandbagRank` · `sandbagRecord` · `sandbagReward`(채팅) |
+| `godot/game/game.gd` | 메뉴 칸 "샌드백" · `_unhandled_input`(샌드백 존이면 누르기 무시 — 이펙트·고르기 없음) · `_refresh_sandbag_dock`(샌드백 존에서 물약·자동사냥 칸 숨김) · `_build_sandbag_panel`(전체 화면) · `_toggle_sandbag` · `_fill_sandbag` · `_fill_sandbag_days`(날짜별 기록) · `_on_sandbag_enter` · `_draw_sandbag_hud`(가운데 카운트 · 시계 줄) · 이벤트 `sandbagRank` · `sandbagRecord` · `sandbagReward`(채팅) |
 | `godot/game/dungeon_result.gd` | `_show_sandbag`(보상 칸을 숨긴다 — `_show_rewards(false)`) · `show_sandbag_best` · `comma` — 결과창을 같이 쓴다 |
 | `godot/game/rig.gd` | `FILES.sandbag` → `varco_sandbag.glb` (클립 없음) |
 | `public/assets/models/varco_sandbag.glb` | 바르코 모델 (원화 → 3D, **원점 바닥**, 텍스처 1024). 주소는 `fetch-assets.sh` |
 | `public/assets/icons/ui_icon_sandbag.png` | 메뉴 단추 그림 (HUD 아이콘 기준 프롬프트 그대로, 세 장 중 둘째) |
 | `godot/tests/sandbag_test.gd` | 존 · 카운트 중 막힘 · 걷기 막힘(카운트 · 재는 동안 · 자동사냥 안 꺼짐) · 끝나면 저절로 침 · 결과 뒤 멈춤 · 센 피해 = 맞은 피해 · 안 죽고 안 움직임 · 결과 한 번 · 낮은 기록은 최고를 안 덮음 · 로컬 주 정산(1위 30개 · 한 번만 · 가방 꽉 차면 남겼다 준다) · 날짜별 기록(하루 최고 · 다음 날 · 주 정산에도 남음 · 7일 넘으면 버림 · 날짜 글자) · 저장 · 옐로우 크리스탈 3차 · 서버(18초 · 상한 · 한 번 · 순위 · 굳힌 순위로 정산 · 새 주 비움) |
-| `godot/tests/ui_test.gd` | `_case_sandbag` — 메뉴 → 창(전체 화면 · 설명 한 줄 · 보상 일곱 줄 · 기록 없음 · 100줄이면 굴린다) → 입장 → 카운트 "3" · 물약·자동사냥 칸 숨김 → 누적 피해 → 결과창(보상 칸 없음) → 다시 열면 1위 · 날짜별 기록 맨 위가 방금 기록 → 확인 → 마을 · 글자가 폰트에 있나 |
+| `godot/tests/ui_test.gd` | `_case_sandbag` — 메뉴 → 창(전체 화면 · 설명 한 줄 · 보상 일곱 줄 · 기록 없음 · 100줄이면 굴린다) → 입장 → 카운트 "3" · 물약·자동사냥 칸 숨김 · 샌드백·땅을 눌러도 고리·클릭 이펙트 없음 → 누적 피해 → 결과창(보상 칸 없음) → 다시 열면 1위 · 날짜별 기록 맨 위가 방금 기록 → 확인 → 마을 · 글자가 폰트에 있나 |
 
 ## 규칙
 
@@ -59,6 +59,9 @@
   존이 샌드백이면 순번만 갱신하고 돌려보낸다 — `_take_manual` 보다 앞이라 조이스틱을 밀어도 자동사냥이 안 꺼진다.
   자동사냥은 `input_move` 를 거치지 않고 걷지만 샌드백이 사거리 안이라 걸을 일이 없다(평타에 실린 짧은 전진 0.07m 는 그대로다).
   처음엔 "걷기는 된다" 였다.
+- **화면을 눌러도 아무 일 없다** (같은 날 요청 "이동 이펙트도 안 나오게 만들고, 샌드백도 선택 못 하게"). `game.gd` 의
+  `_unhandled_input` 이 샌드백 존이면 바로 돌려보낸다 — 땅의 클릭 이펙트(`_pulse_marker`)도, 샌드백 발밑 고리(`_select_mob`)도,
+  누르고 있기(`_holding`)도 안 선다. 자동사냥이 치는 대상은 판정이 고르므로 고리가 없어도 그대로 친다.
 - **카운트가 끝나면 저절로 친다** (2026-10-02 요청 "물약이랑 자동사냥 버튼 없애고, 카운트 끝나면 자동으로 공격하도록").
   `step` 의 `_drive_sandbag_auto` 가 재는 동안 매 틱 자동사냥(`set_auto`)을 켠다 — 평소 자동사냥과 같은 `_drive_auto`
   라 스킬 순서·평타·날라차기가 그대로다. 결과가 나면 `_finish_sandbag` 이 끄고, 존을 옮기면 `join` 이 끈다.

@@ -5672,6 +5672,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		# 죽어 있으면 화면을 눌러도 아무 일 없다 — 되살아나기는 사망 창(던전이면 결과창)의 "확인" 으로만
 		if _am_dead():
 			return
+		# **샌드백 존에서는 화면을 눌러도 아무 일 없다** (2026-10-02 요청 "이동 이펙트도 안 나오게 만들고,
+		# 샌드백도 선택 못 하게"). 판정이 걷기를 막으니(`World.input_move`) 땅을 눌러 걸을 일도, 고리를 세울
+		# 일도 없다. 누르고 있기(`_holding`)도 여기서 안 서므로 클릭 이펙트가 다시 뜨지 않는다
+		if _shown_zone == Sandbag.zone():
+			return
 		var hit := _ground_point(event.position)
 		if hit == Vector3.INF:
 			return

@@ -1010,6 +1010,16 @@ func _case_sandbag(game: Node3D) -> void:
 	seen += game._trial_hud.text
 	if game._potion_cell.is_visible_in_tree() or game._auto_cell.is_visible_in_tree() or game._auto_gap.visible:
 		_fail("샌드백에 물약·자동사냥 칸이 남았다")
+	# 샌드백을 눌러도 안 골라지고, 땅을 눌러도 클릭 이펙트가 안 뜬다
+	for mob in game._transport.snapshot().monsters:
+		_push_mouse(game._camera.unproject_position(Vector3(float(mob.x), 0.5, float(mob.z))), true)
+		_push_mouse(game._camera.unproject_position(Vector3(float(mob.x), 0.5, float(mob.z))), false)
+	var ground: Vector2 = game._camera.unproject_position(Vector3(-3.0, 0.0, 3.0))
+	_push_mouse(ground, true)
+	_push_mouse(ground, false)
+	await process_frame
+	if game._selected_mob != "" or game._marker.visible or game._target != Vector3.INF or game._holding:
+		_fail("샌드백 존에서 눌렀는데 골라짐 '%s' · 이펙트 %s · 목표 %s" % [game._selected_mob, game._marker.visible, game._target])
 
 	# 카운트를 건너뛰고 재기 시작 → 한 대 넣고 → 시간 끝
 	var run: Dictionary = game._transport.snapshot().dungeon

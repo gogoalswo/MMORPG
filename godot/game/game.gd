@@ -1456,8 +1456,8 @@ func _build_char_panel() -> void:
 func _build_char_window(panel: PanelContainer) -> void:
 	var side := VBoxContainer.new()
 	side.custom_minimum_size = Vector2(DETAIL_W, 0)
-	# 7 — "평타" 줄(2026-09-30)을 더하니 8 로는 창이 화면 위로 5px 넘었다 (간격 10개 × 1px 로 되찾는다)
-	side.add_theme_constant_override("separation", 7)
+	# 5 — "평타" 줄(2026-09-30)에 8 → 7, 증가 풀이 줄 셋(2026-10-02)에 7 → 5 (창이 화면 위로 넘쳤다)
+	side.add_theme_constant_override("separation", 5)
 	panel.add_child(side)
 
 	var title := _stone_title(side, "", 22, "ui_icon_character")
@@ -1476,8 +1476,8 @@ func _build_char_window(panel: PanelContainer) -> void:
 		var grid := GridContainer.new()
 		grid.columns = 2
 		grid.add_theme_constant_override("h_separation", 12)
-		# 4 — "아이템 드랍률" 줄(2026-10-01)을 더하니 6 으로는 창이 화면 위로 25px 넘었다 (간격 13개 × 2px)
-		grid.add_theme_constant_override("v_separation", 4)
+		# 2 — "아이템 드랍률" 줄(2026-10-01)에 6 → 4, 증가 풀이 줄 셋(2026-10-02)에 4 → 2 (화면 위로 48px 넘쳤다)
+		grid.add_theme_constant_override("v_separation", 2)
 		side.add_child(grid)
 		_char_grids.append(grid)
 
@@ -1485,9 +1485,8 @@ func _build_char_window(panel: PanelContainer) -> void:
 	room.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	room.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	side.add_child(room)
-	var formula := _inv_label("최종 = 기본 × (1 + 증가 %)", 15, INV_DIM)
-	formula.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	side.add_child(formula)
+	# 아래 끝의 "최종 = 기본 × (1 + 증가 %)" 안내 줄은 뺐다 (2026-10-02) — 증가 줄 아래 풀이
+	# `(장비 × 헬스 × 도감)` 가 같은 것을 보여 주고, 그 줄 셋 때문에 창이 화면 위로 넘쳤다
 
 
 ## 착용 중 비교 창 — **상세 창 바로 왼쪽에 같은 높이로** 나란히 뜬다 (2026-09-25 요청:
@@ -2434,7 +2433,9 @@ func _redraw_char(me: Dictionary) -> void:
 			["기본 " + name, "%d" % int(stats.get("base_" + key, final))],
 			[name + " 증가", _bonus_text(key, total), INV_GOLD_HI if total > 0.0 else INV_DIM],
 			[
-				"(장비 %s × 헬스 %d%% × 도감 %s%%)" % [_bonus_text(key, gear).trim_prefix("+"), int(fit), String.num(book, 2)],
+				"(장비 %s × 헬스 %d%% × 도감 %s%%)" % [
+					_bonus_text(key, gear).trim_prefix("+"), int(fit), ("%.2f" % book).rstrip("0").rstrip("."),
+				],
 				"", INV_DIM, "note",
 			],
 			["최종 " + name, "%d" % final, INV_GOLD_HI],
@@ -2715,7 +2716,7 @@ func _fill_detail_rows(rows: Array, grid: GridContainer = null) -> void:
 		# 풀이 줄(`"note"`) — 작은 글자로 왼쪽 칸에서 **오른쪽 칸까지 넘쳐** 그린다. 칸에 그대로 넣으면
 		# 글자 폭만큼 왼쪽 칸이 넓어져 창이 커진다 — 폭 0 인 틀에 얹어 칸 폭을 건드리지 않는다
 		if row.size() > 3 and str(row[3]) == "note":
-			var note := _inv_label(str(row[0]), font - 3, row[2])
+			var note := _inv_label(str(row[0]), font - 4, row[2])
 			var holder := Control.new()
 			holder.custom_minimum_size = Vector2(0, note.get_minimum_size().y)
 			holder.mouse_filter = Control.MOUSE_FILTER_IGNORE

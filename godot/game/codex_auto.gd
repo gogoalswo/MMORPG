@@ -14,7 +14,7 @@ extends Control
 ##   │  [무기][갑옷][투구][신발][목걸이][반지]                    │ ← 켜면(밝음) 넣는다
 ##   │  1차 옵션 — 활성화 된 옵션만 자동으로 등록합니다            │
 ##   │  [치명타][치명타 데미지][체력][방어력 관통][아이템 드랍률]    │ ← 켜면(밝음) 넣는다
-##   │                                               [ 닫기 ]  │
+##   │                     (오른쪽 위 X 로 닫는다 — [닫기] 단추는 뺐다)│
 ##
 ## 일곱 등급을 한 화면에 줄로 늘어놓으면 옵션 칩까지 720 높이에 안 들어가 **등급 탭**으로 나눴다.
 ## 값은 **장부**(`codex_auto` · `codex_auto_options`)다 — 이 창은 요청만 내고 장부 값을 그린다.
@@ -81,6 +81,8 @@ func _build(close_button: Button) -> void:
 	sheet.add_child(column)
 	var title := _label("자동 등록 설정", 24, TITLE)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	title.custom_minimum_size = Vector2(0, close_button.custom_minimum_size.y)  # 오른쪽 위 X 가 아래 줄에 안 걸친다
 	column.add_child(title)
 	column.add_child(_hint("주운 장비를 바로 도감에 넣습니다 — 칸이 차 있으면 다음 빈 단계까지 +1 부터 강화해 넣고, 실패하면 부서집니다"))
 
@@ -156,17 +158,27 @@ func _build(close_button: Button) -> void:
 			option_chips[str(kind)] = chip
 		_option_chips[grade] = option_chips
 
-	var foot := HBoxContainer.new()
-	foot.alignment = BoxContainer.ALIGNMENT_END
-	column.add_child(foot)
-	close_button.name = "done"
+	# 오른쪽 위 X — 판 안쪽 모서리에 앵커로 얹는다 (창 X 와 같은 자리 규칙, ui-art-style.md "창은 오른쪽 위 X 로 닫는다").
+	# 판 위에 겹쳐 놓는 층이라 누름은 X 만 받는다
+	var layer := Control.new()
+	layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	sheet.add_child(layer)
+	close_button.name = "close"
 	close_button.pressed.connect(close)
-	foot.add_child(close_button)
+	close_button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	close_button.offset_left = -close_button.custom_minimum_size.x
+	close_button.offset_right = 0
+	close_button.offset_top = 0
+	close_button.offset_bottom = close_button.custom_minimum_size.y
+	layer.add_child(close_button)
 	pick_grade(1)
 
 
 func open(me: Dictionary) -> void:
 	visible = true
+	# 도감 창 X 는 `game.gd` 가 나중에 붙여 맨 뒤 자식이다 — 그보다 앞으로 올려야 X 가 이 창 위에서 안 눌린다
+	# (2026-10-02 지적 "자동 등록 설정 창 누른 상태에서도 뒤에 도감창 X버튼이 눌리는 문제")
+	move_to_front()
 	_seen = ""
 	refresh(me)
 

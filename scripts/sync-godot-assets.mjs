@@ -104,6 +104,8 @@ const ICONS = [
   'ui_icon_fitness.png',
   // 장비 도감 · 메뉴 ≡ / X (2026-10-01, docs/features/codex.md · hud.md "메뉴 판")
   'ui_icon_codex.png', 'ui_icon_menu.png', 'ui_icon_menu_close.png',
+  // 설정 단추 — 톱니바퀴 (2026-10-02, docs/features/hud.md "소리 설정")
+  'ui_icon_settings.png',
   'ui_fitness_bench.png', 'ui_fitness_deadlift.png', 'ui_fitness_squat.png',
   'ui_protein_power.png', 'ui_protein_defense.png', 'ui_protein_health.png',
   // 던전 종류 카드 그림 셋 — 토벌(보스 머리) · 시련의 탑 · 보물 창고 (2026-09-23)

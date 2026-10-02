@@ -360,10 +360,6 @@ var _potion_cooling := false
 var _potion_panel: PanelContainer
 var _potion_pct_label: Label
 var _potion_slider: HSlider
-## 소리 설정 창 (메뉴 "설정") — 전체 볼륨. 값은 기기 설정(`SoundSettings`)이다
-var _sound_panel: PanelContainer
-var _sound_label: Label
-var _sound_slider: HSlider
 ## 테스트 스위치 단추 — 이름 → Button
 var _switch_buttons: Dictionary = {}
 ## 테스트 무적 단추. 글자는 **스냅샷(me.invincible)** 만 보고 그린다 (자동사냥과 같다)
@@ -378,6 +374,11 @@ var _skill_list_toggle: Button
 ## me.auto** 로만 정한다 — 눌린 것으로 지레 바꾸면 판정이 거절했을 때 화면만
 ## 켜진 채로 남는다
 var _auto_cell: PanelContainer
+## 물약 칸 뒤 · 자동사냥 칸 앞의 틈 — 샌드백 존에서 칸과 같이 숨긴다 (`_refresh_sandbag_dock`)
+var _potion_gap: Control
+## 물약 칸을 감싼 자리 (`_build_potion_cell`) — 샌드백 존에서 칸과 같이 숨긴다
+var _potion_seat: Control
+var _auto_gap: Control
 ## 켜져 있는 동안 칸 위에서 도는 화살표 고리
 var _auto_spin: TextureRect
 ## 오른쪽 위 메뉴 단추 전부 — 순서는 정보 · 스킬 · 강화 · 크리스탈 · 가방 · 던전 · 헬스 · 도감 · (랭킹) · 설정.
@@ -411,6 +412,8 @@ var _codex_panel: CodexPanel
 var _store_panel: StorePanel
 ## 강화 창을 도감 [강화] 로 열었나 — 닫으면 도감으로 돌아간다 (`_back_to_codex`)
 var _enhance_from_codex := false
+## 설정 창 (메뉴 "설정") — 헬스 창과 같은 층(10) · 전체 화면 · 탭 소리 / 아이템 습득 (settings_panel.gd)
+var _settings_panel: SettingsPanel
 var _skill_panel: PanelContainer
 ## 스킬창. 틀은 한 번 짓고 `_redraw_skills` 가 채운다
 var _skill_big: PanelContainer
@@ -833,7 +836,6 @@ func _build_persistent() -> void:
 	_build_rank_panel()
 	_build_sandbag_panel()
 	_build_potion_panel()
-	_build_sound_panel()
 	_build_debug_panel()
 	_enhance = EnhancePopup.make(self)
 	_ui_root.add_child(_enhance)
@@ -857,7 +859,6 @@ func _build_persistent() -> void:
 	_close_button(_rank_panel, _toggle_rank, 0)
 	_close_button(_sandbag_panel, _toggle_sandbag, 0)
 	_close_button(_potion_panel, _toggle_potion_panel, 0)
-	_close_button(_sound_panel, _toggle_sound_panel, 0)
 	_close_button(_npc_panel, func() -> void: _npc_panel.visible = false, 0)
 
 
@@ -3215,6 +3216,8 @@ func _build_skill_bar() -> void:
 
 	var dock := HBoxContainer.new()
 	dock.add_theme_constant_override("separation", 5)
+	# 샌드백 존에서 양옆 칸을 숨겨도 막대가 가운데에 남게 (`_refresh_sandbag_dock`)
+	dock.alignment = BoxContainer.ALIGNMENT_CENTER
 	column.add_child(dock)
 	_build_potion_cell(dock)
 
@@ -3248,10 +3251,10 @@ func _build_skill_bar() -> void:
 
 	# 자동사냥 칸 — 막대 오른쪽 (2026-10-02). 켜지면 칸 위에서 화살표 고리가 돈다.
 	# 막대에서 한 뼘 띄운다
-	var gap := Control.new()
-	gap.custom_minimum_size = Vector2(AUTO_GAP, 0)
-	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	dock.add_child(gap)
+	_auto_gap = Control.new()
+	_auto_gap.custom_minimum_size = Vector2(AUTO_GAP, 0)
+	_auto_gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dock.add_child(_auto_gap)
 
 	_auto_cell = _make_skill_cell(AUTO_CELL, "ui_quick_slot", _toggle_auto, QUICK_MARGIN)
 	# **테두리를 없앤다** (2026-09-20 요청) — 같은 테를 두르면 퀵슬롯과 구분이 안 된다
@@ -3337,9 +3340,9 @@ func _build_skill_bar() -> void:
 	# 그림은 월계관 두른 금 트로피(`ui_icon_rank`)
 	if _transport.online():
 		_menu_cells.append(_icon_button("ui_icon_rank", "랭킹", _toggle_rank, MENU_BTN, true))
-	# 설정 — 메뉴 맨 끝 (2026-09-30 요청 "볼륨 조절 하는 기능 추가해"). 지금은 소리 크기만 있다.
-	# 그림은 톱니바퀴(`ui_icon_settings`, 2026-10-02)
-	_menu_cells.append(_icon_button("ui_icon_settings", "설정", _toggle_sound_panel, MENU_BTN, true))
+	# 설정 — 메뉴 맨 끝 (2026-09-30 요청 "볼륨 조절 하는 기능 추가해"). 2026-10-02 에 전체 화면 창이 됐다
+	# — 탭 소리 / 아이템 습득. 그림은 톱니바퀴(`ui_icon_settings`)
+	_menu_cells.append(_icon_button("ui_icon_settings", "설정", _toggle_settings, MENU_BTN, true))
 	# 평소 줄엔 `MENU_QUICK` 넷만, 나머지는 펼친 판의 격자로 (2026-10-01 요청 그림)
 	for cell in _menu_cells:
 		var hit: Button = cell.get_node("hit")
@@ -3430,11 +3433,12 @@ func _build_potion_cell(dock: HBoxContainer) -> void:
 	seat.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	seat.add_child(_potion_cell)
 	dock.add_child(seat)
+	_potion_seat = seat
 
-	var gap := Control.new()
-	gap.custom_minimum_size = Vector2(AUTO_GAP, 0)
-	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	dock.add_child(gap)
+	_potion_gap = Control.new()
+	_potion_gap.custom_minimum_size = Vector2(AUTO_GAP, 0)
+	_potion_gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dock.add_child(_potion_gap)
 
 
 ## 칸 오른쪽 위 작은 "설정" 단추 — 물약 칸·자동사냥 칸. 칸의 누름(hit)보다 **뒤에**
@@ -4987,6 +4991,22 @@ func _build_gate_panel() -> void:
 	_store_panel.visibility_changed.connect(func(): store_back.visible = _store_panel.visible)
 	top.add_child(_store_panel)
 	_close_button(_store_panel, _toggle_store, 0)
+	# 설정 창도 같은 층·같은 결이다 → docs/features/hud.md "설정 창"
+	_settings_panel = SettingsPanel.make(_frame_box, _inv_button)
+	_settings_panel.theme = _ui_root.theme
+	_settings_panel.loot_skip_changed.connect(func(grades: Array) -> void:
+		_transport.send(&"lootSkip", {"grades": grades})
+	)
+	var settings_back := ColorRect.new()
+	settings_back.name = "SettingsBack"
+	settings_back.color = DungeonPanel.CARD_DARK
+	settings_back.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	settings_back.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	settings_back.visible = false
+	top.add_child(settings_back)
+	_settings_panel.visibility_changed.connect(func(): settings_back.visible = _settings_panel.visible)
+	top.add_child(_settings_panel)
+	_close_button(_settings_panel, _toggle_settings, 0)
 
 
 ## ≡ 를 눌러 펼치는 메뉴 판 (2026-10-01 요청: "오른쪽 위에 x버튼을 평소에는 … 3줄 짜리 ui 아이콘 만들고
@@ -5049,6 +5069,7 @@ func _open_gate() -> void:
 	_fitness_panel.visible = false
 	_codex_panel.visible = false
 	_store_panel.visible = false
+	_settings_panel.visible = false
 	_gate_panel.open(_shown_zone)
 
 
@@ -5062,6 +5083,7 @@ func _toggle_dungeon() -> void:
 	_codex_panel.visible = false
 	_sandbag_panel.visible = false
 	_store_panel.visible = false
+	_settings_panel.visible = false
 	_dungeon_panel.entries = _dungeon_entries()
 	_dungeon_panel.open(_shown_zone)
 
@@ -5091,6 +5113,7 @@ func _toggle_fitness() -> void:
 	_codex_panel.visible = false
 	_sandbag_panel.visible = false
 	_store_panel.visible = false
+	_settings_panel.visible = false
 	_fitness_panel.refresh(_me())
 	_fitness_panel.open()
 
@@ -5105,6 +5128,7 @@ func _toggle_codex() -> void:
 	_fitness_panel.visible = false
 	_sandbag_panel.visible = false
 	_store_panel.visible = false
+	_settings_panel.visible = false
 	_codex_panel.refresh(_me())
 	_codex_panel.open()
 
@@ -5118,9 +5142,25 @@ func _toggle_store() -> void:
 	_dungeon_panel.visible = false
 	_fitness_panel.visible = false
 	_sandbag_panel.visible = false
+	_settings_panel.visible = false
 	if _codex_panel.visible:
 		_codex_panel.close_panel()
 	_store_panel.open()
+
+
+## 설정 단추. 열려 있으면 닫는다. 헬스·도감 창과 한 층이라 그 넷을 닫고 연다
+func _toggle_settings() -> void:
+	if _settings_panel.visible:
+		_settings_panel.close_panel()
+		return
+	_gate_panel.visible = false
+	_dungeon_panel.visible = false
+	_fitness_panel.visible = false
+	_sandbag_panel.visible = false
+	_store_panel.visible = false
+	_codex_panel.visible = false
+	_settings_panel.refresh(_me())
+	_settings_panel.open()
 
 
 ## 문을 눌렀다. **거리와 상관없이 바로 창을 연다** (2026-09-18 요청: "포탈까지
@@ -5166,6 +5206,18 @@ func _draw_trial_hud() -> void:
 func _refresh_home_button() -> void:
 	if _home_button != null:
 		_home_button.visible = _shown_zone != "" and _shown_zone != GameData.start_zone()
+
+
+## 샌드백 존에서는 물약 칸·자동사냥 칸을 숨긴다 (2026-10-02 요청) — 카운트가 끝나면 판정이 저절로 치고
+## (`World._drive_sandbag_auto`), 샌드백은 때리지 않으니 물약도 쓸 일이 없다
+func _refresh_sandbag_dock() -> void:
+	if _auto_cell == null:
+		return
+	var shown := _shown_zone != Sandbag.zone()
+	for node in [_potion_seat, _potion_gap, _auto_gap, _auto_cell]:
+		node.visible = shown
+	if not shown:
+		_potion_panel.visible = false
 
 
 ## "마을가기" 단추 — 차원문 창에서 마을을 고른 것과 같은 `travel` 요청이다 (World 가 다시 본다)
@@ -5214,6 +5266,7 @@ func _build_zone(zone_id: String) -> void:
 	add_child(_zone_node)
 	_shown_zone = zone_id
 	_refresh_home_button()
+	_refresh_sandbag_dock()
 	# 이펙트 셰이더를 미리 굽는다 — 스킬을 처음 쓸 때 멈칫하지 않게 (한 게임에 한 번)
 	if _camera != null:
 		FxWarm.run(self, _camera, _ui_root.theme.default_font if _ui_root != null and _ui_root.theme != null else null)
@@ -6169,6 +6222,7 @@ func _refresh_status(me: Dictionary) -> void:
 	_redraw_char(me)
 	_fitness_panel.refresh(me)
 	_codex_panel.refresh(me)
+	_settings_panel.refresh(me)
 	var max_hp := maxf(1.0, float(me.stats.maxHp))
 	_hp_bar.max_value = max_hp
 	_hp_bar.value = float(me.hp)
@@ -6236,74 +6290,6 @@ func _refresh_potion(me: Dictionary) -> void:
 		_potion_pct_label.text = "HP %d%% 이하" % pct if pct > 0 else "자동 끔"
 		# 신호 없이 옮긴다 — 신호를 내면 받은 값을 다시 보내는 되먹임이 된다
 		_potion_slider.set_value_no_signal(pct)
-
-
-## 소리 설정 창 — 전체 볼륨을 -/+ (10 씩)와 슬라이더로 고른다. 0 이 "소리 끔".
-## 판정이 아니라 기기 설정이라 서버에 보내지 않고 `SoundSettings` 가 바로 걸고 저장한다
-func _build_sound_panel() -> void:
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_ui_root.add_child(center)
-	_sound_panel = _window_panel()
-	_sound_panel.name = "sound_panel"
-	center.add_child(_sound_panel)
-
-	var side := VBoxContainer.new()
-	side.custom_minimum_size = Vector2(300, 0)
-	side.add_theme_constant_override("separation", 12)
-	_sound_panel.add_child(side)
-	_stone_title(side, "소리 설정", 20, "ui_icon_settings")
-	side.add_child(_inv_label("전체 볼륨 — 0 이면 소리를 끈다", 14, INV_TEXT))
-
-	var row := HBoxContainer.new()
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 12)
-	side.add_child(row)
-	# ASCII "-" — 빼기 기호(U+2212)는 한글 폰트 부분집합에 없다 (물약 창과 같다)
-	var down := _inv_button("-", _sound_step.bind(-1))
-	down.name = "sound_down"
-	row.add_child(down)
-	_sound_label = _inv_label("", 20, INV_GOLD_HI)
-	_sound_label.custom_minimum_size = Vector2(110, 0)
-	_sound_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	row.add_child(_sound_label)
-	var up := _inv_button("+", _sound_step.bind(1))
-	up.name = "sound_up"
-	row.add_child(up)
-
-	_sound_slider = HSlider.new()
-	_sound_slider.name = "sound_slider"
-	_sound_slider.min_value = 0
-	_sound_slider.max_value = SoundSettings.MAX
-	_sound_slider.step = SoundSettings.STEP
-	_sound_slider.tick_count = SoundSettings.MAX / SoundSettings.STEP + 1
-	_sound_slider.ticks_on_borders = true
-	_sound_slider.custom_minimum_size = Vector2(0, 32)
-	_sound_slider.value_changed.connect(func(value: float) -> void: _set_sound(roundi(value)))
-	side.add_child(_sound_slider)
-	_show_sound(SoundSettings.volume())
-
-
-func _toggle_sound_panel() -> void:
-	_sound_panel.visible = not _sound_panel.visible
-	if _sound_panel.visible:
-		_sound_panel.get_parent().move_to_front()
-		_show_sound(SoundSettings.volume())
-
-
-func _sound_step(dir: int) -> void:
-	_set_sound(SoundSettings.volume() + dir * SoundSettings.STEP)
-
-
-func _set_sound(value: int) -> void:
-	_show_sound(SoundSettings.set_volume(value))
-
-
-## 글자와 손잡이를 건 값에 맞춘다 — 손잡이는 신호 없이 (신호를 내면 다시 거는 되먹임이 된다)
-func _show_sound(value: int) -> void:
-	_sound_label.text = "%d%%" % value if value > 0 else "소리 끔"
-	_sound_slider.set_value_no_signal(value)
 
 
 func _drink_potion() -> void:

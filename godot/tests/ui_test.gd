@@ -362,30 +362,43 @@ func _case_sound(game: Node3D) -> void:
 		return
 	cell.find_child("hit", true, false).pressed.emit()
 	await process_frame
-	var panel: Control = game._sound_panel
-	if not panel.visible:
-		_fail("설정을 눌렀는데 소리 창이 안 떴다")
+	var panel: SettingsPanel = game._settings_panel
+	if not panel.visible or panel.tab_index() != 0:
+		_fail("설정을 눌렀는데 설정 창(소리 탭)이 안 떴다")
 	var bus := AudioServer.get_bus_index("Master")
-	game._set_sound(50)
+	var label := panel.sound_label()
+	panel.set_sound(50)
 	panel.find_child("sound_up", true, false).pressed.emit()
 	await process_frame
-	if SoundSettings.volume() != 60 or game._sound_label.text != "60%" \
+	if SoundSettings.volume() != 60 or label.text != "60%" \
 			or absf(AudioServer.get_bus_volume_db(bus) - linear_to_db(0.6)) > 0.01:
 		_fail("+ 를 눌렀는데 볼륨 %d · 글자 '%s' · %.2fdB" % [
-			SoundSettings.volume(), game._sound_label.text, AudioServer.get_bus_volume_db(bus)])
+			SoundSettings.volume(), label.text, AudioServer.get_bus_volume_db(bus)])
 	var slider: HSlider = panel.find_child("sound_slider", true, false)
 	slider.value = 0
 	await process_frame
-	if SoundSettings.volume() != 0 or not AudioServer.is_bus_mute(bus) or game._sound_label.text != "소리 끔":
+	if SoundSettings.volume() != 0 or not AudioServer.is_bus_mute(bus) or label.text != "소리 끔":
 		_fail("슬라이더를 0 으로 끌었는데 음소거가 아니다 (볼륨 %d · 글자 '%s')" % [
-			SoundSettings.volume(), game._sound_label.text])
+			SoundSettings.volume(), label.text])
 	panel.find_child("sound_down", true, false).pressed.emit()
 	if SoundSettings.volume() != 0:
 		_fail("0 아래로 내려갔다: %d" % SoundSettings.volume())
-	game._set_sound(before)
+	panel.set_sound(before)
 	if AudioServer.is_bus_mute(bus):
 		_fail("되돌렸는데 음소거가 남았다")
-	game._toggle_sound_panel()
+	# 아이템 습득 탭 — 줄을 누르면 장부에 들어가고 글자가 바뀐다 (판정은 settings_test)
+	panel.pick_tab(1)
+	(panel.find_child("loot_1", true, false) as Button).pressed.emit()
+	await process_frame
+	await process_frame
+	if Ledger.loot_skip(game._me()) != [1] or panel.loot_state(1) != "안 줍기":
+		_fail("일반 줄을 눌렀는데 장부 %s · 글자 '%s'" % [Ledger.loot_skip(game._me()), panel.loot_state(1)])
+	(panel.find_child("loot_1", true, false) as Button).pressed.emit()
+	await process_frame
+	if Ledger.loot_skip(game._me()) != []:
+		_fail("다시 눌렀는데 장부가 안 비었다: %s" % [Ledger.loot_skip(game._me())])
+	panel.pick_tab(0)
+	game._toggle_settings()
 
 
 func _case_potion(game: Node3D) -> void:
@@ -982,20 +995,25 @@ func _case_sandbag(game: Node3D) -> void:
 	if not game._trial_hud.visible:
 		_fail("샌드백 시계 줄이 없다")
 	seen += game._trial_hud.text
+	if game._potion_cell.is_visible_in_tree() or game._auto_cell.is_visible_in_tree() or game._auto_gap.visible:
+		_fail("샌드백에 물약·자동사냥 칸이 남았다")
 
 	# 카운트를 건너뛰고 재기 시작 → 한 대 넣고 → 시간 끝
 	var run: Dictionary = game._transport.snapshot().dungeon
 	run.starts_at = Time.get_ticks_msec() - 1
+	# 재기 시작하면 저절로 쳐서 피해가 늘어난다 — 시계 줄은 넣어 둔 1,234 이상이면 된다
 	run.damage = 1234
 	await process_frame
-	if not game._trial_hud.text.contains("누적 피해 1,234"):
+	var shown := int(game._trial_hud.text.get_slice("누적 피해 ", 1).replace(",", ""))
+	if shown < 1234 or not game._trial_hud.text.contains("누적 피해 "):
 		_fail("시계 줄에 누적 피해가 없다: '%s'" % game._trial_hud.text)
 	seen += game._trial_hud.text + count.text
 	run.ends_at = Time.get_ticks_msec() - 1
 	for i in 3:
 		await process_frame
 	var result: DungeonResult = game._dungeon_result
-	if not result.visible or result._verdict.text != "1,234" or not result._count.text.contains("1,234"):
+	var dealt := DungeonResult.comma(int(run.damage))
+	if not result.visible or result._verdict.text != dealt or not result._count.text.contains(dealt):
 		_fail("샌드백 결과창: 보임 %s '%s' '%s'" % [result.visible, result._verdict.text, result._count.text])
 	if count.visible or game._trial_hud.visible:
 		_fail("결과가 났는데 카운트·시계가 남았다")
@@ -1020,7 +1038,7 @@ func _case_sandbag(game: Node3D) -> void:
 		_fail("기록 뒤 다시 열면 1위: '%s'" % game._sandbag_note.text)
 	# 날짜별 기록 — 일곱 날 · 맨 위가 오늘이고 방금 기록
 	var day_cells: Array = game._sandbag_days.get_children().filter(func(c): return not c.is_queued_for_deletion())
-	if day_cells.size() != Sandbag.history_days() * 2 or (day_cells[1] as Label).text != "1,234":
+	if day_cells.size() != Sandbag.history_days() * 2 or (day_cells[1] as Label).text != dealt:
 		_fail("날짜별 기록: %d칸 '%s'" % [day_cells.size(), (day_cells[1] as Label).text if day_cells.size() > 1 else ""])
 	game._toggle_sandbag()
 	result.confirm_button().pressed.emit()
@@ -1028,6 +1046,8 @@ func _case_sandbag(game: Node3D) -> void:
 		await process_frame
 	if result.visible or game._shown_zone != GameData.start_zone():
 		_fail("확인을 눌렀는데 마을로 안 나갔다: %s" % game._shown_zone)
+	if not game._potion_cell.is_visible_in_tree() or not game._auto_cell.is_visible_in_tree():
+		_fail("마을에 나왔는데 물약·자동사냥 칸이 안 돌아왔다")
 	else:
 		print("  샌드백 랭킹전: 입장 창 → 카운트 '3' → '%s' → 결과 '%s' · %s → 마을" % [
 			"누적 피해", result._verdict.text, result._count.text])

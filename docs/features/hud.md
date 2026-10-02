@@ -52,8 +52,11 @@
 | ″ | `_build_potion_cell` · `_refresh_potion` · `_build_potion_panel` · `_potion_step` — **물약 칸**과 설정 창(−/+ · 슬라이더). 아래 "물약 칸" |
 | `godot/world/world.gd` | `drink_potion` · `set_potion_pct` · `_drive_potions` — 물약 판정 (저절로 마시기는 `step` 에서) |
 | `godot/game/sound_settings.gd` | **소리 크기** (`SoundSettings`) — Master 버스 볼륨 0~100, `user://settings.cfg` 에 저장. 아래 "소리 설정" |
-| `godot/game/game.gd` | `_build_sound_panel` · `_sound_step` · `_set_sound` · `_show_sound` — 메뉴 "설정" 으로 뜨는 소리 창 |
-| `godot/tests/ui_test.gd` | `_case_sound` — 설정 단추로 창 · +/− · 슬라이더가 버스 볼륨을 바꾸고 0 이면 음소거 |
+| `godot/game/settings_panel.gd` | **설정 창** (`SettingsPanel`) — 전체 화면 · 탭 소리 / 아이템 습득. 아래 "설정 창" |
+| `godot/game/game.gd` | `_toggle_settings` — 메뉴 "설정". 헬스·도감 창과 한 층이라 서로 닫는다. 습득 줄을 누르면 `lootSkip` 을 보낸다 |
+| `godot/world/ledger.gd` | `set_loot_skip` · `loot_skip` · `clean_loot_skip` — 안 주울 장비 등급(장부 칸 `loot_skip`). `kill` 이 거른다 |
+| `godot/tests/ui_test.gd` | `_case_sound` — 설정 단추로 창 · +/− · 슬라이더가 버스 볼륨을 바꾸고 0 이면 음소거 · 습득 줄이 장부를 바꾼다 |
+| `godot/tests/settings_test.gd` | 장부 칸 · 서버 요청 · 다 끄면 장비 0 · 골드는 그대로(굴림 순서) · 저장 · 창(전체 화면 · 탭 · 줄 요청) |
 | `godot/tests/potion_test.gd` | 저절로 마시기 · 쿨타임 10초 · 직접 마시기 · 기준 자르기 · 저장 |
 | `godot/tests/ui_test.gd` | `_case_potion` — 퀵슬롯 옆 자리 · 설정 창 +/− · 눌러서 마시고 쿨타임이 돈다. `_case_auto_no_setting` — 자동사냥 칸에 설정 단추가 없다 |
 | `godot/game/chat_log.gd` | **채팅창** (`ChatLog`) — 왼쪽 아래 구석, 장비 획득·강화·말을 한 줄씩 적는다. 아래 "채팅창" |
@@ -415,7 +418,7 @@ frame.add_child(border)         # 채움 **다음**에 붙여야 위로 온다
 | 메뉴 X | 엇갈린 두 검 — 판이 펼쳐지면 ≡ 자리에 선다 | `ui_icon_menu_close` |
 | 설계 | 두루마리 도면 위 컴퍼스 | `ui_icon_design` |
 | 랭킹 | 받침 달린 트로피 | `ui_icon_rank` |
-| 설정 | 톱니바퀴 — 메뉴 맨 끝 (2026-10-02, 아래 "소리 설정"). 세 장 중 셋째(팔레트 거리가 가장 작다) | `ui_icon_settings` |
+| 설정 | 톱니바퀴 — 메뉴 맨 끝 (2026-10-02, 아래 "설정 창"). 세 장 중 셋째(팔레트 거리가 가장 작다) | `ui_icon_settings` |
 | 자동사냥 | 장검 둘이 X자 | `ui_icon_auto` |
 | 물약 | 코르크 막은 둥근 병 | `ui_icon_potion` |
 
@@ -586,8 +589,8 @@ frame.add_child(border)         # 채움 **다음**에 붙여야 위로 온다
 
 요청: "볼륨 조절 하는 기능 추가해".
 
-- **자리** — 오른쪽 위 메뉴 **맨 끝**의 "설정" 단추 → 가운데 창. 물약 설정 창과 같은 틀
-  (-/+ 단추 · 가운데 글자 · `HSlider`). 0 ~ 100, **10 씩**. **처음 값은 70** (`SoundSettings.DEFAULT` —
+- **자리** — 메뉴 판 맨 끝 "설정" → **설정 창의 "소리" 탭** (2026-10-02 부터, 아래 "설정 창").
+  -/+ 단추 · 가운데 글자 · `HSlider`. 0 ~ 100, **10 씩**. **처음 값은 70** (`SoundSettings.DEFAULT` —
   처음엔 100 이었는데 같은 날 "기본 볼륨을 지금의 70%로" 요청으로 줄였다. 이미 고른 기기는 제 값 그대로).
   0 이면 "소리 끔" — 버스를 음소거한다
   (`linear_to_db(0)` 이 -inf 라 따로 막는다).
@@ -600,6 +603,33 @@ frame.add_child(border)         # 채움 **다음**에 붙여야 위로 온다
   그 전엔 그림이 없어 네모가 비고 이름 글자 "설정" 만 섰다. [ui-art-style.md](ui-art-style.md) "HUD 아이콘 기준" 의
   완성 프롬프트 그대로(`<무엇>` = `a single sturdy old cogwheel gear with thick rounded teeth and a round hub`,
   `<쓰임>` = `Settings`), 참고 그림 둘, 세 장 — 셋 다 팔레트 띠 없이 같은 줄기로 나왔다.
+
+## 설정 창 (2026-10-02) ★
+
+요청: "설정 아이콘 만들고 설정 UI를 전체화면으로 만들어. 설정 중에 습득할 아이템도 설정할 수 있는 옵션 만들어".
+
+```
+돌판 틀(ui_dungeon_card, 전체 화면) ──────────────── X
+│ 소리 │ 아이템 습득 │          ← 탭 (글자만, 고른 것은 금빛 + 밑줄 — 헬스·도감과 같다)
+├──────────────────────────────────┤
+│           주울 장비 등급            │
+│  일반 ..................... 줍기   │  ← 줄을 누르면 줍기 ↔ 안 줍기
+│  고급 ..................... 안 줍기 │
+│  … 태초                            │
+```
+
+- **헬스·도감 창과 같은 층·같은 결** — 전체 화면 돌판 틀 + 뒤에 불투명한 판(`SettingsBack`), X 로 닫는다.
+  한 층이라 차원문·던전·헬스·도감 창과 서로 닫는다 (`_toggle_settings` 와 각 토글).
+- **소리 탭** — 위 "소리 설정" 그대로. 기기 설정이라 창이 `SoundSettings` 를 바로 건다.
+- **아이템 습득 탭** — 장비 **등급 일곱 줄**(일반 ~ 태초, 등급 색 글자). 끈 등급의 장비는 떨어져도
+  **가방에 넣지 않는다.** 골드·크리스탈은 거르지 않는다 (크리스탈은 한 칸에 겹쳐 가방을 채우지 않는다).
+  **처음은 다 줍는다.**
+- **습득은 장부다** ★ — 가방에 무엇이 들어오는지가 바뀌므로 소리처럼 기기 설정으로 두지 않았다.
+  장부 칸 `loot_skip`(안 주울 등급 목록) · 요청 `set_loot_skip`(서버 `OPS` 의 `"a"`) · 저장(`save.gd`)에 남는다.
+  창은 줄을 누를 때 **목록 전체**를 `lootSkip` 으로 보내고, 글자는 장부 답이 오면 바뀐다.
+- **거른다고 굴림을 건너뛰지 않는다** ★ — `Ledger.kill` 은 드롭(옵션까지)을 다 굴린 뒤 가방에만 안 넣는다.
+  굴림 순서가 바뀌면 같은 씨앗에서 다른 것이 나와 서버·로컬이 어긋난다 (`settings_test` 가 골드로 대 본다).
+- 옛 계정·옛 저장에는 칸이 없다 → `Ledger.loot_skip` 이 빈 목록(다 줍는다)으로 읽는다.
 
 ## 채팅창 (2026-09-23) ★
 

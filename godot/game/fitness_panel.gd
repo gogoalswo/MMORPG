@@ -10,9 +10,9 @@ extends PanelContainer
 ##   │ 벤치프레스 │ 데드리프트 │ 스쿼트 │           ← 탭 (고른 것 금빛 + 밑줄, 두드릴 수 있으면 빨간 점)
 ##   ├──────────────────────────────────────┬────────────────────┤
 ##   │          벤치프레스 8단계              │     획득 효과       │
-##   │      <     [문장 그림]     >           │ ◆ 공격력 +12% +2%   │
+##   │      <     [문장 그림]     >           │ ◆ 공격력 +12% → +14%│
 ##   │   ───────────────────────────         │ ◆ 방어력 +5%        │
-##   │   다음 단계     공격력 +2%             │ ◆ 체력 +3%          │
+##   │ 강화 성공 시   공격력 +2% 상승          │ ◆ 체력 +3%          │
 ##   │            ●  ○  ○                    │        재료         │
 ##   │                                       │ [통] 파워 프로틴     │
 ##   │                                       │      120 / 75       │
@@ -322,6 +322,18 @@ func title_text() -> String:
 	return _title.text
 
 
+## 획득 효과 줄들의 글자 (줄마다 조각을 띄어 이음) — 테스트가 본다
+func effect_texts() -> Array:
+	var out: Array = []
+	for line in _effects.get_children():
+		var parts: Array = []
+		for part in line.get_children():
+			if part is Label:
+				parts.append((part as Label).text)
+		out.append(" ".join(parts))
+	return out
+
+
 ## 빨간 점이 켜진 탭 (운동 id) — 테스트가 본다
 func dotted_tabs() -> Array:
 	var out: Array = []
@@ -381,8 +393,8 @@ func _redraw() -> void:
 		_next_label.text = "최대 단계"
 		_next_value.text = "%s +%d%%" % [str(kind.statName), int(Fitness.bonus(stage))]
 	else:
-		_next_label.text = "다음 단계"
-		_next_value.text = "%s +%d%%" % [str(kind.statName), int(step.get("gain", 0))]
+		_next_label.text = "강화 성공 시"
+		_next_value.text = "%s +%d%% 상승" % [str(kind.statName), int(step.get("gain", 0))]
 
 	for child in _effects.get_children():
 		_effects.remove_child(child)
@@ -396,9 +408,11 @@ func _redraw() -> void:
 		line.add_child(_label(
 			"%s +%d%%" % [str(each.statName), int(Fitness.bonus(each_stage))], 21, IVORY if index == _kind else DIM
 		))
-		# 받은 그림의 "+1" (하늘색) — 고른 운동의 다음 단계 몫
+		# 받은 그림의 "+1" 자리 — 몫(+2%)만 붙이면 누계에 더하는 건지 헷갈려서(2026-10-02 지적)
+		# 강화하면 **얼마가 되는지**를 화살표로 보인다: "체력 +5% → +7%"
 		if index == _kind and not top:
-			line.add_child(_label("+%d%%" % int(step.get("gain", 0)), 21, NEXT))
+			line.add_child(_label("→", 21, DIM))
+			line.add_child(_label("+%d%%" % int(Fitness.bonus(each_stage + 1)), 21, NEXT))
 		_effects.add_child(line)
 
 	_protein_icon.texture = _icon.call("ui_protein_" + str(kind.protein)) if _icon.is_valid() else null

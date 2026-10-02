@@ -2780,6 +2780,14 @@ func auto_equip(player_id: String) -> void:
 	_ledger_call(player, &"auto_equip")
 
 
+## 가방에서 버린다 — 가방 번호 목록 (`Ledger.discard`). 장비만 · 잠근 것은 건너뛴다
+func discard(player_id: String, indices: Array) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	_ledger_call(player, &"discard", [indices])
+
+
 ## 장비 잠금을 뒤집는다 (`Ledger.toggle_lock`) — where 는 "bag"(가방 번호) · "equip"(슬롯)
 func toggle_lock(player_id: String, where: String, key: Variant) -> void:
 	var player: Dictionary = _players.get(player_id, {})

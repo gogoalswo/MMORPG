@@ -23,7 +23,7 @@
 ```bash
 npm run sync:godot     # 에셋을 godot/assets 로 (모델은 텍스처를 512 로 줄여서)
 npm run export:godot   # shared 표를 godot/data/*.json 으로
-npm run test:godot     # 고도 테스트 — 통과는 한 줄, 실패만 자세히
+npm run test:godot     # 고도 테스트 — 통과는 한 줄, 실패만 자세히 (의존성·동기화·에셋 등록 검사를 스스로 한다)
 ```
 
 블렌더도 설치 없이 쓴다 — `npm run blender -- --python 스크립트.py` (없으면 알아서

@@ -18,12 +18,28 @@ if [ -z "$GODOT" ]; then
   exit 1
 fi
 
+# **에셋을 스스로 갖춘다** ★ (2026-10-02). 새 컨테이너에는 `godot/assets` 도 `node_modules`
+# 도 없어서, 병합 직전에 이것만 돌리면 폰트·모델을 못 찾아 12개가 깨졌다. CI 는 앞 단계에서
+# `npm ci` · `sync:godot` 을 해서 안 걸렸다. 의존성이 없거나 lock 보다 낡았으면 받고,
+# 동기화는 매번 한다 (바뀐 것만 복사해서 1초 안쪽). 목록에 있는데 커밋 안 된 것 ·
+# 코드가 부르는데 목록에 없는 것은 여기서 멈춘다 — 배포 화면에서만 그림이 빠지던 일이다
+if [ ! -d node_modules ] || [ package-lock.json -nt node_modules/.package-lock.json ]; then
+  echo "의존성 받는 중 (npm ci)"
+  npm ci --silent --no-audit --no-fund >/dev/null || { echo "npm ci 실패"; exit 1; }
+fi
+node scripts/sync-godot-assets.mjs --quiet || exit 1
+node scripts/check-godot-assets.mjs || exit 1
+
 # **클래스 캐시가 낡았으면 먼저 임포트한다** ★ (2026-09-24). 다른 세션이 `class_name` 을
 # 새로 넣은 것(`DragScroll`)을 받으면 캐시(`godot/.godot`)가 그 이름을 몰라 `game.gd` 가
 # 파스 에러를 낸다. CI 는 늘 `--import` 부터 해서 안 걸리고, 로컬만 걸렸다.
-# 스크립트가 캐시보다 새로울 때만 한다 — 바뀐 게 없으면 8초를 안 쓴다
+# 스크립트가 캐시보다 새로울 때만 한다 — 바뀐 게 없으면 8초를 안 쓴다.
+# **에셋이 새로 들어와도 한다** (2026-10-02) — 에셋 없이 한 번 돌아 굳은 캐시가 남아서,
+# 동기화한 뒤에도 9개가 "모델이 없다" 로 깨졌다. `.source.json` 은 동기화가 매번 쓰니 뺀다
 cache="godot/.godot/global_script_class_cache.cfg"
-if [ ! -f "$cache" ] || [ -n "$(find godot -name '*.gd' -newer "$cache" -not -path 'godot/.godot/*' -print -quit)" ]; then
+if [ ! -f "$cache" ] \
+  || [ -n "$(find godot -name '*.gd' -newer "$cache" -not -path 'godot/.godot/*' -print -quit)" ] \
+  || [ -n "$(find godot/assets -type f -newer "$cache" -not -name '.source.json' -print -quit)" ]; then
   "$GODOT" --headless --path godot --import >/dev/null 2>&1
   touch "$cache"
 fi

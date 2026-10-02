@@ -1364,6 +1364,10 @@ func _case_bag(game: Node3D) -> void:
 			if stat_labels[index].visible:
 				wrote += stat_labels[index].text + "  "
 		print("  스탯 상자: %s" % wrote.strip_edges())
+	# 상자 높이는 줄 수와 상관없이 고정이다 (2026-10-02 요청) — 숨지도, 세 줄을 넘겨 자라지도 않는다
+	var stat_box: PanelContainer = game._stat_box
+	if not stat_box.visible or absf(stat_box.size.y - game.STAT_BOX_HEIGHT) > 0.5:
+		_fail("스탯 상자 높이가 %d 고정이어야 하는데 %.1f (보임 %s)" % [game.STAT_BOX_HEIGHT, stat_box.size.y, stat_box.visible])
 
 	# 탭 — 네 개, 고른 것만 바뀐다 (재료 탭은 제작과 함께 없앴다)
 	var tabs: Array = game._tab_buttons

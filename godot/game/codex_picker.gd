@@ -138,7 +138,9 @@ func open(item_id: String, enhance: int, bag: Array) -> void:
 	_bag = bag
 	_choices = []
 	for index in bag.size():
-		if str(bag[index].get("id", "")) == item_id and int(bag[index].get("enhance", 0)) == enhance:
+		# 잠근 것은 고를 수 없다 — 판정(`Ledger.codex_register`)도 거절한다
+		if str(bag[index].get("id", "")) == item_id and int(bag[index].get("enhance", 0)) == enhance \
+				and not Items.is_locked(bag[index]):
 			_choices.append(index)
 	if _choices.is_empty():
 		return

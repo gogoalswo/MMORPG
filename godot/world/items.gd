@@ -317,9 +317,9 @@ static func enhance_reach_odds(from: int, goal: int) -> float:
 
 ## 다중 강화 목록에 드는 칸인가 — 장비이고 강화가 `cap` 아래인 것 중에서
 ## `mode` 가 "all" 이면 전부, "item" 이면 같은 아이템(id·등급), "grade" 면 같은 등급.
-## 재료·+cap 이상은 빠진다. 팝업의 오른쪽 목록 탭과 "모두 담기" 가 쓴다
+## 재료·+cap 이상은 빠진다. **잠근 것도 빠진다** (`is_locked`). 팝업의 오른쪽 목록 탭과 "모두 담기" 가 쓴다
 static func batch_match(stack: Dictionary, mode: String, ref_id: String, grade: int, cap: int) -> bool:
-	if get_item(str(stack.get("id", ""))).is_empty():
+	if get_item(str(stack.get("id", ""))).is_empty() or is_locked(stack):
 		return false
 	if int(stack.get("enhance", 0)) >= mini(cap, max_enhance()):
 		return false
@@ -328,6 +328,12 @@ static func batch_match(stack: Dictionary, mode: String, ref_id: String, grade: 
 		"item": return str(stack.get("id", "")) == ref_id and int(stack.get("grade", 1)) == grade
 		"grade": return int(stack.get("grade", 1)) == grade
 	return false
+
+
+## 잠근 장비인가 — 잠근 것은 판매·강화·도감 등록을 받지 않는다 (2026-10-02 요청).
+## 끼고 벗는 것과 크리스탈은 그대로 된다 → docs/features/inventory-equipment.md "잠금"
+static func is_locked(stack: Dictionary) -> bool:
+	return bool(stack.get("locked", false))
 
 
 ## 굴림값(0~1)에서 결과 하나 — "success" · "keep" · "destroy"

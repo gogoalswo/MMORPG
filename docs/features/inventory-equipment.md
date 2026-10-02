@@ -13,7 +13,9 @@
 | `godot/game/drag_scroll.gd` | `DragScroll` — 칸 목록을 끌어서 내린다 (가방·스킬 목록·강화 목록) |
 | `godot/world/items.gd` | `slot_label(slot, job)` — 칸 이름 · `grade_name` / `grade_color` — 등급 이름·색 (표: `items.json` 의 `gradeNames`·`gradeColors`) |
 | `godot/world/world.gd` | `sort_bag` — 정렬 (등급 높은 것 → 슬롯 순서 → 강화 높은 것). 요청은 `sortBag` · `auto_equip` — 자동 장착, 요청은 `autoEquip` |
-| `godot/world/ledger.gd` | `equip` / `unequip` / `sort_bag` · **`auto_equip` · `gear_power`(자동 장착이 견주는 전투력)** |
+| `godot/world/ledger.gd` | `equip` / `unequip` / `sort_bag` · **`auto_equip` · `gear_power`(자동 장착이 견주는 전투력)** · **`toggle_lock`(잠금)** |
+| `godot/world/items.gd` `is_locked` | 잠근 장비인가 — 장부·강화 팝업 목록(`batch_match`)·도감 창이 같이 쓴다 |
+| `godot/tests/lock_test.gd` | 잠금 — 뒤집기 · 판매/강화/다중 강화/도감 거절 · 도감 자동 고르기가 건너뜀 · 끼고 벗어도 유지 · 요청 |
 | `scripts/build-item-icons.mjs` | 바르코 아이콘 원본 → `public/assets/icons` (배경 걷기 + 128px) |
 | `packages/client/src/ui/inventory.ts` | 옛 웹 창 (지워짐) |
 | `packages/client/src/ui/itemIcons.ts` | 옛 절차적 SVG 아이콘 13종 (지워짐) |
@@ -223,6 +225,24 @@
 - **요약 줄**(`.bag-gear-sum`)은 상태바에 안 나오는 것만 적는다 —
   치명타 / 치명타 데미지 / 공격 속도. 옵션으로만 붙는 값이라 여기가 없으면
   무엇을 끼웠는지 알 방법이 없다.
+
+### 잠금 ★ (2026-10-02)
+요청: "아이템 잠금 기능 넣어. 잠근 아이템은 버리기, 강화, 도감 등록을 못 하도록 막아."
+- **상세 창 단추 줄 맨 왼쪽 "잠금"** — 누르면 `toggleLock {where, key}` → `Ledger.toggle_lock`.
+  잠그면 단추가 **"잠금 해제"**(글자 15 — 76px 에 넣으려고), 다시 누르면 풀린다. 가방 칸·낀 칸 둘 다 된다.
+  단추 셋(잠금·강화·장착)이 76 × 3 + 간격 6 × 2 = **240 = `ITEM_W`** 에 꼭 맞는다 (`ui_test` `_case_lock` 이 잰다).
+- 장부에는 스택에 **`locked: true`** 만 단다 (풀면 키를 지운다). 저장은 스택을 통째로 두므로 따로 할 것이 없다.
+  끼고 벗어도 같은 사전이 옮겨 다녀 잠금이 따라간다. **재료는 잠그지 않는다** — 크리스탈은 한 칸에 겹쳐서
+  새로 들어온 것까지 잠겨 버린다.
+- **잠근 것을 거절하는 판정** (`Items.is_locked`): `sell`(판매 — "잠근 장비는 팔 수 없습니다") ·
+  `enhance`(단일, 낀 것 포함) · `enhance_many`(담겨 와도 건너뛴다) · `codex_register`(고른 칸이면 거절,
+  -1 자동 고르기면 잠근 것을 건너뛴다).
+  - **"버리기" 는 게임에 없다** — 가방에서 물건을 없애는 판정은 판매·강화 파괴·도감 등록·크리스탈 사용뿐이라,
+    버리기에 해당하는 판매를 막았다. 버리기 단추를 새로 만들면 그 판정에도 `is_locked` 를 건다.
+  - 끼기·벗기·정렬·자동 장착·크리스탈(옵션 다시 굴리기)은 **막지 않는다** — 물건이 사라지지 않는다.
+- 화면: 칸 **왼쪽 위에 금빛 "잠금"**(`_make_cell` 의 `lock` 겹 — 강화 배지는 오른쪽 아래라 안 겹친다),
+  상세·비교 창 상태 줄 `보유 중 · 잠금`, **강화 단추 꺼짐**. 강화 팝업 목록은 `batch_match` 가 잠근 것을 빼고,
+  도감 창은 잠근 것을 "가방에 있음" 으로 안 세며(`_owned`) 고르기 창에도 안 띄운다.
 
 ### 자동 장착 ★ (2026-10-02)
 요청: **"인벤토리에 자동장착 버튼 만들어. 내 아이템중에 가장 좋은 아이템으로 자동으로 장착하도록"**.

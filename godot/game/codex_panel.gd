@@ -445,23 +445,27 @@ func _redraw_pick(codex: Dictionary, owned: Dictionary) -> void:
 	_register_button.modulate = Color.WHITE if can else Color(1, 1, 1, 0.45)
 
 
-## 가방 → `{ "아이템 id:강화": 개수 }` — 장비만 센다 (재료는 칸이 없다)
+## 가방 → `{ "아이템 id:강화": 개수 }` — 장비만 센다 (재료는 칸이 없다). **잠근 것은 안 센다** —
+## 등록할 수 없으니 "가방에 있음" 으로 띄우면 눌러도 거절만 당한다
 func _owned(bag: Array) -> Dictionary:
 	var out := {}
 	for stack in bag:
 		var id := str(stack.get("id", ""))
-		if Items.get_item(id).is_empty():
+		if Items.get_item(id).is_empty() or Items.is_locked(stack):
 			continue
 		var key := "%s:%d" % [id, int(stack.get("enhance", 0))]
 		out[key] = int(out.get(key, 0)) + int(stack.get("count", 1))
 	return out
 
 
-## 가방이 바뀌었나만 알면 된다 — 장비의 id · 강화 · 개수만 이어 붙인다 (옵션까지 문자열로 만들지 않는다)
+## 가방이 바뀌었나만 알면 된다 — 장비의 id · 강화 · 개수 · 잠금만 이어 붙인다 (옵션까지 문자열로 만들지 않는다)
 func _bag_key(bag: Array) -> String:
 	var parts := PackedStringArray()
 	for stack in bag:
-		parts.append("%s+%d*%d" % [stack.get("id", ""), int(stack.get("enhance", 0)), int(stack.get("count", 1))])
+		parts.append("%s+%d*%d%s" % [
+			stack.get("id", ""), int(stack.get("enhance", 0)), int(stack.get("count", 1)),
+			"L" if Items.is_locked(stack) else "",
+		])
 	return ",".join(parts)
 
 

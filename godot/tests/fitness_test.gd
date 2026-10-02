@@ -229,6 +229,10 @@ func _case_panel() -> void:
 		_fail("프로틴이 모자란데 강화 단추가 켜져 있다")
 	if not panel.dotted_tabs().is_empty():
 		_fail("두드릴 수 없는데 빨간 점 %s" % [panel.dotted_tabs()])
+	# 고른 운동 줄은 "지금 → 강화하면 될 값" 이다 (몫만 붙이면 헷갈린다, 2026-10-02)
+	var want := "공격력 +%d%% → +%d%%" % [int(Fitness.bonus(3)), int(Fitness.bonus(4))]
+	if panel.effect_texts()[0] != want or "→" in str(panel.effect_texts()[1]):
+		_fail("획득 효과 줄 %s (첫 줄이 '%s' 여야 한다)" % [panel.effect_texts(), want])
 	panel.refresh({"proteins": {"power": 5, "health": 10}, "fitness": {"bench": 3}})
 	if panel.dotted_tabs() != ["squat"]:
 		_fail("스쿼트만 빨간 점이어야 하는데 %s" % [panel.dotted_tabs()])
@@ -251,4 +255,4 @@ func _case_panel() -> void:
 	if inner.x > 1280.0 or inner.y > 720.0:
 		_fail("헬스 창 최소 크기 %s 가 화면(1280x720)보다 크다" % inner)
 	panel.queue_free()
-	print("  창: 제목 · 단추 꺼짐 · 탭 빨간 점 · 강화/자동 요청 · 꺾쇠로 돌기 · 최소 크기 %s" % inner)
+	print("  창: 제목 · 획득 효과 → · 단추 꺼짐 · 탭 빨간 점 · 강화/자동 요청 · 꺾쇠로 돌기 · 최소 크기 %s" % inner)

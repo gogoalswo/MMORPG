@@ -2793,12 +2793,12 @@ func _case_switches(game: Node3D) -> void:
 		if read.call() != was:
 			_fail("%s 단추를 두 번 눌렀는데 원래대로 안 돌아온다" % name)
 	var corner: Rect2 = game._switch_buttons["cooldownOff"].get_global_rect()
-	# 왼쪽 아래 구석은 채팅창 자리라(2026-09-23) 채팅창 바로 위에 치트 목록 여닫기 단추가,
-	# 그 바로 위에 단추 묶음이 선다 (2026-09-25)
-	var chat: Rect2 = game._chat.get_global_rect()
+	# 왼쪽 아래 구석은 채팅창 자리라(2026-09-23) 채팅창 바로 위에 카메라 거리 단추(2026-10-02),
+	# 그 위에 치트 목록 여닫기 단추가, 그 바로 위에 단추 묶음이 선다 (2026-09-25)
+	var chat: Rect2 = game._camera_button.get_global_rect()
 	var toggle: Rect2 = game._cheat_toggle.get_global_rect()
 	if toggle.position.x > 40 or toggle.end.y > chat.position.y or toggle.end.y < chat.position.y - 40:
-		_fail("치트 여닫기 단추가 채팅창 바로 위(왼쪽 아래)가 아니다: %s, 채팅창 %s" % [toggle, chat])
+		_fail("치트 여닫기 단추가 카메라 단추 바로 위(왼쪽 아래)가 아니다: %s, 카메라 단추 %s" % [toggle, chat])
 	if corner.position.x > 40 or corner.end.y > toggle.position.y or corner.end.y < toggle.position.y - 40:
 		_fail("스위치 단추가 여닫기 단추 바로 위가 아니다: %s, 여닫기 %s" % [corner, toggle])
 	# 여닫기 — 누르면 묶음이 숨고 글자가 바뀌며, 다시 누르면 돌아온다

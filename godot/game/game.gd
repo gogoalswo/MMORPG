@@ -372,6 +372,9 @@ var _cheat_toggle: Button
 ## 테스트 모드 스킬 목록과 그것을 여닫는 단추 (2026-09-28) — 치트 여닫기 단추 오른쪽
 var _skill_list: GridContainer
 var _skill_list_toggle: Button
+## 채팅창 바로 위 카메라 거리 단추와 단계 숫자 (hud.md "카메라 거리")
+var _camera_button: Control
+var _camera_step_label: Label
 ## 자동 사냥 칸. 퀵슬롯 옆에 같은 모양으로 붙는다. 켜짐 표시는 **서버가 준
 ## me.auto** 로만 정한다 — 눌린 것으로 지레 바꾸면 판정이 거절했을 때 화면만
 ## 켜진 채로 남는다
@@ -825,6 +828,7 @@ func _build_persistent() -> void:
 	_chat.offset_bottom = -(EXP_GAUGE_H + CHAT_MARGIN)
 	_chat.offset_top = _chat.offset_bottom - ChatLog.SIZE.y
 	_chat.offset_right = CHAT_MARGIN + ChatLog.SIZE.x
+	_build_camera_button()
 
 	# 경험치는 채팅창이 아니라 오른쪽 아래, 경험치 띠 바로 위에 잠깐 떴다 사라진다
 	# (2026-09-28 요청, 받은 스크린샷의 파란 상자 자리) → hud.md "경험치 알림"
@@ -4327,6 +4331,8 @@ func _build_test_switches() -> void:
 	column.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	# 왼쪽 아래 구석은 채팅창 자리다 (2026-09-23) — 묶음을 채팅창 위로 올린다
 	var lift := ChatLog.SIZE.y + EXP_GAUGE_H + CHAT_MARGIN + 8 - 20
+	# 채팅창 바로 위는 카메라 거리 단추 자리다 (2026-10-02) — 그 위로 한 칸 더 올린다
+	lift += CAMERA_BTN + CAMERA_BTN_GAP
 	# 채팅창 바로 위에는 **치트 목록 여닫기 단추** 하나가 서고, 묶음은 그 위로 선다 (2026-09-25).
 	# 단추 열 개가 왼쪽을 다 덮어서 접을 수 있게 했다
 	_cheat_toggle = Button.new()
@@ -4343,6 +4349,43 @@ func _build_test_switches() -> void:
 	column.offset_top -= lift
 	column.offset_bottom -= lift
 	_set_cheats_open(true)
+
+
+## **카메라 거리 단추** (2026-10-02 요청: "채팅창 위에 카메라 거리 조절 버튼 만들어. 총 3단계로 만들어.
+## 현재 상태를 기본으로 하고 2단계로 설정해"). 채팅창 왼쪽 위 모서리에 붙어 선다. 누를 때마다
+## 2 → 3 → 1 → 2 로 돈다 (1 가깝게 · 2 기본 · 3 멀게, `CameraRig.ZOOM_STEPS`). 그림은 받은 것
+## 그대로(`ui_icon_camera`), 오른쪽 아래 구석에 지금 단계 숫자를 얹는다
+const CAMERA_BTN := 50
+const CAMERA_BTN_GAP := 6
+func _build_camera_button() -> void:
+	_camera_button = _icon_button("ui_icon_camera", "카메라 거리", _cycle_camera_zoom, CAMERA_BTN)
+	_camera_button.name = "cameraZoom"
+	_ui_root.add_child(_camera_button)
+	_camera_button.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE)
+	_camera_button.offset_left = _chat.offset_left
+	_camera_button.offset_right = _chat.offset_left + CAMERA_BTN
+	_camera_button.offset_bottom = _chat.offset_top - CAMERA_BTN_GAP
+	_camera_button.offset_top = _camera_button.offset_bottom - CAMERA_BTN
+	_camera_step_label = Label.new()
+	_camera_step_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_camera_step_label.add_theme_font_size_override("font_size", 15)
+	_camera_step_label.add_theme_color_override("font_color", Color("#eeead7"))
+	_camera_step_label.add_theme_constant_override("outline_size", 5)
+	_camera_step_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	_camera_button.add_child(_camera_step_label)
+	_camera_step_label.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE)
+	_camera_step_label.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_camera_step_label.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_refresh_camera_button()
+
+
+func _cycle_camera_zoom() -> void:
+	_camera.set_zoom_step((_camera.zoom_step() + 1) % CameraRig.ZOOM_STEPS.size())
+	_refresh_camera_button()
+
+
+func _refresh_camera_button() -> void:
+	_camera_step_label.text = str(_camera.zoom_step() + 1)
 
 
 ## 치트 목록 여닫기 단추의 크기 — 테스트 단추(230)와 너비를 맞춘다

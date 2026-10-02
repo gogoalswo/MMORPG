@@ -217,9 +217,10 @@ export function buildData() {
       gradeMin: GRADE_MIN,
       gradeMax: GRADE_MAX,
       maxDropGrade: MAX_DROP_GRADE,
-      // 사냥터(1~20)마다 나오는 등급들 — 고도는 표만 읽고 역산하지 않는다.
-      // 칸 0 은 안 쓴다(사냥터 번호가 1부터다)
-      dropGrades: [[], ...Array.from({ length: 20 }, (_, i) => dropGradesFor(i * 10 + 1))],
+      // 몬스터 레벨(1~200)마다 나오는 등급들 — 고도는 표만 읽고 역산하지 않는다.
+      // 사냥터 번호가 아니라 레벨로 찾는다: 고급·희귀를 구간 중간에서 앞당겼다
+      // (items.ts `DROP_GRADE_FROM`). 칸 0 은 안 쓴다(레벨이 1부터다)
+      dropGrades: [[], ...Array.from({ length: 200 }, (_, i) => dropGradesFor(i + 1))],
       optionKinds: OPTION_KINDS,
       optionMin: OPTION_MIN,
       optionMax: OPTION_MAX,

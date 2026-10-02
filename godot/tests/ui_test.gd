@@ -317,7 +317,7 @@ func _run_scene() -> void:
 	await _case_status(game)
 	await _case_potion(game)
 	await _case_sound(game)
-	await _case_auto_priority(game)
+	_case_auto_no_setting(game)
 	await _case_bag_dot(game)
 	await _case_bag(game)
 	await _case_char(game)
@@ -341,63 +341,10 @@ func _run_scene() -> void:
 		quit(1)
 
 
-## 물약 칸 (2026-09-26) — 퀵슬롯 바로 옆 · 누르면 마시고 쿨타임이 돈다 · "설정" 으로 기준(HP %)을 고른다
-## 자동사냥 칸 "설정" → 스킬 순서 창 (2026-09-27 요청). 처음은 쿨타임 긴 순이고, "위" 로 올리면
-## 판정의 순서(`auto_priority`)가 바뀌어 줄이 다시 서며, "쿨타임 긴 순으로" 가 되돌린다
-func _case_auto_priority(game: Node3D) -> void:
-	var me: Dictionary = game._me()
-	var kept_skills: Array = me.skills.duplicate()
-	var kept_bar: Array = me.skill_bar.duplicate()
-	me.skills = ["rising_kick", "thunder_fall", "sky_breaker"]
-	me.skill_bar = ["rising_kick", "thunder_fall", "sky_breaker"]
-	me.auto_priority = []
-	var cell: Control = game._auto_cell
-	var setting: Button = cell.find_child("auto_setting", true, false)
-	if setting == null or not cell.get_global_rect().encloses(setting.get_global_rect()):
-		_fail("자동사냥 칸에 설정 단추가 없거나 칸 밖이다")
-		return
-	setting.pressed.emit()
-	await process_frame
-	var panel: Control = game._auto_panel
-	var rows: Control = game._auto_rows
-	if not panel.visible:
-		_fail("자동사냥 설정을 눌렀는데 창이 안 떴다")
-	var names := func() -> Array:
-		var out: Array = []
-		for row in rows.get_children():
-			if row.name.begins_with("auto_row_"):
-				out.append(str(row.get_child(2).get_child(0).text))
-		return out
-	if names.call() != ["천붕각", "낙뢰", "할퀴기"]:
-		_fail("처음 순서가 쿨타임 긴 순이 아니다: %s" % [names.call()])
-	if not bool(panel.find_child("auto_reset", true, false).disabled):
-		_fail("정한 순서가 없는데 '쿨타임 긴 순으로' 가 눌린다")
-	# 맨 아래 할퀴기를 한 칸 올린다
-	rows.get_child(2).find_child("up", true, false).pressed.emit()
-	await process_frame
-	if me.auto_priority != ["sky_breaker", "rising_kick", "thunder_fall"] \
-			or names.call() != ["천붕각", "할퀴기", "낙뢰"]:
-		_fail("위를 눌렀는데 순서 %s · 줄 %s" % [me.auto_priority, names.call()])
-	# 글자가 전부 폰트에 있어야 한다 — 없으면 빈 단추로 나온다 (물약 "-" 와 같은 일)
-	var font: Font = setting.get_theme_font("font")
-	var missing := ""
-	for label in panel.find_children("*", "Label", true, false) + panel.find_children("*", "Button", true, false):
-		for ch in str(label.text):
-			if ch != " " and not font.has_char(ch.unicode_at(0)) and not (ch in missing):
-				missing += ch
-	if missing != "":
-		_fail("자동사냥 설정 창 글자가 폰트에 없다: %s" % missing)
-	panel.find_child("auto_reset", true, false).pressed.emit()
-	await process_frame
-	if not me.auto_priority.is_empty() or names.call() != ["천붕각", "낙뢰", "할퀴기"]:
-		_fail("되돌렸는데 순서 %s · 줄 %s" % [me.auto_priority, names.call()])
-	panel.find_child("close", true, false).find_child("hit", true, false).pressed.emit()
-	await process_frame
-	if panel.visible:
-		_fail("X 를 눌렀는데 자동사냥 설정 창이 남았다")
-	me.skills = kept_skills
-	me.skill_bar = kept_bar
-	print("  자동사냥 설정: 쿨타임 긴 순 → 위로 올리기 → 되돌리기")
+## 자동사냥 칸에 "설정" 단추가 없다 (2026-10-02 "설정 버튼 제거하고, 기능 지워")
+func _case_auto_no_setting(game: Node3D) -> void:
+	if game._auto_cell.find_child("auto_setting", true, false) != null:
+		_fail("자동사냥 칸에 설정 단추가 남아 있다")
 
 
 ## 소리 설정 — 메뉴 "설정" 으로 창이 뜨고, -/+ · 슬라이더가 Master 버스 볼륨을 바꾸고 저장한다.

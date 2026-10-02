@@ -174,7 +174,12 @@ func _case_death() -> void:
 ## 나가면 시계가 없어진다 — 마을에는 시련이 없다
 func _case_leave() -> void:
 	var w := _enter(1)
+	var me: Dictionary = w.snapshot().players["me"]
+	me.hp = 1
 	w.travel("me", "village")
+	me = w.snapshot().players["me"]
+	if int(me.hp) != int(me.stats.maxHp):
+		_fail("던전에서 나왔는데 체력이 %d / %d 다 — 가득 차야 한다" % [int(me.hp), int(me.stats.maxHp)])
 	if not w.snapshot().get("dungeon", {}).is_empty():
 		_fail("마을로 나왔는데 시련 시계가 남았다")
 	w.step(0.016)

@@ -47,6 +47,7 @@
 | `godot/world/world.gd` | **던전 한 판** — `_run` · `_start_run`(존을 열 때) · `_count_run_kill`(`_kill` 에서 — 토벌 보스 · 시련 마릿수) · `_check_run_time`(`step` 에서, 시련 30초) · `_fail_run_on_death`(`_hit_player` 에서) · `_finish_run`(`dungeonResult` 이벤트) · 스냅숏의 `dungeon` |
 | `godot/world/game_data.gd` | `dungeon_type_of(zone)` — 결과창 제목의 종류 이름 |
 | `godot/world/ledger.gd` | `trial_clear` — 통과하면 크리스탈 그 단계 표 값(2 ~ 15, `trialReward` 이벤트) · ★ **하루 입장** `dungeon_day` · `day_of` · `dungeon_entries_left` · `dungeon_enter` (칸 `dungeon_entries`) |
+| `godot/world/world.gd` `_move_to` | ★ 던전 존을 떠나면 체력을 가득 채운다 ("결과창" 절 끝) |
 | `godot/world/world.gd` `_use_dungeon_entry` · `_kill` · `restore` | 입장 때 하루 입장을 쓴다(서버에 붙으면 막기만) · 던전 몬스터는 안 되살린다 · 던전 안에서 끝낸 저장은 그 자리로 안 돌아간다 |
 | `godot/server/ledger_server.gd` `_enter` · `_check_kill` | 서버의 하루 입장(`daily_used`) · 던전 몬스터 두 번 처치 거절(`once_per_entry`) |
 | `godot/server/ledger_server.gd` | `OPS` 의 `trial_clear` · `_check_trial` — 서버가 인정한 처치를 30초 안으로 다시 센다 |
@@ -196,6 +197,11 @@
   결과창이 떠 있는 동안은 화면을 눌러도 되살아나지 않는다 — 원래는 "아무 데나 눌러 되살아나기" 였는데,
   그러면 결과를 읽기도 전에 창이 사라진다. 상태 줄은 "쓰러졌습니다 — 확인을 누르면 마을에서 되살아납니다".
 - 존을 옮기거나(`zone`) 되살아나면(`revived`) 창을 닫는다.
+- ★ **던전에서 나오면 체력이 가득 찬다** (2026-10-02 요청: "던전에서 나오면 체력 풀로 만들어줘").
+  `World._move_to` 가 떠나는 존이 던전 단계(`GameData.dungeon_type_of`)면 `join` 이 스탯을 다시 잰 뒤
+  `hp = maxHp` 로 채운다 — 확인이든 마을가기든 나가는 길 전부가 `travel` → `_move_to` 라서 한 곳이면 된다.
+  쓰러져 있으면 건드리지 않는다(되살아나기가 따로 채운다). 샌드백 랭킹전은 던전 표에 없어 해당 없다.
+  확인: `dungeon_run_test.gd` `_case_leave` (체력 1 로 나와도 가득).
 - 전직 시험(`job_1` …)은 던전이 아니라 넣지 않았다 — 던전 창의 종류가 아니다.
 
 ### 차원문 목록에는 없다

@@ -44,6 +44,27 @@ static func bonus(stage: int) -> float:
 	return float(step(mini(stage, max_stage())).get("total", 0))
 
 
+## 지금 두드릴 수 있는 운동인가 — 끝 단계가 아니고 프로틴이 비용 이상. 헬스 창 탭과 HUD 헬스 아이콘의
+## 빨간 점이 같이 쓴다 (`me` 는 스냅샷 — `fitness` · `proteins`)
+static func can_up(me: Dictionary, id: String) -> bool:
+	var info := kind(id)
+	if info.is_empty():
+		return false
+	var stage := int(me.get("fitness", {}).get(id, 0))
+	if stage >= max_stage():
+		return false
+	var cost := int(step(stage + 1).get("cost", 0))
+	return cost > 0 and int(me.get("proteins", {}).get(str(info.protein), 0)) >= cost
+
+
+## 하나라도 두드릴 수 있는 운동이 있나 — HUD 헬스 아이콘 · ≡ 의 빨간 점
+static func any_up(me: Dictionary) -> bool:
+	for each in kinds():
+		if can_up(me, str(each.id)):
+			return true
+	return false
+
+
 ## 장부 `fitness` 사전 → 능력치별 보너스 `{attack, defense, maxHp}` (%) — `World.stats_of` 가 곱한다
 static func stat_bonus(stages: Dictionary) -> Dictionary:
 	var out := {"attack": 0.0, "defense": 0.0, "maxHp": 0.0}

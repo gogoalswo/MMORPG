@@ -319,6 +319,7 @@ func _run_scene() -> void:
 	await _case_sound(game)
 	_case_auto_no_setting(game)
 	await _case_bag_dot(game)
+	_case_fitness_dot(game)
 	await _case_bag(game)
 	await _case_char(game)
 	await _case_bag_drag(game)
@@ -1288,6 +1289,43 @@ func _case_bag_dot(game: Node3D) -> void:
 		_fail("가방을 보고 있는데 빨간 점이 켜졌다")
 	game._toggle_bag()
 	print("  가방 빨간 점: 얻으면 켜지고 열면 꺼진다")
+
+
+## 헬스 아이콘 빨간 점 — 강화할 수 있는 운동이 있으면 헬스와 ≡ 에 켜지고, 프로틴이 모자라면 꺼진다
+func _case_fitness_dot(game: Node3D) -> void:
+	var me: Dictionary = game._transport.snapshot().players[game._transport.my_id()]
+	var was_proteins = me.get("proteins", {})
+	var was_fitness = me.get("fitness", {})
+	me.fitness = {}
+	me.proteins = {}
+	game._refresh_status(me)
+	if game._fitness_dot.visible:
+		_fail("프로틴이 없는데 헬스에 빨간 점이 떠 있다")
+	me.proteins = {"health": int(Fitness.step(1).cost)}
+	game._refresh_status(me)
+	if not game._fitness_dot.visible or not game._menu_dot.visible:
+		_fail("스쿼트를 강화할 수 있는데 빨간 점이 꺼져 있다 (헬스 %s · ≡ %s)" % [game._fitness_dot.visible, game._menu_dot.visible])
+	me.fitness = {"squat": Fitness.max_stage()}
+	game._refresh_status(me)
+	if game._fitness_dot.visible:
+		_fail("끝 단계인데 헬스에 빨간 점이 떠 있다")
+	var was_codex_new = me.get("codex_new", {})
+	me.codex_new = {}
+	game._refresh_status(me)
+	if game._menu_dot.visible:
+		_fail("판 안에 켜진 점이 없는데 ≡ 에 빨간 점이 떠 있다")
+	# 도감 · 헬스가 아닌 판 안 칸의 점도 ≡ 를 켠다 — 점을 이름으로 찾는지 본다
+	var extra: Control = game._add_red_dot(game._menu_grid.get_child(0))
+	extra.visible = true
+	game._refresh_status(me)
+	me.codex_new = was_codex_new
+	if not game._menu_dot.visible:
+		_fail("판 안 칸(%s)에 빨간 점이 켜졌는데 ≡ 에는 꺼져 있다" % game._menu_grid.get_child(0).name)
+	extra.get_parent().free()
+	me.proteins = was_proteins
+	me.fitness = was_fitness
+	game._refresh_status(me)
+	print("  헬스 빨간 점: 강화할 수 있으면 헬스 · ≡ 에 켜진다 · 판 안 어느 점이든 ≡ 에 켜진다")
 
 
 func _case_bag(game: Node3D) -> void:

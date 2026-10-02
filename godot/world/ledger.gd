@@ -18,7 +18,7 @@ const KEYS := [
 	"job", "level", "exp", "gold", "skills", "skill_points", "passives",
 	"skill_upgrades", "skill_upgrade_exp", "skill_exp", "bag", "equipped", "granted",
 	"diamonds", "proteins", "fitness", "codex", "sandbag", "dungeon_entries", "loot_skip",
-	"codex_auto", "codex_new",
+	"codex_auto", "codex_auto_block", "codex_new",
 ]
 
 ## **첫 선물** — 새 캐릭터가 한 번만 받는 것 `[[표시, 묶음], …]`. 로컬은 `LocalTransport.open` 이,
@@ -55,6 +55,8 @@ static func fresh(job: String) -> Dictionary:
 		"loot_skip": [],
 		# 도감 자동 등록을 켠 장비 등급 `[등급, …]` — 도감 창 "자동 등록 설정" (`set_codex_auto`). 비어 있으면 다 끔
 		"codex_auto": [],
+		# 자동 등록에서 막을 1차 옵션 종류 `[종류, …]` — 이 옵션이 붙은 장비는 주워도 안 넣는다 (`set_codex_auto_block`)
+		"codex_auto_block": [],
 		# 자동 등록으로 새로 찬 칸 `{ 아이템 id: 강화 비트 }` — 도감 빨간 점. 그 탭을 보고 나오면 지운다(`codex_seen`)
 		"codex_new": {},
 	}
@@ -492,6 +494,11 @@ func _codex_auto(p: Dictionary, at: int) -> void:
 	if item.is_empty() or not (int(item.grade) in codex_auto(p)) or Items.is_locked(stack) \
 			or int(stack.get("count", 1)) > 1:
 		return
+	# 막아 둔 1차 옵션이 붙었으면 넣지 않는다 (2026-10-02 요청 "치명타 옵션이 있을 경우 등록 안 되게 막는거야")
+	var blocked := codex_auto_block(p)
+	for option in stack.get("options", []):
+		if option is Dictionary and str(option.get("kind", "")) in blocked:
+			return
 	var codex: Dictionary = p.get("codex", {})
 	var level := int(stack.get("enhance", 0))
 	var goal := Codex.next_empty(codex, item_id, level)
@@ -525,6 +532,28 @@ func _codex_auto(p: Dictionary, at: int) -> void:
 ## 도감 자동 등록을 켤 장비 등급 — 도감 창 "자동 등록 설정". 표에 있는 등급만, 겹치지 않게, 작은 것부터
 func set_codex_auto(p: Dictionary, grades: Array) -> void:
 	p.codex_auto = clean_grades(grades)
+
+
+## 자동 등록에서 막을 1차 옵션 종류 — 도감 "자동 등록 설정" 창. 표에 있는 종류만, 겹치지 않게, 표 순서로
+func set_codex_auto_block(p: Dictionary, kinds: Array) -> void:
+	p.codex_auto_block = clean_option_kinds(kinds)
+
+
+## 막은 1차 옵션 종류 — 옛 계정·옛 저장에는 칸이 없다(빈 목록 = 다 넣는다)
+static func codex_auto_block(p: Dictionary) -> Array:
+	var raw: Variant = p.get("codex_auto_block", [])
+	return raw if raw is Array else []
+
+
+static func clean_option_kinds(raw: Variant) -> Array:
+	var out: Array = []
+	if not raw is Array:
+		return out
+	var asked: Array = raw.map(func(each: Variant) -> String: return str(each))
+	for kind in Items._t().get("optionKinds", []):
+		if str(kind) in asked:
+			out.append(str(kind))
+	return out
 
 
 ## 자동 등록을 켠 등급 — 옛 계정·옛 저장에는 칸이 없다(빈 목록 = 다 끔)

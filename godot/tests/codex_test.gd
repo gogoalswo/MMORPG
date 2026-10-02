@@ -294,6 +294,21 @@ func _case_auto_loot() -> void:
 	ledger._codex_auto(p, 0)
 	if p.bag.size() != 1 or int(p.bag[0].enhance) != 4:
 		_fail("넣을 칸이 없는데 장비가 바뀌었다 %s" % [p.bag])
+	# 막아 둔 1차 옵션이 붙었으면 넣지 않는다 — 다른 옵션이면 넣는다 (2026-10-02 "치명타 옵션이 있을 경우 등록 안 되게")
+	ledger.set_codex_auto_block(p, ["crit", "없는것", "crit", "dropRate"])
+	if Ledger.codex_auto_block(p) != ["crit", "dropRate"]:
+		_fail("다듬은 막을 옵션이 [crit, dropRate] 가 아니라 %s" % [Ledger.codex_auto_block(p)])
+	var critty := _gear(1, "boots", 0)
+	critty.options = [{"kind": "crit", "value": 1.0}]
+	p.bag = [critty]
+	ledger._codex_auto(p, 0)
+	if p.bag.size() != 1 or Codex.has(p.codex, Items.item_id(1, "boots"), 0):
+		_fail("치명타를 막았는데 치명타 장비가 도감에 들어갔다")
+	critty.options = [{"kind": "maxHp", "value": 1.0}]
+	ledger._codex_auto(p, 0)
+	if not p.bag.is_empty() or not Codex.has(p.codex, Items.item_id(1, "boots"), 0):
+		_fail("막지 않은 체력 옵션 장비가 안 들어갔다")
+	ledger.set_codex_auto_block(p, [])
 	# 잠근 것은 건드리지 않는다
 	var locked := _gear(1, "ring", 0)
 	locked.locked = true
@@ -340,6 +355,7 @@ func _case_auto_save() -> void:
 	var s := _me()
 	var w: World = s[0]
 	w.set_codex_auto("me", [5, 2])
+	w.set_codex_auto_block("me", ["penetration"])
 	var me: Dictionary = w.snapshot().players["me"]
 	me.codex_new = {Items.item_id(2, "helmet"): 4}
 	w.save("me")
@@ -347,14 +363,17 @@ func _case_auto_save() -> void:
 	again.open("village")
 	again.restore("me")
 	var back: Dictionary = again.snapshot().players["me"]
-	if back.codex_auto != [2, 5] or back.codex_new != {Items.item_id(2, "helmet"): 4}:
-		_fail("불러온 자동 등록 %s · 새 칸 %s" % [back.codex_auto, back.codex_new])
+	if back.codex_auto != [2, 5] or back.codex_new != {Items.item_id(2, "helmet"): 4} \
+			or back.codex_auto_block != ["penetration"]:
+		_fail("불러온 자동 등록 %s · 새 칸 %s · 막은 옵션 %s" % [back.codex_auto, back.codex_new, back.codex_auto_block])
+	if str(LedgerServer.OPS.get("set_codex_auto_block", "")) != "a":
+		_fail("서버가 set_codex_auto_block 요청을 모른다")
 	again.codex_seen("me", 2)
 	if not again.snapshot().players["me"].codex_new.is_empty():
 		_fail("World.codex_seen 이 장부에 안 닿았다")
 	if str(LedgerServer.OPS.get("set_codex_auto", "")) != "a" or str(LedgerServer.OPS.get("codex_seen", "")) != "i":
 		_fail("서버가 set_codex_auto · codex_seen 요청을 모른다")
-	for key in ["codex_auto", "codex_new"]:
+	for key in ["codex_auto", "codex_auto_block", "codex_new"]:
 		if not key in Ledger.KEYS or not Ledger.fresh("fighter").has(key):
 			_fail("장부 칸·새 계정에 %s 가 없다" % key)
 
@@ -524,7 +543,24 @@ func _case_panel() -> void:
 	(sheet.find_child("auto_7", true, false).get_node("on") as Button).pressed.emit()
 	if autos != [[3], [3, 7]] or not sheet.is_on(3) or sheet.is_on(7):
 		_fail("자동 등록 스위치 요청 %s · 희귀 %s · 태초 %s" % [autos, sheet.is_on(3), sheet.is_on(7)])
+	var sheet_size := (sheet.find_child("sheet", true, false) as Control).get_combined_minimum_size()
+	if sheet_size.x > 1280.0 or sheet_size.y > 720.0:
+		_fail("자동 등록 설정 창 %s 가 화면(1280x720)보다 크다" % sheet_size)
+	# 1차 옵션 — 처음엔 다 넣는다(ON). 끄면 막을 목록 전체를 요청한다
+	var blocks: Array = []
+	panel.auto_block_changed.connect(func(kinds: Array) -> void: blocks.append(kinds))
+	if not sheet.option_on("crit"):
+		_fail("처음인데 치명타 옵션이 막혀 있다")
+	(sheet.find_child("block_crit", true, false).get_node("off") as Button).pressed.emit()
+	panel.refresh({"codex": {}, "bag": [], "codex_auto": [3], "codex_auto_block": ["crit"]})
+	(sheet.find_child("block_maxHp", true, false).get_node("off") as Button).pressed.emit()
+	if blocks != [["crit"], ["crit", "maxHp"]] or sheet.option_on("crit") or not sheet.option_on("maxHp"):
+		_fail("옵션 스위치 요청 %s · 치명타 %s · 체력 %s" % [blocks, sheet.option_on("crit"), sheet.option_on("maxHp")])
 	(sheet.find_child("done", true, false) as Button).pressed.emit()
+	# [자동 등록 설정] 은 [등록] 옆(옛 [자동 등록] 자리), [자동 등록] 은 숨김
+	if panel.auto_button().visible or panel.auto_setting_button().get_parent() != panel.register_button().get_parent():
+		_fail("자동 등록 숨김 %s · 설정 단추가 등록 줄에 있나 %s" % [
+			not panel.auto_button().visible, panel.auto_setting_button().get_parent() == panel.register_button().get_parent()])
 	if sheet.visible:
 		_fail("자동 등록 설정 창 [닫기] 를 눌렀는데 남았다")
 	# 새로 찬 칸 — 칸 · 탭에 빨간 점. 탭을 떠나면 그 등급을 봤다고 알린다 (다른 등급은 남는다)

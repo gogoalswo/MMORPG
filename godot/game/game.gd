@@ -3253,7 +3253,7 @@ func _build_skill_bar() -> void:
 	if _transport.online():
 		_menu_cells.append(_icon_button("ui_icon_rank", "랭킹", _toggle_rank, MENU_BTN, true))
 	# 설정 — 메뉴 맨 끝 (2026-09-30 요청 "볼륨 조절 하는 기능 추가해"). 지금은 소리 크기만 있다.
-	# 그림(`ui_icon_settings`)은 아직 없어서 이름 글자만 선다
+	# 그림은 톱니바퀴(`ui_icon_settings`, 2026-10-02)
 	_menu_cells.append(_icon_button("ui_icon_settings", "설정", _toggle_sound_panel, MENU_BTN, true))
 	# 평소 줄엔 `MENU_QUICK` 넷만, 나머지는 펼친 판의 격자로 (2026-10-01 요청 그림)
 	for cell in _menu_cells:

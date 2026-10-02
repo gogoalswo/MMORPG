@@ -2,10 +2,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FIELD_ORDER, START_ZONE, ZONES, getSpawn, getZone } from './zones.ts';
 import {
-  DUNGEON_SKILL_EXP_PER_STAGE, DUNGEON_TYPES, DUNGEON_ZONES,
-  TRIAL_CRYSTALS_PER_STAGE, TRIAL_KILLS, TRIAL_MONSTERS, TRIAL_SECONDS,
+  DUNGEON_SKILL_EXP_PER_STAGE, DUNGEON_TYPES, DUNGEON_ZONES, dungeonDay,
+  TRIAL_CRYSTALS, TRIAL_KILLS, TRIAL_MONSTERS, TRIAL_SECONDS,
 } from './dungeons.ts';
-import { MONSTER_KINDS } from './monsters.ts';
+import { MONSTER_KINDS, tierLevels } from './monsters.ts';
 import { SANDBAG_KIND, SANDBAG_ZONE } from './sandbag.ts';
 import { GROUND_KINDS } from './zone.ts';
 import { MONSTER_GAP, monsterRadius, scatterSpawn, zoneHalfSize, type Solid } from './movement.ts';
@@ -127,13 +127,18 @@ test('던전 — 종류 셋, 토벌은 단계마다 보스 한 마리', () => {
 test('시련의 탑 — 30초 7마리, 좁은 맵, 일반 몬스터가 7마리보다 넉넉하다', () => {
   const trial = DUNGEON_TYPES.find((t) => t.id === 'trial')!;
   assert.ok(trial.open);
-  assert.equal(trial.stages.length, 20);
+  // 7단계 — 1단계 크리스탈 2개, 7단계 15개 (2026-10-02 요청). 몬스터는 첫 사냥터부터 마지막 사냥터까지
+  assert.equal(trial.stages.length, 7);
+  assert.equal(trial.stages[0]!.crystals, 2);
+  assert.equal(trial.stages[6]!.crystals, 15);
+  assert.equal(trial.stages[0]!.level, tierLevels(0)[1]);
+  assert.equal(trial.stages[6]!.level, tierLevels(19)[1]);
   let previous = 0;
   for (const s of trial.stages) {
     assert.equal(s.kills, TRIAL_KILLS);
     assert.equal(s.seconds, TRIAL_SECONDS);
-    // 보상 = 단계 × 1개 (2026-09-29)
-    assert.equal(s.crystals, s.stage * TRIAL_CRYSTALS_PER_STAGE);
+    assert.equal(s.crystals, TRIAL_CRYSTALS[s.stage - 1]);
+    assert.ok(s.crystals! > (trial.stages[s.stage - 2]?.crystals ?? 0), `${s.zone}: 앞 단계보다 크리스탈이 적다`);
     const zone = getZone(s.zone);
     assert.ok(zone.size < ZONES[START_ZONE]!.size, `${s.zone}: 맵이 줄지 않았다`);
     const mobs = zone.monsters ?? [];
@@ -310,4 +315,15 @@ test('무리 안에서 몬스터가 서로 겹치지 않는다', () => {
       }
     }
   }
+});
+
+test('던전 하루 한 번 — 토벌 · 시련은 하루 1회, 날은 한국 시각 5시에 바뀐다', () => {
+  for (const id of ['raid', 'trial']) {
+    assert.equal(DUNGEON_TYPES.find((t) => t.id === id)!.daily, 1, `${id}: 하루 1회`);
+  }
+  // 2026-10-03 04:59:59 KST = 10-02 19:59:59 UTC, 1초 뒤(5시)가 다음 날. 자정은 같은 날이다
+  const lastSecond = Date.UTC(2026, 9, 2, 19, 59, 59) / 1000;
+  assert.equal(dungeonDay(lastSecond - 5 * 3600), dungeonDay(lastSecond), '자정에 날이 바뀌었다');
+  assert.equal(dungeonDay(lastSecond + 1), dungeonDay(lastSecond) + 1);
+  assert.equal(dungeonDay(lastSecond - 86399), dungeonDay(lastSecond));
 });

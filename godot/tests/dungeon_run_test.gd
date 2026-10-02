@@ -17,6 +17,7 @@ func _init() -> void:
 	_case_leave()
 	_case_raid()
 	_case_death()
+	_case_daily()
 	if _failed == 0:
 		print("던전 결과: 전부 통과")
 		quit(0)
@@ -73,7 +74,7 @@ func _case_zone() -> void:
 	print("  맵 %s · 몬스터 %d · %d마리 / %.0f초" % [snap.size, snap.monsters.size(), int(trial.need), left / 1000.0])
 
 
-## 일곱째에 통과 — 크리스탈 단계 수만큼, 결과는 한 번만
+## 일곱째에 통과 — 크리스탈은 그 단계 표 값만큼(4단계 = 7개), 결과는 한 번만
 func _case_clear() -> void:
 	var w := _enter(4)
 	var me: Dictionary = w.snapshot().players["me"]
@@ -94,13 +95,14 @@ func _case_clear() -> void:
 		_fail("결과가 %d번 났다 (한 번이어야 한다)" % results.size())
 		return
 	var result: Dictionary = results[0]
-	if str(result.result) != "clear" or int(result.kills) != 7 or int(result.crystals) != 4:
+	var want := int(GameData.dungeon_stage("trial_04").crystals)
+	if str(result.result) != "clear" or int(result.kills) != 7 or int(result.crystals) != want:
 		_fail("통과 결과가 틀렸다: %s" % result)
 	if _all(events, "trialReward").is_empty():
 		_fail("장부가 크리스탈을 안 줬다")
 	var gained := _crystals(me) - before - dropped
-	if gained != 4:
-		_fail("크리스탈이 %d개 늘었다 (4단계 = 4개)" % gained)
+	if gained != want:
+		_fail("크리스탈이 %d개 늘었다 (4단계 = %d개)" % [gained, want])
 	print("  7마리째 통과 · 크리스탈 +%d" % gained)
 
 
@@ -178,3 +180,39 @@ func _case_leave() -> void:
 	w.step(0.016)
 	if not _all(w.drain_events(), "dungeonResult").is_empty():
 		_fail("나온 뒤에 결과가 났다")
+
+
+## 하루 한 번 — 토벌·시련 각각. 다시 들어가려 하면 막히고 알림, 날이 바뀌면 다시 된다.
+## 안에서 잡은 보스는 되살아나지 않는다 (docs/features/dungeons.md "하루 한 번")
+func _case_daily() -> void:
+	var w := World.new()
+	w.open("village")
+	w.join("me")
+	var me: Dictionary = w.snapshot().players["me"]
+	me.level = 200
+	var today := float(Time.get_unix_time_from_system())
+	w._ledger.unix_now = func() -> float: return today
+	w.travel("me", "raid_03")
+	w._hit_monster(me, w.snapshot().monsters[0], 1e9, "")
+	if int(w.snapshot().monsters[0].respawn_at) != 0:
+		_fail("토벌 보스가 되살아날 예정이다 — 안에서 기다리면 한 번 더 잡는다")
+	w.travel("me", "village")
+	w.drain_events()
+	w.travel("me", "raid_05")
+	var notices := _all(w.drain_events(), "notice")
+	if w.zone_id != "village" or notices.is_empty():
+		_fail("오늘 토벌에 또 들어갔다 (%s · 알림 %d)" % [w.zone_id, notices.size()])
+	# 종류가 다르면 따로 센다
+	w.travel("me", "trial_01")
+	if w.zone_id != "trial_01":
+		_fail("토벌을 썼다고 시련까지 막혔다 (%s)" % w.zone_id)
+	w.travel("me", "village")
+	w.travel("me", "trial_02")
+	if w.zone_id != "village":
+		_fail("오늘 시련에 또 들어갔다 (%s)" % w.zone_id)
+	# 다음 날(한국 시각 5시가 지나면) 다시 된다
+	w._ledger.unix_now = func() -> float: return today + 86400.0
+	w.travel("me", "raid_05")
+	if w.zone_id != "raid_05":
+		_fail("다음 날인데 토벌에 못 들어갔다 (%s)" % w.zone_id)
+	print("  하루 한 번 — 토벌·시련 따로 · 두 번째는 막힘 · 다음 날 다시 · 보스 안 되살아남")

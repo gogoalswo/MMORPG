@@ -324,6 +324,7 @@ func _run_scene() -> void:
 	await _case_bag_drag(game)
 	await _case_compare(game)
 	await _case_lock(game)
+	await _case_codex_enhance(game)
 	await _case_skills(game)
 	await _case_design_panel(game)
 	# 존을 옮기므로 맨 끝에 둔다
@@ -807,13 +808,13 @@ func _case_trial(game: Node3D) -> void:
 	game._toggle_dungeon()
 	await process_frame
 	await _tap_card(panel, 1)
-	if not panel.stages_open() or panel.row_count() != 20:
-		_fail("시련의 탑을 누르면 단계 20줄이 떠야 한다 (%s · %d줄)" % [panel.stages_open(), panel.row_count()])
+	if not panel.stages_open() or panel.row_count() != 7:
+		_fail("시련의 탑을 누르면 단계 7줄이 떠야 한다 (%s · %d줄)" % [panel.stages_open(), panel.row_count()])
 		return
 	if panel.picked_stage() != "trial_01":
 		_fail("시련 단계 창을 열면 1단계가 골라져야 한다: %s" % panel.picked_stage())
 	var first_reward: Label = panel._rewards.get_child(0).find_children("*", "Label", true, false)[0]
-	if first_reward.text != "크리스탈 1개":
+	if first_reward.text != "크리스탈 2개":
 		_fail("시련 보상 맨 앞이 크리스탈이어야 한다: '%s'" % first_reward.text)
 	var rule: Label = panel.find_child("trial_rule", true, false)
 	if rule == null or rule.text != "30초 안에 7마리":
@@ -1880,6 +1881,48 @@ func _case_lock(game: Node3D) -> void:
 	game._toggle_bag()
 	me.bag.clear()
 	me.bag.append_array(kept_bag)
+
+
+## 도감 [강화] (2026-10-02 요청) — 칸을 누르면 켜지고, 누르면 그 장비를 고르고 목표를 그 칸 단계로 잡은 강화 창이 뜬다.
+## 강화 창은 도감보다 아래 층이라 도감을 감추고, X 로 닫으면 도감으로 돌아온다
+func _case_codex_enhance(game: Node3D) -> void:
+	var me: Dictionary = game._transport.snapshot().players[game._transport.my_id()]
+	var kept_bag: Array = me.bag.duplicate(true)
+	var kept_codex: Dictionary = me.get("codex", {}).duplicate(true)
+	var weapon := Items.item_id(1, "weapon")
+	me.bag.clear()
+	me.bag.append({"id": weapon, "grade": 1, "enhance": 0, "options": []})
+	me.bag.append({"id": weapon, "grade": 1, "enhance": 2, "options": []})
+	me.codex = {}
+	game._toggle_codex()
+	await process_frame
+	var panel: CodexPanel = game._codex_panel
+	if not panel.enhance_button().disabled:
+		_fail("도감 칸을 누르기 전인데 강화 단추가 켜져 있다")
+	(panel.find_child("cell_weapon_5", true, false) as Button).pressed.emit()
+	await process_frame
+	if panel.enhance_button().disabled:
+		_fail("+5 칸을 눌렀는데(가방에 +0 · +2) 강화 단추가 꺼져 있다")
+	panel.enhance_button().pressed.emit()
+	await process_frame
+	var popup: EnhancePopup = game._enhance
+	if not popup.visible or panel.visible:
+		_fail("강화 단추 → 강화 창 %s · 도감 %s (강화 창만 보여야 한다)" % [popup.visible, panel.visible])
+	if popup.mode != "one" or popup.target != {"where": "bag", "index": 1} or popup.goal != 5:
+		_fail("강화 창: 탭 %s · 대상 %s (가방 1번 +2) · 목표 %d (5)" % [popup.mode, popup.target, popup.goal])
+	popup.close()
+	await process_frame
+	if not panel.visible or panel.picked() != ["weapon", 5]:
+		_fail("강화 창을 닫으면 도감이 그 칸 그대로 돌아와야 한다: 보임 %s · 칸 %s" % [panel.visible, panel.picked()])
+	# 같은 장비가 목표 아래에 없으면 꺼진다
+	(panel.find_child("cell_helmet_3", true, false) as Button).pressed.emit()
+	await process_frame
+	if not panel.enhance_button().disabled:
+		_fail("가방에 투구가 없는데 강화 단추가 켜져 있다")
+	game._toggle_codex()
+	me.bag.clear()
+	me.bag.append_array(kept_bag)
+	me.codex = kept_codex
 
 
 func _case_compare(game: Node3D) -> void:

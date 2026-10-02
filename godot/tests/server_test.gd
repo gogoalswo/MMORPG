@@ -345,8 +345,14 @@ func _case_trial_check() -> void:
 	if send.call("trial_clear", [zone]).get("reason") != "claimed":
 		_fail("한 번 들어와 두 번 받았다")
 
-	# 다시 들어와 30초가 지난 뒤에 잡은 것은 안 센다
-	send.call("enter", [zone])
+	# 같은 날 다시 들어오면 막는다 — 하루 한 번 (dungeons.md "하루 한 번")
+	if send.call("enter", [zone]).get("reason") != "daily_used":
+		_fail("같은 날 시련에 두 번 들어왔다")
+	# 다음 날 다시 들어와 30초가 지난 뒤에 잡은 것은 안 센다
+	var tomorrow := float(Time.get_unix_time_from_system()) + 86400.0
+	server.ledger.unix_now = func() -> float: return tomorrow
+	if send.call("enter", [zone]).get("t") != "result":
+		_fail("다음 날인데 시련에 못 들어왔다")
 	now[0] += int(stage.seconds) * 1000 + int(KillCheck.SLACK_MS) + 1
 	for i in int(stage.kills):
 		send.call("kill", [{"kind": str(roster[ids[i]].kind), "zone": zone, "id": str(ids[i])}])

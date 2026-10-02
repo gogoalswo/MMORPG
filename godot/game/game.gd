@@ -394,6 +394,8 @@ var _tombs: Array[Dictionary] = []
 var _fitness_panel: FitnessPanel
 ## 장비 도감 창 — 헬스 창과 같은 층(10) · 전체 화면 (codex_panel.gd)
 var _codex_panel: CodexPanel
+## 강화 창을 도감 [강화] 로 열었나 — 닫으면 도감으로 돌아간다 (`_back_to_codex`)
+var _enhance_from_codex := false
 var _skill_panel: PanelContainer
 ## 스킬창. 틀은 한 번 짓고 `_redraw_skills` 가 채운다
 var _skill_big: PanelContainer
@@ -819,6 +821,7 @@ func _build_persistent() -> void:
 	_ui_root.add_child(_enhance)
 	_enhance.acted.connect(_on_enhance_acted)
 	_enhance.closed.connect(_redraw_bag)
+	_enhance.closed.connect(_back_to_codex)
 	_enhance.finished.connect(
 		func(head: String, text: String, good: bool) -> void:
 			_chat.add_line(head, text, INV_GOLD_HI if good else INV_WARN)
@@ -2128,6 +2131,7 @@ func _pick_bag(where: String, index: int) -> void:
 func _toggle_bag() -> void:
 	var open := not _bag_panel.visible
 	_enhance.hide_now()
+	_enhance_from_codex = false
 	_bag_panel.visible = open
 	_gear_panel.visible = open
 	_bag_pick = {}
@@ -2513,6 +2517,7 @@ func _close_detail() -> void:
 func _toggle_crystal() -> void:
 	var open := not _crystal_panel.visible
 	_enhance.hide_now()
+	_enhance_from_codex = false
 	_bag_panel.visible = open
 	_gear_panel.visible = open
 	_bag_pick = {}
@@ -2996,6 +3001,7 @@ func _toggle_lock() -> void:
 func _open_enhance() -> void:
 	if Items.get_item(str(_picked_stack().get("id", ""))).is_empty():
 		return
+	_enhance_from_codex = false
 	var worn := str(_bag_pick.get("where", "")) == "equip"
 	_enhance.open({
 		"where": "equip" if worn else "bag",
@@ -3009,7 +3015,27 @@ func _toggle_enhance() -> void:
 	if _enhance.visible:
 		_enhance.close()
 		return
+	_enhance_from_codex = false
 	_enhance.open({})
+
+
+## 도감 [강화] — 그 칸을 채울 장비(가방 번호 `index`)를 고르고 **목표를 그 칸의 강화 단계로** 잡은 단일 강화 창을 띄운다
+## (2026-10-02 요청). 강화 창은 도감 창(층 10) 아래 층이라 도감을 잠시 감추고, X 로 닫으면 도감으로 돌아온다
+func _open_enhance_from_codex(index: int, goal: int) -> void:
+	_codex_panel.close_panel()
+	_enhance_from_codex = true
+	_bag_pick = {}
+	_enhance.open({"where": "bag", "index": index})
+	_enhance.set_goal(goal)
+
+
+## 강화 창을 X 로 닫았다 — 도감에서 열었으면 도감을 다시 연다 (고른 칸·탭은 그대로다)
+func _back_to_codex() -> void:
+	if not _enhance_from_codex:
+		return
+	_enhance_from_codex = false
+	_codex_panel.refresh(_me())
+	_codex_panel.open()
 
 
 ## 강화 팝업이 한 개를 두드린 뒤 — **고른 칸은 결과를 따라간다.** 부서졌거나 일괄로 가방이
@@ -4783,6 +4809,7 @@ func _build_gate_panel() -> void:
 	_codex_panel.register_requested.connect(func(item_id: String, enhance: int, index: int) -> void:
 		_transport.send(&"codexRegister", {"id": item_id, "enhance": enhance, "index": index})
 	)
+	_codex_panel.enhance_requested.connect(_open_enhance_from_codex)
 	_codex_panel.register_all_requested.connect(func() -> void:
 		_transport.send(&"codexRegisterAll", {})
 	)
@@ -4869,7 +4896,20 @@ func _toggle_dungeon() -> void:
 	_fitness_panel.visible = false
 	_codex_panel.visible = false
 	_sandbag_panel.visible = false
+	_dungeon_panel.spent = _spent_dungeons()
 	_dungeon_panel.open(_shown_zone)
+
+
+## 오늘 입장을 다 쓴 던전 종류 `{ 종류 id: true }` — 던전 창이 카드·입장 단추를 막는다 (dungeons.md "하루 한 번")
+func _spent_dungeons() -> Dictionary:
+	var me := _me()
+	var day := Ledger.day_of(Time.get_unix_time_from_system())
+	var out := {}
+	for type in GameData.dungeons():
+		var stages: Array = type.get("stages", [])
+		if not stages.is_empty() and Ledger.dungeon_entries_left(me, str(stages[0].zone), day) == 0:
+			out[str(type.id)] = true
+	return out
 
 
 ## 헬스 단추. 열려 있으면 닫는다. 차원문·던전 창과 한 층이라 그 둘을 닫고 연다

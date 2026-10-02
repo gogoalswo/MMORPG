@@ -42,6 +42,8 @@ const NAME_WIDTH := 92.0
 const PICK_ICON := 52.0
 const BUTTON_MARGIN := 28
 const SINK := 3
+## 자동 등록 설정 창 X 한 변 — 창 X(`game.gd` `CLOSE_BTN`)와 같다
+const CLOSE_SIZE := 44
 
 const TITLE := GatePanel.PAGE_TITLE_COLOR
 const GOLD := GatePanel.CARD_GOLD
@@ -142,10 +144,21 @@ func _build() -> void:
 	)
 	_picker.picked_all.connect(func() -> void: register_all_requested.emit())
 	add_child(_picker)
-	var done := _side_button("done", "닫기", func() -> void: pass)
-	done.custom_minimum_size = Vector2(160, 56)
-	done.size_flags_horizontal = Control.SIZE_SHRINK_END
-	_auto_sheet = CodexAutoSheet.make(done)
+	# 자동 등록 설정 창의 X — 창 닫기 그림(`ui_close`), 없으면 글자 X. [닫기] 단추는 2026-10-02 에 뺐다 ("닫기 버튼 없애고,
+	# X버튼 오른쪽 위에 만들어")
+	var shut := Button.new()
+	shut.flat = true
+	shut.focus_mode = Control.FOCUS_NONE
+	shut.custom_minimum_size = Vector2(CLOSE_SIZE, CLOSE_SIZE)
+	var cross: Texture2D = _icon.call("ui_close") if _icon.is_valid() else null
+	if cross != null:
+		shut.icon = cross
+		shut.expand_icon = true
+	else:
+		shut.text = "X"
+		shut.add_theme_font_size_override("font_size", 26)
+	ButtonFx.attach(shut)
+	_auto_sheet = CodexAutoSheet.make(shut)
 	_auto_sheet.changed.connect(func(grade: int, slots: Array) -> void: auto_changed.emit(grade, slots))
 	_auto_sheet.options_changed.connect(func(grade: int, kinds: Array) -> void: auto_options_changed.emit(grade, kinds))
 	add_child(_auto_sheet)

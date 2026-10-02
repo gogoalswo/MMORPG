@@ -157,6 +157,8 @@ func open(item_id: String, enhance: int, bag: Array) -> void:
 	_title.text = "등록할 장비 선택 — %s +%d" % [str(item.get("name", "")), enhance]
 	_scroll.scroll_vertical = 0
 	visible = true
+	# 도감 창 X 는 `game.gd` 가 나중에 붙여 맨 뒤 자식이다 — 그보다 앞으로 올려야 X 가 이 창 위에서 안 눌린다
+	move_to_front()
 	_redraw()
 
 
@@ -172,6 +174,7 @@ func open_all(bag: Array, picks: Array) -> void:
 	_title.text = "자동 등록 — %d칸에 넣습니다" % _choices.size()
 	_scroll.scroll_vertical = 0
 	visible = true
+	move_to_front()  # 도감 창 X 보다 위 (open 과 같다)
 	_redraw()
 
 

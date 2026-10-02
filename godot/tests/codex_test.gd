@@ -611,7 +611,25 @@ func _case_panel() -> void:
 			or not (sheet.find_child("tab_3", true, false).get_node("on_mark") as Control).visible \
 			or (sheet.find_child("tab_5", true, false).get_node("on_mark") as Control).visible:
 		_fail("자동 등록 설정 등급 탭 — 쪽 · 켠 점이 어긋났다")
-	(sheet.find_child("done", true, false) as Button).pressed.emit()
+	# 도감 창 X 는 `game.gd` 가 나중에 맨 뒤 자식으로 붙인다 — 위에 뜨는 창은 열 때 그보다 앞(뒤 번호)으로 와야
+	# X 가 그 창 위에서 안 눌린다 (2026-10-02 지적)
+	var panel_close := Button.new()
+	panel.add_child(panel_close)
+	panel.auto_setting_button().pressed.emit()
+	if sheet.get_index() < panel_close.get_index():
+		_fail("자동 등록 설정 창(%d)이 도감 창 X(%d)보다 아래다" % [sheet.get_index(), panel_close.get_index()])
+	# [닫기] 단추는 없고 오른쪽 위 X 로 닫는다
+	var sheet_x: Button = sheet.find_child("close", true, false)
+	if sheet.find_child("done", true, false) != null or sheet_x == null:
+		_fail("자동 등록 설정 창에 [닫기] 가 남았거나 X 가 없다")
+	sheet_x.pressed.emit()
+	if sheet.visible:
+		_fail("자동 등록 설정 창 X 를 눌렀는데 남았다")
+	panel.register_button().pressed.emit()
+	if panel.picker().visible and panel.picker().get_index() < panel_close.get_index():
+		_fail("고르기 창(%d)이 도감 창 X(%d)보다 아래다" % [panel.picker().get_index(), panel_close.get_index()])
+	panel.picker().close()
+	panel_close.queue_free()
 	# [자동 등록 설정] 은 [등록] 옆(옛 [자동 등록] 자리), [자동 등록] 은 숨김
 	if panel.auto_button().visible or panel.auto_setting_button().get_parent() != panel.register_button().get_parent():
 		_fail("자동 등록 숨김 %s · 설정 단추가 등록 줄에 있나 %s" % [

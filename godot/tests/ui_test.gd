@@ -1590,18 +1590,20 @@ func _case_bag(game: Node3D) -> void:
 		_fail("장비 칸을 눌렀는데 대상이 안 잡혔다")
 	if not _bag_cell(game, 1).get_node("pick").visible:
 		_fail("크리스탈 대상 칸에 금테가 없다")
-	# 옵션 확률 창 (2026-10-02) — 종류마다 확률 · 범위, 수치 5단계 확률
-	var kinds: Array = Items.option_odds(2, 2)
+	# 옵션 확률 창 (2026-10-02) — 수치마다 한 줄 "치명타 4%" · "7.6%"
+	var value_rows: Array = Items.option_value_odds(2, 2)
 	var odds_text := ""
-	for label in game._odds_kinds.get_children() + game._odds_steps.get_children():
-		odds_text += label.text + " "
+	var odds_labels := 0
+	for label in game._odds_list.get_children():
+		if label is Label:
+			odds_text += label.text + " "
+			odds_labels += 1
+	var odds_want := "%s %s" % [game._odds_value_text(value_rows[0]), game._odds_percent(value_rows[0].chance)]
 	var odds_box: Rect2 = game._odds_panel.get_global_rect()
 	if not game._odds_panel.visible:
 		_fail("대상을 골랐는데 옵션 확률 창이 안 떴다")
-	elif game._odds_kinds.get_child_count() != (kinds.size() + 1) * 3 or game._odds_steps.get_child_count() != 6 * 2:
-		_fail("확률 표 칸 수가 %d · %d" % [game._odds_kinds.get_child_count(), game._odds_steps.get_child_count()])
-	elif not odds_text.contains("%s 20%%" % kinds[0].label) or not odds_text.contains("5단계 (최고) 2%"):
-		_fail("확률 표가 '%s'" % odds_text)
+	elif odds_labels != value_rows.size() * 2 or not odds_text.begins_with(odds_want):
+		_fail("확률 줄이 %d줄이어야 하는데 '%s'" % [value_rows.size(), odds_text])
 	elif not Rect2(Vector2.ZERO, Vector2(1280, 720)).encloses(odds_box) or odds_box.intersects(game._crystal_panel.get_global_rect()):
 		_fail("확률 창 자리가 %s (크리스탈 %s)" % [odds_box, game._crystal_panel.get_global_rect()])
 	else:

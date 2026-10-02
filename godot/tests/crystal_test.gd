@@ -66,6 +66,24 @@ func _case_odds() -> void:
 	var steps: Array = Items.option_step_odds()
 	_eq("단계 수", steps.size(), 5)
 	_eq("1단계 확률", snappedf(float(steps[0]), 0.001), 0.4)
+	# 수치마다 한 줄 — 다 더하면 1. 수치가 10개 이하면 하나씩, 넘으면 단계마다 묶어 5줄 이하
+	for grade in range(1, 8):
+		var lines: Array = Items.option_value_odds(2, grade)
+		var total := 0.0
+		for line in lines:
+			total += float(line.chance)
+		_eq("%d등급 수치 확률 합" % grade, snappedf(total, 0.0001), 1.0)
+		for row in Items.option_odds(2, grade):
+			var mine: Array = lines.filter(func(l: Dictionary) -> bool: return l.kind == row.kind)
+			var many := int(row.max) - int(row.min) + 1
+			var want_most := many if many <= Items.ODDS_SINGLE_MAX else 5
+			if mine.size() > want_most or int(mine[0].from) != int(row.min) or int(mine[-1].to) != int(row.max):
+				_fail("%d등급 %s 줄이 %s (범위 %s~%s)" % [grade, row.kind, mine, row.min, row.max])
+	# 범위 폭이 1 인 단계는 정수 하나가 한 단계다 — 맨 아래 수치는 40% × 0.95(반올림으로 위로 넘어간 몫)
+	var crit: Array = Items.option_value_odds(2, 2).filter(func(l: Dictionary) -> bool: return l.kind == "crit")
+	var crit_span := Items.option_range("crit", 2)
+	if int(crit_span.max) - int(crit_span.min) == 5:
+		_eq("고급 치명타 맨 아래 수치 확률", snappedf(float(crit[0].chance), 0.0001), snappedf(0.2 * 0.4 * 0.95, 0.0001))
 
 
 func _crystal(count: int) -> Dictionary:

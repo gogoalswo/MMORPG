@@ -523,8 +523,8 @@ var _crystal_tabs: Array[Button] = []
 ## 대상을 골랐을 때만 보인다. 표는 `Items.option_odds` · `option_step_odds`
 var _odds_panel: PanelContainer
 var _odds_head: Label
-var _odds_kinds: GridContainer
-var _odds_steps: GridContainer
+## 수치마다 한 줄 — "치명타 4%" · "7.6%" (2026-10-02 두 번째 요청: 표 대신 하나씩)
+var _odds_list: GridContainer
 ## 장비 창(왼쪽 끝)과 상세 창(인벤토리 왼쪽). 인벤토리는 `_bag_panel` 이다
 var _gear_panel: PanelContainer
 var _detail_panel: PanelContainer
@@ -1721,7 +1721,9 @@ func _build_crystal_window(panel: PanelContainer) -> void:
 	foot.add_child(_crystal_roll)
 
 
-## 옵션 확률 창 — 머리 줄(대상 등급 · 차수) · 옵션 종류 표(옵션 · 확률 · 범위) · 수치 단계 표(단계 · 확률)
+## 옵션 확률 창 — 머리 줄(대상 등급 · 차수) · **수치마다 한 줄**("치명타 4%" · "7.6%").
+## 처음엔 종류 표(확률 · 범위)와 단계 표 둘이었다 — "이렇게 표시하지 말고 치명타 4%가 나올 확률 몇 %
+## 이런식으로 단계별로 하나씩 작성해" (2026-10-02). 줄이 25개까지 가서 스크롤에 얹는다
 func _build_odds_window(panel: PanelContainer) -> void:
 	var side := VBoxContainer.new()
 	side.custom_minimum_size = Vector2(DETAIL_W, 0)
@@ -1732,62 +1734,67 @@ func _build_odds_window(panel: PanelContainer) -> void:
 	_odds_head = _inv_label("", 18, INV_GOLD)
 	_odds_head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	side.add_child(_odds_head)
-
-	for part in [["옵션 종류", 3], ["수치 단계", 2]]:
-		side.add_child(_inv_label(str(part[0]), 20, INV_GOLD))
-		var rule := ColorRect.new()
-		rule.color = INV_RULE
-		rule.custom_minimum_size = Vector2(0, 1)
-		side.add_child(rule)
-		var grid := GridContainer.new()
-		grid.columns = int(part[1])
-		grid.add_theme_constant_override("h_separation", 12)
-		grid.add_theme_constant_override("v_separation", 6)
-		side.add_child(grid)
-		if part[1] == 3:
-			_odds_kinds = grid
-		else:
-			_odds_steps = grid
-
-	var note := _inv_label("종류를 고르게 하나 뽑고, 범위를 5등분한 단계를 위 확률로 골라 그 안에서 수치를 굴립니다.", 15, INV_DIM)
-	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var note := _inv_label("한 번 굴릴 때 그 옵션이 붙을 확률", 15, INV_DIM)
 	side.add_child(note)
+	var rule := ColorRect.new()
+	rule.color = INV_RULE
+	rule.custom_minimum_size = Vector2(0, 1)
+	side.add_child(rule)
+
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	side.add_child(scroll)
+	_odds_list = GridContainer.new()
+	_odds_list.columns = 2
+	_odds_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_odds_list.add_theme_constant_override("h_separation", 12)
+	_odds_list.add_theme_constant_override("v_separation", 5)
+	scroll.add_child(_odds_list)
 
 
-## 옵션 확률 창을 채운다 — 대상 등급의 범위와 지금 고른 재료(차수)의 확률
+## 옵션 확률 창을 채운다 — 대상 등급·지금 고른 재료(차수)로 `Items.option_value_odds` 를 한 줄씩.
+## 종류가 바뀌면 틈을 조금 둔다. 가장 높은 단계(2%) 줄은 금빛
 func _redraw_odds(grade: int) -> void:
 	var material_name := str(Items.get_material(Items.tier_material(_crystal_tier)).get("name", "크리스탈"))
 	_odds_head.text = "%s 장비 · %d차 옵션 (%s)" % [Items.grade_name(grade), _crystal_tier, material_name]
 	_odds_head.add_theme_color_override("font_color", _grade_tint(grade))
 
-	var kinds: Array = [["옵션", "확률", "범위", INV_DIM]]
-	for row in Items.option_odds(_crystal_tier, grade):
-		kinds.append([row.label, _odds_percent(row.chance), "%d ~ %d%%" % [int(row.min), int(row.max)], INV_TEXT])
-	var steps: Array = [["단계", "확률", INV_DIM]]
-	var odds: Array = Items.option_step_odds()
-	for step in odds.size():
-		var tag := " (최저)" if step == 0 else (" (최고)" if step == odds.size() - 1 else "")
-		steps.append(["%d단계%s" % [step + 1, tag], _odds_percent(odds[step]), INV_GOLD_HI if step == odds.size() - 1 else INV_TEXT])
-	for pair in [[_odds_kinds, kinds], [_odds_steps, steps]]:
-		var grid: GridContainer = pair[0]
-		for child in grid.get_children():
-			grid.remove_child(child)
-			child.queue_free()
-		for row in pair[1]:
-			var tint: Color = row[row.size() - 1]
-			for col in row.size() - 1:
-				var label := _inv_label(str(row[col]), 17, tint)
-				if col == 0:
-					label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-				else:
-					label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-				grid.add_child(label)
+	for child in _odds_list.get_children():
+		_odds_list.remove_child(child)
+		child.queue_free()
+	var top := Items.option_step_odds().size() - 1
+	var kind := ""
+	for row in Items.option_value_odds(_crystal_tier, grade):
+		if kind != "" and kind != str(row.kind):
+			for i in 2:
+				var gap := Control.new()
+				gap.custom_minimum_size = Vector2(0, 4)
+				_odds_list.add_child(gap)
+		kind = str(row.kind)
+		var tint := INV_GOLD_HI if int(row.step) == top else INV_TEXT
+		var name_label := _inv_label(_odds_value_text(row), 17, tint)
+		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_odds_list.add_child(name_label)
+		var chance := _inv_label(_odds_percent(row.chance), 17, tint)
+		chance.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		_odds_list.add_child(chance)
 
 
-## 0.2 → "20%", 1/6 → "16.7%"
+## "치명타 4%" · 묶인 줄은 "치명타 40 ~ 46%"
+func _odds_value_text(row: Dictionary) -> String:
+	if int(row.from) == int(row.to):
+		return "%s %d%%" % [row.label, int(row.from)]
+	return "%s %d ~ %d%%" % [row.label, int(row.from), int(row.to)]
+
+
+## 0.2 → "20%", 0.076 → "7.6%", 0.0038 → "0.38%" — 1% 밑은 둘째 자리까지 (0 으로 뭉개지지 않게)
 func _odds_percent(ratio: float) -> String:
 	var value := ratio * 100.0
-	return "%d%%" % roundi(value) if is_equal_approx(value, roundf(value)) else "%.1f%%" % value
+	var text := "%.2f" % value if value < 1.0 else "%.1f" % value
+	if text.contains("."):
+		text = text.rstrip("0").rstrip(".")
+	return text + "%"
 
 
 ## 인벤토리 창 — 머리 줄 · 격자와 오른쪽 세로 탭 · 소지품 수와 정렬 · 동전

@@ -30,7 +30,7 @@ signal enhance_requested(index: int, goal: int)
 ## 자동 등록 설정 창 — 등급 하나의 넣을 부위 목록(비면 그 등급을 끈다) → `codexAutoGrade` (주울 때 장부가 넣는다)
 signal auto_changed(grade: int, slots: Array)
 ## 자동 등록 설정 창에서 막을 1차 옵션 종류 목록 전체 → `codexAutoBlock`
-signal auto_block_changed(kinds: Array)
+signal auto_block_changed(grade: int, kinds: Array)
 ## 그 등급 탭을 보고 나왔다 → `codexSeen` (자동 등록으로 새로 찬 칸의 빨간 점을 지운다)
 signal seen(grade: int)
 
@@ -147,7 +147,7 @@ func _build() -> void:
 	done.size_flags_horizontal = Control.SIZE_SHRINK_END
 	_auto_sheet = CodexAutoSheet.make(done)
 	_auto_sheet.changed.connect(func(grade: int, slots: Array) -> void: auto_changed.emit(grade, slots))
-	_auto_sheet.blocked_changed.connect(func(kinds: Array) -> void: auto_block_changed.emit(kinds))
+	_auto_sheet.blocked_changed.connect(func(grade: int, kinds: Array) -> void: auto_block_changed.emit(grade, kinds))
 	add_child(_auto_sheet)
 	# 숨으면(X · 다른 창 · 강화 창으로 넘어감) 보던 탭의 새 칸 표시를 지운다 — 본 것이다
 	visibility_changed.connect(func() -> void:
@@ -463,6 +463,8 @@ func _enhance_source() -> int:
 
 ## [자동 등록 설정] — 등급마다 ON/OFF 를 고르는 창
 func _open_auto() -> void:
+	# 도감에서 보던 등급 탭으로 연다
+	_auto_sheet.pick_grade(_grade)
 	_auto_sheet.open(_me)
 
 

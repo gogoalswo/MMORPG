@@ -329,7 +329,7 @@ func join(player_id: String) -> void:
 		"loot_skip": Ledger.clean_grades(kept.get("loot_skip", [])),
 		# 도감 자동 등록을 켠 등급 · 자동 등록으로 새로 찬 칸(빨간 점) — 도감 창 (codex.md "주울 때 자동 등록")
 		"codex_auto": Ledger.clean_codex_auto(kept.get("codex_auto", {})),
-		"codex_auto_block": Ledger.clean_option_kinds(kept.get("codex_auto_block", [])),
+		"codex_auto_block": Ledger.codex_auto_block(kept),
 		"codex_new": Codex.clean(kept.get("codex_new", {})),
 	}
 	_refresh_stats(_players[player_id])
@@ -1682,7 +1682,7 @@ func restore(player_id: String) -> bool:
 	player.loot_skip = Ledger.clean_grades(saved.get("loot_skip", []))
 	# 도감 자동 등록 — 없던 칸이라 옛 저장은 다 끔 · 새 칸 표시 없음
 	player.codex_auto = Ledger.clean_codex_auto(saved.get("codex_auto", {}))
-	player.codex_auto_block = Ledger.clean_option_kinds(saved.get("codex_auto_block", []))
+	player.codex_auto_block = Ledger.codex_auto_block(saved)
 	player.codex_new = Codex.clean(saved.get("codex_new", {}))
 
 	# 가방·장비도 되살린다. **옛 id 는 지금 id 로 옮긴다** (2026-09-21 에 단계 축을
@@ -2062,12 +2062,12 @@ func set_codex_auto_grade(player_id: String, grade: int, slots: Array) -> void:
 	_ledger_call(player, &"set_codex_auto_grade", [grade, slots])
 
 
-## 도감 자동 등록에서 막을 1차 옵션 종류 (`Ledger.set_codex_auto_block`)
-func set_codex_auto_block(player_id: String, kinds: Array) -> void:
+## 도감 자동 등록에서 막을 1차 옵션 — 등급 하나의 종류 목록 (`Ledger.set_codex_auto_block`)
+func set_codex_auto_block(player_id: String, grade: int, kinds: Array) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty():
 		return
-	_ledger_call(player, &"set_codex_auto_block", [kinds])
+	_ledger_call(player, &"set_codex_auto_block", [grade, kinds])
 
 
 ## 도감 그 등급 탭을 보고 나왔다 — 새로 찬 칸의 빨간 점을 지운다 (`Ledger.codex_seen`)

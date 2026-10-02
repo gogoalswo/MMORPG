@@ -72,6 +72,9 @@ const RANK_TOP := 50
 ## 그 주 번호. 주가 바뀌면 비운다. 닫힌 주의 순위는 `_sandbag_ranks` (파일로 굳힌 것)
 var _sandbag_board := {}
 var _sandbag_order: Array = []
+## 순위를 마지막으로 줄 세운 시각(`clock`). **1분(`Sandbag.rank_refresh_ms`)이 지나야 다시 센다** (2026-10-02 요청
+## "샌드백 랭킹 갱신은 1분마다") — 그 사이 낸 기록은 다음 갱신에 잡힌다. -1 이면 아직 안 셌다
+var _sandbag_order_at := -1
 var _sandbag_week := -1
 var _sandbag_ranks := {}
 ## 샌드백 순위 창에 싣는 윗줄 수 — 100위까지 굴려 본다 (2026-10-02 요청 "순위는 100위까지 스크롤 가능하게")
@@ -232,6 +235,7 @@ func _roll_sandbag_week() -> void:
 	_sandbag_week = week
 	_sandbag_board.clear()
 	_sandbag_order.clear()
+	_sandbag_order_at = -1
 
 
 ## 이번 주 기록이 있는 계정만 줄에 올린다
@@ -242,8 +246,8 @@ func _touch_sandbag(account: Dictionary) -> void:
 	var row := {"id": str(account.id), "name": name_of(account), "best": int(mine.best)}
 	if _sandbag_board.get(account.id, {}) == row:
 		return
+	# 줄 세운 것은 버리지 않는다 — 순위는 1분마다 다시 센다(`_sandbag_rank`)
 	_sandbag_board[account.id] = row
-	_sandbag_order.clear()
 
 
 ## 순위 — **최고 기록 → 계정 id 순**(늘 같은 순서가 나오게). 같은 기록이면 먼저 낸 사람을 앞에 두려면
@@ -314,13 +318,15 @@ func _check_sandbag(account: Dictionary, damage: int) -> String:
 	return ""
 
 
-## 이번 주 순위 — 위 50명 + 내 줄 + 이 주가 끝나는 시각(유닉스 초)
+## 이번 주 순위 — 위 100명 + 내 줄 + 이 주가 끝나는 시각(유닉스 초). 줄은 **1분마다** 다시 센다
 func _sandbag_rank(session: Dictionary) -> Dictionary:
 	var account: Dictionary = session.get("account", {})
 	if account.is_empty():
 		return _error(null, "no_hello")
-	if _sandbag_order.is_empty() and not _sandbag_board.is_empty():
+	var now := int(clock.call())
+	if _sandbag_order_at < 0 or now - _sandbag_order_at >= Sandbag.rank_refresh_ms():
 		_sandbag_order = _order_rows(_sandbag_board.values())
+		_sandbag_order_at = now
 	var top: Array = []
 	var mine := {"rank": 0, "best": 0}
 	for i in _sandbag_order.size():

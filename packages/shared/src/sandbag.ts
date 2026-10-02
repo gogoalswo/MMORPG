@@ -19,6 +19,8 @@ import { DUNGEON_ENV } from './dungeons.ts';
 export const SANDBAG_ZONE = 'sandbag';
 export const SANDBAG_COUNTDOWN_SECONDS = 3;
 export const SANDBAG_SECONDS = 15;
+/** 이번 주 순위를 다시 세는 간격(초). 그 사이 낸 기록은 다음 갱신에 순위에 잡힌다 (2026-10-02 요청 "1분마다") */
+export const SANDBAG_RANK_REFRESH_SECONDS = 60;
 /** 시련의 탑과 같은 좁은 맵 — 둘만 서 있으면 된다 */
 export const SANDBAG_ZONE_SIZE = 30;
 

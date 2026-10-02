@@ -917,6 +917,10 @@ func _case_sandbag(game: Node3D) -> void:
 	var sb_enter: Button = panel.find_child("SandbagEnter", true, false)
 	if sb_enter.get_parent() != game._sandbag_note.get_parent() or sb_enter.size.x < DungeonPanel.ENTER_SIZE.x - 1:
 		_fail("입장이 글자 옆이 아니거나 작다: %s" % sb_enter.size)
+	# 순위 갱신 간격을 창에 적는다 (2026-10-02 "랭킹 갱신은 1분마다 … UI에도 명시해")
+	var sb_refresh: Label = panel.find_child("SandbagRefresh", true, false)
+	if sb_refresh == null or not sb_refresh.text.contains("1분마다 갱신"):
+		_fail("순위 갱신 간격 안내가 없다")
 	if not game._sandbag_note.text.contains("이번 주 기록 없음") or not game._sandbag_note.text.contains("정산까지"):
 		_fail("혼자 처음 열면 기록 없음 · 정산까지: '%s'" % game._sandbag_note.text)
 	var seen: String = game._sandbag_note.text

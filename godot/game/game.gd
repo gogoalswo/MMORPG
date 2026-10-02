@@ -721,6 +721,17 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			_fitness_panel.show_result(payload)
 		&"codexResult":
 			_codex_panel.show_result(payload)
+		&"codexAuto":
+			# 주울 때 자동 등록(·자동 강화)도 채팅창에 남긴다 — 사냥 중이라 위 한 줄은 금방 지나간다
+			var piece := "%s +%d" % [str(payload.get("name", "")), int(payload.get("level", 0))]
+			var tries := int(payload.get("tries", 0))
+			var climbed := " (강화 %d번)" % tries if tries > 0 else ""
+			match str(payload.get("result", "")):
+				"register":
+					_chat.add_line("도감 등록", "%s%s · %s +%s%%" % [piece, climbed,
+						Codex.stat_name(str(payload.get("stat", ""))), String.num(float(payload.get("gain", 0.0)), 2)], INV_GOLD_HI)
+				"destroy": _chat.add_line("도감 강화 실패", piece + " 파괴", INV_WARN)
+				_: _chat.add_line("도감 강화 중단", piece + " 골드 부족", INV_TEXT)
 		&"dungeonResult":
 			# 성공이든 실패든 결과창. 걷던 곳·자동 사냥 겨냥을 멈춘다 — 확인을 누르면 마을로 나간다
 			# (쓰러졌으면 마을에서 되살아난다 — `_on_result_confirmed`)

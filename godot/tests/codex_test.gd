@@ -267,11 +267,17 @@ func _case_auto_loot() -> void:
 	if not p.bag.is_empty() or not Codex.has(p.codex, id, 0) or not Codex.has(Ledger.codex_new(p), id, 0):
 		_fail("+0 빈 칸인데 바로 안 들어갔다: 가방 %s · 도감 %s · 새 칸 %s" % [p.bag, p.codex, p.codex_new])
 	var auto_event := false
+	var logged := {}
 	for event in ledger.take_events():
 		if event.type == "codexResult" and bool(event.get("auto", false)):
 			auto_event = true
+		if event.type == "codexAuto":
+			logged = event
 	if not auto_event:
 		_fail("자동 등록이 codexResult(auto) 를 안 냈다")
+	# 채팅창에 남길 한 줄 (2026-10-02 지적 "채팅창에 기록 안 남는거 같은데")
+	if logged.get("result", "") != "register" or int(logged.get("level", -1)) != 0 or str(logged.get("stat", "")).is_empty():
+		_fail("자동 등록이 채팅용 codexAuto(register) 를 안 냈다: %s" % [logged])
 	# +0 ~ +2 가 찼다 → +3 까지 두드린다. 씨앗을 돌려 성공과 파괴가 둘 다 나오는지 본다
 	var reached := 0
 	var broke := 0
@@ -284,6 +290,12 @@ func _case_auto_loot() -> void:
 		q.codex = {id: 0b111}
 		q.bag = [_gear(3, "weapon", 0)]
 		roll._codex_auto(q, 0)
+		var told := ""
+		for event in roll.take_events():
+			if event.type == "codexAuto":
+				told = str(event.result)
+		if told != ("register" if Codex.has(q.codex, id, 3) else "destroy"):
+			_fail("씨앗 %d: 채팅용 codexAuto 결과가 %s" % [seed, told])
 		if not q.bag.is_empty():
 			_fail("씨앗 %d: 두드린 장비가 가방에 남았다 %s" % [seed, q.bag])
 		elif Codex.has(q.codex, id, 3):

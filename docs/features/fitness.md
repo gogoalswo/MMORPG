@@ -36,7 +36,7 @@
 | `godot/net/local_transport.gd` | `fitnessUp {kind, auto}` · `debugProtein` |
 | `godot/game/fitness_panel.gd` `FitnessPanel` | ★ **헬스 창** (아래 "창") |
 | `godot/game/game.gd` `_toggle_fitness` · `_build_gate_panel` | 메뉴 단추(던전 옆), 창을 차원문·던전 창과 같은 층(10)에 단다, `fitnessResult` → `show_result` |
-| `godot/game/game.gd` `_redraw_char` | 캐릭터 정보 창 — 증가 줄 끝에 `헬스 +N%` (0 이면 안 붙인다) |
+| `godot/game/game.gd` `_redraw_char` | 캐릭터 정보 창 — 증가 줄은 세 몫을 곱한 합계 %, 그 아래 `(장비 N% × 헬스 N% × 도감 N%)` |
 | `godot/game/dungeon_panel.gd` `_stage_rewards` · `dungeon_result.gd` `_protein_cell` | 던전 단계 창의 보상 칸 셋 · 결과창의 한 칸(세 통 나란히) |
 | `godot/tests/fitness_test.gd` | 던전 보상 · 한 번/자동 · 끝 단계 · 곱하기 · 저장 · 서버 표·처치 검증 · 창(제목·단추·빨간 점·요청·크기) |
 
@@ -94,8 +94,9 @@
 - 장비 % 에 **더하면** 태초 풀셋(공격력 +856%) 앞에서 +50% 가 실제로는 +5% 가 된다 — 초반엔 크고 후반엔
   안 보인다. 곱하면 **언제 올려도 같은 비율**이다 (레벨을 복리로 바꾼 것과 같은 이유 → [stat-balance.md](stat-balance.md)).
 - 끝(+50%)까지 가면 동레벨 타수가 약 ⅔ 로 준다. 몬스터 표는 건드리지 않았다 — 헬스는 **밸런스 위에 얹는 성장**이다.
-- 캐릭터 정보 창은 증가 줄 끝에 `헬스 +N%` 를 붙인다. **줄을 따로 더하지 않았다** — 세 줄을 더했더니 창이
-  720 을 넘었다 (`ui_test`).
+- 캐릭터 정보 창의 **증가 줄은 장비·헬스·도감을 곱한 합계 %** 이고, 바로 아래 작은 글자로
+  `(장비 200% × 헬스 32% × 도감 20%)` 풀이를 적는다 (2026-10-02 요청 — 그 전엔 증가 줄 끝에 `헬스 +N%` 를
+  따로 붙였는데 "이렇게 하지마"). 풀이 줄은 폭 0 인 틀에 얹어 칸 폭을 넓히지 않는다 (`_fill_detail_rows` 의 `"note"`).
 - 방어력은 0 아래로, 공격력·체력은 1 아래로 안 내려간다 (`stats_of` 의 `maxi`).
 
 ### 창 (`fitness_panel.gd`) ★

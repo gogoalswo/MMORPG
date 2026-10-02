@@ -229,11 +229,12 @@ test('몬스터 표는 고정 표에서 나온다 — 장비를 고쳐도 안 �
 test('역할 배수 — 보스는 설계 보류라 임시값이다', () => {
   assert.deepEqual(ROLE_MULT.normal, { hp: 1, atk: 1 });
   assert.deepEqual(ROLE_MULT.elite, { hp: 3, atk: 2 });
-  // 보스 공격 ×5 → ×1 (2026-09-30) — 일반 몬스터를 "한 마리당 HP 10%" 로 올리면서
-  assert.deepEqual(ROLE_MULT.boss, { hp: 7, atk: 1 });
+  // 보스 공격 ×5 → ×1 (2026-09-30) — 일반 몬스터를 "한 마리당 HP 10%" 로 올리면서.
+  // ×1 → ×3 (2026-10-02) — 사용자 지시 "던전 보스 공격력을 지금보다 3배 높여"
+  assert.deepEqual(ROLE_MULT.boss, { hp: 7, atk: 3 });
   const normal = monster(100);
   assert.equal(monster(100, 'elite').hp, normal.hp * 3);
-  assert.equal(monster(100, 'boss').atk, normal.atk);
+  assert.equal(monster(100, 'boss').atk, normal.atk * 3);
   // 역할이 달라도 방어력은 그대로다 (배수는 HP·공격력에만)
   assert.equal(monster(100, 'boss').df, normal.df);
 });

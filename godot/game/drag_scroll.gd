@@ -34,11 +34,24 @@ static func attach(scroll: ScrollContainer, grid: Container, gap: float) -> Drag
 	drag._gap = gap
 	scroll.set_meta("drag_scroll", drag)
 	scroll.gui_input.connect(drag.on_input)
+	top_on_open(scroll)
 	# 칸은 나중에 채워진다 — 들어오는 칸마다 입력을 흘려보내게 한다
 	grid.child_entered_tree.connect(_let_through)
 	for cell in grid.get_children():
 		_let_through(cell)
 	return drag
+
+
+## 창을 **다시 열면 맨 위로** 되돌린다. 창이 숨으면 목록도 같이 숨었다가(`visibility_changed` 는
+## 부모를 따라 자식까지 온다) 다시 보일 때 0 으로 간다 — 닫기 전에 내려 둔 자리에서 열렸다
+## (2026-10-02 지적: "스킬 UI 껐다 켜면 스크롤이 맨 위로 오게"). 끌기 목록은 `attach` 가 붙이고,
+## 끌기가 없는 목록(랭킹·던전 보상)은 이걸 직접 부른다. 열면서 다른 자리로 보내는 목록(패시브
+## 나무 → 습득할 칸)은 그 이동을 `call_deferred` 로 하면 이것 다음에 온다
+static func top_on_open(scroll: ScrollContainer) -> void:
+	scroll.visibility_changed.connect(func():
+		if scroll.is_visible_in_tree():
+			scroll.scroll_vertical = 0
+	)
 
 
 ## 칸은 **흘려보내고**(PASS — 목록까지 올라간다) 칸 안의 것은 **비킨다**(IGNORE).

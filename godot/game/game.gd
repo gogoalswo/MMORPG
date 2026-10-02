@@ -2159,6 +2159,7 @@ func _build_rank_panel() -> void:
 	scroll.custom_minimum_size = Vector2(0, RANK_LIST_H)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	side.add_child(scroll)
+	DragScroll.top_on_open(scroll)
 	_rank_grid = GridContainer.new()
 	_rank_grid.columns = 4
 	_rank_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL

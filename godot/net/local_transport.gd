@@ -167,6 +167,8 @@ func send(message: StringName, payload: Dictionary) -> void:
 			_world.sort_bag(MY_ID)
 		&"autoEquip":
 			_world.auto_equip(MY_ID)
+		&"toggleLock":
+			_world.toggle_lock(MY_ID, str(payload.get("where", "")), payload.get("key", -1))
 		&"feedUpgrade":
 			_world.feed_upgrade(
 				MY_ID,

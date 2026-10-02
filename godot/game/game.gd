@@ -460,6 +460,7 @@ var _learn_wait := 0.0
 var _learn_gap := 0.0
 var _bag_action: Button
 var _enhance_button: Button  # 상세 창 "강화" — 장비를 고르면 뜨고, 누르면 강화 팝업을 연다
+var _lock_button: Button  # 상세 창 "잠금" / "잠금 해제" — 장비를 고르면 뜬다 (`_toggle_lock`)
 ## 강화 팝업 — 화면 가운데, 뒤를 어둡게 덮는다. 한 개 · 같은 아이템 · 같은 등급, 자동 강화
 ## → `enhance_popup.gd`
 var _enhance: EnhancePopup
@@ -1552,8 +1553,13 @@ func _build_detail_window(panel: PanelContainer) -> void:
 
 	var buttons := HBoxContainer.new()
 	buttons.alignment = BoxContainer.ALIGNMENT_END
-	buttons.add_theme_constant_override("separation", 8)
+	# 단추 셋(76 × 3)이 상세 창 폭(`ITEM_W` 240)에 꼭 맞도록 간격은 6
+	buttons.add_theme_constant_override("separation", 6)
 	side.add_child(buttons)
+	_lock_button = _inv_button("잠금", _toggle_lock)
+	_lock_button.name = "LockButton"
+	_lock_button.visible = false
+	buttons.add_child(_lock_button)
 	_enhance_button = _inv_button("강화", _open_enhance)
 	_enhance_button.visible = false
 	buttons.add_child(_enhance_button)
@@ -1951,6 +1957,21 @@ func _make_cell(on_press: Callable, size: int = CELL) -> PanelContainer:
 	act.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cell.add_child(act)
 
+	# 잠근 장비 — 왼쪽 위에 "잠금" (`Items.is_locked`). 강화 배지(오른쪽 아래)와 안 겹친다
+	var lock := Label.new()
+	lock.name = "lock"
+	lock.visible = false
+	lock.text = "잠금"
+	lock.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	lock.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	lock.size_flags_vertical = Control.SIZE_FILL
+	lock.add_theme_font_size_override("font_size", 13)
+	lock.add_theme_color_override("font_color", INV_GOLD_HI)
+	lock.add_theme_color_override("font_outline_color", Color.BLACK)
+	lock.add_theme_constant_override("outline_size", 4)
+	lock.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cell.add_child(lock)
+
 	# 고른 칸 — 받은 그림처럼 밝은 금테를 덮는다
 	var pick := Panel.new()
 	pick.name = "pick"
@@ -1976,6 +1997,9 @@ func _fill_cell(cell: PanelContainer, stack: Dictionary, empty_text: String, ico
 	icon.texture = texture
 
 	var grade: Panel = cell.get_node("grade")
+	var lock: Label = cell.get_node_or_null("lock")
+	if lock != null:
+		lock.visible = Items.is_locked(stack)
 	if stack.is_empty():
 		# 빈 칸 — 그림을 죽여 둔다. 그림이 없으면 칸 이름을 적는다
 		icon.modulate = Color(1, 1, 1, 0.22)
@@ -2611,6 +2635,7 @@ func _show_bag_detail() -> void:
 
 	var stack := _picked_stack()
 	_enhance_button.visible = not Items.get_item(str(stack.get("id", ""))).is_empty()
+	_lock_button.visible = _enhance_button.visible
 	if stack.is_empty():
 		_detail_panel.visible = false
 		_bag_action.text = "-"
@@ -2647,7 +2672,11 @@ func _show_bag_detail() -> void:
 	# 성공률·실패 시 파괴는 **강화 팝업**에 적는다 (2026-09-23 요청 "강화 ui창을 따로 만들어")
 	var can := Items.can_enhance(enhance)
 	_enhance_button.text = "강화" if can else "최대"
-	_enhance_button.disabled = not can
+	# 잠근 장비는 강화 팝업을 열지 않는다 — 판정(`Ledger.enhance`)도 거절한다
+	var locked := Items.is_locked(stack)
+	_enhance_button.disabled = not can or locked
+	_lock_button.text = "잠금 해제" if locked else "잠금"
+	_lock_button.add_theme_font_size_override("font_size", 15 if locked else 18)
 
 	if fits:
 		_bag_action.text = "해제" if worn else "장착"
@@ -2678,6 +2707,8 @@ func _fill_item_view(view: Dictionary, stack: Dictionary, worn: bool, fits: bool
 	kind.add_theme_color_override("font_color", INV_DIM if fits else INV_WARN)
 	var state: Label = view.state
 	state.text = "착용 중" if worn else "보유 중"
+	if Items.is_locked(stack):
+		state.text += " · 잠금"
 	_fill_cell(view.icon, stack, "", _item_icon(stack))
 
 	# 아이템 정보 — 이름 · 값 두 줄짜리 표를 다시 채운다
@@ -2944,6 +2975,19 @@ func _on_bag_action() -> void:
 		# 탭으로 걸러 놔서 칸 번호가 아니라 가방 번호를 보낸다
 		_transport.send(&"equip", {"index": _picked_bag_index()})
 	_bag_pick = {}
+	_redraw_bag()
+
+
+## 상세 창 "잠금" — 고른 장비의 잠금을 뒤집는다 (`Ledger.toggle_lock`). 잠근 것은 판매 · 강화 ·
+## 도감 등록을 못 한다. 가방 번호는 그대로라 고른 칸도 그대로 둔다
+func _toggle_lock() -> void:
+	if Items.get_item(str(_picked_stack().get("id", ""))).is_empty():
+		return
+	var worn := str(_bag_pick.get("where", "")) == "equip"
+	_transport.send(&"toggleLock", {
+		"where": "equip" if worn else "bag",
+		"key": str(Items.slots()[int(_bag_pick.index)]) if worn else _picked_bag_index(),
+	})
 	_redraw_bag()
 
 

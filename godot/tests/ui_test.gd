@@ -317,6 +317,7 @@ func _run_scene() -> void:
 	await _case_char(game)
 	await _case_bag_drag(game)
 	await _case_compare(game)
+	await _case_lock(game)
 	await _case_skills(game)
 	await _case_design_panel(game)
 	# 존을 옮기므로 맨 끝에 둔다
@@ -1869,6 +1870,52 @@ func _case_bag_drag(game: Node3D) -> void:
 ## 띄워서 비교할 수 있게" + "상세 정보창 크기를 좀 줄여"). 가방 칸을 고르면 같은 부위에
 ## 낀 것이 **상세 창 바로 왼쪽에 같은 높이로** 뜬다. 줄이 가장 많은 장비(능력치 셋 ·
 ## 옵션 셋 = 8줄)로 채워도 두 창이 화면 안이어야 한다
+## 잠금 (2026-10-02) — 상세 창 "잠금" 단추가 칸을 잠그고, 잠그면 칸 왼쪽 위 "잠금" ·
+## 상태 줄 "· 잠금" · 강화 단추 꺼짐 · 단추가 "잠금 해제". 단추 셋이 상세 창 폭 안에 든다
+func _case_lock(game: Node3D) -> void:
+	var me: Dictionary = game._transport.snapshot().players[game._transport.my_id()]
+	var kept_bag: Array = me.bag.duplicate(true)
+	me.bag.clear()
+	me.bag.append({"id": "g1_b", "grade": 1, "enhance": 0, "options": []})
+	game._gate_panel.close_panel()
+	if game._bag_panel.visible:
+		game._toggle_bag()
+	game._toggle_bag()
+	await process_frame
+	await process_frame
+	await _tap_cell(game._bag_drag, game._bag_scroll, game._bag_grid, 0)
+	await process_frame
+	var lock: Button = game._lock_button
+	if not lock.is_visible_in_tree() or lock.text != "잠금":
+		_fail("장비를 골랐는데 잠금 단추가 없다 (%s · '%s')" % [lock.is_visible_in_tree(), lock.text])
+	lock.pressed.emit()
+	await process_frame
+	await process_frame
+	var cell: PanelContainer = game._bag_grid.get_child(0)
+	if not Items.is_locked(me.bag[0]):
+		_fail("잠금 단추를 눌렀는데 장부가 안 잠겼다")
+	if not cell.get_node("lock").visible:
+		_fail("잠근 칸에 '잠금' 표시가 없다")
+	if not game._detail_state.text.ends_with("· 잠금"):
+		_fail("상태 줄에 잠금이 없다: '%s'" % game._detail_state.text)
+	if not game._enhance_button.disabled:
+		_fail("잠근 장비인데 강화 단추가 켜져 있다")
+	if lock.text != "잠금 해제":
+		_fail("잠근 뒤 단추 글자: '%s'" % lock.text)
+	var row: Rect2 = lock.get_parent().get_global_rect()
+	var detail: Rect2 = game._detail_panel.get_global_rect()
+	if not detail.encloses(row) or row.size.x > game.ITEM_W + 0.5:
+		_fail("단추 줄이 상세 창을 넓혔거나 밖으로 나갔다: %s / %s" % [row, detail])
+	print("  잠금: 단추 줄 %s · 상세 %s" % [row, detail])
+	lock.pressed.emit()
+	await process_frame
+	if Items.is_locked(me.bag[0]) or cell.get_node("lock").visible or game._enhance_button.disabled:
+		_fail("잠금 해제가 안 됐다")
+	game._toggle_bag()
+	me.bag.clear()
+	me.bag.append_array(kept_bag)
+
+
 func _case_compare(game: Node3D) -> void:
 	var me: Dictionary = game._transport.snapshot().players[game._transport.my_id()]
 	var kept_bag: Array = me.bag.duplicate(true)

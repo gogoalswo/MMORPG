@@ -323,7 +323,8 @@ func fitness_up(p: Dictionary, kind_id: String, auto: int = 0) -> void:
 ## (2026-10-01 요청: "각 등급 0강부터 9강까지 등록할 수 있는 도감"). **끼고 있는 것은 안 받는다** —
 ## 가방만 뒤진다. `index` 는 도감 창에서 **고른 가방 번호** — 그 칸이 이 등급·부위·강화가 맞는지 다시 본다
 ## (2026-10-01 요청 "등록할 때 어떤 아이템 넣을건지 선택하는 UI"). -1 이면 같은 장비 중
-## **옵션 줄(1·2·3차 합)이 가장 적은 것**을 넣는다 (좋은 것을 남긴다). 겹친 칸이면 하나만 뗀다
+## **옵션 줄(1·2·3차 합)이 가장 적은 것**을 넣는다 (좋은 것을 남긴다). 겹친 칸이면 하나만 뗀다.
+## **잠근 것은 안 넣는다** — 고른 칸이 잠겼으면 거절, -1 이면 잠근 것을 건너뛴다
 func codex_register(p: Dictionary, item_id: String, enhance: int, index: int = -1) -> void:
 	var item := Items.get_item(item_id)
 	if item.is_empty() or enhance < 0 or enhance > Codex.max_enhance():
@@ -342,9 +343,13 @@ func codex_register(p: Dictionary, item_id: String, enhance: int, index: int = -
 		else:
 			_notice("고른 %s 이 가방에 없습니다" % label)
 			return
+		if Items.is_locked(p.bag[pick]):
+			_notice("잠근 장비는 도감에 넣을 수 없습니다")
+			return
 	for at in p.bag.size() if index < 0 else 0:
 		var stack: Dictionary = p.bag[at]
-		if str(stack.get("id", "")) != item_id or int(stack.get("enhance", 0)) != enhance:
+		if str(stack.get("id", "")) != item_id or int(stack.get("enhance", 0)) != enhance \
+				or Items.is_locked(stack):
 			continue
 		if pick < 0 or Items.option_lines(stack) < Items.option_lines(p.bag[pick]):
 			pick = at
@@ -549,6 +554,27 @@ func unequip(p: Dictionary, slot: String) -> void:
 	_inventory_changed(p)
 
 
+## 잠금을 뒤집는다 (2026-10-02 요청). where 는 "bag"(가방 번호) · "equip"(슬롯 이름).
+## 잠근 것은 판매·강화(단일·다중)·도감 등록이 거절한다. 장비만 잠근다 — 재료는 칸이 겹쳐서
+## 새로 들어온 것까지 잠겨 버린다. 겹친 칸은 통째로 잠근다 (같은 물건이라 나눌 까닭이 없다)
+func toggle_lock(p: Dictionary, where: String, key: Variant) -> void:
+	var stack: Dictionary = {}
+	if where == "equip":
+		stack = p.equipped.get(str(key), {})
+	elif where == "bag" and int(key) >= 0 and int(key) < p.bag.size():
+		stack = p.bag[int(key)]
+	var item := Items.get_item(str(stack.get("id", "")))
+	if item.is_empty():
+		return
+	if Items.is_locked(stack):
+		stack.erase("locked")
+		_notice("%s 잠금 해제" % item.name)
+	else:
+		stack.locked = true
+		_notice("%s 잠금" % item.name)
+	_inventory_changed(p)
+
+
 ## 가방을 정렬한다 — 높은 등급이 앞, 같은 등급이면 슬롯 순서(무기 → 반지),
 ## 그다음 강화가 높은 것. 순서만 바뀌고 물건은 그대로다
 func sort_bag(p: Dictionary) -> void:
@@ -723,6 +749,9 @@ func sell(p: Dictionary, index: int) -> void:
 	var item := Items.get_item(str(stack.id))
 	if item.is_empty():
 		return
+	if Items.is_locked(stack):
+		_notice("잠근 장비는 팔 수 없습니다")
+		return
 
 	var price := Items.sell_price(item, int(stack.get("grade", 1)))
 	p.bag.remove_at(index)
@@ -755,6 +784,9 @@ func enhance(p: Dictionary, where: String, key: Variant) -> void:
 	var item := Items.get_item(str(stack.get("id", "")))
 	if item.is_empty():
 		return  # 장비만 두드린다
+	if Items.is_locked(stack):
+		_notice("잠근 장비는 강화할 수 없습니다")
+		return
 
 	var level := int(stack.get("enhance", 0))
 	if not Items.can_enhance(level):
@@ -812,8 +844,8 @@ func enhance_many(p: Dictionary, indices: Array, cap: int = -1) -> void:
 		if at < 0 or at >= p.bag.size() or chosen.has(at):
 			continue
 		var stack: Dictionary = p.bag[at]
-		if Items.get_item(str(stack.get("id", ""))).is_empty():
-			continue
+		if Items.get_item(str(stack.get("id", ""))).is_empty() or Items.is_locked(stack):
+			continue  # 잠근 것은 담겨 와도 두드리지 않는다
 		chosen.append(at)
 		if int(stack.get("enhance", 0)) < limit:
 			live += 1

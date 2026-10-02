@@ -24,6 +24,8 @@ const OPS := {
 	"equip": "i",
 	"unequip": "s",
 	"sort_bag": "",
+	# 잠금 뒤집기 — 어디(bag/equip) · 가방 번호 또는 슬롯
+	"toggle_lock": "sk",
 	# 자동 장착 — 무엇을 낄지는 서버가 장부로 고른다
 	"auto_equip": "",
 	# 어디(bag/equip) · 가방 번호 또는 슬롯 · 차수(2 크리스탈 · 3 옐로우 크리스탈)

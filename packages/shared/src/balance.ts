@@ -209,11 +209,15 @@ export const JOB_MULT: Record<JobId, { atk: number; hp: number; df: number; inte
  * 약해서 1:1 인 보스만 ×5 로 올려 뒀는데, 일반을 "한 마리당 HP 10%" 로 올리자 ×5 면 같은
  * 레벨 보스 한 판에 HP 350% 를 잃었다. ×1 이면 한 대는 일반과 같고 HP ×7 만큼 오래 싸워
  * 한 판에 약 70% (범위 공격 빼고) — 사용자가 고른 안이다.
+ *
+ * 2026-10-02 에 ×1 → **×3** 이다 (사용자 지시: "던전 보스 공격력을 지금보다 3배 높여").
+ * 보스 종은 던전에서만 서니 던전 보스에만 걸린다. 한 판에 약 210% (범위 공격 빼고) —
+ * 혼자서는 물약 없이 못 버티는 값이다.
  */
 export const ROLE_MULT = {
   normal: { hp: 1, atk: 1 },
   elite: { hp: 3, atk: 2 },
-  boss: { hp: 7, atk: 1 },
+  boss: { hp: 7, atk: 3 },
 } as const;
 export type MonsterRole = keyof typeof ROLE_MULT;
 

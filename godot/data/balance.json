@@ -1143,7 +1143,7 @@
     },
     "boss": {
       "hp": 7,
-      "atk": 1
+      "atk": 3
     }
   },
   "skillStages": [

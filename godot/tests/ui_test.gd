@@ -807,13 +807,13 @@ func _case_trial(game: Node3D) -> void:
 	game._toggle_dungeon()
 	await process_frame
 	await _tap_card(panel, 1)
-	if not panel.stages_open() or panel.row_count() != 20:
-		_fail("시련의 탑을 누르면 단계 20줄이 떠야 한다 (%s · %d줄)" % [panel.stages_open(), panel.row_count()])
+	if not panel.stages_open() or panel.row_count() != 7:
+		_fail("시련의 탑을 누르면 단계 7줄이 떠야 한다 (%s · %d줄)" % [panel.stages_open(), panel.row_count()])
 		return
 	if panel.picked_stage() != "trial_01":
 		_fail("시련 단계 창을 열면 1단계가 골라져야 한다: %s" % panel.picked_stage())
 	var first_reward: Label = panel._rewards.get_child(0).find_children("*", "Label", true, false)[0]
-	if first_reward.text != "크리스탈 1개":
+	if first_reward.text != "크리스탈 2개":
 		_fail("시련 보상 맨 앞이 크리스탈이어야 한다: '%s'" % first_reward.text)
 	var rule: Label = panel.find_child("trial_rule", true, false)
 	if rule == null or rule.text != "30초 안에 7마리":

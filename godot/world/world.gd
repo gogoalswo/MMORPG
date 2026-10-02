@@ -323,6 +323,8 @@ func join(player_id: String) -> void:
 		"codex": kept.get("codex", {}).duplicate(),
 		# 샌드백 랭킹전 `{week, best, unpaid?}` — 그 주 최고 기록 (docs/features/sandbag.md)
 		"sandbag": kept.get("sandbag", {}).duplicate(true),
+		# 던전 하루 입장 `{ 종류 id: {day, count} }` (docs/features/dungeons.md "하루 한 번")
+		"dungeon_entries": kept.get("dungeon_entries", {}).duplicate(true),
 	}
 	_refresh_stats(_players[player_id])
 	# 샌드백 랭킹전 — 들어오면 샌드백을 보고 선다. 평타는 정면 부채꼴 안만 치므로 등을 지고 서면 헛손질한다
@@ -436,7 +438,24 @@ func travel(player_id: String, target: String) -> void:
 	var all: Dictionary = GameData.zones().get("zones", {})
 	if not all.has(target) or target == zone_id:
 		return
+	if not _use_dungeon_entry(_players[player_id], target):
+		return
 	_move_to(target)
+
+
+## 하루 한 번인 던전이면 오늘 입장을 쓴다. 다 썼으면 알리고 false (docs/features/dungeons.md "하루 한 번").
+## 서버에 붙어 있으면 **기기는 막기만 하고 세는 것은 서버다** — `enter` 를 받은 `LedgerServer._enter` 가
+## 장부에 적고, 답이 오면 `apply_ledger` 가 덮는다
+func _use_dungeon_entry(player: Dictionary, target: String) -> bool:
+	if remote == null:
+		var ok := _ledger.dungeon_enter(player, target)
+		_after_ledger(player, int(player.level), _ledger.take_events())
+		return ok
+	if Ledger.dungeon_entries_left(player, target, _ledger.dungeon_day()) != 0:
+		return true
+	var type := GameData.dungeon_type_of(target)
+	_events.append({"type": "notice", "text": "%s 은(는) 오늘 이미 들어갔습니다 — 5시에 다시 열립니다" % str(type.get("name", "던전"))})
+	return false
 
 
 ## 존을 옮긴다. 있는 존인지는 부르는 쪽이 봤다
@@ -873,7 +892,10 @@ func _walk_auto(
 
 
 func _kill(player: Dictionary, target: Dictionary, now: int) -> void:
-	target.respawn_at = now + int(target.respawn_ms)
+	# 하루 한 번인 던전의 몬스터는 **되살아나지 않는다** — 안에서 기다렸다 보스를 또 잡으면 하루 한 번이
+	# 아니게 된다 (`respawn_at` 0 = 되살릴 것 없음, `_respawn` 이 건너뛴다). 서버도 같은 개체를 두 번 안 받는다
+	var daily_dungeon := int(GameData.dungeon_type_of(zone_id).get("daily", 0)) > 0
+	target.respawn_at = 0 if daily_dungeon else now + int(target.respawn_ms)
 
 	# 보상(드롭·골드·경험치·레벨·전직 시험)은 장부가 굴린다 — `Ledger.kill`.
 	# **종류·존·개체 id 만 보낸다** — 수치는 장부가 표에서 찾고, 서버는 id 를 제 명단에 대 본다
@@ -1533,7 +1555,10 @@ func restore(player_id: String) -> bool:
 
 	var zone_saved := str(saved.get("zone", ""))
 	var all: Dictionary = GameData.zones().get("zones", {})
-	if all.has(zone_saved) and zone_saved != zone_id:
+	# **하루 한 번인 던전 안에서 끝냈으면 그 자리로 돌아가지 않는다** — 다시 열면 몬스터가 새로 서서
+	# 입장을 안 쓰고 한 판을 더 하게 된다. 그 판은 들어갈 때 이미 셌다 (dungeons.md "하루 한 번")
+	var daily_dungeon := int(GameData.dungeon_type_of(zone_saved).get("daily", 0)) > 0
+	if all.has(zone_saved) and zone_saved != zone_id and not daily_dungeon:
 		open(zone_saved)
 	join(player_id)
 
@@ -1616,6 +1641,9 @@ func restore(player_id: String) -> bool:
 	# 샌드백 랭킹전 — 없던 칸이라 옛 저장은 빈 사전. 주가 지났으면 `_check_sandbag_week` 가 정산한다
 	var raw_sandbag: Variant = saved.get("sandbag", {})
 	player.sandbag = Ledger.from_json(raw_sandbag) if raw_sandbag is Dictionary else {}
+	# 던전 하루 입장 — 없던 칸이라 옛 저장은 빈 사전
+	var raw_entries: Variant = saved.get("dungeon_entries", {})
+	player.dungeon_entries = Ledger.from_json(raw_entries) if raw_entries is Dictionary else {}
 	# 물약을 저절로 마시는 기준 — 없던 칸이라 옛 저장은 처음 값으로 읽힌다
 	set_potion_pct(player_id, int(saved.get("potion_pct", player.potion_pct)))
 

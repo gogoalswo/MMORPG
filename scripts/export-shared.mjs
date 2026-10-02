@@ -64,6 +64,8 @@ import {
   START_ZONE,
   FIELD_ORDER,
   DUNGEON_TYPES,
+  DUNGEON_DAY_SECONDS,
+  DUNGEON_DAY_SHIFT_SECONDS,
   FITNESS_KINDS,
   FITNESS_MAX_STAGE,
   FITNESS_STEPS,
@@ -125,6 +127,8 @@ export function buildData() {
       fieldOrder: FIELD_ORDER,
       // 던전 창이 읽는다 — 종류 셋과 단계별 존 id·보스 (dungeons.ts)
       dungeons: DUNGEON_TYPES,
+      // 던전 하루 입장의 날 경계 — 한국 시각 0시 (dungeons.ts `dungeonDay`)
+      dungeonDay: { seconds: DUNGEON_DAY_SECONDS, shift: DUNGEON_DAY_SHIFT_SECONDS },
       // 샌드백 랭킹전 (sandbag.ts) — 존 · 카운트 · 재는 시간 · 주 경계 · 순위 보상
       sandbag: {
         zone: SANDBAG_ZONE,

@@ -269,7 +269,7 @@ var _hold_at := Vector2.ZERO
 ## 누르는 동안은 `CLICK_FX_EVERY` 마다 다시 띄운다 (2026-10-02 요청)
 var _marker_age := 0.0
 var _marker_next := 0.0
-const CLICK_FX_EVERY := 0.8
+const CLICK_FX_EVERY := 0.5
 const CLICK_FX_LIFE := 0.5
 var _seq := 0
 var _half_size := 0.0

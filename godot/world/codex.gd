@@ -48,7 +48,7 @@ static func has(codex: Dictionary, item_id: String, enhance: int) -> bool:
 
 
 ## **자동 등록**이 넣을 가방 번호 — 아직 빈 칸마다 하나, 같은 칸의 장비가 여럿이면 **옵션 줄(1·2·3차 합)이 가장
-## 적은 것** (`Ledger.codex_register` 의 기본과 같은 셈 — 좋은 것을 남긴다). 번호 오름차순.
+## 적은 것** (`Ledger.codex_register` 의 기본과 같은 셈 — 좋은 것을 남긴다). **잠근 것은 빼고** 번호 오름차순.
 ## 장부(`Ledger.codex_register_all`)와 확인 창(`CodexPicker.open_all`)이 같이 쓴다 → codex.md "자동 등록"
 static func auto_picks(codex: Dictionary, bag: Array) -> Array:
 	var best := {}
@@ -56,8 +56,9 @@ static func auto_picks(codex: Dictionary, bag: Array) -> Array:
 		var stack: Dictionary = bag[at]
 		var item_id := str(stack.get("id", ""))
 		var enhance := int(stack.get("enhance", 0))
+		# 잠근 장비는 건너뛴다 — 장부가 도감 등록을 거절한다 (inventory-equipment.md "잠금")
 		if Items.get_item(item_id).is_empty() or enhance < 0 or enhance > max_enhance() \
-				or has(codex, item_id, enhance):
+				or has(codex, item_id, enhance) or Items.is_locked(stack):
 			continue
 		var key := "%s:%d" % [item_id, enhance]
 		if not best.has(key) or Items.option_lines(stack) < Items.option_lines(bag[best[key]]):

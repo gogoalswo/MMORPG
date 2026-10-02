@@ -419,8 +419,8 @@ func _redraw() -> void:
 
 	_redraw_effects(codex)
 	_redraw_pick(codex, owned)
-	# 자동 등록은 등급을 가리지 않는다 — 어느 탭이든 빨간 점이 하나라도 있으면 켠다
-	var any := not dotted_tabs().is_empty()
+	# 자동 등록은 등급을 가리지 않는다 — 넣을 것(잠근 것 빼고)이 어느 탭에든 하나라도 있으면 켠다
+	var any := not Codex.auto_picks(codex, _me.get("bag", [])).is_empty()
 	_auto_button.disabled = not any
 	_auto_button.modulate = Color.WHITE if any else Color(1, 1, 1, 0.45)
 

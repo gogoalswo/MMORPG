@@ -139,8 +139,10 @@ func _case_all() -> void:
 	poor.options = [{"kind": "crit", "value": 1}]
 	me.codex = {Items.item_id(2, "helmet"): 1}
 	me.equipped = {"armor": _gear(3, "armor", 0)}
+	var kept := _gear(4, "armor", 1)
+	kept.locked = true
 	me.bag = [
-		_gear(1, "weapon", 0, 3), rich, _gear(2, "helmet", 0), {"id": "없는것", "count": 4}, poor, _gear(7, "ring", 9),
+		_gear(1, "weapon", 0, 3), rich, _gear(2, "helmet", 0), {"id": "없는것", "count": 4}, poor, _gear(7, "ring", 9), kept,
 	]
 	w.codex_register_all("me")
 	for cell in [[1, "weapon", 0], [5, "boots", 7], [7, "ring", 9]]:
@@ -150,18 +152,18 @@ func _case_all() -> void:
 		_fail("자동 등록 뒤 찬 칸 %d (4 여야 한다) · 끼운 갑옷 %s" % [
 			Codex.filled(me.codex), Codex.has(me.codex, Items.item_id(3, "armor"), 0)
 		])
-	# 남는 것: 겹친 무기 2 · 옵션 많은 신발 · 이미 찬 투구 · 재료
+	# 남는 것: 겹친 무기 2 · 옵션 많은 신발 · 이미 찬 투구 · 재료 · 잠근 갑옷
 	var left: Array = []
 	for stack in me.bag:
 		left.append("%s+%d*%d/%d" % [stack.id, int(stack.get("enhance", 0)), int(stack.get("count", 1)), (stack.get("options", []) as Array).size()])
 	var want := ["%s+0*2/0" % Items.item_id(1, "weapon"), "%s+7*1/2" % Items.item_id(5, "boots"),
-		"%s+0*1/0" % Items.item_id(2, "helmet"), "없는것+0*4/0"]
+		"%s+0*1/0" % Items.item_id(2, "helmet"), "없는것+0*4/0", "%s+1*1/0" % Items.item_id(4, "armor")]
 	if left != want:
 		_fail("자동 등록 뒤 가방 %s (바라는 것 %s)" % [left, want])
 	# 넣을 것이 없으면 아무것도 안 바뀐다
 	var before: Dictionary = me.codex.duplicate()
 	w.codex_register_all("me")
-	if me.codex != before or me.bag.size() != 4:
+	if me.codex != before or me.bag.size() != 5:
 		_fail("넣을 것이 없는데 바뀌었다: %s · 가방 %d" % [me.codex, me.bag.size()])
 
 
@@ -359,10 +361,12 @@ func _case_panel() -> void:
 	if picker.is_all() or picker.choice() != 2:
 		_fail("자동 등록 뒤 [등록] 이 하나 고르는 창이 아니다: 전부 %s · 고른 것 %d" % [picker.is_all(), picker.choice()])
 	picker.close()
-	panel.refresh({"codex": {Items.item_id(3, "ring"): 1}, "bag": [_gear(3, "ring", 0)]})
+	var locked := _gear(5, "weapon", 0)
+	locked.locked = true
+	panel.refresh({"codex": {Items.item_id(3, "ring"): 1}, "bag": [_gear(3, "ring", 0), locked]})
 	await process_frame
 	if not panel.auto_button().disabled:
-		_fail("넣을 장비가 없는데 자동 등록 단추가 켜져 있다")
+		_fail("넣을 장비가 없는데(찬 칸 · 잠근 것뿐) 자동 등록 단추가 켜져 있다")
 	# 기준 화면(1280x720)에 들어가나 — 돌판 틀 여백(카드 34 · 안 30)을 뺀 알맹이로 본다
 	var inner := panel.get_combined_minimum_size()
 	if inner.x > 1280.0 - 128.0 or inner.y > 720.0 - 128.0:

@@ -524,6 +524,7 @@ func _codex_auto(p: Dictionary, at: int) -> bool:
 		if result == "destroy":
 			p.bag.remove_at(at)
 			_notice("도감 자동 강화 실패 — %s +%d 에서 부서졌습니다" % [item.name, level])
+			_codex_auto_log("destroy", item, level, tries)
 			_inventory_changed(p)
 			return true
 		if result == "success":
@@ -531,14 +532,25 @@ func _codex_auto(p: Dictionary, at: int) -> bool:
 	stack.enhance = level
 	if level < goal:
 		_notice("도감 자동 강화 — 골드가 모자라 %s +%d 에서 멈췄습니다" % [item.name, level])
+		_codex_auto_log("short", item, level, tries)
 		_inventory_changed(p)
 		return false
 	var got := _codex_take(p, codex, at, true)
 	var climbed := " (강화 %d번)" % tries if tries > 0 else ""
 	_notice("도감 자동 등록 — %s +%d%s · %s +%s%%" % [
 		item.name, level, climbed, Codex.stat_name(str(got.stat)), String.num(float(got.gain), 2)])
+	_codex_auto_log("register", item, level, tries, got)
 	_inventory_changed(p)
 	return true
+
+
+## 주울 때 자동 등록의 결과 — 채팅창에 남길 한 줄 (`game.gd` `codexAuto`). `notice` 는 위 한 줄만 바꾸고 사라진다
+## (2026-10-02 지적 "자동 강화해서 등록하면 채팅창에 기록 안 남는거 같은데")
+func _codex_auto_log(result: String, item: Dictionary, level: int, tries: int, got: Dictionary = {}) -> void:
+	events.append({
+		"type": "codexAuto", "result": result, "name": str(item.name), "level": level, "tries": tries,
+		"stat": str(got.get("stat", "")), "gain": float(got.get("gain", 0.0)),
+	})
 
 
 ## 도감 자동 등록 — **등급 하나**의 넣을 종류(부위) 목록을 정한다. 비면 그 등급을 끈다.

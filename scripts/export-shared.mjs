@@ -111,6 +111,9 @@ import {
   SANDBAG_REWARDS,
   SANDBAG_WEEK_SHIFT_SECONDS,
   WEEK_SECONDS,
+  SANDBAG_DAY_SHIFT_SECONDS,
+  DAY_SECONDS,
+  SANDBAG_HISTORY_DAYS,
 } from '../packages/shared/src/sandbag.ts';
 // `index.ts` 가 gear.ts 를 다시 내보내지 않는다 — 설계 표는 직접 가져온다
 import { GEAR_DROP_RATE } from '../packages/shared/src/gear.ts';
@@ -138,6 +141,9 @@ export function buildData() {
         rankRefresh: SANDBAG_RANK_REFRESH_SECONDS,
         weekShift: SANDBAG_WEEK_SHIFT_SECONDS,
         weekSeconds: WEEK_SECONDS,
+        dayShift: SANDBAG_DAY_SHIFT_SECONDS,
+        daySeconds: DAY_SECONDS,
+        historyDays: SANDBAG_HISTORY_DAYS,
         rewards: SANDBAG_REWARDS,
       },
       zones: ZONES,

@@ -488,6 +488,7 @@ var _sandbag_panel: PanelContainer
 var _sandbag_grid: GridContainer
 var _sandbag_note: Label
 var _sandbag_count: Label
+var _sandbag_days: GridContainer
 var _char_head: Label
 ## 캐릭터 정보 창 제목 — "캐릭터 정보" 대신 닉네임을 적는다 (2026-09-30 요청)
 var _char_name: Label
@@ -2409,6 +2410,24 @@ func _build_sandbag_panel() -> void:
 	# 휠·손가락 둘 다 굴린다 — 엔진의 끌기는 터치 화면에서만 켜진다 (가방 격자와 같다)
 	DragScroll.attach(scroll, _sandbag_grid, 8)
 
+	# --- 맨 오른쪽 — 날짜별 기록 (2026-10-02 요청 "매일 가장 강한 기록 날짜별로 기록하고, 최대 일주일") ---
+	# 오늘부터 6일 전까지 일곱 줄 — 판을 안 돈 날은 "-". 값은 순위 답의 `days` · `today` (`_fill_sandbag`)
+	var split_days := ColorRect.new()
+	split_days.color = GatePanel.HEAD_LINE
+	split_days.custom_minimum_size = Vector2(1, 0)
+	body.add_child(split_days)
+	var history := VBoxContainer.new()
+	history.custom_minimum_size = Vector2(250, 0)
+	history.add_theme_constant_override("separation", 8)
+	body.add_child(history)
+	history.add_child(_inv_label("날짜별 기록", 22, INV_GOLD))
+	_sandbag_days = GridContainer.new()
+	_sandbag_days.name = "SandbagDays"
+	_sandbag_days.columns = 2
+	_sandbag_days.add_theme_constant_override("h_separation", 24)
+	_sandbag_days.add_theme_constant_override("v_separation", 8)
+	history.add_child(_sandbag_days)
+
 	# 화면 가운데 큰 카운트 — 판이 도는 동안만 (`_draw_sandbag_hud`)
 	_sandbag_count = Label.new()
 	_sandbag_count.name = "sandbag_count"
@@ -2476,6 +2495,26 @@ func _fill_sandbag(board: Dictionary) -> void:
 	else:
 		_sandbag_note.text = "내 기록 %s · %d위 / %d명\n%s" % [
 			DungeonResult.comma(int(me.best)), int(me.rank), int(board.get("total", 0)), until]
+	_fill_sandbag_days(board.get("days", []), int(board.get("today", 0)))
+
+
+## 날짜별 기록 — 오늘이 맨 위, 그날 최고 한 판. 기록이 없는 날은 "-"
+func _fill_sandbag_days(days: Array, today: int) -> void:
+	for child in _sandbag_days.get_children():
+		child.queue_free()
+	var best_of := {}
+	for row in days:
+		best_of[int(row.get("day", -1))] = int(row.get("best", 0))
+	for i in Sandbag.history_days():
+		var day := today - i
+		var best := int(best_of.get(day, 0))
+		var tint := INV_GOLD_HI if i == 0 else INV_TEXT
+		var date := _inv_label(Sandbag.day_label(day), 18, tint)
+		date.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_sandbag_days.add_child(date)
+		var value := _inv_label(DungeonResult.comma(best) if best > 0 else "-", 18, tint if best > 0 else INV_DIM)
+		value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		_sandbag_days.add_child(value)
 
 
 ## 판이 도는 동안 — 카운트 중엔 가운데 큰 숫자(3 · 2 · 1), 재기 시작하면 "시작!" 을 잠깐, 시계 줄엔 남은 시간 · 누적 피해

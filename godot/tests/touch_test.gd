@@ -37,6 +37,26 @@ func _run() -> void:
 	else:
 		print("  누른 자리 -> 바닥 (%.1f, %.1f)" % [target.x, target.z])
 
+	# 클릭 이펙트는 한 번 퍼지고 사라진다. 누르고 있으면 `CLICK_FX_EVERY` 마다 다시 뜬다
+	# (2026-10-02 요청: "안 없어지고 계속 보여"). 프레임 시간이 고르지 않아 delta 를 직접 넣는다
+	if not game._marker.visible:
+		print("  실패: 땅을 눌렀는데 클릭 이펙트가 안 떴다")
+		_failed += 1
+	game._tick_marker(game.CLICK_FX_LIFE + 0.01)
+	if game._marker.visible:
+		print("  실패: 클릭 이펙트가 %.1f초가 지나도 안 사라진다" % game.CLICK_FX_LIFE)
+		_failed += 1
+	# 이펙트 시계와 다음 이펙트까지의 시계는 따로 간다 — 움직임이 크지 않게 delta 는 짧게 주고 남은 시간을 당긴다
+	game._send_input(0.1)
+	if game._marker.visible:
+		print("  실패: 누르고 있는데 %.1f초가 되기 전에 클릭 이펙트가 또 떴다" % game.CLICK_FX_EVERY)
+		_failed += 1
+	game._marker_next = 0.05
+	game._send_input(0.1)
+	if not game._marker.visible:
+		print("  실패: 누르고 있는데 %.1f초마다 클릭 이펙트가 다시 안 뜬다" % game.CLICK_FX_EVERY)
+		_failed += 1
+
 	for i in 90:
 		await process_frame
 

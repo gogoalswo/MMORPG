@@ -5034,7 +5034,7 @@ func _build_zone(zone_id: String) -> void:
 	# 차원문. 여기 들어가면 존이 바뀐다 (World._check_gate)
 	var gate: Dictionary = zone.get("gate", {})
 	if not gate.is_empty():
-		var portal := Portal.create(gate)
+		var portal := Portal.create(gate, _ui_root.theme.default_font if _ui_root.theme != null else null)
 		portal.position.y = _ground_y(portal.position.x, portal.position.z)
 		_zone_node.add_child(portal)
 

@@ -56,14 +56,14 @@ test('기본 스탯은 레벨당 복리 ×1.02 다', () => {
   // Lv1 HP300/공20/방20 → Lv200 맨몸 HP 5,146 / 공 1,029 / 방 1,029
   // (문서 2장은 공10/방10 — 2026-09-26 에 공 20 · 방 20 으로 올렸다)
   // 2026-09-27: Lv1 HP 100 → 300, HP 만 성장률을 따로 둬서 Lv200 은 그대로 5,146 (후반 2만 유지)
-  // 2026-10-02: 모든 레벨 ×1.5 (`HP_SCALE`) — Lv1 450, Lv200 7,718
+  // 2026-10-02: 모든 레벨 ×1.5 → 같은 날 ×3 (`HP_SCALE`) — Lv1 900, Lv200 15,437
   const one = base(1);
-  assert.equal(one.hp, 450);
+  assert.equal(one.hp, 900);
   assert.equal(one.atk, 20);
   assert.equal(one.df, 20);
 
   const top = base(MAX_LEVEL);
-  assert.equal(Math.round(top.hp), 7718);
+  assert.equal(Math.round(top.hp), 15437);
   assert.equal(Math.round(top.atk), 1029);
   assert.equal(Math.round(top.df), 1029);
 
@@ -184,7 +184,7 @@ test('한 마리 잡는 동안 HP 를 10% 쯤 잃는다 ★★', () => {
 
 test('후반 HP 는 2만 근처이고, 생존은 방어의 감소율이 맡는다 ★★', () => {
   // 2026-09-27 지시: "체력은 후반에도 2만 정도만 되고 방어력 올려서 피해감소를 해서 안 죽으면 좋겠어"
-  // 2026-10-02 에 HP 를 모든 레벨 ×1.5 (`HP_SCALE`) — 범위도 같이 곱한다
+  // 2026-10-02 에 HP 를 모든 레벨 ×1.5 → ×3 (`HP_SCALE`) — 범위도 같이 곱한다
   const hp200 = refPlayer(MAX_LEVEL).hp;
   assert.ok(hp200 > 15000 * HP_SCALE && hp200 < 25000 * HP_SCALE, `Lv200 기준 HP ${Math.round(hp200)}`);
   // 등급7 풀세트는 풀강(10단)이어도 무강과 HP 가 같다 — HP 는 강화를 안 탄다

@@ -21,7 +21,7 @@ import { PASSIVES, passiveRankOpen } from './skills.ts';
 
 /**
  * 같은 레벨 몬스터 한 마리를 잡는 동안 잃는 HP 비율 — 10% 였는데 2026-10-02 에 HP 를 ×1.5
- * (`HP_SCALE`) 하면서 약 6.7% 가 됐다. 여기서 나눠 둬야 표를 다시 구워도 몬스터 공격력이
+ * (`HP_SCALE`) 하면서 약 6.7%, 같은 날 ×3 으로 올려 약 3.3% 가 됐다. 여기서 나눠 둬야 표를 다시 구워도 몬스터 공격력이
  * 1.5배로 따라 올라 그 변경을 지우지 않는다
  */
 export const HP_LOSS_PER_KILL = 0.1 / HP_SCALE;

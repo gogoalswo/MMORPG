@@ -1,7 +1,7 @@
 {
   "maxLevel": 200,
   "fieldSpan": 10,
-  "hpBase": 450,
+  "hpBase": 900,
   "hpGrowth": 0.014384437020289909,
   "atkBase": 20,
   "defBase": 20,

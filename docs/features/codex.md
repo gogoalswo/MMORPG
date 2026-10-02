@@ -25,7 +25,7 @@
 | `godot/net/local_transport.gd` | `codexRegister {id, enhance}` |
 | `godot/game/codex_panel.gd` `CodexPanel` | ★ **도감 창** (아래 "창") · [강화] → `enhance_requested` (아래 "강화 단추") |
 | `godot/game/codex_picker.gd` `CodexPicker` | ★ **등록할 장비 선택 창** — [등록] 을 누르면 도감 창 위에 뜬다 (아래 "고르기 창") |
-| `godot/game/codex_auto.gd` `CodexAutoSheet` | ★ **자동 등록 설정 창** — 오른쪽 칸 맨 아래 [자동 등록 설정], 등급 탭마다 ON/OFF · 부위 칩 여섯 · 1차 옵션 칩 다섯(켜면 넣음) (아래 "주울 때 자동 등록") |
+| `godot/game/codex_auto.gd` `CodexAutoSheet` | ★ **자동 등록 설정 창** — 오른쪽 칸 맨 아래 [자동 등록 설정], 등급 탭마다 ON/OFF · 부위 칩 여섯 · 1차 옵션 칩 다섯(켜면 넣음) (아래 "주울 때 자동 등록"). 칩 · 등급 탭 조각은 `SettingsPanel` 정적 함수 — 설정 창 "아이템 → 습득" 이 같은 모양이다 ([hud.md](hud.md) "설정 창") |
 | `godot/world/ledger.gd` `_codex_auto` · `set_codex_auto_grade` · `set_codex_auto_options` · `codex_seen` | ★ **주울 때 자동 등록** 판정 · 등급별 부위(`codex_auto`) · 넣을 옵션(`codex_auto_options`) · 새 칸 표시(`codex_new`) 지우기 |
 | `godot/world/items.gd` `option_lines` | 장비 한 벌의 옵션 줄 수(1·2·3차 합) — 장부의 기본 고르기와 고르기 창이 같이 쓴다 |
 | `godot/game/game.gd` `_toggle_codex` · `_build_gate_panel` · `_redraw_char` | 메뉴 판의 "도감", 창을 헬스 창과 같은 층(10)에, `codexResult` → `show_result`, 캐릭터 정보 창 증가 줄 아래 풀이 `도감 N%` |
@@ -230,7 +230,8 @@
   눌리는 문제"). 두 창 다 열 때 맨 앞으로 올린다 — 도감 창 안에 새 겹창을 만들면 같은 줄을 넣는다.
 - ★ **서버 인자 `"w"`(글자 목록)** — `"a"` 는 **숫자 목록만** 받는다. 처음엔 옵션 막기를 `"a"` 로 적어 서버에 붙으면
   `bad_args` 로 거절될 뻔했다. 부위·옵션 종류처럼 글자 목록은 `"w"` 로 적는다 (`LedgerServer._args`).
-- 가방에서 무엇이 사라지는지가 바뀌므로 둘 다 **장부**다 (설정 창의 습득 등급 `loot_skip` 과 같은 길).
+- 가방에서 무엇이 사라지는지가 바뀌므로 둘 다 **장부**다 (설정 창의 습득 `loot_slots` · `loot_options` 와 같은 길 — 그 창은
+  이 창을 본떠 같은 모양으로 지었다, 2026-10-02. 이 창의 다루는 법을 바꾸면 그쪽도 맞춘다).
 - **판정은 `Ledger.kill` 이 장비를 가방에 넣은 바로 뒤** (`_codex_auto`). 노리는 칸은 **지금 강화 이상에서 가장 낮은
   빈 칸**(`Codex.next_empty`):
   - 그 단계가 비었으면 바로 넣는다.

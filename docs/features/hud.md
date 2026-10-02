@@ -53,11 +53,11 @@
 | ″ | `_build_potion_cell` · `_refresh_potion` · `_build_potion_panel` · `_potion_step` — **물약 칸**과 설정 창(−/+ · 슬라이더). 아래 "물약 칸" |
 | `godot/world/world.gd` | `drink_potion` · `set_potion_pct` · `_drive_potions` — 물약 판정 (저절로 마시기는 `step` 에서) |
 | `godot/game/sound_settings.gd` | **소리 크기** (`SoundSettings`) — Master 버스 볼륨 0~100, `user://settings.cfg` 에 저장. 아래 "소리 설정" |
-| `godot/game/settings_panel.gd` | **설정 창** (`SettingsPanel`) — 전체 화면 · 탭 소리 / 아이템 습득. 아래 "설정 창" |
-| `godot/game/game.gd` | `_toggle_settings` — 메뉴 "설정". 헬스·도감 창과 한 층이라 서로 닫는다. 습득 줄을 누르면 `lootSkip` 을 보낸다 |
-| `godot/world/ledger.gd` | `set_loot_skip` · `loot_skip` · `clean_grades` — 안 주울 장비 등급(장부 칸 `loot_skip`). `set_loot_skip_slots` · `set_loot_skip_options` · `clean_slots` · `clean_option_kinds`(도감 자동 등록과 같이 쓴다) — 부위 · 1차 옵션 종류(`loot_skip_slots` · `loot_skip_options`). `kill` 이 `loot_wanted` 로 거른다 |
+| `godot/game/settings_panel.gd` | **설정 창** (`SettingsPanel`) — 전체 화면 · 탭 소리 / 아이템 습득. 아래 "설정 창". 칩 · 등급 탭 조각(`make_chip` · `paint_chip` · `make_grade_tab` · `paint_grade_tab` · `chip_head`)은 도감 자동 등록 설정 창(`codex_auto.gd`)과 같이 쓴다 |
+| `godot/game/game.gd` | `_toggle_settings` — 메뉴 "설정". 헬스·도감 창과 한 층이라 서로 닫는다. 습득 스위치·칩을 누르면 `lootGrade {grade, slots}` · `lootOptions {grade, kinds}` 를 보낸다 |
+| `godot/world/ledger.gd` | `set_loot_grade` · `set_loot_options` — 등급 하나의 주울 부위 · 1차 옵션(장부 칸 `loot_slots` · `loot_options`). `loot_slots` · `loot_options` 가 일곱 등급이 다 든 표를 읽는다(옛 칸 `loot_skip` · `loot_skip_slots` · `loot_skip_options` 를 옮겨 읽는다). `kill` 이 `loot_wanted` 로 거른다 |
 | `godot/tests/ui_test.gd` | `_case_sound` — 설정 단추로 창 · +/− · 슬라이더가 버스 볼륨을 바꾸고 0 이면 음소거 · 습득 줄이 장부를 바꾼다 |
-| `godot/tests/settings_test.gd` | 장부 칸 · 서버 요청 · `loot_wanted`(등급·부위·옵션) · 등급/부위/옵션 다 끄면 장비 0 · 무기만 끄면 무기만 빠짐 · 골드는 그대로(굴림 순서) · 저장 · 창(전체 화면 · 탭 · 세부 쪽 · 줄 요청 · 쪽마다 720 안) |
+| `godot/tests/settings_test.gd` | 장부 칸 · 서버 요청 · 등급마다 다듬기 · 옛 칸 옮겨 읽기(부위만 정해도 옛 옵션 끄기가 남나) · `loot_wanted` · 등급/부위/옵션 다 끄면 장비 0 · 무기만 끄면 무기만 빠짐 · 골드는 그대로(굴림 순서) · 저장(옛 저장 포함) · 창(전체 화면 · 탭 · 등급 탭 · 금빛 점 · 스위치·칩 요청 · 검색 · 쪽마다 720 안) |
 | `godot/tests/potion_test.gd` | 저절로 마시기 · 쿨타임 5초 · 직접 마시기 · 기준 자르기 · 저장 |
 | `godot/tests/ui_test.gd` | `_case_potion` — 퀵슬롯 옆 자리 · 설정 창 +/− · 눌러서 마시고 쿨타임이 돈다. `_case_auto_no_setting` — 자동사냥 칸에 설정 단추가 없다 |
 | `godot/game/chat_log.gd` | **채팅창** (`ChatLog`) — 왼쪽 아래 구석, 장비 획득·강화·말을 한 줄씩 적는다. 아래 "채팅창" |
@@ -626,7 +626,7 @@ frame.add_child(border)         # 채움 **다음**에 붙여야 위로 온다
 ```
 
 - **위 탭 → 왼쪽 세부 목록 → 오른쪽 줄** 셋 자리를 그림대로 둔다. 지금은 `환경 → 소리`,
-  `아이템 → 습득 등급 · 습득 부위 · 습득 옵션` 이다 — **세부 하나가 쪽 하나**(`_pages[탭][세부]`).
+  `아이템 → 습득` 이다 — **세부 하나가 쪽 하나**(`_pages[탭][세부]`).
   설정이 늘면 `TABS` 에 세부와 쪽을 더한다. 탭을 누르면 그 탭의 첫 세부가, 세부를 누르면 그 쪽이 뜬다(`pick_sub`).
 - 고른 탭 — 금빛 글자 + 금 밑줄 + 옅은 금빛 바탕. 고른 세부 — 왼쪽에서 번지는 금빛 + 마름모(글꼴에 ◆ 가 없어 네모를 돌려 그린다).
 - **두 칸 스위치** `SettingsPanel.make_switch` · `paint_switch` — 고른 칸만 밝은 갈색 판 + 금빛 글자 + 옅은 빛.
@@ -639,24 +639,44 @@ frame.add_child(border)         # 채움 **다음**에 붙여야 위로 온다
 - **헬스·도감 창과 같은 층** — 전체 화면 + 뒤에 불투명한 판(`SettingsBack`), X 로 닫는다.
   한 층이라 차원문·던전·헬스·도감 창과 서로 닫는다 (`_toggle_settings` 와 각 토글).
 - **소리** — 위 "소리 설정" 그대로. 기기 설정이라 창이 `SoundSettings` 를 바로 건다.
-- **아이템 → 습득** — 세 쪽, 줄마다 ON(줍기)/OFF(안 줍기). **처음은 다 줍는다.**
-  - **습득 등급** — 장비 등급 일곱 줄(일반 ~ 태초, 등급 색 글자).
-  - **습득 부위** (2026-10-02 요청: "등급만 있는데, 부위와 옵션도 설정할 수 있게끔") — 슬롯 여섯 줄(무기 ~ 반지, `Items.slots()`).
-  - **습득 옵션** (같은 요청) — 드랍에 붙는 **1차 옵션 종류** 다섯 줄(`optionKinds` — 치명타 · 치명타 데미지 · 체력 ·
-    방어력 관통 · 아이템 드랍률). 뺀 옵션(공속·쿨감)은 줄이 없다.
-  - **셋 다 켜진 장비만 줍는다** (`Ledger.loot_wanted`). 옵션은 **붙은 종류 중 하나라도 켜져 있으면** 줍는다 —
-    드랍은 1차 한 줄이라 그 줄이 정한다. 옵션이 없는 장비는 옵션으로 거르지 않는다.
+- **아이템 → 습득** ★ — **도감 자동 등록 설정 창과 같은 모양**이다 (2026-10-02 요청: "설정에 아이템 습득 옵션 있는데,
+  이 부분도 도감에 자동 등록 설정 참고해서 비슷하게 만들어" → [codex.md](codex.md) "주울 때 자동 등록").
+  그 전엔 습득 등급 · 습득 부위 · 습득 옵션 세 쪽에 **전 등급 공통** 스위치가 줄마다 있었다.
+
+  ```
+  │ 아이템 습득                                                       │ ← 띠 머리
+  │   ◆ 활성화 된 종류 · 옵션의 장비만 가방에 넣습니다 · 골드와 크리스탈은 늘 줍습니다 │
+  │   일반•  고급•  희귀•  영웅•  전설•  초월•  태초•                   │ ← 등급 탭 (켠 등급은 금빛 점)
+  │   습득                                          [ ON ][ OFF ]    │
+  │   아이템 종류 — 활성화 된 종류만 습득합니다                          │
+  │   [무기][갑옷][투구][신발][목걸이][반지]                            │ ← 켜면(밝음) 줍는다
+  │   1차 옵션 — 활성화 된 옵션만 습득합니다                             │
+  │   [치명타][치명타 데미지][체력][방어력 관통][아이템 드랍률]            │ ← 켜면(밝음) 줍는다
+  ```
+
+  - **처음은 다 줍는다** — 일곱 등급 모두 ON, 전 부위 · 전 옵션. (도감 자동 등록은 처음이 다 끔이다 — 여기만 거꾸로.)
+  - 다루는 법은 도감 자동 등록과 똑같다: 등급 스위치 ON → 그 등급의 **전 부위 · 전 옵션**, OFF → 부위를 비운다(옵션 값은
+    남는다). 칩을 누르면 그 부위 · 옵션만 넣고 뺀다(부위 마지막 하나를 빼면 그 등급이 꺼진다). 꺼진 등급의 칩은 흐리게.
+  - **그 등급의 고른 부위이고, 붙은 1차 옵션이 전부 고른 옵션인 장비만 줍는다** (`Ledger.loot_wanted`, 도감 자동 등록과
+    같은 판정). 드랍은 1차 한 줄이라 그 줄이 정한다. 옵션이 없는 장비는 옵션으로 거르지 않는다. 뺀 옵션(공속·쿨감)은 칩이 없다.
   - 골드·크리스탈은 거르지 않는다 (크리스탈은 한 칸에 겹쳐 가방을 채우지 않는다).
-  - **쪽을 나눈 이유** — 한 쪽에 18줄을 다 넣으면 기준 화면(720)을 넘는다 (`settings_test` 가 쪽마다 높이를 잰다).
+  - 칩 · 등급 탭 조각은 `SettingsPanel` 의 정적 함수(`make_chip` · `paint_chip` · `make_grade_tab` · `paint_grade_tab` ·
+    `chip_head`)로 두고 도감 자동 등록 설정 창이 같이 쓴다 — 두 창의 색이 어긋나지 않게.
+  - 검색에서는 등급 탭 · 칩 묶음(`loot_block`)이 **줄 하나**다 — 낱말에 등급 · 부위 · 옵션 이름이 다 들어 있다("목걸이" 로 찾힌다).
 - **습득은 장부다** ★ — 가방에 무엇이 들어오는지가 바뀌므로 소리처럼 기기 설정으로 두지 않았다.
-  장부 칸 `loot_skip`(안 주울 등급 목록) · 요청 `set_loot_skip`(서버 `OPS` 의 `"a"`) · 저장(`save.gd`)에 남는다.
-  부위·옵션은 칸 `loot_skip_slots` · `loot_skip_options`(글자 목록), 요청 `set_loot_skip_slots` · `set_loot_skip_options`
-  (서버 `OPS` 의 `"w"` — 글자 목록 모양, 숫자가 섞이면 `bad_args`). 장부가 표에 있는 것만 표 순서로 남긴다(`Ledger.clean_slots` · `clean_option_kinds`).
-  창은 스위치를 누를 때 바뀐 **목록 하나 전체**를 `lootSkip` 으로 보내고(`{grades}` · `{slots}` · `{options}` 중 하나),
-  스위치는 장부 답이 오면 바뀐다.
+  장부 칸 `loot_slots` `{ "등급": [부위, …] }` · `loot_options` `{ "등급": [종류, …] }` — **등급이 없으면 전부**(새 계정은 일곱
+  등급 다 전부를 적어 둔다 — 기기 join 과 모양이 같아야 한다, `server_test`), 부위가 빈 목록이면 그 등급을 끈 것, 옵션이 빈 목록이면 옵션 붙은 장비를 안 줍는다. 읽을 때는 언제나
+  `Ledger.loot_slots` · `loot_options`(일곱 등급이 다 든 새 사전)로 읽는다.
+  요청은 등급 하나씩 `set_loot_grade` · `set_loot_options`(서버 `OPS` 의 `"iw"` — 글자 목록, 숫자가 섞이면 `bad_args`) ·
+  저장(`save.gd`)에 남는다. 장부가 표에 있는 것만 표 순서로 남긴다(`Ledger.clean_slots` · `clean_option_kinds`).
+  창은 `lootGrade {grade, slots}` · `lootOptions {grade, kinds}` 를 보내고, 그림은 장부 답이 오면 바뀐다.
+- **옛 칸은 옮겨 읽는다** — 같은 날 앞 판의 `loot_skip`(끈 등급) · `loot_skip_slots` · `loot_skip_options`(끈 부위 · 옵션,
+  전 등급 공통)는 새 칸이 없을 때 "끈 등급은 빈 목록, 나머지 등급은 전체 − 끈 것" 으로 읽는다. 새로 정하면
+  (`_own_loot_tables`) **두 표를 다 옮겨 적은 뒤에** 옛 칸을 지운다 — 부위만 정할 때 옵션 칸을 안 옮기고 지우면 꺼 둔
+  옵션이 되살아난다. 서버 계정에 옛 칸이 남아 있을 수 있어 `Ledger.KEYS` 에 그대로 둔다.
 - **거른다고 굴림을 건너뛰지 않는다** ★ — `Ledger.kill` 은 드롭(옵션까지)을 다 굴린 뒤 가방에만 안 넣는다.
   굴림 순서가 바뀌면 같은 씨앗에서 다른 것이 나와 서버·로컬이 어긋난다 (`settings_test` 가 골드로 대 본다).
-- 옛 계정·옛 저장에는 칸이 없다 → `Ledger.loot_skip` · `loot_skip_slots` · `loot_skip_options` 가 빈 목록(다 줍는다)으로 읽는다.
+- 그 전 계정·저장(습득 칸이 하나도 없다)은 `Ledger.loot_slots` · `loot_options` 가 다 줍기로 읽는다.
 
 ## 채팅창 (2026-09-23) ★
 

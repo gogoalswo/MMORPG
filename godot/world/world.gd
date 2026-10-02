@@ -325,10 +325,10 @@ func join(player_id: String) -> void:
 		"sandbag": kept.get("sandbag", {}).duplicate(true),
 		# 던전 하루 입장 `{ 종류 id: {day, count} }` (docs/features/dungeons.md "하루 한 번")
 		"dungeon_entries": kept.get("dungeon_entries", {}).duplicate(true),
-		# 안 주울 장비 등급 — 설정 창 "아이템 습득" 탭 (`set_loot_skip`). 저장에 남는다
-		"loot_skip": Ledger.clean_grades(kept.get("loot_skip", [])),
-		"loot_skip_slots": Ledger.clean_slots(kept.get("loot_skip_slots", [])),
-		"loot_skip_options": Ledger.clean_option_kinds(kept.get("loot_skip_options", [])),
+		# 주울 장비 — 등급마다 부위 · 1차 옵션. 설정 창 "아이템 → 습득" (`set_loot_grade` · `set_loot_options`).
+		# 저장에 남는다. 옛 칸(`loot_skip` …)만 있으면 거기서 옮겨 읽는다
+		"loot_slots": Ledger.loot_slots(kept),
+		"loot_options": Ledger.loot_options(kept),
 		# 도감 자동 등록을 켠 등급 · 자동 등록으로 새로 찬 칸(빨간 점) — 도감 창 (codex.md "주울 때 자동 등록")
 		"codex_auto": Ledger.clean_codex_auto(kept.get("codex_auto", {})),
 		"codex_auto_options": Ledger.codex_auto_options(kept),
@@ -1680,10 +1680,9 @@ func restore(player_id: String) -> bool:
 	player.dungeon_entries = Ledger.from_json(raw_entries) if raw_entries is Dictionary else {}
 	# 물약을 저절로 마시는 기준 — 없던 칸이라 옛 저장은 처음 값으로 읽힌다
 	set_potion_pct(player_id, int(saved.get("potion_pct", player.potion_pct)))
-	# 안 주울 장비 등급 — 없던 칸이라 옛 저장은 빈 목록(다 줍는다)
-	player.loot_skip = Ledger.clean_grades(saved.get("loot_skip", []))
-	player.loot_skip_slots = Ledger.clean_slots(saved.get("loot_skip_slots", []))
-	player.loot_skip_options = Ledger.clean_option_kinds(saved.get("loot_skip_options", []))
+	# 주울 장비 — 없던 칸이라 옛 저장은 다 줍는다. 그 전 판의 칸(`loot_skip` …)은 옮겨 읽는다
+	player.loot_slots = Ledger.loot_slots(saved)
+	player.loot_options = Ledger.loot_options(saved)
 	# 도감 자동 등록 — 없던 칸이라 옛 저장은 다 끔 · 새 칸 표시 없음
 	player.codex_auto = Ledger.clean_codex_auto(saved.get("codex_auto", {}))
 	player.codex_auto_options = Ledger.codex_auto_options(saved)
@@ -2770,27 +2769,20 @@ func equip(player_id: String, index: int) -> void:
 	_ledger_call(player, &"equip", [index])
 
 
-## 안 주울 장비 등급 (`Ledger.set_loot_skip`) — 설정 창 "아이템 습득" 탭
-func set_loot_skip(player_id: String, grades: Array) -> void:
+## 주울 장비 — 등급 하나의 부위 목록 (`Ledger.set_loot_grade`). 비면 그 등급을 끈다 — 설정 창 "아이템 → 습득"
+func set_loot_grade(player_id: String, grade: int, slots: Array) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty():
 		return
-	_ledger_call(player, &"set_loot_skip", [grades])
+	_ledger_call(player, &"set_loot_grade", [grade, slots])
 
 
-## 안 주울 장비 부위 · 1차 옵션 종류 (`Ledger.set_loot_skip_slots` · `_options`) — 같은 탭
-func set_loot_skip_slots(player_id: String, slots: Array) -> void:
+## 주울 장비 — 등급 하나의 1차 옵션 종류 목록 (`Ledger.set_loot_options`)
+func set_loot_options(player_id: String, grade: int, kinds: Array) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty():
 		return
-	_ledger_call(player, &"set_loot_skip_slots", [slots])
-
-
-func set_loot_skip_options(player_id: String, kinds: Array) -> void:
-	var player: Dictionary = _players.get(player_id, {})
-	if player.is_empty():
-		return
-	_ledger_call(player, &"set_loot_skip_options", [kinds])
+	_ledger_call(player, &"set_loot_options", [grade, kinds])
 
 
 ## 가방을 정렬한다 (`Ledger.sort_bag`)

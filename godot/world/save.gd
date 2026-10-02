@@ -57,11 +57,9 @@ static func write(zone_id: String, player: Dictionary) -> void:
 		"sandbag": player.get("sandbag", {}),
 		# 던전 하루 입장 `{ 종류 id: {day, count} }` — 없던 칸이라 옛 저장은 빈 사전
 		"dungeon_entries": player.get("dungeon_entries", {}),
-		# 안 주울 장비 등급 — 없던 칸이라 옛 저장은 빈 목록(다 줍는다)
-		"loot_skip": player.get("loot_skip", []),
-		# 안 주울 장비 부위 · 1차 옵션 종류 — 없던 칸이라 옛 저장은 빈 목록(다 줍는다)
-		"loot_skip_slots": player.get("loot_skip_slots", []),
-		"loot_skip_options": player.get("loot_skip_options", []),
+		# 주울 장비 — 등급마다 부위 · 1차 옵션. 없던 칸이라 옛 저장은 다 줍는다(그 전 판의 `loot_skip` … 은 옮겨 읽는다)
+		"loot_slots": Ledger.loot_slots(player),
+		"loot_options": Ledger.loot_options(player),
 		# 도감 자동 등록을 켠 등급 · 새로 찬 칸(빨간 점) — 없던 칸이라 옛 저장은 다 끔 · 빈 사전
 		"codex_auto": player.get("codex_auto", {}),
 		"codex_auto_options": player.get("codex_auto_options", {}),

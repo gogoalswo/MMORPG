@@ -63,9 +63,10 @@ func _case_fresh_matches_join() -> void:
 	w.join("me")
 	var joined := Ledger.view(w._players["me"])
 	var fresh := Ledger.fresh(World.DEFAULT_JOB)
+	# 옛 칸(`loot_skip` …)은 어느 쪽에도 없다 — `get` 으로 null 끼리 댄다
 	for key in Ledger.KEYS:
-		if JSON.stringify(joined[key]) != JSON.stringify(fresh[key]):
-			_fail("새 계정의 %s 가 join 과 다르다 — join %s · fresh %s" % [key, joined[key], fresh[key]])
+		if JSON.stringify(joined.get(key)) != JSON.stringify(fresh.get(key)):
+			_fail("새 계정의 %s 가 join 과 다르다 — join %s · fresh %s" % [key, joined.get(key), fresh.get(key)])
 
 
 func _case_store() -> void:
@@ -160,7 +161,7 @@ func _case_rejects() -> void:
 		[{"t": "op", "id": 3, "op": "equip", "args": ["0"]}, "bad_args"],
 		[{"t": "op", "id": 4, "op": "equip", "args": []}, "bad_args"],
 		# 습득 부위·옵션은 글자 목록이다 — 숫자가 섞이면 거절
-		[{"t": "op", "id": 5, "op": "set_loot_skip_slots", "args": [["weapon", 1]]}, "bad_args"],
+		[{"t": "op", "id": 5, "op": "set_loot_grade", "args": [3, ["weapon", 1]]}, "bad_args"],
 		[{"t": "op", "op": "sort_bag", "args": []}, "no_id"],
 		[{"t": "nope"}, "unknown_type"],
 	]
@@ -172,8 +173,8 @@ func _case_rejects() -> void:
 	var stale := server.handle(session, {"t": "op", "id": 5, "op": "sort_bag", "args": []})
 	if ok.get("t") != "result" or stale.get("reason") != "stale":
 		_fail("지난 번호를 막지 않는다: %s · %s" % [ok, stale])
-	var slots := server.handle(session, {"t": "op", "id": 10, "op": "set_loot_skip_slots", "args": [["ring", "weapon"]]})
-	if slots.get("t") != "result" or slots.get("ledger", {}).get("loot_skip_slots") != ["weapon", "ring"]:
+	var slots := server.handle(session, {"t": "op", "id": 10, "op": "set_loot_grade", "args": [3, ["ring", "weapon"]]})
+	if slots.get("t") != "result" or slots.get("ledger", {}).get("loot_slots", {}).get("3") != ["weapon", "ring"]:
 		_fail("습득 부위 요청이 장부에 안 들어갔다: %s" % [slots])
 	if server.handle(session, "문자열").get("reason") != "bad_message":
 		_fail("사전이 아닌 메시지를 받았다")

@@ -113,22 +113,17 @@ static func cooldown_of(skill: Dictionary) -> int:
 	return 0 if cooldown_off() else int(skill.get("cooldown", 0))
 
 
-## 자동 사냥이 스킬을 볼 순서 (`World._auto_cast`, 화면의 자동사냥 설정 창).
-## 사람이 정한 순서(`priority`)에 든 것을 **그 순서대로 먼저**, 나머지는 **쿨타임이 긴 것부터**
-## (같으면 칸 순서) 둔다. 액션바에 없는 것은 뺀다.
+## 자동 사냥이 스킬을 볼 순서 (`World._auto_cast`). **쿨타임이 긴 것부터** (같으면 칸 순서).
+## 사람이 순서를 정하던 설정 창은 2026-10-02 에 걷었다 ("설정 버튼 제거하고, 기능 지워").
 ##
 ## 칸 순서를 그대로 쓰던 때는 1번 칸 할퀴기(쿨타임 1초 = 동작 1초)가 시전이 끝날 때마다
 ## 돌아와 있어서 **할퀴기만 썼다** (2026-09-27 지적). 긴 것부터 보면 짧은 것은 긴 것이
 ## 도는 사이를 메운다. 쿨타임은 표의 값으로 잰다 — 테스트 스위치(쿨타임 0)가 켜져도
 ## 순서는 그대로다
-static func auto_order(job: String, bar: Array, priority: Array) -> Array:
-	var order: Array = []
-	for id in priority:
-		if str(id) in bar and not (str(id) in order):
-			order.append(str(id))
+static func auto_order(job: String, bar: Array) -> Array:
 	var rest: Array = []
 	for id in bar:
-		if not (str(id) in order) and not (str(id) in rest):
+		if not (str(id) in rest):
 			rest.append(str(id))
 	# sort_custom 은 안정 정렬이 아니라 쿨타임이 같으면 칸 번호로 가른다
 	rest.sort_custom(func(a: String, b: String) -> bool:
@@ -138,7 +133,7 @@ static func auto_order(job: String, bar: Array, priority: Array) -> Array:
 			return cool_a > cool_b
 		return bar.find(a) < bar.find(b)
 	)
-	return order + rest
+	return rest
 
 
 ## 배울 수 있나. **직업은 스위치와 무관하게 본다** — 남의 직업 스킬은 배워 봐야 쓸 수가 없다.

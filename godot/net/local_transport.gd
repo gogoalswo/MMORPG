@@ -211,8 +211,6 @@ func send(message: StringName, payload: Dictionary) -> void:
 			_world.drink_potion(MY_ID)
 		&"potionPct":
 			_world.set_potion_pct(MY_ID, int(payload.get("pct", 0)))
-		&"autoPriority":
-			_world.set_auto_priority(MY_ID, payload.get("ids", []))
 		_:
 			push_warning("모르는 메시지: %s" % message)
 

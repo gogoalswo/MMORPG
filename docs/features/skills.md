@@ -1094,8 +1094,8 @@ HUD                    [퀵1][퀵2][퀵3][퀵4][자동사냥]          [스킬][
   접속하자마자 서버로 보낸다.
 - 실제 시전은 서버 `tryAutoSkill` 이 한다 → [auto-hunt-and-targeting.md](auto-hunt-and-targeting.md).
 - **고도**: `A` 스위치 없이 자동 사냥이 **액션바의 스킬을 전부** 쓴다 (`World._auto_cast`).
-  순서는 **기본이 쿨타임 긴 순**이고 자동사냥 칸 "설정" 창에서 바꾼다 (`Skills.auto_order`,
-  2026-09-27) → [auto-hunt-and-targeting.md](auto-hunt-and-targeting.md) 의 "스킬도 쓴다".
+  순서는 **쿨타임 긴 순** 하나다 (`Skills.auto_order`, 2026-09-27). 바꾸던 "설정" 창은
+  2026-10-02 에 걷었다 → [auto-hunt-and-targeting.md](auto-hunt-and-targeting.md) 의 "스킬도 쓴다".
 
 ## 손댈 때
 

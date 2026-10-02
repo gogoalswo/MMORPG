@@ -291,9 +291,6 @@ func join(player_id: String) -> void:
 		# 배운 패시브 단계 `{ id: 단계 }` — 스킬창 [습득] 으로 오른다 (`learn_passive`)
 		"passives": kept.get("passives", {}).duplicate(),
 		"skill_bar": kept.get("skill_bar", starter).duplicate(),
-		# 자동 사냥이 스킬을 볼 순서 (`set_auto_priority`). 비어 있으면 쿨타임이 긴 것부터다
-		# (`Skills.auto_order`). 저장에 남는다
-		"auto_priority": kept.get("auto_priority", []).duplicate(),
 		# 스킬별 다음에 쓸 수 있는 시각
 		"skill_ready_at": {},
 		# --- 물약 (`drink_potion`) --- 개수는 세지 않고 쿨타임(10초)만 막는다.
@@ -758,8 +755,8 @@ func _run_lunges(delta: float, now: int) -> void:
 			_hit_monster(player, picked[0], float(stats.attack), "")
 
 
-## 자동 사냥의 스킬. **우선순위 순서대로**(`Skills.auto_order` — 사람이 정한 순서, 안 정했으면
-## 쿨타임이 긴 것부터) 보고, 쿨타임이 돈 것 중 대상이 그 스킬 사거리 안에 든 첫 것을 쓴다.
+## 자동 사냥의 스킬. **쿨타임이 긴 것부터**(`Skills.auto_order`) 보고, 쿨타임이 돈 것 중
+## 대상이 그 스킬 사거리 안에 든 첫 것을 쓴다.
 ## 칸 순서를 우선순위로 쓰던 때는 1번 칸 할퀴기만 나갔다 (2026-09-27 지적).
 ##
 ## 쏘는 것은 사람이 누를 때와 **같은 `cast`** 다. 쿨타임·액션바·조준 검증을 두 벌
@@ -767,7 +764,7 @@ func _run_lunges(delta: float, now: int) -> void:
 ## 보면 테스트 스위치(쿨타임 0)에서 나갔는데도 안 나간 것으로 읽힌다.
 func _auto_cast(player: Dictionary, id: String, aim_id: String, gap: float, now: int) -> bool:
 	var ready_at: Dictionary = player.skill_ready_at
-	var order := Skills.auto_order(str(player.job), player.skill_bar, player.get("auto_priority", []))
+	var order := Skills.auto_order(str(player.job), player.skill_bar)
 	for skill_id in order:
 		if now < int(ready_at.get(skill_id, 0)):
 			continue
@@ -1573,8 +1570,6 @@ func restore(player_id: String) -> bool:
 		if str(id) in learned and str(id) in listed:
 			bar.append(str(id))
 	player.skill_bar = bar
-	# 자동 사냥 스킬 순서 — 없던 칸이라 옛 저장은 빈 목록(쿨타임 긴 순)으로 읽힌다
-	set_auto_priority(player_id, saved.get("auto_priority", []))
 	player.granted = saved.get("granted", []).duplicate()
 	player.name = str(saved.get("name", "")) if Names.valid(str(saved.get("name", ""))) else ""
 	# 강화도 **지금 표에 있는 것만** 되살린다 — 없던 칸이라 옛 저장은 빈 사전이다
@@ -2155,21 +2150,6 @@ func debug_gear(player_id: String, level: int, grade: int, enhance: int) -> void
 		"type": "notice",
 		"text": "디버그: Lv%d · 등급%d 풀세트 · 강화 +%d" % [player.level, grade, step],
 	})
-
-
-## 자동 사냥이 스킬을 볼 순서를 정한다 (자동사냥 칸의 "설정" 창). 이 직업 스킬 id 만,
-## 겹치지 않게 남긴다. **빈 목록이면 기본(쿨타임이 긴 것부터)** 이다. 액션바에 없는 id 도
-## 남긴다 — 뺐다 다시 올려도 정한 자리로 돌아온다 (`Skills.auto_order` 가 액션바로 거른다)
-func set_auto_priority(player_id: String, ids) -> void:
-	var player: Dictionary = _players.get(player_id, {})
-	if player.is_empty():
-		return
-	var order: Array = []
-	if typeof(ids) == TYPE_ARRAY:
-		for id in ids:
-			if not Skills.get_skill(str(player.job), str(id)).is_empty() and not (str(id) in order):
-				order.append(str(id))
-	player.auto_priority = order
 
 
 ## 액션바를 정한다. 배운 것만, 칸 수만큼만 올라간다

@@ -289,7 +289,7 @@ function buildKinds(): Record<string, MonsterKind> {
       accentColor: tier.bodyColor,
       boss: true,
       ...base,
-      // 역할 배수는 설계표를 쓴다 (`ROLE_MULT.boss` — HP ×7 / 공격 ×1).
+      // 역할 배수는 설계표를 쓴다 (`ROLE_MULT.boss` — HP ×7 / 공격 ×3).
       // **보스는 아직 설계 보류**라 이 배수는 자리만 잡아 둔 임시값이다. 공격은 2026-09-30 에
       // ×5 → ×1 — 일반 몬스터가 "한 마리당 HP 10%" 로 올라 보스 한 대도 이미 충분히 세다.
       // HP ×7 만큼 오래 싸우니 한 판에 약 70% 를 잃는다 (범위 공격 빼고)

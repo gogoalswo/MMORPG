@@ -209,6 +209,12 @@ func _run_scene() -> void:
 		_fail("문 발치(받침)가 아직 문으로 잡힌다")
 	if game._gate_tapped(game._camera.unproject_position(Vector3(gx + 13.0, 0.0, gz))):
 		_fail("문에서 먼 땅이 문으로 잡힌다")
+	# 문 아래 "사냥터 이동" — 화면에서 받침보다 아래에 와야 한다
+	var portal_label := game._zone_node.find_child("PortalLabel", true, false) as Label3D
+	if portal_label == null or portal_label.text != Portal.LABEL_TEXT:
+		_fail("차원문 아래 '사냥터 이동' 글자가 없다")
+	elif game._camera.unproject_position(portal_label.global_position).y <= game._camera.unproject_position(Vector3(gx, 0.1, gz)).y:
+		_fail("'사냥터 이동' 글자가 화면에서 문 받침보다 위에 있다")
 	if ResourceLoader.exists(Portal.MODEL):
 		print("  차원문 모델: 있음, 소용돌이를 누르면 창")
 	else:

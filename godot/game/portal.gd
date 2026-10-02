@@ -9,15 +9,22 @@ extends RefCounted
 
 const MODEL := "res://assets/models/varco_portal.glb"
 
+## 문 발치에 띄우는 글자. 단추 글자와 같은 주황빛 금 + 검은 테 (ui-art-style.md "단추 결")
+const LABEL_TEXT := "사냥터 이동"
+const LABEL_COLOR := Color("#f8c878")
+const LABEL_OUTLINE := Color("#141816")
 
-## 존 노드에 세울 차원문. gate 는 zones.json 의 gate 그대로
-static func create(gate: Dictionary) -> Node3D:
+
+## 존 노드에 세울 차원문. gate 는 zones.json 의 gate 그대로.
+## font 는 화면 글꼴(NPC 이름표와 같은 것) — 없으면 고도 기본 글꼴로 쓴다
+static func create(gate: Dictionary, font: Font = null) -> Node3D:
 	var pos: Array = gate.get("position", [0, 0])
 	var radius := float(gate.get("radius", 2.6))
 	var color := Color(gate.get("color", "#4aa8ff"))
 	var root := Node3D.new()
 	root.name = "Portal"
 	root.position = Vector3(float(pos[0]), 0.0, float(pos[1]))
+	root.add_child(_label(radius, font))
 
 	if ResourceLoader.exists(MODEL):
 		var packed: PackedScene = load(MODEL)
@@ -49,6 +56,26 @@ static func create(gate: Dictionary) -> Node3D:
 	# (docs/features/effect-rules.md 1절)
 	root.add_child(PortalSwirl.create(radius, color, CameraRig.YAW))
 	return root
+
+
+## 문 아래 "사냥터 이동". 받침 앞(카메라 쪽) 땅 가까이에 두고 늘 카메라를 보게 한다.
+## 받침에 가려지지 않게 깊이 검사를 끈다 — NPC 이름표와 같은 규칙
+static func _label(radius: float, font: Font) -> Label3D:
+	var label := Label3D.new()
+	label.name = "PortalLabel"
+	label.text = LABEL_TEXT
+	if font != null:
+		label.font = font
+	label.font_size = 72
+	label.pixel_size = 0.005
+	label.modulate = LABEL_COLOR
+	label.outline_modulate = LABEL_OUTLINE
+	label.outline_size = 14
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.no_depth_test = true
+	var facing := Vector3(sin(CameraRig.YAW), 0.0, cos(CameraRig.YAW))
+	label.position = facing * radius * 1.15 + Vector3(0.0, 0.15, 0.0)
+	return label
 
 
 ## 화면에서 쏜 선이 **소용돌이 원판**에 닿나.

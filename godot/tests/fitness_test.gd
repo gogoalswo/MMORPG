@@ -56,7 +56,7 @@ func _case_table() -> void:
 		_fail("1단계가 10개 · 90%% 가 아니다: %s" % [Fitness.step(1)])
 
 
-## 토벌 보스를 잡거나 시련을 통과하면 프로틴 세 종이 **각각** 단계 × 5 만큼
+## 토벌 보스를 잡으면 프로틴 세 종이 **각각** 단계 × 5 만큼. 시련의 탑은 크리스탈만 (2026-10-02)
 func _case_dungeon_reward() -> void:
 	var ledger := Ledger.new()
 	var me := Ledger.fresh("fighter")
@@ -66,13 +66,13 @@ func _case_dungeon_reward() -> void:
 	ledger._check_dungeon_clear(me, {"boss": true, "zone": "raid_03"})
 	ledger.trial_clear(me, "trial_02")
 	for protein in ["power", "defense", "health"]:
-		if int(me.proteins.get(protein, 0)) != 25:
-			_fail("토벌 3단계(15) + 시련 2단계(10) 인데 %s 가 %d" % [protein, int(me.proteins.get(protein, 0))])
+		if int(me.proteins.get(protein, 0)) != 15:
+			_fail("토벌 3단계(15) + 시련(0) 인데 %s 가 %d" % [protein, int(me.proteins.get(protein, 0))])
 	var events := ledger.take_events()
 	var seen := events.filter(func(e): return str(e.type) == "protein").size()
-	if seen != 2:
-		_fail("protein 이벤트가 두 번이 아니다: %d" % seen)
-	print("  던전: 토벌 3단계 15 + 시련 2단계 10 = 세 종 각 25개")
+	if seen != 1:
+		_fail("protein 이벤트가 한 번이 아니다: %d" % seen)
+	print("  던전: 토벌 3단계 15 + 시련 0 = 세 종 각 15개")
 
 
 ## 한 번 — 모자라면 거절, 두드리면 그 단계 비용만큼 빠지고 성공이면 한 단계 오른다. 끝 단계는 거절

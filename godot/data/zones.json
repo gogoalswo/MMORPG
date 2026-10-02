@@ -204,7 +204,7 @@
           "monster": "mob008",
           "level": 8,
           "skillExp": 0,
-          "protein": 5,
+          "protein": 0,
           "kills": 7,
           "seconds": 30,
           "crystals": 1
@@ -215,7 +215,7 @@
           "monster": "mob018",
           "level": 18,
           "skillExp": 0,
-          "protein": 10,
+          "protein": 0,
           "kills": 7,
           "seconds": 30,
           "crystals": 2
@@ -226,7 +226,7 @@
           "monster": "mob028",
           "level": 28,
           "skillExp": 0,
-          "protein": 15,
+          "protein": 0,
           "kills": 7,
           "seconds": 30,
           "crystals": 3
@@ -237,7 +237,7 @@
           "monster": "mob038",
           "level": 38,
           "skillExp": 0,
-          "protein": 20,
+          "protein": 0,
           "kills": 7,
           "seconds": 30,
           "crystals": 4
@@ -248,7 +248,7 @@
           "monster": "mob048",
           "level": 48,
           "skillExp": 0,
-          "protein": 25,
+          "protein": 0,
           "kills": 7,
           "seconds": 30,
           "crystals": 5
@@ -259,7 +259,7 @@
           "monster": "mob058",
           "level": 58,
           "skillExp": 0,
-          "protein": 30,
+          "protein": 0,
           "kills": 7,
           "seconds": 30,
           "crystals": 6
@@ -270,7 +270,7 @@
           "monster": "mob068",
           "level": 68,
           "skillExp": 0,
-          "protein": 35,
+          "protein": 0,
           "kills": 7,
           "seconds": 30,
           "crystals": 7
@@ -281,7 +281,7 @@
           "monster": "mob078",
           "level": 78,
           "skillExp": 0,
-          "protein": 40,
+          "protein": 0,
           "kills": 7,
           "seconds": 30,
           "crystals": 8
@@ -292,7 +292,7 @@
           "monster": "mob088",
           "level": 88,
           "skillExp": 0,
-          "protein": 45,
+          "protein": 0,
           "kills": 7,
           "seconds": 30,
           "crystals": 9
@@ -303,7 +303,7 @@
           "monster": "mob098",
           "level": 98,
           "skillExp": 0,
-          "protein": 50,
+          "protein": 0,
           "kills": 7,
           "seconds": 30,
           "crystals": 10
@@ -314,7 +314,7 @@
           "monster": "mob108",
           "level": 108,
           "skillExp": 0,
-          "protein": 55,
+          "protein": 0,
           "kills": 7,
           "seconds": 30,
           "crystals": 11
@@ -325,7 +325,7 @@
           "monster": "mob118",
           "level": 118,
           "skillExp": 0,
-          "protein": 60,
+          "protein": 0,
           "kills": 7,
           "seconds": 30,
           "crystals": 12
@@ -336,7 +336,7 @@
           "monster": "mob128",
           "level": 128,
           "skillExp": 0,
-          "protein": 65,
+          "protein": 0,
           "kills": 7,
           "seconds": 30,
           "crystals": 13
@@ -347,7 +347,7 @@
           "monster": "mob138",
           "level": 138,
           "skillExp": 0,
-          "protein": 70,
+          "protein": 0,
           "kills": 7,
           "seconds": 30,
           "crystals": 14
@@ -358,7 +358,7 @@
           "monster": "mob148",
           "level": 148,
           "skillExp": 0,
-          "protein": 75,
+          "protein": 0,
           "kills": 7,
           "seconds": 30,
           "crystals": 15
@@ -369,7 +369,7 @@
           "monster": "mob158",
           "level": 158,
           "skillExp": 0,
-          "protein": 80,
+          "protein": 0,
           "kills": 7,
           "seconds": 30,
           "crystals": 16
@@ -380,7 +380,7 @@
           "monster": "mob168",
           "level": 168,
           "skillExp": 0,
-          "protein": 85,
+          "protein": 0,
           "kills": 7,
           "seconds": 30,
           "crystals": 17
@@ -391,7 +391,7 @@
           "monster": "mob178",
           "level": 178,
           "skillExp": 0,
-          "protein": 90,
+          "protein": 0,
           "kills": 7,
           "seconds": 30,
           "crystals": 18
@@ -402,7 +402,7 @@
           "monster": "mob188",
           "level": 188,
           "skillExp": 0,
-          "protein": 95,
+          "protein": 0,
           "kills": 7,
           "seconds": 30,
           "crystals": 19
@@ -413,7 +413,7 @@
           "monster": "mob198",
           "level": 198,
           "skillExp": 0,
-          "protein": 100,
+          "protein": 0,
           "kills": 7,
           "seconds": 30,
           "crystals": 20

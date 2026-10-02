@@ -32,7 +32,7 @@ export interface DungeonStage {
   skillExp: number;
   /**
    * 깨면 들어오는 **프로틴** — 세 종(파워·디펜스·헬스)을 **각각** 이만큼. 단계 × `DUNGEON_PROTEIN_PER_STAGE`.
-   * 토벌·시련의 탑 둘 다 준다 → 헬스(fitness.ts)
+   * **토벌만** 준다 — 시련의 탑은 0 (크리스탈만, 2026-10-02 요청) → 헬스(fitness.ts)
    */
   protein: number;
   /** 시련의 탑만 — 나오는 일반 몬스터 종 (토벌은 `boss`) */
@@ -108,7 +108,8 @@ const RAID_STAGES: DungeonStage[] = Array.from({ length: BOSS_COUNT }, (_, i) =>
  *   않는다(시험 동안). 7마리보다 셋 많게 둬 한두 마리가 멀리 떠돌아도 모자라지 않다.
  * - 통과 판정은 기기(`World._trial`)가 하고, 크리스탈은 장부(`Ledger.trial_clear`)가 준다.
  *   서버는 들어온 뒤 30초 안에 인정한 처치 수를 제 명단으로 다시 센다 (server.md).
- * - 보상 = 단계 × `TRIAL_CRYSTALS_PER_STAGE` 개 (사용자가 고른 안: "단계 × 1개").
+ * - 보상 = 단계 × `TRIAL_CRYSTALS_PER_STAGE` 개 (사용자가 고른 안: "단계 × 1개"). **크리스탈만** 준다 —
+ *   프로틴은 2026-10-02 에 뺐다 ("크리스탈 던전에 … 크리스탈만 주도록").
  * - 차원문이 없다 — 나가는 길은 결과창 **확인**(마을로)과 HUD **마을가기** 다.
  */
 export const TRIAL_KILLS = 7;
@@ -128,7 +129,7 @@ const TRIAL_STAGES: DungeonStage[] = Array.from({ length: BOSS_COUNT }, (_, i) =
     monster: monsterIdFor(level),
     level,
     skillExp: 0,
-    protein: (i + 1) * DUNGEON_PROTEIN_PER_STAGE,
+    protein: 0,
     kills: TRIAL_KILLS,
     seconds: TRIAL_SECONDS,
     crystals: (i + 1) * TRIAL_CRYSTALS_PER_STAGE,

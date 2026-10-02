@@ -493,7 +493,7 @@ func _stage_rewards(stage: Dictionary) -> Array:
 	var trial_crystals := int(stage.get("crystals", 0))
 	if trial_crystals > 0:
 		out.append({"name": "크리스탈 %d개" % trial_crystals, "icon": Items.crystal_id(), "color": CARD_GOLD})
-	# 헬스 프로틴 — 세 종 **각각** 단계 × 5개 (토벌 · 시련 둘 다, docs/features/fitness.md)
+	# 헬스 프로틴 — 세 종 **각각** 단계 × 5개 (토벌만 — 시련의 탑은 0, docs/features/fitness.md)
 	var protein := int(stage.get("protein", 0))
 	if protein > 0:
 		for kind in Fitness.kinds():

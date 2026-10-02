@@ -27,8 +27,10 @@ signal register_requested(item_id: String, enhance: int, index: int)
 signal register_all_requested
 ## [강화] — 고른 칸을 채우려고 가방 번호 `index` 의 장비를 `goal` 까지 올리는 강화 창을 띄운다 (game.gd 가 연다)
 signal enhance_requested(index: int, goal: int)
-## 자동 등록 설정 창에서 켤 등급 목록 전체 → `codexAuto` (주울 때 장부가 넣는다)
-signal auto_changed(grades: Array)
+## 자동 등록 설정 창 — 등급 하나의 넣을 부위 목록(비면 그 등급을 끈다) → `codexAutoGrade` (주울 때 장부가 넣는다)
+signal auto_changed(grade: int, slots: Array)
+## 자동 등록 설정 창에서 막을 1차 옵션 종류 목록 전체 → `codexAutoBlock`
+signal auto_block_changed(kinds: Array)
 ## 그 등급 탭을 보고 나왔다 → `codexSeen` (자동 등록으로 새로 찬 칸의 빨간 점을 지운다)
 signal seen(grade: int)
 
@@ -121,19 +123,6 @@ func _build() -> void:
 		tabs.add_child(tab)
 		_tabs.append(tab)
 		_tab_dots.append(_red_dot(tab, 6))
-	# 탭 줄 오른쪽 — [자동 등록 설정]. 그 오른쪽은 X 자리라 비워 둔다
-	var fill := Control.new()
-	fill.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	tabs.add_child(fill)
-	_auto_setting = _side_button("auto_setting", "자동 등록 설정", _open_auto)
-	_auto_setting.custom_minimum_size = Vector2(184, 50)
-	_auto_setting.size_flags_horizontal = Control.SIZE_SHRINK_END
-	_auto_setting.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	GatePanel.paint_button_text(_auto_setting, 19)
-	tabs.add_child(_auto_setting)
-	var room := Control.new()
-	room.custom_minimum_size = Vector2(56, 0)
-	tabs.add_child(room)
 	var rule := ColorRect.new()
 	rule.color = GatePanel.HEAD_LINE
 	rule.custom_minimum_size = Vector2(0, 1)
@@ -157,7 +146,8 @@ func _build() -> void:
 	done.custom_minimum_size = Vector2(160, 56)
 	done.size_flags_horizontal = Control.SIZE_SHRINK_END
 	_auto_sheet = CodexAutoSheet.make(done)
-	_auto_sheet.changed.connect(func(grades: Array) -> void: auto_changed.emit(grades))
+	_auto_sheet.changed.connect(func(grade: int, slots: Array) -> void: auto_changed.emit(grade, slots))
+	_auto_sheet.blocked_changed.connect(func(kinds: Array) -> void: auto_block_changed.emit(kinds))
 	add_child(_auto_sheet)
 	# 숨으면(X · 다른 창 · 강화 창으로 넘어감) 보던 탭의 새 칸 표시를 지운다 — 본 것이다
 	visibility_changed.connect(func() -> void:
@@ -294,12 +284,20 @@ func _build_side() -> Control:
 	# [강화] 는 한 줄을 따로 — 셋을 한 줄에 두면 340 칸에 안 들어간다. 높이는 위의 빈 칸(gap)이 내준다
 	_enhance_button = _side_button("enhance", "강화", _on_enhance)
 	column.add_child(_enhance_button)
-	# [자동 등록] · [등록] 한 줄 — 창 높이를 늘리지 않는다 (1280x720 틀 안)
+	# [자동 등록 설정] · [등록] 한 줄 — 창 높이를 늘리지 않는다 (1280x720 틀 안).
+	# [자동 등록 설정] 은 처음엔 탭 줄 오른쪽이었고, [자동 등록](가방 것을 한 번에)이 이 자리였다 —
+	# 2026-10-02 요청 "자동 등록 설정 버튼을 자동 등록 버튼 위치로 옮기고, 기존 자동 등록 버튼은 숨김 처리 해".
+	# [자동 등록] 은 지우지 않고 숨긴다 (판정 `codex_register_all` · 확인 창은 그대로 남는다)
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 10)
 	column.add_child(buttons)
 	_auto_button = _side_button("auto_register", "자동 등록", _on_register_all)
+	_auto_button.visible = false
 	buttons.add_child(_auto_button)
+	_auto_setting = _side_button("auto_setting", "자동 등록 설정", _open_auto)
+	_auto_setting.size_flags_stretch_ratio = 1.7
+	GatePanel.paint_button_text(_auto_setting, 19)
+	buttons.add_child(_auto_setting)
 	_register_button = _side_button("register", "등록", _on_register)
 	buttons.add_child(_register_button)
 	return side

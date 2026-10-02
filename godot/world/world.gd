@@ -328,7 +328,8 @@ func join(player_id: String) -> void:
 		# 안 주울 장비 등급 — 설정 창 "아이템 습득" 탭 (`set_loot_skip`). 저장에 남는다
 		"loot_skip": Ledger.clean_grades(kept.get("loot_skip", [])),
 		# 도감 자동 등록을 켠 등급 · 자동 등록으로 새로 찬 칸(빨간 점) — 도감 창 (codex.md "주울 때 자동 등록")
-		"codex_auto": Ledger.clean_grades(kept.get("codex_auto", [])),
+		"codex_auto": Ledger.clean_codex_auto(kept.get("codex_auto", {})),
+		"codex_auto_block": Ledger.clean_option_kinds(kept.get("codex_auto_block", [])),
 		"codex_new": Codex.clean(kept.get("codex_new", {})),
 	}
 	_refresh_stats(_players[player_id])
@@ -1680,7 +1681,8 @@ func restore(player_id: String) -> bool:
 	# 안 주울 장비 등급 — 없던 칸이라 옛 저장은 빈 목록(다 줍는다)
 	player.loot_skip = Ledger.clean_grades(saved.get("loot_skip", []))
 	# 도감 자동 등록 — 없던 칸이라 옛 저장은 다 끔 · 새 칸 표시 없음
-	player.codex_auto = Ledger.clean_grades(saved.get("codex_auto", []))
+	player.codex_auto = Ledger.clean_codex_auto(saved.get("codex_auto", {}))
+	player.codex_auto_block = Ledger.clean_option_kinds(saved.get("codex_auto_block", []))
 	player.codex_new = Codex.clean(saved.get("codex_new", {}))
 
 	# 가방·장비도 되살린다. **옛 id 는 지금 id 로 옮긴다** (2026-09-21 에 단계 축을
@@ -2052,12 +2054,20 @@ func codex_register(player_id: String, item_id: String, enhance: int, index: int
 	_ledger_call(player, &"codex_register", [item_id, enhance, index])
 
 
-## 도감 자동 등록을 켤 등급 (`Ledger.set_codex_auto`) — 도감 창 "자동 등록 설정". 켜 둔 등급의 장비는 주울 때 들어간다
-func set_codex_auto(player_id: String, grades: Array) -> void:
+## 도감 자동 등록 — 등급 하나의 넣을 부위 (`Ledger.set_codex_auto_grade`). 비면 그 등급을 끈다. 주울 때 들어간다
+func set_codex_auto_grade(player_id: String, grade: int, slots: Array) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty():
 		return
-	_ledger_call(player, &"set_codex_auto", [grades])
+	_ledger_call(player, &"set_codex_auto_grade", [grade, slots])
+
+
+## 도감 자동 등록에서 막을 1차 옵션 종류 (`Ledger.set_codex_auto_block`)
+func set_codex_auto_block(player_id: String, kinds: Array) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	_ledger_call(player, &"set_codex_auto_block", [kinds])
 
 
 ## 도감 그 등급 탭을 보고 나왔다 — 새로 찬 칸의 빨간 점을 지운다 (`Ledger.codex_seen`)

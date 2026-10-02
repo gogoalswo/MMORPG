@@ -27,6 +27,7 @@ const MODELS = [
   'mob_slime.glb', 'mob_hare.glb', 'mob_mushroom.glb', 'mob_mantis.glb', 'mob_scorpion.glb', 'mob_kobold.glb',
   'varco_portal.glb', // 차원문 (모든 존의 GATE_SPOT)
   'varco_tomb.glb', // 묘비 — 쓰러진 자리 (tomb.gd)
+  'varco_sandbag.glb', // 샌드백 랭킹전의 과녁 (docs/features/sandbag.md) — Rig.FILES 의 `sandbag`
   // 마을 NPC 7명 — zones.ts 의 NpcDef.look (rig.gd 의 FILES)
   'npc_merchant.glb', 'npc_smith.glb', 'npc_trainer.glb',
   'npc_villager_sack.glb', 'npc_villager_apron.glb', 'npc_villager_hood.glb', 'npc_villager_old.glb',
@@ -63,6 +64,8 @@ const ICONS = [
   'boots.png', 'necklace.png', 'ring.png',
   // 재료 — 크리스탈 (2026-09-23). `_item_icon` 이 재료는 id 를 그림 이름으로 쓴다
   'crystal.png',
+  // 옐로우 크리스탈 — 3차 옵션 재료 (2026-10-02, 샌드백 랭킹전 보상)
+  'yellow_crystal.png',
   'bag.png', 'gold.png',
   // 창을 짓는 그림들. 9조각으로 늘여 쓴다 (game.gd 의 _frame_box)
   'ui_panel.png', 'ui_subpanel.png', 'ui_slot.png',
@@ -93,6 +96,8 @@ const ICONS = [
   'ui_icon_dungeon.png',
   // 랭킹 단추 — 월계관 두른 금 트로피 (2026-09-28). 서버에 붙었을 때만 메뉴에 선다
   'ui_icon_rank.png',
+  // 샌드백 랭킹전 단추 (2026-10-02, docs/features/sandbag.md)
+  'ui_icon_sandbag.png',
   // 헬스 (2026-09-30, docs/features/fitness.md) — 메뉴 덤벨 · 창 가운데 문장 셋 · 프로틴 셋
   'ui_icon_fitness.png',
   // 장비 도감 · 메뉴 ≡ / X (2026-10-01, docs/features/codex.md · hud.md "메뉴 판")

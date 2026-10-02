@@ -472,6 +472,12 @@ var _char_panel: PanelContainer
 var _rank_panel: PanelContainer
 var _rank_grid: GridContainer
 var _rank_note: Label
+## 샌드백 랭킹전 (docs/features/sandbag.md) — 입장 창(규칙 · 주간 보상 표 · 이번 주 순위 · 내 기록 · 입장)과
+## 화면 가운데 큰 카운트(3 · 2 · 1 · 시작!)
+var _sandbag_panel: PanelContainer
+var _sandbag_grid: GridContainer
+var _sandbag_note: Label
+var _sandbag_count: Label
 var _char_head: Label
 ## 캐릭터 정보 창 제목 — "캐릭터 정보" 대신 닉네임을 적는다 (2026-09-30 요청)
 var _char_name: Label
@@ -487,6 +493,9 @@ var _crystal_roll: Button
 ## 대상 — `{"where": "bag"|"equip", "index": 가방 번호|슬롯 번호}`. **가방은 칸 번호가
 ## 아니라 가방 번호다** (탭으로 거르면 둘이 어긋난다)
 var _crystal_target: Dictionary = {}
+## 어느 재료로 굴리나 — 2 = 크리스탈(2차), 3 = 옐로우 크리스탈(3차, 2026-10-02). 창 위 단추 둘로 바꾼다
+var _crystal_tier := 2
+var _crystal_tabs: Array[Button] = []
 ## 장비 창(왼쪽 끝)과 상세 창(인벤토리 왼쪽). 인벤토리는 `_bag_panel` 이다
 var _gear_panel: PanelContainer
 var _detail_panel: PanelContainer
@@ -631,6 +640,16 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			_chat.add_chat(str(payload.get("from", "")), str(payload.get("text", "")), bool(payload.get("system", false)))
 		&"rank":
 			_fill_rank(payload)
+		&"sandbagRank":
+			_fill_sandbag(payload)
+		&"sandbagRecord":
+			# 서버에 붙어 있으면 결과창이 먼저 뜨고 최고 기록이 늦게 온다 — 그때 고친다
+			if _dungeon_result.visible:
+				_dungeon_result.show_sandbag_best(int(payload.get("best", 0)), bool(payload.get("new_best", false)))
+		&"sandbagReward":
+			_chat.add_line("샌드백 랭킹전", "지난주 %d위 · %s x%d" % [
+				int(payload.get("rank", 0)), Items.stack_name({"id": Items.yellow_crystal_id()}),
+				int(payload.get("crystals", 0))], INV_GOLD_HI)
 		&"notice":
 			_last_event = str(payload.get("text", ""))
 		&"enhanceResult":
@@ -796,6 +815,7 @@ func _build_persistent() -> void:
 	_build_bag_panel()
 	_build_char_panel()
 	_build_rank_panel()
+	_build_sandbag_panel()
 	_build_potion_panel()
 	_build_sound_panel()
 	_build_auto_panel()
@@ -819,6 +839,7 @@ func _build_persistent() -> void:
 	_close_button(_crystal_panel, _close_crystal, 0)
 	_close_button(_char_panel, _toggle_char, 0)
 	_close_button(_rank_panel, _toggle_rank, 0)
+	_close_button(_sandbag_panel, _toggle_sandbag, 0)
 	_close_button(_potion_panel, _toggle_potion_panel, 0)
 	_close_button(_sound_panel, _toggle_sound_panel, 0)
 	_close_button(_auto_panel, _toggle_auto_panel, 0)
@@ -1599,6 +1620,20 @@ func _build_crystal_window(panel: PanelContainer) -> void:
 
 	_stone_title(side, "크리스탈 강화", 22, "ui_icon_crystal")
 
+	# 재료 고르기 — 크리스탈(2차) · 옐로우 크리스탈(3차). 가방에서 "사용" 을 누르면 그 재료로 열린다
+	var tabs := HBoxContainer.new()
+	tabs.add_theme_constant_override("separation", 8)
+	side.add_child(tabs)
+	_crystal_tabs.clear()
+	for tier in [2, 3]:
+		var tab := _inv_button(
+			"크리스탈" if tier == 2 else "옐로우", func() -> void: _pick_crystal_tier(tier)
+		)
+		tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		tab.set_meta("tier", tier)
+		tabs.add_child(tab)
+		_crystal_tabs.append(tab)
+
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 10)
 	side.add_child(head)
@@ -2181,6 +2216,149 @@ static func _rank_exp(level: int, exp_now: int) -> String:
 	return "%.1f%%" % (100.0 * exp_now / need) if need > 0 else "-"
 
 
+## --- 샌드백 랭킹전 (docs/features/sandbag.md) ---
+
+## 입장 창 — 랭킹 창과 같은 결(돌판 + 금테). 위에서부터 규칙 두 줄 · 주간 보상 표 · 이번 주 순위(굴림) ·
+## 내 기록 · 입장 단추. 화면 가운데 큰 카운트 글자도 여기서 단다
+func _build_sandbag_panel() -> void:
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ui_root.add_child(center)
+	_sandbag_panel = _window_panel()
+	center.add_child(_sandbag_panel)
+
+	var side := VBoxContainer.new()
+	side.custom_minimum_size = Vector2(DETAIL_W, 0)
+	side.add_theme_constant_override("separation", 8)
+	_sandbag_panel.add_child(side)
+	_stone_title(side, "샌드백 랭킹전", 22, "ui_icon_sandbag")
+	var rule_text := _inv_label("%d초 카운트 뒤 %d초 동안 샌드백에 넣은 피해를 겨룹니다.\n이번 주 최고 기록으로 순위를 매기고 월요일 0시에 정산합니다." % [
+		Sandbag.countdown_ms() / 1000, Sandbag.play_ms() / 1000], 16, INV_DIM)
+	rule_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	side.add_child(rule_text)
+
+	# 주간 보상 — 순위 · 개수를 두 벌씩 한 줄에 (일곱 줄을 세로로 늘어놓으면 창이 화면을 넘는다)
+	side.add_child(_inv_label("주간 보상 — %s" % Items.stack_name({"id": Items.yellow_crystal_id()}), 18, INV_GOLD))
+	var rewards := GridContainer.new()
+	rewards.name = "SandbagRewards"
+	rewards.columns = 4
+	rewards.add_theme_constant_override("h_separation", 14)
+	rewards.add_theme_constant_override("v_separation", 4)
+	side.add_child(rewards)
+	for row in Sandbag.table().get("rewards", []):
+		var head := _inv_label(Sandbag.reward_label(row), 16, INV_TEXT)
+		head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		rewards.add_child(head)
+		rewards.add_child(_inv_label("x%d" % int(row.yellowCrystals), 16, INV_GOLD_HI))
+
+	var rule := ColorRect.new()
+	rule.color = INV_RULE
+	rule.custom_minimum_size = Vector2(0, 1)
+	side.add_child(rule)
+	side.add_child(_inv_label("이번 주 순위", 18, INV_GOLD))
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(0, 170)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	side.add_child(scroll)
+	_sandbag_grid = GridContainer.new()
+	_sandbag_grid.columns = 3
+	_sandbag_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_sandbag_grid.add_theme_constant_override("h_separation", 16)
+	_sandbag_grid.add_theme_constant_override("v_separation", 6)
+	scroll.add_child(_sandbag_grid)
+
+	var foot := HBoxContainer.new()
+	foot.add_theme_constant_override("separation", 10)
+	side.add_child(foot)
+	_sandbag_note = _inv_label("", 16, INV_TEXT)
+	_sandbag_note.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_sandbag_note.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	foot.add_child(_sandbag_note)
+	var enter := _inv_button("입장", _on_sandbag_enter)
+	enter.name = "SandbagEnter"
+	foot.add_child(enter)
+
+	# 화면 가운데 큰 카운트 — 판이 도는 동안만 (`_draw_sandbag_hud`)
+	_sandbag_count = Label.new()
+	_sandbag_count.name = "sandbag_count"
+	_sandbag_count.add_theme_font_size_override("font_size", 140)
+	_sandbag_count.add_theme_color_override("font_color", GatePanel.CARD_GOLD)
+	_sandbag_count.add_theme_color_override("font_outline_color", GatePanel.BUTTON_OUTLINE)
+	_sandbag_count.add_theme_constant_override("outline_size", 14)
+	_sandbag_count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_sandbag_count.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_sandbag_count.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_sandbag_count.visible = false
+	_ui_root.add_child(_sandbag_count)
+	_sandbag_count.set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.PRESET_MODE_MINSIZE)
+	_sandbag_count.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_sandbag_count.grow_vertical = Control.GROW_DIRECTION_BOTH
+
+
+## HUD 단추 — 창을 열 때마다 순위를 새로 묻는다 (남이 치는 동안에도 바뀐다)
+func _toggle_sandbag() -> void:
+	var open := not _sandbag_panel.visible
+	_sandbag_panel.visible = open
+	if open:
+		_sandbag_panel.get_parent().move_to_front()
+		_sandbag_note.text = "불러오는 중…"
+		_transport.send(&"sandbagRank", {})
+
+
+## 입장 — 차원문 창에서 고른 것과 같은 `travel` (World 가 다시 본다). 이미 샌드백 존이면 막는다
+func _on_sandbag_enter() -> void:
+	if _shown_zone == Sandbag.zone():
+		return
+	_sandbag_panel.visible = false
+	_on_gate_pick(Sandbag.zone())
+
+
+## 답 `{top: [{rank, name, best}], me: {rank, best}, total, ends_at, local?}` 으로 표를 다시 짓는다.
+## 1~3위는 밝은 금빛, 내 줄은 청록 — 레벨 랭킹 창(`_fill_rank`)과 같다
+func _fill_sandbag(board: Dictionary) -> void:
+	for child in _sandbag_grid.get_children():
+		child.queue_free()
+	for head in ["순위", "이름", "최고 피해"]:
+		_sandbag_grid.add_child(_inv_label(head, 16, INV_DIM))
+	var me: Dictionary = board.get("me", {})
+	for row in board.get("top", []):
+		var rank := int(row.get("rank", 0))
+		var tint := INV_TEXT
+		if rank == int(me.get("rank", -1)):
+			tint = ChatLog.EXP
+		elif rank <= 3:
+			tint = INV_GOLD_HI
+		_sandbag_grid.add_child(_inv_label("%d" % rank, 18, tint))
+		_sandbag_grid.add_child(_inv_label(str(row.get("name", "")), 18, tint))
+		_sandbag_grid.add_child(_inv_label(DungeonResult.comma(int(row.get("best", 0))), 18, tint))
+	var left := maxf(0.0, float(board.get("ends_at", 0.0)) - Time.get_unix_time_from_system())
+	var until := "정산까지 %d일 %d시간" % [int(left / 86400.0), int(fmod(left, 86400.0) / 3600.0)]
+	if int(me.get("rank", 0)) <= 0:
+		_sandbag_note.text = "이번 주 기록 없음\n%s" % until
+	else:
+		_sandbag_note.text = "내 기록 %s · %d위 / %d명\n%s" % [
+			DungeonResult.comma(int(me.best)), int(me.rank), int(board.get("total", 0)), until]
+
+
+## 판이 도는 동안 — 카운트 중엔 가운데 큰 숫자(3 · 2 · 1), 재기 시작하면 "시작!" 을 잠깐, 시계 줄엔 남은 시간 · 누적 피해
+func _draw_sandbag_hud(run: Dictionary) -> void:
+	var now := Time.get_ticks_msec()
+	var going := str(run.get("result", "")) == ""
+	var starts := int(run.get("starts_at", 0))
+	_trial_hud.visible = going
+	_sandbag_count.visible = going and now < starts + 700
+	if not going:
+		return
+	if now < starts:
+		_sandbag_count.text = "%d" % ceili((starts - now) / 1000.0)
+		_trial_hud.text = "곧 시작합니다"
+		return
+	_sandbag_count.text = "시작!"
+	var left := maxi(0, int(run.get("ends_at", 0)) - now)
+	_trial_hud.text = "남은 시간 %d초   누적 피해 %s" % [ceili(left / 1000.0), DungeonResult.comma(int(run.get("damage", 0)))]
+
+
 func _toggle_char() -> void:
 	var open := not _char_panel.visible
 	if open and _bag_panel.visible:
@@ -2518,7 +2696,7 @@ func _show_material_detail(stack: Dictionary) -> void:
 	_fill_cell(_detail_icon, stack, "", _item_icon(stack))
 	_fill_detail_rows([
 		["보유 수량", "%d" % int(stack.get("count", 1))],
-		["쓰임", "2차 옵션 굴리기"],
+		["쓰임", "%d차 옵션 굴리기" % maxi(2, Items.material_tier(str(stack.get("id", ""))))],
 	])
 	# "사용" 을 누르면 크리스탈 창이 뜬다 (2026-09-23 요청)
 	_bag_action.text = "사용"
@@ -2526,13 +2704,20 @@ func _show_material_detail(stack: Dictionary) -> void:
 	_show_cell_action()
 
 
-## 가방에 든 크리스탈 수
+## 가방에 든 크리스탈 수 — 고른 재료(`_crystal_tier`)의 것
 func _crystal_count() -> int:
+	var material := Items.tier_material(_crystal_tier)
 	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
 	for stack in me.get("bag", []):
-		if str(stack.get("id", "")) == Items.crystal_id():
+		if str(stack.get("id", "")) == material:
 			return int(stack.get("count", 1))
 	return 0
+
+
+## 크리스탈 창 위 단추 — 재료를 바꾼다. 대상은 그대로 둔다 (같은 장비에 2차·3차를 번갈아 굴릴 수 있다)
+func _pick_crystal_tier(tier: int) -> void:
+	_crystal_tier = tier
+	_redraw_crystal()
 
 
 ## 대상(`{"where", "index"}`)이 가리키는 물건. 가방은 **가방 번호**, 장비는 슬롯 번호다
@@ -2552,7 +2737,11 @@ func _stack_at(target: Dictionary) -> Dictionary:
 ## **2차 줄은 금빛**이다 — 크리스탈이 바꾸는 줄이 어느 것인지 한눈에 보여야 한다
 func _redraw_crystal() -> void:
 	var crystals := _crystal_count()
-	_crystal_have.text = "보유 크리스탈 x%d" % crystals
+	var material_name := str(Items.get_material(Items.tier_material(_crystal_tier)).get("name", "크리스탈"))
+	_crystal_have.text = "보유 %s x%d" % [material_name, crystals]
+	# 고른 재료 단추만 밝게 — 나머지는 어둡게 눌러 둔다
+	for tab in _crystal_tabs:
+		tab.modulate = Color.WHITE if int(tab.get_meta("tier")) == _crystal_tier else Color(1, 1, 1, 0.45)
 	var stack := _stack_at(_crystal_target)
 	var item := Items.get_item(str(stack.get("id", "")))
 	if item.is_empty():
@@ -2562,7 +2751,7 @@ func _redraw_crystal() -> void:
 		_crystal_kind.text = ""
 		_fill_cell(_crystal_icon, {}, "", "")
 		_fill_detail_rows([], _crystal_info)
-		_crystal_hint.text = "장비나 인벤토리에서 장비 칸을 누르세요.\n2차 옵션 1줄을 새로 굴립니다."
+		_crystal_hint.text = "장비나 인벤토리에서 장비 칸을 누르세요.\n%d차 옵션 1줄을 새로 굴립니다." % _crystal_tier
 		_crystal_roll.disabled = true
 		return
 
@@ -2577,17 +2766,16 @@ func _redraw_crystal() -> void:
 	var rows: Array = []
 	for tier in Items.option_tiers():
 		var head := "%d차 옵션" % int(tier.tier)
-		var tint := INV_GOLD_HI if str(tier.get("source", "")) == "crystal" else INV_TEXT
+		var tint := INV_GOLD_HI if int(tier.tier) == _crystal_tier else INV_TEXT
 		var lines: Array = Items.shown_options(stack.get(str(tier.key), []))
 		for option in lines:
 			rows.append([head, Items.describe_option(option), tint])
 		if lines.is_empty() and str(tier.get("source", "")) != "drop":
 			rows.append([head, "비어 있음", INV_DIM])
 	_fill_detail_rows(rows, _crystal_info)
-	var second: Array = stack.get("options2", [])
-	var has_second := not second.is_empty()
-	_crystal_hint.text = "굴리면 2차 옵션이 새로 바뀝니다." if has_second \
-		else "굴리면 2차 옵션 1줄이 붙습니다."
+	var rolled: Array = stack.get(str(Items.option_tier(_crystal_tier).get("key", "options2")), [])
+	_crystal_hint.text = ("굴리면 %d차 옵션이 새로 바뀝니다." if not rolled.is_empty() \
+		else "굴리면 %d차 옵션 1줄이 붙습니다.") % _crystal_tier
 	_crystal_roll.disabled = crystals <= 0
 
 
@@ -2599,9 +2787,10 @@ func _on_crystal_roll() -> void:
 		return
 	var me: Dictionary = _transport.snapshot().get("players", {}).get(_transport.my_id(), {})
 	var bag: Array = me.get("bag", [])
+	var material := Items.tier_material(_crystal_tier)
 	var crystal_at := -1
 	for index in bag.size():
-		if str(bag[index].get("id", "")) == Items.crystal_id():
+		if str(bag[index].get("id", "")) == material:
 			crystal_at = index
 			break
 	if crystal_at < 0:
@@ -2610,9 +2799,9 @@ func _on_crystal_roll() -> void:
 
 	var index := int(_crystal_target.index)
 	if str(_crystal_target.where) == "equip":
-		_transport.send(&"useCrystal", {"where": "equip", "key": str(Items.slots()[index])})
+		_transport.send(&"useCrystal", {"where": "equip", "key": str(Items.slots()[index]), "tier": _crystal_tier})
 	else:
-		_transport.send(&"useCrystal", {"where": "bag", "key": index})
+		_transport.send(&"useCrystal", {"where": "bag", "key": index, "tier": _crystal_tier})
 		if last and crystal_at < index:
 			_crystal_target.index = index - 1
 	_redraw_bag()
@@ -2678,6 +2867,7 @@ func _on_bag_action() -> void:
 		return
 	# 크리스탈 "사용" — 상세 창 자리에 크리스탈 창을 띄운다. 대상은 칸을 눌러 고른다
 	if Items.is_material(str(stack.get("id", ""))):
+		_crystal_tier = maxi(2, Items.material_tier(str(stack.get("id", ""))))
 		_bag_pick = {}
 		_crystal_target = {}
 		_crystal_panel.visible = true
@@ -2864,6 +3054,8 @@ func _build_skill_bar() -> void:
 		_icon_button("ui_icon_fitness", "헬스", _toggle_fitness, MENU_BTN, true),
 		# 장비 도감 — 헬스 옆 (2026-10-01). 그림은 펼친 책(`ui_icon_codex`) — 없으면 이름 글자만 선다
 		_icon_button("ui_icon_codex", "도감", _toggle_codex, MENU_BTN, true),
+		# 샌드백 랭킹전 — 도감 옆 (2026-10-02 요청 "HUD 별도 단추"). 그림은 받침에 선 가죽 샌드백
+		_icon_button("ui_icon_sandbag", "랭킹전", _toggle_sandbag, MENU_BTN, true),
 	]
 	# 랭킹 — 던전 옆. **서버에 붙었을 때만** 선다 (혼자 노는 판에는 견줄 사람이 없다).
 	# 그림은 월계관 두른 금 트로피(`ui_icon_rank`)
@@ -3632,8 +3824,8 @@ func _build_test_switches() -> void:
 	# 크리스탈 30개를 가방에 넣는다 (2026-09-23 요청 — "가방에 30개 넣어". 드랍이 0.1% 라
 	# 주워서는 시험해 볼 수 없다)
 	var crystals := Button.new()
-	crystals.custom_minimum_size = Vector2(112, 52)
-	crystals.add_theme_font_size_override("font_size", 16)
+	crystals.custom_minimum_size = Vector2(72, 52)
+	crystals.add_theme_font_size_override("font_size", 14)
 	crystals.text = "크리스탈\n30"
 	crystals.pressed.connect(func() -> void:
 		_transport.send(&"debugCrystals", {"count": 30})
@@ -3641,11 +3833,13 @@ func _build_test_switches() -> void:
 			_redraw_bag()
 	)
 	# 프로틴 세 종 +1만 — 던전을 안 돌고 헬스를 볼 때 (`World.debug_protein`, 2026-09-30).
-	# 목록이 위로 넘치므로 줄을 늘리지 않고 크리스탈과 한 줄에 반씩 놓는다
+	# 목록이 위로 넘치므로 줄을 늘리지 않고 크리스탈과 한 줄에 셋으로 놓는다.
+	# 옐로우 크리스탈 30 — 3차 옵션 재료 (2026-10-02). 샌드백 랭킹전 보상으로만 들어와서 시험할 길이 없다
 	var crystal_row := HBoxContainer.new()
 	crystal_row.add_theme_constant_override("separation", 6)
 	crystal_row.add_child(crystals)
-	crystal_row.add_child(_test_button("프로틴\n+1만", 112, 16, &"debugProtein", {}))
+	crystal_row.add_child(_test_button("옐로우\n30", 72, 14, &"debugCrystals", {"count": 30, "id": Items.yellow_crystal_id()}))
+	crystal_row.add_child(_test_button("프로틴\n+1만", 72, 14, &"debugProtein", {}))
 	column.add_child(crystal_row)
 	column.move_child(crystal_row, 0)
 	# 스킬 강화 — **모든 스킬 1번 강화 · 2번 강화 · 초기화** (2026-09-23 요청). 경험치북
@@ -4595,11 +4789,17 @@ func _on_result_confirmed() -> void:
 		_go_village()
 
 
-## 시련의 탑 시계 줄 — World 가 준 던전 판(`ends_at` · `kills` · `need`)을 그린다. 결과가 나면 숨긴다
+## 시련의 탑 시계 줄 — World 가 준 던전 판(`ends_at` · `kills` · `need`)을 그린다. 결과가 나면 숨긴다.
+## 샌드백 랭킹전도 같은 줄에 남은 시간 · 누적 피해를 적고, 카운트는 가운데 큰 글자로 (`_draw_sandbag_count`)
 func _draw_trial_hud() -> void:
 	if _trial_hud == null:
 		return
 	var trial: Dictionary = _transport.snapshot().get("dungeon", {})
+	if str(trial.get("dungeon", "")) == "sandbag":
+		_draw_sandbag_hud(trial)
+		return
+	if _sandbag_count != null:
+		_sandbag_count.visible = false
 	_trial_hud.visible = str(trial.get("dungeon", "")) == "trial" and str(trial.get("result", "")) == ""
 	if not _trial_hud.visible:
 		return

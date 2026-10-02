@@ -38,6 +38,24 @@ static func crystal_id() -> String:
 	return str(_t().get("crystalId", "crystal"))
 
 
+## 옐로우 크리스탈 — 3차 옵션 재료 (2026-10-02). 표의 3차 `material` 이 곧 이것이다
+static func yellow_crystal_id() -> String:
+	return str(option_tier(3).get("material", "yellow_crystal"))
+
+
+## 그 차수를 붙이는 재료 id — 크리스탈 창이 고른 재료로 차수를 찾는다. 없으면 ""
+static func tier_material(tier: int) -> String:
+	return str(option_tier(tier).get("material", ""))
+
+
+## 재료 id 로 차수를 찾는다 — 크리스탈은 2, 옐로우 크리스탈은 3. 재료가 아니면 0
+static func material_tier(material_id: String) -> int:
+	for row in option_tiers():
+		if str(row.get("material", "")) == material_id and material_id != "":
+			return int(row.get("tier", 0))
+	return 0
+
+
 static func crystal_drop_chance() -> float:
 	return float(_t().get("crystalDropChance", 0.0))
 
@@ -206,7 +224,7 @@ static func roll_option_value(span: Dictionary, rng: RandomNumberGenerator) -> f
 
 
 ## --- 옵션 차수 ---
-## **1차는 드랍, 2차는 크리스탈, 3차는 비워 둔다** (2026-09-23). 표는 `optionTiers`
+## **1차는 드랍, 2차는 크리스탈, 3차는 옐로우 크리스탈** (2026-09-23 · 3차는 2026-10-02). 표는 `optionTiers`
 ## — 차수마다 저장 칸(`options` · `options2` · `options3`)과 줄 수가 있다.
 ## 수치 범위는 셋 다 장비 등급의 `option_range` 다
 

@@ -67,6 +67,8 @@ func _attach(url: String) -> void:
 		event.emit(&"chat", line))
 	_server.ranked.connect(func(board: Dictionary) -> void:
 		event.emit(&"rank", board))
+	_server.sandbag_ranked.connect(func(board: Dictionary) -> void:
+		event.emit(&"sandbagRank", board))
 	_server.purchase_done.connect(func(result: Dictionary) -> void:
 		event.emit(&"purchase", result))
 	_world.remote = _server
@@ -90,6 +92,13 @@ func send(message: StringName, payload: Dictionary) -> void:
 	if message == &"purchase":
 		if _server != null:
 			_server.purchase(str(payload.get("product", "")), str(payload.get("token", "")))
+		return
+	# 샌드백 랭킹전 순위 — 서버에 붙어 있으면 서버의 표, 아니면 **혼자라 나 하나**의 표 (docs/features/sandbag.md)
+	if message == &"sandbagRank":
+		if _server != null:
+			_server.ask_sandbag_rank()
+		else:
+			event.emit(&"sandbagRank", _local_sandbag_board())
 		return
 	# 랭킹도 World 를 거치지 않는다 — 서버만 가진 표다
 	if message == &"rank":
@@ -136,7 +145,7 @@ func send(message: StringName, payload: Dictionary) -> void:
 		&"testSkills":
 			_world.grant_test_skills(MY_ID)
 		&"debugCrystals":
-			_world.debug_crystals(MY_ID, int(payload.get("count", 30)))
+			_world.debug_crystals(MY_ID, int(payload.get("count", 30)), str(payload.get("id", "")))
 		&"debugLevel":
 			_world.debug_level(MY_ID, int(payload.get("level", 1)))
 		&"debugGear":
@@ -179,7 +188,7 @@ func send(message: StringName, payload: Dictionary) -> void:
 		&"debugResetUpgrades":
 			_world.debug_reset_upgrades(MY_ID)
 		&"useCrystal":
-			_world.use_crystal(MY_ID, str(payload.get("where", "")), payload.get("key", -1))
+			_world.use_crystal(MY_ID, str(payload.get("where", "")), payload.get("key", -1), int(payload.get("tier", 2)))
 		&"npcBuy":
 			_world.npc_buy(MY_ID, str(payload.get("item", "")))
 		&"npcSell":
@@ -226,3 +235,19 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_PAUSED:
 		if _world != null:
 			_world.save(MY_ID)
+
+
+## 서버 없이 노는 판의 샌드백 순위 — 나 하나뿐이다. 이번 주 기록이 있으면 1위, 없으면 순위 없음.
+## 모양은 서버 답(`LedgerServer._sandbag_rank`)과 같다 — 창이 둘을 가리지 않게
+func _local_sandbag_board() -> Dictionary:
+	var me: Dictionary = _world.snapshot().get("players", {}).get(MY_ID, {})
+	var week := _world.sandbag_week()
+	var mine: Dictionary = me.get("sandbag", {})
+	var best := int(mine.get("best", 0)) if int(mine.get("week", -1)) == week else 0
+	var top: Array = []
+	if best > 0:
+		top.append({"rank": 1, "name": str(me.get("name", "")), "best": best})
+	return {
+		"t": "sandbagRank", "top": top, "me": {"rank": 1 if best > 0 else 0, "best": best},
+		"total": top.size(), "week": week, "ends_at": Sandbag.week_end(week), "local": true,
+	}

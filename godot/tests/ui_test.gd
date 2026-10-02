@@ -322,6 +322,7 @@ func _run_scene() -> void:
 	# 존을 옮기므로 맨 끝에 둔다
 	await _case_dungeon(game)
 	await _case_trial(game)
+	await _case_sandbag(game)
 	await _case_home(game)
 	await _case_death(game)
 
@@ -586,9 +587,9 @@ func _case_status(game: Node3D) -> void:
 	# 정보 · 스킬 · 강화 · 크리스탈 · 가방 · 던전 (강화·크리스탈은 2026-09-24 에 가방 왼쪽에,
 	# 정보는 2026-09-25 에 맨 앞에 더했다). 설계는 2026-09-28 에 오른쪽 맨 아래로 뺐다 — 아래에서 본다.
 	# 헬스는 2026-09-30 에 던전 옆에 더했다 (docs/features/fitness.md). 설정(소리)은 같은 날 맨 끝에.
-	# 도감은 2026-10-01 에 헬스 옆에 더했다 (docs/features/codex.md)
-	if game._menu_cells.size() != 9:
-		_fail("오른쪽 위 단추가 9개여야 하는데 %d개" % game._menu_cells.size())
+	# 도감은 2026-10-01 에 헬스 옆에 더했다 (docs/features/codex.md). 샌드백 랭킹전은 2026-10-02 에 도감 옆에
+	if game._menu_cells.size() != 10:
+		_fail("오른쪽 위 단추가 10개여야 하는데 %d개" % game._menu_cells.size())
 		return
 	# 설계 단추 — 오른쪽 맨 아래 모서리에 붙고, 알파 0 이라 안 보이지만 누르면 창이 열린다
 	var design_rect: Rect2 = game._design_cell.get_global_rect()
@@ -911,6 +912,90 @@ func _case_trial(game: Node3D) -> void:
 		_fail("확인을 눌렀는데 마을로 안 나갔다: %s (창 %s)" % [game._shown_zone, result.visible])
 	else:
 		print("  시련의 탑: 시계 '%s' · 실패/성공 결과창 · 확인 → 마을" % hud.text)
+
+
+## 샌드백 랭킹전 (docs/features/sandbag.md) — 메뉴 판의 "랭킹전" → 입장 창(보상 표 · 혼자면 순위 없음) →
+## 입장 → 가운데 큰 카운트 · 시계 줄 → 15초가 끝나면 결과창(넣은 피해 · 이번 주 최고) → 확인 → 마을
+func _case_sandbag(game: Node3D) -> void:
+	var cell: Control = null
+	for c in game._menu_cells:
+		var cap: Label = c.find_child("caption", true, false)
+		if cap != null and cap.text == "랭킹전":
+			cell = c
+	if cell == null:
+		_fail("메뉴에 랭킹전 단추가 없다")
+		return
+	cell.find_child("hit", true, false).pressed.emit()
+	for i in 3:
+		await process_frame
+	var panel: PanelContainer = game._sandbag_panel
+	if not panel.visible:
+		_fail("랭킹전 단추를 눌렀는데 창이 안 열렸다")
+		return
+	if not panel.get_viewport_rect().encloses(panel.get_global_rect()):
+		_fail("랭킹전 창이 화면 밖으로 넘친다: %s" % panel.get_global_rect())
+	var rewards: GridContainer = panel.find_child("SandbagRewards", true, false)
+	if rewards == null or rewards.get_child_count() != Sandbag.table().rewards.size() * 2:
+		_fail("보상 표가 일곱 줄이 아니다")
+	if not game._sandbag_note.text.contains("이번 주 기록 없음") or not game._sandbag_note.text.contains("정산까지"):
+		_fail("혼자 처음 열면 기록 없음 · 정산까지: '%s'" % game._sandbag_note.text)
+	var seen: String = game._sandbag_note.text
+	for label in panel.find_children("*", "Label", true, false):
+		seen += label.text
+
+	(panel.find_child("SandbagEnter", true, false) as Button).pressed.emit()
+	for i in 3:
+		await process_frame
+	if game._shown_zone != Sandbag.zone() or panel.visible:
+		_fail("입장했는데 샌드백 존이 아니다: %s (창 %s)" % [game._shown_zone, panel.visible])
+		return
+	var count: Label = game._sandbag_count
+	if not count.visible or count.text != "3":
+		_fail("들어오면 가운데 큰 카운트 3: 보임 %s '%s'" % [count.visible, count.text])
+	if not game._trial_hud.visible:
+		_fail("샌드백 시계 줄이 없다")
+	seen += game._trial_hud.text
+
+	# 카운트를 건너뛰고 재기 시작 → 한 대 넣고 → 시간 끝
+	var run: Dictionary = game._transport.snapshot().dungeon
+	run.starts_at = Time.get_ticks_msec() - 1
+	run.damage = 1234
+	await process_frame
+	if not game._trial_hud.text.contains("누적 피해 1,234"):
+		_fail("시계 줄에 누적 피해가 없다: '%s'" % game._trial_hud.text)
+	seen += game._trial_hud.text + count.text
+	run.ends_at = Time.get_ticks_msec() - 1
+	for i in 3:
+		await process_frame
+	var result: DungeonResult = game._dungeon_result
+	if not result.visible or result._verdict.text != "1,234" or not result._count.text.contains("1,234"):
+		_fail("샌드백 결과창: 보임 %s '%s' '%s'" % [result.visible, result._verdict.text, result._count.text])
+	if count.visible or game._trial_hud.visible:
+		_fail("결과가 났는데 카운트·시계가 남았다")
+	for label in result.find_children("*", "Label", true, false):
+		seen += label.text
+	var font: Font = load(FONT)
+	var missing := ""
+	for ch in seen:
+		if ch != " " and ch != "\n" and not font.has_char(ch.unicode_at(0)):
+			missing += ch
+	if missing != "":
+		_fail("샌드백 글자가 폰트에 없다: %s" % missing)
+
+	# 다시 열면 내 기록이 1위로 보인다 (혼자라 나 하나)
+	game._toggle_sandbag()
+	await process_frame
+	if not game._sandbag_note.text.contains("1위"):
+		_fail("기록 뒤 다시 열면 1위: '%s'" % game._sandbag_note.text)
+	game._toggle_sandbag()
+	result.confirm_button().pressed.emit()
+	for i in 5:
+		await process_frame
+	if result.visible or game._shown_zone != GameData.start_zone():
+		_fail("확인을 눌렀는데 마을로 안 나갔다: %s" % game._shown_zone)
+	else:
+		print("  샌드백 랭킹전: 입장 창 → 카운트 '3' → '%s' → 결과 '%s' · %s → 마을" % [
+			"누적 피해", result._verdict.text, result._count.text])
 
 
 ## 토벌 던전에서 쓰러졌다 — 결과창 "실패"(처치 줄 없음 · 보상 없음) · 화면을 눌러도 안 살아나고

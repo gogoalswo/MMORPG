@@ -31,6 +31,8 @@ export const BEAST_HEIGHT: Record<string, number> = {
   mob_mantis: 1.7,
   mob_scorpion: 1.0,
   mob_kobold: 1.5,
+  // 샌드백 랭킹전의 과녁 (2026-10-02) — 사람(1.8)의 어깨께. `scale`(1.3)이 곱해진다
+  sandbag: 1.2,
 };
 export const BEAST_HEIGHT_DEFAULT = 0.9;
 

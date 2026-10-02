@@ -17,7 +17,7 @@ extends RefCounted
 const KEYS := [
 	"job", "level", "exp", "gold", "skills", "skill_points", "passives",
 	"skill_upgrades", "skill_upgrade_exp", "skill_exp", "bag", "equipped", "granted",
-	"diamonds", "proteins", "fitness", "codex",
+	"diamonds", "proteins", "fitness", "codex", "sandbag",
 ]
 
 ## **첫 선물** — 새 캐릭터가 한 번만 받는 것 `[[표시, 묶음], …]`. 로컬은 `LocalTransport.open` 이,
@@ -46,6 +46,8 @@ static func fresh(job: String) -> Dictionary:
 		"diamonds": 0,
 		"proteins": {}, "fitness": {},
 		"codex": {},
+		# 샌드백 랭킹전 (docs/features/sandbag.md) — `{week, best, unpaid?}` 그 주 최고 기록과 못 받은 주간 보상
+		"sandbag": {},
 	}
 
 
@@ -182,6 +184,77 @@ func trial_clear(p: Dictionary, zone_id: String) -> void:
 		return
 	events.append({"type": "trialReward", "stage": int(stage.stage), "crystal": count})
 	_give_proteins(p, Fitness.dungeon_reward(stage))
+
+
+## --- 샌드백 랭킹전 (docs/features/sandbag.md) ---
+##
+## 장부에 남는 것은 `sandbag = {week, best, unpaid?}` 하나다 — **그 주의 최고 기록**과, 주가 바뀌어
+## 정산됐는데 가방이 꽉 차 못 받은 보상 `{week, rank, best, crystals}`.
+## 순위는 장부가 모른다 — 로컬은 혼자라 1위(`World`), 서버는 모든 계정을 줄 세워 넘겨준다(`LedgerServer`)
+
+## 지금 몇째 주인가 — 판정하는 쪽의 시계. 테스트는 바꿔 끼워 주를 넘긴다
+var unix_now: Callable = func() -> float: return Time.get_unix_time_from_system()
+
+
+func sandbag_week() -> int:
+	return Sandbag.week(float(unix_now.call()))
+
+
+## 이번 판의 기록을 남긴다 — 그 주 최고보다 높으면 갈아 끼운다. 주가 지났으면 **정산을 먼저 해야 한다**
+## (부르는 쪽 몫 — 여기서 지난 기록을 버리면 보상이 사라진다). 지난 기록이 0 이면 그냥 새 주로 넘긴다
+func sandbag_record(p: Dictionary, damage: int) -> void:
+	var now := sandbag_week()
+	var mine: Dictionary = p.get("sandbag", {})
+	if int(mine.get("week", -1)) != now:
+		var unpaid: Variant = mine.get("unpaid")
+		mine = {"week": now, "best": 0}
+		if unpaid != null:
+			mine["unpaid"] = unpaid
+	var best := int(mine.get("best", 0))
+	var new_best := damage > best
+	if new_best:
+		mine["best"] = damage
+	p.sandbag = mine
+	events.append({
+		"type": "sandbagRecord", "damage": damage, "best": int(mine.best), "new_best": new_best, "week": now,
+	})
+
+
+## 지난주 기록을 닫는다 — `rank` 위 보상을 `unpaid` 에 얹고 새 주로 넘긴 뒤 바로 지급해 본다.
+## 그 주에 기록이 없거나(0) 이미 이번 주면 아무것도 안 한다
+func sandbag_close_week(p: Dictionary, rank: int) -> void:
+	var mine: Dictionary = p.get("sandbag", {})
+	var now := sandbag_week()
+	if mine.is_empty() or int(mine.get("week", now)) >= now:
+		return
+	var closed := {"week": now, "best": 0}
+	if int(mine.get("best", 0)) > 0 and rank > 0:
+		closed["unpaid"] = {
+			"week": int(mine.week), "rank": rank, "best": int(mine.best), "crystals": Sandbag.reward(rank),
+		}
+	elif mine.has("unpaid"):
+		closed["unpaid"] = mine.unpaid  # 더 오래된 못 받은 것이 남아 있으면 지킨다
+	p.sandbag = closed
+	sandbag_pay(p)
+
+
+## 못 받은 주간 보상을 가방에 넣는다 — 가방이 꽉 차 안 들어가면 그대로 두고 다음에 또 해 본다
+func sandbag_pay(p: Dictionary) -> void:
+	var mine: Dictionary = p.get("sandbag", {})
+	var unpaid: Dictionary = mine.get("unpaid", {})
+	if unpaid.is_empty():
+		return
+	var count := int(unpaid.get("crystals", 0))
+	if count > 0 and not give(p, {"id": Items.yellow_crystal_id(), "count": count}):
+		_notice("가방이 가득 차 샌드백 랭킹전 보상을 받지 못했습니다")
+		return
+	mine.erase("unpaid")
+	p.sandbag = mine
+	_inventory_changed(p)
+	events.append({
+		"type": "sandbagReward", "week": int(unpaid.get("week", 0)), "rank": int(unpaid.get("rank", 0)),
+		"best": int(unpaid.get("best", 0)), "crystals": count,
+	})
 
 
 ## --- 헬스 (docs/features/fitness.md) ---
@@ -504,7 +577,11 @@ func sort_bag(p: Dictionary) -> void:
 ## 크리스탈로 **2차 옵션을 통째로 다시 굴린다** (2026-09-23). 처음 쓰면 붙고, 다시 쓰면
 ## 바뀐다. 가방(`where = "bag"`, `key` = 가방 번호)과 끼고 있는 것(`"equip"`, `key` = 슬롯)
 ## 둘 다 된다 — 끼고 있는 걸 벗어야 굴릴 수 있으면 번거롭기만 하다. NPC 가 필요 없다
-func use_crystal(p: Dictionary, where: String, key: Variant) -> void:
+## `tier` — 2 = 크리스탈(2차), 3 = 옐로우 크리스탈(3차). 차수의 재료는 표(`optionTiers.material`)가 정한다
+func use_crystal(p: Dictionary, where: String, key: Variant, tier: int = 2) -> void:
+	var material := Items.tier_material(tier)
+	if material == "":
+		return  # 재료로 붙는 차수가 아니다 (1차는 드랍)
 	var target: Dictionary = {}
 	if where == "equip":
 		target = p.equipped.get(str(key), {})
@@ -516,15 +593,16 @@ func use_crystal(p: Dictionary, where: String, key: Variant) -> void:
 
 	var crystal := -1
 	for index in p.bag.size():
-		if str(p.bag[index].get("id", "")) == Items.crystal_id():
+		if str(p.bag[index].get("id", "")) == material:
 			crystal = index
 			break
 	if crystal < 0:
-		_notice("크리스탈이 없습니다")
+		_notice("%s이 없습니다" % str(Items.get_material(material).get("name", "크리스탈")))
 		return
 
 	# 먼저 굴리고 나서 크리스탈을 뺀다 — 빼다가 칸이 비면 가방 번호가 당겨진다
-	target.options2 = Items.roll_tier_options(2, int(target.get("grade", 1)), rng)
+	var slot_key := str(Items.option_tier(tier).get("key", "options2"))
+	target[slot_key] = Items.roll_tier_options(tier, int(target.get("grade", 1)), rng)
 	var left := int(p.bag[crystal].get("count", 1)) - 1
 	if left > 0:
 		p.bag[crystal].count = left
@@ -532,9 +610,9 @@ func use_crystal(p: Dictionary, where: String, key: Variant) -> void:
 		p.bag.remove_at(crystal)
 
 	var lines: Array = []
-	for option in target.options2:
+	for option in target[slot_key]:
 		lines.append(Items.describe_option(option))
-	_notice("%s 2차 옵션 — %s" % [item.name, ", ".join(lines)])
+	_notice("%s %d차 옵션 — %s" % [item.name, tier, ", ".join(lines)])
 	_inventory_changed(p)
 
 

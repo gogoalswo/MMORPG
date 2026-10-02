@@ -24,12 +24,15 @@ const OPS := {
 	"equip": "i",
 	"unequip": "s",
 	"sort_bag": "",
-	"use_crystal": "sk",
+	# 어디(bag/equip) · 가방 번호 또는 슬롯 · 차수(2 크리스탈 · 3 옐로우 크리스탈)
+	"use_crystal": "ski",
 	"buy": "s",
 	"sell": "i",
 	"enhance": "sk",
 	"enhance_many": "ai",
 	"trial_clear": "s",
+	# 샌드백 랭킹전 — 한 판에 넣은 피해. 서버가 들어온 때·끝난 때·상한을 다시 본다 (`_check_sandbag`)
+	"sandbag_record": "i",
 	# 헬스 — 운동 id · 자동(1)이냐 한 번(0)이냐. 확률은 서버가 굴린다
 	"fitness_up": "si",
 	# 장비 도감 — 아이템 id(등급·부위) · 강화 · 고른 가방 번호(-1 이면 옵션 적은 것). 가방에서 하나를 넣어 칸을 채운다
@@ -59,6 +62,12 @@ var _board := {}
 var _board_order: Array = []
 ## 랭킹 창에 싣는 윗줄 수 (내 순위는 따로 싣는다)
 const RANK_TOP := 50
+## 샌드백 랭킹전 (docs/features/sandbag.md) — **이번 주** 계정마다 한 줄 `{id, name, best}` 와 줄 세운 것,
+## 그 주 번호. 주가 바뀌면 비운다. 닫힌 주의 순위는 `_sandbag_ranks` (파일로 굳힌 것)
+var _sandbag_board := {}
+var _sandbag_order: Array = []
+var _sandbag_week := -1
+var _sandbag_ranks := {}
 ## 결제 검증기 — 없으면 결제를 받지 않는다(`store_off`). 실제 서버는 `GooglePlayVerifier`
 var verifier: PurchaseVerifier = null
 ## 검증 중인 결제 `[{session, account, product, key, job}]` 과, 끝난 뒤 **그 연결에만** 보낼 답
@@ -71,15 +80,18 @@ var clock: Callable = func() -> int: return Time.get_ticks_msec()
 func _init(account_store: AccountStore) -> void:
 	store = account_store
 	# 랭킹은 켤 때 계정 파일을 전부 읽어 세운다 — 그 뒤로는 장부가 바뀔 때마다 그 줄만 고친다
+	_sandbag_week = ledger.sandbag_week()
 	for saved in store.all():
 		_board[saved.id] = _board_row(str(saved.id), saved.ledger)
 		_board[saved.id].name = name_of(saved)
+		_touch_sandbag(saved)
 
 
 ## 연결 하나의 상태는 `session` 사전에 둔다 (`server_main` 이 연결마다 하나씩 쥔다)
 func handle(session: Dictionary, message: Variant) -> Dictionary:
 	if typeof(message) != TYPE_DICTIONARY:
 		return _error(null, "bad_message")
+	_roll_sandbag_week()
 	match str(message.get("t", "")):
 		"hello":
 			return _hello(session, message)
@@ -89,6 +101,8 @@ func handle(session: Dictionary, message: Variant) -> Dictionary:
 			return _chat(session, message)
 		"rank":
 			return _rank(session)
+		"sandbagRank":
+			return _sandbag_rank(session)
 		"purchase":
 			return _purchase(session, message)
 	return _error(message.get("id"), "unknown_type")
@@ -116,10 +130,14 @@ func _hello(session: Dictionary, message: Dictionary) -> Dictionary:
 		account["name"] = wanted
 		store.write(account)
 		_touch_board(account)
+	# 지난주 샌드백 기록이 남아 있으면 정산한다 — 들어온 순간 보상이 가방에 들어온다
+	var settled := _settle_sandbag(account)
 	var reply := {
 		"t": "welcome",
 		"name": name_of(account),
 		"ledger": Ledger.view(account.ledger),
+		# 정산 알림(`sandbagReward`) 같은 것 — 기기가 채팅창에 적는다
+		"events": ledger.take_events() if settled else [],
 		"last_req": int(account.get("last_req", 0)),
 		"chat": _chat_log.duplicate(true),  # 들어오기 전에 오간 말 — 채팅창이 비어 있지 않게
 	}
@@ -152,7 +170,17 @@ func _op(session: Dictionary, message: Dictionary) -> Dictionary:
 	if args == null:
 		return _error(req, "bad_args")
 
+	# 판정 전에 지난주 샌드백 기록을 정산한다 — 새 기록이 지난 기록을 덮기 전에.
+	# 알림은 바로 걷어 둔다 — `Ledger` 는 계정들이 같이 쓰므로 거절로 끝나면 다음 계정 답에 섞인다
+	var settled: Array = ledger.take_events() if _settle_sandbag(account) else []
 	match op:
+		"sandbag_record":
+			var why := _check_sandbag(account, int(args[0]))
+			if not why.is_empty():
+				print("샌드백 거절 %s %s: %d" % [account.id, why, int(args[0])])
+				return _error(req, why)
+			ledger.callv(op, [account.ledger] + args)
+			_touch_sandbag(account)
 		"enter":
 			var locked := _enter(account, str(args[0]))
 			if not locked.is_empty():
@@ -175,7 +203,7 @@ func _op(session: Dictionary, message: Dictionary) -> Dictionary:
 	var reply := {
 		"t": "result", "id": req,
 		"ledger": Ledger.view(account.ledger),
-		"events": ledger.take_events(),
+		"events": settled + ledger.take_events(),
 	}.duplicate(true)  # 이벤트가 가방을 가리킨다 — 남겨 둘 답은 지금 값으로 굳힌다
 	account["last_req"] = req
 	account["last_reply"] = reply
@@ -184,6 +212,119 @@ func _op(session: Dictionary, message: Dictionary) -> Dictionary:
 	_announce(account, reply.events)
 	_touch_board(account)
 	return reply
+
+
+## --- 샌드백 랭킹전 (docs/features/sandbag.md) ---
+
+## 주가 바뀌었으면 이번 주 순위표를 비운다. 지난주 순위는 처음 정산할 때 굳힌다(`_ranks_of`)
+func _roll_sandbag_week() -> void:
+	var week := ledger.sandbag_week()
+	if week == _sandbag_week:
+		return
+	_sandbag_week = week
+	_sandbag_board.clear()
+	_sandbag_order.clear()
+
+
+## 이번 주 기록이 있는 계정만 줄에 올린다
+func _touch_sandbag(account: Dictionary) -> void:
+	var mine: Dictionary = account.ledger.get("sandbag", {})
+	if int(mine.get("week", -1)) != _sandbag_week or int(mine.get("best", 0)) <= 0:
+		return
+	var row := {"id": str(account.id), "name": name_of(account), "best": int(mine.best)}
+	if _sandbag_board.get(account.id, {}) == row:
+		return
+	_sandbag_board[account.id] = row
+	_sandbag_order.clear()
+
+
+## 순위 — **최고 기록 → 계정 id 순**(늘 같은 순서가 나오게). 같은 기록이면 먼저 낸 사람을 앞에 두려면
+## 낸 시각을 따로 남겨야 한다 (지금은 없다 — 레벨 랭킹과 같다)
+static func _order_rows(rows: Array) -> Array:
+	rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		if int(a.best) != int(b.best):
+			return int(a.best) > int(b.best)
+		return str(a.id) < str(b.id))
+	return rows
+
+
+## 닫힌 주의 순위 `{계정 id: 순위}`. 처음 묻는 순간 **그 주 기록이 남은 계정 전부**를 줄 세워 파일로 굳힌다 —
+## 정산한 계정은 장부가 새 주로 넘어가 다시는 그 주 줄에 안 잡히므로, 굳히기 전에 정산한 계정은 없다
+func _ranks_of(week: int) -> Dictionary:
+	if _sandbag_ranks.has(week):
+		return _sandbag_ranks[week]
+	var ranks := store.find_sandbag_ranks(week)
+	if ranks.is_empty():
+		var rows: Array = []
+		for saved in store.all():
+			var held: Dictionary = _accounts.get(saved.id, saved)  # 메모리에 있으면 그게 최신이다
+			var mine: Dictionary = held.ledger.get("sandbag", {})
+			if int(mine.get("week", -1)) == week and int(mine.get("best", 0)) > 0:
+				rows.append({"id": str(saved.id), "best": int(mine.best)})
+		var order := _order_rows(rows)
+		for i in order.size():
+			ranks[order[i].id] = i + 1
+		store.write_sandbag_ranks(week, ranks)
+	_sandbag_ranks[week] = ranks
+	return ranks
+
+
+## 이 계정의 지난주를 닫는다 — 굳힌 순위로 보상을 얹고 바로 넣어 본다. 못 받은 보상이 있으면 다시 넣어 본다.
+## 장부가 바뀌었으면 true (부르는 쪽이 저장한다 — `_op` 는 어차피 쓴다)
+func _settle_sandbag(account: Dictionary) -> bool:
+	var mine: Dictionary = account.ledger.get("sandbag", {})
+	if mine.is_empty():
+		return false
+	if int(mine.get("week", _sandbag_week)) < _sandbag_week:
+		var rank := int(_ranks_of(int(mine.week)).get(str(account.id), 0))
+		ledger.sandbag_close_week(account.ledger, rank)
+	elif mine.has("unpaid"):
+		ledger.sandbag_pay(account.ledger)
+	else:
+		return false
+	store.write(account)
+	return true
+
+
+## 기록을 대 본다 — 샌드백 존에 들어와서 카운트 + 재는 시간이 다 지났나, 한 번 들어와 한 판만인가,
+## 이 캐릭터가 15초에 넣을 수 있는 피해(`KillCheck.max_damage`)를 넘지 않나. 되면 빈 글자
+func _check_sandbag(account: Dictionary, damage: int) -> String:
+	var hunt: Dictionary = _hunts.get(account.id, {})
+	if hunt.is_empty() or str(hunt.zone) != Sandbag.zone():
+		return "wrong_zone"
+	if bool(hunt.get("sandbag_claimed", false)):
+		return "claimed"
+	if damage < 0:
+		return "bad_args"
+	var elapsed := float(int(clock.call()) - int(hunt.entered_at))
+	if elapsed + KillCheck.SLACK_MS < float(Sandbag.countdown_ms() + Sandbag.play_ms()):
+		return "too_early"
+	var kind: Dictionary = GameData.load_table("monsters").get("kinds", {}).get("sandbag", {})
+	if float(damage) > KillCheck.max_damage(account.ledger, kind, float(Sandbag.play_ms())):
+		return "too_much"
+	hunt["sandbag_claimed"] = true
+	return ""
+
+
+## 이번 주 순위 — 위 50명 + 내 줄 + 이 주가 끝나는 시각(유닉스 초)
+func _sandbag_rank(session: Dictionary) -> Dictionary:
+	var account: Dictionary = session.get("account", {})
+	if account.is_empty():
+		return _error(null, "no_hello")
+	if _sandbag_order.is_empty() and not _sandbag_board.is_empty():
+		_sandbag_order = _order_rows(_sandbag_board.values())
+	var top: Array = []
+	var mine := {"rank": 0, "best": 0}
+	for i in _sandbag_order.size():
+		var row: Dictionary = _sandbag_order[i]
+		if i < RANK_TOP:
+			top.append({"rank": i + 1, "name": row.name, "best": row.best})
+		if row.id == account.id:
+			mine = {"rank": i + 1, "best": row.best}
+	return {
+		"t": "sandbagRank", "top": top, "me": mine, "total": _sandbag_order.size(),
+		"week": _sandbag_week, "ends_at": Sandbag.week_end(_sandbag_week),
+	}
 
 
 ## --- 랭킹 (docs/features/server.md 6단계) ---

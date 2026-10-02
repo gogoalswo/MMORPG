@@ -106,12 +106,16 @@ func _build() -> void:
 
 ## `World._finish_run` 그대로 — `{dungeon, name, stage, result, kills, need, skill_exp, crystals, protein}`
 func show_result(event: Dictionary) -> void:
+	if str(event.get("dungeon", "")) == "sandbag":
+		_show_sandbag(event)
+		return
 	var clear := str(event.get("result", "")) == "clear"
 	_title.text = "%s %d단계" % [str(event.get("name", "던전")), int(event.get("stage", 0))]
 	_verdict.text = "성공" if clear else "실패"
 	_verdict.add_theme_color_override("font_color", OK if clear else WARN)
 	# 처치 수는 시련의 탑만 — 토벌은 보스 한 마리라 셀 것이 없다
 	_count.visible = int(event.get("need", 0)) > 0
+	_count.add_theme_color_override("font_color", IVORY)  # 샌드백 판이 금빛으로 칠했을 수 있다
 	_count.text = "처치 %d / %d" % [int(event.get("kills", 0)), int(event.get("need", 0))]
 	for child in _rewards.get_children():
 		_rewards.remove_child(child)
@@ -132,6 +136,41 @@ func show_result(event: Dictionary) -> void:
 		none.name = "no_reward"
 		_rewards.add_child(none)
 	visible = true
+
+
+## 샌드백 랭킹전 (docs/features/sandbag.md) — 성공/실패가 없다. 큰 글자가 **넣은 피해**, 그 밑에 이번 주 최고,
+## 보상 칸 자리에는 정산 안내 한 줄. 최고 기록은 장부가 정하므로 서버에 붙어 있으면 늦게 온다 —
+## `show_sandbag_best` 가 그때 고친다
+func _show_sandbag(event: Dictionary) -> void:
+	_title.text = str(event.get("name", "샌드백 랭킹전"))
+	_verdict.text = "%s" % comma(int(event.get("damage", 0)))
+	_verdict.add_theme_color_override("font_color", TITLE)
+	_count.visible = true
+	show_sandbag_best(int(event.get("best", 0)), bool(event.get("new_best", false)))
+	for child in _rewards.get_children():
+		_rewards.remove_child(child)
+		child.queue_free()
+	var note := _label("주간 보상(옐로우 크리스탈)은 월요일 0시에\n이번 주 최고 기록의 순위로 정산합니다", 18, DIM)
+	note.name = "no_reward"
+	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_rewards.add_child(note)
+	visible = true
+
+
+## 이번 주 최고 줄 — 새 기록이면 금빛으로 덧붙인다
+func show_sandbag_best(best: int, new_best: bool) -> void:
+	_count.text = "이번 주 최고  %s%s" % [comma(best), "   새 기록!" if new_best else ""]
+	_count.add_theme_color_override("font_color", OK if new_best else IVORY)
+
+
+## 1234567 → "1,234,567"
+static func comma(value: int) -> String:
+	var digits := str(absi(value))
+	var out := ""
+	while digits.length() > 3:
+		out = "," + digits.substr(digits.length() - 3) + out
+		digits = digits.substr(0, digits.length() - 3)
+	return ("-" if value < 0 else "") + digits + out
 
 
 func confirm_button() -> Button:

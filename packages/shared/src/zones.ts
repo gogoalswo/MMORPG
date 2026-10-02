@@ -1,6 +1,7 @@
 import { ZONE_SIZE, type GateDef, type GroundKind, type ZoneDef, type ZoneEnv } from './zone.ts';
 import { monsterIdFor, tierLevels } from './monsters.ts';
 import { dungeonZones } from './dungeons.ts';
+import { SANDBAG_ZONE_DEF } from './sandbag.ts';
 
 /**
  * 존 배치.
@@ -242,6 +243,8 @@ export const ZONES: Record<string, ZoneDef> = {
   ...Object.fromEntries(FIELDS.map((theme, i) => [theme.id, buildField(theme, i)])),
   // 던전 단계마다 존 하나 — 차원문 목록에는 없고 던전 창으로만 간다 (dungeons.ts)
   ...Object.fromEntries(dungeonZones(gateFor).map((zone) => [zone.id, zone])),
+  // 샌드백 랭킹전 — HUD 단추로만 간다. 차원문 없이 결과창 "확인" 이 마을로 보낸다 (sandbag.ts)
+  [SANDBAG_ZONE_DEF.id]: SANDBAG_ZONE_DEF,
 };
 
 export const START_ZONE = VILLAGE.id;

@@ -427,6 +427,50 @@
       "stages": []
     }
   ],
+  "sandbag": {
+    "zone": "sandbag",
+    "countdown": 3,
+    "seconds": 15,
+    "weekShift": 291600,
+    "weekSeconds": 604800,
+    "rewards": [
+      {
+        "from": 1,
+        "to": 1,
+        "yellowCrystals": 30
+      },
+      {
+        "from": 2,
+        "to": 2,
+        "yellowCrystals": 25
+      },
+      {
+        "from": 3,
+        "to": 3,
+        "yellowCrystals": 20
+      },
+      {
+        "from": 4,
+        "to": 10,
+        "yellowCrystals": 15
+      },
+      {
+        "from": 11,
+        "to": 50,
+        "yellowCrystals": 10
+      },
+      {
+        "from": 51,
+        "to": 100,
+        "yellowCrystals": 5
+      },
+      {
+        "from": 101,
+        "to": null,
+        "yellowCrystals": 2
+      }
+    ]
+  },
   "zones": {
     "village": {
       "id": "village",
@@ -10585,6 +10629,36 @@
           "kind": "mob198",
           "x": 5.7,
           "z": -4.1,
+          "radius": 0,
+          "count": 1,
+          "respawnMs": 900000
+        }
+      ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "sandbag": {
+      "id": "sandbag",
+      "name": "샌드백 랭킹전",
+      "size": 30,
+      "spawns": {
+        "default": [
+          -0.64,
+          0.64
+        ]
+      },
+      "monsters": [
+        {
+          "kind": "sandbag",
+          "x": 0.64,
+          "z": -0.64,
           "radius": 0,
           "count": 1,
           "respawnMs": 900000

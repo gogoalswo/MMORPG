@@ -6,6 +6,7 @@ import {
   TRIAL_CRYSTALS_PER_STAGE, TRIAL_KILLS, TRIAL_MONSTERS, TRIAL_SECONDS,
 } from './dungeons.ts';
 import { MONSTER_KINDS } from './monsters.ts';
+import { SANDBAG_KIND, SANDBAG_ZONE } from './sandbag.ts';
 import { GROUND_KINDS } from './zone.ts';
 import { MONSTER_GAP, monsterRadius, scatterSpawn, zoneHalfSize, type Solid } from './movement.ts';
 
@@ -42,7 +43,8 @@ test('몬스터 무리가 실재하는 종이고 영역 안에 있다', () => {
   for (const zone of Object.values(ZONES)) {
     const half = zoneHalfSize(zone.size);
     for (const spawn of zone.monsters ?? []) {
-      assert.ok(MONSTER_KINDS[spawn.kind], `${zone.id}: 없는 몬스터 '${spawn.kind}'`);
+      // 샌드백은 몬스터 표 밖의 과녁이다 (sandbag.ts)
+      assert.ok(MONSTER_KINDS[spawn.kind] || spawn.kind === SANDBAG_KIND.id, `${zone.id}: 없는 몬스터 '${spawn.kind}'`);
       const reach = Math.max(Math.abs(spawn.x) + spawn.radius, Math.abs(spawn.z) + spawn.radius);
       assert.ok(reach <= half, `${zone.id}/${spawn.kind} 무리가 ±${half} 를 넘는다 (${reach})`);
     }
@@ -76,6 +78,8 @@ test('차원문 목록이 세상의 모든 존을 덮는다', () => {
     START_ZONE,
     ...FIELD_ORDER,
     ...DUNGEON_ZONES,
+    // 샌드백 랭킹전은 HUD 단추로 간다 (sandbag.ts)
+    SANDBAG_ZONE,
   ]);
   assert.deepEqual([...reachable].sort(), Object.keys(ZONES).sort());
 });
@@ -164,7 +168,10 @@ test('차원문이 사냥터 말고는 모든 존에 있다', () => {
   // 시련의 탑도 없다 — 결과창 "확인" 이 마을로 보낸다 (dungeons.ts)
   const fields = new Set<string>(FIELD_ORDER);
   const trials = new Set(DUNGEON_TYPES.find((t) => t.id === 'trial')!.stages.map((s) => s.zone));
-  const without = Object.values(ZONES).filter((z) => !z.gate && !fields.has(z.id) && !trials.has(z.id));
+  // 샌드백 랭킹전도 없다 — 결과창 "확인" 이 마을로 보낸다 (sandbag.ts)
+  const without = Object.values(ZONES).filter(
+    (z) => !z.gate && !fields.has(z.id) && !trials.has(z.id) && z.id !== SANDBAG_ZONE
+  );
   assert.deepEqual(without.map((z) => z.id), [], '차원문이 없는 존이 있다');
   const withGate = FIELD_ORDER.filter((id) => getZone(id).gate);
   assert.deepEqual(withGate, [], '사냥터에 차원문이 남아 있다');
@@ -285,7 +292,7 @@ test('무리 안에서 몬스터가 서로 겹치지 않는다', () => {
   for (const zone of Object.values(ZONES)) {
     const half = zoneHalfSize(zone.size);
     for (const spawn of zone.monsters ?? []) {
-      const kind = MONSTER_KINDS[spawn.kind];
+      const kind = MONSTER_KINDS[spawn.kind] ?? SANDBAG_KIND;
       const r = monsterRadius(kind.scale);
       const placed: Solid[] = [];
       for (let i = 0; i < spawn.count; i++) {

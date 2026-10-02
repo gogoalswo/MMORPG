@@ -83,6 +83,12 @@ node scripts/shrink-glb-textures.mjs assets-src/models/varco/portal.glb public/a
 fetch_varco d70bfa94d61eda4718810417e2219bd9 tomb
 node scripts/shrink-glb-textures.mjs assets-src/models/varco/tomb.glb public/assets/models/varco_tomb.glb 1024
 
+# 샌드백 — 바르코 워크플로우 "Untitled" 의 맨 아래(y 4900~) 줄. 원화 두 장 중 둘째(b8a3ad03…png, 나무 받침 +
+# 가죽 띠 둘)에서 뽑은 3D — **원점을 바닥으로**(pivotToBottom) 내보낸 것. 샌드백 랭킹전의 과녁 (2026-10-02,
+# docs/features/sandbag.md). 1024 로 줄여 커밋한다
+fetch_varco d107839c00de50f9776818db0ba5e404 sandbag
+node scripts/shrink-glb-textures.mjs assets-src/models/varco/sandbag.glb public/assets/models/varco_sandbag.glb 1024
+
 # 차원문 창 UI 조각 — 같은 워크플로우. 창 바탕·소용돌이 칸·별 칸을 **따로** 받아 고도에서
 # 조립한다 (docs/features/portal-ui.md). 원화 두 장(9fbb5d1f… 9dfeff2c…)은 3D 를 뽑은 그림이라 안 받는다.
 fetch_ui() { # $1=객체 해시  $2=출력 이름
@@ -285,6 +291,8 @@ fetch_icon 9fc33631108021fa8ec41db82b8ed378 boots     # 장화
 fetch_icon 7798ba00c5755e15d7a9fa28c38083ef ring      # 반지
 # 재료 — 크리스탈 (2026-09-23). 건틀릿 워크플로우에 일반 건틀릿을 참고로 물려 뽑은 두 장 중 첫 장
 fetch_icon 6cd39aca0eb28083b14b49c8fab67303 crystal   # 크리스탈
+# 재료 — 옐로우 크리스탈 (2026-10-02, 3차 옵션). 위 크리스탈 그림을 EditImage 로 노랗게만 다시 칠한 두 장 중 첫 장
+fetch_icon a7166a3fe73dbabacbb037e37ecad682 yellow_crystal # 옐로우 크리스탈
 fetch_icon 624e1a1a10e8576c2ce473e0155dd4f0 necklace  # 목걸이
 fetch_icon 5fd4ab55b5c3e682f35f8cf81b2a266d bag       # 가방
 fetch_icon 0f5c8a9b06c498361643b69fc4b3d97c gold      # 동전
@@ -373,6 +381,7 @@ fetch_icon fba999f3e828debccb1109e84189d3a0 ui_icon_bag       # 가방 — 버�
 fetch_icon 82f60e0a994bb7257ca7da850cd82069 ui_icon_dungeon   # 던전 — 돌 아치에 반쯤 열린 나무 문 (세 장 중 둘째, 처음부터 세피아 팔레트로 뽑음). 2026-09-29
 fetch_icon 60019ed8187ff0cff607c9aa023849f4 ui_icon_design    # 설계 — 두루마리 도면 위 컴퍼스 (첫째). 2026-09-29 세피아 단색조
 fetch_icon 0cd496bab7dbf9e3e1b78144b25a235c ui_icon_rank      # 랭킹 — 받침 달린 트로피 (첫째). 2026-09-29 세피아 단색조
+fetch_icon 9d0cfd6c330ff0eecd6fb4fd2ecad4be ui_icon_sandbag   # 샌드백 랭킹전 — 받침에 선 가죽 샌드백 (세 장 중 둘째). 2026-10-02 HUD 아이콘 기준 프롬프트 그대로
 fetch_icon 48c32df95c8cead1a978cd760ed10188 ui_icon_fitness   # 헬스 — 쇠 덤벨 (세 장 중 둘째). 2026-09-30 세피아 단색조 (HUD 아이콘 기준 프롬프트 그대로)
 # 2026-10-01 — 도감 단추 · 메뉴를 펼치는 ≡ · 접는 X (HUD 아이콘 기준 프롬프트 그대로, 각 세 장)
 fetch_icon 3949117dc4a7ca950e5e3fc4d7d24511 ui_icon_codex      # 도감 — 방패 문장이 든 펼친 책 (셋째)

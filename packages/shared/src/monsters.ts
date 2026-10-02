@@ -49,6 +49,8 @@ export interface MonsterKind {
   boss?: boolean;
   /** 범위 공격. 지금은 보스만 가진다 */
   aoe?: MonsterAoe;
+  /** 과녁 — 안 죽고 안 움직이고 안 때린다. 샌드백 랭킹전의 샌드백뿐이다 (sandbag.ts) */
+  dummy?: boolean;
 }
 
 /**

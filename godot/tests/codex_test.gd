@@ -595,6 +595,11 @@ func _case_panel() -> void:
 			or sheet.option_on(3, "crit") or not sheet.option_on(3, "maxHp") or not sheet.option_on(5, "crit"):
 		_fail("옵션 칩 요청 %s · 희귀 치명타 %s · 희귀 체력 %s · 전설 치명타 %s" % [
 			picks, sheet.option_on(3, "crit"), sheet.option_on(3, "maxHp"), sheet.option_on(5, "crit")])
+	# 꺼진 등급(태초)은 옵션 칩도 종류 칩과 같은 꺼진 판 색 — 값(전 옵션)은 남아 있다
+	var off_slot: StyleBoxFlat = (sheet.find_child("slot_7_weapon", true, false) as Button).get_theme_stylebox("normal")
+	var off_option: StyleBoxFlat = (sheet.find_child("option_7_crit", true, false) as Button).get_theme_stylebox("normal")
+	if off_slot.bg_color != off_option.bg_color or not sheet.option_on(7, "crit"):
+		_fail("꺼진 등급의 칩 색 — 종류 %s · 옵션 %s · 옵션 값 %s" % [off_slot.bg_color, off_option.bg_color, sheet.option_on(7, "crit")])
 	# 등급을 켜면 전 옵션도 켠다
 	(sheet.find_child("auto_6", true, false).get_node("on") as Button).pressed.emit()
 	if picks.back() != [6, every]:

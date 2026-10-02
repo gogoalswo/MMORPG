@@ -667,6 +667,8 @@ const WINDOW_TOGGLES := {
 	"debug": "_toggle_debug",
 	# ≡ 를 눌러 펼친 메뉴 판 · 장비 도감 (2026-10-01)
 	"menu": "_toggle_menu", "codex": "_toggle_codex", "codex_pick": "_toggle_codex",
+	# 상점 (2026-10-02, store.md)
+	"store": "_toggle_store",
 }
 
 

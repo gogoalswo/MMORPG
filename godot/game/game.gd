@@ -404,6 +404,8 @@ var _tombs: Array[Dictionary] = []
 var _fitness_panel: FitnessPanel
 ## 장비 도감 창 — 헬스 창과 같은 층(10) · 전체 화면 (codex_panel.gd)
 var _codex_panel: CodexPanel
+## 상점 창 — 도감 창과 같은 층(10) · 전체 화면 (store_panel.gd)
+var _store_panel: StorePanel
 ## 강화 창을 도감 [강화] 로 열었나 — 닫으면 도감으로 돌아간다 (`_back_to_codex`)
 var _enhance_from_codex := false
 var _skill_panel: PanelContainer
@@ -2412,6 +2414,7 @@ func _toggle_sandbag() -> void:
 		_fitness_panel.visible = false
 		if _codex_panel.visible:
 			_codex_panel.close_panel()
+		_store_panel.visible = false
 	_sandbag_panel.visible = open
 	if open:
 		_sandbag_note.text = "불러오는 중…"
@@ -3243,6 +3246,8 @@ func _build_skill_bar() -> void:
 		_icon_button("ui_icon_codex", "도감", _toggle_codex, MENU_BTN, true),
 		# 샌드백 랭킹전 — 도감 옆 (2026-10-02 요청 "HUD 별도 단추"). 그림은 받침에 선 가죽 샌드백
 		_icon_button("ui_icon_sandbag", "샌드백", _toggle_sandbag, MENU_BTN, true),
+		# 상점 — 샌드백 옆 (2026-10-02 요청, store.md). 그림(`ui_icon_shop`)은 아직 없어서 이름 글자만 선다
+		_icon_button("ui_icon_shop", "상점", _toggle_store, MENU_BTN, true),
 	]
 	# 랭킹 — 던전 옆. **서버에 붙었을 때만** 선다 (혼자 노는 판에는 견줄 사람이 없다).
 	# 그림은 월계관 두른 금 트로피(`ui_icon_rank`)
@@ -4878,6 +4883,20 @@ func _build_gate_panel() -> void:
 	top.add_child(_codex_panel)
 	_close_button(_codex_panel, _toggle_codex, 0)
 
+	# 상점 창도 같은 층·같은 결이다 → docs/features/store.md
+	_store_panel = StorePanel.make(_frame_box, _icon)
+	_store_panel.theme = _ui_root.theme
+	var store_back := ColorRect.new()
+	store_back.name = "StoreBack"
+	store_back.color = DungeonPanel.CARD_DARK
+	store_back.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	store_back.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	store_back.visible = false
+	top.add_child(store_back)
+	_store_panel.visibility_changed.connect(func(): store_back.visible = _store_panel.visible)
+	top.add_child(_store_panel)
+	_close_button(_store_panel, _toggle_store, 0)
+
 
 ## ≡ 를 눌러 펼치는 메뉴 판 (2026-10-01 요청: "오른쪽 위에 x버튼을 평소에는 … 3줄 짜리 ui 아이콘 만들고
 ## 누르면 … 아이콘 나열되게"). 어두운 판 + 얇은 금테(ui-art-style.md), 맨 위는 평소 줄이 얹히는 빈 자리,
@@ -4938,6 +4957,7 @@ func _open_gate() -> void:
 	_dungeon_panel.visible = false
 	_fitness_panel.visible = false
 	_codex_panel.visible = false
+	_store_panel.visible = false
 	_gate_panel.open(_shown_zone)
 
 
@@ -4950,6 +4970,7 @@ func _toggle_dungeon() -> void:
 	_fitness_panel.visible = false
 	_codex_panel.visible = false
 	_sandbag_panel.visible = false
+	_store_panel.visible = false
 	_dungeon_panel.spent = _spent_dungeons()
 	_dungeon_panel.open(_shown_zone)
 
@@ -4975,6 +4996,7 @@ func _toggle_fitness() -> void:
 	_dungeon_panel.visible = false
 	_codex_panel.visible = false
 	_sandbag_panel.visible = false
+	_store_panel.visible = false
 	_fitness_panel.refresh(_me())
 	_fitness_panel.open()
 
@@ -4988,8 +5010,23 @@ func _toggle_codex() -> void:
 	_dungeon_panel.visible = false
 	_fitness_panel.visible = false
 	_sandbag_panel.visible = false
+	_store_panel.visible = false
 	_codex_panel.refresh(_me())
 	_codex_panel.open()
+
+
+## 상점 단추. 열려 있으면 닫는다. 차원문·던전·헬스·도감·샌드백 창과 한 층이라 그것들을 닫고 연다
+func _toggle_store() -> void:
+	if _store_panel.visible:
+		_store_panel.close_panel()
+		return
+	_gate_panel.visible = false
+	_dungeon_panel.visible = false
+	_fitness_panel.visible = false
+	_sandbag_panel.visible = false
+	if _codex_panel.visible:
+		_codex_panel.close_panel()
+	_store_panel.open()
 
 
 ## 문을 눌렀다. **거리와 상관없이 바로 창을 연다** (2026-09-18 요청: "포탈까지

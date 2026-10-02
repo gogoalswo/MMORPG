@@ -995,20 +995,25 @@ func _case_sandbag(game: Node3D) -> void:
 	if not game._trial_hud.visible:
 		_fail("샌드백 시계 줄이 없다")
 	seen += game._trial_hud.text
+	if game._potion_cell.is_visible_in_tree() or game._auto_cell.is_visible_in_tree() or game._auto_gap.visible:
+		_fail("샌드백에 물약·자동사냥 칸이 남았다")
 
 	# 카운트를 건너뛰고 재기 시작 → 한 대 넣고 → 시간 끝
 	var run: Dictionary = game._transport.snapshot().dungeon
 	run.starts_at = Time.get_ticks_msec() - 1
+	# 재기 시작하면 저절로 쳐서 피해가 늘어난다 — 시계 줄은 넣어 둔 1,234 이상이면 된다
 	run.damage = 1234
 	await process_frame
-	if not game._trial_hud.text.contains("누적 피해 1,234"):
+	var shown := int(game._trial_hud.text.get_slice("누적 피해 ", 1).replace(",", ""))
+	if shown < 1234 or not game._trial_hud.text.contains("누적 피해 "):
 		_fail("시계 줄에 누적 피해가 없다: '%s'" % game._trial_hud.text)
 	seen += game._trial_hud.text + count.text
 	run.ends_at = Time.get_ticks_msec() - 1
 	for i in 3:
 		await process_frame
 	var result: DungeonResult = game._dungeon_result
-	if not result.visible or result._verdict.text != "1,234" or not result._count.text.contains("1,234"):
+	var dealt := DungeonResult.comma(int(run.damage))
+	if not result.visible or result._verdict.text != dealt or not result._count.text.contains(dealt):
 		_fail("샌드백 결과창: 보임 %s '%s' '%s'" % [result.visible, result._verdict.text, result._count.text])
 	if count.visible or game._trial_hud.visible:
 		_fail("결과가 났는데 카운트·시계가 남았다")
@@ -1033,7 +1038,7 @@ func _case_sandbag(game: Node3D) -> void:
 		_fail("기록 뒤 다시 열면 1위: '%s'" % game._sandbag_note.text)
 	# 날짜별 기록 — 일곱 날 · 맨 위가 오늘이고 방금 기록
 	var day_cells: Array = game._sandbag_days.get_children().filter(func(c): return not c.is_queued_for_deletion())
-	if day_cells.size() != Sandbag.history_days() * 2 or (day_cells[1] as Label).text != "1,234":
+	if day_cells.size() != Sandbag.history_days() * 2 or (day_cells[1] as Label).text != dealt:
 		_fail("날짜별 기록: %d칸 '%s'" % [day_cells.size(), (day_cells[1] as Label).text if day_cells.size() > 1 else ""])
 	game._toggle_sandbag()
 	result.confirm_button().pressed.emit()
@@ -1041,6 +1046,8 @@ func _case_sandbag(game: Node3D) -> void:
 		await process_frame
 	if result.visible or game._shown_zone != GameData.start_zone():
 		_fail("확인을 눌렀는데 마을로 안 나갔다: %s" % game._shown_zone)
+	if not game._potion_cell.is_visible_in_tree() or not game._auto_cell.is_visible_in_tree():
+		_fail("마을에 나왔는데 물약·자동사냥 칸이 안 돌아왔다")
 	else:
 		print("  샌드백 랭킹전: 입장 창 → 카운트 '3' → '%s' → 결과 '%s' · %s → 마을" % [
 			"누적 피해", result._verdict.text, result._count.text])

@@ -15,6 +15,7 @@ func _init() -> void:
 	_wipe()
 	_case_zone()
 	_case_countdown()
+	_case_auto()
 	_case_count_and_finish()
 	_case_local_week()
 	_case_days()
@@ -103,6 +104,33 @@ func _case_countdown() -> void:
 		_fail("카운트 중에 맞았다")
 	if int(w.snapshot().dungeon.damage) != 0:
 		_fail("카운트 중 피해가 셌다")
+
+
+## 카운트 동안은 가만히 · 끝나면 누르지 않아도 저절로 친다 · 결과가 나면 멈춘다 · 마을에선 꺼져 있다
+func _case_auto() -> void:
+	var w := _enter()
+	var me: Dictionary = w.snapshot().players.me
+	w.step(0.016)
+	if bool(me.auto):
+		_fail("카운트 중에 저절로 치기가 켜졌다")
+	var run: Dictionary = w.snapshot().dungeon
+	run.starts_at = Time.get_ticks_msec() - 1
+	run.ends_at = Time.get_ticks_msec() + 60000
+	for i in 30:
+		me.next_attack_at = 0
+		me.rooted_until = 0
+		me.cast_until = 0
+		w.step(0.016)
+	if not bool(me.auto) or int(run.damage) <= 0:
+		_fail("카운트가 끝났는데 저절로 안 친다: 켜짐 %s · 피해 %d" % [me.auto, int(run.damage)])
+	run.ends_at = Time.get_ticks_msec() - 1
+	w.step(0.016)
+	if bool(me.auto):
+		_fail("결과가 났는데 계속 친다")
+	w.travel("me", "village")
+	w.step(0.016)
+	if bool(w.snapshot().players.me.auto):
+		_fail("마을에서 자동사냥이 켜져 있다")
 
 
 ## 카운트가 끝나면 친 만큼 센다 · 샌드백은 안 죽고 안 움직인다 · 15초가 지나면 기록과 결과창

@@ -25,8 +25,6 @@ signal changed(grade: int, slots: Array)
 signal options_changed(grade: int, kinds: Array)
 
 const WIDTH := 860.0
-const CHIP := Vector2(120, 42)
-const OPTION_CHIP := Vector2(150, 42)
 
 const TITLE := GatePanel.PAGE_TITLE_COLOR
 const GOLD := GatePanel.CARD_GOLD
@@ -96,26 +94,8 @@ func _build(close_button: Button) -> void:
 
 	var labels: Dictionary = Items._t().get("optionLabel", {})
 	for grade in range(1, int(Items._t().get("gradeMax", 7)) + 1):
-		var tab := Button.new()
-		tab.name = "tab_%d" % grade
-		tab.text = Items.grade_name(grade)
-		tab.custom_minimum_size = Vector2(108, 46)
-		tab.focus_mode = Control.FOCUS_NONE
-		tab.add_theme_font_size_override("font_size", 20)
-		tab.pressed.connect(pick_grade.bind(grade))
-		var mark := Panel.new()
-		mark.name = "on_mark"
-		mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var dot := StyleBoxFlat.new()
-		dot.bg_color = GOLD
-		dot.set_corner_radius_all(4)
-		mark.add_theme_stylebox_override("panel", dot)
-		mark.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-		mark.offset_left = -14
-		mark.offset_right = -6
-		mark.offset_top = 6
-		mark.offset_bottom = 14
-		tab.add_child(mark)
+		# 등급 탭 · 칩은 설정 창 "아이템 → 습득" 과 같이 쓴다 (`SettingsPanel.make_grade_tab` · `make_chip`)
+		var tab := SettingsPanel.make_grade_tab("tab_%d" % grade, grade, pick_grade.bind(grade))
 		tabs.add_child(tab)
 		_tabs[grade] = tab
 
@@ -134,25 +114,26 @@ func _build(close_button: Button) -> void:
 		page.add_child(row)
 		_switches[grade] = switch
 
-		page.add_child(_head("아이템 종류 — 활성화 된 종류만 자동으로 등록합니다"))
+		page.add_child(SettingsPanel.chip_head("아이템 종류 — 활성화 된 종류만 자동으로 등록합니다"))
 		var slots := HBoxContainer.new()
 		slots.add_theme_constant_override("separation", 8)
 		page.add_child(slots)
 		var chips := {}
 		for slot in Items.slots():
-			var chip := _chip("slot_%d_%s" % [grade, slot], Items.slot_label(str(slot)), CHIP)
+			var chip := SettingsPanel.make_chip("slot_%d_%s" % [grade, slot], Items.slot_label(str(slot)), SettingsPanel.CHIP)
 			chip.pressed.connect(_toggle_slot.bind(grade, str(slot)))
 			slots.add_child(chip)
 			chips[str(slot)] = chip
 		_chips[grade] = chips
 
-		page.add_child(_head("1차 옵션 — 활성화 된 옵션만 자동으로 등록합니다"))
+		page.add_child(SettingsPanel.chip_head("1차 옵션 — 활성화 된 옵션만 자동으로 등록합니다"))
 		var options := HBoxContainer.new()
 		options.add_theme_constant_override("separation", 8)
 		page.add_child(options)
 		var option_chips := {}
 		for kind in Items._t().get("optionKinds", []):
-			var chip := _chip("option_%d_%s" % [grade, kind], str(labels.get(kind, kind)), OPTION_CHIP)
+			var chip := SettingsPanel.make_chip("option_%d_%s" % [grade, kind], str(labels.get(kind, kind)),
+				SettingsPanel.OPTION_CHIP)
 			chip.pressed.connect(_toggle_option.bind(grade, str(kind)))
 			options.add_child(chip)
 			option_chips[str(kind)] = chip
@@ -210,12 +191,12 @@ func refresh(me: Dictionary) -> void:
 	for grade in _tabs:
 		var slots: Array = table.get(str(grade), [])
 		var allowed := Ledger.codex_auto_option_kinds(me, grade)
-		_paint_tab(_tabs[grade], grade == _grade, grade, not slots.is_empty())
+		SettingsPanel.paint_grade_tab(_tabs[grade], grade == _grade, grade, not slots.is_empty())
 		SettingsPanel.paint_switch(_switches[grade], not slots.is_empty())
 		for slot in _chips[grade]:
-			_paint_chip(_chips[grade][slot], slot in slots, not slots.is_empty())
+			SettingsPanel.paint_chip(_chips[grade][slot], slot in slots, not slots.is_empty())
 		for kind in _option_chips[grade]:
-			_paint_chip(_option_chips[grade][kind], kind in allowed, not slots.is_empty())
+			SettingsPanel.paint_chip(_option_chips[grade][kind], kind in allowed, not slots.is_empty())
 
 
 ## 고른 탭 · 그 등급이 켜졌나 · 그 부위를 넣나 · 그 옵션을 막나 — 테스트가 본다
@@ -263,73 +244,6 @@ func _toggle_option(grade: int, kind: String) -> void:
 	else:
 		kinds.append(kind)
 	options_changed.emit(grade, Ledger.clean_option_kinds(kinds))
-
-
-## 등급 탭 — 등급 색 글자, 고른 탭만 밝게 + 금빛 밑줄. 켠 등급은 오른쪽 위 금빛 점
-func _paint_tab(tab: Button, on: bool, grade: int, lit: bool) -> void:
-	var box := StyleBoxFlat.new()
-	box.bg_color = Color(0.86, 0.78, 0.5, 0.08) if on else Color(0, 0, 0, 0)
-	box.border_color = GOLD if on else Color(0, 0, 0, 0)
-	box.border_width_bottom = 3
-	box.set_content_margin_all(4)
-	for state in ["normal", "hover", "pressed", "disabled"]:
-		tab.add_theme_stylebox_override(state, box)
-	tab.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
-	var color := Items.grade_color(grade)
-	tab.add_theme_color_override("font_color", color if on else color.darkened(0.45))
-	tab.add_theme_color_override("font_hover_color", color)
-	tab.add_theme_color_override("font_pressed_color", color)
-	(tab.get_node("on_mark") as Control).visible = lit
-
-
-## 칩 — 켜면 설정 창 스위치의 고른 칸과 같은 결(밝은 갈색 판 + 금빛 글자), 끄면 어두운 판 + 흐린 글자
-func _chip(node_name: String, text: String, size: Vector2) -> Button:
-	var chip := Button.new()
-	chip.name = node_name
-	chip.text = text
-	chip.custom_minimum_size = size
-	chip.focus_mode = Control.FOCUS_NONE
-	chip.add_theme_font_size_override("font_size", 17)
-	_paint_chip(chip, false, true)
-	return chip
-
-
-## `live` 가 아니면(등급이 꺼졌다) **값과 관계없이 꺼진 칩처럼** 어두운 판 + 흐리게 — 종류 칩(꺼지면 비어서 어둡다)과
-## 옵션 칩(꺼져도 넣을 옵션 값이 남는다)이 같은 색이어야 한다 (2026-10-02 지적 "OFF … 버튼 색상이 달라").
-## 값(`on` 메타)은 그대로 둔다 — 등급을 다시 켜면 남은 값대로 밝아진다. 눌러서 고를 수는 있다
-func _paint_chip(chip: Button, value: bool, live: bool) -> void:
-	chip.set_meta("on", value)
-	var on := value and live
-	var box := StyleBoxFlat.new()
-	box.bg_color = Color("#3b3226") if on else Color("#121110")
-	box.border_color = Color("#6e5c3d") if on else Color("#29261f")
-	box.set_border_width_all(1)
-	box.set_corner_radius_all(3)
-	if on:
-		box.shadow_color = Color(0.9, 0.7, 0.35, 0.16)
-		box.shadow_size = 4
-	for state in ["normal", "hover", "pressed", "disabled"]:
-		chip.add_theme_stylebox_override(state, box)
-	chip.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
-	chip.add_theme_color_override("font_color", SettingsPanel.GOLD if on else SettingsPanel.FAINT)
-	chip.add_theme_color_override("font_hover_color", SettingsPanel.GOLD if on else SettingsPanel.SUB_TEXT)
-	chip.add_theme_color_override("font_pressed_color", SettingsPanel.GOLD)
-	chip.modulate = Color.WHITE if live else Color(1, 1, 1, 0.45)
-
-
-## 묶음 머리 — 금빛 글자 + 가는 선
-func _head(text: String) -> Control:
-	var head := VBoxContainer.new()
-	head.add_theme_constant_override("separation", 2)
-	var top := Control.new()
-	top.custom_minimum_size = Vector2(0, 6)
-	head.add_child(top)
-	head.add_child(_label(text, 17, GOLD))
-	var line := ColorRect.new()
-	line.color = GatePanel.HEAD_LINE
-	line.custom_minimum_size = Vector2(0, 1)
-	head.add_child(line)
-	return head
 
 
 func _hint(text: String) -> Control:

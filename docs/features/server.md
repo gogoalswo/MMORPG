@@ -143,7 +143,7 @@
 
 `OPS`(받는 요청과 인자 모양): `enter` · `kill` · `learn_skill` · `feed_upgrade` · `equip` · `unequip` · `sort_bag` ·
 `use_crystal`(어디 · 번호/슬롯 · **차수** 2/3) · `buy` · `sell` · `enhance` · `enhance_many` · `trial_clear` · `sandbag_record` ·
-`set_loot_skip`(안 주울 장비 등급 목록 → [hud.md](hud.md) "설정 창")
+`set_loot_grade` · `set_loot_options`(등급 · 주울 부위 / 1차 옵션 종류 목록 → [hud.md](hud.md) "설정 창")
 (→ [sandbag.md](sandbag.md) "서버가 기록을 믿는 근거"). JSON 숫자는 실수로 오므로 모양대로 바꾸고,
 모양이 틀리면 `bad_args`.
 

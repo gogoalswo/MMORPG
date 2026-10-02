@@ -187,8 +187,8 @@ func send(message: StringName, payload: Dictionary) -> void:
 			_world.codex_register_all(MY_ID)
 		&"codexAutoGrade":
 			_world.set_codex_auto_grade(MY_ID, int(payload.get("grade", 0)), payload.get("slots", []))
-		&"codexAutoBlock":
-			_world.set_codex_auto_block(MY_ID, int(payload.get("grade", 0)), payload.get("kinds", []))
+		&"codexAutoOptions":
+			_world.set_codex_auto_options(MY_ID, int(payload.get("grade", 0)), payload.get("kinds", []))
 		&"codexSeen":
 			_world.codex_seen(MY_ID, int(payload.get("grade", 0)))
 		&"debugProtein":

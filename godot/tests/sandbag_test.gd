@@ -18,6 +18,7 @@ func _init() -> void:
 	_case_auto()
 	_case_count_and_finish()
 	_case_local_week()
+	_case_days()
 	_case_save()
 	_case_yellow_crystal()
 	_case_server()
@@ -233,10 +234,44 @@ func _case_local_week() -> void:
 		_fail("자리가 났는데 안 들어왔다")
 
 
+## 날짜별 기록 — 하루 최고 한 판 · 최근 7일만 · 주가 바뀌어도 이어진다 · 날은 한국 0시
+func _case_days() -> void:
+	# 2026-10-02(금) 12:00 KST
+	var clock := [Time.get_unix_time_from_datetime_string("2026-10-02T03:00:00")]
+	var w := _enter(clock)
+	var me := _bag_of(w)
+	var first := w.sandbag_day()
+	if Sandbag.day_label(first) != "10월 2일 (금)":
+		_fail("날짜 글자: '%s'" % Sandbag.day_label(first))
+	for damage in [100, 50, 300]:
+		w._ledger.sandbag_record(me, damage)
+	var days: Array = me.sandbag.get("days", [])
+	if days.size() != 1 or int(days[0].day) != first or int(days[0].best) != 300:
+		_fail("하루에 최고 한 판만: %s" % str(days))
+	# 한국 0시(UTC 15시)를 넘으면 다음 날
+	clock[0] += 12 * 3600.0
+	w._ledger.sandbag_record(me, 20)
+	days = me.sandbag.days
+	if days.size() != 2 or int(days[0].day) != first + 1 or int(days[0].best) != 20 or int(days[1].best) != 300:
+		_fail("다음 날 줄이 앞에 안 붙었다: %s" % str(days))
+	# 주가 바뀌어 정산해도 날짜별 기록은 남는다 (10-05 월요일)
+	clock[0] += 3 * 86400.0
+	w._check_sandbag_week(0, true)
+	w.drain_events()
+	if me.sandbag.get("days", []).size() != 2:
+		_fail("주 정산이 날짜별 기록을 지웠다: %s" % str(me.sandbag))
+	# 첫날에서 7일 뒤 — 첫날은 일주일을 넘어 버리고, 이튿날부터는 남는다
+	clock[0] = Time.get_unix_time_from_datetime_string("2026-10-09T03:00:00")
+	w._ledger.sandbag_record(me, 5)
+	days = me.sandbag.days
+	if days.size() != 2 or int(days[0].day) != first + 7 or int(days[1].day) != first + 1:
+		_fail("일주일이 지난 날을 안 버렸다: %s" % str(days))
+
+
 ## 저장했다 불러와도 그 주 기록이 남는다
 func _case_save() -> void:
 	var w := _enter()
-	_bag_of(w).sandbag = {"week": w.sandbag_week(), "best": 777}
+	_bag_of(w).sandbag = {"week": w.sandbag_week(), "best": 777, "days": [{"day": 20000, "best": 777}]}
 	w.save("me")
 	var back := World.new()
 	back.open("village")
@@ -245,6 +280,9 @@ func _case_save() -> void:
 		return
 	if int(back.snapshot().players.me.sandbag.get("best", 0)) != 777:
 		_fail("기록이 저장되지 않았다: %s" % str(back.snapshot().players.me.get("sandbag")))
+	var saved_days: Array = back.snapshot().players.me.sandbag.get("days", [])
+	if saved_days.size() != 1 or int(saved_days[0].day) != 20000:
+		_fail("날짜별 기록이 저장되지 않았다: %s" % str(saved_days))
 	Save.clear()
 
 

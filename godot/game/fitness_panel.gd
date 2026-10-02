@@ -343,7 +343,8 @@ func dotted_tabs() -> Array:
 	return out
 
 
-## `fitnessResult` 이벤트 — 성공이면 초록 "성공!", 실패면 붉은 "실패" 를 문장 위에 띄웠다가 지운다
+## `fitnessResult` 이벤트 — 성공이면 초록 "성공!", 실패면 붉은 "실패" 를 문장 위에 띄웠다가 지운다.
+## 문장에서 이펙트도 난다 — 성공은 금빛 빛줄기 · 반짝이, 실패는 금 · 잿빛 연기 (`FitnessFx`)
 func show_result(event: Dictionary) -> void:
 	if not visible:
 		return
@@ -355,6 +356,10 @@ func show_result(event: Dictionary) -> void:
 	var tween := create_tween().set_parallel(true)
 	tween.tween_property(_emblem, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tween.tween_property(_flash, "modulate:a", 0.0, 0.5).set_delay(0.7)
+	if success:
+		FitnessFx.burst(_emblem.get_parent(), _emblem)
+	else:
+		FitnessFx.smoke(_emblem.get_parent(), _emblem)
 
 
 func _pick(index: int) -> void:

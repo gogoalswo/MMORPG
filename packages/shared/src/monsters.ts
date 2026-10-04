@@ -173,29 +173,37 @@ const TIERS: TierDef[] = [
  * **만렙 너머 사냥터 몬스터** — 종말의 대지(Lv198) 뒤 다섯 곳에 한 종씩 (2026-10-02).
  *
  * 요청: "사냥터 5개 더 추가해 — 현재 마지막 사냥터 이후". 만렙은 200 그대로 두기로 했다(사용자가
- * 골랐다) — 그래서 레벨은 전부 200 이고, **Lv200 표 값에 `power` 를 곱해** 점점 세진다.
- * - HP·공격력만 곱한다. 방어력까지 곱하면 피해가 감쇠식에서 빠르게 0 쪽으로 눌려 "안 아픈데 안 죽는"
- *   몬스터가 된다. 경험치는 HP 에서 나오니 같이 늘지만 만렙이라 쓸 일이 없다.
- * - 드랍·치명타 저항은 레벨(200)을 따른다 — Lv200 몬스터와 같다.
- * - 배수는 고정 표다 (몬스터 능력치는 역산하지 않는다 — monsters-progression.md). 안 맞으면 여기를 고친다.
+ * 골랐다) — 그래서 레벨은 전부 200 이다.
+ * - **체력·공격력은 기존 사냥터처럼 오른다** (2026-10-04 요청 "체력 배율도 기존 사냥터처럼", "공격력도
+ *   기존처럼"). 기존 사냥터 사이의 비율(균열 지대 앞 Lv188 → 종말의 대지 Lv198, 고정 표에서 읽는다 —
+ *   HP ×1.79 · 공격력 ×1.43)을 종말의 대지 몬스터에 단계마다 한 번씩 더 곱한다.
+ * - 방어력은 Lv200 그대로다. 곱하면 피해가 감쇠식에서 빠르게 0 쪽으로 눌려 "안 아픈데 안 죽는" 몬스터가 된다.
+ *   경험치는 HP 에서 나오니 같이 늘지만 만렙이라 쓸 일이 없다.
+ * - **덩치는 기존 몬스터의 1.5배** (`BEYOND_SCALE`, 같은 요청). 모델은 바르코로 따로 만든 것이다.
+ * - 드랍 등급·치명타 저항은 레벨(200)을 따른다. 윗등급 확률은 사냥터 순서로 오른다 (`items.ts` 의 `dropWeights`).
  */
 interface BeyondDef {
   name: string;
   bodyColor: string;
   accentColor: string;
   look: string;
-  /** Lv200 HP·공격력에 곱하는 배수 */
-  power: number;
 }
 
 export const BEYOND_LEVEL = 200;
 
+/** 덩치 — 기존(Lv200 강한 종) 몬스터의 몇 배인가 */
+export const BEYOND_SCALE = 1.5;
+
+/** 사냥터 한 칸마다 오르는 비율 — 기존 마지막 두 강한 종 사이 (Lv188 → 198), 고정 표에서 읽는다 */
+const STEP_FROM = 188;
+const STEP_TO = 198;
+
 const BEYOND: BeyondDef[] = [
-  { name: '공허 파수꾼', bodyColor: '#3b4660', accentColor: '#1a2030', look: 'varco_ogre1', power: 1.2 }, // 공허의 해안
-  { name: '추락한 별괴물', bodyColor: '#6a6f8f', accentColor: '#2e3048', look: 'varco_ogre2', power: 1.4 }, // 별이 진 폐허
-  { name: '핏빛 광전사', bodyColor: '#7a2228', accentColor: '#3a0e12', look: 'varco_ogre3', power: 1.6 }, // 핏빛 달의 평원
-  { name: '망각의 집행자', bodyColor: '#4a4a4f', accentColor: '#202024', look: 'varco_ogre4', power: 1.8 }, // 망각의 회랑
-  { name: '혼돈의 화신', bodyColor: '#5b2a6e', accentColor: '#240f2e', look: 'varco_ogre5', power: 2.0 }, // 혼돈의 왕좌
+  { name: '공허 파수꾼', bodyColor: '#3b4660', accentColor: '#1a2030', look: 'varco_ogre1' }, // 공허의 해안
+  { name: '추락한 별괴물', bodyColor: '#6a6f8f', accentColor: '#2e3048', look: 'varco_ogre2' }, // 별이 진 폐허
+  { name: '핏빛 광전사', bodyColor: '#7a2228', accentColor: '#3a0e12', look: 'varco_ogre3' }, // 핏빛 달의 평원
+  { name: '망각의 집행자', bodyColor: '#4a4a4f', accentColor: '#202024', look: 'varco_ogre4' }, // 망각의 회랑
+  { name: '혼돈의 화신', bodyColor: '#5b2a6e', accentColor: '#240f2e', look: 'varco_ogre5' }, // 혼돈의 왕좌
 ];
 
 /** 만렙 너머 사냥터 수 */
@@ -342,9 +350,14 @@ function buildKinds(): Record<string, MonsterKind> {
     };
   });
 
+  const from = statsForLevel(STEP_FROM, true);
+  const last = statsForLevel(STEP_TO, true);
+  const hpStep = last.maxHp / from.maxHp;
+  const atkStep = last.attack / from.attack;
   BEYOND.forEach((def, index) => {
     const id = beyondIdFor(index);
     const base = statsForLevel(BEYOND_LEVEL, true);
+    const steps = index + 1;
     out[id] = {
       id,
       name: def.name,
@@ -353,9 +366,10 @@ function buildKinds(): Record<string, MonsterKind> {
       bodyColor: def.bodyColor,
       accentColor: def.accentColor,
       ...base,
-      maxHp: Math.round(base.maxHp * def.power),
-      attack: Math.round(base.attack * def.power),
-      expReward: Math.round(base.expReward * def.power),
+      maxHp: Math.round(last.maxHp * hpStep ** steps),
+      attack: Math.round(last.attack * atkStep ** steps),
+      expReward: Math.round(last.expReward * hpStep ** steps),
+      scale: Math.round(base.scale * BEYOND_SCALE * 100) / 100,
     };
   });
   return out;

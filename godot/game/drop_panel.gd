@@ -174,7 +174,8 @@ func _monster_cell(kind: Dictionary) -> Control:
 	var bottom := HBoxContainer.new()
 	bottom.add_theme_constant_override("separation", 16)
 	column.add_child(bottom)
-	var stats := _label("체력 %s     공격 %s     방어 %s" % [
+	# 사이는 네 칸 — 만렙 너머 마지막 사냥터 체력이 8자리(2091만)라 다섯 칸이면 창 폭(640)을 넘는다 (2026-10-04)
+	var stats := _label("체력 %s    공격 %s    방어 %s" % [
 		number(int(kind.get("maxHp", 0))), number(int(kind.get("attack", 0))), number(int(kind.get("defense", 0))),
 	], NAME_FONT, GatePanel.TEXT_COLOR)
 	stats.name = "Stats"

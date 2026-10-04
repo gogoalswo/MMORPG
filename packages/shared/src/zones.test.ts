@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { FIELD_ORDER, START_ZONE, ZONES, getSpawn, getZone } from './zones.ts';
+import { DROP_STEPS, FIELD_ORDER, START_ZONE, ZONES, getSpawn, getZone } from './zones.ts';
+import { DROP_STEP_BOOST, dropGradesFor, dropWeights } from './items.ts';
 import {
   DUNGEON_SKILL_EXP_PER_STAGE, DUNGEON_TYPES, DUNGEON_ZONES, dungeonDay,
   TRIAL_CRYSTALS, TRIAL_KILLS, TRIAL_MONSTERS, TRIAL_SECONDS,
@@ -328,4 +329,22 @@ test('던전 하루 한 번 — 토벌 · 시련은 하루 1회, 날은 한국 �
   assert.equal(dungeonDay(lastSecond - 5 * 3600), dungeonDay(lastSecond), '자정에 날이 바뀌었다');
   assert.equal(dungeonDay(lastSecond + 1), dungeonDay(lastSecond) + 1);
   assert.equal(dungeonDay(lastSecond - 86399), dungeonDay(lastSecond));
+});
+
+test('같은 드랍 등급 창이 이어지면 윗등급 확률이 사냥터마다 ×1.1 (2026-10-04)', () => {
+  // "같은 등급이 나오는 사냥터의 경우에 이전 사냥터보다 더 좋은 아이템이 나올 확률을 10%씩 증가시켜"
+  let previous: { window: string; top: number } | null = null;
+  for (const id of FIELD_ORDER) {
+    const kind = MONSTER_KINDS[getZone(id).monsters![0]!.kind]!;
+    const step = DROP_STEPS[kind.id]!;
+    const window = dropGradesFor(kind.level).join(',');
+    const weights = dropWeights(kind.level, step);
+    const top = weights[weights.length - 1]!;
+    if (previous && previous.window === window) {
+      assert.ok(Math.abs(top / previous.top - DROP_STEP_BOOST) < 1e-9, `${id}: 윗등급이 앞 사냥터의 1.1배가 아니다`);
+    } else {
+      assert.equal(step, 0, `${id}: 창이 바뀌었는데 단계가 0 이 아니다`);
+    }
+    previous = { window, top };
+  }
 });

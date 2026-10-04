@@ -1,5 +1,6 @@
 import { ZONE_SIZE, type GateDef, type GroundKind, type ZoneDef, type ZoneEnv } from './zone.ts';
-import { beyondIdFor, monsterIdFor, tierLevels } from './monsters.ts';
+import { MONSTER_KINDS, beyondIdFor, monsterIdFor, tierLevels } from './monsters.ts';
+import { dropGradesFor } from './items.ts';
 import { dungeonZones } from './dungeons.ts';
 import { SANDBAG_ZONE_DEF } from './sandbag.ts';
 
@@ -259,6 +260,25 @@ export const ZONES: Record<string, ZoneDef> = {
 };
 
 export const START_ZONE = VILLAGE.id;
+
+/**
+ * 몬스터 종마다 **같은 드랍 등급 창이 몇 번째로 이어지는 사냥터인가** (첫 곳 0) — `items.ts` 의 `dropWeights` (2026-10-04).
+ * 사냥터 순서(`FIELDS`)대로 걸으며 앞 사냥터와 창이 같으면 +1, 바뀌면 0 으로 돌아간다.
+ * 사냥터에 안 서는 종(보스·던전 전용)은 표에 없고 0 으로 친다. 고도는 `monsters.json` 의 `dropStep` 으로 받는다
+ */
+export const DROP_STEPS: Record<string, number> = (() => {
+  const out: Record<string, number> = {};
+  let previous = '';
+  let step = 0;
+  for (const theme of FIELDS) {
+    const kind = ZONES[theme.id]!.monsters![0]!.kind;
+    const window = dropGradesFor(MONSTER_KINDS[kind]!.level).join(',');
+    step = window === previous ? step + 1 : 0;
+    previous = window;
+    out[kind] = step;
+  }
+  return out;
+})();
 
 /** 사냥터 순서 — 레벨대 순으로 나열한다 (UI 나 문서용) */
 export const FIELD_ORDER: string[] = FIELDS.map((f) => f.id);

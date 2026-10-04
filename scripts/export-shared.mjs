@@ -63,6 +63,8 @@ import {
   NPC_REACH,
   START_ZONE,
   FIELD_ORDER,
+  DROP_STEPS,
+  DROP_STEP_BOOST,
   DUNGEON_TYPES,
   DUNGEON_DAY_SECONDS,
   DUNGEON_DAY_SHIFT_SECONDS,
@@ -153,7 +155,12 @@ export function buildData() {
     // heights 는 모델을 얼마나 키울지 정한다 (모델 높이는 1 로 정규화돼 있다)
     'monsters.json': {
       // 샌드백은 몬스터 표(60종) 밖의 과녁이라 여기서 붙인다 (sandbag.ts)
-      kinds: { ...MONSTER_KINDS, [SANDBAG_KIND.id]: SANDBAG_KIND },
+      // dropStep — 같은 드랍 등급 창이 몇 번째로 이어지는 사냥터의 종인가 (zones.ts 의 DROP_STEPS, 2026-10-04)
+      kinds: {
+        ...Object.fromEntries(Object.entries(MONSTER_KINDS).map(([id, k]) => [id, { ...k, dropStep: DROP_STEPS[id] ?? 0 }])),
+        [SANDBAG_KIND.id]: SANDBAG_KIND,
+      },
+      dropStepBoost: DROP_STEP_BOOST,
       heights: BEAST_HEIGHT,
       heightDefault: BEAST_HEIGHT_DEFAULT,
     },

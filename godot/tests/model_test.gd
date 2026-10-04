@@ -89,8 +89,10 @@ func _case_ogre() -> void:
 ## 몬스터 표가 쓰는 모델이 실제로 뜨고, 고도가 부르는 클립 넷이 다 있고, 키가 표대로인가
 func _case_low_mobs() -> void:
 	var seen := []
-	for level in [3, 8, 13, 18, 23, 28]:
-		var kind: Dictionary = GameData.monster_kind("mob%03d" % level)
+	# 만렙 너머 다섯(mob200_1~5, 2026-10-04)도 같은 규칙으로 본다 — 바르코 Rig + Animate 넷
+	for id in ["mob003", "mob008", "mob013", "mob018", "mob023", "mob028",
+			"mob200_1", "mob200_2", "mob200_3", "mob200_4", "mob200_5"]:
+		var kind: Dictionary = GameData.monster_kind(id)
 		var look := str(kind.get("look", ""))
 		var target := GameData.beast_height(look, float(kind.get("scale", 1.0)))
 		var rig := Rig.create(look, target)
@@ -106,7 +108,7 @@ func _case_low_mobs() -> void:
 		var h := _height(rig)
 		if absf(h - target) > 0.02:
 			_fail("%s 키가 %.2f 이어야 하는데 %.2f" % [look, target, h])
-		seen.append("%s %.2fm" % [kind.get("name"), h])
+		seen.append("%s %.2fm 공격 %.2f초" % [kind.get("name"), h, rig.clip_length("Attack")])
 		rig.free()
 	print("  저레벨 몬스터: %s" % " · ".join(seen))
 

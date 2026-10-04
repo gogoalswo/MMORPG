@@ -26,6 +26,8 @@ const MODELS = [
   'varco_ogre1.glb', 'varco_ogre2.glb', 'varco_ogre3.glb', 'varco_ogre4.glb', 'varco_ogre5.glb',
   // 저레벨 여섯 종 — 사냥터마다 한 종 (monsters.ts 의 TIERS 앞 셋, scripts/blender/mob_moves.py)
   'mob_slime.glb', 'mob_hare.glb', 'mob_mushroom.glb', 'mob_mantis.glb', 'mob_scorpion.glb', 'mob_kobold.glb',
+  // 만렙 너머 다섯 (2026-10-04)
+  'mob_beyond1.glb', 'mob_beyond2.glb', 'mob_beyond3.glb', 'mob_beyond4.glb', 'mob_beyond5.glb',
   'varco_portal.glb', // 차원문 (모든 존의 GATE_SPOT)
   'varco_tomb.glb', // 묘비 — 쓰러진 자리 (tomb.gd)
   'varco_sandbag.glb', // 샌드백 랭킹전의 과녁 (docs/features/sandbag.md) — Rig.FILES 의 `sandbag`

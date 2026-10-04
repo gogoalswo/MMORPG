@@ -394,6 +394,29 @@ Rig(humanoid) → Animate 로 나온 것을 합쳤다. 출처와 약관은
 - 고치는 법: `mob_moves.py` 의 자세 표를 고치고
   `npm run blender -- --python scripts/blender/mob_moves.py -- kobold` → `npm run sync:godot`.
 
+### 만렙 너머 몬스터 (`mob_beyond1` ~ `mob_beyond5`) ★ (2026-10-04)
+요청: "강한 몬스터 모델링 만들어서 적용하고 덩치를 기존 몬스터보다 1.5배 크게 만들어". 종말의 대지 뒤 다섯
+사냥터의 몬스터 → [world-zones.md](world-zones.md) "만렙 너머 사냥터 다섯".
+
+| look | 몬스터 | 사냥터 | 원화 한 줄 |
+|---|---|---|---|
+| `mob_beyond1` | 공허 파수꾼 | 공허의 해안 | 검푸른 흑요석 판 · 청록 금 · 바이저 눈 |
+| `mob_beyond2` | 추락한 별괴물 | 별이 진 폐허 | 연보라 수정·바위 몸 · 가슴의 별 핵 · 등 가시 |
+| `mob_beyond3` | 핏빛 광전사 | 핏빛 달의 평원 | 진홍 피부 · 뼈 갑옷 · 검은 뿔 |
+| `mob_beyond4` | 망각의 집행자 | 망각의 회랑 | 회색 두건 · 쇠 갑옷 · 얼굴 대신 그림자와 흰 눈 |
+| `mob_beyond5` | 혼돈의 화신 | 혼돈의 왕좌 | 보라·검정 갑피 · 보라 룬 · 큰 뿔 |
+
+- **만드는 길:** 바르코 커스텀 워크플로우("Untitled", y 6000~ 줄)에서 원화(`nano-banana-pro`, 흰 배경 한 마리,
+  "huge hulking humanoid … T-pose … empty hands, no weapons, no wings") → `Generate3D`(tPose 1 · 3만 면 · 텍스처 1024)
+  → `Rig`(humanoid) → `Animate` 넷(전부 inPlace): 대기 `werewolf_breath_idle` · 달리기 `run` · 공격
+  `werewolf_anger_swing_1` · 사망 `hit_fall`. 오우거와 같은 사람 뼈대라 **블렌더를 안 썼다.**
+- 빌드는 `fetch-assets.sh` 의 `beyond` 루프 → `build-varco-character.mjs` (Run 은 `#loop#face`, 오우거와 같다).
+  결과 2.4~2.8MB, 클립 넷. 원본 주소 20개가 거기 박혀 있다 — 다시 받을 때 워크플로우를 열 필요가 없다.
+- **키 2.2**(`BEAST_HEIGHT`, 오우거와 같다) × 몬스터 `scale` 2.85 = **6.27m** — 기존 마지막 사냥터(종말의 대지,
+  scale 1.9 → 4.18m)의 1.5배다 (`monsters.ts` 의 `BEYOND_SCALE`). `model_test` 가 키·클립 넷·공격 길이를 본다.
+- **공격 클립 1.50초** — 고도는 0.8초부터 0.65초만 튼다(`MOB_SWING_FROM`). 내려치는 순간이 판정(1.0초)과
+  어긋나 보이면 공격 키를 바꾸거나 `MOB_SWING_FROM` 을 모델별로 둬야 한다 (아직 화면으로 안 봤다).
+
 ### 모델 리그 (KayKit — 2026-09-10 에 파일을 뺐다. 짐승 규칙은 오우거에 그대로 쓰인다)
 - 다섯 캐릭터가 **같은 41본 뼈대**를 쓴다. 그래서 애니메이션은 `knight.glb`
   한 곳에만 남기고 나머지 넷은 통째로 비웠다. 안 그러면 5×3.6MB 를 받는다.

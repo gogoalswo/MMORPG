@@ -31,6 +31,13 @@ export const BEAST_HEIGHT: Record<string, number> = {
   mob_mantis: 1.7,
   mob_scorpion: 1.0,
   mob_kobold: 1.5,
+  // 만렙 너머 다섯 (2026-10-04) — 오우거와 같은 키에서 시작하고, 몬스터 `scale` 이 기존의 1.5배라
+  // 게임에서는 6m 남짓이다 (monsters.ts 의 BEYOND_SCALE)
+  mob_beyond1: 2.2,
+  mob_beyond2: 2.2,
+  mob_beyond3: 2.2,
+  mob_beyond4: 2.2,
+  mob_beyond5: 2.2,
   // 샌드백 랭킹전의 과녁 (2026-10-02) — 사람(1.8)의 어깨께. `scale`(1.3)이 곱해진다
   sandbag: 1.2,
 };

@@ -218,6 +218,37 @@ fetch_varco 9973846ed2e779f522add2796e41360a mob_mantis_mesh
 fetch_varco 23e24a42f36229df3ce142c5044909d6 mob_scorpion_mesh
 fetch_varco 90a59e4d7efa708ba9dc853d003b93c6 mob_kobold_mesh
 
+# 만렙 너머 몬스터 다섯 (2026-10-04) — 공허 파수꾼 · 추락한 별괴물 · 핏빛 광전사 · 망각의 집행자 · 혼돈의 화신.
+# 바르코 커스텀 워크플로우("Untitled")의 원화(nano-banana-pro) → Generate3D(tPose, 3만 면) → Rig(humanoid) →
+# Animate 넷: 대기 werewolf_breath_idle · 달리기 run · 공격 werewolf_anger_swing_1 · 사망 hit_fall (전부 inPlace).
+# → docs/features/characters-and-animation.md "만렙 너머 몬스터"
+fetch_varco 68cb0e4764fd20bf4e0cebc6f1dfe77a beyond1_idle
+fetch_varco 76fd0b2d929c2b48cd0ef280477d81cb beyond1_run
+fetch_varco 80321d807168ca7250ae0df9426cf412 beyond1_attack
+fetch_varco 7561c3db7d95252211e91be7c7645ec5 beyond1_death
+fetch_varco dd2ceb8929895f1e386597f96a0538e7 beyond2_idle
+fetch_varco d8668c0d2a26c4a0da60c9d1ff52e70d beyond2_run
+fetch_varco ccab00c9ac429b9112aa09c8aa40b2b2 beyond2_attack
+fetch_varco 01afaed27bdd7a1d62ab1b3d711948b7 beyond2_death
+fetch_varco 2630b6aa9fd10f1c0dc2a31234c36f47 beyond3_idle
+fetch_varco 9b47f04bee7b1c5a79175530cf705ecb beyond3_run
+fetch_varco e6504f4d57557abac71d0750199ca479 beyond3_attack
+fetch_varco 8f05d75c7d78ab07c56fb5d50768d09b beyond3_death
+fetch_varco 7cdc9fc5d0cd91823616ccbcbaf0a152 beyond4_idle
+fetch_varco 46d762a862e2519fa8740a32ebe3f6c8 beyond4_run
+fetch_varco 764f455bbaafcaa964ea1aabdfd784a5 beyond4_attack
+fetch_varco cbebfc55321a4075e656593570c2e05d beyond4_death
+fetch_varco 40d49f34703e08745df71cb23bb8ae76 beyond5_idle
+fetch_varco fc0f5fade20a3f06c78f5c9e0aeb9b4e beyond5_run
+fetch_varco d48c714aa3a7525352d3b4616928d28d beyond5_attack
+fetch_varco 5f0d2ca084c99e8b459e35a161ca81af beyond5_death
+for n in 1 2 3 4 5; do
+  B="assets-src/models/varco/beyond${n}"
+  if [ -f "${B}_idle.glb" ] && [ -f "${B}_run.glb" ] && [ -f "${B}_attack.glb" ] && [ -f "${B}_death.glb" ]; then
+    node scripts/build-varco-character.mjs "public/assets/models/mob_beyond${n}.glb" "${B}_idle.glb" "Idle=${B}_idle.glb" "Run=${B}_run.glb#loop#face" "Attack=${B}_attack.glb" "Death=${B}_death.glb"
+  fi
+done
+
 # ------------------------------------------------------------ 가방·장비 아이콘
 
 # 바르코 커스텀 워크플로우 "인벤토리 UI" 의 출력물 11장. 연한 청백색 선화 한 벌이라

@@ -28,6 +28,12 @@ const FILES := {
 	"mob_mantis": "mob_mantis.glb",
 	"mob_scorpion": "mob_scorpion.glb",
 	"mob_kobold": "mob_kobold.glb",
+	# 만렙 너머 다섯 (2026-10-04) — 바르코 원화 → 3D → Rig → Animate 넷 (scripts/fetch-assets.sh)
+	"mob_beyond1": "mob_beyond1.glb",
+	"mob_beyond2": "mob_beyond2.glb",
+	"mob_beyond3": "mob_beyond3.glb",
+	"mob_beyond4": "mob_beyond4.glb",
+	"mob_beyond5": "mob_beyond5.glb",
 	# 샌드백 랭킹전의 과녁 (2026-10-02) — 움직이지 않는 바르코 모델. 클립이 없어 `play` 는 그냥 지나간다
 	"sandbag": "varco_sandbag.glb",
 	# 마을 NPC — 키는 zones.ts 의 NpcDef.look. 바르코 원화 → 3D → 리깅 → 대기 하나

@@ -199,11 +199,11 @@ const STEP_FROM = 188;
 const STEP_TO = 198;
 
 const BEYOND: BeyondDef[] = [
-  { name: '공허 파수꾼', bodyColor: '#3b4660', accentColor: '#1a2030', look: 'varco_ogre1' }, // 공허의 해안
-  { name: '추락한 별괴물', bodyColor: '#6a6f8f', accentColor: '#2e3048', look: 'varco_ogre2' }, // 별이 진 폐허
-  { name: '핏빛 광전사', bodyColor: '#7a2228', accentColor: '#3a0e12', look: 'varco_ogre3' }, // 핏빛 달의 평원
-  { name: '망각의 집행자', bodyColor: '#4a4a4f', accentColor: '#202024', look: 'varco_ogre4' }, // 망각의 회랑
-  { name: '혼돈의 화신', bodyColor: '#5b2a6e', accentColor: '#240f2e', look: 'varco_ogre5' }, // 혼돈의 왕좌
+  { name: '공허 파수꾼', bodyColor: '#3b4660', accentColor: '#1a2030', look: 'mob_beyond1' }, // 공허의 해안
+  { name: '추락한 별괴물', bodyColor: '#6a6f8f', accentColor: '#2e3048', look: 'mob_beyond2' }, // 별이 진 폐허
+  { name: '핏빛 광전사', bodyColor: '#7a2228', accentColor: '#3a0e12', look: 'mob_beyond3' }, // 핏빛 달의 평원
+  { name: '망각의 집행자', bodyColor: '#4a4a4f', accentColor: '#202024', look: 'mob_beyond4' }, // 망각의 회랑
+  { name: '혼돈의 화신', bodyColor: '#5b2a6e', accentColor: '#240f2e', look: 'mob_beyond5' }, // 혼돈의 왕좌
 ];
 
 /** 만렙 너머 사냥터 수 */

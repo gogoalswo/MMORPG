@@ -851,6 +851,22 @@ func _trainers(game: Node3D) -> void:
 				info.id, info.name, img.get_width(), img.get_height(),
 				used.position.x, used.end.x, used.position.y, used.end.y])
 	print("  카드 3D 그림 %d / %d장" % [made, Trainers.all().size()])
+	# 53장을 한 판에 — 11열, 한 장 96×128 (logs/shot_trainer_cards.png)
+	var cols := 11
+	var cell := Vector2i(96, 128)
+	var board := Image.create(cell.x * cols, cell.y * ceili(Trainers.all().size() / float(cols)), false, Image.FORMAT_RGBA8)
+	board.fill(Color(0.12, 0.11, 0.1))
+	var at := 0
+	for info in Trainers.all():
+		var shot := TrainerPortraits.cached(str(info.id))
+		if shot != null:
+			var img := shot.get_image()
+			img.convert(Image.FORMAT_RGBA8)
+			img.resize(cell.x, cell.y, Image.INTERPOLATE_BILINEAR)
+			board.blend_rect(img, Rect2i(Vector2i.ZERO, cell), Vector2i((at % cols) * cell.x, (at / cols) * cell.y))
+		at += 1
+	board.save_png("res://../logs/shot_trainer_cards.png")
+	print("logs/shot_trainer_cards.png")
 	for i in 3:
 		await process_frame
 	await RenderingServer.frame_post_draw

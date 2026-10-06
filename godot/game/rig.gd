@@ -36,9 +36,6 @@ const FILES := {
 	"mob_beyond5": "mob_beyond5.glb",
 	# 샌드백 랭킹전의 과녁 (2026-10-02) — 움직이지 않는 바르코 모델. 클립이 없어 `play` 는 그냥 지나간다
 	"sandbag": "varco_sandbag.glb",
-	# 트레이너 뽑기 연출의 덤벨 (trainer_draw.gd, docs/features/trainers.md "뽑기 연출")
-	"dumbbell_white": "draw_dumbbell_white.glb",
-	"dumbbell_gold": "draw_dumbbell_gold.glb",
 	# 마을 NPC — 키는 zones.ts 의 NpcDef.look. 바르코 원화 → 3D → 리깅 → 대기 하나
 	"merchant": "npc_merchant.glb",
 	"smith": "npc_smith.glb",
@@ -71,7 +68,8 @@ const FIST_BONES := ["RightHand", "LeftHand"]
 ## 없으면 null. 부르는 쪽이 기둥으로 대신한다
 static func create(look: String, target_height: float) -> Rig:
 	# PT 트레이너 53명은 표에서 이름을 짓는다 — `trainer_<id>.glb` (docs/features/trainers.md)
-	if not FILES.has(look) and not look.begins_with("trainer_"):
+	# 뽑기 연출의 밀랍 조각상도 — `draw_statue<1~4>_<white|gold>.glb` (trainer_draw.gd)
+	if not FILES.has(look) and not look.begins_with("trainer_") and not look.begins_with("draw_statue"):
 		return null
 	var path: String = DIR + str(FILES.get(look, look + ".glb"))
 	if not ResourceLoader.exists(path):

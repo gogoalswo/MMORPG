@@ -1,35 +1,43 @@
 class_name TrainerDraw
 extends Control
 
-## 트레이너 뽑기 연출 (2026-10-06 요청: 체스판 스크린샷 두 장 + "뽑기 갯수에 따라 3D 모델이 이렇게 나올거고, 배치는 좀
-## 다르게. 체스말이 아니라 덤벨이 나오게 … 일반 등급은 흰색 덤벨, 희귀 이상 등급은 황금색 덤벨. 보기 버튼 누르면 …
-## 이펙트가 나오면서 어떤 캐릭터가 나왔는지 표시하고, 이름은 등급 색상에 맞게").
+## 트레이너 뽑기 연출 (2026-10-06 요청: 체스판 스크린샷 두 장 + "뽑기 갯수에 따라 3D 모델이 이렇게 나올거고 … 보기 버튼
+## 누르면 … 이펙트가 나오면서 어떤 캐릭터가 나왔는지 표시하고, 이름은 등급 색상에 맞게". 같은 날 고침: "바닥을 똑같이
+## 만들라는게 아니야. 배치를 저런 식으로 하라고 한 거야 … 덤벨로 하지 말고, 스샷 보내준 것 처럼 밀랍 느낌의 사람으로
+## 만들어. 희귀 등급 이상부터는 금색 밀랍으로").
 ##
-##   어두운 돌판 위로 뽑은 수만큼 덤벨이 하나씩 떨어져 선다 (10회면 두 줄 초승달 — 뒤 6 · 앞 4, 앞줄은 뒷줄 사이사이)
-##   → [모두 보기] → 덤벨마다 차례로 빛기둥이 솟고 덤벨이 빛 속으로 사라지며 그 자리에 트레이너 카드가 선다
+##   어두운 수련장 바닥 위로 뽑은 수만큼 **밀랍 조각상**(사람 넷 중 하나)이 하나씩 내려선다 — 자리는 받은 스크린샷의 대형
+##   → [모두 보기] → 조각상마다 차례로 빛기둥이 솟고 조각상이 빛 속으로 사라지며 그 자리에 트레이너 카드가 선다
 ##   → 카드 위 이름은 등급 색 · 새로 얻은 것은 NEW → [확인]
 ##
-## 덤벨 모델은 바르코(`draw_dumbbell_white.glb` · `draw_dumbbell_gold.glb`), 바닥판 그림도 바르코(`trainer_board.jpg`).
-## 빛기둥·섬광·반짝이는 코드로 짓는다 (effect-rules.md). 카드는 3D 가 아니라 **화면 위 조각** — 덤벨 발밑을 화면에
-## 비춰 그 자리에 세우고 멀수록 작게 그린다 → docs/features/trainers.md "뽑기 연출"
+## 조각상은 바르코(`draw_statue<1~4>_white.glb` · `_gold.glb`, 같은 메시에 금빛 텍스처만 다르다), 바닥 그림도 바르코
+## (`trainer_floor.jpg`). 빛기둥·섬광·반짝이는 코드로 짓는다 (effect-rules.md). 카드는 3D 가 아니라 **화면 위 조각** —
+## 조각상 발밑을 화면에 비춰 그 자리에 세우고 멀수록 작게 그린다 → docs/features/trainers.md "뽑기 연출"
 
 ## 확인을 눌렀다 — 상점이 판을 걷는다
 signal closed
 
-## 이 등급부터 금 덤벨 (희귀)
+## 이 등급부터 금빛 밀랍 (희귀)
 const GOLD_GRADE := 3
-const DUMBBELL_HEIGHT := 1.15
-## 판 — 칸 수 · 한 칸(m)
-const BOARD_TILES := 8
-const TILE := 1.0
-## 자리 — 뒷줄 · 앞줄의 앞뒤 자리(z), 뒷줄 간격(앞줄은 그 두 배라 뒷줄 사이사이에 선다), 양끝이 앞으로 휘는 정도
-const BACK_Z := -1.5
-const FRONT_Z := 1.0
-const COL_GAP := 1.05
-const ARC := 0.6
+## 조각상 종류 수(보디빌더 · 권투선수 · 격투가 · 노사범)와 키(m, 받침 포함)
+const STATUE_KINDS := 4
+const STATUE_HEIGHT := 1.6
+## 바닥 한 변(m)
+const FLOOR_SIZE := 11.0
+## 자리 — 받은 스크린샷의 대형(뒤 2 · 둘째 2 · 셋째 3 · 넷째 2 · 앞 모서리 2 = 11자리)을 판 위 좌표로 옮겼다.
+## 눈에 띄는 순서로 적는다(넷째 줄 → 앞 모서리 → 셋째 줄 양끝 → 둘째 → 뒤 → 셋째 가운데). 10회는 앞 열 자리라
+## **가운데가 비고** 둘레로 선다. 1회는 판 가운데
+const LAYOUT := [
+	Vector3(-1.15, 0.0, 0.55), Vector3(1.15, 0.0, 0.55),
+	Vector3(-2.35, 0.0, 1.45), Vector3(2.35, 0.0, 1.45),
+	Vector3(-3.2, 0.0, -0.4), Vector3(3.2, 0.0, -0.4),
+	Vector3(-2.05, 0.0, -1.4), Vector3(2.05, 0.0, -1.4),
+	Vector3(-0.85, 0.0, -2.35), Vector3(0.85, 0.0, -2.35),
+	Vector3(0.0, 0.0, -0.4),
+]
 const FOV := 40.0
-const CAMERA_POS := Vector3(0.0, 4.3, 6.6)
-const LOOK_AT := Vector3(0.0, 0.5, -0.6)
+const CAMERA_POS := Vector3(0.0, 4.1, 6.3)
+const LOOK_AT := Vector3(0.0, 0.65, -0.5)
 
 ## 떨어지기 — 하나 간격 · 걸리는 시간 · 높이
 const DROP_GAP := 0.07
@@ -46,7 +54,7 @@ const BEAM_HEIGHT := 5.5
 ## 카드(화면 조각) — 그림 크기 · 기준 화면 높이 · 기준 깊이에서의 배율
 const ART := Vector2(126, 168)
 const BASE_VIEW_H := 720.0
-const CARD_SCALE := 1.0
+const CARD_SCALE := 1.2
 
 const IVORY := Color("#eeead7")
 const GOLD := GatePanel.CARD_GOLD
@@ -108,7 +116,7 @@ func _build(got: Array, fresh: Array) -> void:
 		var entry: Dictionary = entries[i]
 		entry.gold = int(entry.grade) >= GOLD_GRADE
 		entry.slot = slots[i]
-		entry.node = _dumbbell(bool(entry.gold))
+		entry.node = _statue(i % STATUE_KINDS, bool(entry.gold))
 		entry.node.position = Vector3(entry.slot.x, DROP_HEIGHT, entry.slot.z)
 		entry.node.visible = false
 		entry.fx = null
@@ -124,34 +132,24 @@ func _build(got: Array, fresh: Array) -> void:
 	_ok.pressed.connect(func() -> void: closed.emit())
 
 
-## 자리 — 눈에 잘 띄는 순서(앞줄 가운데 → 바깥 → 뒷줄 가운데 → 바깥)로 낸다. 여섯 개부터 두 줄(앞 = 2/5),
-## 앞줄 간격은 뒷줄의 두 배라 뒷줄 사이사이에 서서 뒤 카드의 얼굴을 덜 가린다. 두 줄 다 양끝이 앞으로 휜다
+## 자리 — `LAYOUT` 앞에서부터 `count` 개. 1회는 판 가운데, 11개를 넘으면 맨 뒤에 한 줄씩 더 깐다
 static func slots(count: int) -> Array:
 	if count <= 0:
 		return []
 	if count == 1:
 		return [Vector3.ZERO]
-	var front := count * 2 / 5 if count >= 6 else 0
-	var out: Array = TrainerDraw._row(front, FRONT_Z, COL_GAP * 2.0)
-	out.append_array(TrainerDraw._row(count - front, BACK_Z if front > 0 else 0.0, COL_GAP * (1.0 if front > 0 else 1.6)))
+	var out: Array = LAYOUT.slice(0, mini(count, LAYOUT.size()))
+	var extra := count - out.size()
+	for i in extra:
+		out.append(Vector3((float(i % 6) - 2.5) * 1.1, 0.0, -3.2 - 0.9 * float(i / 6)))
 	return out
-
-
-static func _row(n: int, z: float, gap: float) -> Array:
-	var row: Array = []
-	var half := maxf(1.0, float(n - 1) * 0.5 * gap)
-	for i in n:
-		var x := (float(i) - float(n - 1) * 0.5) * gap
-		row.append(Vector3(x, 0.0, z + ARC * pow(x / half, 2.0)))
-	row.sort_custom(func(a: Vector3, b: Vector3) -> bool: return absf(a.x) < absf(b.x) - 0.001 or (absf(absf(a.x) - absf(b.x)) <= 0.001 and a.x < b.x))
-	return row
 
 
 func _build_world() -> void:
 	var env := WorldEnvironment.new()
 	var environment := Environment.new()
 	environment.background_mode = Environment.BG_COLOR
-	environment.background_color = Color(0.03, 0.055, 0.055)
+	environment.background_color = Color(0.025, 0.04, 0.04)
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	environment.ambient_light_color = Color(0.55, 0.66, 0.66)
 	environment.ambient_light_energy = 0.18
@@ -168,36 +166,24 @@ func _build_world() -> void:
 	spot.light_color = Color(0.92, 0.97, 0.95)
 	spot.shadow_enabled = true
 	_view.add_child(spot)
-	# 앞에서 덤벨 몸을 살리는 약한 빛
+	# 앞에서 조각상 몸을 살리는 약한 빛
 	var fill := DirectionalLight3D.new()
 	fill.rotation_degrees = Vector3(-30, -25, 0)
 	fill.light_energy = 0.3
 	fill.light_color = Color(0.75, 0.85, 0.85)
 	_view.add_child(fill)
 
-	var span := BOARD_TILES * TILE
-	var board := MeshInstance3D.new()
-	board.name = "board"
+	# 바닥 — 판이 아니라 수련장 바닥 한 장. 가장자리는 스포트라이트 밖이라 어둠에 묻힌다
+	var floor_mesh := MeshInstance3D.new()
+	floor_mesh.name = "floor"
 	var plane := PlaneMesh.new()
-	plane.size = Vector2(span, span)
-	board.mesh = plane
+	plane.size = Vector2(FLOOR_SIZE, FLOOR_SIZE)
+	floor_mesh.mesh = plane
 	var mat := StandardMaterial3D.new()
-	mat.albedo_texture = TrainerDraw._board_texture()
-	mat.albedo_color = Color(0.62, 0.66, 0.66)
-	mat.roughness = 0.55
-	board.material_override = mat
-	_view.add_child(board)
-	# 판 테두리 — 판보다 조금 큰 어두운 돌 받침
-	var rim := MeshInstance3D.new()
-	var slab := BoxMesh.new()
-	slab.size = Vector3(span + 0.5, 0.3, span + 0.5)
-	rim.mesh = slab
-	rim.position.y = -0.151
-	var rim_mat := StandardMaterial3D.new()
-	rim_mat.albedo_color = Color(0.12, 0.11, 0.1)
-	rim_mat.roughness = 0.8
-	rim.material_override = rim_mat
-	_view.add_child(rim)
+	mat.albedo_texture = TrainerDraw._floor_texture()
+	mat.roughness = 0.75
+	floor_mesh.material_override = mat
+	_view.add_child(floor_mesh)
 
 	_camera = Camera3D.new()
 	_camera.fov = FOV
@@ -206,38 +192,35 @@ func _build_world() -> void:
 	_camera.look_at_from_position(CAMERA_POS, LOOK_AT)
 
 
-## 바르코 바닥판 그림. 없으면(에셋을 안 받은 사람) 흑백 체크로
-static func _board_texture() -> Texture2D:
-	var path := "res://assets/trainers/trainer_board.jpg"
+## 바르코 바닥 그림. 없으면(에셋을 안 받은 사람) 어두운 나무색 한 장으로
+static func _floor_texture() -> Texture2D:
+	var path := "res://assets/trainers/trainer_floor.jpg"
 	if ResourceLoader.exists(path):
 		return load(path)
-	var img := Image.create(BOARD_TILES, BOARD_TILES, false, Image.FORMAT_RGB8)
-	for x in BOARD_TILES:
-		for y in BOARD_TILES:
-			img.set_pixel(x, y, Color(0.62, 0.63, 0.62) if (x + y) % 2 == 0 else Color(0.16, 0.17, 0.17))
-	var tex := ImageTexture.create_from_image(img)
-	return tex
+	var img := Image.create(4, 4, false, Image.FORMAT_RGB8)
+	img.fill(Color(0.2, 0.15, 0.11))
+	return ImageTexture.create_from_image(img)
 
 
-## 덤벨 하나 — 바르코 모델. 없으면 같은 키의 기둥으로 대신한다 (다른 모델과 같은 규칙)
-func _dumbbell(gold: bool) -> Node3D:
+## 조각상 하나 — 바르코 모델(`kind` 0~3, 흰 밀랍 / 금빛 밀랍). 없으면 같은 키의 기둥으로 대신한다 (다른 모델과 같은 규칙)
+func _statue(kind: int, gold: bool) -> Node3D:
 	var holder := Node3D.new()
-	holder.name = "dumbbell"
-	var rig := Rig.create("dumbbell_gold" if gold else "dumbbell_white", DUMBBELL_HEIGHT)
+	holder.name = "statue"
+	var rig := Rig.create("draw_statue%d_%s" % [kind + 1, "gold" if gold else "white"], STATUE_HEIGHT)
 	if rig != null:
 		holder.add_child(rig)
 	else:
 		var pillar := MeshInstance3D.new()
 		var mesh := CylinderMesh.new()
-		mesh.top_radius = 0.18
-		mesh.bottom_radius = 0.22
-		mesh.height = DUMBBELL_HEIGHT
+		mesh.top_radius = 0.16
+		mesh.bottom_radius = 0.24
+		mesh.height = STATUE_HEIGHT
 		pillar.mesh = mesh
-		pillar.position.y = DUMBBELL_HEIGHT * 0.5
+		pillar.position.y = STATUE_HEIGHT * 0.5
 		var mat := StandardMaterial3D.new()
-		mat.albedo_color = Color(0.86, 0.68, 0.25) if gold else Color(0.9, 0.9, 0.88)
-		mat.metallic = 0.8 if gold else 0.0
-		mat.roughness = 0.3
+		mat.albedo_color = Color(0.86, 0.68, 0.25) if gold else Color(0.9, 0.88, 0.82)
+		mat.metallic = 0.6 if gold else 0.0
+		mat.roughness = 0.35
 		pillar.material_override = mat
 		holder.add_child(pillar)
 	_view.add_child(holder)
@@ -261,7 +244,7 @@ func _button(id: String, text: String) -> Button:
 	return button
 
 
-## 모두 보기 — 덤벨이 아직 떨어지는 중이면 다 선 것으로 치고 바로 시작한다
+## 모두 보기 — 조각상이 아직 떨어지는 중이면 다 선 것으로 치고 바로 시작한다
 func reveal_all() -> void:
 	if _reveal_at >= 0.0:
 		return
@@ -276,7 +259,7 @@ func finish() -> void:
 	_step(1000.0)
 
 
-## 덤벨 노드들 — 테스트가 본다 (`gold` · `id`)
+## 조각상 노드들 — 테스트가 본다 (`gold` · `id`)
 func pieces() -> Array:
 	return _pieces
 
@@ -334,7 +317,7 @@ func _drop(piece: Dictionary, i: int) -> void:
 		piece.started = true
 
 
-## 한 덤벨의 보기 — `t` 는 그 덤벨 차례가 온 뒤 지난 초
+## 한 조각상의 보기 — `t` 는 그 조각상 차례가 온 뒤 지난 초
 func _reveal_piece(piece: Dictionary, t: float) -> void:
 	if t < 0.0:
 		return
@@ -342,7 +325,7 @@ func _reveal_piece(piece: Dictionary, t: float) -> void:
 	if piece.fx == null:
 		piece.fx = _make_fx(piece)
 	var fx: Node3D = piece.fx
-	# 덤벨은 살짝 뜨며 빛 속으로 줄어든다
+	# 조각상은 살짝 뜨며 빛 속으로 줄어든다
 	var gone := clampf(t / CARD_AT, 0.0, 1.0)
 	node.scale = Vector3.ONE * (1.0 - gone * gone)
 	node.position.y = 0.25 * gone
@@ -567,7 +550,7 @@ func _make_card(piece: Dictionary) -> Control:
 	return card
 
 
-## 카드를 덤벨 발밑 자리에 세운다 — 화면 크기 · 깊이를 따라 배율을 매 프레임 다시 잡는다
+## 카드를 조각상 발밑 자리에 세운다 — 화면 크기 · 깊이를 따라 배율을 매 프레임 다시 잡는다
 func _place_cards() -> void:
 	var view_h := size.y if size.y > 0.0 else BASE_VIEW_H
 	for piece in _pieces:

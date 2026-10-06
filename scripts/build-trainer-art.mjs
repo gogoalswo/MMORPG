@@ -22,12 +22,12 @@ const HEIGHT = 320;
 const TOP = 0.03;
 const SPAN = 0.6;
 
-// 뽑기 연출의 바닥판 (2026-10-06, docs/features/trainers.md "뽑기 연출") — 바르코 그림(8×8 칸, 1024²)을 그대로 JPG 로
-const BOARD = join(ROOT, 'assets-src', 'textures', 'varco', 'trainer_board.png');
-if (existsSync(BOARD)) {
+// 뽑기 연출의 바닥 (2026-10-06, docs/features/trainers.md "뽑기 연출") — 바르코 그림(어두운 나무 마루, 1024²)을 그대로 JPG 로
+const FLOOR = join(ROOT, 'assets-src', 'textures', 'varco', 'trainer_floor.png');
+if (existsSync(FLOOR)) {
   mkdirSync(OUT, { recursive: true });
-  await sharp(BOARD).jpeg({ quality: 84, mozjpeg: true }).toFile(join(OUT, 'trainer_board.jpg'));
-  console.log('뽑기 바닥판 → public/assets/trainers/trainer_board.jpg');
+  await sharp(FLOOR).jpeg({ quality: 84, mozjpeg: true }).toFile(join(OUT, 'trainer_floor.jpg'));
+  console.log('뽑기 바닥 → public/assets/trainers/trainer_floor.jpg');
 }
 
 if (!existsSync(SRC)) {

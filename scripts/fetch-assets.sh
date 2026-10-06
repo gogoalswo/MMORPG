@@ -89,17 +89,23 @@ node scripts/shrink-glb-textures.mjs assets-src/models/varco/tomb.glb public/ass
 fetch_varco d107839c00de50f9776818db0ba5e404 sandbag
 node scripts/shrink-glb-textures.mjs assets-src/models/varco/sandbag.glb public/assets/models/varco_sandbag.glb 1024
 
-# 트레이너 뽑기 연출 (2026-10-06, docs/features/trainers.md "뽑기 연출") — 바르코 워크플로우 "Untitled" 의 맨 위
-# (y -6000 ~ -5200) 줄. 둥근 받침에 세운 흰 대리석 덤벨 원화(8c6b692a…png)를 EditImage 로 금만 입힌 원화(bde73ffd…png)
-# → 3D(1만 면, pivotToBottom) = 금 덤벨. 흰 덤벨은 그 금 메시에 흰 원화로 텍스처만 다시 입힌 것(Texture3D) — 모양이 같다.
-# 1024 로 줄여 커밋한다. 바닥판은 그림 한 장(81f08893…png)
-fetch_varco 71879af3ec17f4e32102dd83d83a82e5 draw_dumbbell_white
-node scripts/shrink-glb-textures.mjs assets-src/models/varco/draw_dumbbell_white.glb public/assets/models/draw_dumbbell_white.glb 1024
-fetch_varco 3a26ea10a7da1106318241bd9ba78e1a draw_dumbbell_gold
-node scripts/shrink-glb-textures.mjs assets-src/models/varco/draw_dumbbell_gold.glb public/assets/models/draw_dumbbell_gold.glb 1024
-if [ ! -f assets-src/textures/varco/trainer_board.png ]; then
-  echo "받는 중: textures/varco/trainer_board.png"
-  curl -sL --max-time 120 -o assets-src/textures/varco/trainer_board.png "${VARCO}/81f088939f058fb90527f90496cad3d8.png"
+# 트레이너 뽑기 연출 (2026-10-06, docs/features/trainers.md "뽑기 연출") — 바르코 워크플로우 "Untitled" 의 오른쪽 위
+# (x 3200 ~ 5600, y -6000 ~ -4800) 넷 줄. 밀랍 조각상 넷(보디빌더 · 권투선수 · 격투가 · 노사범): 흰 밀랍 원화(어두운 바탕)
+# → 3D(1만 면, pivotToBottom) = 흰 조각상, 같은 원화를 EditImage 로 금빛 밀랍만 입힌 그림 → 그 흰 메시에 Texture3D = 금 조각상
+# (모양이 같다). 1024 로 줄여 커밋한다. 줄 = 번호 · 흰 · 금 해시. 바닥은 그림 한 장(어두운 나무 마루, ef50f767…png)
+fetch_statue() {
+  fetch_varco "$2" "draw_statue$1_white"
+  node scripts/shrink-glb-textures.mjs "assets-src/models/varco/draw_statue$1_white.glb" "public/assets/models/draw_statue$1_white.glb" 1024
+  fetch_varco "$3" "draw_statue$1_gold"
+  node scripts/shrink-glb-textures.mjs "assets-src/models/varco/draw_statue$1_gold.glb" "public/assets/models/draw_statue$1_gold.glb" 1024
+}
+fetch_statue 1 645f7d9382315bbe7b425a0e8e04a0cc 1ddaa17edecb2b4c420b870e3110dae1
+fetch_statue 2 30dad7ae7c563e977048725104176233 3b7d016d71e3daf2986d1f7eb26dc8b8
+fetch_statue 3 ec861f081d03578f35477574a86fdb85 b4b1a4c3cf073e2f93402233c3f1529c
+fetch_statue 4 000582d79c901db6feda466ca2b7592b f8cc278588595b14575b20999002746d
+if [ ! -f assets-src/textures/varco/trainer_floor.png ]; then
+  echo "받는 중: textures/varco/trainer_floor.png"
+  curl -sL --max-time 120 -o assets-src/textures/varco/trainer_floor.png "${VARCO}/ef50f76704e77da75b70affc78f8b2a6.png"
 fi
 
 # 차원문 창 UI 조각 — 같은 워크플로우. 창 바탕·소용돌이 칸·별 칸을 **따로** 받아 고도에서

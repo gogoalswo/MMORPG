@@ -24,7 +24,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const GODOT = join(ROOT, 'godot');
 
 /** 확장자 → 고도 쪽 폴더. 목록의 `to` 와 맞춘다 */
-const EXT_DIR = { glb: 'models', png: 'icons', ttf: 'fonts', ktx2: 'textures', wav: 'sfx' };
+const EXT_DIR = { glb: 'models', png: 'icons', ttf: 'fonts', ktx2: 'textures', wav: 'sfx', jpg: 'trainers' };
 
 /**
  * 고를 수 있는 직업. 지금은 격투가 고정이라 마법사·궁수 스킬(옛 표에 남아 있다)은
@@ -76,6 +76,11 @@ for (const id of skillIds) {
 for (const id of Object.keys(materialsById(items.materials))) want(`icons/${id}.png`, 'items.json materials');
 for (const slot of items.slots) {
   for (let g = items.gradeMin; g <= items.gradeMax; g++) want(`icons/${slot}_g${g}.png`, 'items.json <슬롯>_g<등급>');
+}
+// PT 트레이너 — 모델과 카드 원화 (game.gd `_draw_buddy` · `_trainer_art` 가 `Trainers.look(id)` 로 짓는다)
+for (const { id } of data('trainers').trainers) {
+  want(`models/trainer_${id}.glb`, 'trainers.json → trainer_<id>.glb');
+  want(`trainers/trainer_${id}.jpg`, 'trainers.json → trainer_<id>.jpg');
 }
 
 const missing = [...wanted].filter(([path]) => !listed.has(path) && !NO_ASSET.has(path));

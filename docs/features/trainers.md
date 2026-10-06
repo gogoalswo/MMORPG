@@ -52,7 +52,7 @@
 | `godot/game/game.gd` `_toggle_trainer` · `_trainer_art` · `_draw_buddy` | 메뉴 단추(상점 옆, ≡ 판 안) · 원화 불러오기 · 동행 모델 그리기, `buddySwing` · `trainerDraw` · `diamonds` 알림 |
 | `godot/game/rig.gd` `create` | `trainer_<id>` 는 `FILES` 에 없어도 `trainer_<id>.glb` 로 찾는다 (53줄을 손으로 안 적는다) |
 | `godot/tests/trainer_test.gd` | 표 · 뽑기 · 동행 고르기 · 보유 효과 · **동행 전투** · 저장 · 서버 · 창 · 상점 뽑기 |
-| `godot/tests/model_test.gd` `_case_trainers` | 53명 전원이 모델로 만들어지고 `Idle` · `Run` · `Attack` 이 있고 키가 표대로다 |
+| `godot/tests/model_test.gd` `_case_trainers` · `_case_trainer_kicks` | 53명 전원이 모델로 만들어지고 `Idle` · `Run` · 발차기 넷이 있고 키가 표대로다 · 등급마다 한 명씩 발차기에서 **왼발이 머리 높이의 80% 를 넘는지** 뼈 자리로 잰다 (전설 권신: 발 0.86 · 머리 0.69) |
 | `scripts/build-trainer-art.mjs` | 원화(9:16) → 카드 그림 240×320 JPG (`public/assets/trainers/`, 커밋) |
 | `scripts/fetch-assets.sh` 의 트레이너 줄 | 바르코 결과물 주소 (원화 · 대기 · 달리기 · 펀치) → `build-varco-character.mjs` |
 
@@ -91,7 +91,9 @@
 - 충돌이 없다 — 몬스터·캐릭터 사이를 지나다닌다 (막히면 같이 칠 수 없다). 14m 넘게 떨어지면(존 이동·순간 이동)
   곁으로 옮긴다. 샌드백 카운트 동안은 기다린다.
 - 화면 — 트레이너 한 대의 `hit` 은 `buddy: true` 라 **숫자·섬광만** 낸다(소리·히트스톱·흔들림은 내 손맛이라 안 겹친다).
-  `buddySwing` 에서 `Attack`(boxing_punch)을 내 발차기와 같은 배속으로 처음부터 튼다. 달리면 `Run`, 서 있으면 `Idle`.
+  `buddySwing` 에서 **플레이어와 같은 발차기**를 같은 배속으로 처음부터, 클립 끝까지 튼다 (2026-10-06 요청 "공격 모션을
+  지금 플레이어처럼 발차기로 해") — 고르는 규칙도 같다(`_buddy_kick_clip` = `_kick_clip`): 초당 4타 미만이면
+  `KickSlapFull`, 그 위로는 `KickSlapIn` → `A` · `B` 번갈아. 달리면 `Run`, 서 있으면 `Idle`.
 
 ### 서버
 - 뽑기는 서버가 굴린다 (`OPS.trainer_draw` — 다이아도 장부가 다시 센다). 동행은 갖고 있는 것만.
@@ -100,7 +102,11 @@
 ### 원화 · 모델 (바르코)
 - 워크플로우 "Untitled"(`6f4423a3…`) — 트레이너마다 한 줄: `TextInput`(프롬프트) → `GenerateImage`(`nano-banana-pro`,
   9:16, 참고 그림 = **격투가 원화** `e9a9e381…jpg`) → `Generate3D`(tPose 1 · **1만 면** · 텍스처 1024) →
-  `Rig`(humanoid) → `Animate` 셋(inPlace): 대기 `standing_idle_1` · 달리기 `run` · 공격 `boxing_punch`.
+  `Rig`(humanoid) → `Animate` 셋(inPlace): 대기 `standing_idle_1` · 달리기 `run` · 공격 `boxing_punch`(지금은 안 쓴다 — 아래).
+- **발차기는 격투가 클립을 옮겨 붙인다** (2026-10-06) — `add-clips.mjs <트레이너> <트레이너> fighter_moves.glb --retarget
+  --only=KickSlapFull,KickSlapIn,KickSlapA,KickSlapB`. 바르코 사람 뼈대라 뼈 이름이 같고, 트레이너는 T 포즈로 뽑아
+  `--retarget`(`--align` 아님)이면 된다. 다리 길이 비로 `Root` 이동을 줄인다. `--only` 는 이때 더한 옵션 — 안 주면
+  스킬 동작까지 1.4MB 가 트레이너마다 붙는다. 넷을 붙여도 한 벌 크기는 그대로다(1.0MB). 블렌더는 안 썼다.
 - **1만 면 · 텍스처 512 인 이유** — 3만 면 모델이 하나 1.9MB(고도, 텍스처 512)라 53벌이면 100MB 가 웹 빌드에 얹힌다.
   동행은 한 번에 한 명이고 화면에서 작다. 텍스처는 고도가 어차피 512 로 넣으므로 `--tex 512` 로 구워도 화면은 같다.
   그래도 **한 벌 1.0MB, 53벌 55MB** 다 (뼈대·클립 셋 몫이 크다) — 웹 빌드가 그만큼 무거워졌다.

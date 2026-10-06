@@ -458,6 +458,9 @@ fetch_trainer() {
   local T="assets-src/models/varco/trainer_$1"
   node scripts/build-varco-character.mjs "public/assets/models/trainer_$1.glb" "${T}_idle.glb" \
     "Idle=${T}_idle.glb" "Run=${T}_run.glb#loop#face" "Attack=${T}_attack.glb" --tex 512
+  # 공격은 **플레이어처럼 발차기** (2026-10-06) — 격투가 발차기 넷을 옮겨 붙인다. 바르코 T 포즈 뼈대라 --retarget
+  node scripts/add-clips.mjs "public/assets/models/trainer_$1.glb" "public/assets/models/trainer_$1.glb" \
+    public/assets/anim/fighter_moves.glb --retarget --only=KickSlapFull,KickSlapIn,KickSlapA,KickSlapB
 }
 fetch_trainer n01 e6ab4b237e0ff1c84674ecadaeb2d8f8 46c6b3fc9972c282818a6090328b96ff fbc130f2a7e32aff60ab6f38793d57f2 90b384889e0970b8b0041fb063b5b1ec
 fetch_trainer n02 ce7be5ed04b96e194aade4dd0f8f8975 906031d5f8e2ba08b0df9b08a1fadae2 61e7be9b801313b4c5acf66967ccbbc2 8a744e29c4e12b7f42ee24c9f35bd229

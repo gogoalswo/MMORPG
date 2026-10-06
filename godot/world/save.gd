@@ -54,6 +54,9 @@ static func write(zone_id: String, player: Dictionary) -> void:
 		"fitness": player.get("fitness", {}),
 		# 장비 도감 `{ 아이템 id: 채운 강화 비트 }` — 없던 칸이라 옛 저장은 빈 사전
 		"codex": player.get("codex", {}),
+		# PT 트레이너 `{ id: 개수 }` · 동행 id — 없던 칸이라 옛 저장은 빈 사전 · ""
+		"trainers": player.get("trainers", {}),
+		"trainer_active": player.get("trainer_active", ""),
 		"sandbag": player.get("sandbag", {}),
 		# 던전 하루 입장 `{ 종류 id: {day, count} }` — 없던 칸이라 옛 저장은 빈 사전
 		"dungeon_entries": player.get("dungeon_entries", {}),

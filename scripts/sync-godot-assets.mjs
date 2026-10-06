@@ -19,6 +19,9 @@ import { execFileSync } from 'node:child_process';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
+/** PT 트레이너 id — `npm run export:godot` 가 쓴 표에서 읽는다 (표에 사람이 늘면 목록도 저절로 는다) */
+const TRAINER_IDS = JSON.parse(readFileSync(join(ROOT, 'godot', 'data', 'trainers.json'), 'utf8')).trainers.map((t) => t.id);
+
 /** 복사할 것. 없으면 건너뛰고 화면은 기둥으로 대신 그린다 */
 const MODELS = [
   'varco_fighter.glb', // 캐릭터 (기본 직업 격투가 고정)
@@ -36,7 +39,12 @@ const MODELS = [
   'npc_villager_sack.glb', 'npc_villager_apron.glb', 'npc_villager_hood.glb', 'npc_villager_old.glb',
   // 장비 — 등급마다 갑옷·투구·신발 부위 (바르코, scripts/build-gear-parts.mjs → armor.gd)
   'gear_g1.glb', 'gear_g2.glb', 'gear_g3.glb', 'gear_g4.glb', 'gear_g5.glb', 'gear_g6.glb', 'gear_g7.glb',
+  // PT 트레이너 53명 — 이름은 표에서 짓는다 `trainer_<id>` (docs/features/trainers.md, rig.gd 의 `create`)
+  ...TRAINER_IDS.map((id) => `trainer_${id}.glb`),
 ];
+
+/** PT 트레이너 원화(카드 그림) — scripts/build-trainer-art.mjs 가 구워 커밋한 240×320 JPG */
+const TRAINER_ART = TRAINER_IDS.map((id) => `trainer_${id}.jpg`);
 
 /** UI 조각. 이미 build-ui.mjs 가 줄여 둔 것이라 그대로 복사한다 */
 /**
@@ -103,6 +111,7 @@ const ICONS = [
   'ui_icon_sandbag.png',
   // 상점 단추 — 가죽 돈주머니 (2026-10-02, docs/features/store.md)
   'ui_icon_shop.png',
+  'ui_icon_trainer.png', // PT 트레이너 — 메뉴 판 (docs/features/trainers.md)
   // 헬스 (2026-09-30, docs/features/fitness.md) — 메뉴 덤벨 · 창 가운데 문장 셋 · 프로틴 셋
   'ui_icon_fitness.png',
   // 장비 도감 · 메뉴 ≡ / X (2026-10-01, docs/features/codex.md · hud.md "메뉴 판")
@@ -176,6 +185,7 @@ export const jobs = [
   // 미러링하므로, 이름이 어긋나면 PC 에서만 바닥이 빠진다 (2026-09-19 에 맞췄다)
   { names: GROUND, from: join(ROOT, 'public', 'assets', 'textures'), to: join(ROOT, 'godot', 'assets', 'textures') },
   { names: SFX, from: join(ROOT, 'public', 'assets', 'sfx'), to: join(ROOT, 'godot', 'assets', 'sfx') },
+  { names: TRAINER_ART, from: join(ROOT, 'public', 'assets', 'trainers'), to: join(ROOT, 'godot', 'assets', 'trainers') },
 ];
 
 /**

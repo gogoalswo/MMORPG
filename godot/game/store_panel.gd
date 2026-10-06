@@ -25,7 +25,14 @@ const CATEGORIES := [
 	{"id": "monthly", "name": "월정액", "subs": [
 		{"id": "goods", "name": "상품"},
 	]},
+	# PT 트레이너 뽑기 (2026-10-06) — 다이아로 산다. 상품은 `game.gd` 가 넣는다 → docs/features/trainers.md
+	{"id": "draw", "name": "뽑기", "subs": [
+		{"id": "trainer", "name": "트레이너"},
+	]},
 ]
+
+## 다이아로 사는 상품(`diamonds` 가 있는 것)의 단추를 눌렀다 — `id` 는 상품 id
+signal buy_requested(id: String)
 
 const STONE_IN := 30
 const SIDE_WIDTH := 240.0
@@ -51,6 +58,8 @@ var _side: VBoxContainer
 var _rows: Array = []
 var _grid: GridContainer
 var _empty: Label
+var _diamonds: Label
+var _result: Control
 
 
 ## `frame_box` · `icon` 은 `game.gd` 것을 받는다 (헬스·도감 창과 같다)
@@ -89,6 +98,14 @@ func _build(frame_box: Callable) -> void:
 	var gap := Control.new()
 	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(gap)
+	# 가진 다이아 — 다이아 상품(뽑기)을 고를 때 본다 (`set_diamonds`)
+	_diamonds = _label("다이아 0", 22, IVORY)
+	_diamonds.name = "diamonds"
+	_diamonds.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	head.add_child(_diamonds)
+	var spacer := Control.new()
+	spacer.custom_minimum_size = Vector2(28, 0)
+	head.add_child(spacer)
 	var title := _label("상점", 30, TITLE)
 	title.name = "title"
 	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -144,6 +161,73 @@ func open() -> void:
 
 func close_panel() -> void:
 	visible = false
+	hide_draw()
+
+
+func set_diamonds(count: int) -> void:
+	_diamonds.text = "다이아 %s" % _commas(count)
+
+
+func diamonds_text() -> String:
+	return _diamonds.text
+
+
+## 뽑기 결과 — 창 위에 덮는 판. 나온 트레이너 카드(새로 얻은 것은 "NEW")와 **확인**
+## `portrait` 는 트레이너 id → 원화 (트레이너 창과 같은 것)
+func show_draw(got: Array, fresh: Array, portrait: Callable) -> void:
+	hide_draw()
+	_result = ColorRect.new()
+	_result.name = "draw_result"
+	(_result as ColorRect).color = Color(0.03, 0.025, 0.02, 0.92)
+	_result.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(_result)
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_result.add_child(center)
+	var stack := VBoxContainer.new()
+	stack.alignment = BoxContainer.ALIGNMENT_CENTER
+	stack.add_theme_constant_override("separation", 18)
+	center.add_child(stack)
+	var head := _label("뽑기 결과", 30, TITLE)
+	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	stack.add_child(head)
+	var grid := GridContainer.new()
+	grid.name = "cards"
+	grid.columns = mini(5, maxi(1, got.size()))
+	grid.add_theme_constant_override("h_separation", 12)
+	grid.add_theme_constant_override("v_separation", 12)
+	stack.add_child(grid)
+	for i in got.size():
+		var id := str(got[i])
+		var info := Trainers.trainer(id)
+		var art: Texture2D = portrait.call(id) if portrait.is_valid() else null
+		var card := TrainerPanel.make_card(info, art, 1, false, false)
+		var tag: Label = card.find_child("tag", true, false)
+		if i < fresh.size() and bool(fresh[i]):
+			tag.text = "NEW"
+			tag.add_theme_color_override("font_color", GOLD)
+		else:
+			tag.text = Trainers.grade(int(info.get("grade", 1))).get("name", "")
+		grid.add_child(card)
+	var ok := Button.new()
+	ok.name = "ok"
+	ok.text = "확인"
+	ok.custom_minimum_size = Vector2(220, 58)
+	ok.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	ok.focus_mode = Control.FOCUS_NONE
+	ok.add_theme_font_size_override("font_size", 24)
+	ok.pressed.connect(hide_draw)
+	stack.add_child(ok)
+
+
+func hide_draw() -> void:
+	if _result != null and is_instance_valid(_result):
+		_result.queue_free()
+	_result = null
+
+
+func draw_shown() -> Control:
+	return _result if _result != null and is_instance_valid(_result) else null
 
 
 ## 서브 하나의 상품 `[{name, note?, icon?, price}]` — price 는 원(KRW) 정수
@@ -244,8 +328,23 @@ func _card(product: Dictionary) -> Control:
 	art.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	art.texture = _icon.call(str(product.get("icon", ""))) if product.has("icon") else null
+	# `art` 는 그림을 바로 준 것(트레이너 원화), `icon` 은 아이콘 이름
+	if product.get("art") is Texture2D:
+		art.texture = product.art
+	else:
+		art.texture = _icon.call(str(product.get("icon", ""))) if product.has("icon") else null
 	stack.add_child(art)
+	# 다이아 상품은 값 자리가 **사기 단추**다 (뽑기). 원화 상품은 값 글자만 (결제는 아직 없다)
+	if product.has("diamonds"):
+		var buy := Button.new()
+		buy.name = "buy"
+		buy.text = "다이아 %s" % _commas(int(product.diamonds))
+		buy.custom_minimum_size = Vector2(0, 46)
+		buy.focus_mode = Control.FOCUS_NONE
+		buy.add_theme_font_size_override("font_size", 20)
+		buy.pressed.connect(func() -> void: buy_requested.emit(str(product.get("id", ""))))
+		stack.add_child(buy)
+		return card
 	var price := _label("KRW %s" % _commas(int(product.get("price", 0))), 20, IVORY)
 	price.name = "price"
 	price.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

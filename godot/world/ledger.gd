@@ -19,6 +19,8 @@ const KEYS := [
 	"skill_upgrades", "skill_upgrade_exp", "skill_exp", "bag", "equipped", "granted",
 	"diamonds", "proteins", "fitness", "codex", "sandbag", "dungeon_entries", "loot_slots", "loot_options",
 	"codex_auto", "codex_auto_options", "codex_new",
+	# PT 트레이너 (docs/features/trainers.md) — `{ id: 개수 }` · 동행 id
+	"trainers", "trainer_active",
 	# 옛 습득 칸(전 등급 공통 끄기) — 읽어서 `loot_slots` · `loot_options` 로 옮긴다. 새로 정하면 지운다
 	"loot_skip", "loot_skip_slots", "loot_skip_options",
 ]
@@ -66,6 +68,9 @@ static func fresh(job: String) -> Dictionary:
 		"codex_auto_options": {},
 		# 자동 등록으로 새로 찬 칸 `{ 아이템 id: 강화 비트 }` — 도감 빨간 점. 그 탭을 보고 나오면 지운다(`codex_seen`)
 		"codex_new": {},
+		# PT 트레이너 `{ id: 뽑은 개수 }` · 동행 id ("" 이면 없음) — 상점 뽑기(`trainer_draw`) · 트레이너 창(`trainer_pick`)
+		"trainers": {},
+		"trainer_active": "",
 	}
 
 
@@ -690,6 +695,49 @@ func credit_diamonds(p: Dictionary, amount: int, product: String) -> void:
 	_notice("다이아 %d개를 받았습니다" % amount)
 
 
+## --- PT 트레이너 (docs/features/trainers.md) ---
+
+## 상점의 **트레이너 뽑기** — `times` 번(1 또는 10) 굴린다. 한 번에 다이아 `drawCost` 개.
+## 모자라면 아무것도 안 한다. 같은 트레이너가 또 나오면 개수만 는다 (지금은 쓰임이 없다).
+## **동행이 없으면** 이번에 나온 것 중 가장 높은 등급을 바로 데리고 다닌다 — 첫 뽑기부터 같이 싸운다
+func trainer_draw(p: Dictionary, times: int) -> void:
+	if times != 1 and times != Trainers.draw_multi():
+		return
+	var cost := Trainers.draw_cost() * times
+	var have := int(p.get("diamonds", 0))
+	if have < cost:
+		_notice("다이아가 %d개 모자랍니다" % (cost - have))
+		return
+	p.diamonds = have - cost
+	var owned: Dictionary = p.get("trainers", {})
+	var got: Array = []
+	var fresh: Array = []
+	var best := ""
+	for i in times:
+		var id := Trainers.roll(rng)
+		if id == "":
+			continue
+		fresh.append(int(owned.get(id, 0)) == 0)
+		owned[id] = int(owned.get(id, 0)) + 1
+		got.append(id)
+		if best == "" or int(Trainers.trainer(id).grade) > int(Trainers.trainer(best).grade):
+			best = id
+	p.trainers = owned
+	if str(p.get("trainer_active", "")) == "" and best != "":
+		p.trainer_active = best
+	events.append({"type": "trainerDraw", "got": got, "new": fresh, "diamonds": p.diamonds})
+
+
+## 트레이너 창의 **동행** — 갖고 있는 트레이너만. `id` 가 "" 면 돌려보낸다
+func trainer_pick(p: Dictionary, id: String) -> void:
+	if id != "" and int(p.get("trainers", {}).get(id, 0)) <= 0:
+		return
+	p.trainer_active = id
+	events.append({"type": "trainerPick", "id": id})
+	if id != "":
+		_notice("%s와 함께합니다" % str(Trainers.trainer(id).name))
+
+
 ## --- 스킬 ---
 
 ## 스킬을 배운다. **직업·레벨·포인트를 여기서 다시 본다.**
@@ -1058,7 +1106,8 @@ func auto_equip(p: Dictionary) -> void:
 ## 쿨타임 감소·드랍률은 전투력에 안 넣는다(격투가는 스킬이 없고, 드랍률은 싸움이 아니다)
 static func gear_power(p: Dictionary, equipped: Dictionary) -> float:
 	var s := World.stats_of(
-		str(p.job), int(p.level), equipped, p.get("passives", {}), p.get("fitness", {}), p.get("codex", {})
+		str(p.job), int(p.level), equipped, p.get("passives", {}), p.get("fitness", {}), p.get("codex", {}),
+		p.get("trainers", {})
 	)
 	var hit := float(s.attack) * (1.0 + clampf(float(s.crit), 0.0, 1.0) * float(s.critDamage))
 	hit *= 2.0 / (2.0 - clampf(float(s.penetration), 0.0, 0.9))

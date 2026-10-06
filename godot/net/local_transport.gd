@@ -193,6 +193,12 @@ func send(message: StringName, payload: Dictionary) -> void:
 			_world.codex_seen(MY_ID, int(payload.get("grade", 0)))
 		&"debugProtein":
 			_world.debug_protein(MY_ID)
+		&"trainerDraw":
+			_world.trainer_draw(MY_ID, int(payload.get("times", 1)))
+		&"trainerPick":
+			_world.trainer_pick(MY_ID, str(payload.get("id", "")))
+		&"debugDiamonds":
+			_world.debug_diamonds(MY_ID)
 		&"debugSkillExp":
 			_world.debug_skill_exp(MY_ID)
 		&"debugLearnAll":

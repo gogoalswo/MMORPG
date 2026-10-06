@@ -119,6 +119,13 @@ import {
 } from '../packages/shared/src/sandbag.ts';
 // `index.ts` 가 gear.ts 를 다시 내보내지 않는다 — 설계 표는 직접 가져온다
 import { GEAR_DROP_RATE } from '../packages/shared/src/gear.ts';
+import {
+  TRAINERS,
+  TRAINER_GRADES,
+  TRAINER_STAT_NAME,
+  TRAINER_DRAW_COST,
+  TRAINER_DRAW_MULTI,
+} from '../packages/shared/src/trainers.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const OUT_DIR = join(ROOT, 'godot', 'data');
@@ -262,6 +269,15 @@ export function buildData() {
       // 등급 이름과 색 (일반 → 태초). 가방 상세 창이 이름을 이 색으로 적는다
       gradeNames: Array.from({ length: MAX_DROP_GRADE }, (_, i) => gradeName(i + 1)),
       gradeColors: GRADE_COLOR,
+    },
+    // PT 트레이너 — 등급(계승 % · 보유 효과 · 뽑기 확률)과 명단. 장부(`Ledger.trainer_draw`)와 트레이너 창이 읽는다.
+    // 원화 프롬프트는 바르코용이라 뺀다
+    'trainers.json': {
+      grades: TRAINER_GRADES,
+      statNames: TRAINER_STAT_NAME,
+      drawCost: TRAINER_DRAW_COST,
+      drawMulti: TRAINER_DRAW_MULTI,
+      trainers: TRAINERS.map(({ prompt: _prompt, ...rest }) => rest),
     },
     // 다이아 상품 — 서버가 영수증의 상품 id 로 넣어 줄 개수를 찾는다 (가격은 플레이 콘솔)
     'store.json': {

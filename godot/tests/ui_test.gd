@@ -572,9 +572,9 @@ func _case_status(game: Node3D) -> void:
 	# 정보는 2026-09-25 에 맨 앞에 더했다). 설계는 2026-09-28 에 오른쪽 맨 아래로 뺐다 — 아래에서 본다.
 	# 헬스는 2026-09-30 에 던전 옆에 더했다 (docs/features/fitness.md). 설정(소리)은 같은 날 맨 끝에.
 	# 도감은 2026-10-01 에 헬스 옆에 더했다 (docs/features/codex.md). 샌드백 랭킹전은 2026-10-02 에 도감 옆에,
-	# 상점은 같은 날 샌드백 옆에 (docs/features/store.md)
-	if game._menu_cells.size() != 11:
-		_fail("오른쪽 위 단추가 11개여야 하는데 %d개" % game._menu_cells.size())
+	# 상점은 같은 날 샌드백 옆에 (docs/features/store.md). PT 트레이너는 2026-10-06 에 상점 옆에 (trainers.md)
+	if game._menu_cells.size() != 12:
+		_fail("오른쪽 위 단추가 12개여야 하는데 %d개" % game._menu_cells.size())
 		return
 	# 설계 단추 — 오른쪽 맨 아래 모서리에 붙고, 알파 0 이라 안 보이지만 누르면 창이 열린다
 	var design_rect: Rect2 = game._design_cell.get_global_rect()
@@ -2258,7 +2258,7 @@ func _case_store(game: Node3D) -> void:
 		_fail("상점 단추를 눌렀는데 창이 안 열렸다")
 		return
 	var names: Array = panel.tab_buttons().map(func(b: Button) -> String: return b.text)
-	if names != ["상품", "월정액"]:
+	if names != ["상품", "월정액", "뽑기"]:
 		_fail("상점 메인 탭이 %s" % [names])
 	var subs: Array = panel.sub_buttons().map(func(b: Button) -> String: return b.text)
 	if subs != ["초보자 패키지", "재화"] or panel.current_key() != "goods/starter":

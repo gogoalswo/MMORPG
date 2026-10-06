@@ -53,7 +53,7 @@ static func max_damage(ledger: Dictionary, kind: Dictionary, window_ms: float) -
 static func _pace(ledger: Dictionary, kind: Dictionary) -> Dictionary:
 	var stats := World.stats_of(
 		str(ledger.job), int(ledger.level), ledger.get("equipped", {}), ledger.get("passives", {}),
-		ledger.get("fitness", {}), ledger.get("codex", {})
+		ledger.get("fitness", {}), ledger.get("codex", {}), ledger.get("trainers", {})
 	)
 	var k := Stats.k_of(int(ledger.level))
 	var defense := float(kind.get("defense", 0)) * (1.0 - float(stats.get("penetration", 0.0)))
@@ -66,6 +66,11 @@ static func _pace(ledger: Dictionary, kind: Dictionary) -> Dictionary:
 	var basic_ms := maxf(1.0, float(Combat.effective_cooldown(stats.attackCooldown, stats.attackSpeed)))
 	burst += per_power + 1.0
 	rate += (per_power + 1.0) / basic_ms
+	# 동행 PT 트레이너 — 평타와 같은 간격으로 공격력 × 계승 % 를 넣는다 (`World._buddy_strike`, trainers.md)
+	var buddy := Trainers.inherit_of(ledger.get("trainers", {}), str(ledger.get("trainer_active", "")))
+	if buddy > 0.0:
+		burst += per_power * buddy + 1.0
+		rate += (per_power * buddy + 1.0) / basic_ms
 	var cut := clampf(float(stats.get("cooldown", 0.0)), 0.0, 0.9)
 	for skill_id in ledger.get("skills", []):
 		var skill: Dictionary = Skills.all().get(str(skill_id), {})

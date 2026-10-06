@@ -321,6 +321,14 @@ func join(player_id: String) -> void:
 		# --- 장비 도감 (docs/features/codex.md) --- `{ 아이템 id: 채운 강화 비트 }`. 도감 창에서 가방의
 		# 장비를 넣어 채운다 (`codex_register`)
 		"codex": kept.get("codex", {}).duplicate(),
+		# --- PT 트레이너 (docs/features/trainers.md) --- `{ id: 개수 }` · 동행 id. 상점에서 다이아로 뽑는다
+		"trainers": kept.get("trainers", {}).duplicate(),
+		"trainer_active": str(kept.get("trainer_active", "")),
+		# 동행 트레이너가 서 있는 자리·하는 일 — 전투 쪽 값이라 장부에도 저장에도 없다 (`_step_buddies`)
+		"buddy": {},
+		# 내가 마지막으로 때린 몬스터와 그때 — 동행 트레이너가 이 놈을 같이 친다 (`_hit_monster`)
+		"hunt_focus": "",
+		"hunt_focus_at": 0,
 		# 샌드백 랭킹전 `{week, best, unpaid?}` — 그 주 최고 기록 (docs/features/sandbag.md)
 		"sandbag": kept.get("sandbag", {}).duplicate(true),
 		# 던전 하루 입장 `{ 종류 id: {day, count} }` (docs/features/dungeons.md "하루 한 번")
@@ -414,6 +422,7 @@ func step(delta: float) -> void:
 	_step_monsters(delta, now)
 	_drive_sandbag_auto(now)
 	_drive_auto(delta, now)
+	_step_buddies(delta, now)
 	_drive_potions(now)
 	_check_gate()
 
@@ -1678,6 +1687,10 @@ func restore(player_id: String) -> bool:
 	player.fitness = stages
 	# 장비 도감 — 없던 칸이라 옛 저장은 빈 사전. 표에 있는 장비 id 만, 비트는 +0 ~ +9 안으로
 	player.codex = Codex.clean(saved.get("codex", {}))
+	# PT 트레이너 — 없던 칸이라 옛 저장은 빈 사전. 표에 있는 것만, 동행은 갖고 있는 것만
+	player.trainers = Trainers.clean(saved.get("trainers", {}))
+	var active := str(saved.get("trainer_active", ""))
+	player.trainer_active = active if player.trainers.has(active) else ""
 	# 샌드백 랭킹전 — 없던 칸이라 옛 저장은 빈 사전. 주가 지났으면 `_check_sandbag_week` 가 정산한다
 	var raw_sandbag: Variant = saved.get("sandbag", {})
 	player.sandbag = Ledger.from_json(raw_sandbag) if raw_sandbag is Dictionary else {}
@@ -2050,6 +2063,39 @@ func fitness_up(player_id: String, kind_id: String, auto: bool) -> void:
 	if player.is_empty():
 		return
 	_ledger_call(player, &"fitness_up", [kind_id, 1 if auto else 0])
+
+
+## --- PT 트레이너 --- (docs/features/trainers.md)
+
+## 상점의 **트레이너 뽑기** — 1회 · 10회. 판정은 `Ledger.trainer_draw`
+func trainer_draw(player_id: String, times: int) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	_ledger_call(player, &"trainer_draw", [times])
+
+
+## 트레이너 창의 **동행** · **돌려보내기**("") — 판정은 `Ledger.trainer_pick`
+func trainer_pick(player_id: String, id: String) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	_ledger_call(player, &"trainer_pick", [id])
+	# 새로 부른 트레이너는 내 곁에서 나타난다
+	player.buddy = {}
+
+
+## 테스트 단추 — 다이아 `DEBUG_DIAMONDS` 개 (로컬은 결제가 없어 뽑기를 볼 수 없다)
+const DEBUG_DIAMONDS := 10000
+
+
+func debug_diamonds(player_id: String) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	player.diamonds = int(player.get("diamonds", 0)) + DEBUG_DIAMONDS
+	_events.append({"type": "diamonds", "gain": DEBUG_DIAMONDS, "total": player.diamonds, "product": "debug"})
+	_notice("테스트: 다이아 +%d" % DEBUG_DIAMONDS)
 
 
 ## --- 장비 도감 --- (docs/features/codex.md)
@@ -2598,8 +2644,12 @@ func _run_combos(now: int) -> void:
 
 
 ## 몬스터 하나를 때린다. 기본 공격과 스킬이 같은 자리를 쓴다
-func _hit_monster(player: Dictionary, target: Dictionary, attack: float, skill_id: String) -> void:
+func _hit_monster(player: Dictionary, target: Dictionary, attack: float, skill_id: String, buddy := false) -> void:
 	var stats: Dictionary = player.stats
+	# 내가 친 놈을 동행 트레이너가 같이 친다 — 트레이너가 친 것은 겨냥을 바꾸지 않는다 (`_step_buddies`)
+	if not buddy:
+		player.hunt_focus = str(target.id)
+		player.hunt_focus_at = Time.get_ticks_msec()
 	# **방어력 관통** — 상대 방어력을 그만큼 없는 셈 치고 때린다 (옵션으로만 붙는다)
 	var pierced: float = float(target.defense) * (1.0 - float(stats.get("penetration", 0.0)))
 	var damage := roundi(Stats.damage(attack, int(player.level), pierced))
@@ -2627,6 +2677,8 @@ func _hit_monster(player: Dictionary, target: Dictionary, attack: float, skill_i
 		"skill": skill_id,
 		"x": target.x,
 		"z": target.z,
+		# 동행 트레이너가 넣은 한 대 — 화면이 숫자를 따로 칠한다
+		"buddy": buddy,
 	})
 	if dummy:
 		return
@@ -2652,7 +2704,7 @@ func _hit_monster(player: Dictionary, target: Dictionary, attack: float, skill_i
 func _refresh_stats(player: Dictionary) -> void:
 	player.stats = stats_of(
 		str(player.job), int(player.level), player.equipped, player.get("passives", {}), player.get("fitness", {}),
-		player.get("codex", {})
+		player.get("codex", {}), player.get("trainers", {})
 	)
 	player.hp = mini(int(player.hp), int(player.stats.maxHp))
 
@@ -2666,9 +2718,10 @@ func _speed_of(player: Dictionary) -> float:
 ## `passives` 는 배운 패시브 단계 `{ id: 단계 }` — **공속은 여기서만 온다** (질풍각, 2026-09-29)
 ## `fitness` 는 헬스 운동 단계 `{ id: 단계 }` — 공격력·방어력·체력에 **장비 % 와 따로 곱한다** (fitness.md)
 ## `codex` 는 장비 도감 `{ 아이템 id: 채운 강화 비트 }` — 헬스와 같은 셋에 **또 따로 곱한다** (codex.md)
+## `trainers` 는 뽑은 PT 트레이너 `{ id: 개수 }` — **보유 효과**. 공·방·체는 또 따로 곱하고 치명타 둘은 더한다 (trainers.md)
 static func stats_of(
 	job: String, level: int, equipped: Dictionary, passives: Dictionary = {}, fitness: Dictionary = {},
-	codex: Dictionary = {}
+	codex: Dictionary = {}, trainers: Dictionary = {}
 ) -> Dictionary:
 	var stats := Combat.stats_for(job, level)
 	var gear := Items.equipment_stats(equipped)
@@ -2700,13 +2753,21 @@ static func stats_of(
 		stats["codex_" + key] = float(book[key])
 		if float(book[key]) > 0.0:
 			stats[key] = maxi(0 if key == "defense" else 1, roundi(float(stats[key]) * (1.0 + float(book[key]) / 100.0)))
+	# PT 트레이너 보유 효과 — 헬스·도감과 같은 방식으로 **따로 곱한다** (`trainer_*` 는 캐릭터 정보 창용)
+	var crew := Trainers.owned_bonus(trainers)
+	for key in ["attack", "defense", "maxHp"]:
+		stats["trainer_" + key] = float(crew[key])
+		if float(crew[key]) > 0.0:
+			stats[key] = maxi(0 if key == "defense" else 1, roundi(float(stats[key]) * (1.0 + float(crew[key]) / 100.0)))
 	# **상한이 없다** ★ (2026-09-23 지시: "상한 없애."). 치확 100% 면 늘 치명타,
 	# 공속은 `cooldown / (1 + 공속)` 이라 얼마든 올라가도 0 으로 안 나뉜다.
 	# 가방 옆 장비 창은 **장비 몫만** 적는다 (2026-09-28 요청) — 더하기 전 장비 합계를 같이 내린다
 	for key in ["crit", "critDamage", "attackSpeed"]:
 		stats["gear_" + key] = float(gear[key])
-	stats.crit = maxf(float(stats.crit) + gear.crit + stats.passive_crit, 0.0)
-	stats.critDamage += gear.critDamage + stats.passive_critDamage
+	stats["trainer_crit"] = float(crew.crit)
+	stats["trainer_critDamage"] = float(crew.critDamage)
+	stats.crit = maxf(float(stats.crit) + gear.crit + stats.passive_crit + float(crew.crit), 0.0)
+	stats.critDamage += gear.critDamage + stats.passive_critDamage + float(crew.critDamage)
 	# 이동 속도는 달리기 속도의 배율 — `_run_speed × (1 + moveSpeed)` (`_speed_of`)
 	stats["moveSpeed"] = stats.passive_moveSpeed
 	stats.attackSpeed = maxf(float(stats.attackSpeed) + gear.attackSpeed + stats.passive_attackSpeed, 0.0)
@@ -2906,3 +2967,117 @@ func enhance_many(player_id: String, indices: Array, cap: int = -1) -> void:
 	if player.is_empty():
 		return
 	_ledger_call(player, &"enhance_many", [indices, cap])
+
+
+## --- 동행 PT 트레이너 --- (docs/features/trainers.md "동행")
+##
+## 트레이너는 **몬스터도 플레이어도 아니다** — `_monsters`·`_players` 어디에도 없어서 몬스터가 노리지
+## 못하고(`_nearest_player`), 누르거나 자동 사냥이 고를 수도 없다(`_pick_targets`). 그래서 맞지 않는다.
+## 자리는 `player.buddy` 에만 있다: `{x, z, rot, state("idle"|"run"|"attack"), next_hit_at}`.
+## 충돌도 없다 — 몬스터·캐릭터 사이를 지나다닌다 (막히면 같이 때릴 수 없다).
+##
+## **내가 친 놈을 같이 친다** — 내 한 대(`_hit_monster`)가 `hunt_focus` 를 남기고, 그 뒤
+## `BUDDY_FOCUS_MS` 안이면 트레이너가 그 놈에게 붙어 친다. 간격은 **내 평타 간격**, 피해는
+## 내 공격력 × 계승 %, 치명타·관통은 내 것 그대로 — 그래서 트레이너 몫 = 내 평타 × 계승 %.
+## 잡으면 내 처치다 (경험치·드랍·던전 클리어·샌드백 기록이 다 내 것).
+
+## 마지막으로 친 뒤 이만큼 지나면 그 놈을 놓는다 — 내가 손을 떼면 트레이너도 돌아온다
+const BUDDY_FOCUS_MS := 4000
+## 내 곁 자리 — 오른쪽 뒤로 이만큼 (m)
+const BUDDY_SIDE := 1.1
+const BUDDY_BACK := 0.9
+## 이보다 가까우면 서 있는다 / 이보다 멀면 곧장 곁으로 옮긴다 (존 이동·순간 이동)
+const BUDDY_SETTLE := 0.35
+const BUDDY_SNAP := 14.0
+## 내 달리기 속도의 몇 배로 따라오나 — 조금 빨라야 뒤처지지 않는다
+const BUDDY_SPEED_MUL := 1.25
+## 주먹이 닿는 거리 (m) — 이 안이면 친다
+const BUDDY_REACH := 1.6
+
+
+func _step_buddies(delta: float, now: int) -> void:
+	for id in _players:
+		var player: Dictionary = _players[id]
+		var active := str(player.get("trainer_active", ""))
+		if active == "" or int(player.get("trainers", {}).get(active, 0)) <= 0:
+			player.buddy = {}
+			continue
+		var buddy: Dictionary = player.get("buddy", {})
+		var home := _buddy_home(player)
+		if buddy.is_empty() or str(buddy.get("id", "")) != active \
+				or home.distance_to(Vector2(float(buddy.x), float(buddy.z))) > BUDDY_SNAP:
+			buddy = {"id": active, "x": home.x, "z": home.y, "rot": float(player.get("rot", 0.0)),
+				"state": "idle", "next_hit_at": 0}
+			player.buddy = buddy
+		var target := {} if bool(player.dead) else _buddy_target(player, now)
+		var pos := Vector2(float(buddy.x), float(buddy.z))
+		var speed := _speed_of(player) * BUDDY_SPEED_MUL
+		if not target.is_empty():
+			var at := Vector2(float(target.x), float(target.z))
+			buddy.rot = atan2(at.x - pos.x, at.y - pos.y)
+			var reach := BUDDY_REACH + float(target.get("r", 0.5))
+			if pos.distance_to(at) > reach:
+				_buddy_walk(buddy, pos, at, reach * 0.8, speed, delta)
+				buddy.state = "run"
+			else:
+				if buddy.state == "run":
+					buddy.state = "idle"
+				if now >= int(buddy.next_hit_at):
+					_buddy_strike(player, buddy, target, now)
+			continue
+		# 칠 놈이 없으면 내 곁으로
+		if pos.distance_to(home) > BUDDY_SETTLE:
+			buddy.rot = atan2(home.x - pos.x, home.y - pos.y)
+			_buddy_walk(buddy, pos, home, 0.0, speed, delta)
+			buddy.state = "run"
+		else:
+			buddy.rot = float(player.get("rot", 0.0))
+			buddy.state = "idle"
+
+
+## 내 곁 자리 — 내가 보는 쪽 기준 오른쪽 뒤 (화면이 아니라 캐릭터 기준)
+func _buddy_home(player: Dictionary) -> Vector2:
+	var rot := float(player.get("rot", 0.0))
+	var forward := Vector2(sin(rot), cos(rot))
+	var right := Vector2(-forward.y, forward.x)
+	return Vector2(float(player.x), float(player.z)) + right * BUDDY_SIDE - forward * BUDDY_BACK
+
+
+## 같이 칠 놈 — 내가 `BUDDY_FOCUS_MS` 안에 친, 아직 살아 있는 몬스터. 없으면 빈 사전
+func _buddy_target(player: Dictionary, now: int) -> Dictionary:
+	var focus := str(player.get("hunt_focus", ""))
+	if focus == "" or now - int(player.get("hunt_focus_at", 0)) > BUDDY_FOCUS_MS:
+		return {}
+	for monster in _monsters:
+		if str(monster.id) == focus:
+			return monster if int(monster.hp) > 0 or bool(monster.get("dummy", false)) else {}
+	return {}
+
+
+## `to` 쪽으로 걷는다 — `stop` 거리 앞에서 멈춘다. 맵 끝 밖으로는 안 나간다
+func _buddy_walk(buddy: Dictionary, pos: Vector2, to: Vector2, stop: float, speed: float, delta: float) -> void:
+	var way := to - pos
+	var gap := way.length() - stop
+	if gap <= 0.0:
+		return
+	var next := pos + way.normalized() * minf(gap, speed * delta)
+	var half := float(zone.get("size", 66)) * 0.5
+	buddy.x = clampf(next.x, -half, half)
+	buddy.z = clampf(next.y, -half, half)
+
+
+## 한 대 — 내 평타 간격으로, 내 공격력 × 계승 %. 화면은 `buddySwing` 에서 주먹을 튼다
+func _buddy_strike(player: Dictionary, buddy: Dictionary, target: Dictionary, now: int) -> void:
+	# 샌드백 카운트 동안은 나도 못 친다 — 트레이너도 기다린다
+	if _counting_down(now):
+		return
+	var stats: Dictionary = player.stats
+	var cooldown := Combat.effective_cooldown(stats.attackCooldown, stats.attackSpeed)
+	buddy.next_hit_at = now + cooldown
+	buddy.state = "attack"
+	_events.append({
+		"type": "buddySwing", "id": str(player.id), "ms": cooldown,
+		"speed": float(stats.attackCooldown) / maxf(1.0, float(cooldown)),
+	})
+	var inherit := Trainers.inherit_of(player.get("trainers", {}), str(player.get("trainer_active", "")))
+	_hit_monster(player, target, float(stats.attack) * inherit, "", true)

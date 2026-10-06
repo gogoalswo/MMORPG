@@ -14,6 +14,7 @@
 |---|---|
 | 상품 (`goods`) | 초보자 패키지 (`starter`) · 재화 (`currency`) |
 | 월정액 (`monthly`) | 상품 (`goods`) |
+| 뽑기 (`draw`) | 트레이너 (`trainer`) — ★ 2026-10-06, **유일하게 상품이 있다**: 1회 · 10회 (다이아) → [trainers.md](trainers.md) |
 
 ```
  돌판 틀(ui_dungeon_card, 전체 화면) ─────────────────────────────── X
@@ -43,6 +44,9 @@
 - 메인 탭을 바꾸면 서브는 **첫째로** 돌아간다.
 - 카드 한 장 = `{name, note?, icon?, price}` — `price` 는 원 정수, `KRW 55,000` 으로 적는다. `icon` 은 `_icon` 이 찾는
   이름(없으면 그림 자리만 빈다).
+- ★ **다이아 상품** (2026-10-06) — `{id, diamonds, art?}` 이면 값 자리가 **"다이아 N" 사기 단추**(`buy`)가 되고 누르면
+  `buy_requested(id)` 를 낸다. `art` 는 그림을 바로 준 것(트레이너 원화). 탭 줄 오른쪽에 **가진 다이아**(`set_diamonds`)를 적는다.
+  뽑기 결과는 창 위에 덮는 판(`show_draw` — 카드 · NEW · 확인)이다 → [trainers.md](trainers.md)
 - 메뉴 그림 `ui_icon_shop` 은 **끈 묶은 가죽 돈주머니**다 (2026-10-02 요청 "상점 아이콘도 바르코로 만들어").
   HUD 아이콘 기준([ui-art-style.md](ui-art-style.md) "HUD 아이콘 기준 (2026-09-29)") 프롬프트에 `<무엇>` 만
   `a plump leather coin pouch tied shut with a cord at the neck, two or three coins resting at its base` 로,

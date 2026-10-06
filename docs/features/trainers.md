@@ -42,11 +42,11 @@
 | `godot/world/ledger.gd` `trainer_draw` · `trainer_pick` · `trainer_fuse` | ★ **판정.** 장부 칸 `trainers {id: 개수}` · `trainer_active` (`KEYS`) |
 | `godot/world/world.gd` `stats_of` | 보유 효과 — 공·방·체는 **따로 곱하고**(`trainer_*`), 치명타 둘은 비율에 더한다 |
 | `godot/world/world.gd` `_step_buddies` · `_buddy_strike` · `_hit_monster` | ★ **동행 전투** (아래 "동행") · `hunt_focus` |
-| `godot/world/world.gd` `trainer_draw` · `trainer_pick` · `debug_diamonds` · `restore` | 요청 → 장부, 테스트 단추(다이아 +1만), 저장 되살리기(표에 있는 것만 · 안 가진 동행은 비움) |
+| `godot/world/world.gd` `trainer_draw` · `trainer_pick` · `debug_diamonds` · `restore` | 요청 → 장부, 테스트 단추(다이아 `count` 개 — 가방 창 +1만 · 설계 재현 창 +10만), 저장 되살리기(표에 있는 것만 · 안 가진 동행은 비움) |
 | `godot/world/save.gd` | `trainers` · `trainer_active` 칸 |
 | `godot/server/ledger_server.gd` `OPS` | `trainer_draw: "i"` · `trainer_pick: "s"` · `trainer_fuse: "ii"` — 서버에서는 **서버가 굴린다** |
 | `godot/server/kill_check.gd` `_pace` | 처치 검증 · 샌드백 상한이 **동행 몫**(평타 × 계승 %)을 더해 본다 |
-| `godot/net/local_transport.gd` | `trainerDraw {times}` · `trainerPick {id}` · `debugDiamonds` |
+| `godot/net/local_transport.gd` | `trainerDraw {times}` · `trainerPick {id}` · `debugDiamonds {count}` |
 | `godot/game/trainer_panel.gd` `TrainerPanel` | 트레이너 창 + **카드 한 장**(`make_card`) · `grade_color`(등급 색 = 장비 등급 표 `Items.grade_color`) |
 | `godot/game/trainer_draw.gd` `TrainerDraw` | ★ **뽑기 연출** (아래 "뽑기 연출") — 돌판 · 덤벨 · 빛기둥 · 카드 · [모두 보기] · [확인] |
 | `godot/game/trainer_portraits.gd` `TrainerPortraits` | ★ **카드 그림도 3D 모델** (2026-10-06 요청 "왼쪽 이미지도 3D 모델로") — 카드마다 3D 를 띄우면 무거워서, **보이지 않는 무대 하나**(`SubViewport`, 오른쪽 무대와 같은 빛·각도 `TrainerStage.build_world` · `frame`)에 한 명씩 세워 대기 자세로 252×336 한 장을 찍어 카드에 쓴다. 창을 열면 그 탭의 카드를 줄 세워 한 프레임에 한 명씩 찍고 찍히는 대로 갈아 끼운다(`baked`). 판이 끝날 때까지 기억한다(`_cache`). 못 찍는 곳(헤드리스)·찍기 전에는 원화. 상점 뽑기 결과 카드도 같은 그림. 확인: `npm run shot:godot -- trainers` 가 찍힌 장 수와 모델이 그림에서 차지한 범위를 글로 낸다 (53/53장, 세로 약 90%) |

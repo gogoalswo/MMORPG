@@ -192,6 +192,9 @@ func _check_dungeon_clear(p: Dictionary, target: Dictionary) -> void:
 	if not bool(target.get("boss", false)):
 		return
 	var stage := GameData.dungeon_stage(str(target.get("zone", "")))
+	# 토벌은 보스를 잡으면 클리어 — 오늘 입장을 쓴다 (시련의 보스는 클리어가 아니다 — `trial_clear` 가 센다)
+	if int(stage.get("kills", 0)) <= 0:
+		dungeon_cleared(p, str(target.get("zone", "")))
 	var gain := int(stage.get("skillExp", 0))
 	if gain <= 0:
 		return
@@ -213,6 +216,8 @@ func trial_clear(p: Dictionary, zone_id: String) -> void:
 	var count := int(stage.get("crystals", 0))
 	if int(stage.get("kills", 0)) <= 0 or count <= 0:
 		return
+	# 통과가 클리어다 — 가방이 꽉 차 크리스탈을 못 받아도 깬 것은 깬 것이다
+	dungeon_cleared(p, zone_id)
 	if not give(p, {"id": Items.crystal_id(), "count": count}):
 		_notice("가방이 가득 차 크리스탈을 받지 못했습니다")
 		return
@@ -264,23 +269,29 @@ static func dungeon_entries_left(p: Dictionary, zone_id: String, day: int) -> in
 	return maxi(0, limit - used)
 
 
-## 던전에 들어간다 — 오늘 입장을 하나 쓴다. 다 썼으면 알리고 false. 제한이 없는 존은 늘 true.
-## **들어가는 순간 센다** — 깨든 쓰러지든 나가든 그날 입장은 쓴 것이다
+## 던전에 들어가도 되나 — 오늘 입장이 남았으면 true, 다 썼으면 알리고 false. 제한이 없는 존은 늘 true.
+## **들어갈 때는 세지 않는다** — 세는 것은 클리어할 때다(`dungeon_cleared`, 2026-10-06 요청
+## "던전을 클리어 했을 때만 입장권 차감 되도록"). 쓰러지거나 시간이 다 되거나 나가면 입장은 그대로 남는다
 func dungeon_enter(p: Dictionary, zone_id: String) -> bool:
-	var day := dungeon_day()
-	var left := dungeon_entries_left(p, zone_id, day)
-	if left < 0:
+	if dungeon_entries_left(p, zone_id, dungeon_day()) != 0:
 		return true
 	var type := GameData.dungeon_type_of(zone_id)
-	if left == 0:
-		_notice("%s 은(는) 오늘 이미 들어갔습니다 — 5시에 다시 열립니다" % str(type.get("name", "던전")))
-		return false
+	_notice("%s 은(는) 오늘 이미 클리어했습니다 — 5시에 다시 열립니다" % str(type.get("name", "던전")))
+	return false
+
+
+## 던전을 깼다 — 오늘 입장을 하나 쓴다. 토벌은 보스 처치(`_check_dungeon_clear`), 시련은 통과(`trial_clear`).
+## 제한이 없는 존은 세지 않는다
+func dungeon_cleared(p: Dictionary, zone_id: String) -> void:
+	var day := dungeon_day()
+	if dungeon_entries_left(p, zone_id, day) < 0:
+		return
+	var type := GameData.dungeon_type_of(zone_id)
 	if not p.has("dungeon_entries") or not p.dungeon_entries is Dictionary:
 		p["dungeon_entries"] = {}
 	var mine: Dictionary = p.dungeon_entries.get(str(type.id), {})
 	var used := int(mine.get("count", 0)) if int(mine.get("day", -1)) == day else 0
 	p.dungeon_entries[str(type.id)] = {"day": day, "count": used + 1}
-	return true
 
 
 ## 이번 판의 기록을 남긴다 — 그 주 최고보다 높으면 갈아 끼운다. 주가 지났으면 **정산을 먼저 해야 한다**

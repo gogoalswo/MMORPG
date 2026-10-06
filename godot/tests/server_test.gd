@@ -336,7 +336,10 @@ func _case_trial_check() -> void:
 
 	if send.call("trial_clear", [zone]).get("reason") != "wrong_zone":
 		_fail("들어오지도 않은 시련을 통과시켰다")
+	# 못 깨고 다시 들어오는 것은 된다 — 클리어할 때만 센다 (2026-10-06)
 	send.call("enter", [zone])
+	if send.call("enter", [zone]).get("t") != "result":
+		_fail("못 깼는데 같은 날 다시 못 들어왔다")
 	now[0] += wait
 	for i in int(stage.kills) - 1:
 		send.call("kill", [{"kind": str(roster[ids[i]].kind), "zone": zone, "id": str(ids[i])}])
@@ -351,7 +354,7 @@ func _case_trial_check() -> void:
 	if send.call("trial_clear", [zone]).get("reason") != "claimed":
 		_fail("한 번 들어와 두 번 받았다")
 
-	# 같은 날 다시 들어오면 막는다 — 하루 한 번 (dungeons.md "하루 한 번")
+	# 깬 뒤 같은 날 다시 들어오면 막는다 — 하루 한 번 (dungeons.md "하루 한 번")
 	if send.call("enter", [zone]).get("reason") != "daily_used":
 		_fail("같은 날 시련에 두 번 들어왔다")
 	# 다음 날 다시 들어와 30초가 지난 뒤에 잡은 것은 안 센다

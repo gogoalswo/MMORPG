@@ -197,7 +197,13 @@ func _case_daily() -> void:
 	me.level = 200
 	var today := float(Time.get_unix_time_from_system())
 	w._ledger.unix_now = func() -> float: return today
+	# 못 깨고 나오면 입장이 남는다 — 클리어할 때만 센다 (2026-10-06)
 	w.travel("me", "raid_03")
+	w.travel("me", "village")
+	w.travel("me", "raid_03")
+	if w.zone_id != "raid_03":
+		_fail("못 깨고 나왔는데 토벌 입장이 줄었다 (%s)" % w.zone_id)
+	me = w.snapshot().players["me"]  # 존을 옮기면 플레이어 사전을 새로 짓는다
 	w._hit_monster(me, w.snapshot().monsters[0], 1e9, "")
 	if int(w.snapshot().monsters[0].respawn_at) != 0:
 		_fail("토벌 보스가 되살아날 예정이다 — 안에서 기다리면 한 번 더 잡는다")
@@ -211,13 +217,19 @@ func _case_daily() -> void:
 	w.travel("me", "trial_01")
 	if w.zone_id != "trial_01":
 		_fail("토벌을 썼다고 시련까지 막혔다 (%s)" % w.zone_id)
+	# 시련도 못 통과하고 나오면 입장이 남는다
 	w.travel("me", "village")
 	w.travel("me", "trial_02")
+	if w.zone_id != "trial_02":
+		_fail("시련을 못 통과했는데 입장이 줄었다 (%s)" % w.zone_id)
+	w._ledger.trial_clear(w.snapshot().players["me"], "trial_02")
+	w.travel("me", "village")
+	w.travel("me", "trial_01")
 	if w.zone_id != "village":
-		_fail("오늘 시련에 또 들어갔다 (%s)" % w.zone_id)
+		_fail("오늘 시련을 통과했는데 또 들어갔다 (%s)" % w.zone_id)
 	# 다음 날(한국 시각 5시가 지나면) 다시 된다
 	w._ledger.unix_now = func() -> float: return today + 86400.0
 	w.travel("me", "raid_05")
 	if w.zone_id != "raid_05":
 		_fail("다음 날인데 토벌에 못 들어갔다 (%s)" % w.zone_id)
-	print("  하루 한 번 — 토벌·시련 따로 · 두 번째는 막힘 · 다음 날 다시 · 보스 안 되살아남")
+	print("  하루 한 번 — 클리어할 때만 셈 · 토벌·시련 따로 · 깬 뒤는 막힘 · 다음 날 다시 · 보스 안 되살아남")

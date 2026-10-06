@@ -544,10 +544,9 @@ func _enter(account: Dictionary, zone: String) -> String:
 	if not GameData.zones().get("zones", {}).has(zone):
 		return "no_zone"
 	# 다 썼으면 막는다 — 막힌 존의 처치는 명단이 없어(`wrong_zone`) 보상이 안 나간다.
-	# 먼저 대 보고 되는 것만 장부에 적는다 — 알림이 남으면 다음 계정 답에 섞인다
+	# 들어올 때는 세지 않는다 — 클리어(토벌 보스 `kill` · 시련 `trial_clear`)에서 장부가 센다
 	if Ledger.dungeon_entries_left(account.ledger, zone, ledger.dungeon_day()) == 0:
 		return "daily_used"
-	ledger.dungeon_enter(account.ledger, zone)
 	_hunts[account.id] = {"zone": zone, "entered_at": int(clock.call()), "roster": World.roster(zone), "killed": {}}
 	return ""
 

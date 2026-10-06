@@ -55,6 +55,9 @@ const OPS := {
 	# 도감 자동 등록할 1차 옵션 — 등급 · 종류 목록(글자, 비면 그 등급은 옵션 붙은 장비를 안 넣는다)
 	"set_codex_auto_options": "iw",
 	"codex_seen": "i",
+	# PT 트레이너 — 뽑기 횟수(1 · 10, 다이아는 장부가 다시 센다 · 확률은 서버가 굴린다) / 동행 id("" 면 돌려보냄)
+	"trainer_draw": "i",
+	"trainer_pick": "s",
 }
 
 var store: AccountStore

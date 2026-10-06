@@ -414,6 +414,7 @@ fetch_icon 60019ed8187ff0cff607c9aa023849f4 ui_icon_design    # 설계 — 두�
 fetch_icon 0cd496bab7dbf9e3e1b78144b25a235c ui_icon_rank      # 랭킹 — 받침 달린 트로피 (첫째). 2026-09-29 세피아 단색조
 fetch_icon 9d0cfd6c330ff0eecd6fb4fd2ecad4be ui_icon_sandbag   # 샌드백 랭킹전 — 받침에 선 가죽 샌드백 (세 장 중 둘째). 2026-10-02 HUD 아이콘 기준 프롬프트 그대로
 fetch_icon 99dd144558994da511b31b91bc589575 ui_icon_shop      # 상점 — 끈 묶은 가죽 돈주머니 · 동전 (세 장 중 셋째). 2026-10-02 HUD 아이콘 기준 프롬프트 그대로
+fetch_icon 2e01e56278ee7715db28877e4e761015 ui_icon_trainer   # PT 트레이너 — 땋은 끈 달린 코치 호루라기 (세 장 중 둘째). 2026-10-06 HUD 아이콘 기준 프롬프트 그대로
 fetch_icon 48c32df95c8cead1a978cd760ed10188 ui_icon_fitness   # 헬스 — 쇠 덤벨 (세 장 중 둘째). 2026-09-30 세피아 단색조 (HUD 아이콘 기준 프롬프트 그대로)
 # 2026-10-01 — 도감 단추 · 메뉴를 펼치는 ≡ · 접는 X (HUD 아이콘 기준 프롬프트 그대로, 각 세 장)
 fetch_icon 3949117dc4a7ca950e5e3fc4d7d24511 ui_icon_codex      # 도감 — 방패 문장이 든 펼친 책 (셋째)

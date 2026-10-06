@@ -1,0 +1,532 @@
+{
+  "grades": [
+    {
+      "grade": 1,
+      "name": "일반",
+      "inherit": 20,
+      "owned": 1,
+      "chance": 58,
+      "count": 20
+    },
+    {
+      "grade": 2,
+      "name": "고급",
+      "inherit": 30,
+      "owned": 2,
+      "chance": 30,
+      "count": 15
+    },
+    {
+      "grade": 3,
+      "name": "희귀",
+      "inherit": 40,
+      "owned": 3,
+      "chance": 9,
+      "count": 10
+    },
+    {
+      "grade": 4,
+      "name": "영웅",
+      "inherit": 60,
+      "owned": 5,
+      "chance": 2.5,
+      "count": 5
+    },
+    {
+      "grade": 5,
+      "name": "전설",
+      "inherit": 80,
+      "owned": 8,
+      "chance": 0.5,
+      "count": 3
+    }
+  ],
+  "statNames": {
+    "attack": "공격력",
+    "defense": "방어력",
+    "maxHp": "체력",
+    "crit": "치명타 확률",
+    "critDamage": "치명타 피해"
+  },
+  "drawCost": 100,
+  "drawMulti": 10,
+  "trainers": [
+    {
+      "id": "n01",
+      "name": "근력 코치 브람",
+      "grade": 1,
+      "stat": "attack",
+      "owned": 1,
+      "inherit": 20,
+      "height": 1.8
+    },
+    {
+      "id": "n02",
+      "name": "요가 강사 미라",
+      "grade": 1,
+      "stat": "defense",
+      "owned": 1,
+      "inherit": 20,
+      "height": 1.8
+    },
+    {
+      "id": "n03",
+      "name": "줄넘기 소녀 피피",
+      "grade": 1,
+      "stat": "maxHp",
+      "owned": 1,
+      "inherit": 20,
+      "height": 1.55
+    },
+    {
+      "id": "n04",
+      "name": "러닝 코치 테오",
+      "grade": 1,
+      "stat": "crit",
+      "owned": 1,
+      "inherit": 20,
+      "height": 1.8
+    },
+    {
+      "id": "n05",
+      "name": "스트레칭 강사 로나",
+      "grade": 1,
+      "stat": "critDamage",
+      "owned": 1,
+      "inherit": 20,
+      "height": 1.8
+    },
+    {
+      "id": "n06",
+      "name": "복싱 견습생 덱스",
+      "grade": 1,
+      "stat": "attack",
+      "owned": 1,
+      "inherit": 20,
+      "height": 1.8
+    },
+    {
+      "id": "n07",
+      "name": "수영 코치 마린",
+      "grade": 1,
+      "stat": "defense",
+      "owned": 1,
+      "inherit": 20,
+      "height": 1.8
+    },
+    {
+      "id": "n08",
+      "name": "역도 초보 군",
+      "grade": 1,
+      "stat": "maxHp",
+      "owned": 1,
+      "inherit": 20,
+      "height": 1.7
+    },
+    {
+      "id": "n09",
+      "name": "필라테스 강사 엘라",
+      "grade": 1,
+      "stat": "crit",
+      "owned": 1,
+      "inherit": 20,
+      "height": 1.8
+    },
+    {
+      "id": "n10",
+      "name": "등산 가이드 호크",
+      "grade": 1,
+      "stat": "critDamage",
+      "owned": 1,
+      "inherit": 20,
+      "height": 1.8
+    },
+    {
+      "id": "n11",
+      "name": "권법 수련생 린",
+      "grade": 1,
+      "stat": "attack",
+      "owned": 1,
+      "inherit": 20,
+      "height": 1.8
+    },
+    {
+      "id": "n12",
+      "name": "체조 선수 노바",
+      "grade": 1,
+      "stat": "defense",
+      "owned": 1,
+      "inherit": 20,
+      "height": 1.5
+    },
+    {
+      "id": "n13",
+      "name": "나무꾼 트레이너 오크스",
+      "grade": 1,
+      "stat": "maxHp",
+      "owned": 1,
+      "inherit": 20,
+      "height": 1.95
+    },
+    {
+      "id": "n14",
+      "name": "조깅 할아버지 페드로",
+      "grade": 1,
+      "stat": "crit",
+      "owned": 1,
+      "inherit": 20,
+      "height": 1.8
+    },
+    {
+      "id": "n15",
+      "name": "댄스 강사 루루",
+      "grade": 1,
+      "stat": "critDamage",
+      "owned": 1,
+      "inherit": 20,
+      "height": 1.8
+    },
+    {
+      "id": "n16",
+      "name": "씨름꾼 바우",
+      "grade": 1,
+      "stat": "attack",
+      "owned": 1,
+      "inherit": 20,
+      "height": 1.9
+    },
+    {
+      "id": "n17",
+      "name": "사이클 코치 지나",
+      "grade": 1,
+      "stat": "defense",
+      "owned": 1,
+      "inherit": 20,
+      "height": 1.8
+    },
+    {
+      "id": "n18",
+      "name": "짐꾼 훈련사 토르",
+      "grade": 1,
+      "stat": "maxHp",
+      "owned": 1,
+      "inherit": 20,
+      "height": 1.35
+    },
+    {
+      "id": "n19",
+      "name": "궁도 체력관 세라",
+      "grade": 1,
+      "stat": "crit",
+      "owned": 1,
+      "inherit": 20,
+      "height": 1.8
+    },
+    {
+      "id": "n20",
+      "name": "농부 근육맨 감자",
+      "grade": 1,
+      "stat": "critDamage",
+      "owned": 1,
+      "inherit": 20,
+      "height": 1.8
+    },
+    {
+      "id": "a01",
+      "name": "킥복서 레이븐",
+      "grade": 2,
+      "stat": "attack",
+      "owned": 2,
+      "inherit": 30,
+      "height": 1.8
+    },
+    {
+      "id": "a02",
+      "name": "레슬러 맥",
+      "grade": 2,
+      "stat": "defense",
+      "owned": 2,
+      "inherit": 30,
+      "height": 2
+    },
+    {
+      "id": "a03",
+      "name": "크로스핏 코치 제이드",
+      "grade": 2,
+      "stat": "maxHp",
+      "owned": 2,
+      "inherit": 30,
+      "height": 1.8
+    },
+    {
+      "id": "a04",
+      "name": "파쿠르 러너 키트",
+      "grade": 2,
+      "stat": "crit",
+      "owned": 2,
+      "inherit": 30,
+      "height": 1.8
+    },
+    {
+      "id": "a05",
+      "name": "태권 사범 한결",
+      "grade": 2,
+      "stat": "critDamage",
+      "owned": 2,
+      "inherit": 30,
+      "height": 1.8
+    },
+    {
+      "id": "a06",
+      "name": "수인 트레이너 바크",
+      "grade": 2,
+      "stat": "attack",
+      "owned": 2,
+      "inherit": 30,
+      "height": 1.9
+    },
+    {
+      "id": "a07",
+      "name": "방패술 교관 브리짓",
+      "grade": 2,
+      "stat": "defense",
+      "owned": 2,
+      "inherit": 30,
+      "height": 1.8
+    },
+    {
+      "id": "a08",
+      "name": "오크 역사 그롬",
+      "grade": 2,
+      "stat": "maxHp",
+      "owned": 2,
+      "inherit": 30,
+      "height": 2
+    },
+    {
+      "id": "a09",
+      "name": "검무 강사 세이",
+      "grade": 2,
+      "stat": "crit",
+      "owned": 2,
+      "inherit": 30,
+      "height": 1.8
+    },
+    {
+      "id": "a10",
+      "name": "곰 조련사 우르사",
+      "grade": 2,
+      "stat": "critDamage",
+      "owned": 2,
+      "inherit": 30,
+      "height": 1.8
+    },
+    {
+      "id": "a11",
+      "name": "카포에라 마스터 지우",
+      "grade": 2,
+      "stat": "attack",
+      "owned": 2,
+      "inherit": 30,
+      "height": 1.8
+    },
+    {
+      "id": "a12",
+      "name": "사막 체력관 사림",
+      "grade": 2,
+      "stat": "defense",
+      "owned": 2,
+      "inherit": 30,
+      "height": 1.8
+    },
+    {
+      "id": "a13",
+      "name": "스모 선수 오야마",
+      "grade": 2,
+      "stat": "maxHp",
+      "owned": 2,
+      "inherit": 30,
+      "height": 1.9
+    },
+    {
+      "id": "a14",
+      "name": "창술 교관 리엔",
+      "grade": 2,
+      "stat": "crit",
+      "owned": 2,
+      "inherit": 30,
+      "height": 1.8
+    },
+    {
+      "id": "a15",
+      "name": "도깨비 코치 방망",
+      "grade": 2,
+      "stat": "critDamage",
+      "owned": 2,
+      "inherit": 30,
+      "height": 1.8
+    },
+    {
+      "id": "r01",
+      "name": "무에타이 챔피언 칸",
+      "grade": 3,
+      "stat": "attack",
+      "owned": 3,
+      "inherit": 40,
+      "height": 1.8
+    },
+    {
+      "id": "r02",
+      "name": "강철 수도승 혜능",
+      "grade": 3,
+      "stat": "defense",
+      "owned": 3,
+      "inherit": 40,
+      "height": 1.8
+    },
+    {
+      "id": "r03",
+      "name": "엘프 무희 실바나",
+      "grade": 3,
+      "stat": "maxHp",
+      "owned": 3,
+      "inherit": 40,
+      "height": 1.8
+    },
+    {
+      "id": "r04",
+      "name": "닌자 사범 카게",
+      "grade": 3,
+      "stat": "crit",
+      "owned": 3,
+      "inherit": 40,
+      "height": 1.8
+    },
+    {
+      "id": "r05",
+      "name": "바이킹 역사 하랄드",
+      "grade": 3,
+      "stat": "critDamage",
+      "owned": 3,
+      "inherit": 40,
+      "height": 2
+    },
+    {
+      "id": "r06",
+      "name": "사자 수인 레오닉",
+      "grade": 3,
+      "stat": "attack",
+      "owned": 3,
+      "inherit": 40,
+      "height": 1.95
+    },
+    {
+      "id": "r07",
+      "name": "성기사 교관 아우렐",
+      "grade": 3,
+      "stat": "defense",
+      "owned": 3,
+      "inherit": 40,
+      "height": 1.8
+    },
+    {
+      "id": "r08",
+      "name": "거인족 장사 몰록",
+      "grade": 3,
+      "stat": "maxHp",
+      "owned": 3,
+      "inherit": 40,
+      "height": 2.2
+    },
+    {
+      "id": "r09",
+      "name": "쌍권 여제 메이",
+      "grade": 3,
+      "stat": "crit",
+      "owned": 3,
+      "inherit": 40,
+      "height": 1.8
+    },
+    {
+      "id": "r10",
+      "name": "해적 권투가 바르보사",
+      "grade": 3,
+      "stat": "critDamage",
+      "owned": 3,
+      "inherit": 40,
+      "height": 1.8
+    },
+    {
+      "id": "h01",
+      "name": "용권사 류",
+      "grade": 4,
+      "stat": "attack",
+      "owned": 5,
+      "inherit": 60,
+      "height": 1.8
+    },
+    {
+      "id": "h02",
+      "name": "검투왕 막시무스",
+      "grade": 4,
+      "stat": "defense",
+      "owned": 5,
+      "inherit": 60,
+      "height": 1.95
+    },
+    {
+      "id": "h03",
+      "name": "대지의 장사 가이아",
+      "grade": 4,
+      "stat": "maxHp",
+      "owned": 5,
+      "inherit": 60,
+      "height": 2
+    },
+    {
+      "id": "h04",
+      "name": "바람의 권객 시엔",
+      "grade": 4,
+      "stat": "crit",
+      "owned": 5,
+      "inherit": 60,
+      "height": 1.8
+    },
+    {
+      "id": "h05",
+      "name": "흑룡 무투가 카이저",
+      "grade": 4,
+      "stat": "critDamage",
+      "owned": 5,
+      "inherit": 60,
+      "height": 1.8
+    },
+    {
+      "id": "l01",
+      "name": "권신 아수라",
+      "grade": 5,
+      "stat": "attack",
+      "owned": 8,
+      "inherit": 80,
+      "height": 1.95
+    },
+    {
+      "id": "l02",
+      "name": "불멸의 철인 헤라클",
+      "grade": 5,
+      "stat": "maxHp",
+      "owned": 8,
+      "inherit": 80,
+      "height": 2
+    },
+    {
+      "id": "l03",
+      "name": "천상의 무희 선녀",
+      "grade": 5,
+      "stat": "crit",
+      "owned": 8,
+      "inherit": 80,
+      "height": 1.8
+    }
+  ]
+}

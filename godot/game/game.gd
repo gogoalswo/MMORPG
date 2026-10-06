@@ -423,6 +423,13 @@ var _fitness_panel: FitnessPanel
 var _codex_panel: CodexPanel
 ## 상점 창 — 도감 창과 같은 층(10) · 전체 화면 (store_panel.gd)
 var _store_panel: StorePanel
+## PT 트레이너 창 · 동행 트레이너 모델 (docs/features/trainers.md)
+var _trainer_panel: TrainerPanel
+var _buddy_node: Node3D
+var _buddy_id := ""
+var _buddy_swing_until := 0
+var _buddy_swing_speed := 1.0
+var _trainer_art_cache: Dictionary = {}
 ## 강화 창을 도감 [강화] 로 열었나 — 닫으면 도감으로 돌아간다 (`_back_to_codex`)
 var _enhance_from_codex := false
 ## 설정 창 (메뉴 "설정") — 헬스 창과 같은 층(10) · 전체 화면 · 탭 소리 / 아이템 습득 (settings_panel.gd)
@@ -723,6 +730,18 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			_dungeon_result.visible = false
 		&"fitnessResult":
 			_fitness_panel.show_result(payload)
+		&"trainerDraw":
+			_store_panel.set_diamonds(int(payload.get("diamonds", 0)))
+			_store_panel.show_draw(payload.get("got", []), payload.get("new", []), _trainer_art)
+		&"diamonds":
+			_store_panel.set_diamonds(int(payload.get("total", 0)))
+		&"buddySwing":
+			# 동행 트레이너가 한 대 — 내 평타와 같은 간격이라 주먹도 그 배속으로 튼다
+			if str(payload.get("id", "")) == _transport.my_id():
+				_buddy_swing_until = Time.get_ticks_msec() + int(payload.get("ms", 600))
+				_buddy_swing_speed = float(payload.get("speed", 1.0))
+				if _buddy_node is Rig:
+					(_buddy_node as Rig).play("Attack", _buddy_swing_speed, 0.0, true)
 		&"codexResult":
 			_codex_panel.show_result(payload)
 		&"codexAuto":
@@ -2623,6 +2642,7 @@ func _toggle_sandbag() -> void:
 		if _codex_panel.visible:
 			_codex_panel.close_panel()
 		_store_panel.visible = false
+		_trainer_panel.visible = false
 	_sandbag_panel.visible = open
 	if open:
 		_sandbag_note.text = "불러오는 중…"
@@ -2731,10 +2751,11 @@ func _redraw_char(me: Dictionary) -> void:
 		var gear := float(stats.get("gear_" + key, 0.0)) + float(stats.get("passive_" + key, 0.0)) * 100.0
 		var fit := float(stats.get("fitness_" + key, 0.0))
 		var book := float(stats.get("codex_" + key, 0.0))
+		var crew := float(stats.get("trainer_" + key, 0.0))
 		# 증가 줄은 **세 몫을 곱한 합계 %** 하나 — 헬스(fitness.md)·도감(codex.md)은 장비 % 에 더하지 않고
 		# 따로 곱한다. 몫은 그 아래 풀이 줄에 `(장비 × 헬스 × 도감)` 으로 적는다 (2026-10-02 요청:
 		# "헬스가 따로 텍스트로 표시 되는데 이렇게 하지마"). 도감은 0.01% 단위라 소수 둘째 자리까지
-		var total := ((1.0 + gear / 100.0) * (1.0 + fit / 100.0) * (1.0 + book / 100.0) - 1.0) * 100.0
+		var total := ((1.0 + gear / 100.0) * (1.0 + fit / 100.0) * (1.0 + book / 100.0) * (1.0 + crew / 100.0) - 1.0) * 100.0
 		var group: Array = [
 			["기본 " + name, "%d" % int(stats.get("base_" + key, final))],
 			[name + " 증가", _bonus_text(key, total), INV_GOLD_HI if total > 0.0 else INV_DIM],
@@ -2750,6 +2771,8 @@ func _redraw_char(me: Dictionary) -> void:
 		var book_text := ("%.2f" % book).rstrip("0").rstrip(".")
 		if book_text != "0":
 			parts.append("도감 %s%%" % book_text)
+		if int(crew) != 0:
+			parts.append("트레이너 %d%%" % int(crew))
 		if not parts.is_empty():
 			group.append(["(%s)" % " × ".join(parts), "", INV_DIM, "note"])
 		group.append(["최종 " + name, "%d" % final, INV_GOLD_HI])
@@ -3557,6 +3580,8 @@ func _build_skill_bar() -> void:
 		_icon_button("ui_icon_sandbag", "샌드백", _toggle_sandbag, MENU_BTN, true),
 		# 상점 — 샌드백 옆 (2026-10-02 요청, store.md). 그림은 끈 묶은 가죽 돈주머니(`ui_icon_shop`)
 		_icon_button("ui_icon_shop", "상점", _toggle_store, MENU_BTN, true),
+		# PT 트레이너 — 상점 옆 (2026-10-06, trainers.md). 그림은 끈 달린 코치 호루라기(`ui_icon_trainer`)
+		_icon_button("ui_icon_trainer", "트레이너", _toggle_trainer, MENU_BTN, true),
 	]
 	# 랭킹 — 던전 옆. **서버에 붙었을 때만** 선다 (혼자 노는 판에는 견줄 사람이 없다).
 	# 그림은 월계관 두른 금 트로피(`ui_icon_rank`)
@@ -4359,6 +4384,8 @@ func _build_test_switches() -> void:
 	crystal_row.add_child(crystals)
 	crystal_row.add_child(_test_button("옐로우\n30", 72, 14, &"debugCrystals", {"count": 30, "id": Items.yellow_crystal_id()}))
 	crystal_row.add_child(_test_button("프로틴\n+1만", 72, 14, &"debugProtein", {}))
+	# 다이아 +1만 — 로컬은 결제가 없어 트레이너 뽑기를 볼 수 없다 (`World.debug_diamonds`, 2026-10-06)
+	crystal_row.add_child(_test_button("다이아\n+1만", 72, 14, &"debugDiamonds", {}))
 	column.add_child(crystal_row)
 	column.move_child(crystal_row, 0)
 	# 스킬 강화 — **모든 스킬 1번 강화 · 2번 강화 · 초기화** (2026-09-23 요청). 경험치북
@@ -5272,6 +5299,36 @@ func _build_gate_panel() -> void:
 	_store_panel.visibility_changed.connect(func(): store_back.visible = _store_panel.visible)
 	top.add_child(_store_panel)
 	_close_button(_store_panel, _toggle_store, 0)
+	# 뽑기 → 트레이너 — 1회 · 10회 (다이아). 판정은 `Ledger.trainer_draw` → docs/features/trainers.md
+	var rates := PackedStringArray()
+	for g in Trainers.grades():
+		rates.append("%s %s%%" % [str(g.name), str(g.chance).trim_suffix(".0")])
+	var draw_note := " · ".join(rates)
+	_store_panel.set_products("draw/trainer", [
+		{"id": "trainer_1", "name": "트레이너 1회 뽑기", "note": draw_note,
+			"art": _trainer_art("l01"), "diamonds": Trainers.draw_cost()},
+		{"id": "trainer_10", "name": "트레이너 %d회 뽑기" % Trainers.draw_multi(), "note": draw_note,
+			"art": _trainer_art("l02"), "diamonds": Trainers.draw_cost() * Trainers.draw_multi()},
+	])
+	_store_panel.buy_requested.connect(func(id: String) -> void:
+		_transport.send(&"trainerDraw", {"times": Trainers.draw_multi() if id == "trainer_10" else 1})
+	)
+	# 트레이너 창도 같은 층·같은 결이다 → docs/features/trainers.md
+	_trainer_panel = TrainerPanel.make(_frame_box, _trainer_art)
+	_trainer_panel.theme = _ui_root.theme
+	_trainer_panel.pick_requested.connect(func(id: String) -> void:
+		_transport.send(&"trainerPick", {"id": id})
+	)
+	var trainer_back := ColorRect.new()
+	trainer_back.name = "TrainerBack"
+	trainer_back.color = DungeonPanel.CARD_DARK
+	trainer_back.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	trainer_back.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	trainer_back.visible = false
+	top.add_child(trainer_back)
+	_trainer_panel.visibility_changed.connect(func(): trainer_back.visible = _trainer_panel.visible)
+	top.add_child(_trainer_panel)
+	_close_button(_trainer_panel, _toggle_trainer, 0)
 	# 설정 창도 같은 층·같은 결이다 → docs/features/hud.md "설정 창"
 	_settings_panel = SettingsPanel.make()
 	_settings_panel.theme = _ui_root.theme
@@ -5353,6 +5410,7 @@ func _open_gate() -> void:
 	_fitness_panel.visible = false
 	_codex_panel.visible = false
 	_store_panel.visible = false
+	_trainer_panel.visible = false
 	_settings_panel.visible = false
 	_gate_panel.open(_shown_zone)
 
@@ -5367,6 +5425,7 @@ func _toggle_dungeon() -> void:
 	_codex_panel.visible = false
 	_sandbag_panel.visible = false
 	_store_panel.visible = false
+	_trainer_panel.visible = false
 	_settings_panel.visible = false
 	_dungeon_panel.entries = _dungeon_entries()
 	_dungeon_panel.open(_shown_zone)
@@ -5397,6 +5456,7 @@ func _toggle_fitness() -> void:
 	_codex_panel.visible = false
 	_sandbag_panel.visible = false
 	_store_panel.visible = false
+	_trainer_panel.visible = false
 	_settings_panel.visible = false
 	_fitness_panel.refresh(_me())
 	_fitness_panel.open()
@@ -5412,6 +5472,7 @@ func _toggle_codex() -> void:
 	_fitness_panel.visible = false
 	_sandbag_panel.visible = false
 	_store_panel.visible = false
+	_trainer_panel.visible = false
 	_settings_panel.visible = false
 	_codex_panel.refresh(_me())
 	_codex_panel.open()
@@ -5429,7 +5490,38 @@ func _toggle_store() -> void:
 	_settings_panel.visible = false
 	if _codex_panel.visible:
 		_codex_panel.close_panel()
+	_trainer_panel.visible = false
+	_store_panel.set_diamonds(int(_me().get("diamonds", 0)))
 	_store_panel.open()
+
+
+## 트레이너 단추. 열려 있으면 닫는다. 같은 층의 창들을 닫고 연다 (docs/features/trainers.md)
+func _toggle_trainer() -> void:
+	if _trainer_panel.visible:
+		_trainer_panel.close_panel()
+		return
+	_gate_panel.visible = false
+	_dungeon_panel.visible = false
+	_fitness_panel.visible = false
+	_sandbag_panel.visible = false
+	_store_panel.visible = false
+	_settings_panel.visible = false
+	if _codex_panel.visible:
+		_codex_panel.close_panel()
+	_trainer_panel.refresh(_me())
+	_trainer_panel.open()
+
+
+## 트레이너 원화 — `res://assets/trainers/trainer_<id>.jpg`. 없으면 null (카드는 빈 자리)
+func _trainer_art(id: String) -> Texture2D:
+	if _trainer_art_cache.has(id):
+		return _trainer_art_cache[id]
+	var path := "res://assets/trainers/%s.jpg" % Trainers.look(id)
+	var texture: Texture2D = null
+	if FileAccess.file_exists(path) or FileAccess.file_exists(path + ".import"):
+		texture = load(path) as Texture2D
+	_trainer_art_cache[id] = texture
+	return texture
 
 
 ## 설정 단추. 열려 있으면 닫는다. 헬스·도감 창과 한 층이라 그 넷을 닫고 연다
@@ -5442,6 +5534,7 @@ func _toggle_settings() -> void:
 	_fitness_panel.visible = false
 	_sandbag_panel.visible = false
 	_store_panel.visible = false
+	_trainer_panel.visible = false
 	_codex_panel.visible = false
 	_settings_panel.refresh(_me())
 	_settings_panel.open()
@@ -6236,6 +6329,7 @@ func _draw_state() -> void:
 				node.play("Idle")
 
 	_tick_ring(snap)
+	_draw_buddy(me)
 
 	var alive := 0
 	for monster in snap.get("monsters", []):
@@ -6315,6 +6409,9 @@ func _show_hit(payload: Dictionary) -> void:
 		# 최대 체력의 4분의 1을 한 번에 맞으면 제일 진하다
 		_hurt.hit(float(payload.get("amount", 0)) / maxf(1.0, max_hp * 0.25))
 
+	# 동행 트레이너의 한 대는 숫자와 섬광만 — 소리·히트스톱·흔들림은 내 손맛이라 겹치지 않는다
+	if bool(payload.get("buddy", false)):
+		return
 	# 평타만 소리를 낸다 — 스킬 피격(`skill` 이 있음)·내가 맞음·회복은 조용하다
 	if not on_me and str(payload.get("skill", "")) == "" and _hit_sound.stream != null:
 		_hit_sound.play()
@@ -6742,3 +6839,50 @@ func _show_skill_range(payload: Dictionary) -> void:
 		roundi(rad_to_deg(float(payload.get("arc", 0.0)))),
 		int(payload.get("hits", 0)),
 	]
+
+
+## 동행 PT 트레이너를 그린다 — 자리·하는 일은 판정(`World._step_buddies`)이 `me.buddy` 에 둔다.
+## 모델(`trainer_<id>.glb`)이 없으면 등급 색 기둥이다. **누를 수 없다** — 충돌체가 없고 `_mob_nodes`
+## 에도 없어서 눌러도 땅으로 읽힌다 (docs/features/trainers.md "동행")
+func _draw_buddy(me: Dictionary) -> void:
+	var buddy: Dictionary = me.get("buddy", {})
+	var id := str(buddy.get("id", ""))
+	if _buddy_node != null and (not is_instance_valid(_buddy_node) or id != _buddy_id):
+		if is_instance_valid(_buddy_node):
+			_buddy_node.queue_free()
+		_buddy_node = null
+	_buddy_id = id
+	if id == "" or _zone_node == null:
+		return
+	if _buddy_node == null:
+		var info := Trainers.trainer(id)
+		var height := float(info.get("height", Rig.HUMAN_HEIGHT))
+		_buddy_node = Rig.create(Trainers.look(id), height)
+		var foot := 0.0
+		if _buddy_node == null:
+			var body := MeshInstance3D.new()
+			var shape := CapsuleMesh.new()
+			shape.radius = 0.3
+			shape.height = height
+			body.mesh = shape
+			var mat := StandardMaterial3D.new()
+			mat.albedo_color = TrainerPanel.grade_color(int(info.get("grade", 1)))
+			body.material_override = mat
+			_buddy_node = body
+			foot = height * 0.5
+		_buddy_node.name = "Buddy"
+		_buddy_node.set_meta("foot", foot)
+		_zone_node.add_child(_buddy_node)
+	var x := float(buddy.get("x", 0.0))
+	var z := float(buddy.get("z", 0.0))
+	_buddy_node.position = Vector3(x, _ground_y(x, z) + float(_buddy_node.get_meta("foot", 0.0)), z)
+	_buddy_node.rotation.y = float(buddy.get("rot", 0.0))
+	_buddy_node.visible = not bool(me.get("dead", false))
+	if _buddy_node is Rig:
+		var rig := _buddy_node as Rig
+		if Time.get_ticks_msec() < _buddy_swing_until:
+			rig.play("Attack", _buddy_swing_speed)
+		elif str(buddy.get("state", "idle")) == "run":
+			rig.play("Run")
+		else:
+			rig.play("Idle")

@@ -67,9 +67,10 @@ const FIST_BONES := ["RightHand", "LeftHand"]
 
 ## 없으면 null. 부르는 쪽이 기둥으로 대신한다
 static func create(look: String, target_height: float) -> Rig:
-	if not FILES.has(look):
+	# PT 트레이너 53명은 표에서 이름을 짓는다 — `trainer_<id>.glb` (docs/features/trainers.md)
+	if not FILES.has(look) and not look.begins_with("trainer_"):
 		return null
-	var path: String = DIR + FILES[look]
+	var path: String = DIR + str(FILES.get(look, look + ".glb"))
 	if not ResourceLoader.exists(path):
 		return null
 	var packed: PackedScene = load(path)

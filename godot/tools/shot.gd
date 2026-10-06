@@ -145,6 +145,10 @@ func _run() -> void:
 	if skill == "fitness":
 		await _fitness(game)
 		return
+	# 트레이너 창 — 카드 그림을 3D 모델로 찍는지 (장 수 · 모델이 그림에서 차지한 범위를 글로 찍는다)
+	if skill == "trainers":
+		await _trainers(game)
+		return
 
 	# 주먹 기운 — 등급 일곱을 차례로 끼워 캐릭터 둘레를 가까이 찍는다
 	if skill == "fist":
@@ -776,6 +780,37 @@ func _portal(game: Node3D) -> void:
 ## 헬스 강화 문장 이펙트를 늦춰서 찍는다 (`npm run shot:godot -- fitness`). 문장 둘레만 잘라
 ## 위 줄 성공 · 아래 줄 실패, 시간 순으로 셋씩 붙인다 → docs/features/fitness.md
 const FITNESS_TIMES := [0.06, 0.25, 0.6]
+
+
+## 트레이너 창 (`npm run shot:godot -- trainers`) — 카드 그림을 3D 모델로 다 찍을 때까지 기다렸다가
+## 찍힌 장 수와, 그림마다 **불투명한 칸의 위·아래·좌·우 끝**(모델이 들어앉은 자리)을 글로 낸다.
+## 창 전체는 `logs/shot_trainers.png` → docs/features/trainers.md
+func _trainers(game: Node3D) -> void:
+	game._toggle_trainer()
+	var panel: TrainerPanel = game._trainer_panel
+	for i in 600:
+		await process_frame
+		if panel._shots.pending() == 0 and not panel._shots._busy:
+			break
+	var made := 0
+	for info in Trainers.all():
+		var shot := TrainerPortraits.cached(str(info.id))
+		if shot == null:
+			continue
+		made += 1
+		if str(info.id) in ["n01", "n18", "r08", "l03"]:
+			var img := shot.get_image()
+			var used := img.get_used_rect()
+			print("  %s %s — 그림 %dx%d 중 모델 x %d~%d · y %d~%d" % [
+				info.id, info.name, img.get_width(), img.get_height(),
+				used.position.x, used.end.x, used.position.y, used.end.y])
+	print("  카드 3D 그림 %d / %d장" % [made, Trainers.all().size()])
+	for i in 3:
+		await process_frame
+	await RenderingServer.frame_post_draw
+	root.get_texture().get_image().save_png("res://../logs/shot_trainers.png")
+	print("logs/shot_trainers.png")
+	quit(0)
 
 
 func _fitness(game: Node3D) -> void:

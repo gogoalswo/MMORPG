@@ -43,6 +43,8 @@ var _tabs: Array = []
 var _grid: GridContainer
 ## 고른 트레이너의 3D 모델 (2026-10-06 — 그림 대신). 모델이 없으면 무대가 원화로 대신한다
 var _detail_art: TrainerStage
+## 카드 그림을 3D 모델로 찍는 보이지 않는 무대 (`TrainerPortraits`)
+var _shots: TrainerPortraits
 var _detail_name: Label
 var _detail_grade: Label
 var _detail_lines: Label
@@ -148,6 +150,9 @@ func _build(frame_box: Callable) -> void:
 	detail.alignment = BoxContainer.ALIGNMENT_CENTER
 	detail.add_theme_constant_override("separation", 10)
 	body.add_child(detail)
+	_shots = TrainerPortraits.new()
+	_shots.baked.connect(_on_baked)
+	add_child(_shots)
 	_detail_art = TrainerStage.make(DETAIL_ART)
 	_detail_art.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	detail.add_child(_detail_art)
@@ -297,6 +302,13 @@ func _fill() -> void:
 	for card in _grid.get_children():
 		_grid.remove_child(card)
 		card.queue_free()
+	# 이 탭의 카드를 3D 모델로 찍어 달라고 줄 세운다 — 찍히는 대로 그림이 바뀐다 (`_on_baked`)
+	var shown: Array = []
+	for info in Trainers.all():
+		if _tab == 0 or int(info.grade) == _tab:
+			shown.append(str(info.id))
+	if _shots.is_inside_tree():
+		_shots.request(shown)
 	var owned: Dictionary = _me.get("trainers", {})
 	var active := str(_me.get("trainer_active", ""))
 	for info in Trainers.all():
@@ -322,7 +334,7 @@ func _fill_detail(owned: Dictionary, active: String) -> void:
 		return
 	var grade := Trainers.grade(int(info.grade))
 	var have := int(owned.get(_selected, 0))
-	_detail_art.show_trainer(_selected, _art(_selected), have > 0)
+	_detail_art.show_trainer(_selected, _concept(_selected), have > 0)
 	_detail_name.text = str(info.name)
 	_detail_name.add_theme_color_override("font_color", TrainerPanel.grade_color(int(info.grade)))
 	_detail_grade.text = "%s 등급" % str(grade.get("name", ""))
@@ -436,8 +448,24 @@ func _on_pick() -> void:
 	pick_requested.emit("" if _selected == active else _selected)
 
 
+## 카드 그림 — **3D 모델을 찍은 것**(`TrainerPortraits`, 2026-10-06), 아직 못 찍었으면 원화
 func _art(id: String) -> Texture2D:
+	var shot := TrainerPortraits.cached(id)
+	if shot != null:
+		return shot
 	return _portrait.call(id) if _portrait.is_valid() else null
+
+
+## 원화 — 오른쪽 무대가 모델이 없을 때 대신 깐다
+func _concept(id: String) -> Texture2D:
+	return _portrait.call(id) if _portrait.is_valid() else null
+
+
+## 한 장 찍혔다 — 보이는 카드의 그림을 갈아 끼운다
+func _on_baked(id: String, texture: Texture2D) -> void:
+	var card := _grid.get_node_or_null("card_%s" % id)
+	if card != null:
+		(card.find_child("art", true, false) as TextureRect).texture = texture
 
 
 ## 카드 한 장 — 트레이너 창 · 뽑기 결과가 같이 쓴다. 원화 · 등급 색 테 · 이름 · 표시(동행 / ×개수 / 미보유)

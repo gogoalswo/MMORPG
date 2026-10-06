@@ -200,7 +200,8 @@ func _case_npcs() -> void:
 	print("  NPC %d명 → 모델 %s" % [looks.size(), looks])
 
 
-## PT 트레이너 53명 — 전원 모델로 만들어지고 클립 셋(Idle · Run · Attack)이 있고 키가 표대로다 (trainers.md)
+## PT 트레이너 53명 — 전원 모델로 만들어지고 대기 · 달리기 · **발차기 넷**(플레이어와 같은 것, 2026-10-06)이 있고
+## 키가 표대로다. 발차기는 격투가 클립을 옮겨 붙인 것이라 **정말 발을 머리 높이까지 드는지** 뼈 자리로 잰다 (trainers.md)
 func _case_trainers() -> void:
 	var made := 0
 	for info in Trainers.all():
@@ -210,14 +211,49 @@ func _case_trainers() -> void:
 		if rig == null:
 			_fail("트레이너 %s(%s) 가 모델로 안 만들어진다" % [info.name, id])
 			continue
-		for clip in ["Idle", "Run", "Attack"]:
+		for clip in ["Idle", "Run", "KickSlapFull", "KickSlapIn", "KickSlapA", "KickSlapB"]:
 			if not rig.has_clip(clip):
 				_fail("트레이너 %s 에 %s 클립이 없다 %s" % [id, clip, rig.clips()])
 		if absf(_height(rig) - height) > 0.03:
 			_fail("트레이너 %s 키가 %.2f (표 %.2f)" % [id, _height(rig), height])
 		made += 1
 		rig.free()
-	print("  트레이너 %d명 → 모델" % made)
+	print("  트레이너 %d명 → 모델 (발차기 넷)" % made)
+
+
+## 등급마다 한 명씩(첫째) — 발차기에서 왼발이 가장 높이 올라간 때가 머리 높이의 80% 를 넘어야 한다.
+## 동작은 트리 안에서만 뼈에 입혀지므로 `_run_scene` 에서 부른다
+func _case_trainer_kicks() -> void:
+	for id in ["n01", "a01", "r01", "h01", "l01"]:
+		var rig := Rig.create(Trainers.look(id), float(Trainers.trainer(id).get("height", Rig.HUMAN_HEIGHT)))
+		if rig == null:
+			continue
+		root.add_child(rig)
+		await process_frame
+		_check_kick(rig, id)
+		rig.queue_free()
+
+
+func _check_kick(rig: Rig, id: String) -> void:
+	# 뼈대 기준 좌표로 견준다 — 발과 머리가 같은 기준이면 된다
+	var skeleton: Skeleton3D = rig.find_children("*", "Skeleton3D", true, false)[0]
+	var rest_foot := skeleton.get_bone_global_pose(skeleton.find_bone("LeftFoot")).origin.y
+	var foot := skeleton.find_bone("LeftFoot")
+	var head := skeleton.find_bone("Head")
+	for clip in ["KickSlapIn", "KickSlapFull"]:
+		var best := -INF
+		var head_y := 0.0
+		for i in 19:
+			rig._anim.play(clip)
+			rig._anim.seek(i * 0.025, true)
+			var f := skeleton.get_bone_global_pose(foot).origin.y - rest_foot
+			if f > best:
+				best = f
+				head_y = skeleton.get_bone_global_pose(head).origin.y - rest_foot
+		if best < head_y * 0.8:
+			_fail("트레이너 %s 의 %s — 왼발 최고 %.2f 가 머리(%.2f)의 80%% 에 못 미친다 (발바닥 기준)" % [id, clip, best, head_y])
+		elif id == "l01":
+			print("  트레이너 발차기 (%s %s): 왼발 최고 %.2f · 그때 머리 %.2f (발바닥 기준)" % [id, clip, best, head_y])
 
 
 ## 이벤트가 오면 그 동작을 틀고, 끝나면 대기로 돌아가는지 본다
@@ -304,6 +340,7 @@ func _check_moves(game: Node3D) -> void:
 
 ## 실제 화면에서 뿔토끼 들판(meadow)까지 걸어가 몬스터가 모델로 서 있는지 본다
 func _run_scene() -> void:
+	await _case_trainer_kicks()
 	root.add_child(load("res://main.tscn").instantiate())
 	await process_frame
 	var game: Node3D = root.get_node("Game")

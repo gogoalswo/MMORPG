@@ -27,6 +27,9 @@
  * 채 팔을 내리고 뽑은 격투가). 새 뼈대의 기본 자세 대신 **뼈 방향을 클립 뼈대에 맞춘 가상 자세**
  * (`align-rest.mjs`)에 돈 만큼을 입힌다. 클립이 키로 안 가진 뼈도 가상 자세로 가야 하므로 클립 뼈대에
  * 있는 뼈는 **전부** 채널을 쓴다 (손가락은 가상 자세에서도 안 돌아 주먹이 그대로다).
+ *
+ * `--only=이름,이름` — 클립 GLB 에서 **이 이름의 클립만** 옮긴다 (2026-10-06, PT 트레이너에 격투가 발차기만).
+ * 안 주면 전부다. 격투가 동작 묶음은 스킬까지 1.4MB 라 통째로 붙이면 트레이너 53명이 그만큼씩 무거워진다.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { alignedRest } from './align-rest.mjs';
@@ -41,7 +44,10 @@ const REST_EPS = 1e-3;
 
 const ALIGN = process.argv.includes('--align');
 const RETARGET = ALIGN || process.argv.includes('--retarget');
-const [output, base, clips] = process.argv.slice(2).filter((a) => a !== '--retarget' && a !== '--align');
+const ONLY = (process.argv.find((a) => a.startsWith('--only=')) ?? '').slice('--only='.length).split(',').filter(Boolean);
+const [output, base, clips] = process.argv
+  .slice(2)
+  .filter((a) => a !== '--retarget' && a !== '--align' && !a.startsWith('--only='));
 if (!output || !base || !clips) {
   console.error('사용법: node scripts/add-clips.mjs <출력.glb> <캐릭터.glb> <클립.glb> [--retarget | --align]');
   process.exit(1);
@@ -66,6 +72,11 @@ function readGlb(path) {
 
 const dst = readGlb(base);
 const src = readGlb(clips);
+if (ONLY.length > 0) {
+  const missing = ONLY.filter((name) => !src.json.animations.some((a) => a.name === name));
+  if (missing.length > 0) throw new Error(`클립 GLB 에 없는 이름: ${missing.join(' ')}`);
+  src.json.animations = src.json.animations.filter((a) => ONLY.includes(a.name));
+}
 const json = dst.json;
 
 // bufferView 를 조각째 들고 다니다 마지막에 한 번 잇는다 (build-varco-character 와 같다)

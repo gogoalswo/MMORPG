@@ -431,6 +431,10 @@ var _buddy_node: Node3D
 var _buddy_id := ""
 var _buddy_swing_until := 0
 var _buddy_swing_speed := 1.0
+## 동행 트레이너의 발차기 — 플레이어와 같은 규칙으로 고른다 (`_buddy_kick_clip`)
+var _buddy_clip := KICK_FULL
+var _buddy_last_kick_at := 0
+var _buddy_kick_to_a := true
 var _trainer_art_cache: Dictionary = {}
 ## 강화 창을 도감 [강화] 로 열었나 — 닫으면 도감으로 돌아간다 (`_back_to_codex`)
 var _enhance_from_codex := false
@@ -740,12 +744,16 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 		&"diamonds":
 			_store_panel.set_diamonds(int(payload.get("total", 0)))
 		&"buddySwing":
-			# 동행 트레이너가 한 대 — 내 평타와 같은 간격이라 주먹도 그 배속으로 튼다
+			# 동행 트레이너가 한 대 — **플레이어처럼 발차기**(2026-10-06 요청 "공격 모션을 지금 플레이어처럼
+			# 발차기로 해"). 내 평타와 같은 간격이라 같은 클립을 같은 배속으로, 클립 끝까지 튼다
 			if str(payload.get("id", "")) == _transport.my_id():
-				_buddy_swing_until = Time.get_ticks_msec() + int(payload.get("ms", 600))
 				_buddy_swing_speed = float(payload.get("speed", 1.0))
-				if _buddy_node is Rig:
-					(_buddy_node as Rig).play("Attack", _buddy_swing_speed, 0.0, true)
+				_buddy_clip = _buddy_kick_clip(int(payload.get("ms", 900)))
+				var length := 0.9
+				if _buddy_node is Rig and (_buddy_node as Rig).has_clip(_buddy_clip):
+					length = (_buddy_node as Rig).clip_length(_buddy_clip)
+					(_buddy_node as Rig).play(_buddy_clip, _buddy_swing_speed, 0.0, true)
+				_buddy_swing_until = Time.get_ticks_msec() + int(length * 1000.0 / maxf(0.1, _buddy_swing_speed))
 		&"codexResult":
 			_codex_panel.show_result(payload)
 		&"codexAuto":
@@ -6177,6 +6185,22 @@ func _kick_clip(interval_ms: int) -> String:
 	return clip
 
 
+## 동행 트레이너 발차기 고르기 — `_kick_clip` 과 같은 규칙(초당 `KICK_CHAIN_HITS` 미만이면 차고 내려와 서고,
+## 그 위로는 무릎 들며 한 번 → 바깥·안쪽 번갈아). 상태만 트레이너 것을 따로 쓴다
+func _buddy_kick_clip(interval_ms: int) -> String:
+	var now := Time.get_ticks_msec()
+	var chained := now - _buddy_last_kick_at <= int(interval_ms * 1.5)
+	_buddy_last_kick_at = now
+	if 1000.0 / maxf(1.0, interval_ms) < KICK_CHAIN_HITS:
+		return KICK_FULL
+	if not chained:
+		_buddy_kick_to_a = true
+		return KICK_IN
+	var clip := KICK_A if _buddy_kick_to_a else KICK_B
+	_buddy_kick_to_a = not _buddy_kick_to_a
+	return clip
+
+
 func _start_move(clip: String, speed := 1.0) -> void:
 	if not _player is Rig:
 		return
@@ -6892,7 +6916,7 @@ func _draw_buddy(me: Dictionary) -> void:
 	if _buddy_node is Rig:
 		var rig := _buddy_node as Rig
 		if Time.get_ticks_msec() < _buddy_swing_until:
-			rig.play("Attack", _buddy_swing_speed)
+			rig.play(_buddy_clip, _buddy_swing_speed)
 		elif str(buddy.get("state", "idle")) == "run":
 			rig.play("Run")
 		else:

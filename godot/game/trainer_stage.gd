@@ -49,32 +49,9 @@ func _build(size: Vector2) -> void:
 	_view.msaa_3d = Viewport.MSAA_4X
 	_view.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
 	_box.add_child(_view)
-
-	var env := WorldEnvironment.new()
-	var environment := Environment.new()
-	environment.background_mode = Environment.BG_CLEAR_COLOR
-	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	environment.ambient_light_color = Color(0.75, 0.72, 0.66)
-	environment.ambient_light_energy = 0.9
-	env.environment = environment
-	_view.add_child(env)
-	# 왼쪽 위 앞에서 오는 빛 + 뒤에서 테두리를 살리는 빛
-	var key := DirectionalLight3D.new()
-	key.rotation_degrees = Vector3(-35, -30, 0)
-	key.light_energy = 1.3
-	_view.add_child(key)
-	var rim := DirectionalLight3D.new()
-	rim.rotation_degrees = Vector3(-20, 160, 0)
-	rim.light_energy = 0.6
-	_view.add_child(rim)
-
-	_pivot = Node3D.new()
-	_pivot.name = "pivot"
-	_view.add_child(_pivot)
-	_camera = Camera3D.new()
-	_camera.fov = FOV
-	_camera.current = true
-	_view.add_child(_camera)
+	var parts := TrainerStage.build_world(_view)
+	_pivot = parts.pivot
+	_camera = parts.camera
 
 	# 모델이 없으면(에셋을 안 받은 사람) 원화를 그 자리에 깐다
 	_fallback = TextureRect.new()
@@ -85,6 +62,44 @@ func _build(size: Vector2) -> void:
 	_fallback.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_fallback.visible = false
 	add_child(_fallback)
+
+
+## 무대 세상 — 빛 둘 · 주변광 · 모델을 얹을 축(`pivot`) · 카메라. 카드 그림을 찍는 `TrainerPortraits` 도 같은 것을 쓴다
+## (그래서 카드와 오른쪽 무대가 같은 빛·같은 각도로 보인다)
+static func build_world(view: SubViewport) -> Dictionary:
+	var env := WorldEnvironment.new()
+	var environment := Environment.new()
+	environment.background_mode = Environment.BG_CLEAR_COLOR
+	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	environment.ambient_light_color = Color(0.75, 0.72, 0.66)
+	environment.ambient_light_energy = 0.9
+	env.environment = environment
+	view.add_child(env)
+	# 왼쪽 위 앞에서 오는 빛 + 뒤에서 테두리를 살리는 빛
+	var key := DirectionalLight3D.new()
+	key.rotation_degrees = Vector3(-35, -30, 0)
+	key.light_energy = 1.3
+	view.add_child(key)
+	var rim := DirectionalLight3D.new()
+	rim.rotation_degrees = Vector3(-20, 160, 0)
+	rim.light_energy = 0.6
+	view.add_child(rim)
+	var pivot := Node3D.new()
+	pivot.name = "pivot"
+	view.add_child(pivot)
+	var camera := Camera3D.new()
+	camera.fov = FOV
+	camera.current = true
+	view.add_child(camera)
+	return {"pivot": pivot, "camera": camera}
+
+
+## 발끝부터 머리까지 화면 세로의 90% — 키가 달라도 같은 크기로 담는다 (모델 원점은 발바닥)
+static func frame(camera: Camera3D, height: float) -> void:
+	var half := height * 0.5
+	var distance := half / tan(deg_to_rad(FOV * 0.5)) / 0.9
+	camera.position = Vector3(0.0, half, distance)
+	camera.look_at(Vector3(0.0, half, 0.0))
 
 
 ## 트레이너 하나를 세운다. 같은 트레이너면 다시 짓지 않는다 (돌던 각도도 그대로). `owned` 가 아니면 어둡게
@@ -107,11 +122,7 @@ func show_trainer(id: String, art: Texture2D, owned: bool) -> void:
 	_pivot.add_child(_rig)
 	_pivot.rotation.y = 0.0
 	_rig.play("Idle")
-	# 발끝부터 머리까지 화면 세로의 90% — 키가 달라도 같은 크기로 담는다
-	var half := height * 0.5
-	var distance := half / tan(deg_to_rad(FOV * 0.5)) / 0.9
-	_camera.position = Vector3(0.0, half, distance)
-	_camera.look_at(Vector3(0.0, half, 0.0))
+	TrainerStage.frame(_camera, height)
 
 
 ## 지금 서 있는 모델 — 테스트가 본다 (없으면 null)

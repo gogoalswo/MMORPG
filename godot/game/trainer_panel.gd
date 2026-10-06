@@ -514,12 +514,12 @@ static func make_card(info: Dictionary, art: Texture2D, have: int, active: bool,
 	return card
 
 
-## 등급 색 — 장비 등급과 같은 표 (`combat.json` 의 gradeColors)
+## 등급 색 — 장비 등급과 같은 표 (`items.json` 의 gradeColors). 예전에는 `combat.json` 의 없는 칸을 읽어
+## 등급과 상관없이 전부 상아색이었다 (2026-10-06 뽑기 연출에서 이름을 등급 색으로 칠하다 찾았다)
 static func grade_color(grade: int) -> Color:
-	var colors: Array = GameData.load_table("combat").get("gradeColors", [])
-	if grade < 1 or grade > colors.size():
+	if grade < 1 or grade > Trainers.grades().size():
 		return IVORY
-	return Color(str(colors[grade - 1]))
+	return Items.grade_color(grade)
 
 
 ## "공격력 +8%" — 치명타 둘은 %p 지만 화면에는 % 로 적는다

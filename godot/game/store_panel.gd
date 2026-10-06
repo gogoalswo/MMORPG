@@ -172,52 +172,14 @@ func diamonds_text() -> String:
 	return _diamonds.text
 
 
-## 뽑기 결과 — 창 위에 덮는 판. 나온 트레이너 카드(새로 얻은 것은 "NEW")와 **확인**
-## `portrait` 는 트레이너 id → 원화 (트레이너 창과 같은 것)
+## 뽑기 결과 — 창 위에 덮는 3D 연출 판 (`TrainerDraw` — 덤벨이 떨어져 서고 [모두 보기] 로 카드가 선다 → [확인])
+## `portrait` 는 트레이너 id → 카드 그림 (트레이너 창과 같은 것) → docs/features/trainers.md "뽑기 연출"
 func show_draw(got: Array, fresh: Array, portrait: Callable) -> void:
 	hide_draw()
-	_result = ColorRect.new()
-	_result.name = "draw_result"
-	(_result as ColorRect).color = Color(0.03, 0.025, 0.02, 0.92)
-	_result.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var draw := TrainerDraw.make(got, fresh, portrait)
+	draw.closed.connect(hide_draw)
+	_result = draw
 	add_child(_result)
-	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_result.add_child(center)
-	var stack := VBoxContainer.new()
-	stack.alignment = BoxContainer.ALIGNMENT_CENTER
-	stack.add_theme_constant_override("separation", 18)
-	center.add_child(stack)
-	var head := _label("뽑기 결과", 30, TITLE)
-	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	stack.add_child(head)
-	var grid := GridContainer.new()
-	grid.name = "cards"
-	grid.columns = mini(5, maxi(1, got.size()))
-	grid.add_theme_constant_override("h_separation", 12)
-	grid.add_theme_constant_override("v_separation", 12)
-	stack.add_child(grid)
-	for i in got.size():
-		var id := str(got[i])
-		var info := Trainers.trainer(id)
-		var art: Texture2D = portrait.call(id) if portrait.is_valid() else null
-		var card := TrainerPanel.make_card(info, art, 1, false, false)
-		var tag: Label = card.find_child("tag", true, false)
-		if i < fresh.size() and bool(fresh[i]):
-			tag.text = "NEW"
-			tag.add_theme_color_override("font_color", GOLD)
-		else:
-			tag.text = Trainers.grade(int(info.get("grade", 1))).get("name", "")
-		grid.add_child(card)
-	var ok := Button.new()
-	ok.name = "ok"
-	ok.text = "확인"
-	ok.custom_minimum_size = Vector2(220, 58)
-	ok.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	ok.focus_mode = Control.FOCUS_NONE
-	ok.add_theme_font_size_override("font_size", 24)
-	ok.pressed.connect(hide_draw)
-	stack.add_child(ok)
 
 
 func hide_draw() -> void:

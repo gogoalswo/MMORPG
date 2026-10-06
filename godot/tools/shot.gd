@@ -149,6 +149,10 @@ func _run() -> void:
 	if skill == "trainers":
 		await _trainers(game)
 		return
+	# 트레이너 뽑기 연출 — 덤벨이 선 판 · 빛기둥이 솟는 중 · 카드가 다 선 판 (10회)
+	if skill == "draw":
+		await _draw(game)
+		return
 
 	# 주먹 기운 — 등급 일곱을 차례로 끼워 캐릭터 둘레를 가까이 찍는다
 	if skill == "fist":
@@ -780,6 +784,34 @@ func _portal(game: Node3D) -> void:
 ## 헬스 강화 문장 이펙트를 늦춰서 찍는다 (`npm run shot:godot -- fitness`). 문장 둘레만 잘라
 ## 위 줄 성공 · 아래 줄 실패, 시간 순으로 셋씩 붙인다 → docs/features/fitness.md
 const FITNESS_TIMES := [0.06, 0.25, 0.6]
+
+
+## 트레이너 뽑기 연출 (`npm run shot:godot -- draw`) — 10회 한 판을 세 장으로: 덤벨이 다 선 뒤 ·
+## [모두 보기] 직후(빛기둥) · 카드가 다 선 뒤 → `logs/shot_draw_1~3.png` (docs/features/trainers.md "뽑기 연출")
+func _draw(game: Node3D) -> void:
+	game._toggle_store()
+	var store: StorePanel = game._store_panel
+	var got := ["n03", "a02", "l01", "n07", "r03", "n12", "a04", "h02", "n01", "r05"]
+	var fresh := [true, true, true, false, true, false, false, true, false, false]
+	store.show_draw(got, fresh, func(id: String) -> Texture2D: return game._trainer_art(id))
+	var draw: TrainerDraw = store.draw_shown()
+	var times := [2.2, 0.3, 0.5, 3.0]
+	await create_timer(times[0]).timeout
+	await _save_shot("logs/shot_draw_1.png")
+	draw.reveal_all()
+	await create_timer(times[1]).timeout
+	await _save_shot("logs/shot_draw_2.png")
+	await create_timer(times[2]).timeout
+	await _save_shot("logs/shot_draw_3.png")
+	await create_timer(times[3]).timeout
+	await _save_shot("logs/shot_draw_4.png")
+	quit(0)
+
+
+func _save_shot(path: String) -> void:
+	await RenderingServer.frame_post_draw
+	root.get_texture().get_image().save_png("res://../" + path)
+	print(path)
 
 
 ## 트레이너 창 (`npm run shot:godot -- trainers`) — 카드 그림을 3D 모델로 다 찍을 때까지 기다렸다가

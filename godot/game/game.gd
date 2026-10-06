@@ -404,6 +404,8 @@ var _bag_dot: Control
 var _codex_dot: Control
 ## 헬스 아이콘의 빨간 점 — 두드릴 수 있는 운동이 있다 (`Fitness.any_up`). ≡ 에도 켠다
 var _fitness_dot: Control
+## 합성할 수 있는 등급이 있으면 트레이너 아이콘에 켠다 (trainers.md "합성")
+var _trainer_dot: Control
 var _menu_dot: Control
 ## 설계 창 단추 — 오른쪽 맨 아래, 알파 0 (안 보이지만 눌린다)
 var _design_cell: Control
@@ -730,6 +732,8 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			_dungeon_result.visible = false
 		&"fitnessResult":
 			_fitness_panel.show_result(payload)
+		&"trainerFuse":
+			_trainer_panel.show_fuse_result(payload)
 		&"trainerDraw":
 			_store_panel.set_diamonds(int(payload.get("diamonds", 0)))
 			_store_panel.show_draw(payload.get("got", []), payload.get("new", []), _trainer_art)
@@ -3558,6 +3562,7 @@ func _build_skill_bar() -> void:
 	# 장비 도감 — 헬스 옆 (2026-10-01). 그림은 펼친 책(`ui_icon_codex`) — 없으면 이름 글자만 선다
 	var codex_cell := _icon_button("ui_icon_codex", "도감", _toggle_codex, MENU_BTN, true)
 	var fitness_cell := _icon_button("ui_icon_fitness", "헬스", _toggle_fitness, MENU_BTN, true)
+	var trainer_cell := _icon_button("ui_icon_trainer", "트레이너", _toggle_trainer, MENU_BTN, true)
 	_menu_cells = [
 		# 캐릭터 정보 — 스킬 왼쪽, 메뉴 맨 앞 (2026-09-25 요청 "상세 정보창을 따로 띄우고
 		# 버튼을 만들어"). 그림은 기사 투구
@@ -3581,7 +3586,7 @@ func _build_skill_bar() -> void:
 		# 상점 — 샌드백 옆 (2026-10-02 요청, store.md). 그림은 끈 묶은 가죽 돈주머니(`ui_icon_shop`)
 		_icon_button("ui_icon_shop", "상점", _toggle_store, MENU_BTN, true),
 		# PT 트레이너 — 상점 옆 (2026-10-06, trainers.md). 그림은 끈 달린 코치 호루라기(`ui_icon_trainer`)
-		_icon_button("ui_icon_trainer", "트레이너", _toggle_trainer, MENU_BTN, true),
+		trainer_cell,
 	]
 	# 랭킹 — 던전 옆. **서버에 붙었을 때만** 선다 (혼자 노는 판에는 견줄 사람이 없다).
 	# 그림은 월계관 두른 금 트로피(`ui_icon_rank`)
@@ -3623,6 +3628,7 @@ func _build_skill_bar() -> void:
 	_codex_dot = _add_red_dot(codex_cell)
 	# 강화할 수 있는 운동이 있으면 헬스 아이콘에도 켠다 (2026-10-02 요청 "헬스 강화 가능할 경우 레드닷 표시해")
 	_fitness_dot = _add_red_dot(fitness_cell)
+	_trainer_dot = _add_red_dot(trainer_cell)
 	_menu_dot = _add_red_dot(_menu_open_cell)
 	# 배울 수 있는 패시브 단계가 있으면 켠다 — `_refresh_status` 가 매 프레임 맞춘다 (2026-09-29 요청)
 	_skill_dot = _add_red_dot(skill_cell)
@@ -5319,6 +5325,9 @@ func _build_gate_panel() -> void:
 	_trainer_panel.pick_requested.connect(func(id: String) -> void:
 		_transport.send(&"trainerPick", {"id": id})
 	)
+	_trainer_panel.fuse_requested.connect(func(grade: int, all: bool) -> void:
+		_transport.send(&"trainerFuse", {"grade": grade, "all": all})
+	)
 	var trainer_back := ColorRect.new()
 	trainer_back.name = "TrainerBack"
 	trainer_back.color = DungeonPanel.CARD_DARK
@@ -6615,6 +6624,8 @@ func _refresh_status(me: Dictionary) -> void:
 	_skill_dot.visible = Skills.passive_learnable(str(me.job), int(me.level), me.get("passives", {}))
 	_codex_dot.visible = not Ledger.codex_new(me).is_empty()
 	_fitness_dot.visible = Fitness.any_up(me)
+	_trainer_dot.visible = Trainers.any_fuse(me.get("trainers", {}))
+	_trainer_panel.refresh(me)
 	# 펼친 판 안(≡ 를 눌러야 보인다)에 켜진 빨간 점이 하나라도 있으면 ≡ 에도 켠다.
 	# 점을 손으로 나열하지 않고 이름(`red_dot`)으로 찾는다 — 판에 점이 새로 붙어도 따로 잇지 않아도 된다
 	# (2026-10-02 요청 "햄버거 메뉴 안에 레드닷이 있는 경우에 햄버거 메뉴에도 레드닷 띄워")

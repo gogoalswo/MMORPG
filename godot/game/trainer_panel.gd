@@ -16,6 +16,8 @@ extends PanelContainer
 ##   │ 모은 트레이너 12 / 53   보유 효과  공격력 +5% · 방어력 +3% …            │
 
 signal pick_requested(id: String)
+## 합성 줄의 **합성**(`all` false) · **모두 합성**(true) — `grade` 는 넣는 쪽 등급
+signal fuse_requested(grade: int, all: bool)
 
 const STONE_IN := 30
 const COLUMNS := 5
@@ -45,6 +47,13 @@ var _detail_grade: Label
 var _detail_lines: Label
 var _pick: Button
 var _summary: Label
+## 합성 보기 — 목록(`_body`)과 자리를 바꿔 선다 (`_fuse_toggle`)
+var _body: HBoxContainer
+var _fuse_view: VBoxContainer
+var _fuse_toggle: Button
+var _fuse_rows: Dictionary = {}
+var _fuse_note: Label
+var _fuse_cards: HBoxContainer
 
 
 ## `portrait` 는 트레이너 id → 원화 Texture2D (없으면 null) — `game.gd` 의 `_trainer_art`
@@ -85,6 +94,18 @@ func _build(frame_box: Callable) -> void:
 	var gap := Control.new()
 	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(gap)
+	# 합성 — 같은 등급 여분 3장으로 다음 등급 도전 (2026-10-06). 누르면 목록 자리에 합성 줄이 선다
+	_fuse_toggle = Button.new()
+	_fuse_toggle.name = "fuse_toggle"
+	_fuse_toggle.text = "합성"
+	_fuse_toggle.custom_minimum_size = Vector2(120, 48)
+	_fuse_toggle.focus_mode = Control.FOCUS_NONE
+	_fuse_toggle.add_theme_font_size_override("font_size", 22)
+	_fuse_toggle.pressed.connect(func() -> void: show_fuse(not _fuse_view.visible))
+	head.add_child(_fuse_toggle)
+	var gap2 := Control.new()
+	gap2.custom_minimum_size = Vector2(24, 0)
+	head.add_child(gap2)
 	var title := _label("트레이너", 30, TITLE)
 	title.name = "title"
 	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -99,6 +120,8 @@ func _build(frame_box: Callable) -> void:
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	body.add_theme_constant_override("separation", 0)
 	column.add_child(body)
+	_body = body
+	_build_fuse(column)
 
 	var shelf := MarginContainer.new()
 	shelf.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -151,6 +174,7 @@ func _build(frame_box: Callable) -> void:
 	_pick.pressed.connect(_on_pick)
 	detail.add_child(_pick)
 
+	column.move_child(_fuse_view, body.get_index() + 1)
 	column.add_child(_rule(Vector2(0, 1)))
 	_summary = _label("", 18, IVORY)
 	_summary.name = "summary"
@@ -185,11 +209,59 @@ func refresh(me: Dictionary) -> void:
 		return
 	_seen = seen
 	_fill()
+	if _fuse_view.visible:
+		_fill_fuse()
 
 
 func select(id: String) -> void:
 	_selected = id
 	_fill()
+
+
+## 합성 보기를 켜고 끈다 — 목록과 한 자리
+func show_fuse(on: bool) -> void:
+	_fuse_view.visible = on
+	_body.visible = not on
+	_fuse_toggle.text = "목록" if on else "합성"
+	if on:
+		_fill_fuse()
+
+
+func fuse_shown() -> bool:
+	return _fuse_view.visible
+
+
+## 합성 줄의 단추 둘 — 테스트가 누른다 `[합성, 모두 합성]`
+func fuse_buttons(grade: int) -> Array:
+	var row: Dictionary = _fuse_rows.get(grade, {})
+	return [row.get("one"), row.get("all")]
+
+
+func fuse_note() -> String:
+	return _fuse_note.text
+
+
+## 판정이 낸 합성 결과(`trainerFuse`) — 아래 줄에 성공·실패 수, 얻은 트레이너 카드
+func show_fuse_result(payload: Dictionary) -> void:
+	var results: Array = payload.get("results", [])
+	var got: Array = []
+	for r in results:
+		if str(r.get("got", "")) != "":
+			got.append(str(r.got))
+	var from := str(Trainers.grade(int(payload.get("grade", 0))).get("name", ""))
+	if results.size() == 1:
+		_fuse_note.text = "%s 합성 — %s" % [from, "성공!" if not got.is_empty() else "실패 (재료 %d장이 사라졌습니다)" % Trainers.fuse_cost()]
+	else:
+		_fuse_note.text = "%s 합성 %d번 — 성공 %d · 실패 %d" % [from, results.size(), got.size(), results.size() - got.size()]
+	for card in _fuse_cards.get_children():
+		card.queue_free()
+	for id in got.slice(0, 6):
+		var card := TrainerPanel.make_card(Trainers.trainer(id), _art(id), 1, false, false)
+		(card.find_child("tag", true, false) as Label).text = "획득"
+		_fuse_cards.add_child(card)
+	_seen = ""
+	refresh(_me)
+	_fill_fuse()
 
 
 func cards() -> Array:
@@ -286,6 +358,74 @@ func _fill_summary(owned: Dictionary) -> void:
 	_summary.text = "  모은 트레이너 %d / %d     보유 효과  %s" % [
 		count, Trainers.all().size(), " · ".join(parts) if not parts.is_empty() else "없음",
 	]
+
+
+func _build_fuse(column: VBoxContainer) -> void:
+	_fuse_view = VBoxContainer.new()
+	_fuse_view.name = "fuse"
+	_fuse_view.visible = false
+	_fuse_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_fuse_view.add_theme_constant_override("separation", 10)
+	column.add_child(_fuse_view)
+	var hint := _label("같은 등급 여분 %d장으로 다음 등급에 도전합니다. 트레이너마다 1장은 남깁니다 — 실패하면 재료만 사라집니다." % Trainers.fuse_cost(), 18, DIM)
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.custom_minimum_size = Vector2(0, 52)
+	hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_fuse_view.add_child(hint)
+	for g in Trainers.grades():
+		var grade := int(g.grade)
+		if Trainers.fuse_chance(grade) <= 0.0:
+			continue
+		var row := HBoxContainer.new()
+		row.name = "fuse_%d" % grade
+		row.add_theme_constant_override("separation", 18)
+		var title := _label("%s → %s" % [str(g.name), str(Trainers.grade(grade + 1).get("name", ""))], 22, IVORY)
+		title.custom_minimum_size = Vector2(170, 0)
+		title.add_theme_color_override("font_color", TrainerPanel.grade_color(grade + 1).lightened(0.3))
+		row.add_child(title)
+		var spare := _label("", 20, IVORY)
+		spare.custom_minimum_size = Vector2(150, 0)
+		row.add_child(spare)
+		var odds := _label("성공 %s%%" % str(Trainers.fuse_chance(grade)).trim_suffix(".0"), 20, GOLD)
+		odds.custom_minimum_size = Vector2(120, 0)
+		row.add_child(odds)
+		var one := Button.new()
+		one.name = "one"
+		one.text = "합성"
+		one.custom_minimum_size = Vector2(130, 50)
+		one.focus_mode = Control.FOCUS_NONE
+		one.add_theme_font_size_override("font_size", 20)
+		one.pressed.connect(func() -> void: fuse_requested.emit(grade, false))
+		row.add_child(one)
+		var all := Button.new()
+		all.name = "all"
+		all.text = "모두 합성"
+		all.custom_minimum_size = Vector2(150, 50)
+		all.focus_mode = Control.FOCUS_NONE
+		all.add_theme_font_size_override("font_size", 20)
+		all.pressed.connect(func() -> void: fuse_requested.emit(grade, true))
+		row.add_child(all)
+		_fuse_view.add_child(row)
+		_fuse_rows[grade] = {"spare": spare, "one": one, "all": all}
+	_fuse_note = _label("", 20, IVORY)
+	_fuse_note.name = "fuse_note"
+	_fuse_view.add_child(_fuse_note)
+	_fuse_cards = HBoxContainer.new()
+	_fuse_cards.name = "fuse_cards"
+	_fuse_cards.add_theme_constant_override("separation", 12)
+	_fuse_view.add_child(_fuse_cards)
+
+
+## 합성 줄의 여분 수와 단추 켜짐 — 여분이 `fuse_cost` 장 이상이어야 켜진다
+func _fill_fuse() -> void:
+	var owned: Dictionary = _me.get("trainers", {})
+	for grade in _fuse_rows:
+		var row: Dictionary = _fuse_rows[grade]
+		var have := Trainers.spare(owned, int(grade))
+		(row.spare as Label).text = "여분 %d장" % have
+		var ok := have >= Trainers.fuse_cost()
+		(row.one as Button).disabled = not ok
+		(row.all as Button).disabled = not ok
 
 
 func _on_pick() -> void:

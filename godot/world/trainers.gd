@@ -58,6 +58,32 @@ static func draw_multi() -> int:
 	return int(table().get("drawMulti", 10))
 
 
+## 합성 한 번에 넣는 같은 등급 여분 (3)
+static func fuse_cost() -> int:
+	return int(table().get("fuseCost", 3))
+
+
+## 그 등급 합성 성공 확률(%) — 전설은 0
+static func fuse_chance(g: int) -> float:
+	return float(grade(g).get("fuse", 0))
+
+
+## 그 등급의 **여분** 합 — 트레이너마다 1장은 남기고 나머지 (보유 효과가 안 줄게)
+static func spare(owned: Dictionary, g: int) -> int:
+	var total := 0
+	for info in of_grade(g):
+		total += maxi(0, int(owned.get(str(info.id), 0)) - 1)
+	return total
+
+
+## 합성할 수 있는 등급이 하나라도 있나 — 트레이너 아이콘 빨간 점
+static func any_fuse(owned: Dictionary) -> bool:
+	for g in grades():
+		if fuse_chance(int(g.grade)) > 0.0 and spare(owned, int(g.grade)) >= fuse_cost():
+			return true
+	return false
+
+
 ## 동행 트레이너의 계승 비율(0 ~ 1) — 갖고 있지 않거나 없으면 0
 static func inherit_of(owned: Dictionary, active: String) -> float:
 	if active == "" or int(owned.get(active, 0)) <= 0:

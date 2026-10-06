@@ -29,3 +29,7 @@ test('트레이너 — 53명을 다 모은 보유 효과', () => {
   for (const v of Object.values(all)) assert.ok(v > 0 && v <= 30);
   assert.deepEqual(trainerOwnedBonus(['n01', 'zz']).attack, 1);
 });
+
+test('트레이너 합성 — 확률은 사용자가 정한 20 · 20 · 10 · 10 %, 전설은 더 위가 없다', () => {
+  assert.deepEqual(TRAINER_GRADES.map((g) => g.fuse), [20, 20, 10, 10, 0]);
+});

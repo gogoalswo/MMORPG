@@ -728,6 +728,49 @@ func trainer_draw(p: Dictionary, times: int) -> void:
 	events.append({"type": "trainerDraw", "got": got, "new": fresh, "diamonds": p.diamonds})
 
 
+## 트레이너 창의 **합성** — `grade` 등급 **여분** `fuse_cost` 장(트레이너마다 1장은 남긴다)을 넣어 확률로
+## 다음 등급 무작위 1명. 실패하면 넣은 것만 사라진다. `all` 이 1 이면 여분이 모자랄 때까지 되풀이한다.
+## 재료는 여분이 가장 많은 트레이너부터 뗀다 — 고르게 줄어 다음에도 고를 것이 남는다
+func trainer_fuse(p: Dictionary, grade: int, all: int = 0) -> void:
+	var chance := Trainers.fuse_chance(grade)
+	var cost := Trainers.fuse_cost()
+	var owned: Dictionary = p.get("trainers", {})
+	if chance <= 0.0 or Trainers.grade(grade + 1).is_empty():
+		return
+	if Trainers.spare(owned, grade) < cost:
+		_notice("%s 여분이 %d장 모자랍니다" % [str(Trainers.grade(grade).name), cost - Trainers.spare(owned, grade)])
+		return
+	var pool := Trainers.of_grade(grade)
+	var results: Array = []
+	while Trainers.spare(owned, grade) >= cost:
+		var used: Array = []
+		for i in cost:
+			var pick := ""
+			for info in pool:
+				var id := str(info.id)
+				if int(owned.get(id, 0)) > 1 and (pick == "" or int(owned[id]) > int(owned[pick])):
+					pick = id
+			owned[pick] = int(owned[pick]) - 1
+			used.append(pick)
+		var got := ""
+		if rng.randf() * 100.0 < chance:
+			var next := Trainers.of_grade(grade + 1)
+			got = str(next[rng.randi_range(0, next.size() - 1)].id)
+			owned[got] = int(owned.get(got, 0)) + 1
+		results.append({"used": used, "got": got})
+		if all == 0:
+			break
+	p.trainers = owned
+	var wins := results.filter(func(r: Dictionary) -> bool: return str(r.got) != "")
+	events.append({"type": "trainerFuse", "grade": grade, "results": results})
+	if results.size() == 1 and not wins.is_empty():
+		_notice("합성 성공! %s" % str(Trainers.trainer(str(wins[0].got)).name))
+	elif results.size() == 1:
+		_notice("합성 실패 — 재료 %d장이 사라졌습니다" % cost)
+	else:
+		_notice("합성 %d번 — 성공 %d · 실패 %d" % [results.size(), wins.size(), results.size() - wins.size()])
+
+
 ## 트레이너 창의 **동행** — 갖고 있는 트레이너만. `id` 가 "" 면 돌려보낸다
 func trainer_pick(p: Dictionary, id: String) -> void:
 	if id != "" and int(p.get("trainers", {}).get(id, 0)) <= 0:

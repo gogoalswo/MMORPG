@@ -333,17 +333,17 @@ func _case_panel() -> void:
 		buy.pressed.emit()
 	if bought != ["trainer_1"]:
 		_fail("뽑기 단추가 요청을 안 냈다: %s" % [bought])
-	# 뽑기 연출 — 뽑은 수만큼 덤벨(일반·고급 흰색 · 희귀 이상 금), 좋은 등급이 꼭짓점, [모두 보기] → 카드 (이름은 등급 색)
+	# 뽑기 연출 — 뽑은 수만큼 밀랍 조각상(일반·고급 흰색 · 희귀 이상 금), 좋은 등급이 앞자리, [모두 보기] → 카드 (이름은 등급 색)
 	if TrainerDraw.slots(10).size() != 10 or TrainerDraw.slots(1) != [Vector3.ZERO]:
 		_fail("뽑기 자리 수가 틀리다: %d" % TrainerDraw.slots(10).size())
 	store.show_draw(["n01", "a01", "r01", "l01"], [true, false, false, false], arts)
 	var shown := store.draw_shown() as TrainerDraw
 	if shown == null or shown.pieces().size() != 4:
-		_fail("뽑기 판에 덤벨 넷이 없다")
+		_fail("뽑기 판에 조각상 넷이 없다")
 	else:
 		var golds: Array = shown.pieces().map(func(p): return "%s:%s" % [p.id, "금" if p.gold else "흰"])
 		if golds != ["l01:금", "r01:금", "a01:흰", "n01:흰"]:
-			_fail("덤벨 색·자리가 %s" % [golds])
+			_fail("조각상 색·자리가 %s" % [golds])
 		if not shown.cards().is_empty():
 			_fail("보기 전에 카드가 섰다")
 		(shown.find_child("reveal", true, false) as Button).pressed.emit()

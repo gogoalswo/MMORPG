@@ -41,14 +41,14 @@ const MODELS = [
   'gear_g1.glb', 'gear_g2.glb', 'gear_g3.glb', 'gear_g4.glb', 'gear_g5.glb', 'gear_g6.glb', 'gear_g7.glb',
   // PT 트레이너 53명 — 이름은 표에서 짓는다 `trainer_<id>` (docs/features/trainers.md, rig.gd 의 `create`)
   ...TRAINER_IDS.map((id) => `trainer_${id}.glb`),
-  // 트레이너 뽑기 연출의 덤벨 — 일반·고급은 흰 대리석, 희귀 이상은 금 (trainer_draw.gd, rig.gd 의 FILES)
-  'draw_dumbbell_white.glb', 'draw_dumbbell_gold.glb',
+  // 트레이너 뽑기 연출의 밀랍 조각상 넷 — 일반·고급은 흰 밀랍, 희귀 이상은 금빛 밀랍 (trainer_draw.gd, rig.gd 의 `create`)
+  ...[1, 2, 3, 4].flatMap((n) => [`draw_statue${n}_white.glb`, `draw_statue${n}_gold.glb`]),
 ];
 
 /** PT 트레이너 원화(카드 그림) — scripts/build-trainer-art.mjs 가 구워 커밋한 240×320 JPG */
 const TRAINER_ART = [
   ...TRAINER_IDS.map((id) => `trainer_${id}.jpg`),
-  'trainer_board.jpg', // 뽑기 연출의 바닥판 (trainer_draw.gd)
+  'trainer_floor.jpg', // 뽑기 연출의 바닥 (trainer_draw.gd)
 ];
 
 /** UI 조각. 이미 build-ui.mjs 가 줄여 둔 것이라 그대로 복사한다 */

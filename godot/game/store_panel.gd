@@ -172,7 +172,7 @@ func diamonds_text() -> String:
 	return _diamonds.text
 
 
-## 뽑기 결과 — 창 위에 덮는 3D 연출 판 (`TrainerDraw` — 덤벨이 떨어져 서고 [모두 보기] 로 카드가 선다 → [확인])
+## 뽑기 결과 — 창 위에 덮는 3D 연출 판 (`TrainerDraw` — 밀랍 조각상이 내려서고 [모두 보기] 로 카드가 선다 → [확인])
 ## `portrait` 는 트레이너 id → 카드 그림 (트레이너 창과 같은 것) → docs/features/trainers.md "뽑기 연출"
 func show_draw(got: Array, fresh: Array, portrait: Callable) -> void:
 	hide_draw()

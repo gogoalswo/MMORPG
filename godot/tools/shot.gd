@@ -149,7 +149,7 @@ func _run() -> void:
 	if skill == "trainers":
 		await _trainers(game)
 		return
-	# 트레이너 뽑기 연출 — 덤벨이 선 판 · 빛기둥이 솟는 중 · 카드가 다 선 판 (10회)
+	# 트레이너 뽑기 연출 — 조각상이 선 판 · 빛기둥이 솟는 중 · 카드가 다 선 판 (10회)
 	if skill == "draw":
 		await _draw(game)
 		return
@@ -786,7 +786,7 @@ func _portal(game: Node3D) -> void:
 const FITNESS_TIMES := [0.06, 0.25, 0.6]
 
 
-## 트레이너 뽑기 연출 (`npm run shot:godot -- draw`) — 10회 한 판을 세 장으로: 덤벨이 다 선 뒤 ·
+## 트레이너 뽑기 연출 (`npm run shot:godot -- draw`) — 10회 한 판을 세 장으로: 조각상이 다 선 뒤 ·
 ## [모두 보기] 직후(빛기둥) · 카드가 다 선 뒤 → `logs/shot_draw_1~3.png` (docs/features/trainers.md "뽑기 연출")
 func _draw(game: Node3D) -> void:
 	game._toggle_store()

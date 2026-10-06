@@ -165,7 +165,8 @@ func _build(frame_box: Callable) -> void:
 func open() -> void:
 	visible = true
 	_seen = ""
-	refresh(_me)
+	if not _me.is_empty():
+		refresh(_me)
 
 
 func close_panel() -> void:
@@ -176,7 +177,7 @@ func close_panel() -> void:
 ## 보이는 동안 **바뀐 것이 있을 때만** 다시 짓는다
 func refresh(me: Dictionary) -> void:
 	_me = me
-	if _selected == "":
+	if _selected == "" and me.has("trainers"):
 		var active := str(me.get("trainer_active", ""))
 		_selected = active if active != "" else str(Trainers.all()[0].id)
 	var seen := str(me.get("trainers", {})) + "|" + str(me.get("trainer_active", ""))

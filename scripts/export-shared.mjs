@@ -163,9 +163,9 @@ export function buildData() {
     // heights 는 모델을 얼마나 키울지 정한다 (모델 높이는 1 로 정규화돼 있다)
     'monsters.json': {
       // 샌드백은 몬스터 표(60종) 밖의 과녁이라 여기서 붙인다 (sandbag.ts)
-      // dropStep — 같은 드랍 등급 창이 몇 번째로 이어지는 사냥터의 종인가 (zones.ts 의 DROP_STEPS, 2026-10-04)
+      // dropSteps — 창의 등급마다 앞에서 몇 곳 연달아 나왔나 (zones.ts 의 DROP_STEPS, 2026-10-06)
       kinds: {
-        ...Object.fromEntries(Object.entries(MONSTER_KINDS).map(([id, k]) => [id, { ...k, dropStep: DROP_STEPS[id] ?? 0 }])),
+        ...Object.fromEntries(Object.entries(MONSTER_KINDS).map(([id, k]) => [id, { ...k, dropSteps: DROP_STEPS[id] ?? [] }])),
         [SANDBAG_KIND.id]: SANDBAG_KIND,
       },
       dropStepBoost: DROP_STEP_BOOST,

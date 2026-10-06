@@ -914,6 +914,20 @@ func _case_trial(game: Node3D) -> void:
 ## 오늘 입장을 다 쓴 뒤 (2026-10-02 요청) — 카드에 "입장 횟수 0 / 1" · 입장 단추는 어둡지만 눌리고 ·
 ## 누르면 "입장 횟수가 다 소모 되었습니다." 가 뜨고 떠나지 않는다 (docs/features/dungeons.md "하루 한 번")
 func _check_spent_entries(game: Node3D, panel: DungeonPanel) -> void:
+	# 위에서 토벌은 쓰러지고 시련은 시간이 다 됐다 — **못 깼으니 입장이 그대로다** (클리어할 때만 센다, 2026-10-06)
+	game._toggle_dungeon()
+	await process_frame
+	for i in 2:
+		var left: Label = panel.card(i).find_child("Entries", true, false)
+		if left == null or left.text != "입장 횟수 1 / 1":
+			_fail("%d번 카드 — 못 깼는데 입장이 줄었다: '%s'" % [i, left.text if left != null else "없음"])
+	game._toggle_dungeon()
+	await process_frame
+	# 이제 둘 다 깬 것으로 친다
+	var world: World = game._transport._world
+	var me: Dictionary = world.snapshot().players.values()[0]
+	world._ledger.dungeon_cleared(me, "raid_01")
+	world._ledger.dungeon_cleared(me, "trial_01")
 	game._toggle_dungeon()
 	await process_frame
 	for i in 2:

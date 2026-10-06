@@ -88,7 +88,7 @@ var _enter: Button
 var _notice: PanelContainer
 var _notice_tween: Tween
 ## 종류마다 오늘 입장 `{ 종류 id: Vector2i(남은, 하루) }` — 여는 쪽(`game.gd` `_toggle_dungeon`)이 장부에서 채운다.
-## 하루 제한이 없는 종류는 빠진다. 막기만 한다 — 세는 것은 장부다 (`World.travel` → `Ledger.dungeon_enter`)
+## 하루 제한이 없는 종류는 빠진다. 막기만 한다 — 세는 것은 장부다 (클리어할 때 `Ledger.dungeon_cleared`)
 var entries := {}
 
 

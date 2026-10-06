@@ -458,9 +458,9 @@ func travel(player_id: String, target: String) -> void:
 	_move_to(target)
 
 
-## 하루 한 번인 던전이면 오늘 입장을 쓴다. 다 썼으면 알리고 false (docs/features/dungeons.md "하루 한 번").
-## 서버에 붙어 있으면 **기기는 막기만 하고 세는 것은 서버다** — `enter` 를 받은 `LedgerServer._enter` 가
-## 장부에 적고, 답이 오면 `apply_ledger` 가 덮는다
+## 하루 한 번인 던전이면 오늘 입장이 남았나 본다. 다 썼으면 알리고 false (docs/features/dungeons.md "하루 한 번").
+## **세는 것은 클리어할 때다** — 토벌 보스 처치·시련 통과에서 장부가 센다. 서버에 붙어 있으면 그 처치·통과를
+## 받은 서버 장부가 세고, 답이 오면 `apply_ledger` 가 덮는다
 func _use_dungeon_entry(player: Dictionary, target: String) -> bool:
 	if remote == null:
 		var ok := _ledger.dungeon_enter(player, target)
@@ -469,7 +469,7 @@ func _use_dungeon_entry(player: Dictionary, target: String) -> bool:
 	if Ledger.dungeon_entries_left(player, target, _ledger.dungeon_day()) != 0:
 		return true
 	var type := GameData.dungeon_type_of(target)
-	_events.append({"type": "notice", "text": "%s 은(는) 오늘 이미 들어갔습니다 — 5시에 다시 열립니다" % str(type.get("name", "던전"))})
+	_events.append({"type": "notice", "text": "%s 은(는) 오늘 이미 클리어했습니다 — 5시에 다시 열립니다" % str(type.get("name", "던전"))})
 	return false
 
 
@@ -1596,7 +1596,7 @@ func restore(player_id: String) -> bool:
 	var zone_saved := str(saved.get("zone", ""))
 	var all: Dictionary = GameData.zones().get("zones", {})
 	# **하루 한 번인 던전 안에서 끝냈으면 그 자리로 돌아가지 않는다** — 다시 열면 몬스터가 새로 서서
-	# 입장을 안 쓰고 한 판을 더 하게 된다. 그 판은 들어갈 때 이미 셌다 (dungeons.md "하루 한 번")
+	# 깬 뒤 안에서 저장했으면 입장을 안 쓰고 한 판을 더 하게 된다. 못 깼으면 입장이 남아 있어 다시 들어가면 된다
 	var daily_dungeon := int(GameData.dungeon_type_of(zone_saved).get("daily", 0)) > 0
 	if all.has(zone_saved) and zone_saved != zone_id and not daily_dungeon:
 		open(zone_saved)

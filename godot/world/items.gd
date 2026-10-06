@@ -558,22 +558,24 @@ static func grade_drop_rate(grade: int) -> float:
 ##
 ## 2026-09-21 까지는 `dropChance` 평면값 0.14 였다. 설계값(`GEAR_DROP_RATE`)은
 ## `balance.json` 에 있기만 하고 판정이 안 읽고 있었다 → docs/features/items.md
-static func drop_chance(monster_level: int, drop_bonus := 0.0, step := 0) -> float:
+static func drop_chance(monster_level: int, drop_bonus := 0.0, steps: Array = []) -> float:
 	var sum := 0.0
-	for w in drop_weights(monster_level, step):
+	for w in drop_weights(monster_level, steps):
 		sum += float(w)
 	return with_drop_bonus(sum, drop_bonus)
 
 
-## 창의 등급마다 킬당 확률 — **윗등급(마지막)에 1.1^step** ★ (2026-10-04, `items.ts` 의 `dropWeights` 와 같다).
-## 요청: "같은 등급이 나오는 사냥터의 경우에 이전 사냥터보다 더 좋은 아이템이 나올 확률을 10%씩 증가시켜".
-## `step` 은 몬스터 종의 `dropStep` — 사냥터 순서에서 같은 창이 몇 번째로 이어지나 (`zones.ts` 의 `DROP_STEPS`)
-static func drop_weights(monster_level: int, step := 0) -> Array:
+## 창의 등급마다 킬당 확률 — **그 등급에 1.1^steps[i]** ★ (2026-10-06, `items.ts` 의 `dropWeights` 와 같다).
+## 요청: "같은 등급이 나오는 사냥터의 경우에 이전 사냥터보다 더 좋은 아이템이 나올 확률을 10%씩 증가시켜" (10-04),
+## "다음 등급이 나오는 사냥터로 넘어가면, 하위 등급이 확률이 다시 떨어지는 문제" (10-06 — 등급마다 따로 센다).
+## `steps` 는 몬스터 종의 `dropSteps` — 창의 등급마다 앞에서 몇 곳 연달아 나왔나 (`zones.ts` 의 `DROP_STEPS`)
+static func drop_weights(monster_level: int, steps: Array = []) -> Array:
 	var grades := drop_grades(monster_level)
-	var boost := pow(float(GameData.load_table("monsters").get("dropStepBoost", 1.0)), step)
+	var base := float(GameData.load_table("monsters").get("dropStepBoost", 1.0))
 	var out: Array = []
 	for i in grades.size():
-		out.append(grade_drop_rate(int(grades[i])) * (boost if i == grades.size() - 1 else 1.0))
+		var step := int(steps[i]) if i < steps.size() else 0
+		out.append(grade_drop_rate(int(grades[i])) * pow(base, step))
 	return out
 
 
@@ -587,9 +589,9 @@ static func with_drop_bonus(chance: float, drop_bonus: float) -> float:
 ## 그 사냥터 안에서 등급 하나 — **설계의 등급별 드랍률 비 그대로.**
 ## 예전에는 2^(n-g) 로 임의로 반씩 깎았는데, 설계가 절대 확률을 정해 두었으므로
 ## 그 비로 나누면 두 값이 어긋날 일이 없다
-static func roll_grade(roll: float, monster_level: int, step := 0) -> int:
+static func roll_grade(roll: float, monster_level: int, steps: Array = []) -> int:
 	var grades := drop_grades(monster_level)
-	var weights := drop_weights(monster_level, step)
+	var weights := drop_weights(monster_level, steps)
 	var total := 0.0
 	for w in weights:
 		total += float(w)
@@ -606,15 +608,15 @@ static func roll_grade(roll: float, monster_level: int, step := 0) -> int:
 ## **떨어지는 장비는 잡은 사람이 쓸 수 있는 것만 고른다** — 못 쓰는 무기가
 ## 가방을 채우면 정리하는 게 일이 된다
 ## `drop_bonus` 는 장비의 아이템 드랍률 합계(1.0 = +100%) — `with_drop_bonus`
-static func roll_drop(monster_level: int, job: String, rng: RandomNumberGenerator, drop_bonus := 0.0, step := 0) -> Dictionary:
+static func roll_drop(monster_level: int, job: String, rng: RandomNumberGenerator, drop_bonus := 0.0, steps: Array = []) -> Dictionary:
 	# ±30% 흔들어 매번 같은 숫자가 나오지 않게 한다
 	var gold := maxi(1, roundi(gold_base(monster_level) * (0.7 + rng.randf() * 0.6)))
 
 	# 크리스탈은 장비와 **따로** 굴린다. 순서는 골드 → 장비 → (슬롯 → 등급 → 옵션) → 크리스탈
 	# — `items.ts` 와 같은 순서라야 같은 씨앗에서 같은 것이 나온다
 	var drop := {"gold": gold}
-	if rng.randf() < drop_chance(monster_level, drop_bonus, step):
-		drop["item"] = _roll_gear_drop(monster_level, rng, step)
+	if rng.randf() < drop_chance(monster_level, drop_bonus, steps):
+		drop["item"] = _roll_gear_drop(monster_level, rng, steps)
 	if rng.randf() < with_drop_bonus(crystal_drop_chance(), drop_bonus):
 		drop["crystal"] = 1
 	return drop
@@ -662,13 +664,13 @@ static func zone_drops(zone_id: String) -> Dictionary:
 	var lo: int = levels[0]
 	var hi: int = levels[levels.size() - 1]
 	# 등급마다 몬스터 한 마리당 확률 (2026-10-02 요청: "아이템 드랍 정보에 확률 표기해놔").
-	# 등급 하나의 킬당 확률은 `drop_weights` 그대로다 — 윗등급은 종의 `dropStep` 만큼 오른다 (2026-10-04).
+	# 등급 하나의 킬당 확률은 `drop_weights` 그대로다 — 등급마다 종의 `dropSteps` 만큼 오른다 (2026-10-06).
 	# `drop_chance` 는 창의 합, `roll_grade` 는 그 비로 고른다. 한 등급이 종마다 다르면 큰 쪽을 적는다
 	var chances := {}
 	for kind_id in kinds:
 		var k := GameData.monster_kind(str(kind_id))
 		var grades := drop_grades(int(k.get("level", 1)))
-		var weights := drop_weights(int(k.get("level", 1)), int(k.get("dropStep", 0)))
+		var weights := drop_weights(int(k.get("level", 1)), k.get("dropSteps", []))
 		for i in grades.size():
 			chances[grades[i]] = maxf(float(chances.get(grades[i], 0.0)), float(weights[i]))
 	return {
@@ -678,13 +680,13 @@ static func zone_drops(zone_id: String) -> Dictionary:
 	}
 
 
-static func _roll_gear_drop(monster_level: int, rng: RandomNumberGenerator, step := 0) -> Dictionary:
+static func _roll_gear_drop(monster_level: int, rng: RandomNumberGenerator, steps: Array = []) -> Dictionary:
 	# 슬롯은 고루 나와야 한다 — 한쪽만 나오면 나머지 자리는 영영 빈다.
 	# 직업은 더 이상 후보를 가르지 않는다. **굴리는 순서는 슬롯 → 등급** —
 	# `items.ts` 와 같은 순서라야 같은 씨앗에서 같은 것이 나온다
 	var all_slots := slots()
 	var pick := mini(all_slots.size() - 1, int(rng.randf() * all_slots.size()))
-	var grade := roll_grade(rng.randf(), monster_level, step)
+	var grade := roll_grade(rng.randf(), monster_level, steps)
 	var id := item_id(grade, str(all_slots[pick]))
 	var def := get_item(id)
 	return {

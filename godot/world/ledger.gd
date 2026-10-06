@@ -148,8 +148,8 @@ func kill(p: Dictionary, target: Dictionary) -> void:
 	# 보상을 굴린다. **굴리는 쪽은 언제나 판정하는 쪽이다**
 	# 끼운 장비의 **아이템 드랍률** 옵션 합계를 건다 (2026-10-01) — 판정하는 쪽의 장부로 센다
 	var drop_bonus := float(Items.equipment_stats(p.get("equipped", {})).get("dropRate", 0.0))
-	# 같은 등급 창이 이어지는 뒤 사냥터일수록 윗등급이 잘 나온다 — 종의 `dropStep` (items.gd `drop_weights`)
-	var loot := Items.roll_drop(int(target.level), str(p.job), rng, drop_bonus, int(kind.get("dropStep", 0)))
+	# 한 등급이 연달아 나오는 뒤 사냥터일수록 그 등급이 잘 나온다 — 종의 `dropSteps` (items.gd `drop_weights`)
+	var loot := Items.roll_drop(int(target.level), str(p.job), rng, drop_bonus, kind.get("dropSteps", []))
 	p.gold = int(p.gold) + int(loot.gold)
 	var event := {"type": "loot", "gold": loot.gold}
 	# 설정에서 끈 등급·부위·옵션은 **가방에 넣지 않는다** (2026-10-02 요청: "습득할 아이템도 설정할 수 있는 옵션",

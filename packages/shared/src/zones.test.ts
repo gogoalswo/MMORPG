@@ -331,20 +331,21 @@ test('던전 하루 한 번 — 토벌 · 시련은 하루 1회, 날은 한국 �
   assert.equal(dungeonDay(lastSecond - 86399), dungeonDay(lastSecond));
 });
 
-test('같은 드랍 등급 창이 이어지면 윗등급 확률이 사냥터마다 ×1.1 (2026-10-04)', () => {
-  // "같은 등급이 나오는 사냥터의 경우에 이전 사냥터보다 더 좋은 아이템이 나올 확률을 10%씩 증가시켜"
-  let previous: { window: string; top: number } | null = null;
+test('한 등급이 연달아 나오면 그 등급 확률이 사냥터마다 ×1.1 — 창이 바뀌어도 안 떨어진다 (2026-10-06)', () => {
+  // "같은 등급이 나오는 사냥터의 경우에 이전 사냥터보다 더 좋은 아이템이 나올 확률을 10%씩 증가시켜" (10-04)
+  // "다음 등급이 나오는 사냥터로 넘어가면, 하위 등급이 확률이 다시 떨어지는 문제 … 희귀 확률을 여기서도 올려야" (10-06)
+  let previous = new Map<number, number>();
   for (const id of FIELD_ORDER) {
     const kind = MONSTER_KINDS[getZone(id).monsters![0]!.kind]!;
-    const step = DROP_STEPS[kind.id]!;
-    const window = dropGradesFor(kind.level).join(',');
-    const weights = dropWeights(kind.level, step);
-    const top = weights[weights.length - 1]!;
-    if (previous && previous.window === window) {
-      assert.ok(Math.abs(top / previous.top - DROP_STEP_BOOST) < 1e-9, `${id}: 윗등급이 앞 사냥터의 1.1배가 아니다`);
-    } else {
-      assert.equal(step, 0, `${id}: 창이 바뀌었는데 단계가 0 이 아니다`);
-    }
-    previous = { window, top };
+    const steps = DROP_STEPS[kind.id]!;
+    const grades = dropGradesFor(kind.level);
+    const weights = dropWeights(kind.level, steps);
+    assert.equal(steps.length, grades.length, `${id}: 단계 수가 창과 다르다`);
+    grades.forEach((g, i) => {
+      const before = previous.get(g);
+      if (before === undefined) assert.equal(steps[i], 0, `${id}: 처음 나온 ${g}등급인데 단계가 0 이 아니다`);
+      else assert.ok(Math.abs(weights[i]! / before - DROP_STEP_BOOST) < 1e-9, `${id}: ${g}등급이 앞 사냥터의 1.1배가 아니다`);
+    });
+    previous = new Map(grades.map((g, i) => [g, weights[i]!]));
   }
 });

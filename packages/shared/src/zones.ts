@@ -262,20 +262,22 @@ export const ZONES: Record<string, ZoneDef> = {
 export const START_ZONE = VILLAGE.id;
 
 /**
- * 몬스터 종마다 **같은 드랍 등급 창이 몇 번째로 이어지는 사냥터인가** (첫 곳 0) — `items.ts` 의 `dropWeights` (2026-10-04).
- * 사냥터 순서(`FIELDS`)대로 걸으며 앞 사냥터와 창이 같으면 +1, 바뀌면 0 으로 돌아간다.
- * 사냥터에 안 서는 종(보스·던전 전용)은 표에 없고 0 으로 친다. 고도는 `monsters.json` 의 `dropStep` 으로 받는다
+ * 몬스터 종마다 **창의 등급별로 그 등급이 앞에서 몇 곳 연달아 나왔나** (처음 나온 곳 0) — `items.ts` 의 `dropWeights`.
+ * 배열은 창(`dropGradesFor`) 순서와 같다 — [아랫등급, 윗등급].
+ * - 2026-10-04: 창이 같으면 +1, 바뀌면 0 — 숫자 하나로 윗등급에만 걸었다.
+ * - 2026-10-06: **등급마다 따로 센다.** 요청: "다음 등급이 나오는 사냥터로 넘어가면, 하위 등급이 확률이 다시
+ *   떨어지는 문제가 있어 … 희귀 확률을 여기서도 올려야". 창이 2·3 → 3·4 로 바뀌어도 3등급은 앞에서 센 데서 이어 간다.
+ * 사냥터에 안 서는 종(보스·던전 전용)은 표에 없고 전부 0 으로 친다. 고도는 `monsters.json` 의 `dropSteps` 로 받는다
  */
-export const DROP_STEPS: Record<string, number> = (() => {
-  const out: Record<string, number> = {};
-  let previous = '';
-  let step = 0;
+export const DROP_STEPS: Record<string, number[]> = (() => {
+  const out: Record<string, number[]> = {};
+  let streak = new Map<number, number>();
   for (const theme of FIELDS) {
     const kind = ZONES[theme.id]!.monsters![0]!.kind;
-    const window = dropGradesFor(MONSTER_KINDS[kind]!.level).join(',');
-    step = window === previous ? step + 1 : 0;
-    previous = window;
-    out[kind] = step;
+    const grades = dropGradesFor(MONSTER_KINDS[kind]!.level);
+    // 앞 사냥터에 없던 등급은 0 부터, 있던 등급은 이어서 +1
+    streak = new Map(grades.map((g) => [g, streak.has(g) ? streak.get(g)! + 1 : 0]));
+    out[kind] = grades.map((g) => streak.get(g)!);
   }
   return out;
 })();

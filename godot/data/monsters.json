@@ -18,7 +18,9 @@
       "leashRange": 22.2,
       "moveSpeed": 3.6,
       "scale": 1.01,
-      "dropStep": 0
+      "dropSteps": [
+        0
+      ]
     },
     "mob008": {
       "id": "mob008",
@@ -38,7 +40,9 @@
       "leashRange": 22.5,
       "moveSpeed": 4.4,
       "scale": 1.16,
-      "dropStep": 1
+      "dropSteps": [
+        1
+      ]
     },
     "boss00": {
       "id": "boss00",
@@ -65,7 +69,7 @@
         "cooldownMs": 9000,
         "power": 2.2
       },
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob013": {
       "id": "mob013",
@@ -85,7 +89,9 @@
       "leashRange": 22.8,
       "moveSpeed": 3.6,
       "scale": 1.05,
-      "dropStep": 2
+      "dropSteps": [
+        2
+      ]
     },
     "mob018": {
       "id": "mob018",
@@ -105,7 +111,10 @@
       "leashRange": 23.1,
       "moveSpeed": 4.4,
       "scale": 1.2,
-      "dropStep": 0
+      "dropSteps": [
+        3,
+        0
+      ]
     },
     "boss01": {
       "id": "boss01",
@@ -132,7 +141,7 @@
         "cooldownMs": 9000,
         "power": 2.2
       },
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob023": {
       "id": "mob023",
@@ -152,7 +161,10 @@
       "leashRange": 23.4,
       "moveSpeed": 3.6,
       "scale": 1.09,
-      "dropStep": 1
+      "dropSteps": [
+        4,
+        1
+      ]
     },
     "mob028": {
       "id": "mob028",
@@ -172,7 +184,10 @@
       "leashRange": 23.7,
       "moveSpeed": 4.4,
       "scale": 1.25,
-      "dropStep": 2
+      "dropSteps": [
+        5,
+        2
+      ]
     },
     "boss02": {
       "id": "boss02",
@@ -199,7 +214,7 @@
         "cooldownMs": 9000,
         "power": 2.2
       },
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob033": {
       "id": "mob033",
@@ -219,7 +234,7 @@
       "leashRange": 24,
       "moveSpeed": 3.6,
       "scale": 1.13,
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob038": {
       "id": "mob038",
@@ -239,7 +254,10 @@
       "leashRange": 24.3,
       "moveSpeed": 4.4,
       "scale": 1.29,
-      "dropStep": 3
+      "dropSteps": [
+        6,
+        3
+      ]
     },
     "boss03": {
       "id": "boss03",
@@ -266,7 +284,7 @@
         "cooldownMs": 9000,
         "power": 2.2
       },
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob043": {
       "id": "mob043",
@@ -286,7 +304,7 @@
       "leashRange": 24.6,
       "moveSpeed": 3.6,
       "scale": 1.17,
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob048": {
       "id": "mob048",
@@ -306,7 +324,10 @@
       "leashRange": 24.9,
       "moveSpeed": 4.4,
       "scale": 1.34,
-      "dropStep": 4
+      "dropSteps": [
+        7,
+        4
+      ]
     },
     "boss04": {
       "id": "boss04",
@@ -333,7 +354,7 @@
         "cooldownMs": 9000,
         "power": 2.2
       },
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob053": {
       "id": "mob053",
@@ -353,7 +374,7 @@
       "leashRange": 25.2,
       "moveSpeed": 3.6,
       "scale": 1.21,
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob058": {
       "id": "mob058",
@@ -373,7 +394,10 @@
       "leashRange": 25.5,
       "moveSpeed": 4.4,
       "scale": 1.38,
-      "dropStep": 0
+      "dropSteps": [
+        5,
+        0
+      ]
     },
     "boss05": {
       "id": "boss05",
@@ -400,7 +424,7 @@
         "cooldownMs": 9000,
         "power": 2.2
       },
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob063": {
       "id": "mob063",
@@ -420,7 +444,7 @@
       "leashRange": 25.8,
       "moveSpeed": 3.6,
       "scale": 1.25,
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob068": {
       "id": "mob068",
@@ -440,7 +464,10 @@
       "leashRange": 26.1,
       "moveSpeed": 4.4,
       "scale": 1.42,
-      "dropStep": 1
+      "dropSteps": [
+        6,
+        1
+      ]
     },
     "boss06": {
       "id": "boss06",
@@ -467,7 +494,7 @@
         "cooldownMs": 9000,
         "power": 2.2
       },
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob073": {
       "id": "mob073",
@@ -487,7 +514,7 @@
       "leashRange": 26.4,
       "moveSpeed": 3.6,
       "scale": 1.29,
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob078": {
       "id": "mob078",
@@ -507,7 +534,10 @@
       "leashRange": 26.7,
       "moveSpeed": 4.4,
       "scale": 1.47,
-      "dropStep": 2
+      "dropSteps": [
+        7,
+        2
+      ]
     },
     "boss07": {
       "id": "boss07",
@@ -534,7 +564,7 @@
         "cooldownMs": 9000,
         "power": 2.2
       },
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob083": {
       "id": "mob083",
@@ -554,7 +584,7 @@
       "leashRange": 27,
       "moveSpeed": 3.6,
       "scale": 1.33,
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob088": {
       "id": "mob088",
@@ -574,7 +604,10 @@
       "leashRange": 27.3,
       "moveSpeed": 4.4,
       "scale": 1.51,
-      "dropStep": 3
+      "dropSteps": [
+        8,
+        3
+      ]
     },
     "boss08": {
       "id": "boss08",
@@ -601,7 +634,7 @@
         "cooldownMs": 9000,
         "power": 2.2
       },
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob093": {
       "id": "mob093",
@@ -621,7 +654,7 @@
       "leashRange": 27.6,
       "moveSpeed": 3.6,
       "scale": 1.37,
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob098": {
       "id": "mob098",
@@ -641,7 +674,10 @@
       "leashRange": 27.9,
       "moveSpeed": 4.4,
       "scale": 1.56,
-      "dropStep": 4
+      "dropSteps": [
+        9,
+        4
+      ]
     },
     "boss09": {
       "id": "boss09",
@@ -668,7 +704,7 @@
         "cooldownMs": 9000,
         "power": 2.2
       },
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob103": {
       "id": "mob103",
@@ -688,7 +724,7 @@
       "leashRange": 28.2,
       "moveSpeed": 3.6,
       "scale": 1.41,
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob108": {
       "id": "mob108",
@@ -708,7 +744,10 @@
       "leashRange": 28.5,
       "moveSpeed": 4.4,
       "scale": 1.6,
-      "dropStep": 0
+      "dropSteps": [
+        5,
+        0
+      ]
     },
     "boss10": {
       "id": "boss10",
@@ -735,7 +774,7 @@
         "cooldownMs": 9000,
         "power": 2.2
       },
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob113": {
       "id": "mob113",
@@ -755,7 +794,7 @@
       "leashRange": 28.8,
       "moveSpeed": 3.6,
       "scale": 1.45,
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob118": {
       "id": "mob118",
@@ -775,7 +814,10 @@
       "leashRange": 29.1,
       "moveSpeed": 4.4,
       "scale": 1.65,
-      "dropStep": 1
+      "dropSteps": [
+        6,
+        1
+      ]
     },
     "boss11": {
       "id": "boss11",
@@ -802,7 +844,7 @@
         "cooldownMs": 9000,
         "power": 2.2
       },
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob123": {
       "id": "mob123",
@@ -822,7 +864,7 @@
       "leashRange": 29.4,
       "moveSpeed": 3.6,
       "scale": 1.49,
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob128": {
       "id": "mob128",
@@ -842,7 +884,10 @@
       "leashRange": 29.7,
       "moveSpeed": 4.4,
       "scale": 1.69,
-      "dropStep": 2
+      "dropSteps": [
+        7,
+        2
+      ]
     },
     "boss12": {
       "id": "boss12",
@@ -869,7 +914,7 @@
         "cooldownMs": 9000,
         "power": 2.2
       },
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob133": {
       "id": "mob133",
@@ -889,7 +934,7 @@
       "leashRange": 30,
       "moveSpeed": 3.6,
       "scale": 1.53,
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob138": {
       "id": "mob138",
@@ -909,7 +954,10 @@
       "leashRange": 30.3,
       "moveSpeed": 4.4,
       "scale": 1.74,
-      "dropStep": 0
+      "dropSteps": [
+        3,
+        0
+      ]
     },
     "boss13": {
       "id": "boss13",
@@ -936,7 +984,7 @@
         "cooldownMs": 9000,
         "power": 2.2
       },
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob143": {
       "id": "mob143",
@@ -956,7 +1004,7 @@
       "leashRange": 30.6,
       "moveSpeed": 3.6,
       "scale": 1.57,
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob148": {
       "id": "mob148",
@@ -976,7 +1024,10 @@
       "leashRange": 30.9,
       "moveSpeed": 4.4,
       "scale": 1.78,
-      "dropStep": 1
+      "dropSteps": [
+        4,
+        1
+      ]
     },
     "boss14": {
       "id": "boss14",
@@ -1003,7 +1054,7 @@
         "cooldownMs": 9000,
         "power": 2.2
       },
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob153": {
       "id": "mob153",
@@ -1023,7 +1074,7 @@
       "leashRange": 31.2,
       "moveSpeed": 3.6,
       "scale": 1.61,
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob158": {
       "id": "mob158",
@@ -1043,7 +1094,10 @@
       "leashRange": 31.5,
       "moveSpeed": 4.4,
       "scale": 1.83,
-      "dropStep": 2
+      "dropSteps": [
+        5,
+        2
+      ]
     },
     "boss15": {
       "id": "boss15",
@@ -1070,7 +1124,7 @@
         "cooldownMs": 9000,
         "power": 2.2
       },
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob163": {
       "id": "mob163",
@@ -1090,7 +1144,7 @@
       "leashRange": 31.8,
       "moveSpeed": 3.6,
       "scale": 1.65,
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob168": {
       "id": "mob168",
@@ -1110,7 +1164,10 @@
       "leashRange": 32.1,
       "moveSpeed": 4.4,
       "scale": 1.87,
-      "dropStep": 0
+      "dropSteps": [
+        3,
+        0
+      ]
     },
     "boss16": {
       "id": "boss16",
@@ -1137,7 +1194,7 @@
         "cooldownMs": 9000,
         "power": 2.2
       },
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob173": {
       "id": "mob173",
@@ -1157,7 +1214,7 @@
       "leashRange": 32.4,
       "moveSpeed": 3.6,
       "scale": 1.69,
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob178": {
       "id": "mob178",
@@ -1177,7 +1234,10 @@
       "leashRange": 32.7,
       "moveSpeed": 4.4,
       "scale": 1.9,
-      "dropStep": 1
+      "dropSteps": [
+        4,
+        1
+      ]
     },
     "boss17": {
       "id": "boss17",
@@ -1204,7 +1264,7 @@
         "cooldownMs": 9000,
         "power": 2.2
       },
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob183": {
       "id": "mob183",
@@ -1224,7 +1284,7 @@
       "leashRange": 33,
       "moveSpeed": 3.6,
       "scale": 1.7,
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob188": {
       "id": "mob188",
@@ -1244,7 +1304,10 @@
       "leashRange": 33.3,
       "moveSpeed": 4.4,
       "scale": 1.9,
-      "dropStep": 2
+      "dropSteps": [
+        5,
+        2
+      ]
     },
     "boss18": {
       "id": "boss18",
@@ -1271,7 +1334,7 @@
         "cooldownMs": 9000,
         "power": 2.2
       },
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob193": {
       "id": "mob193",
@@ -1291,7 +1354,7 @@
       "leashRange": 33.6,
       "moveSpeed": 3.6,
       "scale": 1.7,
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob198": {
       "id": "mob198",
@@ -1311,7 +1374,10 @@
       "leashRange": 33.9,
       "moveSpeed": 4.4,
       "scale": 1.9,
-      "dropStep": 0
+      "dropSteps": [
+        3,
+        0
+      ]
     },
     "boss19": {
       "id": "boss19",
@@ -1338,7 +1404,7 @@
         "cooldownMs": 9000,
         "power": 2.2
       },
-      "dropStep": 0
+      "dropSteps": []
     },
     "mob200_1": {
       "id": "mob200_1",
@@ -1358,7 +1424,10 @@
       "leashRange": 34,
       "moveSpeed": 4.4,
       "scale": 2.85,
-      "dropStep": 1
+      "dropSteps": [
+        4,
+        1
+      ]
     },
     "mob200_2": {
       "id": "mob200_2",
@@ -1378,7 +1447,10 @@
       "leashRange": 34,
       "moveSpeed": 4.4,
       "scale": 2.85,
-      "dropStep": 2
+      "dropSteps": [
+        5,
+        2
+      ]
     },
     "mob200_3": {
       "id": "mob200_3",
@@ -1398,7 +1470,10 @@
       "leashRange": 34,
       "moveSpeed": 4.4,
       "scale": 2.85,
-      "dropStep": 3
+      "dropSteps": [
+        6,
+        3
+      ]
     },
     "mob200_4": {
       "id": "mob200_4",
@@ -1418,7 +1493,10 @@
       "leashRange": 34,
       "moveSpeed": 4.4,
       "scale": 2.85,
-      "dropStep": 4
+      "dropSteps": [
+        7,
+        4
+      ]
     },
     "mob200_5": {
       "id": "mob200_5",
@@ -1438,7 +1516,10 @@
       "leashRange": 34,
       "moveSpeed": 4.4,
       "scale": 2.85,
-      "dropStep": 5
+      "dropSteps": [
+        8,
+        5
+      ]
     },
     "sandbag": {
       "id": "sandbag",

@@ -791,27 +791,28 @@ export function equipmentStats(
  *
  * `GEAR_DROP_RATE` 는 **퍼센트 단위**라 100 으로 나눈다. 0.2963 = 0.2963% 다.
  */
-export function dropChanceFor(monsterLevel: number, dropBonus = 0, step = 0): number {
-  const base = dropWeights(monsterLevel, step).reduce((sum, w) => sum + w, 0);
+export function dropChanceFor(monsterLevel: number, dropBonus = 0, steps: readonly number[] = []): number {
+  const base = dropWeights(monsterLevel, steps).reduce((sum, w) => sum + w, 0);
   return withDropBonus(base, dropBonus);
 }
 
 /**
- * **같은 등급 창이 이어지면 윗등급 확률을 사냥터마다 10%씩 올린다** ★ (2026-10-04).
+ * **한 등급이 연달아 나오는 사냥터마다 그 등급 확률을 10%씩 올린다** ★ (2026-10-04, 2026-10-06 고침).
  *
  * 요청: "같은 등급이 나오는 사냥터의 경우에 이전 사냥터보다 더 좋은 아이템이 나올 확률을 10%씩
  * 증가시켜". 그 전에는 등급별 확률이 레벨과 상관없이 하나라 같은 창을 쓰는 사냥터는 드랍이 똑같았다.
- * - `step` = 사냥터 순서에서 **같은 창이 몇 번째로 이어지나**(첫 곳 0) — `zones.ts` 의 `DROP_STEPS` 가 종마다 매긴다.
- * - 창의 **윗등급**(1등급만 나오는 곳은 그 1등급) 확률 × 1.1^step. 아랫등급은 그대로다.
- *   그래서 장비가 떨어질 확률(합)도 조금 오르고, 떨어진 것 중 윗등급 비중도 오른다.
- * - 이전 사냥터 대비 ×1.1 이 쌓인다(복리) — 만렙 너머 다섯 곳도 종말의 대지에서 이어 간다.
+ * - `steps[i]` = 창의 i 번째 등급이 **앞에서 몇 곳 연달아 나왔나**(처음 나온 곳 0) — `zones.ts` 의 `DROP_STEPS`.
+ * - 그 등급 확률 × 1.1^steps[i]. 이전 사냥터 대비 ×1.1 이 쌓인다(복리).
+ * - 10-04 에는 창이 바뀌면 0 으로 돌아가고 윗등급에만 걸어서, 다음 창으로 넘어가 아랫등급이 된 등급이
+ *   **기본값으로 떨어졌다** (2·3 창 끝의 희귀 1.40% → 3·4 창 첫 곳 0.96%). 10-06 요청 "희귀 확률을 여기서도
+ *   올려야" 로 등급마다 따로 세서 끊기지 않게 했다 — 아랫등급이 된 뒤에도 계속 오른다.
  */
 export const DROP_STEP_BOOST = 1.1;
 
-/** 창의 등급마다 킬당 확률 — 윗등급에 `DROP_STEP_BOOST ^ step` */
-export function dropWeights(monsterLevel: number, step = 0): number[] {
+/** 창의 등급마다 킬당 확률 — 그 등급에 `DROP_STEP_BOOST ^ steps[i]` (없으면 0) */
+export function dropWeights(monsterLevel: number, steps: readonly number[] = []): number[] {
   const grades = dropGradesFor(monsterLevel);
-  return grades.map((g, i) => gearDropRate(g) * (i === grades.length - 1 ? DROP_STEP_BOOST ** step : 1));
+  return grades.map((g, i) => gearDropRate(g) * DROP_STEP_BOOST ** (steps[i] ?? 0));
 }
 
 /**
@@ -900,9 +901,9 @@ export const DROP_GRADE_FROM: Readonly<Record<number, number>> = { 2: 16, 3: 51 
  * `2^(n-g)` 로 임의로 반씩 깎았는데, 설계가 등급마다 절대 확률을 정해 두었으므로
  * 그 비로 나누면 두 값이 어긋날 일이 없다. 창이 [1, 2] 면 0.2963 : 0.08 이다.
  */
-export function rollGrade(roll: number, monsterLevel: number, step = 0): number {
+export function rollGrade(roll: number, monsterLevel: number, steps: readonly number[] = []): number {
   const grades = dropGradesFor(monsterLevel);
-  const weights = dropWeights(monsterLevel, step);
+  const weights = dropWeights(monsterLevel, steps);
   const total = weights.reduce((a, b) => a + b, 0);
   let cursor = Math.max(0, Math.min(0.999999, roll)) * total;
   for (let i = 0; i < weights.length; i++) {
@@ -933,8 +934,8 @@ export function rollDrop(
   job: JobId,
   rng: () => number = Math.random,
   dropBonus = 0,
-  /** 같은 등급 창이 몇 번째로 이어지는 사냥터인가 — `dropWeights` */
-  step = 0
+  /** 창의 등급마다 앞에서 몇 곳 연달아 나왔나 — `dropWeights` */
+  steps: readonly number[] = []
 ): Drop {
   const base = 2 + monsterLevel * 1.5;
   // ±30% 흔들어 매번 같은 숫자가 나오지 않게 한다
@@ -944,17 +945,17 @@ export function rollDrop(
   // — 고도 `items.gd` 도 같은 순서라야 같은 씨앗에서 같은 것이 나온다
   const drop: Drop = { gold };
   // `dropBonus` 는 장비의 아이템 드랍률 합계(1 = +100%) — `withDropBonus`
-  if (rng() < dropChanceFor(monsterLevel, dropBonus, step)) drop.item = rollGearDrop(monsterLevel, rng, step);
+  if (rng() < dropChanceFor(monsterLevel, dropBonus, steps)) drop.item = rollGearDrop(monsterLevel, rng, steps);
   if (rng() < withDropBonus(CRYSTAL_DROP_CHANCE, dropBonus)) drop.crystal = 1;
   return drop;
 }
 
-function rollGearDrop(monsterLevel: number, rng: () => number, step = 0): ItemStack {
+function rollGearDrop(monsterLevel: number, rng: () => number, steps: readonly number[] = []): ItemStack {
   // 슬롯은 고루 나와야 한다 — 한쪽만 나오면 나머지 자리는 영영 빈다.
   // 직업은 더 이상 후보를 가르지 않는다. 등급은 사냥터가 정한다
   // (굴리는 순서는 슬롯 → 등급. 고도 `items.gd` 도 같은 순서라야 같은 씨앗에서 같은 것이 나온다)
   const pick = Math.min(EQUIP_SLOTS.length - 1, Math.floor(rng() * EQUIP_SLOTS.length));
-  const grade = rollGrade(rng(), monsterLevel, step);
+  const grade = rollGrade(rng(), monsterLevel, steps);
   const id = itemId(grade, EQUIP_SLOTS[pick]!);
 
   const def = getItem(id);

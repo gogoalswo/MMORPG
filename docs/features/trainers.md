@@ -47,6 +47,7 @@
 | `godot/game/game.gd` `_toggle_trainer` · `_trainer_art` · `_draw_buddy` | 메뉴 단추(상점 옆, ≡ 판 안) · 원화 불러오기 · 동행 모델 그리기, `buddySwing` · `trainerDraw` · `diamonds` 알림 |
 | `godot/game/rig.gd` `create` | `trainer_<id>` 는 `FILES` 에 없어도 `trainer_<id>.glb` 로 찾는다 (53줄을 손으로 안 적는다) |
 | `godot/tests/trainer_test.gd` | 표 · 뽑기 · 동행 고르기 · 보유 효과 · **동행 전투** · 저장 · 서버 · 창 · 상점 뽑기 |
+| `godot/tests/model_test.gd` `_case_trainers` | 53명 전원이 모델로 만들어지고 `Idle` · `Run` · `Attack` 이 있고 키가 표대로다 |
 | `scripts/build-trainer-art.mjs` | 원화(9:16) → 카드 그림 240×320 JPG (`public/assets/trainers/`, 커밋) |
 | `scripts/fetch-assets.sh` 의 트레이너 줄 | 바르코 결과물 주소 (원화 · 대기 · 달리기 · 펀치) → `build-varco-character.mjs` |
 
@@ -85,8 +86,11 @@
 - 워크플로우 "Untitled"(`6f4423a3…`) — 트레이너마다 한 줄: `TextInput`(프롬프트) → `GenerateImage`(`nano-banana-pro`,
   9:16, 참고 그림 = **격투가 원화** `e9a9e381…jpg`) → `Generate3D`(tPose 1 · **1만 면** · 텍스처 1024) →
   `Rig`(humanoid) → `Animate` 셋(inPlace): 대기 `standing_idle_1` · 달리기 `run` · 공격 `boxing_punch`.
-- **1만 면인 이유** — 3만 면 모델이 하나 1.9MB(고도, 텍스처 512)라 53벌이면 100MB 가 웹 빌드에 얹힌다.
-  동행은 한 번에 한 명이고 화면에서 작다.
+- **1만 면 · 텍스처 512 인 이유** — 3만 면 모델이 하나 1.9MB(고도, 텍스처 512)라 53벌이면 100MB 가 웹 빌드에 얹힌다.
+  동행은 한 번에 한 명이고 화면에서 작다. 텍스처는 고도가 어차피 512 로 넣으므로 `--tex 512` 로 구워도 화면은 같다.
+  그래도 **한 벌 1.0MB, 53벌 55MB** 다 (뼈대·클립 셋 몫이 크다) — 웹 빌드가 그만큼 무거워졌다.
+- 바르코 작업 메모 — 노드가 380개를 넘자 `get_output_downloads` 를 `nodeId` 없이 부르면 **502** 가 났다.
+  Animate 노드마다 따로 받고, 원화 주소는 그래프 출력(`/api/objects/…png`)에서 뽑았다.
 - 프롬프트의 공통 꼬리는 마을 NPC 와 같다 — 정면 · 팔은 몸에서 조금 떨어뜨려 · **두 손은 비우고** · 흰 바탕. 손에
   든 물건은 T자세 3D 에서 뭉개지므로 소품은 허리·등에 단다.
 - 원화는 카드 그림으로도 쓴다 — `build-trainer-art.mjs` 가 머리~허벅지를 3:4 로 잘라 굽는다 (따로 그리지 않았다).

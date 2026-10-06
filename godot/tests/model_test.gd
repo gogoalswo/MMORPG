@@ -19,6 +19,7 @@ func _init() -> void:
 	_case_height_table()
 	_case_every_kind()
 	_case_npcs()
+	_case_trainers()
 	_run_scene.call_deferred()
 
 
@@ -197,6 +198,26 @@ func _case_npcs() -> void:
 		looks.append(look)
 		rig.free()
 	print("  NPC %d명 → 모델 %s" % [looks.size(), looks])
+
+
+## PT 트레이너 53명 — 전원 모델로 만들어지고 클립 셋(Idle · Run · Attack)이 있고 키가 표대로다 (trainers.md)
+func _case_trainers() -> void:
+	var made := 0
+	for info in Trainers.all():
+		var id := str(info.id)
+		var height := float(info.get("height", Rig.HUMAN_HEIGHT))
+		var rig := Rig.create(Trainers.look(id), height)
+		if rig == null:
+			_fail("트레이너 %s(%s) 가 모델로 안 만들어진다" % [info.name, id])
+			continue
+		for clip in ["Idle", "Run", "Attack"]:
+			if not rig.has_clip(clip):
+				_fail("트레이너 %s 에 %s 클립이 없다 %s" % [id, clip, rig.clips()])
+		if absf(_height(rig) - height) > 0.03:
+			_fail("트레이너 %s 키가 %.2f (표 %.2f)" % [id, _height(rig), height])
+		made += 1
+		rig.free()
+	print("  트레이너 %d명 → 모델" % made)
 
 
 ## 이벤트가 오면 그 동작을 틀고, 끝나면 대기로 돌아가는지 본다

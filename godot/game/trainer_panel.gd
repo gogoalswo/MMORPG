@@ -41,7 +41,8 @@ var _portrait := Callable()
 
 var _tabs: Array = []
 var _grid: GridContainer
-var _detail_art: TextureRect
+## 고른 트레이너의 3D 모델 (2026-10-06 — 그림 대신). 모델이 없으면 무대가 원화로 대신한다
+var _detail_art: TrainerStage
 var _detail_name: Label
 var _detail_grade: Label
 var _detail_lines: Label
@@ -147,12 +148,8 @@ func _build(frame_box: Callable) -> void:
 	detail.alignment = BoxContainer.ALIGNMENT_CENTER
 	detail.add_theme_constant_override("separation", 10)
 	body.add_child(detail)
-	_detail_art = TextureRect.new()
-	_detail_art.name = "art"
-	_detail_art.custom_minimum_size = DETAIL_ART
+	_detail_art = TrainerStage.make(DETAIL_ART)
 	_detail_art.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	_detail_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_detail_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	detail.add_child(_detail_art)
 	_detail_name = _label("", 26, IVORY)
 	_detail_name.name = "name"
@@ -276,6 +273,11 @@ func detail_name() -> String:
 	return _detail_name.text
 
 
+## 오른쪽 3D 무대 — 테스트가 본다
+func stage() -> TrainerStage:
+	return _detail_art
+
+
 func pick_button() -> Button:
 	return _pick
 
@@ -320,8 +322,7 @@ func _fill_detail(owned: Dictionary, active: String) -> void:
 		return
 	var grade := Trainers.grade(int(info.grade))
 	var have := int(owned.get(_selected, 0))
-	_detail_art.texture = _art(_selected)
-	_detail_art.modulate = Color.WHITE if have > 0 else Color(0.35, 0.35, 0.35)
+	_detail_art.show_trainer(_selected, _art(_selected), have > 0)
 	_detail_name.text = str(info.name)
 	_detail_name.add_theme_color_override("font_color", TrainerPanel.grade_color(int(info.grade)))
 	_detail_grade.text = "%s 등급" % str(grade.get("name", ""))

@@ -2093,17 +2093,18 @@ func trainer_fuse(player_id: String, grade: int, all: bool) -> void:
 	_ledger_call(player, &"trainer_fuse", [grade, 1 if all else 0])
 
 
-## 테스트 단추 — 다이아 `DEBUG_DIAMONDS` 개 (로컬은 결제가 없어 뽑기를 볼 수 없다)
+## 테스트 단추 — 다이아 `count` 개 (로컬은 결제가 없어 뽑기를 볼 수 없다).
+## 가방 창은 +1만, 설계 재현 창은 +10만을 보낸다 (2026-10-06)
 const DEBUG_DIAMONDS := 10000
 
 
-func debug_diamonds(player_id: String) -> void:
+func debug_diamonds(player_id: String, count: int = DEBUG_DIAMONDS) -> void:
 	var player: Dictionary = _players.get(player_id, {})
-	if player.is_empty():
+	if player.is_empty() or count <= 0:
 		return
-	player.diamonds = int(player.get("diamonds", 0)) + DEBUG_DIAMONDS
-	_events.append({"type": "diamonds", "gain": DEBUG_DIAMONDS, "total": player.diamonds, "product": "debug"})
-	_notice("테스트: 다이아 +%d" % DEBUG_DIAMONDS)
+	player.diamonds = int(player.get("diamonds", 0)) + count
+	_events.append({"type": "diamonds", "gain": count, "total": player.diamonds, "product": "debug"})
+	_notice("테스트: 다이아 +%d" % count)
 
 
 ## --- 장비 도감 --- (docs/features/codex.md)

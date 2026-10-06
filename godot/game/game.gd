@@ -1263,6 +1263,21 @@ func _build_debug_panel() -> void:
 		_apply_debug()
 	, [-10, -1, 1, 10]))
 
+	# 다이아 +10만 — 트레이너 뽑기를 여러 번 시험할 때 (2026-10-06 요청). 가방 창의 +1만과 같은 통로
+	var diamond_row := HBoxContainer.new()
+	diamond_row.add_theme_constant_override("separation", 8)
+	var diamond_label := Label.new()
+	diamond_label.text = "다이아"
+	diamond_label.custom_minimum_size = Vector2(90, 0)
+	diamond_label.add_theme_font_size_override("font_size", 20)
+	diamond_row.add_child(diamond_label)
+	var diamond_button := _make_button("+10만", func() -> void:
+		_transport.send(&"debugDiamonds", {"count": 100000})
+	)
+	diamond_button.custom_minimum_size = Vector2(120, 52)
+	diamond_row.add_child(diamond_button)
+	column.add_child(diamond_row)
+
 	_debug_text = Label.new()
 	_debug_text.add_theme_font_size_override("font_size", 18)
 	_debug_text.custom_minimum_size = Vector2(560, 0)

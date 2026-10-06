@@ -2505,6 +2505,21 @@ func _case_design_panel(game: Node3D) -> void:
 		if (label as Label).text in ["등급", "강화"]:
 			_fail("설계 창에 장비를 입히는 '%s' 단추 줄이 남아 있다" % (label as Label).text)
 
+	# 다이아 +10만 단추 (2026-10-06 요청) — 눌러서 실제로 10만이 들어오는지
+	var diamond_button: Button = null
+	for button in game._debug_panel.find_children("", "Button", true, false):
+		if (button as Button).text == "+10만":
+			diamond_button = button
+	if diamond_button == null:
+		_fail("설계 창에 다이아 +10만 단추가 없다")
+	else:
+		var gems_before := int(me.get("diamonds", 0))
+		diamond_button.pressed.emit()
+		await game.get_tree().process_frame
+		var gems_after := int(game._transport.snapshot().get("players", {}).get("me", {}).get("diamonds", 0))
+		if gems_after - gems_before != 100000:
+			_fail("다이아 +10만을 눌렀는데 %d 만큼 늘었다" % (gems_after - gems_before))
+
 	game._toggle_debug()
 	await game.get_tree().process_frame
 	if game._debug_panel.visible:

@@ -200,7 +200,7 @@ func send(message: StringName, payload: Dictionary) -> void:
 		&"trainerFuse":
 			_world.trainer_fuse(MY_ID, int(payload.get("grade", 0)), bool(payload.get("all", false)))
 		&"debugDiamonds":
-			_world.debug_diamonds(MY_ID)
+			_world.debug_diamonds(MY_ID, int(payload.get("count", World.DEBUG_DIAMONDS)))
 		&"debugSkillExp":
 			_world.debug_skill_exp(MY_ID)
 		&"debugLearnAll":

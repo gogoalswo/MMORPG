@@ -47,15 +47,16 @@
 | `godot/server/ledger_server.gd` `OPS` | `trainer_draw: "i"` · `trainer_pick: "s"` · `trainer_fuse: "ii"` — 서버에서는 **서버가 굴린다** |
 | `godot/server/kill_check.gd` `_pace` | 처치 검증 · 샌드백 상한이 **동행 몫**(평타 × 계승 %)을 더해 본다 |
 | `godot/net/local_transport.gd` | `trainerDraw {times}` · `trainerPick {id}` · `debugDiamonds` |
-| `godot/game/trainer_panel.gd` `TrainerPanel` | 트레이너 창 + **카드 한 장**(`make_card` — 뽑기 결과도 쓴다) |
+| `godot/game/trainer_panel.gd` `TrainerPanel` | 트레이너 창 + **카드 한 장**(`make_card`) · `grade_color`(등급 색 = 장비 등급 표 `Items.grade_color`) |
+| `godot/game/trainer_draw.gd` `TrainerDraw` | ★ **뽑기 연출** (아래 "뽑기 연출") — 돌판 · 덤벨 · 빛기둥 · 카드 · [모두 보기] · [확인] |
 | `godot/game/trainer_portraits.gd` `TrainerPortraits` | ★ **카드 그림도 3D 모델** (2026-10-06 요청 "왼쪽 이미지도 3D 모델로") — 카드마다 3D 를 띄우면 무거워서, **보이지 않는 무대 하나**(`SubViewport`, 오른쪽 무대와 같은 빛·각도 `TrainerStage.build_world` · `frame`)에 한 명씩 세워 대기 자세로 252×336 한 장을 찍어 카드에 쓴다. 창을 열면 그 탭의 카드를 줄 세워 한 프레임에 한 명씩 찍고 찍히는 대로 갈아 끼운다(`baked`). 판이 끝날 때까지 기억한다(`_cache`). 못 찍는 곳(헤드리스)·찍기 전에는 원화. 상점 뽑기 결과 카드도 같은 그림. 확인: `npm run shot:godot -- trainers` 가 찍힌 장 수와 모델이 그림에서 차지한 범위를 글로 낸다 (53/53장, 세로 약 90%) |
 | `godot/game/trainer_stage.gd` `TrainerStage` | ★ 창 오른쪽 **3D 모델 무대** (2026-10-06 요청 "이미지로 나오는데, 3D 모델이 나오도록") — 창 안 `SubViewport`(제 세상 · 투명 바탕 · 보일 때만 그림)에 고른 트레이너를 세워 `Idle`, 천천히 돌고(`SPIN`) **끌면 손으로 돌린다**(놓고 2초 뒤 다시 돎). 카메라는 키에 맞춰 발끝~머리를 세로 90% 로 담는다. 미보유는 어둡게. 모델이 없으면 원화로 대신. **카드 53장은 그림 그대로** — 다 3D 로 띄우면 폰에서 무겁다 |
-| `godot/game/store_panel.gd` | 뽑기 탭 · 다이아 단추(`buy_requested`) · 가진 다이아 · 뽑기 결과 판(`show_draw`) |
+| `godot/game/store_panel.gd` | 뽑기 탭 · 다이아 단추(`buy_requested`) · 가진 다이아 · 뽑기 결과(`show_draw` → `TrainerDraw` 를 창 위에 덮는다) |
 | `godot/game/game.gd` `_toggle_trainer` · `_trainer_art` · `_draw_buddy` | 메뉴 단추(상점 옆, ≡ 판 안) · 원화 불러오기 · 동행 모델 그리기, `buddySwing` · `trainerDraw` · `diamonds` 알림 |
 | `godot/game/rig.gd` `create` | `trainer_<id>` 는 `FILES` 에 없어도 `trainer_<id>.glb` 로 찾는다 (53줄을 손으로 안 적는다) |
-| `godot/tests/trainer_test.gd` | 표 · 뽑기 · 동행 고르기 · 보유 효과 · **동행 전투** · 저장 · 서버 · 창 · 상점 뽑기 |
+| `godot/tests/trainer_test.gd` | 표 · 뽑기 · 동행 고르기 · 보유 효과 · **동행 전투** · 저장 · 서버 · 창 · 상점 뽑기 · **뽑기 연출**(자리 수 · 덤벨 색 · 보기 전 카드 없음 · 이름 등급 색 · NEW · 확인) |
 | `godot/tests/model_test.gd` `_case_trainers` · `_case_trainer_kicks` | 53명 전원이 모델로 만들어지고 `Idle` · `Run` · 발차기 넷이 있고 키가 표대로다 · 등급마다 한 명씩 발차기에서 **왼발이 머리 높이의 80% 를 넘는지** 뼈 자리로 잰다 (전설 권신: 발 0.86 · 머리 0.69) |
-| `scripts/build-trainer-art.mjs` | 원화(9:16) → 카드 그림 240×320 JPG (`public/assets/trainers/`, 커밋) |
+| `scripts/build-trainer-art.mjs` | 원화(9:16) → 카드 그림 240×320 JPG (`public/assets/trainers/`, 커밋) · 뽑기 바닥판 `trainer_board.jpg` |
 | `scripts/fetch-assets.sh` 의 트레이너 줄 | 바르코 결과물 주소 (원화 · 대기 · 달리기 · 펀치) → `build-varco-character.mjs` |
 
 ## 규칙
@@ -118,6 +119,39 @@
   든 물건은 T자세 3D 에서 뭉개지므로 소품은 허리·등에 단다.
 - 원화는 카드 그림으로도 쓴다 — `build-trainer-art.mjs` 가 머리~허벅지를 3:4 로 잘라 굽는다 (따로 그리지 않았다).
 
+### 뽑기 연출 ★ (2026-10-06)
+
+요청: 다른 게임의 체스판 뽑기 스크린샷 두 장(말이 선 판 · [모두 보기] 뒤 카드가 선 판) + "뽑기 갯수에 따라 3D 모델이 이렇게
+나올거고, 배치는 좀 다르게. 체스말이 아니라 덤벨이 나오게 … 일반 등급은 흰색 덤벨, 희귀 이상 등급은 황금색 덤벨 … 보기 버튼
+누르면 두 번째 스샷처럼 이펙트가 나오면서 어떤 캐릭터가 나왔는지 표시하고, 이름은 등급 색상에 맞게".
+
+- **흐름** — 상점에서 사면 창 위에 판이 덮인다 → 뽑은 수만큼 덤벨이 하나씩(0.07초 간격) 떨어져 살짝 튀고 앉는다 →
+  **[모두 보기]** → 덤벨마다 차례로(0.13초) 빛기둥이 솟고 덤벨이 빛 속으로 줄어들며 그 자리에 카드가 선다 → **[확인]** 으로 걷는다.
+  떨어지는 중에 [모두 보기] 를 누르면 다 선 것으로 치고 바로 시작한다.
+- **덤벨 색** — 일반·고급은 **흰 대리석**, 희귀 이상은 **금** (`GOLD_GRADE` 3). 고급은 요청에 없어 "희귀 이상이 아니면 흰색" 으로 읽었다.
+- **배치** — 받은 그림(3 · 4 · 3 격자)과 다르게 **두 줄 초승달**: 10회면 뒤 6 · 앞 4 이고, 앞줄 간격이 뒷줄의 두 배라
+  **뒷줄 사이사이에** 선다(앞 카드가 뒤 카드 얼굴을 덜 가린다). 두 줄 다 양끝이 앞으로 휜다(`ARC`). 1회는 판 가운데 하나.
+  처음엔 꼭짓점이 안쪽인 삼각형(1 · 2 · 3 · 4줄)이었는데 줄이 넷이라 **카드·이름이 서로 덮였다** (찍어 보고 바꿨다).
+- **자리 순서** — 좋은 등급이 눈에 띄는 자리부터(앞줄 가운데 → 바깥 → 뒷줄 가운데 → 바깥, `slots`). 떨어지고 보는 순서는
+  그 거꾸로라 **가장 좋은 것이 마지막**에 열린다.
+- **이펙트**(코드, effect-rules.md) — 세로 빛기둥(직접 메시 · Y 축으로만 카메라를 본다 · 0.12초에 솟아 가늘어지며 사그라든다) ·
+  발밑 섬광(**퍼지지 않고 제자리에서** 사그라든다) · 바닥 빛 · 희귀 이상은 위로 튀는 반짝이(`one_shot`, 다음 프레임에 켠다).
+  색은 등급 색을 밝힌 것, 일반만 푸른 흰빛(등급 색이 흙빛이라 빛으로는 탁하다).
+- **카드는 3D 가 아니라 화면 위 조각**(UI 는 조각 조립 규칙) — 덤벨 발밑을 화면에 비춰(`unproject_position`) 그 자리에 세우고
+  **멀수록 작게**(깊이 비) · 화면 높이를 따라 배율을 매 프레임 다시 잡는다. 뒷줄 카드가 먼저 깔린다. 이름은 카드 위,
+  **등급 색**(`grade_color` 를 조금 밝힘) + 검은 외곽선. 테두리도 등급 색, 희귀 이상은 등급 색 번짐. 새로 얻은 것은 그림 오른쪽 위 **NEW**.
+  그림은 트레이너 창과 같은 것(찍어 둔 3D 그림, 없으면 원화).
+- **판** — 바르코 바닥판(8×8 칸, 흰 대리석 · 검은 돌에 월계관 두른 운동선수 메달) + 어두운 받침. 위에서 판 가운데로 떨어지는
+  스포트라이트라 가장자리는 어둠에 묻힌다. 그림이 없으면 흑백 체크로 그린다.
+- **덤벨 모델** — 바르코 워크플로우 "Untitled"(`6f4423a3…`)의 맨 위(y −6000 ~ −5200) 줄: 흰 대리석 원화(`GenerateImage`)
+  → 같은 그림을 `EditImage` 로 **재질만 금으로** → 금 원화에서 `Generate3D`(1만 면 · 텍스처 1024) → 흰 덤벨은 **그 금 메시에
+  흰 원화로 텍스처만 다시 입힌다**(`Texture3D`) — 두 벌이 모양이 똑같다. 흰 원화에서 따로 뽑은 3D 는 납작하게(1.0 × 0.48 × 1.0)
+  누운 채로 나와 버렸다. 6천 면으로는 `Generate3D` 가 이유 없이 실패해서 트레이너와 같은 1만 면으로 뽑았다.
+  둥근 받침 위에 세운 덤벨이라 체스말처럼 선다. 이름은 `Rig.FILES` 의 `dumbbell_white` · `dumbbell_gold`, 키 1.15m.
+  모델이 없으면 같은 키의 기둥(흰색 · 금빛)으로 대신한다.
+- **확인** — `npm run shot:godot -- draw` 가 10회 한 판을 넷으로 찍는다(`logs/shot_draw_1~4.png` — 선 판 · 보기 직후 빛기둥 ·
+  절반 · 다 선 판).
+
 ## 손댈 때
 
 - 등급 수치·인원을 바꾸면 `trainers.ts` → `npm run export:godot` → `npm test` · `npm run test:godot -- trainer`.
@@ -125,6 +159,7 @@
   이름은 표에서 짓는다(`trainer_<id>`) — `rig.gd`·`sync-godot-assets.mjs`·`check-godot-assets.mjs` 는 손댈 것이 없다.
 - 동행 피해를 바꾸면 `KillCheck._pace` 의 동행 줄도 같이 고친다.
 - 메뉴 단추가 늘면 `ui_test` 의 메뉴 개수(12)도 같이.
+- 뽑기 연출의 자리·카드 크기를 바꾸면 `npm run shot:godot -- draw` 로 **카드·이름이 서로 덮이지 않는지** 본다.
 
 ## 관련
 

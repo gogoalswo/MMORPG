@@ -89,6 +89,19 @@ node scripts/shrink-glb-textures.mjs assets-src/models/varco/tomb.glb public/ass
 fetch_varco d107839c00de50f9776818db0ba5e404 sandbag
 node scripts/shrink-glb-textures.mjs assets-src/models/varco/sandbag.glb public/assets/models/varco_sandbag.glb 1024
 
+# 트레이너 뽑기 연출 (2026-10-06, docs/features/trainers.md "뽑기 연출") — 바르코 워크플로우 "Untitled" 의 맨 위
+# (y -6000 ~ -5200) 줄. 둥근 받침에 세운 흰 대리석 덤벨 원화(8c6b692a…png)를 EditImage 로 금만 입힌 원화(bde73ffd…png)
+# → 3D(1만 면, pivotToBottom) = 금 덤벨. 흰 덤벨은 그 금 메시에 흰 원화로 텍스처만 다시 입힌 것(Texture3D) — 모양이 같다.
+# 1024 로 줄여 커밋한다. 바닥판은 그림 한 장(81f08893…png)
+fetch_varco 71879af3ec17f4e32102dd83d83a82e5 draw_dumbbell_white
+node scripts/shrink-glb-textures.mjs assets-src/models/varco/draw_dumbbell_white.glb public/assets/models/draw_dumbbell_white.glb 1024
+fetch_varco 3a26ea10a7da1106318241bd9ba78e1a draw_dumbbell_gold
+node scripts/shrink-glb-textures.mjs assets-src/models/varco/draw_dumbbell_gold.glb public/assets/models/draw_dumbbell_gold.glb 1024
+if [ ! -f assets-src/textures/varco/trainer_board.png ]; then
+  echo "받는 중: textures/varco/trainer_board.png"
+  curl -sL --max-time 120 -o assets-src/textures/varco/trainer_board.png "${VARCO}/81f088939f058fb90527f90496cad3d8.png"
+fi
+
 # 차원문 창 UI 조각 — 같은 워크플로우. 창 바탕·소용돌이 칸·별 칸을 **따로** 받아 고도에서
 # 조립한다 (docs/features/portal-ui.md). 원화 두 장(9fbb5d1f… 9dfeff2c…)은 3D 를 뽑은 그림이라 안 받는다.
 fetch_ui() { # $1=객체 해시  $2=출력 이름

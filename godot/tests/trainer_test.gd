@@ -333,8 +333,35 @@ func _case_panel() -> void:
 		buy.pressed.emit()
 	if bought != ["trainer_1"]:
 		_fail("뽑기 단추가 요청을 안 냈다: %s" % [bought])
-	store.show_draw(["n01", "l01"], [true, false], arts)
-	var shown := store.draw_shown()
-	if shown == null or (shown.find_child("cards", true, false) as GridContainer).get_child_count() != 2:
-		_fail("뽑기 결과 판에 카드 둘이 없다")
+	# 뽑기 연출 — 뽑은 수만큼 덤벨(일반·고급 흰색 · 희귀 이상 금), 좋은 등급이 꼭짓점, [모두 보기] → 카드 (이름은 등급 색)
+	if TrainerDraw.slots(10).size() != 10 or TrainerDraw.slots(1) != [Vector3.ZERO]:
+		_fail("뽑기 자리 수가 틀리다: %d" % TrainerDraw.slots(10).size())
+	store.show_draw(["n01", "a01", "r01", "l01"], [true, false, false, false], arts)
+	var shown := store.draw_shown() as TrainerDraw
+	if shown == null or shown.pieces().size() != 4:
+		_fail("뽑기 판에 덤벨 넷이 없다")
+	else:
+		var golds: Array = shown.pieces().map(func(p): return "%s:%s" % [p.id, "금" if p.gold else "흰"])
+		if golds != ["l01:금", "r01:금", "a01:흰", "n01:흰"]:
+			_fail("덤벨 색·자리가 %s" % [golds])
+		if not shown.cards().is_empty():
+			_fail("보기 전에 카드가 섰다")
+		(shown.find_child("reveal", true, false) as Button).pressed.emit()
+		shown.finish()
+		if shown.cards().size() != 4:
+			_fail("모두 보기 뒤 카드가 %d장" % shown.cards().size())
+		else:
+			var legend: Label = shown.cards()[0].find_child("name", true, false)
+			if legend.text != str(Trainers.trainer("l01").name) \
+					or legend.get_theme_color("font_color") != TrainerPanel.grade_color(5).lightened(0.2):
+				_fail("전설 카드 이름이 등급 색이 아니다")
+			if shown.cards()[3].find_child("tag", true, false) == null or shown.cards()[0].find_child("tag", true, false) != null:
+				_fail("새로 얻은 것에만 NEW 가 붙어야 한다")
+		var ok: Button = shown.find_child("ok", true, false)
+		if not ok.visible:
+			_fail("다 본 뒤 확인 단추가 없다")
+		ok.pressed.emit()
+		await process_frame
+		if store.draw_shown() != null:
+			_fail("확인을 눌러도 뽑기 판이 남았다")
 	store.queue_free()

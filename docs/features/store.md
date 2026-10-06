@@ -46,7 +46,7 @@
   이름(없으면 그림 자리만 빈다).
 - ★ **다이아 상품** (2026-10-06) — `{id, diamonds, art?}` 이면 값 자리가 **"다이아 N" 사기 단추**(`buy`)가 되고 누르면
   `buy_requested(id)` 를 낸다. `art` 는 그림을 바로 준 것(트레이너 원화). 탭 줄 오른쪽에 **가진 다이아**(`set_diamonds`)를 적는다.
-  뽑기 결과는 창 위에 덮는 판(`show_draw` — 카드 · NEW · 확인)이다 → [trainers.md](trainers.md)
+  뽑기 결과는 창 위에 덮는 **3D 연출 판**(`show_draw` → `TrainerDraw` — 덤벨이 떨어져 서고 [모두 보기] 로 카드가 선다 · NEW · 확인)이다 → [trainers.md](trainers.md) "뽑기 연출"
 - 메뉴 그림 `ui_icon_shop` 은 **끈 묶은 가죽 돈주머니**다 (2026-10-02 요청 "상점 아이콘도 바르코로 만들어").
   HUD 아이콘 기준([ui-art-style.md](ui-art-style.md) "HUD 아이콘 기준 (2026-09-29)") 프롬프트에 `<무엇>` 만
   `a plump leather coin pouch tied shut with a cord at the neck, two or three coins resting at its base` 로,

@@ -9,7 +9,10 @@
  * - **보유 효과** — 뽑아서 갖고만 있어도 캐릭터에 붙는다 (2026-10-06 사용자가 고른 "보유 효과").
  *   트레이너마다 능력치 하나, 등급마다 1 · 2 · 3 · 5 · 8 %. 공격력·방어력·체력은 다른 몫(장비·헬스·도감)과
  *   **따로 곱하고**, 치명타 확률·치명타 피해는 비율에 더한다.
- * - **동행은 한 명** (사용자가 고른 것). 같은 트레이너가 또 나오면 개수만 센다 — 지금은 쓰임이 없다.
+ * - **동행은 한 명** (사용자가 고른 것). 같은 트레이너가 또 나오면 개수가 는다.
+ * - **합성** (2026-10-06 요청: "중복으로 나온 트레이너는 합성해서 다음 등급으로 올릴 수 있는 기능 … 확률에 따라서.
+ *   트레이너 3장당 다음 등급 도전") — 같은 등급 **여분**(트레이너마다 1장은 남긴다) 3장을 넣어 `fuse` 확률로
+ *   다음 등급 무작위 1명. 실패하면 3장만 사라진다. 확률은 사용자가 정했다 — 20 · 20 · 10 · 10 %.
  * - 판정은 장부(`Ledger.trainer_draw` · `trainer_pick`)가 한다 → docs/features/trainers.md
  */
 
@@ -34,15 +37,20 @@ export interface TrainerGrade {
   /** 뽑기에서 이 등급이 나올 확률(%) — 등급 안에서는 고르게 */
   chance: number;
   count: number;
+  /** 이 등급 여분 `TRAINER_FUSE_COST` 장으로 다음 등급에 도전할 때의 성공 확률(%) — 전설은 0(더 위가 없다) */
+  fuse: number;
 }
 
 export const TRAINER_GRADES: TrainerGrade[] = [
-  { grade: 1, name: '일반', inherit: 20, owned: 1, chance: 58, count: 20 },
-  { grade: 2, name: '고급', inherit: 30, owned: 2, chance: 30, count: 15 },
-  { grade: 3, name: '희귀', inherit: 40, owned: 3, chance: 9, count: 10 },
-  { grade: 4, name: '영웅', inherit: 60, owned: 5, chance: 2.5, count: 5 },
-  { grade: 5, name: '전설', inherit: 80, owned: 8, chance: 0.5, count: 3 },
+  { grade: 1, name: '일반', inherit: 20, owned: 1, chance: 58, count: 20, fuse: 20 },
+  { grade: 2, name: '고급', inherit: 30, owned: 2, chance: 30, count: 15, fuse: 20 },
+  { grade: 3, name: '희귀', inherit: 40, owned: 3, chance: 9, count: 10, fuse: 10 },
+  { grade: 4, name: '영웅', inherit: 60, owned: 5, chance: 2.5, count: 5, fuse: 10 },
+  { grade: 5, name: '전설', inherit: 80, owned: 8, chance: 0.5, count: 3, fuse: 0 },
 ];
+
+/** 합성 한 번에 넣는 같은 등급 여분 */
+export const TRAINER_FUSE_COST = 3;
 
 /** 뽑기 값 — 다이아. 10회는 한 번에 열 번 굴린다 (할인 없음) */
 export const TRAINER_DRAW_COST = 100;

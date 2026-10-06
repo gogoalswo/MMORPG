@@ -2085,6 +2085,14 @@ func trainer_pick(player_id: String, id: String) -> void:
 	player.buddy = {}
 
 
+## 트레이너 창의 **합성** · **모두 합성** — 판정은 `Ledger.trainer_fuse`
+func trainer_fuse(player_id: String, grade: int, all: bool) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty():
+		return
+	_ledger_call(player, &"trainer_fuse", [grade, 1 if all else 0])
+
+
 ## 테스트 단추 — 다이아 `DEBUG_DIAMONDS` 개 (로컬은 결제가 없어 뽑기를 볼 수 없다)
 const DEBUG_DIAMONDS := 10000
 

@@ -197,6 +197,8 @@ func send(message: StringName, payload: Dictionary) -> void:
 			_world.trainer_draw(MY_ID, int(payload.get("times", 1)))
 		&"trainerPick":
 			_world.trainer_pick(MY_ID, str(payload.get("id", "")))
+		&"trainerFuse":
+			_world.trainer_fuse(MY_ID, int(payload.get("grade", 0)), bool(payload.get("all", false)))
 		&"debugDiamonds":
 			_world.debug_diamonds(MY_ID)
 		&"debugSkillExp":

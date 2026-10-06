@@ -48,6 +48,7 @@
 | `godot/server/kill_check.gd` `_pace` | 처치 검증 · 샌드백 상한이 **동행 몫**(평타 × 계승 %)을 더해 본다 |
 | `godot/net/local_transport.gd` | `trainerDraw {times}` · `trainerPick {id}` · `debugDiamonds` |
 | `godot/game/trainer_panel.gd` `TrainerPanel` | 트레이너 창 + **카드 한 장**(`make_card` — 뽑기 결과도 쓴다) |
+| `godot/game/trainer_stage.gd` `TrainerStage` | ★ 창 오른쪽 **3D 모델 무대** (2026-10-06 요청 "이미지로 나오는데, 3D 모델이 나오도록") — 창 안 `SubViewport`(제 세상 · 투명 바탕 · 보일 때만 그림)에 고른 트레이너를 세워 `Idle`, 천천히 돌고(`SPIN`) **끌면 손으로 돌린다**(놓고 2초 뒤 다시 돎). 카메라는 키에 맞춰 발끝~머리를 세로 90% 로 담는다. 미보유는 어둡게. 모델이 없으면 원화로 대신. **카드 53장은 그림 그대로** — 다 3D 로 띄우면 폰에서 무겁다 |
 | `godot/game/store_panel.gd` | 뽑기 탭 · 다이아 단추(`buy_requested`) · 가진 다이아 · 뽑기 결과 판(`show_draw`) |
 | `godot/game/game.gd` `_toggle_trainer` · `_trainer_art` · `_draw_buddy` | 메뉴 단추(상점 옆, ≡ 판 안) · 원화 불러오기 · 동행 모델 그리기, `buddySwing` · `trainerDraw` · `diamonds` 알림 |
 | `godot/game/rig.gd` `create` | `trainer_<id>` 는 `FILES` 에 없어도 `trainer_<id>.glb` 로 찾는다 (53줄을 손으로 안 적는다) |

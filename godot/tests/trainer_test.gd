@@ -273,6 +273,16 @@ func _case_panel() -> void:
 		_fail("전설 탭 카드가 %d장" % panel.cards().size())
 	if panel.detail_name() != "권신 아수라" or panel.pick_button().text != "돌려보내기":
 		_fail("동행 중인 권신을 골랐는데 %s · %s" % [panel.detail_name(), panel.pick_button().text])
+	# 오른쪽은 그림이 아니라 **3D 모델**이 대기 동작으로 선다 (2026-10-06) — 고르면 그 트레이너로 바뀐다
+	var first := panel.stage().rig()
+	if first == null:
+		_fail("오른쪽 무대에 모델이 없다 (에셋을 동기화했나)")
+	elif not first.is_inside_tree() or first.get_viewport() == panel.get_viewport():
+		_fail("무대 모델이 창의 SubViewport 안에 있지 않다")
+	panel.select("n02")
+	await process_frame
+	if panel.stage().rig() == null or panel.stage().rig() == first:
+		_fail("다른 트레이너를 골랐는데 무대 모델이 안 바뀌었다")
 	var asked: Array = []
 	panel.pick_requested.connect(func(id: String) -> void: asked.append(id))
 	panel.select("l02")

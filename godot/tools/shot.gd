@@ -433,15 +433,17 @@ func _trainer(game: Node3D, id: String) -> void:
 	rig.position = game._player.position
 	var cell := Vector2i(460, 700)
 	var sheet: Image = null
-	var shots := [["Idle", 0.0, 0.0], ["Idle", 0.0, PI * 0.25], ["KickSlapIn", 0.12, PI * 0.5]]
+	# 넷째 장은 허리 높이에서 손을 가까이 — 주먹이 어느 쪽을 보는지 (2026-10-06 "주먹이 너무 정면")
+	var shots := [["Idle", 0.0, 0.0], ["Idle", 0.0, PI * 0.25], ["KickSlapIn", 0.12, PI * 0.5], ["Idle", 0.0, PI * 0.12]]
 	for index in shots.size():
 		var shot: Array = shots[index]
 		rig.play(str(shot[0]), 1.0 if str(shot[0]) == "Idle" else 0.0, float(shot[1]), true, 0.0)
 		for i in 6:
 			await process_frame
-		var focus: Vector3 = rig.position + Vector3(0, height * 0.5, 0)
+		var hands := index == 3
+		var focus: Vector3 = rig.position + Vector3(0, height * (0.47 if hands else 0.5), 0)
 		var angle := float(shot[2])
-		game._camera.position = focus + Vector3(sin(angle), 0.05, cos(angle)) * (height * 1.9)
+		game._camera.position = focus + Vector3(sin(angle), 0.05, cos(angle)) * (height * (1.5 if hands else 1.9))
 		game._camera.look_at(focus, Vector3.UP)
 		await process_frame
 		await RenderingServer.frame_post_draw
@@ -452,7 +454,7 @@ func _trainer(game: Node3D, id: String) -> void:
 		sheet.blit_rect(img, Rect2i(from, cell), Vector2i(index * cell.x, 0))
 	sheet.resize(int(sheet.get_width() * 0.6), int(sheet.get_height() * 0.6), Image.INTERPOLATE_BILINEAR)
 	sheet.save_png("res://../logs/shot_sheet.png")
-	print("logs/shot_sheet.png  (%s — 대기 정면 · 대기 45° · 발차기 옆)" % id)
+	print("logs/shot_sheet.png  (%s — 대기 정면 · 대기 45° · 발차기 옆 · 손 근접)" % id)
 	quit(0)
 
 

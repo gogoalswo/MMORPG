@@ -164,6 +164,10 @@ func _run() -> void:
 		await _gear(game, skill == "gear:close")
 		return
 	# 대기 자세 — 정면·옆 온몸을 눈높이에서 (사용자가 준 선 자세 참고 그림과 견준다)
+	# 트레이너 한 명 가까이 — 대기 정면 · 대기 옆 · 발차기(`trainer:n01`). 주먹 쥔 손을 볼 때 (trainers.md)
+	if skill.begins_with("trainer:"):
+		await _trainer(game, skill.trim_prefix("trainer:"))
+		return
 	if skill == "idle" or skill == "idle:close":
 		await _idle(game, skill == "idle:close")
 		return
@@ -409,6 +413,46 @@ func _idle(game: Node3D, close := false, clip := "Idle", at := 0.0, lift := 0.0)
 	sheet.resize(int(sheet.get_width() * 0.6), int(sheet.get_height() * 0.6), Image.INTERPOLATE_BILINEAR)
 	sheet.save_png("res://../logs/shot_sheet.png")
 	print("logs/shot_sheet.png  (대기 — 정면 · 옆 · 뒤)")
+	quit(0)
+
+
+## 트레이너 한 명을 캐릭터 자리에 세워 가까이 세 장 — 대기 정면 · 대기 45° · 발차기(무릎 든 때) 옆
+## (`npm run shot:godot -- trainer:n01` → logs/shot_sheet.png)
+func _trainer(game: Node3D, id: String) -> void:
+	await process_frame
+	await process_frame
+	game.set_process(false)
+	var height := float(Trainers.trainer(id).get("height", Rig.HUMAN_HEIGHT))
+	var rig := Rig.create(Trainers.look(id), height)
+	if rig == null:
+		print("트레이너 %s 모델이 없다" % id)
+		quit(1)
+		return
+	game._player.visible = false
+	game._zone_node.add_child(rig)
+	rig.position = game._player.position
+	var cell := Vector2i(460, 700)
+	var sheet: Image = null
+	var shots := [["Idle", 0.0, 0.0], ["Idle", 0.0, PI * 0.25], ["KickSlapIn", 0.12, PI * 0.5]]
+	for index in shots.size():
+		var shot: Array = shots[index]
+		rig.play(str(shot[0]), 1.0 if str(shot[0]) == "Idle" else 0.0, float(shot[1]), true, 0.0)
+		for i in 6:
+			await process_frame
+		var focus: Vector3 = rig.position + Vector3(0, height * 0.5, 0)
+		var angle := float(shot[2])
+		game._camera.position = focus + Vector3(sin(angle), 0.05, cos(angle)) * (height * 1.9)
+		game._camera.look_at(focus, Vector3.UP)
+		await process_frame
+		await RenderingServer.frame_post_draw
+		var img := root.get_texture().get_image()
+		if sheet == null:
+			sheet = Image.create(cell.x * shots.size(), cell.y, false, img.get_format())
+		var from := Vector2i((img.get_width() - cell.x) / 2, (img.get_height() - cell.y) / 2)
+		sheet.blit_rect(img, Rect2i(from, cell), Vector2i(index * cell.x, 0))
+	sheet.resize(int(sheet.get_width() * 0.6), int(sheet.get_height() * 0.6), Image.INTERPOLATE_BILINEAR)
+	sheet.save_png("res://../logs/shot_sheet.png")
+	print("logs/shot_sheet.png  (%s — 대기 정면 · 대기 45° · 발차기 옆)" % id)
 	quit(0)
 
 

@@ -168,6 +168,10 @@ func _run() -> void:
 		await _gear(game, skill == "gear:close")
 		return
 	# 대기 자세 — 정면·옆 온몸을 눈높이에서 (사용자가 준 선 자세 참고 그림과 견준다)
+	# 주먹 비틀기 비교판 — `fists:<json>` (json = [[id, [[왼, 오른], …]], …]). 줄마다 한 명, 칸마다 비틀기 하나
+	if skill.begins_with("fists:"):
+		await _fists(game, skill.trim_prefix("fists:"))
+		return
 	# 트레이너 한 명 가까이 — 대기 정면 · 대기 옆 · 발차기(`trainer:n01`). 주먹 쥔 손을 볼 때 (trainers.md)
 	if skill.begins_with("trainer:"):
 		await _trainer(game, skill.trim_prefix("trainer:"))
@@ -417,6 +421,62 @@ func _idle(game: Node3D, close := false, clip := "Idle", at := 0.0, lift := 0.0)
 	sheet.resize(int(sheet.get_width() * 0.6), int(sheet.get_height() * 0.6), Image.INTERPOLATE_BILINEAR)
 	sheet.save_png("res://../logs/shot_sheet.png")
 	print("logs/shot_sheet.png  (대기 — 정면 · 옆 · 뒤)")
+	quit(0)
+
+
+## 주먹 비틀기 비교판 (`npm run shot:godot -- fists:<json 경로>`) — 대기 0.5초에 멈추고 아래팔을 [왼, 오른]° 더 비틀어
+## 허리 높이 정면을 찍는다. 줄 = 트레이너, 칸 = 비틀기 후보 → logs/shot_fists.png (docs/features/trainers.md "주먹 쥔 몸")
+func _fists(game: Node3D, path: String) -> void:
+	var plan: Array = JSON.parse_string(FileAccess.get_file_as_string(path))
+	await process_frame
+	await process_frame
+	game.set_process(false)
+	game._player.visible = false
+	var cell := Vector2i(300, 170) if plan.size() > 3 else Vector2i(420, 300)
+	var cols := 0
+	for row in plan:
+		cols = maxi(cols, (row[1] as Array).size())
+	var sheet: Image = null
+	for r in plan.size():
+		var id := str(plan[r][0])
+		var height := float(Trainers.trainer(id).get("height", Rig.HUMAN_HEIGHT))
+		var rig := Rig.create(Trainers.look(id), height)
+		if rig == null:
+			continue
+		game._zone_node.add_child(rig)
+		rig.position = game._player.position
+		await process_frame
+		var sk: Skeleton3D = rig.find_children("*", "Skeleton3D", true, false)[0]
+		rig._anim.play("Idle")
+		rig._anim.seek(0.5, true)
+		rig._anim.pause()
+		var base := {}
+		for side in ["Left", "Right"]:
+			var b := sk.find_bone(side + "ForeArm")
+			base[side] = [b, sk.get_bone_pose_rotation(b)]
+		var variants: Array = plan[r][1]
+		for c in variants.size():
+			for k in 2:
+				var side: String = ["Left", "Right"][k]
+				sk.set_bone_pose_rotation(base[side][0], base[side][1] * Quaternion(Vector3.UP, deg_to_rad(float(variants[c][k]))))
+			# 셋째 값이 있으면 카메라를 그 각도(도, 0 = 정면 · 90 = 왼옆)로 돌린다
+			var yaw := deg_to_rad(float(plan[r][2])) if (plan[r] as Array).size() > 2 else 0.0
+			var focus: Vector3 = rig.position + Vector3(0, height * 0.47, 0)
+			game._camera.position = focus + Vector3(sin(yaw), 0.05, cos(yaw)) * height * 1.25
+			game._camera.look_at(focus, Vector3.UP)
+			for i in 2:
+				await process_frame
+			await RenderingServer.frame_post_draw
+			var img := root.get_texture().get_image()
+			if sheet == null:
+				sheet = Image.create(cell.x * cols, cell.y * plan.size(), false, img.get_format())
+			var from := Vector2i((img.get_width() - cell.x * 2) / 2, (img.get_height() - cell.y * 2) / 2)
+			var part := img.get_region(Rect2i(from, cell * 2))
+			part.resize(cell.x, cell.y, Image.INTERPOLATE_BILINEAR)
+			sheet.blit_rect(part, Rect2i(Vector2i.ZERO, cell), Vector2i(c * cell.x, r * cell.y))
+		rig.queue_free()
+	sheet.save_png("res://../logs/shot_fists.png")
+	print("logs/shot_fists.png  (줄 %d · 칸 %d)" % [plan.size(), cols])
 	quit(0)
 
 

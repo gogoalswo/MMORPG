@@ -39,16 +39,17 @@ const specs = [
   `LeftForeArm:${ax('LeftForeArm')}:${BEND}@Idle`,
   `RightForeArm:${ax('RightForeArm')}:${BEND}@Idle`,
 ];
-// 발차기(파이터에게서 옮긴 클립)는 **손가락·손목 키까지** 가져와서, 파이터의 편 손이 조각된 주먹 위에 덮여 갈퀴 손이 됐다
-// (2026-10-07 "이게 사람 손 이냐?"). 발차기에서도 손가락·손목은 조각된 대로 둔다
-const KICKS = 'KickSlapFull+KickSlapIn+KickSlapA+KickSlapB';
-for (const s of ['L', 'R']) {
-  specs.push(`${s === 'L' ? 'Left' : 'Right'}Hand:rest@${KICKS}`);
-  for (let f = 0; f < 5; f++) for (const k of ['', '1', '2']) specs.push(`HandLoRA_Bip01_${s}_Finger${f}${k}:rest@${KICKS}`);
-}
 if (!noTwist) {
   if (!axes.twist) throw new Error(`${id} 의 주먹 비틀기가 trainer-arm-axes.json 에 없다 — godot/tools/fist_twist.gd 로 잰다`);
   specs.push(`LeftForeArm:0,1,0:${axes.twist[0]}`, `RightForeArm:0,1,0:${axes.twist[1]}`);
+}
+// 리깅이 **왼·오른 이름을 뒤바꾼** 몸(a15 · r10)은 바르코 대기가 팔을 안으로 끌어 두 주먹이 사타구니 앞에서 만났다. 먼저 윗팔·
+// 아래팔 방향을 n01 과 같게 돌린다 (`godot/tools/arm_match.gd`, 2026-10-07). 다른 모델은 n01 과 1~9° 라 안 한다
+if (!noTwist && axes.match) {
+  for (const bone of ['LeftArm', 'LeftForeArm', 'RightArm', 'RightForeArm']) {
+    const [x, y, z, deg] = axes.match[bone];
+    specs.push(`${bone}:${x},${y},${z}:${deg}@Idle`);
+  }
 }
 // 차렷 좌우 대칭 — 바르코 대기가 몸통을 살짝 비틀어 골반 기준 손목이 한쪽만 15% 바깥이었다 (2026-10-07 "왼손이랑 오른손이랑
 // 차렷 자세 위치가 다르자나?"). `godot/tools/hand_sym.gd` 가 위 자세를 다 입은 몸에서 잰 윗팔 돌림이라 **맨 뒤에** 곱한다

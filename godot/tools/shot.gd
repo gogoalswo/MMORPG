@@ -173,6 +173,12 @@ func _run() -> void:
 		await _fists(game, skill.trim_prefix("fists:"))
 		return
 	# 트레이너 한 명 가까이 — 대기 정면 · 대기 옆 · 발차기(`trainer:n01`). 주먹 쥔 손을 볼 때 (trainers.md)
+	if skill == "handsall":
+		await _trainer_hands_all(game)
+		return
+	if skill.begins_with("hands:"):
+		await _trainer_hands(game, skill.trim_prefix("hands:"))
+		return
 	if skill.begins_with("trainer:"):
 		await _trainer(game, skill.trim_prefix("trainer:"))
 		return
@@ -477,6 +483,104 @@ func _fists(game: Node3D, path: String) -> void:
 		rig.queue_free()
 	sheet.save_png("res://../logs/shot_fists.png")
 	print("logs/shot_fists.png  (줄 %d · 칸 %d)" % [plan.size(), cols])
+	quit(0)
+
+
+## 트레이너 손 가까이 (`npm run shot:godot -- hands:n03`) — 대기 정면(멈춤) · 발차기 세 순간. 주먹 모양·좌우 대칭을 볼 때
+## (2026-10-07 "왼손이랑 오른손이랑 차렷 자세 위치가 다르자나? 그리고 이게 사람 손이냐?") → logs/shot_hands.png
+## 트레이너 53명의 **두 주먹 정면**을 한 판에 — 주먹이 뚫렸거나 좌우가 다른 모델을 고른다 (2026-10-07 "이게 사람 손 이냐?")
+## (`npm run shot:godot -- handsall` → logs/shot_hands_all_<쪽>.png, 한 판에 28명 · 4줄 칸)
+func _trainer_hands_all(game: Node3D) -> void:
+	await process_frame
+	await process_frame
+	game.set_process(false)
+	game._player.visible = false
+	game._camera.near = 0.05
+	var ids: Array = []
+	for t in Trainers.all():
+		ids.append(str(t.id))
+	var cell := Vector2i(480, 240)
+	var per_page := 28
+	for page in ceili(ids.size() / float(per_page)):
+		var sheet: Image = null
+		var chunk := ids.slice(page * per_page, (page + 1) * per_page)
+		for index in chunk.size():
+			var id: String = chunk[index]
+			var height := float(Trainers.trainer(id).get("height", Rig.HUMAN_HEIGHT))
+			var rig := Rig.create(Trainers.look(id), height)
+			game._zone_node.add_child(rig)
+			rig.position = game._player.position
+			rig._anim.play("Idle")
+			rig._anim.seek(0.5, true)
+			rig._anim.pause()
+			for i in 2:
+				await process_frame
+			var sk: Skeleton3D = rig.find_children("*", "Skeleton3D", true, false)[0]
+			var l := sk.to_global(sk.get_bone_global_pose(sk.find_bone("LeftHand")).origin)
+			var r := sk.to_global(sk.get_bone_global_pose(sk.find_bone("RightHand")).origin)
+			var focus := (l + r) * 0.5 + Vector3(0, -0.04 * height, 0)
+			game._camera.position = focus + Vector3(0, 0.02, 1) * maxf(0.5, l.distance_to(r) * 1.25)
+			game._camera.look_at(focus, Vector3.UP)
+			for i in 3:
+				await process_frame
+			await RenderingServer.frame_post_draw
+			var img := root.get_texture().get_image()
+			if sheet == null:
+				sheet = Image.create(cell.x * 4, cell.y * 7, false, img.get_format())
+			var from := Vector2i((img.get_width() - cell.x) / 2, (img.get_height() - cell.y) / 2)
+			sheet.blit_rect(img, Rect2i(from, cell), Vector2i(index % 4 * cell.x, index / 4 * cell.y))
+			rig.queue_free()
+		var path := "logs/shot_hands_all_%d.png" % page
+		sheet.save_png("res://../" + path)
+		print(path, "  ", chunk[0], "~", chunk[-1], "  (왼→오른, 위→아래 · 4명씩)")
+	quit(0)
+
+
+func _trainer_hands(game: Node3D, id: String) -> void:
+	await process_frame
+	await process_frame
+	game.set_process(false)
+	var height := float(Trainers.trainer(id).get("height", Rig.HUMAN_HEIGHT))
+	var rig := Rig.create(Trainers.look(id), height)
+	if rig == null:
+		quit(1)
+		return
+	game._player.visible = false
+	game._zone_node.add_child(rig)
+	rig.position = game._player.position
+	# [클립, 초, 카메라 각(도), 높이 비, 거리 비]
+	var shots := [["Idle", 0.5, 0.0, 0.55, 1.5], ["KickSlapIn", 0.08, 90.0, 0.62, 1.0],
+		["KickSlapIn", 0.18, 45.0, 0.62, 1.0], ["KickSlapFull", 0.35, 90.0, 0.6, 1.0]]
+	# SHOT_HANDS='[["Idle",0.5,90,0,0.25,"RightHand"], …]' 로 바꿔 찍는다 — 여섯째 칸에 뼈 이름을 주면 그 뼈를 가운데 둔다
+	if OS.get_environment("SHOT_HANDS") != "":
+		shots = JSON.parse_string(OS.get_environment("SHOT_HANDS"))
+	var sk: Skeleton3D = rig.find_children("*", "Skeleton3D", true, false)[0]
+	game._camera.near = 0.05  # 게임 카메라는 near 1m 라 손 가까이 가면 몸이 잘린다
+	var cell := Vector2i(480, 480)
+	var sheet: Image = null
+	for index in shots.size():
+		var shot: Array = shots[index]
+		rig._anim.play(str(shot[0]))
+		rig._anim.seek(float(shot[1]), true)
+		rig._anim.pause()
+		var focus: Vector3 = rig.position + Vector3(0, height * float(shot[3]), 0)
+		if shot.size() > 5:
+			for i in 2:
+				await process_frame
+			focus = sk.to_global(sk.get_bone_global_pose(sk.find_bone(str(shot[5]))).origin)
+		var yaw := deg_to_rad(float(shot[2]))
+		game._camera.position = focus + Vector3(sin(yaw), 0.05, cos(yaw)) * height * float(shot[4])
+		game._camera.look_at(focus, Vector3.UP)
+		for i in 3:
+			await process_frame
+		await RenderingServer.frame_post_draw
+		var img := root.get_texture().get_image()
+		if sheet == null:
+			sheet = Image.create(cell.x * shots.size(), cell.y, false, img.get_format())
+		var from := Vector2i((img.get_width() - cell.x) / 2, (img.get_height() - cell.y) / 2)
+		sheet.blit_rect(img, Rect2i(from, cell), Vector2i(index * cell.x, 0))
+	sheet.save_png("res://../logs/shot_hands.png")
+	print("logs/shot_hands.png  (%s — 대기 정면 · 발차기 0.08 옆 · 0.18 45° · Full 0.35 옆)" % id)
 	quit(0)
 
 

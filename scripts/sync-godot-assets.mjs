@@ -117,6 +117,8 @@ const ICONS = [
   // 상점 단추 — 가죽 돈주머니 (2026-10-02, docs/features/store.md)
   'ui_icon_shop.png',
   'ui_icon_trainer.png', // PT 트레이너 — 메뉴 판 (docs/features/trainers.md)
+  // 상점 뽑기 상품 카드 — 1회 한 장 · 10회 부채꼴 (2026-10-07, docs/features/trainers.md)
+  'ui_draw_trainer_1.png', 'ui_draw_trainer_10.png',
   // 헬스 (2026-09-30, docs/features/fitness.md) — 메뉴 덤벨 · 창 가운데 문장 셋 · 프로틴 셋
   'ui_icon_fitness.png',
   // 장비 도감 · 메뉴 ≡ / X (2026-10-01, docs/features/codex.md · hud.md "메뉴 판")

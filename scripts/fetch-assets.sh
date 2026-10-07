@@ -445,6 +445,10 @@ fetch_icon 3c42607da64a0fab94246aa8ce10c5c3 ui_icon_settings   # 설정 — 톱�
 fetch_icon 1956152cf5db17044edd2234d687f0b5 ui_fitness_bench    # 벤치프레스 — 붉은 법랑 · 금 부조 사람이 누워 바벨을 민다 (2026-10-02 교체, 첫째)
 fetch_icon aee81a9edba4ba23f9291396d876d92a ui_fitness_deadlift # 데드리프트 — 푸른 법랑 · 금 부조 사람이 바벨을 든다 (2026-10-02 교체, 둘째)
 fetch_icon 8da772886426cee69112252101ac62cb ui_fitness_squat    # 스쿼트 — 초록 법랑 · 금 부조 사람이 바벨을 지고 앉는다 (2026-10-02 교체, 둘째)
+# 상점 뽑기 상품 카드 (2026-10-07, docs/features/trainers.md "상점 상품 그림") — 뽑기 판의 금테 카드를 잘라(2a3e711d…jpg)
+# 물려 흰 바탕으로 두 장씩 뽑았다. 흰 바탕은 build-item-icons.mjs 의 `WHITE_ALPHA` 가 알파로 바꾼다
+fetch_icon c238402602b5689235b3bc1fc2fcd247 ui_draw_trainer_1   # 1회 — 금테 카드 한 장 · 물음표 앞 실루엣 (두 장 중 첫째)
+fetch_icon 9714ecb845b37632c52785f194daf14c ui_draw_trainer_10  # 10회 — 부채꼴 카드 열 장 · 금 · 보라 · 빨강 테 (두 장 중 둘째)
 # 프로틴 세 통을 한 장에 뽑았다 (색만 다르고 결이 같게) — build-item-icons.mjs 의 `SHEETS` 가 셋으로 자른다
 fetch_icon e27e3d5061cc3b8ee7412fa7e4a6c13d ui_protein_sheet    # 빨강 주먹 · 파랑 방패 · 초록 하트 (둘째)
 # 던전 종류 카드 — 받은 그림(다른 게임의 던전 창)을 참고로 물려 뽑은 풍경 · 틀 · 장식

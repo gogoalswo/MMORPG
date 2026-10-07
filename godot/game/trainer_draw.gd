@@ -69,6 +69,9 @@ var _time := 0.0
 var _reveal_at := -1.0
 var _portrait := Callable()
 var _ref_depth := 1.0
+## 뽑힌 트레이너를 **3D 모델로 찍는 보이지 않는 무대** (2026-10-07 요청 "뽑기 화면이 2D 이미지로 나오는데, 3D 모델로
+## 변경해") — 트레이너 창을 한 번도 안 열었으면 찍어 둔 그림이 없어 원화가 섰다. 판이 열리자마자 뽑힌 것만 찍는다
+var _shots: TrainerPortraits
 
 static var _beam_tex: ImageTexture
 
@@ -124,6 +127,11 @@ func _build(got: Array, fresh: Array) -> void:
 		entry.started = false
 		_pieces.append(entry)
 	_ref_depth = _camera.position.distance_to(Vector3.ZERO)
+
+	_shots = TrainerPortraits.new()
+	add_child(_shots)
+	_shots.baked.connect(_on_baked)
+	_shots.request(got)
 
 	_reveal = _button("reveal", "모두 보기")
 	_reveal.pressed.connect(reveal_all)
@@ -477,6 +485,23 @@ static func _beam() -> ImageTexture:
 	return _beam_tex
 
 
+## 3D 그림이 찍혔다 — 이미 선 카드면 그림을 갈아 끼운다 (아직 안 선 카드는 설 때 찍은 것을 쓴다)
+func _on_baked(id: String, texture: Texture2D) -> void:
+	for piece in _pieces:
+		if str(piece.id) == id and piece.card != null:
+			var pic: TextureRect = piece.card.find_child("art", true, false)
+			if pic != null:
+				pic.texture = texture
+
+
+## 카드 그림 — 찍은 3D 그림, 아직 못 찍었으면 받은 것(원화)
+func _art(id: String) -> Texture2D:
+	var shot := TrainerPortraits.cached(id)
+	if shot != null:
+		return shot
+	return _portrait.call(id) if _portrait.is_valid() else null
+
+
 ## 카드 — 이름(등급 색) · 그림(등급 색 테) · NEW
 func _make_card(piece: Dictionary) -> Control:
 	var info := Trainers.trainer(str(piece.id))
@@ -518,7 +543,7 @@ func _make_card(piece: Dictionary) -> Control:
 	pic.custom_minimum_size = ART
 	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	pic.texture = _portrait.call(str(piece.id)) if _portrait.is_valid() else null
+	pic.texture = _art(str(piece.id))
 	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	frame.add_child(pic)
 	if bool(piece.fresh):

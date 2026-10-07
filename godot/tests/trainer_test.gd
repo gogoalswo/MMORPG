@@ -240,6 +240,23 @@ func _case_buddy_follow() -> void:
 		last = state
 	if flips > 0 or last != "run":
 		_fail("걷는 동안 트레이너가 섰다 달렸다 한다 (%d번 바뀜, 마지막 %s)" % [flips, last])
+	# 돌아서도 튀지 않는다 — 몸은 `BUDDY_TURN` 씩만 돌고, 곁 자리는 건너뛰지 않고 내 둘레를 돈다
+	# (2026-10-07 "방향 전환할 때도 살짝 튄다"). 옆으로 꺾기 · 뒤로 돌기 둘 다 본다
+	var turn_max := World.BUDDY_TURN / 60.0 + 0.001
+	var worst := 0.0
+	var seq := 200
+	for way in [Vector2(-1.0, 0.0), Vector2(0.0, -1.0)]:
+		for i in 60:
+			var before := float(me.buddy.rot)
+			seq += 1
+			w.input_move("me", seq, way.x, way.y, 1.0 / 60.0)
+			w.step(1.0 / 60.0)
+			worst = maxf(worst, absf(angle_difference(before, float(me.buddy.rot))))
+			if str(me.buddy.state) != "run":
+				_fail("돌아서는 동안 트레이너가 섰다: %s" % me.buddy)
+				break
+	if worst > turn_max:
+		_fail("돌아설 때 트레이너가 한 틱에 %.0f° 돌았다 (한도 %.0f°)" % [rad_to_deg(worst), rad_to_deg(turn_max)])
 	OS.delay_msec(World.BUDDY_MOVE_GRACE_MS + 50)
 	for i in 30:
 		w.step(1.0 / 60.0)

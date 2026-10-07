@@ -16,6 +16,7 @@ func _init() -> void:
 	_case_stats()
 	_case_buddy()
 	_case_buddy_lunge()
+	_case_buddy_follow()
 	_case_save()
 	_case_server()
 	_finish.call_deferred()
@@ -213,6 +214,37 @@ func _case_buddy() -> void:
 	w.step(1.0 / 60.0)
 	if not (me.buddy as Dictionary).is_empty():
 		_fail("돌려보냈는데 트레이너가 남았다")
+
+
+## 따라오기 — 내가 계속 걸으면 트레이너는 **계속 달린다.** 거리만 보던 때는 ×1.25 로 곧장 붙어 서고
+## 한 걸음 뒤 다시 달려 Idle ↔ Run 이 몇 프레임마다 뒤집혔다 (2026-10-07 "버벅거린다"). 서면 같이 선다
+func _case_buddy_follow() -> void:
+	var w := World.new()
+	w.open("meadow")
+	w.join("me")
+	var me: Dictionary = w.snapshot().players["me"]
+	w.set_invincible("me", true)
+	me.trainers = {"h01": 1}
+	me.trainer_active = "h01"
+	me.x = 0.0
+	me.z = 0.0
+	w.step(1.0 / 60.0)
+	var flips := 0
+	var last := ""
+	for i in 120:
+		w.input_move("me", i + 1, 0.0, 1.0, 1.0 / 60.0)
+		w.step(1.0 / 60.0)
+		var state := str(me.buddy.get("state", ""))
+		if i >= 10 and state != last:
+			flips += 1
+		last = state
+	if flips > 0 or last != "run":
+		_fail("걷는 동안 트레이너가 섰다 달렸다 한다 (%d번 바뀜, 마지막 %s)" % [flips, last])
+	OS.delay_msec(World.BUDDY_MOVE_GRACE_MS + 50)
+	for i in 30:
+		w.step(1.0 / 60.0)
+	if str(me.buddy.get("state", "")) != "idle":
+		_fail("내가 섰는데 트레이너가 안 선다: %s" % me.buddy)
 
 
 ## 동행 날라차기 — 같이 칠 놈이 `LUNGE_MIN` 보다 멀면 달려가지 않고 날아 붙어서, 닿는 순간 한 대 (`_buddy_lunge`)

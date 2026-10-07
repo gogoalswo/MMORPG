@@ -2997,6 +2997,11 @@ const BUDDY_SIDE := 1.1
 const BUDDY_BACK := 0.9
 ## 이보다 가까우면 서 있는다 / 이보다 멀면 곧장 곁으로 옮긴다 (존 이동·순간 이동)
 const BUDDY_SETTLE := 0.35
+## 곁 자리(= 내가)가 마지막으로 움직인 뒤 이만큼은 닿아 있어도 계속 달린다 (ms).
+## 거리만 보면 ×1.25 로 곧장 따라붙어 서고, 내가 한 걸음 더 가면 다시 달려서 **Idle ↔ Run 이
+## 몇 프레임마다 뒤집혔다** (2026-10-07 "idle -> run -> idle 반복해서 버벅거린다"). 입력은 틱마다
+## 고르게 오지 않아 한 틱만 보면 또 깜빡인다 — 그래서 여유를 둔다
+const BUDDY_MOVE_GRACE_MS := 200
 const BUDDY_SNAP := 14.0
 ## 내 달리기 속도의 몇 배로 따라오나 — 조금 빨라야 뒤처지지 않는다
 const BUDDY_SPEED_MUL := 1.25
@@ -3018,6 +3023,11 @@ func _step_buddies(delta: float, now: int) -> void:
 			buddy = {"id": active, "x": home.x, "z": home.y, "rot": float(player.get("rot", 0.0)),
 				"state": "idle", "next_hit_at": 0}
 			player.buddy = buddy
+		# 곁 자리가 움직였나 — 내가 걷는 중인지를 여기서 읽는다 (`BUDDY_MOVE_GRACE_MS`)
+		if Vector2(float(buddy.get("hx", home.x)), float(buddy.get("hz", home.y))).distance_to(home) > 0.001:
+			buddy.home_moved_at = now
+		buddy.hx = home.x
+		buddy.hz = home.y
 		# 날고 있으면 그것만 — 내려앉는 동안은 발이 묶인다 (플레이어 날라차기와 같다)
 		if buddy.has("lunge"):
 			_buddy_fly(player, buddy, delta, now)
@@ -3045,9 +3055,13 @@ func _step_buddies(delta: float, now: int) -> void:
 				if now >= int(buddy.next_hit_at):
 					_buddy_strike(player, buddy, target, now)
 			continue
-		# 칠 놈이 없으면 내 곁으로
-		if pos.distance_to(home) > BUDDY_SETTLE:
-			buddy.rot = atan2(home.x - pos.x, home.y - pos.y)
+		# 칠 놈이 없으면 내 곁으로 — 내가 걷는 동안은 닿아 있어도 달리는 채로 따라온다
+		var away := pos.distance_to(home)
+		if away > BUDDY_SETTLE or now - int(buddy.get("home_moved_at", -BUDDY_MOVE_GRACE_MS)) < BUDDY_MOVE_GRACE_MS:
+			if away > 0.05:
+				buddy.rot = atan2(home.x - pos.x, home.y - pos.y)
+			else:
+				buddy.rot = float(player.get("rot", 0.0))
 			_buddy_walk(buddy, pos, home, 0.0, speed, delta)
 			buddy.state = "run"
 		else:

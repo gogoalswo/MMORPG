@@ -433,6 +433,8 @@ tryAutoSkill(...) || (거리 <= attackRange && handleAttack(...))
 - 화면은 `lunge {id, ms, speed}` 을 받고 `FlyingKick` 을 **`speed` 배속으로** 튼다 — 클립에서 발이
   닿는 키(0.45초 · `LUNGE_HIT_S`)가 도착에 오게 판정이 정해 준다. `ms`(나는 시간 + 착지) 동안은
   달리기로 끊기지 않는다(`_swing_until`). 동작은 [characters-and-animation.md](characters-and-animation.md) 의 "블렌더 동작".
+- **동행 트레이너도 같은 상수로 난다** (2026-10-07, `_buddy_lunge` · `_buddy_fly`) → [trainers.md](trainers.md) "동행".
+  상수(`LUNGE_*`)를 고치면 트레이너 날라차기도 같이 바뀐다.
 - 확인: `godot/tests/lunge_test.gd` (날아 붙어 차기 · 대상 따라가기 · 가까우면/너무 멀면/원거리면 안 난다 · 자동 사냥 · 스킬이 안 닿으면 날라차기 → 스킬 · 닿으면 스킬).
 
 ### 아직 없는 것

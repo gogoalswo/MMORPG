@@ -758,6 +758,16 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 					length = (_buddy_node as Rig).clip_length(_buddy_clip)
 					(_buddy_node as Rig).play(_buddy_clip, _buddy_swing_speed, 0.0, true)
 				_buddy_swing_until = Time.get_ticks_msec() + int(length * 1000.0 / maxf(0.1, _buddy_swing_speed))
+		&"buddyLunge":
+			# 동행 트레이너도 멀면 날아 차며 붙는다 (2026-10-07 요청) — 플레이어 날라차기와 같은 클립·배속.
+			# 나는 동안과 내려앉는 동안(`ms`) 달리기로 끊기지 않는다. 클립이 없는 모델이면 달리기로 난다
+			if str(payload.get("id", "")) == _transport.my_id():
+				_buddy_swing_speed = float(payload.get("speed", 1.0))
+				_buddy_clip = "Run"
+				if _buddy_node is Rig and (_buddy_node as Rig).has_clip(LUNGE_CLIP):
+					_buddy_clip = LUNGE_CLIP
+					(_buddy_node as Rig).play(LUNGE_CLIP, _buddy_swing_speed, 0.0, true)
+				_buddy_swing_until = Time.get_ticks_msec() + int(payload.get("ms", 700))
 		&"codexResult":
 			_codex_panel.show_result(payload)
 		&"codexAuto":

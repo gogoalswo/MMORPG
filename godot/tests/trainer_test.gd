@@ -15,6 +15,7 @@ func _init() -> void:
 	_case_fuse()
 	_case_stats()
 	_case_buddy()
+	_case_buddy_lunge()
 	_case_save()
 	_case_server()
 	_finish.call_deferred()
@@ -212,6 +213,72 @@ func _case_buddy() -> void:
 	w.step(1.0 / 60.0)
 	if not (me.buddy as Dictionary).is_empty():
 		_fail("돌려보냈는데 트레이너가 남았다")
+
+
+## 동행 날라차기 — 같이 칠 놈이 `LUNGE_MIN` 보다 멀면 달려가지 않고 날아 붙어서, 닿는 순간 한 대 (`_buddy_lunge`)
+func _case_buddy_lunge() -> void:
+	var w := World.new()
+	w.open("meadow")
+	w.join("me")
+	var me: Dictionary = w.snapshot().players["me"]
+	w.set_invincible("me", true)
+	me.trainers = {"h01": 1}
+	me.trainer_active = "h01"
+	var mob: Dictionary = w.snapshot().monsters[0]
+	mob.speed = 0.0
+	me.x = float(mob.x)
+	me.z = float(mob.z) + 7.0
+	me.rot = PI
+	w.step(1.0 / 60.0)
+	var buddy: Dictionary = me.buddy
+	var start := Vector2(float(buddy.x), float(buddy.z)).distance_to(Vector2(float(mob.x), float(mob.z)))
+	if start <= World.LUNGE_MIN or start > World.LUNGE_MAX:
+		_fail("시험 자리가 날라차기 거리가 아니다: %.1fm" % start)
+		return
+	w.drain_events()
+	w._hit_monster(me, mob, 1.0, "")
+	var lunged := {}
+	var hit_frame := -1
+	for i in 60:
+		w.step(1.0 / 60.0)
+		for e in w.drain_events():
+			if str(e.type) == "buddyLunge":
+				lunged = e
+			elif str(e.type) == "hit" and bool(e.get("buddy", false)) and hit_frame < 0:
+				hit_frame = i
+		if hit_frame >= 0:
+			break
+	if lunged.is_empty():
+		_fail("트레이너가 %.1fm 떨어진 몬스터에게 날라차기를 안 했다" % start)
+		return
+	if hit_frame < 0 or hit_frame > ceili(World.LUNGE_MAX_S * 60.0) + 2:
+		_fail("날라차기가 %.2f초 안에 안 닿았다 (프레임 %d)" % [World.LUNGE_MAX_S, hit_frame])
+	var near := Vector2(float(me.buddy.x), float(me.buddy.z)).distance_to(Vector2(float(mob.x), float(mob.z)))
+	if near > World.BUDDY_REACH + float(mob.get("r", 0.5)):
+		_fail("날라차기 뒤 트레이너가 주먹 거리 밖이다: %.2fm" % near)
+	if float(lunged.speed) <= 0.0 or int(lunged.ms) <= World.LUNGE_LAND_MS:
+		_fail("buddyLunge 배속·시간이 이상하다: %s" % lunged)
+	# 가까우면 날지 않고 걸어서 붙는다
+	var w2 := World.new()
+	w2.open("meadow")
+	w2.join("me")
+	var me2: Dictionary = w2.snapshot().players["me"]
+	w2.set_invincible("me", true)
+	me2.trainers = {"h01": 1}
+	me2.trainer_active = "h01"
+	var mob2: Dictionary = w2.snapshot().monsters[0]
+	mob2.speed = 0.0
+	me2.x = float(mob2.x) + 3.0
+	me2.z = float(mob2.z)
+	w2.step(1.0 / 60.0)
+	w2.drain_events()
+	w2._hit_monster(me2, mob2, 1.0, "")
+	for i in 120:
+		w2.step(1.0 / 60.0)
+		for e in w2.drain_events():
+			if str(e.type) == "buddyLunge":
+				_fail("가까운(%.1fm) 몬스터에게 날라차기를 했다" % Vector2(float(me2.buddy.x), float(me2.buddy.z)).distance_to(Vector2(float(mob2.x), float(mob2.z))))
+				return
 
 
 ## 저장 — 표에 없는 id 는 버리고, 안 가진 동행은 비운다

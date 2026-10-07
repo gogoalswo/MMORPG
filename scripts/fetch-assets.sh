@@ -479,7 +479,7 @@ fetch_trainer() {
   local OUT="public/assets/models/trainer_$1.glb"
   node scripts/build-varco-character.mjs "$OUT" "${T}_idle.glb" "Idle=${T}_idle.glb" "Run=${T}_run.glb#loop#face" --tex 512
   node scripts/add-clips.mjs "$OUT" "$OUT" public/assets/anim/fighter_moves.glb --align \
-    --only=KickSlapFull,KickSlapIn,KickSlapA,KickSlapB
+    --only=KickSlapFull,KickSlapIn,KickSlapA,KickSlapB,FlyingKick
   node scripts/trainer-arms.mjs "$OUT" "$1"
 }
 fetch_trainer n01 e6ab4b237e0ff1c84674ecadaeb2d8f8 b5966e155e6f7b71015fa292e39e93f8 910eaacb37c011ae991ad694e83cf9de

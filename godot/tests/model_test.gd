@@ -211,14 +211,14 @@ func _case_trainers() -> void:
 		if rig == null:
 			_fail("트레이너 %s(%s) 가 모델로 안 만들어진다" % [info.name, id])
 			continue
-		for clip in ["Idle", "Run", "KickSlapFull", "KickSlapIn", "KickSlapA", "KickSlapB"]:
+		for clip in ["Idle", "Run", "KickSlapFull", "KickSlapIn", "KickSlapA", "KickSlapB", "FlyingKick"]:
 			if not rig.has_clip(clip):
 				_fail("트레이너 %s 에 %s 클립이 없다 %s" % [id, clip, rig.clips()])
 		if absf(_height(rig) - height) > 0.03:
 			_fail("트레이너 %s 키가 %.2f (표 %.2f)" % [id, _height(rig), height])
 		made += 1
 		rig.free()
-	print("  트레이너 %d명 → 모델 (발차기 넷)" % made)
+	print("  트레이너 %d명 → 모델 (발차기 넷 + 날라차기)" % made)
 
 
 ## 등급마다 한 명씩(첫째) — 발차기에서 왼발이 가장 높이 올라간 때가 머리 높이의 80% 를 넘어야 한다.

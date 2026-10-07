@@ -1003,7 +1003,7 @@ func _draw(game: Node3D) -> void:
 	var store: StorePanel = game._store_panel
 	var got := ["n03", "a02", "l01", "n07", "r03", "n12", "a04", "h02", "n01", "r05"]
 	var fresh := [true, true, true, false, true, false, false, true, false, false]
-	store.show_draw(got, fresh, func(id: String) -> Texture2D: return game._trainer_art(id))
+	store.show_draw(got, fresh)
 	var draw: TrainerDraw = store.draw_shown()
 	var times := [2.2, 0.3, 0.5, 3.0]
 	await create_timer(times[0]).timeout

@@ -376,7 +376,9 @@ func _case_server() -> void:
 ## 창 — 카드 53장 · 등급 탭 · 미보유는 단추 꺼짐 · 동행 단추가 요청을 낸다 · 상점 뽑기 결과 판
 func _case_panel() -> void:
 	var boxes := func(_name: String, _margin: int, _content: int) -> StyleBox: return StyleBoxFlat.new()
-	var arts := func(_id: String) -> Texture2D: return null
+	# 원화를 주더라도 카드는 쓰지 않는다 — 3D 를 찍기 전에는 빈 칸 (2026-10-07 "3D 로딩이 안 됐으면 비어 있게")
+	var concept := ImageTexture.create_from_image(Image.create(4, 4, false, Image.FORMAT_RGBA8))
+	var arts := func(_id: String) -> Texture2D: return concept
 	var panel := TrainerPanel.make(boxes, arts)
 	root.add_child(panel)
 	panel.open()
@@ -384,6 +386,10 @@ func _case_panel() -> void:
 	await process_frame
 	if panel.cards().size() != 53:
 		_fail("전체 탭 카드가 %d장" % panel.cards().size())
+	for card in panel.cards():
+		if (card.find_child("art", true, false) as TextureRect).texture == concept:
+			_fail("3D 를 찍기 전인데 카드에 원화가 섰다 (%s)" % card.name)
+			break
 	panel.tab_buttons()[5].pressed.emit()
 	if panel.cards().size() != 3:
 		_fail("전설 탭 카드가 %d장" % panel.cards().size())
@@ -452,7 +458,7 @@ func _case_panel() -> void:
 	# 뽑기 연출 — 뽑은 수만큼 밀랍 조각상(일반·고급 흰색 · 희귀 이상 금), 좋은 등급이 앞자리, [모두 보기] → 카드 (이름은 등급 색)
 	if TrainerDraw.slots(10).size() != 10 or TrainerDraw.slots(1) != [Vector3.ZERO]:
 		_fail("뽑기 자리 수가 틀리다: %d" % TrainerDraw.slots(10).size())
-	store.show_draw(["n01", "a01", "r01", "l01"], [true, false, false, false], arts)
+	store.show_draw(["n01", "a01", "r01", "l01"], [true, false, false, false])
 	var shown := store.draw_shown() as TrainerDraw
 	if shown == null or shown.pieces().size() != 4:
 		_fail("뽑기 판에 조각상 넷이 없다")

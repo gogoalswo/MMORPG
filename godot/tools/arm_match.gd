@@ -34,17 +34,21 @@ func _run() -> void:
 			continue
 		var sk: Skeleton3D = rig.find_children("*", "Skeleton3D", true, false)[0]
 		var entry := {}
+		# 리깅이 **왼·오른 이름을 뒤바꾼** 몸(a15 · r10 — LeftArm 이 몸 오른쪽에 있다)은 과녁도 맞바꾼다. 안 그러면 n01 의
+		# 왼팔 방향(바깥)이 이 몸에선 안쪽이 돼서 두 주먹이 사타구니 앞에서 만난다 (2026-10-07)
+		var swapped := sk.get_bone_global_rest(sk.find_bone("LeftArm")).origin.x < sk.get_bone_global_rest(sk.find_bone("RightArm")).origin.x
 		for side in ["Left", "Right"]:
+			var aim: Array = target["Right" if side == "Left" else "Left"] if swapped else target[side]
 			var arm := sk.find_bone(side + "Arm")
 			var fore := sk.find_bone(side + "ForeArm")
 			var now: Array = _dirs(rig, side)
 			# 1. 윗팔
-			var r1 := _swing(now[0], target[side][0])
+			var r1 := _swing(now[0], aim[0])
 			entry[side + "Arm"] = _local(sk, arm, r1)
 			sk.set_bone_pose_rotation(arm, sk.get_bone_pose_rotation(arm) * _local_quat(sk, arm, r1))
 			# 2. 아래팔 (윗팔을 돌린 뒤에 다시 잰다)
 			now = _dirs(rig, side)
-			var r2 := _swing(now[1], target[side][1])
+			var r2 := _swing(now[1], aim[1])
 			entry[side + "ForeArm"] = _local(sk, fore, r2)
 		out[str(id)] = entry
 		rig.queue_free()

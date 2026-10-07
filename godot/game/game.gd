@@ -740,11 +740,8 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			_trainer_panel.show_fuse_result(payload)
 		&"trainerDraw":
 			_store_panel.set_diamonds(int(payload.get("diamonds", 0)))
-			# 뽑기 결과 카드도 트레이너 창처럼 **3D 모델을 찍은 그림** — 아직 못 찍었으면 원화
-			_store_panel.show_draw(payload.get("got", []), payload.get("new", []), func(id: String) -> Texture2D:
-				var shot := TrainerPortraits.cached(id)
-				return shot if shot != null else _trainer_art(id)
-			)
+			# 뽑기 결과 카드도 트레이너 창처럼 **3D 모델을 찍은 그림** — 판이 찍어 채운다 (찍기 전에는 빈 칸)
+			_store_panel.show_draw(payload.get("got", []), payload.get("new", []))
 		&"diamonds":
 			_store_panel.set_diamonds(int(payload.get("total", 0)))
 		&"buddySwing":

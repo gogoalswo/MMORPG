@@ -67,7 +67,6 @@ var _reveal: Button
 var _ok: Button
 var _time := 0.0
 var _reveal_at := -1.0
-var _portrait := Callable()
 var _ref_depth := 1.0
 ## 뽑힌 트레이너를 **3D 모델로 찍는 보이지 않는 무대** (2026-10-07 요청 "뽑기 화면이 2D 이미지로 나오는데, 3D 모델로
 ## 변경해") — 트레이너 창을 한 번도 안 열었으면 찍어 둔 그림이 없어 원화가 섰다. 판이 열리자마자 뽑힌 것만 찍는다
@@ -76,10 +75,9 @@ var _shots: TrainerPortraits
 static var _beam_tex: ImageTexture
 
 
-## `got` 은 뽑힌 트레이너 id, `fresh` 는 새로 얻었나(같은 순서), `portrait` 는 id → 카드 그림
-static func make(got: Array, fresh: Array, portrait: Callable) -> TrainerDraw:
+## `got` 은 뽑힌 트레이너 id, `fresh` 는 새로 얻었나(같은 순서). 카드 그림은 판이 3D 모델로 찍는다(`_shots`)
+static func make(got: Array, fresh: Array) -> TrainerDraw:
 	var draw := TrainerDraw.new()
-	draw._portrait = portrait
 	draw._build(got, fresh)
 	return draw
 
@@ -494,12 +492,10 @@ func _on_baked(id: String, texture: Texture2D) -> void:
 				pic.texture = texture
 
 
-## 카드 그림 — 찍은 3D 그림, 아직 못 찍었으면 받은 것(원화)
+## 카드 그림 — 찍은 3D 그림. 아직 못 찍었으면 **비워 두고** 찍히는 대로 채운다(`_on_baked`) — 원화를 먼저 세우면
+## 2D 가 섰다가 3D 로 바뀐다 (2026-10-07)
 func _art(id: String) -> Texture2D:
-	var shot := TrainerPortraits.cached(id)
-	if shot != null:
-		return shot
-	return _portrait.call(id) if _portrait.is_valid() else null
+	return TrainerPortraits.cached(id)
 
 
 ## 카드 — 이름(등급 색) · 그림(등급 색 테) · NEW

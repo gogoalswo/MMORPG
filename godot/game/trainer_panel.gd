@@ -261,6 +261,7 @@ func show_fuse_result(payload: Dictionary) -> void:
 		var card := TrainerPanel.make_card(Trainers.trainer(id), _art(id), 1, false, false)
 		(card.find_child("tag", true, false) as Label).text = "획득"
 		_fuse_cards.add_child(card)
+	_shots.request(got.slice(0, 6))
 	_seen = ""
 	refresh(_me)
 	_fill_fuse()
@@ -448,12 +449,10 @@ func _on_pick() -> void:
 	pick_requested.emit("" if _selected == active else _selected)
 
 
-## 카드 그림 — **3D 모델을 찍은 것**(`TrainerPortraits`, 2026-10-06), 아직 못 찍었으면 원화
+## 카드 그림 — **3D 모델을 찍은 것**(`TrainerPortraits`, 2026-10-06). 아직 못 찍었으면 **비워 둔다** — 원화를 먼저
+## 세웠더니 창을 열 때 2D 그림이 섰다가 3D 로 바뀌었다 (2026-10-07 "3D 로딩이 안 됐으면 비어 있게 만들고, 3D 모델을 채워")
 func _art(id: String) -> Texture2D:
-	var shot := TrainerPortraits.cached(id)
-	if shot != null:
-		return shot
-	return _portrait.call(id) if _portrait.is_valid() else null
+	return TrainerPortraits.cached(id)
 
 
 ## 원화 — 오른쪽 무대가 모델이 없을 때 대신 깐다
@@ -461,11 +460,12 @@ func _concept(id: String) -> Texture2D:
 	return _portrait.call(id) if _portrait.is_valid() else null
 
 
-## 한 장 찍혔다 — 보이는 카드의 그림을 갈아 끼운다
+## 한 장 찍혔다 — 보이는 카드(목록 · 합성 결과)의 빈 그림을 채운다
 func _on_baked(id: String, texture: Texture2D) -> void:
-	var card := _grid.get_node_or_null("card_%s" % id)
-	if card != null:
-		(card.find_child("art", true, false) as TextureRect).texture = texture
+	for box in [_grid, _fuse_cards]:
+		var card: Node = box.get_node_or_null("card_%s" % id)
+		if card != null:
+			(card.find_child("art", true, false) as TextureRect).texture = texture
 
 
 ## 카드 한 장 — 트레이너 창 · 뽑기 결과가 같이 쓴다. 원화 · 등급 색 테 · 이름 · 표시(동행 / ×개수 / 미보유)

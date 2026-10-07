@@ -49,7 +49,7 @@
 | `godot/net/local_transport.gd` | `trainerDraw {times}` · `trainerPick {id}` · `debugDiamonds {count}` |
 | `godot/game/trainer_panel.gd` `TrainerPanel` | 트레이너 창 + **카드 한 장**(`make_card`) · `grade_color`(등급 색 = 장비 등급 표 `Items.grade_color`) |
 | `godot/game/trainer_draw.gd` `TrainerDraw` | ★ **뽑기 연출** (아래 "뽑기 연출") — 수련장 바닥 · 밀랍 조각상 · 빛기둥 · 카드 · [모두 보기] · [확인] |
-| `godot/game/trainer_portraits.gd` `TrainerPortraits` | ★ **카드 그림도 3D 모델** (2026-10-06 요청 "왼쪽 이미지도 3D 모델로") — 카드마다 3D 를 띄우면 무거워서, **보이지 않는 무대 하나**(`SubViewport`, 오른쪽 무대와 같은 빛·각도 `TrainerStage.build_world` · `frame`)에 한 명씩 세워 대기 자세로 252×336 한 장을 찍어 카드에 쓴다. 창을 열면 그 탭의 카드를 줄 세워 한 프레임에 한 명씩 찍고 찍히는 대로 갈아 끼운다(`baked`). 판이 끝날 때까지 기억한다(`_cache`). 못 찍는 곳(헤드리스)·찍기 전에는 원화. 상점 뽑기 결과 카드도 같은 그림 — 뽑기 판은 제 것을 하나 띄워 뽑힌 것만 찍는다(2026-10-07, 아래 "뽑기 연출"). 확인: `npm run shot:godot -- trainers` 가 찍힌 장 수와 모델이 그림에서 차지한 범위를 글로 낸다 (53/53장, 세로 약 90%) |
+| `godot/game/trainer_portraits.gd` `TrainerPortraits` | ★ **카드 그림도 3D 모델** (2026-10-06 요청 "왼쪽 이미지도 3D 모델로") — 카드마다 3D 를 띄우면 무거워서, **보이지 않는 무대 하나**(`SubViewport`, 오른쪽 무대와 같은 빛·각도 `TrainerStage.build_world` · `frame`)에 한 명씩 세워 대기 자세로 252×336 한 장을 찍어 카드에 쓴다. 창을 열면 그 탭의 카드를 줄 세워 한 프레임에 한 명씩 찍고 찍히는 대로 갈아 끼운다(`baked`). 판이 끝날 때까지 기억한다(`_cache`). ★ **찍기 전에는 빈 칸**(2026-10-07 "3D 로딩이 안 됐으면 비어 있게 만들고, 3D 모델을 채워" — 원화를 먼저 세웠더니 2D 가 섰다가 3D 로 바뀌었다). 합성 결과 카드도 찍어 채운다. 원화는 오른쪽 무대가 모델이 없을 때만 쓴다(`_concept`). 상점 뽑기 결과 카드도 같은 그림 — 뽑기 판은 제 것을 하나 띄워 뽑힌 것만 찍는다(2026-10-07, 아래 "뽑기 연출"). 확인: `npm run shot:godot -- trainers` 가 찍힌 장 수와 모델이 그림에서 차지한 범위를 글로 낸다 (53/53장, 세로 약 90%) |
 | `godot/game/trainer_stage.gd` `TrainerStage` | ★ 창 오른쪽 **3D 모델 무대** (2026-10-06 요청 "이미지로 나오는데, 3D 모델이 나오도록") — 창 안 `SubViewport`(제 세상 · 투명 바탕 · 보일 때만 그림)에 고른 트레이너를 세워 `Idle`, 천천히 돌고(`SPIN`) **끌면 손으로 돌린다**(놓고 2초 뒤 다시 돎). 카메라는 키에 맞춰 발끝~머리를 세로 90% 로 담는다. 미보유는 어둡게. 모델이 없으면 원화로 대신. **카드 53장은 그림 그대로** — 다 3D 로 띄우면 폰에서 무겁다 |
 | `godot/game/store_panel.gd` | 뽑기 탭 · 다이아 단추(`buy_requested`) · 가진 다이아 · 뽑기 결과(`show_draw` → `TrainerDraw` 를 창 위에 덮는다) |
 | `godot/game/game.gd` `_toggle_trainer` · `_trainer_art` · `_draw_buddy` | 메뉴 단추(상점 옆, ≡ 판 안) · 원화 불러오기 · 동행 모델 그리기, `buddySwing` · `trainerDraw` · `diamonds` 알림 |
@@ -164,7 +164,7 @@
 - **카드는 3D 가 아니라 화면 위 조각**(UI 는 조각 조립 규칙) — 조각상 발밑을 화면에 비춰(`unproject_position`) 그 자리에 세우고
   **멀수록 작게**(깊이 비) · 화면 높이를 따라 배율을 매 프레임 다시 잡는다. 뒷줄 카드가 먼저 깔린다. 이름은 카드 위,
   **등급 색**(`grade_color` 를 조금 밝힘) + 검은 외곽선. 테두리도 등급 색, 희귀 이상은 등급 색 번짐. 새로 얻은 것은 그림 오른쪽 위 **NEW**.
-  그림은 트레이너 창과 같은 것(찍어 둔 3D 그림, 없으면 원화).
+  그림은 트레이너 창과 같은 것(찍어 둔 3D 그림). **찍기 전에는 빈 칸**이다 — 원화는 넘기지 않는다(`show_draw(got, fresh)`).
   ★ **뽑기 판이 스스로 찍는다** (2026-10-07 "뽑기 화면이 2D 이미지로 나오는데, 3D 모델로 변경해") — 전에는 트레이너 창이 찍어
   둔 것만 써서, 창을 한 번도 안 열었으면 카드 열 장이 다 원화였다. 판이 열리자마자 제 `TrainerPortraits` 로 **뽑힌 것만** 찍고
   (조각상이 내려오는 동안 끝난다), 늦게 찍힌 것은 선 카드의 그림을 갈아 끼운다(`_on_baked`). `TrainerPortraits` 는 트리에 붙기

@@ -86,6 +86,9 @@ const FRAME_SIZE = {
   'ui_fitness_bench.png': 384,
   'ui_fitness_deadlift.png': 384,
   'ui_fitness_squat.png': 384,
+  // 상점 뽑기 상품 카드 (2026-10-07) — 상품 칸 그림 자리(116px)에 선명하게
+  'ui_draw_trainer_1.png': 256,
+  'ui_draw_trainer_10.png': 256,
 };
 /**
  * **배경을 걷지 않는 것.** 스킬 아이콘은 칸을 꽉 채운 그림이라 가장자리가 곧 그림이다.
@@ -173,6 +176,24 @@ const GREY = new Set(
   ['weapon', 'armor', 'helmet', 'boots', 'necklace', 'ring'].map((slot) => `${slot}_g1.png`),
 );
 const GREY_DIM = 0.8;
+/**
+ * **흰 바탕을 알파로 바꾸는 것** (color-to-alpha). 상점 뽑기 카드(2026-10-07)는 흰 바탕 위에 금빛 번짐·빛살이
+ * 퍼져 있어서, 가장자리 채우기로 걷으면 번짐이 어느 선에서 뚝 끊겨 **누런 테**가 남는다. 흰색을 빼고 남은 만큼만
+ * 불투명하게 두면 번짐이 어두운 칸 위에서 그대로 빛난다. 카드 안쪽은 어두운 판이라 먹히지 않는다
+ */
+const WHITE_ALPHA = new Set(['ui_draw_trainer_1.png', 'ui_draw_trainer_10.png']);
+
+function whiteToAlpha(data) {
+  for (let i = 0; i < data.length; i += 4) {
+    const a = Math.max(255 - data[i], 255 - data[i + 1], 255 - data[i + 2]) / 255;
+    if (a < 0.03) {
+      data[i + 3] = 0;
+      continue;
+    }
+    for (let c = 0; c < 3; c++) data[i + c] = Math.round(Math.min(255, Math.max(0, (data[i + c] - 255 * (1 - a)) / a)));
+    data[i + 3] = Math.round(data[i + 3] * a);
+  }
+}
 
 function toGrey(data) {
   for (let i = 0; i < data.length; i += 4) {
@@ -400,7 +421,8 @@ for (const name of readdirSync(SRC).filter((f) => f.endsWith('.png')).sort()) {
     .ensureAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });
-  let cut = FULL.test(name)
+  if (WHITE_ALPHA.has(name)) whiteToAlpha(data);
+  let cut = FULL.test(name) || WHITE_ALPHA.has(name)
     ? 0
     : cutBackground(
       data,

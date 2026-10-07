@@ -2299,6 +2299,16 @@ func _case_store(game: Node3D) -> void:
 	elif (cards[0].find_child("price", true, false) as Label).text != "KRW 55,000":
 		_fail("값 글자가 %s" % (cards[0].find_child("price", true, false) as Label).text)
 	panel.set_products("monthly/goods", [])
+	# 뽑기 상품 그림 — 바르코 카드 그림(`ui_draw_trainer_1` · `_10`, 2026-10-07). 구운 파일을 안 올리면 빈 칸이 된다
+	panel.tab_buttons()[2].pressed.emit()
+	await process_frame
+	var drawn := 0
+	for card in panel.cards():
+		for pic in card.find_children("*", "TextureRect", true, false):
+			if (pic as TextureRect).texture != null:
+				drawn += 1
+	if panel.cards().size() != 2 or drawn != 2:
+		_fail("뽑기 상품 %d장 중 그림 %d장 — public/assets/icons/ui_draw_trainer_*.png 를 구워 올렸나" % [panel.cards().size(), drawn])
 	panel.tab_buttons()[0].pressed.emit()
 	(panel.find_child("close", true, false).find_child("hit", true, false) as Button).pressed.emit()
 	await process_frame

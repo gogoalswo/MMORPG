@@ -39,6 +39,9 @@ func _ready() -> void:
 	var parts := TrainerStage.build_world(_view)
 	_pivot = parts.pivot
 	_camera = parts.camera
+	# 트리에 붙기 전에 줄 선 것(뽑기 판은 만들 때 바로 요청한다) — 붙은 뒤에 시작한다
+	if not _queue.is_empty():
+		_run.call_deferred()
 
 
 ## 찍어 둔 그림 — 없으면 null
@@ -51,7 +54,7 @@ func request(ids: Array) -> void:
 	for id in ids:
 		if not _cache.has(id) and not _failed.has(id) and not (id in _queue):
 			_queue.append(id)
-	if not _busy and not _queue.is_empty():
+	if not _busy and not _queue.is_empty() and _view != null and is_inside_tree():
 		_run()
 
 
@@ -60,6 +63,8 @@ func pending() -> int:
 
 
 func _run() -> void:
+	if _busy:
+		return
 	_busy = true
 	while not _queue.is_empty():
 		if not is_inside_tree():

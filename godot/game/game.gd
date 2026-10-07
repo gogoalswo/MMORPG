@@ -5349,9 +5349,9 @@ func _build_gate_panel() -> void:
 	var draw_note := " · ".join(rates)
 	_store_panel.set_products("draw/trainer", [
 		{"id": "trainer_1", "name": "트레이너 1회 뽑기", "note": draw_note,
-			"art": _trainer_art("l01"), "diamonds": Trainers.draw_cost()},
+			"icon": "ui_draw_trainer_1", "diamonds": Trainers.draw_cost()},
 		{"id": "trainer_10", "name": "트레이너 %d회 뽑기" % Trainers.draw_multi(), "note": draw_note,
-			"art": _trainer_art("l02"), "diamonds": Trainers.draw_cost() * Trainers.draw_multi()},
+			"icon": "ui_draw_trainer_10", "diamonds": Trainers.draw_cost() * Trainers.draw_multi()},
 	])
 	_store_panel.buy_requested.connect(func(id: String) -> void:
 		_transport.send(&"trainerDraw", {"times": Trainers.draw_multi() if id == "trainer_10" else 1})

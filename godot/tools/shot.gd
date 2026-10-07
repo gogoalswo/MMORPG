@@ -1015,6 +1015,13 @@ func _draw(game: Node3D) -> void:
 	await _save_shot("logs/shot_draw_3.png")
 	await create_timer(times[3]).timeout
 	await _save_shot("logs/shot_draw_4.png")
+	# 카드 그림이 찍은 3D 그림인지 (원화로 떨어지면 안 된다 — 2026-10-07)
+	var shot_cards := 0
+	for card in draw.cards():
+		var pic: TextureRect = card.find_child("art", true, false)
+		if pic != null and pic.texture != null and pic.texture == TrainerPortraits.cached(str(card.name).trim_prefix("card_")):
+			shot_cards += 1
+	print("  카드 %d장 중 3D 그림 %d장" % [draw.cards().size(), shot_cards])
 	quit(0)
 
 

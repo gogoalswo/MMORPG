@@ -159,6 +159,9 @@ captions or dark background of the references: no text, no letters, no numbers.
   던전 입장, 전직 단추가 이걸 부른다. 옅은 `CARD_GOLD` 는 청록 위에서 묻힌다.
 - 조각이 없으면 `_inv_box` 가 같은 청록(`#45605d`)으로 판을 그린다.
 - 상점 창의 탭·값표(`npc_panel.gd` `_tag_box`)도 같은 조각이다. 탭 글자색(고름/안 고름)은 그대로 뒀다.
+- **새 창의 단추는 `GatePanel.paint_stone_button(button, frame_box, 글자크기)` 한 줄로 입힌다** (2026-10-07).
+  글자·판·누름(내려앉음 + 달아오름)·`ButtonFx` 까지 한 번에 붙는다. 상점 뽑기 단추와 트레이너 창의
+  합성·동행·모두 합성 단추가 기본 고도 단추(회색 판, 평소엔 거의 안 보임)로 나가서 "버튼이 안 보여" 지적을 받았다.
 
 ### 단추 움직임 (`godot/game/button_fx.gd` `ButtonFx`, 2026-09-29)
 

@@ -44,7 +44,7 @@
 - 메인 탭을 바꾸면 서브는 **첫째로** 돌아간다.
 - 카드 한 장 = `{name, note?, icon?, price}` — `price` 는 원 정수, `KRW 55,000` 으로 적는다. `icon` 은 `_icon` 이 찾는
   이름(없으면 그림 자리만 빈다).
-- ★ **다이아 상품** (2026-10-06) — `{id, diamonds, art?}` 이면 값 자리가 **"다이아 N" 사기 단추**(`buy`)가 되고 누르면
+- ★ **다이아 상품** (2026-10-06) — `{id, diamonds, art?}` 이면 값 자리가 **"다이아 N" 사기 단추**(`buy`, 청록 돌판 `GatePanel.paint_stone_button`)가 되고 누르면
   `buy_requested(id)` 를 낸다. `art` 는 그림을 바로 준 것. 뽑기 두 상품은 `icon` 으로 **바르코 카드 그림**
   (`ui_draw_trainer_1` · `_10`, 2026-10-07 — 전에는 트레이너 원화) → [trainers.md](trainers.md) "상점 상품 그림". 탭 줄 오른쪽에 **가진 다이아**(`set_diamonds`)를 적는다.
   뽑기 결과는 창 위에 덮는 **3D 연출 판**(`show_draw` → `TrainerDraw` — 밀랍 조각상이 내려서고 [모두 보기] 로 카드가 선다 · NEW · 확인)이다 → [trainers.md](trainers.md) "뽑기 연출"

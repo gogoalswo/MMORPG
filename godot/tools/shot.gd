@@ -489,7 +489,7 @@ func _fists(game: Node3D, path: String) -> void:
 ## 트레이너 손 가까이 (`npm run shot:godot -- hands:n03`) — 대기 정면(멈춤) · 발차기 세 순간. 주먹 모양·좌우 대칭을 볼 때
 ## (2026-10-07 "왼손이랑 오른손이랑 차렷 자세 위치가 다르자나? 그리고 이게 사람 손이냐?") → logs/shot_hands.png
 ## 트레이너 53명의 **두 주먹 정면**을 한 판에 — 주먹이 뚫렸거나 좌우가 다른 모델을 고른다 (2026-10-07 "이게 사람 손 이냐?")
-## (`npm run shot:godot -- handsall` → logs/shot_hands_all_<쪽>.png, 한 판에 28명 · 4줄 칸)
+## (`npm run shot:godot -- handsall` → logs/shot_hands_all_<쪽>.png, 한 판에 16명 · 4명씩 4줄)
 func _trainer_hands_all(game: Node3D) -> void:
 	await process_frame
 	await process_frame
@@ -499,8 +499,8 @@ func _trainer_hands_all(game: Node3D) -> void:
 	var ids: Array = []
 	for t in Trainers.all():
 		ids.append(str(t.id))
-	var cell := Vector2i(480, 240)
-	var per_page := 28
+	var cell := Vector2i(640, 240)
+	var per_page := 16
 	for page in ceili(ids.size() / float(per_page)):
 		var sheet: Image = null
 		var chunk := ids.slice(page * per_page, (page + 1) * per_page)
@@ -519,14 +519,14 @@ func _trainer_hands_all(game: Node3D) -> void:
 			var l := sk.to_global(sk.get_bone_global_pose(sk.find_bone("LeftHand")).origin)
 			var r := sk.to_global(sk.get_bone_global_pose(sk.find_bone("RightHand")).origin)
 			var focus := (l + r) * 0.5 + Vector3(0, -0.04 * height, 0)
-			game._camera.position = focus + Vector3(0, 0.02, 1) * maxf(0.5, l.distance_to(r) * 1.25)
+			game._camera.position = focus + Vector3(0, 0.02, 1) * maxf(0.9, l.distance_to(r) * 2.8)
 			game._camera.look_at(focus, Vector3.UP)
 			for i in 3:
 				await process_frame
 			await RenderingServer.frame_post_draw
 			var img := root.get_texture().get_image()
 			if sheet == null:
-				sheet = Image.create(cell.x * 4, cell.y * 7, false, img.get_format())
+				sheet = Image.create(cell.x * 4, cell.y * 4, false, img.get_format())
 			var from := Vector2i((img.get_width() - cell.x) / 2, (img.get_height() - cell.y) / 2)
 			sheet.blit_rect(img, Rect2i(from, cell), Vector2i(index % 4 * cell.x, index / 4 * cell.y))
 			rig.queue_free()

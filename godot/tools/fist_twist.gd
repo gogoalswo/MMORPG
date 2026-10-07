@@ -30,6 +30,15 @@ func _run() -> void:
 	for side in ["Left", "Right"]:
 		target[side] = _knuckles(ref, side, _knuckle_local(ref, side), REF_TWIST[side])
 	ref.queue_free()
+	# **좌우 대칭으로** — n01 의 두 손도 똑같지 않아서 그대로 따르면 주먹이 나란하지 않다 (2026-10-07 "나란히 있지도 않은데").
+	# 왼손 방향과 오른손을 좌우 거울(x 뒤집기)한 방향을 평균해 왼손 과녁으로, 그 거울을 오른손 과녁으로 쓴다
+	var mirror := func(v: Vector3) -> Vector3: return Vector3(-v.x, v.y, v.z)
+	var a: Vector3 = target.Left
+	var b: Vector3 = mirror.call(target.Right)
+	if a.dot(b) < 0.0:
+		b = -b
+	target.Left = (a + b).normalized()
+	target.Right = mirror.call(target.Left)
 	var out := {}
 	var score := {}
 	for id in ids:

@@ -9,6 +9,7 @@
  *
  *   예) LeftForeArm:0,1,0:-60            모든 클립 + 기본 자세
  *       LeftArm:1,0,-0.774:12@Idle        대기만 (기본 자세는 안 건드린다)
+ *       LeftHand:rest@Idle                대기의 회전 키를 **전부 기본 자세 값으로** (손목을 조각된 대로 편다, 2026-10-07)
  *
  * 축은 그 뼈의 **로컬** 축이다 (정규화한다). 같은 뼈를 여러 번 주면 적은 순서대로 곱한다.
  * 축은 손 뼈가 실제로 어디로 가는지 재서 고른다 — docs/features/trainers.md "주먹 쥔 몸".
@@ -44,6 +45,26 @@ for (const spec of specs) {
   const [bone, axisText, degText] = left.split(':');
   const at = byName.get(bone);
   if (at === undefined) throw new Error(`뼈가 없다: ${bone}`);
+  if (axisText === 'rest') {
+    // 그 클립의 회전 키를 기본 자세 값으로 덮는다 — 바르코 대기가 손목을 모델마다 제멋대로 굽혀서
+    const rest = json.nodes[at].rotation ?? [0, 0, 0, 1];
+    const clips = clipPart ? clipPart.split('+') : null;
+    let keys = 0;
+    for (const anim of json.animations ?? []) {
+      if (clips && !clips.includes(anim.name)) continue;
+      for (const ch of anim.channels) {
+        if (ch.target.node !== at || ch.target.path !== 'rotation') continue;
+        const acc = json.accessors[anim.samplers[ch.sampler].output];
+        const view = json.bufferViews[acc.bufferView];
+        const stride = view.byteStride ?? 16;
+        const base = (view.byteOffset ?? 0) + (acc.byteOffset ?? 0);
+        for (let i = 0; i < acc.count; i++) rest.forEach((v, k) => bin.writeFloatLE(v, base + i * stride + k * 4));
+        keys += acc.count;
+      }
+    }
+    console.log(`  ${bone} 기본 자세로 ${clips ? clips.join('+') : '전부'} — 키 ${keys}개`);
+    continue;
+  }
   const axis = axisText.split(',').map(Number);
   const len = Math.hypot(...axis);
   if (axis.length !== 3 || !(len > 0)) throw new Error(`축이 이상하다: ${axisText}`);

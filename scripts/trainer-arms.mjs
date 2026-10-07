@@ -30,7 +30,10 @@ if (!glb || !id) {
 const axes = JSON.parse(readFileSync(join(here, 'trainer-arm-axes.json'), 'utf8'))[id];
 if (!axes) throw new Error(`${id} 의 팔 축이 trainer-arm-axes.json 에 없다 — godot/tools/arm_axes.gd 로 잰다`);
 const ax = (name) => axes[name].join(',');
+// 손목은 **조각된 대로 곧게** — 바르코 대기가 모델마다 손목을 제멋대로 굽혀 주먹이 꺾여 보였다 (2026-10-07 "주먹이 꺾여있고")
 const specs = [
+  'LeftHand:rest@Idle',
+  'RightHand:rest@Idle',
   `LeftArm:${ax('LeftArm')}:${SPREAD}@Idle`,
   `RightArm:${ax('RightArm')}:${SPREAD}@Idle`,
   `LeftForeArm:${ax('LeftForeArm')}:${BEND}@Idle`,

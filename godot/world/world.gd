@@ -3018,6 +3018,12 @@ func _step_buddies(delta: float, now: int) -> void:
 			buddy = {"id": active, "x": home.x, "z": home.y, "rot": float(player.get("rot", 0.0)),
 				"state": "idle", "next_hit_at": 0}
 			player.buddy = buddy
+		# 날고 있으면 그것만 — 내려앉는 동안은 발이 묶인다 (플레이어 날라차기와 같다)
+		if buddy.has("lunge"):
+			_buddy_fly(player, buddy, delta, now)
+			continue
+		if now < int(buddy.get("rooted_until", 0)):
+			continue
 		var target := {} if bool(player.dead) else _buddy_target(player, now)
 		var pos := Vector2(float(buddy.x), float(buddy.z))
 		var speed := _speed_of(player) * BUDDY_SPEED_MUL
@@ -3025,9 +3031,14 @@ func _step_buddies(delta: float, now: int) -> void:
 			var at := Vector2(float(target.x), float(target.z))
 			buddy.rot = atan2(at.x - pos.x, at.y - pos.y)
 			var reach := BUDDY_REACH + float(target.get("r", 0.5))
-			if pos.distance_to(at) > reach:
-				_buddy_walk(buddy, pos, at, reach * 0.8, speed, delta)
-				buddy.state = "run"
+			var gap := pos.distance_to(at)
+			if gap > reach:
+				# 멀면 **플레이어처럼 날아 차며 붙는다** (2026-10-07 요청). 더 멀면 `LUNGE_MAX` 까지 달려와서 난다
+				if gap > LUNGE_MIN and gap <= LUNGE_MAX and now >= int(buddy.next_hit_at) and not _counting_down(now):
+					_buddy_lunge(player, buddy, target, reach * 0.8, now)
+				else:
+					_buddy_walk(buddy, pos, at, reach * 0.8, speed, delta)
+					buddy.state = "run"
 			else:
 				if buddy.state == "run":
 					buddy.state = "idle"
@@ -3088,5 +3099,60 @@ func _buddy_strike(player: Dictionary, buddy: Dictionary, target: Dictionary, no
 		"type": "buddySwing", "id": str(player.id), "ms": cooldown,
 		"speed": float(stats.attackCooldown) / maxf(1.0, float(cooldown)),
 	})
+	_buddy_hit(player, target)
+
+
+func _buddy_hit(player: Dictionary, target: Dictionary) -> void:
 	var inherit := Trainers.inherit_of(player.get("trainers", {}), str(player.get("trainer_active", "")))
-	_hit_monster(player, target, float(stats.attack) * inherit, "", true)
+	_hit_monster(player, target, float(player.stats.attack) * inherit, "", true)
+
+
+## 동행 트레이너의 날라차기 (2026-10-07 요청: "트레이너가 몬스터 공격 할 때, 플레이어처럼 멀리 있는 경우
+## 날라차기 해서 공격하도록") — 플레이어 것(`_lunge`)과 같은 거리(`LUNGE_MIN`~`LUNGE_MAX`)·속도·보간·클립.
+## 한 대를 칠 수 있을 때만 난다 — 그래서 날라차기를 섞어도 간격은 평타 간격 그대로다 (`KillCheck._pace` 그대로)
+func _buddy_lunge(player: Dictionary, buddy: Dictionary, target: Dictionary, stop: float, now: int) -> void:
+	var from := Vector2(float(buddy.x), float(buddy.z))
+	var gap := from.distance_to(Vector2(float(target.x), float(target.z)))
+	var secs := clampf((gap - stop) / LUNGE_SPEED, LUNGE_MIN_S, LUNGE_MAX_S)
+	buddy.lunge = {
+		"target": str(target.id), "stop": stop, "from_x": from.x, "from_z": from.y,
+		"to_x": from.x, "to_z": from.y, "t": 0.0, "secs": secs,
+	}
+	buddy.state = "attack"
+	buddy.next_hit_at = now + LUNGE_HOLD_MS
+	# 화면은 이것을 받고 트레이너에게 날라차기 동작을 튼다 — 발이 닿는 키가 도착에 오게 배속을 준다
+	_events.append({
+		"type": "buddyLunge", "id": str(player.id),
+		"ms": roundi(secs * 1000.0) + LUNGE_LAND_MS, "speed": LUNGE_HIT_S / secs,
+	})
+
+
+## 날고 있는 트레이너를 한 틱 옮긴다 — `_run_lunges` 와 같다: 도착점이 대상을 따라가고, 닿으면 한 대
+func _buddy_fly(player: Dictionary, buddy: Dictionary, delta: float, now: int) -> void:
+	var lunge: Dictionary = buddy.lunge
+	var target := {}
+	for monster in _monsters:
+		if str(monster.id) == str(lunge.target) and (int(monster.hp) > 0 or bool(monster.get("dummy", false))):
+			target = monster
+			break
+	var from := Vector2(float(lunge.from_x), float(lunge.from_z))
+	if not target.is_empty():
+		var at := Vector2(float(target.x), float(target.z))
+		var stop := from.direction_to(at) * float(lunge.stop)
+		lunge.to_x = at.x - stop.x
+		lunge.to_z = at.y - stop.y
+		buddy.rot = atan2(at.x - float(buddy.x), at.y - float(buddy.z))
+	lunge.t = float(lunge.t) + delta
+	var k := clampf(float(lunge.t) / float(lunge.secs), 0.0, 1.0)
+	var e := k * k * (2.0 - k)
+	buddy.x = clampf(lerpf(from.x, float(lunge.to_x), e), -half_size, half_size)
+	buddy.z = clampf(lerpf(from.y, float(lunge.to_z), e), -half_size, half_size)
+	if k < 1.0:
+		return
+	# 닿았다 — 찬다. 다음 한 대는 평타 간격 뒤
+	buddy.erase("lunge")
+	buddy.rooted_until = now + LUNGE_LAND_MS
+	var stats: Dictionary = player.stats
+	buddy.next_hit_at = now + Combat.effective_cooldown(stats.attackCooldown, stats.attackSpeed)
+	if not target.is_empty() and not bool(player.dead):
+		_buddy_hit(player, target)

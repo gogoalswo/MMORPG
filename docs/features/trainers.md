@@ -41,7 +41,7 @@
 | `godot/world/trainers.gd` `Trainers` | 표 읽기 — `trainer` · `grade` · `owned_bonus` · `inherit_of` · `roll`(등급 확률 → 등급 안 고르게) · `clean` · `look` |
 | `godot/world/ledger.gd` `trainer_draw` · `trainer_pick` · `trainer_fuse` | ★ **판정.** 장부 칸 `trainers {id: 개수}` · `trainer_active` (`KEYS`) |
 | `godot/world/world.gd` `stats_of` | 보유 효과 — 공·방·체는 **따로 곱하고**(`trainer_*`), 치명타 둘은 비율에 더한다 |
-| `godot/world/world.gd` `_step_buddies` · `_buddy_strike` · `_hit_monster` | ★ **동행 전투** (아래 "동행") · `hunt_focus` |
+| `godot/world/world.gd` `_step_buddies` · `_buddy_strike` · `_buddy_lunge` · `_buddy_fly` · `_hit_monster` | ★ **동행 전투** (아래 "동행") · **날라차기** · `hunt_focus` |
 | `godot/world/world.gd` `trainer_draw` · `trainer_pick` · `debug_diamonds` · `restore` | 요청 → 장부, 테스트 단추(다이아 `count` 개 — 가방 창 +1만 · 설계 재현 창 +10만), 저장 되살리기(표에 있는 것만 · 안 가진 동행은 비움) |
 | `godot/world/save.gd` | `trainers` · `trainer_active` 칸 |
 | `godot/server/ledger_server.gd` `OPS` | `trainer_draw: "i"` · `trainer_pick: "s"` · `trainer_fuse: "ii"` — 서버에서는 **서버가 굴린다** |
@@ -55,7 +55,7 @@
 | `godot/game/game.gd` `_toggle_trainer` · `_trainer_art` · `_draw_buddy` | 메뉴 단추(상점 옆, ≡ 판 안) · 원화 불러오기 · 동행 모델 그리기, `buddySwing` · `trainerDraw` · `diamonds` 알림 |
 | `godot/game/rig.gd` `create` | `trainer_<id>` 는 `FILES` 에 없어도 `trainer_<id>.glb` 로 찾는다 (53줄을 손으로 안 적는다) |
 | `godot/tests/trainer_test.gd` | 표 · 뽑기 · 동행 고르기 · 보유 효과 · **동행 전투** · 저장 · 서버 · 창 · 상점 뽑기 · **뽑기 연출**(자리 수 · 조각상 색 · 보기 전 카드 없음 · 이름 등급 색 · NEW · 확인) |
-| `godot/tests/model_test.gd` `_case_trainers` · `_case_trainer_kicks` | 53명 전원이 모델로 만들어지고 `Idle` · `Run` · 발차기 넷이 있고 키가 표대로다 · 등급마다 한 명씩 발차기에서 **왼발이 머리 높이의 80% 를 넘는지** 뼈 자리로 잰다 (전설 권신: 발 0.86 · 머리 0.69) |
+| `godot/tests/model_test.gd` `_case_trainers` · `_case_trainer_kicks` | 53명 전원이 모델로 만들어지고 `Idle` · `Run` · 발차기 넷 · `FlyingKick` 이 있고 키가 표대로다 · 등급마다 한 명씩 발차기에서 **왼발이 머리 높이의 80% 를 넘는지** 뼈 자리로 잰다 (전설 권신: 발 0.86 · 머리 0.69) |
 | `scripts/build-trainer-art.mjs` | 원화(9:16) → 카드 그림 240×320 JPG (`public/assets/trainers/`, 커밋) · 뽑기 바닥 `trainer_floor.jpg` |
 | `scripts/fetch-assets.sh` 의 트레이너 줄 | 바르코 결과물 주소 (원화 · 대기 · 달리기 · 펀치) → `build-varco-character.mjs` |
 
@@ -90,6 +90,14 @@
   (`BUDDY_REACH` 1.6m + 몬스터 몸)에서 친다. 손을 떼면 4초 뒤 곁(오른쪽 뒤 `BUDDY_SIDE`·`BUDDY_BACK`, **캐릭터 기준**)으로 돌아온다.
 - **한 대 = 내 평타 × 계승 %** — 간격은 내 평타 간격(공속 포함), 피해는 내 최종 공격력 × 계승 %, 치명타·관통은
   내 것 그대로. 그래서 공속 패시브·장비가 트레이너도 같이 키운다. 전설(80%)이면 평타 피해가 1.8배가 된다.
+- **멀면 날아 차며 붙는다** ★ (2026-10-07 요청 "트레이너가 몬스터 공격 할 때, 플레이어처럼 멀리 있는 경우 날라차기 해서
+  공격하도록") — 칠 놈이 `LUNGE_MIN`(4m) 넘게 `LUNGE_MAX`(10m) 안이고 한 대를 칠 수 있으면(`next_hit_at`) 달려가지 않고
+  주먹 거리 × 0.8 앞까지 난다(`_buddy_lunge` → `_buddy_fly`). 거리·속도·`k²(2-k)` 보간·대상 따라가기·착지 경직 300ms 는
+  **플레이어 날라차기와 같은 상수**다 ([auto-hunt-and-targeting.md](auto-hunt-and-targeting.md) "날라차기"). 닿는 순간 한 대
+  (`_buddy_hit`), 다음 한 대는 평타 간격 뒤 — 그래서 **간격이 늘지 않아 `KillCheck._pace` 는 그대로다.** 4m 안은 걷고,
+  10m 밖은 10m 까지 달려와서 난다. 직업 사거리는 안 본다 — 원거리 직업의 트레이너도 발로 싸운다.
+  화면은 `buddyLunge {id, ms, speed}` 로 트레이너에게 `FlyingKick` 을 튼다(플레이어와 같은 배속 규칙).
+  확인: `trainer_test.gd` `_case_buddy_lunge` (7.9m 에서 날아 0.45초 안에 닿아 한 대 · 2m 면 안 난다).
 - 잡으면 **내 처치**다 — 경험치·드랍·던전 클리어·샌드백 기록이 다 내 것. 맞은 몬스터는 **나를** 쫓는다.
 - 충돌이 없다 — 몬스터·캐릭터 사이를 지나다닌다 (막히면 같이 칠 수 없다). 14m 넘게 떨어지면(존 이동·순간 이동)
   곁으로 옮긴다. 샌드백 카운트 동안은 기다린다.
@@ -110,6 +118,10 @@
   --only=KickSlapFull,KickSlapIn,KickSlapA,KickSlapB`. 바르코 사람 뼈대라 뼈 이름이 같고, 트레이너는 T 포즈로 뽑아
   `--retarget`(`--align` 아님)이면 된다. 다리 길이 비로 `Root` 이동을 줄인다. `--only` 는 이때 더한 옵션 — 안 주면
   스킬 동작까지 1.4MB 가 트레이너마다 붙는다. 넷을 붙여도 한 벌 크기는 그대로다(1.0MB). 블렌더는 안 썼다.
+  **2026-10-07 에 `FlyingKick` 을 더했다**(동행 날라차기, 한 벌 +75KB) — `fetch-assets.sh` 의 `--only` 에 들어 있다.
+  이미 구운 53벌에는 **아래팔 비틀기를 풀고(`rotate-bones.mjs` 로 `-twist`) → `--align --only=FlyingKick` → 다시 비틀어**
+  붙였다. 비틀기가 기본 자세에도 걸려 있어서, 안 풀고 붙이면 그 기본 자세에 맞춰 옮겨져 주먹 방향이 처음 빌드와 달라진다.
+  다른 클립·기본 자세는 그대로다(키 차 3e-8).
 - **1만 면 · 텍스처 512 인 이유** — 3만 면 모델이 하나 1.9MB(고도, 텍스처 512)라 53벌이면 100MB 가 웹 빌드에 얹힌다.
   동행은 한 번에 한 명이고 화면에서 작다. 텍스처는 고도가 어차피 512 로 넣으므로 `--tex 512` 로 구워도 화면은 같다.
   그래도 **한 벌 1.0MB, 53벌 55MB** 다 (뼈대·클립 셋 몫이 크다) — 웹 빌드가 그만큼 무거워졌다.

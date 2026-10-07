@@ -85,6 +85,23 @@ static func paint_button_text(button: Button, size: int) -> Button:
 	return button
 
 
+## 청록 돌판 단추 한 벌 — 글자(`paint_button_text`) + `ui_button` 판, 누르면 `ROW_SINK` 만큼 내려앉고 달아오른다.
+## 창마다 `_button_box` 를 따로 두던 것과 같은 결이다 (상점 뽑기 · 트레이너 창이 쓴다)
+static func paint_stone_button(button: Button, frame_box: Callable, size: int) -> Button:
+	paint_button_text(button, size)
+	for state in ["normal", "hover", "disabled", "pressed"]:
+		var pressed: bool = state == "pressed"
+		var box: StyleBox = frame_box.call("ui_button", BUTTON_MARGIN, 12)
+		var sink: int = ROW_SINK if pressed else 0
+		box.content_margin_top = 12 + sink
+		box.content_margin_bottom = 12 - sink
+		if box is StyleBoxTexture:
+			(box as StyleBoxTexture).modulate_color = PRESS_TINT if pressed else Color.WHITE
+		button.add_theme_stylebox_override(state, box)
+	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	return button
+
+
 ## 제목 글자 — 노란 제목(`TITLE_COLOR`) 대신 상아빛 (받은 던전 그림의 제목 결)
 const PAGE_TITLE_COLOR := Color("#ece4cc")
 const PAGE_TITLE_SIZE := 32

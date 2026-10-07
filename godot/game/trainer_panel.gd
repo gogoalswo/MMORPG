@@ -94,21 +94,23 @@ func _build(frame_box: Callable) -> void:
 		tab.pressed.connect(_pick_tab.bind(index))
 		head.add_child(tab)
 		_tabs.append(tab)
-	var gap := Control.new()
-	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	head.add_child(gap)
-	# 합성 — 같은 등급 여분 3장으로 다음 등급 도전 (2026-10-06). 누르면 목록 자리에 합성 줄이 선다
+	# 합성 — 같은 등급 여분 3장으로 다음 등급 도전 (2026-10-06). 누르면 목록 자리에 합성 줄이 선다.
+	# 전설 탭 바로 옆에 청록 돌판 단추로 선다 (2026-10-07 "합성 버튼을 전설탭 옆으로")
+	var gap2 := Control.new()
+	gap2.custom_minimum_size = Vector2(12, 0)
+	head.add_child(gap2)
 	_fuse_toggle = Button.new()
 	_fuse_toggle.name = "fuse_toggle"
 	_fuse_toggle.text = "합성"
 	_fuse_toggle.custom_minimum_size = Vector2(120, 48)
+	_fuse_toggle.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_fuse_toggle.focus_mode = Control.FOCUS_NONE
-	_fuse_toggle.add_theme_font_size_override("font_size", 22)
+	GatePanel.paint_stone_button(_fuse_toggle, frame_box, 22)
 	_fuse_toggle.pressed.connect(func() -> void: show_fuse(not _fuse_view.visible))
 	head.add_child(_fuse_toggle)
-	var gap2 := Control.new()
-	gap2.custom_minimum_size = Vector2(24, 0)
-	head.add_child(gap2)
+	var gap := Control.new()
+	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(gap)
 	var title := _label("트레이너", 30, TITLE)
 	title.name = "title"
 	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -124,7 +126,7 @@ func _build(frame_box: Callable) -> void:
 	body.add_theme_constant_override("separation", 0)
 	column.add_child(body)
 	_body = body
-	_build_fuse(column)
+	_build_fuse(column, frame_box)
 
 	var shelf := MarginContainer.new()
 	shelf.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -172,7 +174,7 @@ func _build(frame_box: Callable) -> void:
 	_pick.custom_minimum_size = Vector2(220, 58)
 	_pick.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_pick.focus_mode = Control.FOCUS_NONE
-	_pick.add_theme_font_size_override("font_size", 24)
+	GatePanel.paint_stone_button(_pick, frame_box, 24)
 	_pick.pressed.connect(_on_pick)
 	detail.add_child(_pick)
 
@@ -373,7 +375,7 @@ func _fill_summary(owned: Dictionary) -> void:
 	]
 
 
-func _build_fuse(column: VBoxContainer) -> void:
+func _build_fuse(column: VBoxContainer, frame_box: Callable) -> void:
 	_fuse_view = VBoxContainer.new()
 	_fuse_view.name = "fuse"
 	_fuse_view.visible = false
@@ -407,7 +409,7 @@ func _build_fuse(column: VBoxContainer) -> void:
 		one.text = "합성"
 		one.custom_minimum_size = Vector2(130, 50)
 		one.focus_mode = Control.FOCUS_NONE
-		one.add_theme_font_size_override("font_size", 20)
+		GatePanel.paint_stone_button(one, frame_box, 20)
 		one.pressed.connect(func() -> void: fuse_requested.emit(grade, false))
 		row.add_child(one)
 		var all := Button.new()
@@ -415,7 +417,7 @@ func _build_fuse(column: VBoxContainer) -> void:
 		all.text = "모두 합성"
 		all.custom_minimum_size = Vector2(150, 50)
 		all.focus_mode = Control.FOCUS_NONE
-		all.add_theme_font_size_override("font_size", 20)
+		GatePanel.paint_stone_button(all, frame_box, 20)
 		all.pressed.connect(func() -> void: fuse_requested.emit(grade, true))
 		row.add_child(all)
 		_fuse_view.add_child(row)

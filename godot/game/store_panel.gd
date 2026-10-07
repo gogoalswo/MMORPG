@@ -48,6 +48,8 @@ const IVORY := Color("#eeead7")
 const DIM := Color("#948c7a")
 
 var _icon := Callable()
+## 창 조각 — 뽑기 카드의 사기 단추에 청록 돌판(`ui_button`)을 입힐 때 쓴다
+var _frame_box := Callable()
 
 var _main := 0
 var _sub := 0
@@ -66,6 +68,7 @@ var _result: Control
 static func make(frame_box: Callable, icon: Callable) -> StorePanel:
 	var panel := StorePanel.new()
 	panel._icon = icon
+	panel._frame_box = frame_box
 	panel._build(frame_box)
 	return panel
 
@@ -303,7 +306,7 @@ func _card(product: Dictionary) -> Control:
 		buy.text = "다이아 %s" % _commas(int(product.diamonds))
 		buy.custom_minimum_size = Vector2(0, 46)
 		buy.focus_mode = Control.FOCUS_NONE
-		buy.add_theme_font_size_override("font_size", 20)
+		GatePanel.paint_stone_button(buy, _frame_box, 20)
 		buy.pressed.connect(func() -> void: buy_requested.emit(str(product.get("id", ""))))
 		stack.add_child(buy)
 		return card

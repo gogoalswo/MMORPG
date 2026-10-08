@@ -16,6 +16,8 @@ extends Control
 
 ## 확인을 눌렀다 — 상점이 판을 걷는다
 signal closed
+## [N회 뽑기] 를 눌렀다 — 상점이 같은 뽑기를 한 번 더 산다 (결과가 오면 이 판을 새 판으로 갈아 끼운다)
+signal again(times: int)
 
 ## 이 등급부터 금빛 밀랍 (희귀)
 const GOLD_GRADE := 3
@@ -70,6 +72,10 @@ var _pieces: Array = []  # {id, grade, fresh, gold, slot: Vector3, node: Node3D,
 var _layer: Control
 var _reveal: Button
 var _ok: Button
+## 확인 옆 다시 뽑기 — 1장이면 1회, 여러 장이면 `Trainers.draw_multi()` 회 (2026-10-08 요청 "1회 뽑기였으면 1회 뽑기,
+## 10회 뽑기였으면 10회 뽑기 버튼을 확인 버튼 옆에")
+var _again: Button
+var _times := 1
 var _time := 0.0
 var _reveal_at := -1.0
 ## 칸 — 줄마다 장 수 · 칸 크기(기준 배율 전, 가장 긴 이름에 맞춘다 — 처음 그릴 때 잰다)
@@ -143,6 +149,15 @@ func _build(got: Array, fresh: Array) -> void:
 	_ok = _button("ok", "확인")
 	_ok.visible = false
 	_ok.pressed.connect(func() -> void: closed.emit())
+	_times = 1 if got.size() <= 1 else Trainers.draw_multi()
+	_again = _button("again", "%d회 뽑기" % _times)
+	_again.visible = false
+	_again.pressed.connect(func() -> void: again.emit(_times))
+	# 둘이 나란히 — [확인] 왼쪽 · [N회 뽑기] 오른쪽 (단추 폭 220 · 사이 20)
+	_ok.offset_left = -230
+	_ok.offset_right = -10
+	_again.offset_left = 10
+	_again.offset_right = 230
 
 
 ## 자리 — `LAYOUT` 앞에서부터 `count` 개. 1회는 판 가운데, 11개를 넘으면 맨 뒤에 한 줄씩 더 깐다
@@ -328,6 +343,7 @@ func _step(delta: float) -> void:
 		var last := REVEAL_GAP * float(maxi(0, _pieces.size() - 1)) + CARD_AT + CARD_POP
 		if _time - _reveal_at >= last:
 			_ok.visible = true
+			_again.visible = true
 	_place_cards()
 
 

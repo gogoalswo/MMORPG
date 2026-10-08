@@ -450,10 +450,13 @@ func _case_panel() -> void:
 	if panel.fuse_shown():
 		_fail("합성 보기에서 등급 탭을 눌러도 목록으로 안 돌아간다")
 	panel.show_fuse(true)
-	# 칸 30개(도전 10번) · 단추 둘은 맨 아래 — 그래도 1280 × 720 한 화면에 든다 (2026-10-08)
+	# 칸 30개(도전 10번)는 원래 크기 그대로 아래로 쭉 — 스크롤 안이라 단추 둘(맨 아래)까지 1280 × 720 한 화면에 든다 (2026-10-08)
 	var need := panel.get_combined_minimum_size()
+	var slot0 := panel.fuse_slots()[0] as Control
 	if panel.fuse_slots().size() != 30 or need.x > 1280 or need.y > 720:
 		_fail("합성 칸 %d개 · 창 최소 크기 %s (30칸이 1280 × 720 에 들어야)" % [panel.fuse_slots().size(), need])
+	elif slot0.custom_minimum_size != Vector2(88, 117) or not (slot0.get_parent().get_parent().get_parent() is ScrollContainer):
+		_fail("합성 칸이 %s · 스크롤 안에 없다 (88 × 117 로 아래로 쭉)" % slot0.custom_minimum_size)
 	panel.refresh({"trainers": {"n01": 5, "n02": 2, "l01": 2}, "trainer_active": "l01"})
 	if panel.fuse_cards().size() != 2 or not panel.fuse_tab(1).get_node("red_dot").visible:
 		_fail("일반 합성 카드 %d장 (n01 · n02 둘이어야) · 빨간 점" % panel.fuse_cards().size())

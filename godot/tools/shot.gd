@@ -1048,12 +1048,15 @@ func _fuse(game: Node3D) -> void:
 		if panel._shots.pending() == 0 and not panel._shots._busy:
 			break
 	await _save_shot("logs/shot_fuse_1.png")
-	panel.show_fuse_result({"grade": 1, "results": [{"used": [], "got": "a02"}, {"used": [], "got": ""}, {"used": [], "got": "a05"}]})
+	# 테두리 등급 색을 한 장에서 보려고 등급을 섞는다 (실제 결과는 한 등급) — 실패는 돌려받은 일반 1장
+	panel.show_fuse_result({"grade": 1, "results": [{"used": [], "got": "a02", "back": ""}, {"used": [], "got": "", "back": "n03"},
+		{"used": [], "got": "r01", "back": ""}, {"used": [], "got": "h01", "back": ""}, {"used": [], "got": "l01", "back": ""}]})
 	for i in 600:
 		await process_frame
 		if panel._shots.pending() == 0 and not panel._shots._busy:
 			break
-	await create_timer(0.5).timeout
+	# 다섯 장이 0.18초 간격으로 튀어나오니 끝까지 서는 데 1초 남짓
+	await create_timer(1.5).timeout
 	await _save_shot("logs/shot_fuse_2.png")
 	quit(0)
 

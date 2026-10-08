@@ -740,8 +740,9 @@ func trainer_draw(p: Dictionary, times: int) -> void:
 
 
 ## 트레이너 창의 **합성** — 합성 칸에 등록한 카드 `ids`(같은 등급 **여분**, 트레이너마다 1장은 남긴다)를
-## 앞에서부터 `fuse_cost` 장씩 끊어 한 줄에 한 번 도전한다. 성공하면 다음 등급 무작위 1명, 실패하면 넣은 것만
-## 사라진다. 어떤 카드를 넣을지는 사람이 고른다 (2026-10-08 — 창에서 카드를 눌러 칸에 등록 · 자동 등록)
+## 앞에서부터 `fuse_cost` 장씩 끊어 한 줄에 한 번 도전한다. 성공하면 다음 등급 무작위 1명(`got`), 실패하면 넣은 3장은
+## 사라지고 **같은 등급 무작위 1명**(`back`)을 돌려준다 (2026-10-08 요청 "실패하면 3장 카드 다 날라가는데, 같은 등급의
+## 랜덤하게 카드 한 장을 줘"). 어떤 카드를 넣을지는 사람이 고른다 (창에서 카드를 눌러 칸에 등록 · 자동 등록)
 func trainer_fuse(p: Dictionary, ids: Array) -> void:
 	var cost := Trainers.fuse_cost()
 	var owned: Dictionary = p.get("trainers", {})
@@ -766,18 +767,23 @@ func trainer_fuse(p: Dictionary, ids: Array) -> void:
 			owned[str(id)] = int(owned[str(id)]) - 1
 			used.append(str(id))
 		var got := ""
+		var back := ""
 		if rng.randf() * 100.0 < chance:
 			var next := Trainers.of_grade(grade + 1)
 			got = str(next[rng.randi_range(0, next.size() - 1)].id)
 			owned[got] = int(owned.get(got, 0)) + 1
-		results.append({"used": used, "got": got})
+		else:
+			var same := Trainers.of_grade(grade)
+			back = str(same[rng.randi_range(0, same.size() - 1)].id)
+			owned[back] = int(owned.get(back, 0)) + 1
+		results.append({"used": used, "got": got, "back": back})
 	p.trainers = owned
 	var wins := results.filter(func(r: Dictionary) -> bool: return str(r.got) != "")
 	events.append({"type": "trainerFuse", "grade": grade, "results": results})
 	if results.size() == 1 and not wins.is_empty():
 		_notice("합성 성공! %s" % str(Trainers.trainer(str(wins[0].got)).name))
 	elif results.size() == 1:
-		_notice("합성 실패 — 재료 %d장이 사라졌습니다" % cost)
+		_notice("합성 실패 — %s 1장을 돌려받았습니다" % str(Trainers.trainer(str(results[0].back)).name))
 	else:
 		_notice("합성 %d번 — 성공 %d · 실패 %d" % [results.size(), wins.size(), results.size() - wins.size()])
 

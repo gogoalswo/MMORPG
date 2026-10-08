@@ -53,10 +53,10 @@ export const TRAINER_GRADES: TrainerGrade[] = [
 export const TRAINER_FUSE_COST = 3;
 
 /**
- * 합성 창의 등록 칸 — 한 번에 넣을 수 있는 카드 수. `TRAINER_FUSE_COST` 의 배수라 칸 한 줄(3장)이 도전 한 번이다
- * (2026-10-08 요청: 등급 탭 → 카드를 눌러 칸에 등록 → 합성). 장부도 이보다 많이 넣으면 거절한다
+ * 합성 창의 등록 칸 — 한 번에 넣을 수 있는 카드 수. `TRAINER_FUSE_COST` 의 배수라 3장 묶음이 도전 한 번이다
+ * (2026-10-08 요청: 등급 탭 → 카드를 눌러 칸에 등록 → 합성. 같은 날 9 → 30 "한 번에 최대 30개 · 총 10번"). 장부도 이보다 많이 넣으면 거절한다
  */
-export const TRAINER_FUSE_SLOTS = 9;
+export const TRAINER_FUSE_SLOTS = 30;
 
 /** 뽑기 값 — 다이아. 10회는 한 번에 열 번 굴린다 (할인 없음) */
 export const TRAINER_DRAW_COST = 100;

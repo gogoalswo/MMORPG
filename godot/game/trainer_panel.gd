@@ -18,10 +18,11 @@ extends PanelContainer
 ## 합성 보기 (머리의 **합성** → 목록 자리, 2026-10-08 요청 "등급별로 탭이 나눠져있고, 선택해서 카드 등록하면 합성"):
 ##   ┌──────┬──────────────────────┬──────────────────────────────────┐
 ##   │ 일반•│ ┌──┐┌──┐┌──┐┌──┐     │ 왼쪽 카드를 눌러 등록하세요 …       │
-##   │ 고급 │ │  ││  ││  ││  │ ←카드│ ┌──┐┌──┐┌──┐   일반 → 고급        │
-##   │ 희귀 │ │여분││  │…        │ │  ││  ││  │ ←줄 = 도전 1번  성공 20% │
-##   │ 영웅 │ └──┘└──┘└──┘└──┘     │ │ +││ +││ +│   [카드 자동 등록]    │
-##   │      │  (스크롤)           │ └──┘└──┘└──┘   [합성]  결과 한 줄     │
+##   │ 고급 │ │  ││  ││  ││  │ ←카드│ 일반 → 고급  성공 20%  등록 0/30   │
+##   │ 희귀 │ │여분││  │…        │   [+][+][+]  [+][+][+]  ← 묶음 = 도전 1번 │
+##   │ 영웅 │ └──┘└──┘└──┘└──┘     │   … 5줄 (30칸 = 10번)               │
+##   │      │  (스크롤)           │ 결과 한 줄                          │
+##   │      │                     │ [카드 자동 등록]   [합성]   ← 맨 아래 │
 ##   [합성] → 결과가 오면 **합성 결과 판**(`TrainerFuseResult`)이 화면을 덮는다 — 도전마다 카드 한 장, X 로 걷는다
 
 signal pick_requested(id: String)
@@ -39,7 +40,9 @@ const TITLE_ROOM := 72
 const FUSE_TAB_WIDTH := 130.0
 const FUSE_COLUMNS := 4
 const FUSE_ART := Vector2(88, 117)
-const SLOT_SIZE := Vector2(88, 117)
+const SLOT_SIZE := Vector2(50, 66)
+## 등록 칸 — 한 줄에 놓는 3장 묶음 수 (30칸 = 2 묶음 × 5줄)
+const SLOT_GROUPS_PER_ROW := 2
 
 const TITLE := GatePanel.PAGE_TITLE_COLOR
 const GOLD := GatePanel.CARD_GOLD
@@ -492,25 +495,45 @@ func _build_fuse(column: VBoxContainer, frame_box: Callable) -> void:
 	var stack := VBoxContainer.new()
 	stack.add_theme_constant_override("separation", 10)
 	right.add_child(stack)
-	var hint := _label("왼쪽 카드를 눌러 등록하세요. %d장 한 줄이 한 번 도전입니다." % Trainers.fuse_cost(), 17, DIM)
-	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	# 한 줄에 든다 — 줄바꿈을 켜면 폭이 정해지기 전 최소 높이를 글자마다 줄을 바꿔 재서 창이 720 을 넘는다
+	var hint := _label("왼쪽 카드를 눌러 등록하세요. %d장 한 묶음이 한 번 도전입니다." % Trainers.fuse_cost(), 17, DIM)
 	stack.add_child(hint)
-	var row := HBoxContainer.new()
-	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	row.add_theme_constant_override("separation", 18)
-	stack.add_child(row)
+	# `일반 → 고급 · 성공 확률 20% · 등록 6 / 30 · 도전 2번` 한 줄
+	var info := HBoxContainer.new()
+	info.add_theme_constant_override("separation", 22)
+	stack.add_child(info)
+	_fuse_target = _label("", 22, IVORY)
+	_fuse_target.name = "fuse_target"
+	info.add_child(_fuse_target)
+	_fuse_odds = _label("", 19, GOLD)
+	_fuse_odds.name = "fuse_odds"
+	_fuse_odds.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	info.add_child(_fuse_odds)
+	_fuse_count = _label("", 18, IVORY)
+	_fuse_count.name = "fuse_count"
+	_fuse_count.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	info.add_child(_fuse_count)
+	# 등록 칸 30개(`TRAINER_FUSE_SLOTS`, 2026-10-08 "한 번에 최대 30개 · 총 10번") — 3장 묶음이 도전 한 번,
+	# 묶음을 `SLOT_GROUPS_PER_ROW` 개씩 줄 세운다. 칸 번호는 묶음 순서대로라 합성은 앞 묶음부터 보낸다
 	var slots := GridContainer.new()
 	slots.name = "slots"
-	slots.columns = Trainers.fuse_cost()
-	slots.add_theme_constant_override("h_separation", 8)
-	slots.add_theme_constant_override("v_separation", 14)
-	row.add_child(slots)
+	slots.columns = SLOT_GROUPS_PER_ROW
+	slots.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	slots.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	slots.add_theme_constant_override("h_separation", 26)
+	slots.add_theme_constant_override("v_separation", 8)
+	stack.add_child(slots)
+	var group: HBoxContainer = null
 	for i in Trainers.fuse_slots():
+		if i % Trainers.fuse_cost() == 0:
+			group = HBoxContainer.new()
+			group.add_theme_constant_override("separation", 6)
+			slots.add_child(group)
 		var slot := Button.new()
 		slot.name = "slot_%d" % i
 		slot.custom_minimum_size = SLOT_SIZE
 		slot.focus_mode = Control.FOCUS_NONE
-		slot.add_theme_font_size_override("font_size", 40)
+		slot.add_theme_font_size_override("font_size", 26)
 		slot.add_theme_color_override("font_color", Color(GOLD, 0.7))
 		slot.add_theme_color_override("font_hover_color", GOLD)
 		var art := TextureRect.new()
@@ -520,46 +543,40 @@ func _build_fuse(column: VBoxContainer, frame_box: Callable) -> void:
 		art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		for side in [SIDE_LEFT, SIDE_TOP]:
-			art.set_offset(side, 4)
+			art.set_offset(side, 3)
 		for side in [SIDE_RIGHT, SIDE_BOTTOM]:
-			art.set_offset(side, -4)
+			art.set_offset(side, -3)
 		slot.add_child(art)
 		slot.pressed.connect(_unslot.bind(i))
-		slots.add_child(slot)
+		group.add_child(slot)
 		_slots.append(slot)
-	var side_box := VBoxContainer.new()
-	side_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	side_box.add_theme_constant_override("separation", 10)
-	row.add_child(side_box)
-	_fuse_target = _label("", 24, IVORY)
-	_fuse_target.name = "fuse_target"
-	side_box.add_child(_fuse_target)
-	_fuse_odds = _label("", 20, GOLD)
-	_fuse_odds.name = "fuse_odds"
-	side_box.add_child(_fuse_odds)
-	_fuse_count = _label("", 18, IVORY)
-	_fuse_count.name = "fuse_count"
-	side_box.add_child(_fuse_count)
+	_fuse_note = _label("", 18, IVORY)
+	_fuse_note.name = "fuse_note"
+	_fuse_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	stack.add_child(_fuse_note)
+	# 단추 둘은 맨 아래 한 줄 (2026-10-08 "카드 자동 등록, 합성 버튼을 맨 아래쪽으로")
+	var buttons := HBoxContainer.new()
+	buttons.name = "fuse_buttons"
+	buttons.add_theme_constant_override("separation", 14)
+	stack.add_child(buttons)
 	_auto = Button.new()
 	_auto.name = "auto"
 	_auto.text = "카드 자동 등록"
 	_auto.custom_minimum_size = Vector2(0, 54)
+	_auto.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_auto.focus_mode = Control.FOCUS_NONE
 	GatePanel.paint_stone_button(_auto, frame_box, 20)
 	_auto.pressed.connect(_auto_slot)
-	side_box.add_child(_auto)
+	buttons.add_child(_auto)
 	_fuse_go = Button.new()
 	_fuse_go.name = "fuse_go"
 	_fuse_go.text = "합성"
 	_fuse_go.custom_minimum_size = Vector2(0, 54)
+	_fuse_go.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_fuse_go.focus_mode = Control.FOCUS_NONE
 	GatePanel.paint_stone_button(_fuse_go, frame_box, 22)
 	_fuse_go.pressed.connect(_on_fuse)
-	side_box.add_child(_fuse_go)
-	_fuse_note = _label("", 18, IVORY)
-	_fuse_note.name = "fuse_note"
-	_fuse_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	side_box.add_child(_fuse_note)
+	buttons.add_child(_fuse_go)
 
 
 func _pick_fuse_grade(grade: int) -> void:

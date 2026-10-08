@@ -63,9 +63,9 @@ static func fuse_cost() -> int:
 	return int(table().get("fuseCost", 3))
 
 
-## 합성 창의 등록 칸 수 (9) — `fuse_cost` 의 배수, 칸 한 줄(3장)이 도전 한 번
+## 합성 창의 등록 칸 수 (30) — `fuse_cost` 의 배수, 3장 묶음이 도전 한 번 (한 번에 10번)
 static func fuse_slots() -> int:
-	return int(table().get("fuseSlots", 9))
+	return int(table().get("fuseSlots", 30))
 
 
 ## 그 등급 합성 성공 확률(%) — 전설은 0

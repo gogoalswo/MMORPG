@@ -56,7 +56,7 @@
   "drawCost": 100,
   "drawMulti": 10,
   "fuseCost": 3,
-  "fuseSlots": 9,
+  "fuseSlots": 30,
   "trainers": [
     {
       "id": "n01",

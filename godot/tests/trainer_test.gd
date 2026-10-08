@@ -628,11 +628,11 @@ func _case_panel() -> void:
 				or again.get_global_rect().intersects(ok.get_global_rect()):
 			_fail("다시 뽑기 단추가 확인 옆에 나란히 서지 않았다")
 		else:
-			var asked: Array = []
-			store.buy_requested.connect(func(id: String) -> void: asked.append(id))
+			var again_asked: Array = []
+			store.buy_requested.connect(func(id: String) -> void: again_asked.append(id))
 			again.pressed.emit()
-			if asked != ["trainer_10"]:
-				_fail("다시 뽑기가 보낸 요청이 %s" % [asked])
+			if again_asked != ["trainer_10"]:
+				_fail("다시 뽑기가 보낸 요청이 %s" % [again_asked])
 		ok.pressed.emit()
 		await process_frame
 		if store.draw_shown() != null:

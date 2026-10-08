@@ -557,4 +557,22 @@ func _case_panel() -> void:
 		await process_frame
 		if store.draw_shown() != null:
 			_fail("확인을 눌러도 뽑기 판이 남았다")
+	# 10회 — 카드가 서로 겹치지 않고 [확인] 위 화면 안에 선다 (2026-10-08 "서로 겹치지 않게")
+	store.show_draw(["n01", "n02", "n03", "a01", "a02", "r01", "r02", "h01", "l01", "l02"], [true, true, true, true, true, true, true, true, true, true])
+	var big_draw := store.draw_shown() as TrainerDraw
+	if big_draw != null:
+		big_draw.finish()
+		var rects: Array = big_draw.cards().map(func(c: Control) -> Rect2: return c.get_global_rect())
+		if rects.size() != 10:
+			_fail("10회 카드가 %d장" % rects.size())
+		var view := big_draw.get_global_rect()
+		var ok_top := (big_draw.find_child("ok", true, false) as Control).get_global_rect().position.y
+		for i in rects.size():
+			var r: Rect2 = rects[i]
+			if not view.encloses(r) or r.end.y > ok_top:
+				_fail("10회 카드 %d 가 화면 밖이거나 확인 단추를 덮는다: %s (화면 %s)" % [i, r, view])
+			for j in range(i + 1, rects.size()):
+				if r.grow(-1.0).intersects(rects[j]):
+					_fail("10회 카드 %d · %d 가 겹친다: %s · %s" % [i, j, r, rects[j]])
+		big_draw.closed.emit()
 	store.queue_free()

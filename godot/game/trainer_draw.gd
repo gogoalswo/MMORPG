@@ -51,10 +51,15 @@ const CARD_POP := 0.25
 ## 빛기둥 키(m)
 const BEAM_HEIGHT := 5.5
 
-## 카드(화면 조각) — 그림 크기 · 기준 화면 높이 · 기준 깊이에서의 배율
+## 카드(화면 조각) — 그림 크기 · 기준 화면 높이 · 기준 배율
 const ART := Vector2(126, 168)
 const BASE_VIEW_H := 720.0
 const CARD_SCALE := 1.2
+## 카드가 서는 칸 — 한 줄 최대 장 수 · 칸 사이(기준 배율 전) · 화면 가장자리 · 아래 [확인] 자리
+const ROW_MAX := 5
+const CELL_GAP := Vector2(16, 14)
+const EDGE := 20.0
+const BUTTON_ROOM := 100.0
 
 const IVORY := Color("#eeead7")
 const GOLD := GatePanel.CARD_GOLD
@@ -67,7 +72,9 @@ var _reveal: Button
 var _ok: Button
 var _time := 0.0
 var _reveal_at := -1.0
-var _ref_depth := 1.0
+## 칸 — 줄마다 장 수 · 칸 크기(기준 배율 전, 가장 긴 이름에 맞춘다 — 처음 그릴 때 잰다)
+var _row_len: Array = []
+var _cell := Vector2.ZERO
 ## 뽑힌 트레이너를 **3D 모델로 찍는 보이지 않는 무대** (2026-10-07 요청 "뽑기 화면이 2D 이미지로 나오는데, 3D 모델로
 ## 변경해") — 트레이너 창을 한 번도 안 열었으면 찍어 둔 그림이 없어 원화가 섰다. 판이 열리자마자 뽑힌 것만 찍는다
 var _shots: TrainerPortraits
@@ -124,7 +131,7 @@ func _build(got: Array, fresh: Array) -> void:
 		entry.card = null
 		entry.started = false
 		_pieces.append(entry)
-	_ref_depth = _camera.position.distance_to(Vector3.ZERO)
+	_row_len = TrainerDraw.cells(_pieces)
 
 	_shots = TrainerPortraits.new()
 	add_child(_shots)
@@ -265,6 +272,31 @@ func finish() -> void:
 	_step(1000.0)
 
 
+## 카드 칸 — 조각상 대형 그대로는 앞뒤 줄 간격(화면 50~90px)이 카드 키(200px 넘게)보다 좁아 겹친다 (2026-10-08 "서로 겹치지
+## 않게"). 그래서 카드는 한 줄 `ROW_MAX` 장 이하의 줄로 선다 — **뒤에 선 조각상이 윗줄**, 줄 안에서는 왼쪽부터라 카드가
+## 제 조각상 가까운 칸으로 미끄러진다. 각 조각(`piece`)에 `cell`(열, 줄)을 매기고 줄마다 장 수를 돌려준다
+static func cells(pieces: Array) -> Array:
+	var count := pieces.size()
+	if count == 0:
+		return []
+	var rows := ceili(float(count) / float(ROW_MAX))
+	var order: Array = range(count)
+	order.sort_custom(func(a, b): return pieces[a].slot.z < pieces[b].slot.z \
+		or (pieces[a].slot.z == pieces[b].slot.z and pieces[a].slot.x < pieces[b].slot.x))
+	var row_len: Array = []
+	var at := 0
+	for row in rows:
+		# 남은 장을 남은 줄에 고르게 — 10 은 5 · 5, 7 은 4 · 3
+		var n := ceili(float(count - at) / float(rows - row))
+		var line: Array = order.slice(at, at + n)
+		line.sort_custom(func(a, b): return pieces[a].slot.x < pieces[b].slot.x)
+		for col in line.size():
+			pieces[line[col]].cell = Vector2i(col, row)
+		row_len.append(n)
+		at += n
+	return row_len
+
+
 ## 조각상 노드들 — 테스트가 본다 (`gold` · `id`)
 func pieces() -> Array:
 	return _pieces
@@ -344,6 +376,7 @@ func _reveal_piece(piece: Dictionary, t: float) -> void:
 		var card: Control = piece.card
 		card.modulate.a = k
 		card.set_meta("pop", 0.7 + 0.3 * (1.0 - pow(1.0 - k, 3.0)) + 0.06 * sin(k * PI))
+		card.set_meta("move", 1.0 - pow(1.0 - k, 3.0))
 
 
 ## 빛 — 기둥(세로 띠, 카메라를 보며 Y 축으로만 돈다) · 발밑 섬광(제자리에서 사그라든다) · 바닥 빛 · 희귀 이상은 반짝이
@@ -571,19 +604,45 @@ func _make_card(piece: Dictionary) -> Control:
 	return card
 
 
-## 카드를 조각상 발밑 자리에 세운다 — 화면 크기 · 깊이를 따라 배율을 매 프레임 다시 잡는다
+## 카드를 세운다 — 조각상 발밑에서 솟아 제 칸(`cells`)으로 미끄러진다. 칸은 화면 안(가장자리 · 아래 [확인] 자리 빼고)에
+## 다 들어가게 배율을 매 프레임 다시 잡는다 — 화면 크기가 바뀌어도 겹치지 않는다
 func _place_cards() -> void:
-	var view_h := size.y if size.y > 0.0 else BASE_VIEW_H
+	if _pieces.is_empty() or cards().is_empty():
+		return
+	var view := size if size.y > 0.0 else Vector2(BASE_VIEW_H * 16.0 / 9.0, BASE_VIEW_H)
+	var cell := _cell_size()
+	var rows := _row_len.size()
+	var cols := 1
+	for n in _row_len:
+		cols = maxi(cols, int(n))
+	var area := Rect2(EDGE, EDGE, view.x - EDGE * 2.0, view.y - EDGE - BUTTON_ROOM)
+	var k := minf(CARD_SCALE * view.y / BASE_VIEW_H,
+		minf(area.size.x / (cell.x * cols), area.size.y / (cell.y * rows)))
+	var top := area.get_center().y - cell.y * k * rows * 0.5
 	for piece in _pieces:
 		var card: Control = piece.card
 		if card == null:
 			continue
-		var foot: Vector3 = piece.slot + Vector3(0.0, 0.0, 0.25)
-		var depth := _camera.position.distance_to(foot)
-		var k := CARD_SCALE * (view_h / BASE_VIEW_H) * (_ref_depth / maxf(0.1, depth)) * float(card.get_meta("pop", 1.0))
-		var at := _camera.unproject_position(foot)
+		var at := Vector2(piece.cell)
+		var spot := Vector2(area.get_center().x + (at.x - (float(_row_len[int(at.y)]) - 1.0) * 0.5) * cell.x * k,
+			top + (at.y + 1.0) * cell.y * k - CELL_GAP.y * k * 0.5)
+		var foot := _camera.unproject_position(piece.slot + Vector3(0.0, 0.0, 0.25))
 		var box := card.get_combined_minimum_size()
 		card.size = box
 		card.pivot_offset = Vector2(box.x * 0.5, box.y)
-		card.scale = Vector2.ONE * k
-		card.position = at - card.pivot_offset
+		card.scale = Vector2.ONE * k * float(card.get_meta("pop", 1.0))
+		card.position = foot.lerp(spot, float(card.get_meta("move", 1.0))) - card.pivot_offset
+
+
+## 칸 크기(기준 배율 전) — 그림 테 · 가장 긴 이름 중 넓은 쪽 + 칸 사이. 글꼴을 재야 해서 처음 그릴 때 한 번 잰다
+func _cell_size() -> Vector2:
+	if _cell != Vector2.ZERO:
+		return _cell
+	var font := get_theme_font("font", "Label")
+	var frame := ART + Vector2(14, 14)
+	var wide := frame.x
+	for piece in _pieces:
+		var text := str(Trainers.trainer(str(piece.id)).get("name", ""))
+		wide = maxf(wide, font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 19).x + 12.0)
+	_cell = Vector2(wide, frame.y + 2.0 + font.get_height(19) + 12.0) + CELL_GAP
+	return _cell

@@ -40,14 +40,16 @@ export interface TrainerGrade {
   count: number;
   /** 이 등급 여분 `TRAINER_FUSE_COST` 장으로 다음 등급에 도전할 때의 성공 확률(%) — 전설은 0(더 위가 없다) */
   fuse: number;
+  /** 등급 색 — 카드 테·합성 결과 테두리·이름 (2026-10-08 사용자 지정: 일반 회색 · 고급 초록 · 희귀 파랑 · 영웅 빨강 · 전설 보라) */
+  color: string;
 }
 
 export const TRAINER_GRADES: TrainerGrade[] = [
-  { grade: 1, name: '일반', inherit: 20, owned: 1, chance: 58, count: 20, fuse: 20 },
-  { grade: 2, name: '고급', inherit: 30, owned: 2, chance: 30, count: 15, fuse: 20 },
-  { grade: 3, name: '희귀', inherit: 40, owned: 3, chance: 9, count: 10, fuse: 10 },
-  { grade: 4, name: '영웅', inherit: 60, owned: 5, chance: 2.5, count: 5, fuse: 10 },
-  { grade: 5, name: '전설', inherit: 80, owned: 8, chance: 0.5, count: 3, fuse: 0 },
+  { grade: 1, name: '일반', inherit: 20, owned: 1, chance: 58, count: 20, fuse: 20, color: '#a3a3a3' },
+  { grade: 2, name: '고급', inherit: 30, owned: 2, chance: 30, count: 15, fuse: 20, color: '#4fc35a' },
+  { grade: 3, name: '희귀', inherit: 40, owned: 3, chance: 9, count: 10, fuse: 10, color: '#3f8cff' },
+  { grade: 4, name: '영웅', inherit: 60, owned: 5, chance: 2.5, count: 5, fuse: 10, color: '#e5433d' },
+  { grade: 5, name: '전설', inherit: 80, owned: 8, chance: 0.5, count: 3, fuse: 0, color: '#b45cf0' },
 ];
 
 /** 합성 한 번에 넣는 같은 등급 여분 */

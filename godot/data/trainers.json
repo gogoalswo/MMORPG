@@ -7,7 +7,8 @@
       "owned": 1,
       "chance": 58,
       "count": 20,
-      "fuse": 20
+      "fuse": 20,
+      "color": "#a3a3a3"
     },
     {
       "grade": 2,
@@ -16,7 +17,8 @@
       "owned": 2,
       "chance": 30,
       "count": 15,
-      "fuse": 20
+      "fuse": 20,
+      "color": "#4fc35a"
     },
     {
       "grade": 3,
@@ -25,7 +27,8 @@
       "owned": 3,
       "chance": 9,
       "count": 10,
-      "fuse": 10
+      "fuse": 10,
+      "color": "#3f8cff"
     },
     {
       "grade": 4,
@@ -34,7 +37,8 @@
       "owned": 5,
       "chance": 2.5,
       "count": 5,
-      "fuse": 10
+      "fuse": 10,
+      "color": "#e5433d"
     },
     {
       "grade": 5,
@@ -43,7 +47,8 @@
       "owned": 8,
       "chance": 0.5,
       "count": 3,
-      "fuse": 0
+      "fuse": 0,
+      "color": "#b45cf0"
     }
   ],
   "statNames": {

@@ -407,6 +407,30 @@ func _case_panel() -> void:
 	await process_frame
 	if panel.cards().size() != 53:
 		_fail("전체 탭 카드가 %d장" % panel.cards().size())
+	# 목록은 **끌어서도** 내려가고, 그 자리에서 떼면 그 카드를 고른다 (2026-10-08 — 휠로만 내려갔다)
+	await process_frame
+	var list_scroll := panel.find_child("scroll", true, false) as ScrollContainer
+	var list_drag: DragScroll = list_scroll.get_meta("drag_scroll")
+	var hold := list_scroll.size * 0.5
+	list_drag.on_input(_trainer_mouse(hold, true))
+	for i in 6:
+		hold.y -= 40
+		var pull := InputEventMouseMotion.new()
+		pull.position = hold
+		list_drag.on_input(pull)
+	list_drag.on_input(_trainer_mouse(hold, false))
+	if list_scroll.scroll_vertical <= 0:
+		_fail("트레이너 목록을 끌었는데 안 내려갔다")
+	list_scroll.scroll_vertical = 0
+	await process_frame
+	var was := str(panel._selected)
+	var second := panel.cards()[1] as Control
+	var spot := second.global_position - list_scroll.global_position + second.size * 0.5
+	list_drag.on_input(_trainer_mouse(spot, true))
+	list_drag.on_input(_trainer_mouse(spot, false))
+	if str(panel._selected) != str(Trainers.all()[1].id):
+		_fail("목록에서 카드를 눌렀다 뗐는데 %s 가 골라졌다" % panel._selected)
+	panel.select(was)
 	for card in panel.cards():
 		if (card.find_child("art", true, false) as TextureRect).texture == concept:
 			_fail("3D 를 찍기 전인데 카드에 원화가 섰다 (%s)" % card.name)

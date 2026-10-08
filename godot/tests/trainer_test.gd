@@ -474,6 +474,11 @@ func _case_panel() -> void:
 	if panel.fuse_shown():
 		_fail("합성 보기에서 등급 탭을 눌러도 목록으로 안 돌아간다")
 	panel.show_fuse(true)
+	# 보유 효과는 등록 칸 오른쪽(도감 능력치)에 서고 아래 합계 줄은 숨는다 (2026-10-08)
+	var codex_count := panel.find_child("codex_count", true, false) as Label
+	var summary := panel.find_child("summary", true, false) as Label
+	if codex_count == null or not ("2 / 53" in codex_count.text) or summary.visible:
+		_fail("합성 보기에 도감 능력치가 없거나(%s) 아래 합계 줄이 그대로 보인다" % (codex_count.text if codex_count else "없음"))
 	# 칸 30개(도전 10번)는 원래 크기 그대로 아래로 쭉 — 스크롤 안이라 단추 둘(맨 아래)까지 1280 × 720 한 화면에 든다 (2026-10-08)
 	var need := panel.get_combined_minimum_size()
 	var slot0 := panel.fuse_slots()[0] as Control
@@ -601,6 +606,24 @@ func _case_panel() -> void:
 		await process_frame
 		if store.draw_shown() != null:
 			_fail("확인을 눌러도 뽑기 판이 남았다")
+	# 10회 — 카드가 서로 겹치지 않고 [확인] 위 화면 안에 선다 (2026-10-08 "서로 겹치지 않게")
+	store.show_draw(["n01", "n02", "n03", "a01", "a02", "r01", "r02", "h01", "l01", "l02"], [true, true, true, true, true, true, true, true, true, true])
+	var big_draw := store.draw_shown() as TrainerDraw
+	if big_draw != null:
+		big_draw.finish()
+		var rects: Array = big_draw.cards().map(func(c: Control) -> Rect2: return c.get_global_rect())
+		if rects.size() != 10:
+			_fail("10회 카드가 %d장" % rects.size())
+		var view := big_draw.get_global_rect()
+		var ok_top := (big_draw.find_child("ok", true, false) as Control).get_global_rect().position.y
+		for i in rects.size():
+			var r: Rect2 = rects[i]
+			if not view.encloses(r) or r.end.y > ok_top:
+				_fail("10회 카드 %d 가 화면 밖이거나 확인 단추를 덮는다: %s (화면 %s)" % [i, r, view])
+			for j in range(i + 1, rects.size()):
+				if r.grow(-1.0).intersects(rects[j]):
+					_fail("10회 카드 %d · %d 가 겹친다: %s · %s" % [i, j, r, rects[j]])
+		big_draw.closed.emit()
 	store.queue_free()
 
 

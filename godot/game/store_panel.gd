@@ -181,6 +181,8 @@ func show_draw(got: Array, fresh: Array) -> void:
 	hide_draw()
 	var draw := TrainerDraw.make(got, fresh)
 	draw.closed.connect(hide_draw)
+	# [N회 뽑기] — 상점 단추를 누른 것과 같다. 다이아가 모자라면 장부가 알림만 내고 판은 남는다
+	draw.again.connect(func(times: int) -> void: buy_requested.emit("trainer_10" if times > 1 else "trainer_1"))
 	_result = draw
 	add_child(_result)
 

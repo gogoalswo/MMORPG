@@ -49,13 +49,13 @@
 | `godot/net/local_transport.gd` | `trainerDraw {times}` · `trainerPick {id}` · `trainerFuse {ids}` · `debugDiamonds {count}` |
 | `godot/game/trainer_panel.gd` `TrainerPanel` | 트레이너 창 + **합성 보기**(등급 탭 · 카드 · 등록 칸 30 · 자동 등록 · 합성) + **카드 한 장**(`make_card`) · `grade_color`(등급 색 = 트레이너 등급 표의 `color` — 아래 "등급 색") |
 | `godot/game/trainer_fuse_result.gd` `TrainerFuseResult` | ★ **합성 결과 판** (아래 "합성") — 흐린 뒤 화면 · 제목 · 도전마다 카드(성공 빛 / 실패는 돌려받은 1장 · 테두리 등급 색) · ✕ |
-| `godot/game/trainer_draw.gd` `TrainerDraw` | ★ **뽑기 연출** (아래 "뽑기 연출") — 수련장 바닥 · 밀랍 조각상 · 빛기둥 · 카드 · [모두 보기] · [확인] |
+| `godot/game/trainer_draw.gd` `TrainerDraw` | ★ **뽑기 연출** (아래 "뽑기 연출") — 수련장 바닥 · 밀랍 조각상 · 빛기둥 · 카드 · [모두 보기] · [확인] · [N회 뽑기] |
 | `godot/game/trainer_portraits.gd` `TrainerPortraits` | ★ **카드 그림도 3D 모델** (2026-10-06 요청 "왼쪽 이미지도 3D 모델로") — 카드마다 3D 를 띄우면 무거워서, **보이지 않는 무대 하나**(`SubViewport`, 오른쪽 무대와 같은 빛·각도 `TrainerStage.build_world` · `frame`)에 한 명씩 세워 대기 자세로 252×336 한 장을 찍어 카드에 쓴다. 창을 열면 그 탭의 카드를 줄 세워 한 프레임에 한 명씩 찍고 찍히는 대로 갈아 끼운다(`baked`). 판이 끝날 때까지 기억한다(`_cache`). ★ **찍기 전에는 빈 칸**(2026-10-07 "3D 로딩이 안 됐으면 비어 있게 만들고, 3D 모델을 채워" — 원화를 먼저 세웠더니 2D 가 섰다가 3D 로 바뀌었다). 합성 결과 카드도 찍어 채운다. 원화는 오른쪽 무대가 모델이 없을 때만 쓴다(`_concept`). 상점 뽑기 결과 카드도 같은 그림 — 뽑기 판은 제 것을 하나 띄워 뽑힌 것만 찍는다(2026-10-07, 아래 "뽑기 연출"). 확인: `npm run shot:godot -- trainers` 가 찍힌 장 수와 모델이 그림에서 차지한 범위를 글로 낸다 (53/53장, 세로 약 90%) |
 | `godot/game/trainer_stage.gd` `TrainerStage` | ★ 창 오른쪽 **3D 모델 무대** (2026-10-06 요청 "이미지로 나오는데, 3D 모델이 나오도록") — 창 안 `SubViewport`(제 세상 · 투명 바탕 · 보일 때만 그림)에 고른 트레이너를 세워 `Idle`, 천천히 돌고(`SPIN`) **끌면 손으로 돌린다**(놓고 2초 뒤 다시 돎). 카메라는 키에 맞춰 발끝~머리를 세로 90% 로 담는다. 미보유는 어둡게. 모델이 없으면 원화로 대신. **카드 53장은 그림 그대로** — 다 3D 로 띄우면 폰에서 무겁다 |
 | `godot/game/store_panel.gd` | 뽑기 탭 · 다이아 단추(`buy_requested`) · 가진 다이아 · 뽑기 결과(`show_draw` → `TrainerDraw` 를 창 위에 덮는다) |
 | `godot/game/game.gd` `_toggle_trainer` · `_trainer_art` · `_draw_buddy` | 메뉴 단추(상점 옆, ≡ 판 안) · 원화 불러오기 · 동행 모델 그리기, `buddySwing` · `trainerDraw` · `diamonds` 알림 |
 | `godot/game/rig.gd` `create` | `trainer_<id>` 는 `FILES` 에 없어도 `trainer_<id>.glb` 로 찾는다 (53줄을 손으로 안 적는다) |
-| `godot/tests/trainer_test.gd` | 표 · 뽑기 · 동행 고르기 · 보유 효과 · **동행 전투** · 저장 · 서버 · 창 · 상점 뽑기 · **뽑기 연출**(자리 수 · 조각상 색 · 보기 전 카드 없음 · 이름 등급 색 · NEW · 확인) |
+| `godot/tests/trainer_test.gd` | 표 · 뽑기 · 동행 고르기 · 보유 효과 · **동행 전투** · 저장 · 서버 · 창 · 상점 뽑기 · **뽑기 연출**(자리 수 · 조각상 색 · 보기 전 카드 없음 · 이름 등급 색 · NEW · 확인 · 다시 뽑기) |
 | `godot/tests/model_test.gd` `_case_trainers` · `_case_trainer_kicks` | 53명 전원이 모델로 만들어지고 `Idle` · `Run` · 발차기 넷 · `FlyingKick` 이 있고 키가 표대로다 · 등급마다 한 명씩 발차기에서 **왼발이 머리 높이의 80% 를 넘는지** 뼈 자리로 잰다 (전설 권신: 발 0.86 · 머리 0.69) |
 | `scripts/build-trainer-art.mjs` | 원화(9:16) → 카드 그림 240×320 JPG (`public/assets/trainers/`, 커밋) · 뽑기 바닥 `trainer_floor.jpg` |
 | `scripts/fetch-assets.sh` 의 트레이너 줄 | 바르코 결과물 주소 (원화 · 대기 · 달리기 · 펀치) → `build-varco-character.mjs` |
@@ -186,6 +186,9 @@
 - **흐름** — 상점에서 사면 창 위에 판이 덮인다 → 뽑은 수만큼 조각상이 하나씩(0.07초 간격) 내려와 살짝 튀고 선다 →
   **[모두 보기]** → 조각상마다 차례로(0.13초) 빛기둥이 솟고 조각상이 빛 속으로 줄어들며 그 자리에 카드가 선다 → **[확인]**.
   내려오는 중에 [모두 보기] 를 누르면 다 선 것으로 치고 바로 시작한다.
+- **[N회 뽑기]** (2026-10-08 요청) — 카드가 다 서면 [확인] 오른쪽에 나란히 선다. 1장 판이면 **1회 뽑기**, 여러 장이면
+  **`drawMulti`회 뽑기**. 누르면 판이 `again(times)` 를 내고 상점이 제 단추와 같은 `buy_requested`(`trainer_1`/`trainer_10`)를
+  낸다 — 결과가 오면 `show_draw` 가 판을 새 판으로 갈아 끼운다. 다이아가 모자라면 장부가 알림만 내고 판은 그대로 남는다.
 - **조각상** — **밀랍 사람** 넷(보디빌더 · 권투선수 · 격투가 · 노사범, 둥근 받침 위)을 자리 번호 순으로 돌려 세운다
   (`i % STATUE_KINDS`). 일반·고급은 **흰 밀랍**, 희귀 이상은 **금빛 밀랍** (`GOLD_GRADE` 3). 고급은 요청에 없어 "희귀
   이상이 아니면 흰색" 으로 읽었다. 무엇이 나왔는지는 보기 전까지 모른다 — 조각상 모양은 트레이너와 상관없다.

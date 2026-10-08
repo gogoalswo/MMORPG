@@ -620,6 +620,19 @@ func _case_panel() -> void:
 		var ok: Button = shown.find_child("ok", true, false)
 		if not ok.visible:
 			_fail("다 본 뒤 확인 단추가 없다")
+		# [N회 뽑기] — 확인 옆에 서고, 누르면 상점 단추와 같은 구매 요청이 나간다 (4장 판은 여러 장이라 10회)
+		var again: Button = shown.find_child("again", true, false)
+		if again == null or not again.visible or again.text != "%d회 뽑기" % Trainers.draw_multi():
+			_fail("다 본 뒤 [%d회 뽑기] 단추가 없다" % Trainers.draw_multi())
+		elif absf(again.get_global_rect().position.y - ok.get_global_rect().position.y) > 0.5 \
+				or again.get_global_rect().intersects(ok.get_global_rect()):
+			_fail("다시 뽑기 단추가 확인 옆에 나란히 서지 않았다")
+		else:
+			var again_asked: Array = []
+			store.buy_requested.connect(func(id: String) -> void: again_asked.append(id))
+			again.pressed.emit()
+			if again_asked != ["trainer_10"]:
+				_fail("다시 뽑기가 보낸 요청이 %s" % [again_asked])
 		ok.pressed.emit()
 		await process_frame
 		if store.draw_shown() != null:
@@ -642,6 +655,18 @@ func _case_panel() -> void:
 				if r.grow(-1.0).intersects(rects[j]):
 					_fail("10회 카드 %d · %d 가 겹친다: %s · %s" % [i, j, r, rects[j]])
 		big_draw.closed.emit()
+	# 1회 판은 [1회 뽑기] — 상점의 1회 단추와 같은 요청
+	var one := TrainerDraw.make(["n01"], [true])
+	var one_again: Button = one.find_child("again", true, false)
+	if one_again == null or one_again.text != "1회 뽑기":
+		_fail("1회 판의 다시 뽑기 단추가 [1회 뽑기] 가 아니다")
+	else:
+		var one_asked: Array = []
+		one.again.connect(func(times: int) -> void: one_asked.append(times))
+		one_again.pressed.emit()
+		if one_asked != [1]:
+			_fail("1회 판의 다시 뽑기가 %s 회를 청했다" % [one_asked])
+	one.free()
 	store.queue_free()
 
 

@@ -35,7 +35,7 @@
 | `packages/shared/src/zones.ts` | `ZONES` 에 샌드백 존을 넣는다 |
 | `scripts/export-shared.mjs` | `zones.json` 의 `sandbag`(규칙) · `monsters.json` 의 `kinds.sandbag`(몬스터 60종 밖에서 붙인다) |
 | `godot/world/sandbag.gd` | `Sandbag` — 표 읽기 · `week` · `week_end` · `day` · `add_day`(날짜별 기록 얹기 · 7일 넘은 날 버리기) · `day_label` · `reward` · `reward_label` |
-| `godot/world/world.gd` | **판** — `_start_sandbag`(존을 열 때) · `input_move`(샌드백 존이면 안 걷는다) · `_counting_down`(평타·스킬 막기) · `_drive_sandbag_auto`(재는 동안 자동사냥 켜기) · `_count_sandbag_damage`(`_hit_monster` 에서) · `_finish_sandbag`(시간 끝 → 기록 · 결과) · `_check_sandbag_week`(로컬 정산) · `join` 이 샌드백을 보고 서게 |
+| `godot/world/world.gd` | **판** — `_start_sandbag`(존을 열 때) · `input_move`(샌드백 존이면 안 걷는다) · `_sandbag_hold`(카운트 중 · 시간 끝 — 평타·스킬·트레이너 막기) · `_drive_sandbag_auto`(재는 동안 자동사냥 켜기) · `_count_sandbag_damage`(`_hit_monster` 에서) · `_finish_sandbag`(시간 끝 → 기록 · 결과) · `_check_sandbag_week`(로컬 정산) · `join` 이 샌드백을 보고 서게 |
 | `godot/world/ledger.gd` | **장부** — `sandbag` 칸 `{week, best, unpaid?, days?}` · `sandbag_record` · `sandbag_close_week(순위)` · `sandbag_pay` · `sandbag_day` |
 | `godot/server/ledger_server.gd` | **서버** — `OPS.sandbag_record` · `_check_sandbag`(들어온 지 18초 · 한 판 한 번 · 상한) · `_sandbag_board`(이번 주) · `_ranks_of`(닫힌 주를 파일로 굳힘) · `_settle_sandbag`(hello · op 마다) · `_sandbag_rank`(내 `days` · `today` 도 싣는다) |
 | `godot/server/kill_check.gd` | `max_damage` — 처치 시간과 같은 식으로 "15초에 넣을 수 있는 피해의 상한" |
@@ -54,7 +54,10 @@
 ### 판 — 3초 카운트 → 15초 ★
 
 - 존을 열면(`World.open` → `_start_run` → `_start_sandbag`) `starts_at = 지금 + 3초`, `ends_at = starts_at + 15초`.
-- **카운트 동안은 평타·스킬이 막힌다**(`attack`·`cast` 머리의 `_counting_down`).
+- **카운트 동안은 평타·스킬이 막힌다**(`attack`·`cast` 머리의 `_sandbag_hold`).
+- **시간이 0초가 되면 공격이 멈춘다** (2026-10-08 요청 "샌드백 때리다가 시간 0초 되면 공격 멈춰"). `_sandbag_hold` 는
+  `ends_at` 을 넘겼거나 결과가 났어도 참이라 평타·스킬·트레이너가 다 막히고, `_finish_sandbag` 이 걸어 둔 연타·지대를 지운다.
+  처음엔 자동사냥만 껐는데, 화면이 고른 과녁(`_target_mob`)으로 `attack` 을 계속 보내 결과창 뒤로 휘둘렀다.
 - **샌드백 존에서는 판 내내 걷지 못한다** (2026-10-02 요청 "샌드백 입장하면 이동도 내가 못 하게 막아"). `input_move` 가
   존이 샌드백이면 순번만 갱신하고 돌려보낸다 — `_take_manual` 보다 앞이라 조이스틱을 밀어도 자동사냥이 안 꺼진다.
   자동사냥은 `input_move` 를 거치지 않고 걷지만 샌드백이 사거리 안이라 걸을 일이 없다(평타에 실린 짧은 전진 0.07m 는 그대로다).

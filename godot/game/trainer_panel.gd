@@ -19,8 +19,8 @@ extends PanelContainer
 ##   ┌──────┬──────────────────────┬──────────────────────────────────┐
 ##   │ 일반•│ ┌──┐┌──┐┌──┐┌──┐     │ 왼쪽 카드를 눌러 등록하세요 …       │
 ##   │ 고급 │ │  ││  ││  ││  │ ←카드│ 일반 → 고급  성공 20%  등록 0/30   │
-##   │ 희귀 │ │여분││  │…        │   [+][+][+]  [+][+][+]  ← 묶음 = 도전 1번 │
-##   │ 영웅 │ └──┘└──┘└──┘└──┘     │   … 5줄 (30칸 = 10번)               │
+##   │ 희귀 │ │여분││  │…        │   [+][+][+]  ← 한 줄(묶음) = 도전 1번  │
+##   │ 영웅 │ └──┘└──┘└──┘└──┘     │   … 10줄 (30칸 = 10번, 스크롤)      │
 ##   │      │  (스크롤)           │ 결과 한 줄                          │
 ##   │      │                     │ [카드 자동 등록]   [합성]   ← 맨 아래 │
 ##   [합성] → 결과가 오면 **합성 결과 판**(`TrainerFuseResult`)이 화면을 덮는다 — 도전마다 카드 한 장, X 로 걷는다
@@ -40,9 +40,9 @@ const TITLE_ROOM := 72
 const FUSE_TAB_WIDTH := 130.0
 const FUSE_COLUMNS := 4
 const FUSE_ART := Vector2(88, 117)
-const SLOT_SIZE := Vector2(50, 66)
-## 등록 칸 — 한 줄에 놓는 3장 묶음 수 (30칸 = 2 묶음 × 5줄)
-const SLOT_GROUPS_PER_ROW := 2
+const SLOT_SIZE := Vector2(88, 117)
+## 등록 칸 — 한 줄에 놓는 3장 묶음 수 (30칸 = 1 묶음 × 10줄, 스크롤)
+const SLOT_GROUPS_PER_ROW := 1
 
 const TITLE := GatePanel.PAGE_TITLE_COLOR
 const GOLD := GatePanel.CARD_GOLD
@@ -514,26 +514,31 @@ func _build_fuse(column: VBoxContainer, frame_box: Callable) -> void:
 	_fuse_count.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	info.add_child(_fuse_count)
 	# 등록 칸 30개(`TRAINER_FUSE_SLOTS`, 2026-10-08 "한 번에 최대 30개 · 총 10번") — 3장 묶음이 도전 한 번,
-	# 묶음을 `SLOT_GROUPS_PER_ROW` 개씩 줄 세운다. 칸 번호는 묶음 순서대로라 합성은 앞 묶음부터 보낸다
+	# 묶음을 `SLOT_GROUPS_PER_ROW` 개씩 줄 세운다. 칸 번호는 묶음 순서대로라 합성은 앞 묶음부터 보낸다.
+	# 칸은 원래 크기(88 × 117) 그대로 아래로 쭉 내리고 스크롤한다 (2026-10-08 "칸 크기를 이전으로 돌리고 아래로 쭉 내려서 스크롤")
+	var slot_scroll := ScrollContainer.new()
+	slot_scroll.name = "slot_scroll"
+	slot_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	slot_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	stack.add_child(slot_scroll)
 	var slots := GridContainer.new()
 	slots.name = "slots"
 	slots.columns = SLOT_GROUPS_PER_ROW
-	slots.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	slots.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	slots.size_flags_horizontal = Control.SIZE_EXPAND | Control.SIZE_SHRINK_CENTER
 	slots.add_theme_constant_override("h_separation", 26)
-	slots.add_theme_constant_override("v_separation", 8)
-	stack.add_child(slots)
+	slots.add_theme_constant_override("v_separation", 14)
+	slot_scroll.add_child(slots)
 	var group: HBoxContainer = null
 	for i in Trainers.fuse_slots():
 		if i % Trainers.fuse_cost() == 0:
 			group = HBoxContainer.new()
-			group.add_theme_constant_override("separation", 6)
+			group.add_theme_constant_override("separation", 8)
 			slots.add_child(group)
 		var slot := Button.new()
 		slot.name = "slot_%d" % i
 		slot.custom_minimum_size = SLOT_SIZE
 		slot.focus_mode = Control.FOCUS_NONE
-		slot.add_theme_font_size_override("font_size", 26)
+		slot.add_theme_font_size_override("font_size", 40)
 		slot.add_theme_color_override("font_color", Color(GOLD, 0.7))
 		slot.add_theme_color_override("font_hover_color", GOLD)
 		var art := TextureRect.new()
@@ -543,9 +548,9 @@ func _build_fuse(column: VBoxContainer, frame_box: Callable) -> void:
 		art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		for side in [SIDE_LEFT, SIDE_TOP]:
-			art.set_offset(side, 3)
+			art.set_offset(side, 4)
 		for side in [SIDE_RIGHT, SIDE_BOTTOM]:
-			art.set_offset(side, -3)
+			art.set_offset(side, -4)
 		slot.add_child(art)
 		slot.pressed.connect(_unslot.bind(i))
 		group.add_child(slot)

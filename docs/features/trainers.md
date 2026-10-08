@@ -38,16 +38,17 @@
 | `packages/shared/src/trainers.ts` | **표 원본** — 등급(`TRAINER_GRADES`: 계승 · 보유 효과 · 확률 · 인원), 명단 53명(`ROSTER` → `TRAINERS`), 바르코 원화 프롬프트(`look` + `TRAINER_PROMPT_TAIL`), 뽑기 값, `trainerOwnedBonus` |
 | `packages/shared/src/trainers.test.ts` | 인원 20·15·10·5·3 · 계승 % · id/이름 겹침 · 확률 합 100 · 다 모은 보유 효과 |
 | `scripts/export-shared.mjs` | `godot/data/trainers.json` (프롬프트는 뺀다) |
-| `godot/world/trainers.gd` `Trainers` | 표 읽기 — `trainer` · `grade` · `owned_bonus` · `inherit_of` · `roll`(등급 확률 → 등급 안 고르게) · `clean` · `look` |
+| `godot/world/trainers.gd` `Trainers` | 표 읽기 — `trainer` · `grade` · `owned_bonus` · `inherit_of` · `roll`(등급 확률 → 등급 안 고르게) · `clean` · `look` · 합성 `fuse_slots` · `spare_of` · `auto_pick`(자동 등록) |
 | `godot/world/ledger.gd` `trainer_draw` · `trainer_pick` · `trainer_fuse` | ★ **판정.** 장부 칸 `trainers {id: 개수}` · `trainer_active` (`KEYS`) |
 | `godot/world/world.gd` `stats_of` | 보유 효과 — 공·방·체는 **따로 곱하고**(`trainer_*`), 치명타 둘은 비율에 더한다 |
 | `godot/world/world.gd` `_step_buddies` · `_buddy_strike` · `_buddy_lunge` · `_buddy_fly` · `_hit_monster` | ★ **동행 전투** (아래 "동행") · **날라차기** · `hunt_focus` |
 | `godot/world/world.gd` `trainer_draw` · `trainer_pick` · `debug_diamonds` · `restore` | 요청 → 장부, 테스트 단추(다이아 `count` 개 — 가방 창 +1만 · 설계 재현 창 +10만), 저장 되살리기(표에 있는 것만 · 안 가진 동행은 비움) |
 | `godot/world/save.gd` | `trainers` · `trainer_active` 칸 |
-| `godot/server/ledger_server.gd` `OPS` | `trainer_draw: "i"` · `trainer_pick: "s"` · `trainer_fuse: "ii"` — 서버에서는 **서버가 굴린다** |
+| `godot/server/ledger_server.gd` `OPS` | `trainer_draw: "i"` · `trainer_pick: "s"` · `trainer_fuse: "w"`(칸에 넣은 id 목록) — 서버에서는 **서버가 굴린다** |
 | `godot/server/kill_check.gd` `_pace` | 처치 검증 · 샌드백 상한이 **동행 몫**(평타 × 계승 %)을 더해 본다 |
-| `godot/net/local_transport.gd` | `trainerDraw {times}` · `trainerPick {id}` · `debugDiamonds {count}` |
-| `godot/game/trainer_panel.gd` `TrainerPanel` | 트레이너 창 + **카드 한 장**(`make_card`) · `grade_color`(등급 색 = 장비 등급 표 `Items.grade_color`) |
+| `godot/net/local_transport.gd` | `trainerDraw {times}` · `trainerPick {id}` · `trainerFuse {ids}` · `debugDiamonds {count}` |
+| `godot/game/trainer_panel.gd` `TrainerPanel` | 트레이너 창 + **합성 보기**(등급 탭 · 카드 · 등록 칸 9 · 자동 등록 · 합성) + **카드 한 장**(`make_card`) · `grade_color`(등급 색 = 장비 등급 표 `Items.grade_color`) |
+| `godot/game/trainer_fuse_result.gd` `TrainerFuseResult` | ★ **합성 결과 판** (아래 "합성") — 흐린 뒤 화면 · 제목 · 도전마다 카드(성공 빛 / 실패 칸) · ✕ |
 | `godot/game/trainer_draw.gd` `TrainerDraw` | ★ **뽑기 연출** (아래 "뽑기 연출") — 수련장 바닥 · 밀랍 조각상 · 빛기둥 · 카드 · [모두 보기] · [확인] |
 | `godot/game/trainer_portraits.gd` `TrainerPortraits` | ★ **카드 그림도 3D 모델** (2026-10-06 요청 "왼쪽 이미지도 3D 모델로") — 카드마다 3D 를 띄우면 무거워서, **보이지 않는 무대 하나**(`SubViewport`, 오른쪽 무대와 같은 빛·각도 `TrainerStage.build_world` · `frame`)에 한 명씩 세워 대기 자세로 252×336 한 장을 찍어 카드에 쓴다. 창을 열면 그 탭의 카드를 줄 세워 한 프레임에 한 명씩 찍고 찍히는 대로 갈아 끼운다(`baked`). 판이 끝날 때까지 기억한다(`_cache`). ★ **찍기 전에는 빈 칸**(2026-10-07 "3D 로딩이 안 됐으면 비어 있게 만들고, 3D 모델을 채워" — 원화를 먼저 세웠더니 2D 가 섰다가 3D 로 바뀌었다). 합성 결과 카드도 찍어 채운다. 원화는 오른쪽 무대가 모델이 없을 때만 쓴다(`_concept`). 상점 뽑기 결과 카드도 같은 그림 — 뽑기 판은 제 것을 하나 띄워 뽑힌 것만 찍는다(2026-10-07, 아래 "뽑기 연출"). 확인: `npm run shot:godot -- trainers` 가 찍힌 장 수와 모델이 그림에서 차지한 범위를 글로 낸다 (53/53장, 세로 약 90%) |
 | `godot/game/trainer_stage.gd` `TrainerStage` | ★ 창 오른쪽 **3D 모델 무대** (2026-10-06 요청 "이미지로 나오는데, 3D 모델이 나오도록") — 창 안 `SubViewport`(제 세상 · 투명 바탕 · 보일 때만 그림)에 고른 트레이너를 세워 `Idle`, 천천히 돌고(`SPIN`) **끌면 손으로 돌린다**(놓고 2초 뒤 다시 돎). 카메라는 키에 맞춰 발끝~머리를 세로 90% 로 담는다. 미보유는 어둡게. 모델이 없으면 원화로 대신. **카드 53장은 그림 그대로** — 다 3D 로 띄우면 폰에서 무겁다 |
@@ -69,15 +70,26 @@
   캐릭터 정보 창 풀이 줄에 `트레이너 N%` 로 적힌다.
 - 같은 트레이너가 또 나오면 **개수가 는다** — 그 여분이 합성 재료다.
 
-### 합성 ★ (2026-10-06)
-- 트레이너 창 머리, **전설 탭 바로 옆**의 **합성** 단추(2026-10-07 옮김 — 전엔 제목 옆 끝이었다) → 목록 자리에 등급별 줄(일반 → 고급 · 고급 → 희귀 · 희귀 → 영웅 · 영웅 → 전설):
-  여분 수 · 성공 확률 · **합성**(1번) · **모두 합성**(여분이 3장 아래로 떨어질 때까지). 다시 누르면(**목록**) 돌아온다.
+### 합성 ★ (2026-10-06 · 창은 2026-10-08 에 갈아끼움)
+- 트레이너 창 머리, **전설 탭 바로 옆**의 **합성** 단추 → 목록 자리에 **합성 보기**(다시 누르면 **목록**). 머리의 등급 탭은 숨는다.
+  ★ 2026-10-08 요청(카드 합성 창 스크린샷 + "등급별로 탭이 나눠져있고, 선택해서 카드 등록하면 합성할 수 있게. 스크린샷을
+  똑같이 따라하라는게 아니라 UX 를 따라하라는거야") — 전엔 등급별 줄에 **합성 · 모두 합성** 단추만 있었다.
+  - **왼쪽 세로 등급 탭** — 일반 · 고급 · 희귀 · 영웅 (전설은 위가 없어 없다). 여분 3장 이상인 등급엔 빨간 점. 탭을 바꾸면 칸이 빈다.
+  - **가운데 카드** — 그 등급에서 가진 트레이너만, 표시는 **칸에 더 넣을 수 있는 장 수**(`여분 N`, 0 이면 어둡게). 누르면 한 장씩 칸에 들어간다.
+  - **오른쪽 등록 칸 9개**(`TRAINER_FUSE_SLOTS`, 3 × 3) — **한 줄(3장) = 도전 한 번**이라 한 번에 3번까지. 칸을 누르면 뺀다.
+    옆에 `일반 → 고급` · 성공 확률 · `등록 6 / 9 · 도전 2번` · **카드 자동 등록**(빈 칸을 남은 여분이 많은 트레이너부터, `Trainers.auto_pick`) · **합성**.
+  - **합성**은 칸 앞에서부터 3장 줄만 보낸다(`trainerFuse {ids}`) — 줄을 못 채운 나머지는 칸에 남는다.
 - **같은 등급 여분 3장**(`TRAINER_FUSE_COST`)이면 한 번 도전한다. 여분 = 트레이너마다 **1장은 남기고** 나머지
-  (`Trainers.spare`) — 합성해도 보유 효과(도감)가 줄지 않는다. 다른 트레이너끼리 섞어도 된다(같은 등급이면).
-- 재료는 **여분이 가장 많은 트레이너부터** 뗀다 (`Ledger.trainer_fuse`) — 한 명만 바닥나지 않고 고르게 준다.
+  (`Trainers.spare` · 칸에 넣은 것을 뺀 것은 `spare_of`) — 합성해도 보유 효과(도감)가 줄지 않는다. 다른 트레이너끼리 섞어도 된다(같은 등급이면).
+- **어떤 카드를 넣을지는 사람이 고른다** — 장부(`Ledger.trainer_fuse(p, ids)`)는 받은 id 를 3장씩 끊어 굴리고, 3의 배수가 아니거나 9장을
+  넘거나 등급이 섞였거나 어느 트레이너든 1장이 안 남으면 통째로 거절한다. 서버 인자는 글자 목록(`OPS.trainer_fuse: "w"`).
 - 성공하면 다음 등급 **무작위 1명**(개수 +1), 실패하면 **재료 3장만 사라진다.** 굴리는 쪽은 장부(서버에서는 서버).
 - 합성할 수 있는 등급이 있으면 **트레이너 아이콘 · ≡ 에 빨간 점** (`Trainers.any_fuse`).
-- 결과는 합성 보기 아래 줄(`성공 1 · 실패 2`)과 얻은 트레이너 카드(최대 6장).
+- ★ **합성 결과 판** (`TrainerFuseResult`, 2026-10-08 요청 "합성 버튼 누르면 이런식으로 나오면 좋겠어" + 뽑기 결과 스크린샷) — 결과가 오면
+  창 위로 화면 전체를 덮는다(`top_level`, 뒤 화면은 흐리게 · 가장자리 어둡게). 위 가운데 **합성 결과**(금선 · 마름모), 가운데 **도전마다
+  카드 한 장** — 성공은 얻은 트레이너(3D 모델을 찍은 그림 · 등급 색 테 · 이름 등급 색 · 뒤에 `FxTex.glow` + 천천히 도는 `puff` 를 가산으로
+  겹쳐 일렁이는 빛), 실패는 어두운 칸에 `실패` · `재료 3장 소멸`. 카드는 0.18초 간격으로 튀어나온다. 오른쪽 위 **✕** 로 걷는다.
+  합성 보기의 단추 아래 줄에도 `합성 2번 — 성공 1 · 실패 1` 이 남는다.
 
 ### 동행 ★
 - **한 명만.** 첫 뽑기에서 동행이 없으면 그 뽑기에서 가장 높은 등급이 바로 따라온다(`trainer_draw`).
@@ -248,6 +260,7 @@ n01 하나로 세 번 확인받고(아래) 나머지 52명을 같은 설정으�
   이름은 표에서 짓는다(`trainer_<id>`) — `rig.gd`·`sync-godot-assets.mjs`·`check-godot-assets.mjs` 는 손댈 것이 없다.
 - 동행 피해를 바꾸면 `KillCheck._pace` 의 동행 줄도 같이 고친다.
 - 메뉴 단추가 늘면 `ui_test` 의 메뉴 개수(12)도 같이.
+- 합성 보기·결과 판을 고치면 `npm run shot:godot -- fuse` → `logs/shot_fuse_1.png`(합성 보기, 자동 등록한 9칸) · `shot_fuse_2.png`(결과 판 — 성공 둘 · 실패 하나, 불길).
 - 뽑기 연출의 자리·카드 크기를 바꾸면 `npm run shot:godot -- draw` 로 **카드·이름이 서로 덮이지 않는지** 본다.
 
 ## 관련

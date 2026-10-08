@@ -58,8 +58,8 @@ const OPS := {
 	# PT 트레이너 — 뽑기 횟수(1 · 10, 다이아는 장부가 다시 센다 · 확률은 서버가 굴린다) / 동행 id("" 면 돌려보냄)
 	"trainer_draw": "i",
 	"trainer_pick": "s",
-	# 합성 — 등급 · 모두(1)냐 한 번(0)이냐. 재료 고르기·확률은 서버가 한다
-	"trainer_fuse": "ii",
+	# 합성 — 칸에 등록한 트레이너 id 목록(3장씩 한 번 도전). 등급·여분·칸 수는 장부가 다시 보고 확률은 서버가 굴린다
+	"trainer_fuse": "w",
 }
 
 var store: AccountStore

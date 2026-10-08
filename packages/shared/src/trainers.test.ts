@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { TRAINERS, TRAINER_GRADES, trainerOwnedBonus } from './trainers.ts';
+import { TRAINERS, TRAINER_GRADES, TRAINER_FUSE_COST, TRAINER_FUSE_SLOTS, trainerOwnedBonus } from './trainers.ts';
 
 test('트레이너 — 등급별 인원이 요청대로다 (20 · 15 · 10 · 5 · 3)', () => {
   const counts = TRAINER_GRADES.map((g) => TRAINERS.filter((t) => t.grade === g.grade).length);
@@ -32,4 +32,6 @@ test('트레이너 — 53명을 다 모은 보유 효과', () => {
 
 test('트레이너 합성 — 확률은 사용자가 정한 20 · 20 · 10 · 10 %, 전설은 더 위가 없다', () => {
   assert.deepEqual(TRAINER_GRADES.map((g) => g.fuse), [20, 20, 10, 10, 0]);
+  // 등록 칸은 3장 줄로 나뉜다 — 칸 한 줄이 도전 한 번
+  assert.equal(TRAINER_FUSE_SLOTS % TRAINER_FUSE_COST, 0);
 });

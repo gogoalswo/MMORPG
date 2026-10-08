@@ -120,19 +120,16 @@ func _build(frame_box: Callable) -> void:
 		tab.pressed.connect(_pick_tab.bind(index))
 		head.add_child(tab)
 		_tabs.append(tab)
-	# 합성 — 같은 등급 여분 3장으로 다음 등급 도전 (2026-10-06). 누르면 목록 자리에 합성 줄이 선다.
-	# 전설 탭 바로 옆에 청록 돌판 단추로 선다 (2026-10-07 "합성 버튼을 전설탭 옆으로")
-	var gap2 := Control.new()
-	gap2.custom_minimum_size = Vector2(12, 0)
-	head.add_child(gap2)
+	# 합성 — 같은 등급 여분 3장으로 다음 등급 도전 (2026-10-06). 누르면 목록 자리에 합성 보기가 선다.
+	# 전설 탭 바로 옆에 **등급 탭과 같은 탭**으로 선다 (2026-10-08 "합성 버튼을 일반,고급 이런 탭처럼 탭으로") —
+	# 전엔 청록 돌판 단추였다. 등급 탭을 누르면 목록으로 돌아간다
 	_fuse_toggle = Button.new()
 	_fuse_toggle.name = "fuse_toggle"
 	_fuse_toggle.text = "합성"
-	_fuse_toggle.custom_minimum_size = Vector2(120, 48)
-	_fuse_toggle.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_fuse_toggle.custom_minimum_size = Vector2(104, 54)
 	_fuse_toggle.focus_mode = Control.FOCUS_NONE
-	GatePanel.paint_stone_button(_fuse_toggle, frame_box, 22)
-	_fuse_toggle.pressed.connect(func() -> void: show_fuse(not _fuse_view.visible))
+	_fuse_toggle.add_theme_font_size_override("font_size", 22)
+	_fuse_toggle.pressed.connect(show_fuse.bind(true))
 	head.add_child(_fuse_toggle)
 	var gap := Control.new()
 	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -253,10 +250,10 @@ func select(id: String) -> void:
 func show_fuse(on: bool) -> void:
 	_fuse_view.visible = on
 	_body.visible = not on
-	_fuse_toggle.text = "목록" if on else "합성"
-	# 머리의 등급 탭은 목록 것 — 합성 보기는 왼쪽에 제 탭이 선다
-	for tab in _tabs:
-		tab.visible = not on
+	# 머리 탭 한 줄에서 하나만 켜진다 — 합성 탭이거나, 목록의 등급 탭이거나
+	_paint_tab(_fuse_toggle, on)
+	for i in _tabs.size():
+		_paint_tab(_tabs[i], not on and i == _tab)
 	if on:
 		_fill_fuse()
 
@@ -350,8 +347,8 @@ func summary_text() -> String:
 
 func _pick_tab(index: int) -> void:
 	_tab = index
-	for i in _tabs.size():
-		_paint_tab(_tabs[i], i == index)
+	# 합성 보기에서 등급 탭을 누르면 목록으로 돌아간다 (탭 색도 거기서 칠한다)
+	show_fuse(false)
 	_fill()
 
 

@@ -439,11 +439,16 @@ func _case_panel() -> void:
 	if not ("2 / 53" in panel.summary_text() and "공격력 +9%" in panel.summary_text()):
 		_fail("아래 합계 줄이 %s" % panel.summary_text())
 	# 합성 보기 — 왼쪽 등급 탭 → 카드를 눌러 칸에 등록 → 3장마다 한 번 도전 (2026-10-08)
-	panel.show_fuse(true)
+	# 머리의 합성은 등급 탭과 같은 탭이다 (2026-10-08) — 누르면 합성 보기, 등급 탭을 누르면 목록으로
+	(panel.find_child("fuse_toggle", true, false) as Button).pressed.emit()
 	if not panel.fuse_shown() or not (panel.fuse_buttons()[1] as Button).disabled:
-		_fail("칸이 비었는데 합성 단추가 켜져 있다")
-	if panel.fuse_tab(5) != null or panel.fuse_tab(1) == null or (panel.tab_buttons()[0] as Button).visible:
-		_fail("합성 탭이 전설에 있거나 일반에 없다 · 목록 탭이 그대로 보인다")
+		_fail("합성 탭을 눌러도 합성 보기가 안 섰거나, 칸이 비었는데 합성 단추가 켜져 있다")
+	if panel.fuse_tab(5) != null or panel.fuse_tab(1) == null or not (panel.tab_buttons()[0] as Button).visible:
+		_fail("합성 탭이 전설에 있거나 일반에 없다 · 머리의 등급 탭이 숨었다")
+	panel.tab_buttons()[1].pressed.emit()
+	if panel.fuse_shown():
+		_fail("합성 보기에서 등급 탭을 눌러도 목록으로 안 돌아간다")
+	panel.show_fuse(true)
 	panel.refresh({"trainers": {"n01": 5, "n02": 2, "l01": 2}, "trainer_active": "l01"})
 	if panel.fuse_cards().size() != 2 or not panel.fuse_tab(1).get_node("red_dot").visible:
 		_fail("일반 합성 카드 %d장 (n01 · n02 둘이어야) · 빨간 점" % panel.fuse_cards().size())

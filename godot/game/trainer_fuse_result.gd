@@ -7,9 +7,9 @@ extends Control
 ##   ─────◆  합성 결과  ◆─────                                    [X]
 ##
 ##          (빛)┌────┐      ┌────┐
-##              │모델│      │실패│        ← 성공은 얻은 트레이너(등급 색 테 + 뒤에서 일렁이는 빛), 실패는 어두운 칸
-##              └────┘      └────┘
-##               이름        재료 3장 소멸
+##              │모델│      │실패│        ← 성공은 얻은 트레이너(뒤에서 일렁이는 빛), 실패는 돌려받은 같은 등급 1장
+##              └────┘      └────┘          — 둘 다 테두리가 그 카드의 등급 색 (`edge_color`)
+##               이름         이름
 ##
 ## 카드 그림은 트레이너 창이 3D 모델로 찍은 것(`TrainerPortraits`) — 아직 못 찍었으면 비워 두고 찍히면 채운다(`set_art`).
 ## 불길은 이펙트 규칙대로 코드로 짓는다 — 셰이더 한 장(`FLAME_SHADER`, 테두리 거리 + 위로 흐르는 노이즈) → docs/features/trainers.md "합성"
@@ -28,9 +28,8 @@ const MANY_SCALE := 0.78
 const POP_GAP := 0.18
 const POP_TIME := 0.28
 const POP_SCALE := 1.3
-## 테두리 불길 — 카드 밖으로 뻗는 길이(px, 노이즈로 0.45 ~ 1.35 배) · 불빛 주황
+## 테두리 불길 — 카드 밖으로 뻗는 길이(px, 노이즈로 0.45 ~ 1.35 배). 색은 카드 등급 색(`edge_color`)
 const FLAME_REACH := 36.0
-const FIRE := Color(1.0, 0.5, 0.15)
 ## 불길 셰이더 — 카드 테두리까지의 거리(`d`) + 위로 흐르는 값 노이즈. 위쪽 불길이 더 길다. 가산
 const FLAME_SHADER := "shader_type canvas_item;
 render_mode blend_add;
@@ -66,7 +65,7 @@ void fragment() {
 	f = f * f * (0.55 + 0.75 * n2);
 	float halo = 0.24 * exp(-max(d, 0.0) / (reach * 1.4)) * (1.0 - smoothstep(reach * 1.2, reach * 2.3, d));
 	float a = clamp(f + halo, 0.0, 1.0) * step(-3.0, d);
-	vec3 col = mix(tint.rgb, vec3(1.0, 0.92, 0.65), smoothstep(0.55, 1.0, f));
+	vec3 col = mix(tint.rgb, mix(tint.rgb, vec3(1.0), 0.75), smoothstep(0.55, 1.0, f));
 	COLOR = vec4(col, a);
 }"
 
@@ -89,7 +88,7 @@ var _time := 0.0
 var _close: Button
 
 
-## `results` 는 장부의 `trainerFuse` 결과 `[{used, got}]` — got 이 "" 면 실패
+## `results` 는 장부의 `trainerFuse` 결과 `[{used, got, back}]` — got 이 "" 면 실패, back 은 실패 때 돌려받은 같은 등급 1장
 static func make(results: Array) -> TrainerFuseResult:
 	var view := TrainerFuseResult.new()
 	view._build(results)
@@ -137,8 +136,7 @@ func _build(results: Array) -> void:
 			row.add_theme_constant_override("separation", CARD_GAP)
 			row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			column.add_child(row)
-		var id := str(results[i].get("got", ""))
-		var holder := _card(id)
+		var holder := _card(results[i])
 		holder.modulate.a = 0.0
 		row.add_child(holder)
 
@@ -232,14 +230,23 @@ func _diamond() -> Control:
 	return room
 
 
-## 도전 하나의 카드 — 성공은 얻은 트레이너, 실패(`id` "")는 어두운 칸
-func _card(id: String) -> Control:
+## 카드 테두리 색 — 등급 색(`Items.grade_color`)은 어두운 판 위 글자용이라 탁하다. 색조는 두고 채도·밝기만 올려
+## 테두리·불길로 또렷하게 (2026-10-08 요청 "합성 결과를 등급에 맞는 색상으로 테두리를 만들어")
+static func edge_color(grade: int) -> Color:
+	var base := TrainerPanel.grade_color(grade)
+	return Color.from_hsv(base.h, minf(base.s * 1.25, 1.0), maxf(base.v, 0.9))
+
+
+## 도전 하나의 카드 — 성공(`got`)은 얻은 트레이너, 실패는 돌려받은 같은 등급 1장(`back`, 옛 결과라 없으면 어두운 칸).
+## 테두리는 그 카드의 등급 색, 불길은 성공에만
+func _card(result: Dictionary) -> Control:
+	var won := str(result.get("got", "")) != ""
+	var id := str(result.get("got", "")) if won else str(result.get("back", ""))
 	var info := Trainers.trainer(id)
-	var won := not info.is_empty()
-	var grade := int(info.get("grade", 1))
-	var color := TrainerPanel.grade_color(grade) if won else DIM
+	var has := not info.is_empty()
+	var color := TrainerFuseResult.edge_color(int(info.get("grade", 1))) if has else DIM
 	var holder := Control.new()
-	holder.name = "card_%s" % (id if won else "fail")
+	holder.name = "card_%s" % id if won else ("card_fail_%s" % id if has else "card_fail")
 	holder.custom_minimum_size = Vector2(ART.x + 8, ART.y + 8 + NAME_ROOM)
 	holder.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	holder.pivot_offset = holder.custom_minimum_size * 0.5
@@ -247,7 +254,7 @@ func _card(id: String) -> Control:
 	var center := Vector2(ART.x + 8, ART.y + 8) * 0.5
 	if won:
 		# 테두리 불길 — 셰이더 한 장(`FLAME_SHADER`): 카드 테두리까지의 거리로 띠를 그리고, 위로 흐르는 노이즈로 길이·밝기를
-		# 흔든다. 색은 등급 색에 불빛 주황을 많이 섞는다 — 일반·고급은 등급 색이 희어서 그대로면 빛이 안 보인다.
+		# 흔든다. 색은 테두리와 같은 등급 색(`edge_color`) — 전엔 불빛 주황을 75% 섞어 등급이 다 주황으로 보였다.
 		# 조각을 늘어놓던 시안은 버렸다 (2026-10-08 찍어 보고) — 뭉게 텍스처는 갈색 연기, 세로 빛 혀는 햇살 무늬·전구 줄이 됐다
 		var edge := Vector2(ART.x + 8, ART.y + 8)
 		var room := edge + Vector2.ONE * FLAME_REACH * 5.0
@@ -257,7 +264,7 @@ func _card(id: String) -> Control:
 		flame.position = center - room * 0.5
 		var mat := ShaderMaterial.new()
 		mat.shader = TrainerFuseResult._flame_shader()
-		mat.set_shader_parameter("tint", color.lerp(FIRE, 0.75))
+		mat.set_shader_parameter("tint", color)
 		mat.set_shader_parameter("box", edge * 0.5)
 		mat.set_shader_parameter("rect", room)
 		mat.set_shader_parameter("reach", FLAME_REACH)
@@ -270,9 +277,12 @@ func _card(id: String) -> Control:
 	frame.name = "frame"
 	frame.size = Vector2(ART.x + 8, ART.y + 8)
 	var box := StyleBoxFlat.new()
-	box.bg_color = Color(0.06, 0.05, 0.05) if won else Color(0.07, 0.07, 0.07, 0.92)
-	box.border_color = color.lightened(0.25) if won else Color(0.3, 0.3, 0.28)
-	box.set_border_width_all(3)
+	box.bg_color = Color(0.06, 0.05, 0.05) if has else Color(0.07, 0.07, 0.07, 0.92)
+	box.border_color = color if has else Color(0.3, 0.3, 0.28)
+	box.set_border_width_all(4 if has else 3)
+	# 테두리 바깥으로 번지는 등급 색 빛 — 성공은 진하게, 실패는 옅게
+	box.shadow_color = Color(color, 0.6 if won else 0.3) if has else Color(0, 0, 0, 0)
+	box.shadow_size = 10 if has else 0
 	frame.add_theme_stylebox_override("panel", box)
 	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	holder.add_child(frame)
@@ -282,27 +292,37 @@ func _card(id: String) -> Control:
 	art.size = ART
 	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	art.texture = TrainerPortraits.cached(id) if won else null
+	art.texture = TrainerPortraits.cached(id) if has else null
 	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	frame.add_child(art)
 	if not won:
+		# 실패 — 돌려받은 카드 위에 어두운 띠 + `실패` (그림이 없으면 칸 가운데)
 		var fail := Label.new()
 		fail.name = "fail"
 		fail.text = "실패"
 		fail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		fail.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		fail.add_theme_font_size_override("font_size", 30)
-		fail.add_theme_color_override("font_color", DIM)
-		fail.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		fail.add_theme_font_size_override("font_size", 22 if has else 30)
+		fail.add_theme_color_override("font_color", Color("#e8a39a") if has else DIM)
+		fail.add_theme_color_override("font_outline_color", Color(0.02, 0.02, 0.02))
+		fail.add_theme_constant_override("outline_size", 6)
 		fail.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		if has:
+			var band := StyleBoxFlat.new()
+			band.bg_color = Color(0.05, 0.04, 0.04, 0.78)
+			fail.add_theme_stylebox_override("normal", band)
+			fail.position = Vector2(4, 4)
+			fail.size = Vector2(ART.x, 34)
+		else:
+			fail.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		frame.add_child(fail)
 
 	var label := Label.new()
 	label.name = "name"
-	label.text = str(info.get("name", "")) if won else "재료 %d장 소멸" % Trainers.fuse_cost()
+	label.text = str(info.get("name", "")) if has else "재료 %d장 소멸" % Trainers.fuse_cost()
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", 20 if won else 16)
-	label.add_theme_color_override("font_color", color.lightened(0.2) if won else DIM)
+	label.add_theme_font_size_override("font_size", 20 if has else 16)
+	label.add_theme_color_override("font_color", color.lightened(0.2) if has else DIM)
 	label.add_theme_color_override("font_outline_color", Color(0.02, 0.02, 0.02))
 	label.add_theme_constant_override("outline_size", 6)
 	label.position = Vector2(-30, ART.y + 16)

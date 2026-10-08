@@ -118,17 +118,26 @@ func _case_fuse() -> void:
 	ledger.take_events()
 	ledger.trainer_fuse(me, ["n01", "n01", "n02"])
 	var events := ledger.take_events()
-	if int(me.trainers.n01) != 2 or int(me.trainers.n02) != 1:
-		_fail("합성 한 번 뒤 %s — 넣은 것만 빠져야 한다" % [me.trainers])
 	var fuse: Dictionary = {}
 	for e in events:
 		if str(e.type) == "trainerFuse":
 			fuse = e
 	if fuse.is_empty() or (fuse.results as Array).size() != 1 or fuse.results[0].used != ["n01", "n01", "n02"]:
 		_fail("합성 알림이 %s" % [fuse])
-	elif str(fuse.results[0].got) != "" and int(Trainers.trainer(str(fuse.results[0].got)).grade) != 2:
-		_fail("합성으로 얻은 것이 고급이 아니다: %s" % fuse.results[0].got)
-	# 칸 30장 = 10번 도전, 그보다 많으면 거절. 일반 여분 300장을 자동 등록 → 합성으로 다 쓰면 100번, 20% 라 대략 8 ~ 32번 성공
+	else:
+		# 성공은 고급 1명(`got`), 실패는 같은 등급(일반) 1명(`back`) — 둘 중 하나만
+		var got := str(fuse.results[0].got)
+		var back := str(fuse.results[0].back)
+		var gain := got if got != "" else back
+		var expect := {"n01": 2, "n02": 1}
+		expect[gain] = int(expect.get(gain, 0)) + 1
+		if (got == "") == (back == "") or int(Trainers.trainer(gain).grade) != (2 if got != "" else 1):
+			_fail("합성 결과가 got %s · back %s (성공은 고급, 실패는 일반 1장)" % [got, back])
+		for id in expect:
+			if int(me.trainers.get(id, 0)) != int(expect[id]):
+				_fail("합성 한 번 뒤 %s — 넣은 3장이 빠지고 %s 1장만 늘어야 한다" % [me.trainers, gain])
+	# 칸 30장 = 10번 도전, 그보다 많으면 거절. 일반 여분 300장을 자동 등록해 다 쓸 때까지 합성 — 실패는 일반 1장을 돌려주니
+	# (한 번에 3장 빠지고 실패면 1장 돌아옴) 대략 130 ~ 140번, 20% 라 성공은 대략 15 ~ 45번
 	var many := {}
 	for info in Trainers.of_grade(1):
 		many[str(info.id)] = 16
@@ -140,6 +149,7 @@ func _case_fuse() -> void:
 	ledger.take_events()
 	var tries := 0
 	var wins := 0
+	var backs := 0
 	for round in 50:
 		var ids := Trainers.auto_pick(me.trainers, 1, [], Trainers.fuse_slots())
 		ids = ids.slice(0, ids.size() / Trainers.fuse_cost() * Trainers.fuse_cost())
@@ -150,9 +160,11 @@ func _case_fuse() -> void:
 			if str(e.type) == "trainerFuse":
 				tries += (e.results as Array).size()
 				wins += (e.results as Array).filter(func(r: Dictionary) -> bool: return str(r.got) != "").size()
-	if tries != 100 or wins < 8 or wins > 32:
-		_fail("일반 여분 300장 합성 — %d번 · 성공 %d" % [tries, wins])
-	if Trainers.spare(me.trainers, 1) != 0:
+				backs += (e.results as Array).filter(func(r: Dictionary) -> bool:
+					return str(r.back) != "" and int(Trainers.trainer(str(r.back)).grade) == 1).size()
+	if tries < 110 or tries > 150 or wins < 15 or wins > 45 or wins + backs != tries:
+		_fail("일반 여분 300장 합성 — %d번 · 성공 %d · 돌려받음 %d (실패마다 일반 1장)" % [tries, wins, backs])
+	if Trainers.spare(me.trainers, 1) >= Trainers.fuse_cost():
 		_fail("다 합성한 뒤 일반 여분이 %d" % Trainers.spare(me.trainers, 1))
 	# 전설은 더 위가 없다
 	me.trainers = {"l01": 9}
@@ -501,22 +513,28 @@ func _case_panel() -> void:
 	panel.fuse_tab(4).pressed.emit()
 	if not panel.slot_ids().is_empty() or not panel.fuse_cards().is_empty():
 		_fail("등급 탭을 바꿨는데 칸 %s · 카드 %d장" % [panel.slot_ids(), panel.fuse_cards().size()])
-	panel.show_fuse_result({"grade": 1, "results": [{"used": [], "got": "a01"}, {"used": [], "got": ""}]})
+	panel.show_fuse_result({"grade": 1, "results": [{"used": [], "got": "a01", "back": ""}, {"used": [], "got": "", "back": "n02"}]})
 	if panel.fuse_note() != "합성 2번 — 성공 1 · 실패 1":
 		_fail("합성 결과 줄이 %s" % panel.fuse_note())
-	# 합성 결과 판 — 도전마다 카드 한 장(성공은 얻은 트레이너 · 실패는 빈 칸), X 로 걷는다
+	# 합성 결과 판 — 도전마다 카드 한 장(성공은 얻은 트레이너 · 실패는 돌려받은 같은 등급 1장), 테두리는 그 카드의 등급 색, X 로 걷는다
 	var result := panel.fuse_result()
 	if result == null:
 		_fail("합성 결과 판이 안 떴다")
 	else:
 		result.finish()
 		var names: Array = result.cards().map(func(c: Control) -> String: return str(c.name))
-		if names != ["card_a01", "card_fail"] or not result.top_level:
+		var edge := func(i: int) -> Color:
+			return ((result.cards()[i].get_node("frame") as Panel).get_theme_stylebox("panel") as StyleBoxFlat).border_color
+		if names != ["card_a01", "card_fail_n02"] or not result.top_level:
 			_fail("합성 결과 판 카드가 %s (화면 전체를 덮어야)" % [names])
 		elif (result.cards()[0] as Control).modulate.a < 0.99 or result.cards()[0].get_node_or_null("flame") == null:
 			_fail("성공 카드가 다 안 섰거나 테두리 불길이 없다")
 		elif result.cards()[1].get_node_or_null("flame") != null:
 			_fail("실패 카드에 불길이 있다")
+		elif edge.call(0) != TrainerFuseResult.edge_color(2) or edge.call(1) != TrainerFuseResult.edge_color(1):
+			_fail("결과 카드 테두리가 %s · %s (고급 · 일반 등급 색이어야)" % [edge.call(0), edge.call(1)])
+		elif edge.call(0) == edge.call(1):
+			_fail("등급이 다른데 테두리 색이 같다")
 		result.close_button().pressed.emit()
 		if panel.fuse_result() != null:
 			_fail("X 를 눌러도 결과 판이 남았다")

@@ -462,6 +462,11 @@ func _case_panel() -> void:
 	if panel.fuse_shown():
 		_fail("합성 보기에서 등급 탭을 눌러도 목록으로 안 돌아간다")
 	panel.show_fuse(true)
+	# 보유 효과는 등록 칸 오른쪽(도감 능력치)에 서고 아래 합계 줄은 숨는다 (2026-10-08)
+	var codex_count := panel.find_child("codex_count", true, false) as Label
+	var summary := panel.find_child("summary", true, false) as Label
+	if codex_count == null or not ("2 / 53" in codex_count.text) or summary.visible:
+		_fail("합성 보기에 도감 능력치가 없거나(%s) 아래 합계 줄이 그대로 보인다" % (codex_count.text if codex_count else "없음"))
 	# 칸 30개(도전 10번)는 원래 크기 그대로 아래로 쭉 — 스크롤 안이라 단추 둘(맨 아래)까지 1280 × 720 한 화면에 든다 (2026-10-08)
 	var need := panel.get_combined_minimum_size()
 	var slot0 := panel.fuse_slots()[0] as Control

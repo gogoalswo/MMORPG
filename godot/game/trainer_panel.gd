@@ -65,6 +65,7 @@ var _detail_grade: Label
 var _detail_lines: Label
 var _pick: Button
 var _summary: Label
+var _summary_rule: Control
 ## 합성 보기 — 목록(`_body`)과 자리를 바꿔 선다 (`_fuse_toggle`)
 var _body: HBoxContainer
 var _fuse_view: HBoxContainer
@@ -82,6 +83,9 @@ var _fuse_count: Label
 var _auto: Button
 var _fuse_go: Button
 var _fuse_note: Label
+## 등록 칸 오른쪽 — 모은 트레이너 수와 보유 효과 (2026-10-08 "오른쪽에 수집한 도감 능력치") · 아래 합계 줄은 합성 보기에선 숨긴다
+var _codex_count: Label
+var _codex_lines: VBoxContainer
 ## 합성 결과 판 (`TrainerFuseResult`) — 결과가 오면 창 위에 덮고 X 로 걷는다
 var _fuse_result: TrainerFuseResult
 
@@ -203,7 +207,8 @@ func _build(frame_box: Callable) -> void:
 	detail.add_child(_pick)
 
 	column.move_child(_fuse_view, body.get_index() + 1)
-	column.add_child(_rule(Vector2(0, 1)))
+	_summary_rule = _rule(Vector2(0, 1))
+	column.add_child(_summary_rule)
 	_summary = _label("", 18, IVORY)
 	_summary.name = "summary"
 	_summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -251,6 +256,9 @@ func select(id: String) -> void:
 func show_fuse(on: bool) -> void:
 	_fuse_view.visible = on
 	_body.visible = not on
+	# 합성 보기에선 보유 효과가 등록 칸 오른쪽에 선다 — 아래 줄은 숨긴다 (2026-10-08 "아래에 표시하는 건 없애고")
+	_summary.visible = not on
+	_summary_rule.visible = not on
 	# 머리 탭 한 줄에서 하나만 켜진다 — 합성 탭이거나, 목록의 등급 탭이거나
 	_paint_tab(_fuse_toggle, on)
 	for i in _tabs.size():
@@ -424,12 +432,22 @@ func _fill_summary(owned: Dictionary) -> void:
 			count += 1
 	var bonus := Trainers.owned_bonus(owned)
 	var parts: Array = []
+	for line in _codex_lines.get_children():
+		_codex_lines.remove_child(line)
+		line.queue_free()
 	for stat in ["attack", "defense", "maxHp", "crit", "critDamage"]:
 		var value := float(bonus[stat])
-		if value <= 0.0:
-			continue
-		var pct := value * 100.0 if stat in ["crit", "critDamage"] else value
-		parts.append("%s +%d%%" % [Trainers.stat_name(stat), roundi(pct)])
+		var pct := roundi(value * 100.0 if stat in ["crit", "critDamage"] else value)
+		# 합성 보기 오른쪽 — 다섯 능력치를 다 세우고 없는 것은 흐리게
+		var row := HBoxContainer.new()
+		var key := _label(Trainers.stat_name(stat), 19, IVORY if pct > 0 else DIM)
+		key.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(key)
+		row.add_child(_label("+%d%%" % pct, 19, GOLD if pct > 0 else DIM))
+		_codex_lines.add_child(row)
+		if pct > 0:
+			parts.append("%s +%d%%" % [Trainers.stat_name(stat), pct])
+	_codex_count.text = "모은 트레이너  %d / %d" % [count, Trainers.all().size()]
 	_summary.text = "  모은 트레이너 %d / %d     보유 효과  %s" % [
 		count, Trainers.all().size(), " · ".join(parts) if not parts.is_empty() else "없음",
 	]
@@ -523,16 +541,41 @@ func _build_fuse(column: VBoxContainer, frame_box: Callable) -> void:
 	# 등록 칸 30개(`TRAINER_FUSE_SLOTS`, 2026-10-08 "한 번에 최대 30개 · 총 10번") — 3장 묶음이 도전 한 번,
 	# 한 줄이 한 묶음이다. 칸 번호는 위 줄부터라 합성은 앞 묶음부터 보낸다.
 	# 칸은 원래 크기(88 × 117) 그대로 아래로 쭉 내리고 스크롤한다 (2026-10-08 "칸 크기를 이전으로 돌리고 아래로 쭉 내려서 스크롤")
+	# 칸 스크롤은 왼쪽에 붙이고 오른쪽에 도감 능력치(보유 효과)를 세운다 (2026-10-08)
+	var middle := HBoxContainer.new()
+	middle.name = "fuse_middle"
+	middle.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	middle.add_theme_constant_override("separation", 0)
+	stack.add_child(middle)
 	var slot_scroll := ScrollContainer.new()
 	slot_scroll.name = "slot_scroll"
 	slot_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	slot_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	stack.add_child(slot_scroll)
+	# 칸 3개 폭 + 스크롤 막대 자리 — 막대가 칸 바로 오른쪽에 붙는다
+	slot_scroll.custom_minimum_size = Vector2(Trainers.fuse_cost() * SLOT_SIZE.x + (Trainers.fuse_cost() - 1) * 8 + 18, 0)
+	middle.add_child(slot_scroll)
+	middle.add_child(_rule(Vector2(1, 0)))
+	var codex := MarginContainer.new()
+	codex.name = "fuse_codex"
+	codex.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	codex.add_theme_constant_override("margin_left", 16)
+	middle.add_child(codex)
+	var codex_box := VBoxContainer.new()
+	codex_box.add_theme_constant_override("separation", 10)
+	codex.add_child(codex_box)
+	codex_box.add_child(_label("도감 능력치", 21, GOLD))
+	_codex_count = _label("", 18, IVORY)
+	_codex_count.name = "codex_count"
+	codex_box.add_child(_codex_count)
+	codex_box.add_child(_rule(Vector2(0, 1)))
+	_codex_lines = VBoxContainer.new()
+	_codex_lines.name = "codex_lines"
+	_codex_lines.add_theme_constant_override("separation", 8)
+	codex_box.add_child(_codex_lines)
 	# 칸은 격자에 바로 넣는다 — 끌기(`DragScroll`)가 격자의 자식을 칸으로 보고 누른 칸을 찾는다
 	var slots := GridContainer.new()
 	slots.name = "slots"
 	slots.columns = Trainers.fuse_cost()
-	slots.size_flags_horizontal = Control.SIZE_EXPAND | Control.SIZE_SHRINK_CENTER
+	slots.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	slots.add_theme_constant_override("h_separation", 8)
 	slots.add_theme_constant_override("v_separation", 14)
 	slot_scroll.add_child(slots)

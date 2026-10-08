@@ -198,7 +198,10 @@ func send(message: StringName, payload: Dictionary) -> void:
 		&"trainerPick":
 			_world.trainer_pick(MY_ID, str(payload.get("id", "")))
 		&"trainerFuse":
-			_world.trainer_fuse(MY_ID, int(payload.get("grade", 0)), bool(payload.get("all", false)))
+			var ids: Array = []
+			for id in payload.get("ids", []):
+				ids.append(str(id))
+			_world.trainer_fuse(MY_ID, ids)
 		&"debugDiamonds":
 			_world.debug_diamonds(MY_ID, int(payload.get("count", World.DEBUG_DIAMONDS)))
 		&"debugSkillExp":

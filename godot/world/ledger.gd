@@ -739,38 +739,38 @@ func trainer_draw(p: Dictionary, times: int) -> void:
 	events.append({"type": "trainerDraw", "got": got, "new": fresh, "diamonds": p.diamonds})
 
 
-## 트레이너 창의 **합성** — `grade` 등급 **여분** `fuse_cost` 장(트레이너마다 1장은 남긴다)을 넣어 확률로
-## 다음 등급 무작위 1명. 실패하면 넣은 것만 사라진다. `all` 이 1 이면 여분이 모자랄 때까지 되풀이한다.
-## 재료는 여분이 가장 많은 트레이너부터 뗀다 — 고르게 줄어 다음에도 고를 것이 남는다
-func trainer_fuse(p: Dictionary, grade: int, all: int = 0) -> void:
-	var chance := Trainers.fuse_chance(grade)
+## 트레이너 창의 **합성** — 합성 칸에 등록한 카드 `ids`(같은 등급 **여분**, 트레이너마다 1장은 남긴다)를
+## 앞에서부터 `fuse_cost` 장씩 끊어 한 줄에 한 번 도전한다. 성공하면 다음 등급 무작위 1명, 실패하면 넣은 것만
+## 사라진다. 어떤 카드를 넣을지는 사람이 고른다 (2026-10-08 — 창에서 카드를 눌러 칸에 등록 · 자동 등록)
+func trainer_fuse(p: Dictionary, ids: Array) -> void:
 	var cost := Trainers.fuse_cost()
 	var owned: Dictionary = p.get("trainers", {})
+	# 칸에 등록한 카드 — 3장 줄 단위로, 칸 수(9)까지. 다 같은 등급이고 트레이너마다 1장은 남아야 한다
+	if ids.is_empty() or ids.size() % cost != 0 or ids.size() > Trainers.fuse_slots():
+		return
+	var grade := int(Trainers.trainer(str(ids[0])).get("grade", 0))
+	var chance := Trainers.fuse_chance(grade)
 	if chance <= 0.0 or Trainers.grade(grade + 1).is_empty():
 		return
-	if Trainers.spare(owned, grade) < cost:
-		_notice("%s 여분이 %d장 모자랍니다" % [str(Trainers.grade(grade).name), cost - Trainers.spare(owned, grade)])
-		return
-	var pool := Trainers.of_grade(grade)
+	for id in ids:
+		if int(Trainers.trainer(str(id)).get("grade", 0)) != grade:
+			return
+	for id in ids:
+		if int(owned.get(str(id), 0)) - 1 < ids.count(id):
+			_notice("%s 여분이 모자랍니다" % str(Trainers.trainer(str(id)).name))
+			return
 	var results: Array = []
-	while Trainers.spare(owned, grade) >= cost:
+	for start in range(0, ids.size(), cost):
 		var used: Array = []
-		for i in cost:
-			var pick := ""
-			for info in pool:
-				var id := str(info.id)
-				if int(owned.get(id, 0)) > 1 and (pick == "" or int(owned[id]) > int(owned[pick])):
-					pick = id
-			owned[pick] = int(owned[pick]) - 1
-			used.append(pick)
+		for id in ids.slice(start, start + cost):
+			owned[str(id)] = int(owned[str(id)]) - 1
+			used.append(str(id))
 		var got := ""
 		if rng.randf() * 100.0 < chance:
 			var next := Trainers.of_grade(grade + 1)
 			got = str(next[rng.randi_range(0, next.size() - 1)].id)
 			owned[got] = int(owned.get(got, 0)) + 1
 		results.append({"used": used, "got": got})
-		if all == 0:
-			break
 	p.trainers = owned
 	var wins := results.filter(func(r: Dictionary) -> bool: return str(r.got) != "")
 	events.append({"type": "trainerFuse", "grade": grade, "results": results})

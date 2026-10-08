@@ -126,6 +126,7 @@ import {
   TRAINER_DRAW_COST,
   TRAINER_DRAW_MULTI,
   TRAINER_FUSE_COST,
+  TRAINER_FUSE_SLOTS,
 } from '../packages/shared/src/trainers.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -279,6 +280,7 @@ export function buildData() {
       drawCost: TRAINER_DRAW_COST,
       drawMulti: TRAINER_DRAW_MULTI,
       fuseCost: TRAINER_FUSE_COST,
+      fuseSlots: TRAINER_FUSE_SLOTS,
       trainers: TRAINERS.map(({ prompt: _prompt, ...rest }) => rest),
     },
     // 다이아 상품 — 서버가 영수증의 상품 id 로 넣어 줄 개수를 찾는다 (가격은 플레이 콘솔)

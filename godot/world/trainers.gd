@@ -63,6 +63,11 @@ static func fuse_cost() -> int:
 	return int(table().get("fuseCost", 3))
 
 
+## 합성 창의 등록 칸 수 (9) — `fuse_cost` 의 배수, 칸 한 줄(3장)이 도전 한 번
+static func fuse_slots() -> int:
+	return int(table().get("fuseSlots", 9))
+
+
 ## 그 등급 합성 성공 확률(%) — 전설은 0
 static func fuse_chance(g: int) -> float:
 	return float(grade(g).get("fuse", 0))
@@ -74,6 +79,31 @@ static func spare(owned: Dictionary, g: int) -> int:
 	for info in of_grade(g):
 		total += maxi(0, int(owned.get(str(info.id), 0)) - 1)
 	return total
+
+
+## 그 트레이너를 칸에 더 넣을 수 있는 장 수 — 1장은 남기고, 이미 칸에 넣은 것(`taken`)은 뺀다
+static func spare_of(owned: Dictionary, id: String, taken: Array) -> int:
+	return maxi(0, int(owned.get(id, 0)) - 1 - taken.count(id))
+
+
+## **카드 자동 등록** — 빈 칸 `room` 개를 그 등급 여분으로 채울 id 들. 남은 여분이 가장 많은 트레이너부터
+## 한 장씩 넣어 한 명만 바닥나지 않게 한다 (예전 장부가 재료를 떼던 순서와 같다)
+static func auto_pick(owned: Dictionary, g: int, taken: Array, room: int) -> Array:
+	var used := taken.duplicate()
+	var out: Array = []
+	for i in room:
+		var pick := ""
+		var best := 0
+		for info in of_grade(g):
+			var left := spare_of(owned, str(info.id), used)
+			if left > best:
+				pick = str(info.id)
+				best = left
+		if pick == "":
+			break
+		used.append(pick)
+		out.append(pick)
+	return out
 
 
 ## 합성할 수 있는 등급이 하나라도 있나 — 트레이너 아이콘 빨간 점

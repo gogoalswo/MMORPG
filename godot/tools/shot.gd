@@ -153,6 +153,10 @@ func _run() -> void:
 	if skill == "draw":
 		await _draw(game)
 		return
+	# 트레이너 합성 — 합성 보기(자동 등록한 칸) · 합성 결과 판(성공 둘 · 실패 하나)
+	if skill == "fuse":
+		await _fuse(game)
+		return
 
 	# 주먹 기운 — 등급 일곱을 차례로 끼워 캐릭터 둘레를 가까이 찍는다
 	if skill == "fist":
@@ -1022,6 +1026,35 @@ func _draw(game: Node3D) -> void:
 		if pic != null and pic.texture != null and pic.texture == TrainerPortraits.cached(str(card.name).trim_prefix("card_")):
 			shot_cards += 1
 	print("  카드 %d장 중 3D 그림 %d장" % [draw.cards().size(), shot_cards])
+	quit(0)
+
+
+## 합성 보기(일반 탭 · 자동 등록) → `logs/shot_fuse_1.png`, 합성 결과 판 → `shot_fuse_2.png` (docs/features/trainers.md "합성")
+func _fuse(game: Node3D) -> void:
+	game._toggle_trainer()
+	var panel: TrainerPanel = game._trainer_panel
+	var owned := {}
+	for info in Trainers.of_grade(1).slice(0, 7):
+		owned[str(info.id)] = 3
+	owned["a02"] = 1
+	# 창은 매 프레임 장부로 다시 채워진다 — 장부에 넣는다
+	game._transport._world._players[game._transport.my_id()].trainers = owned
+	for i in 3:
+		await process_frame
+	panel.show_fuse(true)
+	(panel.fuse_buttons()[0] as Button).pressed.emit()
+	for i in 600:
+		await process_frame
+		if panel._shots.pending() == 0 and not panel._shots._busy:
+			break
+	await _save_shot("logs/shot_fuse_1.png")
+	panel.show_fuse_result({"grade": 1, "results": [{"used": [], "got": "a02"}, {"used": [], "got": ""}, {"used": [], "got": "a05"}]})
+	for i in 600:
+		await process_frame
+		if panel._shots.pending() == 0 and not panel._shots._busy:
+			break
+	await create_timer(0.5).timeout
+	await _save_shot("logs/shot_fuse_2.png")
 	quit(0)
 
 

@@ -5359,8 +5359,8 @@ func _build_gate_panel() -> void:
 	_trainer_panel.pick_requested.connect(func(id: String) -> void:
 		_transport.send(&"trainerPick", {"id": id})
 	)
-	_trainer_panel.fuse_requested.connect(func(grade: int, all: bool) -> void:
-		_transport.send(&"trainerFuse", {"grade": grade, "all": all})
+	_trainer_panel.fuse_requested.connect(func(ids: Array) -> void:
+		_transport.send(&"trainerFuse", {"ids": ids})
 	)
 	var trainer_back := ColorRect.new()
 	trainer_back.name = "TrainerBack"

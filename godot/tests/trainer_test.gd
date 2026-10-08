@@ -92,53 +92,73 @@ func _case_draw() -> void:
 		_fail("뽑기 알림이 없다: %s" % [events])
 
 
-## 합성 — 같은 등급 여분 3장 · 트레이너마다 1장은 남긴다 · 성공하면 다음 등급 · 모두 합성은 여분이 떨어질 때까지
+## 합성 — 칸에 등록한 카드(같은 등급 여분, 트레이너마다 1장은 남긴다)를 3장씩 끊어 한 번씩 도전 · 9장까지
 func _case_fuse() -> void:
 	var ledger := Ledger.new()
 	ledger.rng.seed = 11
 	var me := Ledger.fresh("fighter")
 	me.trainers = {"n01": 3, "n02": 1}
-	ledger.trainer_fuse(me, 1)
-	if int(me.trainers.n01) != 3:
-		_fail("여분이 2장뿐인데 합성됐다: %s" % [me.trainers])
+	ledger.trainer_fuse(me, ["n01", "n01", "n02"])
+	ledger.trainer_fuse(me, ["n01", "n01", "n01"])
+	if int(me.trainers.n01) != 3 or int(me.trainers.n02) != 1:
+		_fail("여분을 넘게 넣었는데 합성됐다: %s" % [me.trainers])
 	me.trainers = {"n01": 4, "n02": 2, "a01": 1}
 	if Trainers.spare(me.trainers, 1) != 4:
 		_fail("여분이 %d (n01 3 + n02 1 = 4)" % Trainers.spare(me.trainers, 1))
+	ledger.trainer_fuse(me, ["n01", "n01"])
+	ledger.trainer_fuse(me, ["n01", "n02", "a01"])
+	if int(me.trainers.n01) != 4 or int(me.trainers.a01) != 1:
+		_fail("3장 줄이 아니거나 등급이 섞였는데 합성됐다: %s" % [me.trainers])
+	# 자동 등록 — 남은 여분이 많은 트레이너부터 (같으면 명단 앞)
+	var auto := Trainers.auto_pick(me.trainers, 1, [], 9)
+	if auto != ["n01", "n01", "n01", "n02"]:
+		_fail("자동 등록이 %s" % [auto])
+	if Trainers.auto_pick(me.trainers, 1, ["n01", "n01"], 9) != ["n01", "n02"]:
+		_fail("이미 칸에 넣은 것을 빼지 않았다")
 	ledger.take_events()
-	ledger.trainer_fuse(me, 1)
+	ledger.trainer_fuse(me, ["n01", "n01", "n02"])
 	var events := ledger.take_events()
-	if Trainers.spare(me.trainers, 1) != 1 or int(me.trainers.n01) < 1 or int(me.trainers.n02) < 1:
-		_fail("합성 한 번 뒤 %s — 여분 1 · 둘 다 1장은 남아야 한다" % [me.trainers])
+	if int(me.trainers.n01) != 2 or int(me.trainers.n02) != 1:
+		_fail("합성 한 번 뒤 %s — 넣은 것만 빠져야 한다" % [me.trainers])
 	var fuse: Dictionary = {}
 	for e in events:
 		if str(e.type) == "trainerFuse":
 			fuse = e
-	if fuse.is_empty() or (fuse.results as Array).size() != 1 or (fuse.results[0].used as Array).size() != 3:
+	if fuse.is_empty() or (fuse.results as Array).size() != 1 or fuse.results[0].used != ["n01", "n01", "n02"]:
 		_fail("합성 알림이 %s" % [fuse])
 	elif str(fuse.results[0].got) != "" and int(Trainers.trainer(str(fuse.results[0].got)).grade) != 2:
 		_fail("합성으로 얻은 것이 고급이 아니다: %s" % fuse.results[0].got)
-	# 모두 합성 — 일반 여분 300장이면 100번, 20% 라 대략 8 ~ 32번 성공
+	# 칸 9장 = 3번 도전, 그보다 많으면 거절. 일반 여분 300장을 자동 등록 → 합성으로 다 쓰면 100번, 20% 라 대략 8 ~ 32번 성공
 	var many := {}
 	for info in Trainers.of_grade(1):
 		many[str(info.id)] = 16
 	me.trainers = many
-	ledger.trainer_fuse(me, 1, 1)
+	ledger.trainer_fuse(me, Trainers.auto_pick(me.trainers, 1, [], 12))
+	if Trainers.spare(me.trainers, 1) != 300:
+		_fail("12장을 넣었는데 합성됐다")
+	ledger.take_events()
 	var tries := 0
 	var wins := 0
-	for e in ledger.take_events():
-		if str(e.type) == "trainerFuse":
-			tries = (e.results as Array).size()
-			wins = (e.results as Array).filter(func(r: Dictionary) -> bool: return str(r.got) != "").size()
+	for round in 50:
+		var ids := Trainers.auto_pick(me.trainers, 1, [], Trainers.fuse_slots())
+		ids = ids.slice(0, ids.size() / Trainers.fuse_cost() * Trainers.fuse_cost())
+		if ids.is_empty():
+			break
+		ledger.trainer_fuse(me, ids)
+		for e in ledger.take_events():
+			if str(e.type) == "trainerFuse":
+				tries += (e.results as Array).size()
+				wins += (e.results as Array).filter(func(r: Dictionary) -> bool: return str(r.got) != "").size()
 	if tries != 100 or wins < 8 or wins > 32:
-		_fail("일반 여분 300장 모두 합성 — %d번 · 성공 %d" % [tries, wins])
+		_fail("일반 여분 300장 합성 — %d번 · 성공 %d" % [tries, wins])
 	if Trainers.spare(me.trainers, 1) != 0:
-		_fail("모두 합성 뒤 일반 여분이 %d" % Trainers.spare(me.trainers, 1))
+		_fail("다 합성한 뒤 일반 여분이 %d" % Trainers.spare(me.trainers, 1))
 	# 전설은 더 위가 없다
 	me.trainers = {"l01": 9}
-	ledger.trainer_fuse(me, 5)
+	ledger.trainer_fuse(me, ["l01", "l01", "l01"])
 	if int(me.trainers.l01) != 9:
 		_fail("전설을 합성했다")
-	if str(LedgerServer.OPS.get("trainer_fuse", "")) != "ii":
+	if str(LedgerServer.OPS.get("trainer_fuse", "")) != "w":
 		_fail("서버가 trainer_fuse 요청을 모른다")
 
 
@@ -418,26 +438,55 @@ func _case_panel() -> void:
 		_fail("동행 · 돌려보내기 요청이 %s" % [asked])
 	if not ("2 / 53" in panel.summary_text() and "공격력 +9%" in panel.summary_text()):
 		_fail("아래 합계 줄이 %s" % panel.summary_text())
-	# 합성 보기 — 여분이 3장 미만이면 단추 꺼짐, 넘으면 켜지고 요청을 낸다
+	# 합성 보기 — 왼쪽 등급 탭 → 카드를 눌러 칸에 등록 → 3장마다 한 번 도전 (2026-10-08)
 	panel.show_fuse(true)
-	if not panel.fuse_shown() or not (panel.fuse_buttons(1)[0] as Button).disabled:
-		_fail("일반 여분 0장인데 합성 단추가 켜져 있다")
-	panel.refresh({"trainers": {"n01": 5, "l01": 2}, "trainer_active": "l01"})
+	if not panel.fuse_shown() or not (panel.fuse_buttons()[1] as Button).disabled:
+		_fail("칸이 비었는데 합성 단추가 켜져 있다")
+	if panel.fuse_tab(5) != null or panel.fuse_tab(1) == null or (panel.tab_buttons()[0] as Button).visible:
+		_fail("합성 탭이 전설에 있거나 일반에 없다 · 목록 탭이 그대로 보인다")
+	panel.refresh({"trainers": {"n01": 5, "n02": 2, "l01": 2}, "trainer_active": "l01"})
+	if panel.fuse_cards().size() != 2 or not panel.fuse_tab(1).get_node("red_dot").visible:
+		_fail("일반 합성 카드 %d장 (n01 · n02 둘이어야) · 빨간 점" % panel.fuse_cards().size())
 	var fused: Array = []
-	panel.fuse_requested.connect(func(g: int, all: bool) -> void: fused.append([g, all]))
-	var buttons := panel.fuse_buttons(1)
-	if (buttons[0] as Button).disabled:
-		_fail("일반 여분 4장인데 합성 단추가 꺼져 있다")
-	else:
-		(buttons[0] as Button).pressed.emit()
-		(buttons[1] as Button).pressed.emit()
-	if fused != [[1, false], [1, true]]:
-		_fail("합성 요청이 %s" % [fused])
-	if panel.fuse_buttons(5)[0] != null:
-		_fail("전설에 합성 줄이 있다")
+	panel.fuse_requested.connect(func(ids: Array) -> void: fused.append(ids))
+	# n01 카드를 다섯 번 — 여분 4장까지만 들어간다
+	for i in 5:
+		for card in panel.fuse_cards():
+			if card.name == "card_n01":
+				(card.get_node("hit") as Button).pressed.emit()
+	if panel.slot_ids() != ["n01", "n01", "n01", "n01"]:
+		_fail("카드를 눌러 등록한 칸이 %s" % [panel.slot_ids()])
+	(panel.fuse_slots()[0] as Button).pressed.emit()
+	if panel.slot_ids().size() != 3:
+		_fail("칸을 눌러도 빠지지 않았다: %s" % [panel.slot_ids()])
+	(panel.fuse_buttons()[0] as Button).pressed.emit()
+	if panel.slot_ids() != ["n01", "n01", "n01", "n01", "n02"] or not (panel.fuse_buttons()[0] as Button).disabled:
+		_fail("자동 등록 뒤 칸이 %s (여분을 다 쓰면 자동 등록 단추가 꺼져야)" % [panel.slot_ids()])
+	(panel.fuse_buttons()[1] as Button).pressed.emit()
+	if fused != [["n01", "n01", "n01"]] or panel.slot_ids() != ["n01", "n02"]:
+		_fail("합성 요청이 %s · 남은 칸 %s (3장 한 줄만 보내고 나머지는 남아야)" % [fused, panel.slot_ids()])
+	panel.fuse_tab(4).pressed.emit()
+	if not panel.slot_ids().is_empty() or not panel.fuse_cards().is_empty():
+		_fail("등급 탭을 바꿨는데 칸 %s · 카드 %d장" % [panel.slot_ids(), panel.fuse_cards().size()])
 	panel.show_fuse_result({"grade": 1, "results": [{"used": [], "got": "a01"}, {"used": [], "got": ""}]})
-	if panel.fuse_note() != "일반 합성 2번 — 성공 1 · 실패 1":
+	if panel.fuse_note() != "합성 2번 — 성공 1 · 실패 1":
 		_fail("합성 결과 줄이 %s" % panel.fuse_note())
+	# 합성 결과 판 — 도전마다 카드 한 장(성공은 얻은 트레이너 · 실패는 빈 칸), X 로 걷는다
+	var result := panel.fuse_result()
+	if result == null:
+		_fail("합성 결과 판이 안 떴다")
+	else:
+		result.finish()
+		var names: Array = result.cards().map(func(c: Control) -> String: return str(c.name))
+		if names != ["card_a01", "card_fail"] or not result.top_level:
+			_fail("합성 결과 판 카드가 %s (화면 전체를 덮어야)" % [names])
+		elif (result.cards()[0] as Control).modulate.a < 0.99 or result.cards()[0].get_node_or_null("flame") == null:
+			_fail("성공 카드가 다 안 섰거나 테두리 불길이 없다")
+		elif result.cards()[1].get_node_or_null("flame") != null:
+			_fail("실패 카드에 불길이 있다")
+		result.close_button().pressed.emit()
+		if panel.fuse_result() != null:
+			_fail("X 를 눌러도 결과 판이 남았다")
 	panel.queue_free()
 
 	var store := StorePanel.make(boxes, func(_n: String) -> Texture2D: return null)

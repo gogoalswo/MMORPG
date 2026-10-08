@@ -12,8 +12,8 @@ extends Control
 ##   │  자동 등록                               [ ON ][ OFF ]  │
 ##   │  아이템 종류 — 활성화 된 종류만 자동으로 등록합니다          │
 ##   │  [무기][갑옷][투구][신발][목걸이][반지]                    │ ← 켜면(밝음) 넣는다
-##   │  1차 옵션 — 활성화 된 옵션만 자동으로 등록합니다            │
-##   │  [치명타][치명타 데미지][체력][방어력 관통][아이템 드랍률]    │ ← 켜면(밝음) 넣는다
+##   │  1차 옵션 — 제외하고 싶은 옵션 선택                        │
+##   │  [치명타][치명타 데미지][체력][방어력 관통][아이템 드랍률]    │ ← 고르면(밝음) 그 옵션 붙은 건 안 넣는다
 ##   │                     (오른쪽 위 X 로 닫는다 — [닫기] 단추는 뺐다)│
 ##
 ## 일곱 등급을 한 화면에 줄로 늘어놓으면 옵션 칩까지 720 높이에 안 들어가 **등급 탭**으로 나눴다.
@@ -126,7 +126,7 @@ func _build(close_button: Button) -> void:
 			chips[str(slot)] = chip
 		_chips[grade] = chips
 
-		page.add_child(SettingsPanel.chip_head("1차 옵션 — 활성화 된 옵션만 자동으로 등록합니다"))
+		page.add_child(SettingsPanel.chip_head("1차 옵션 — 제외하고 싶은 옵션 선택"))
 		var options := HBoxContainer.new()
 		options.add_theme_constant_override("separation", 8)
 		page.add_child(options)
@@ -190,13 +190,13 @@ func refresh(me: Dictionary) -> void:
 	_seen = seen
 	for grade in _tabs:
 		var slots: Array = table.get(str(grade), [])
-		var allowed := Ledger.codex_auto_option_kinds(me, grade)
+		var allowed := Ledger.codex_auto_option_kinds(me, grade)  # 장부는 넣을 목록 — 칩은 그 나머지(제외)를 밝힌다
 		SettingsPanel.paint_grade_tab(_tabs[grade], grade == _grade, grade, not slots.is_empty())
 		SettingsPanel.paint_switch(_switches[grade], not slots.is_empty())
 		for slot in _chips[grade]:
 			SettingsPanel.paint_chip(_chips[grade][slot], slot in slots, not slots.is_empty())
 		for kind in _option_chips[grade]:
-			SettingsPanel.paint_chip(_option_chips[grade][kind], kind in allowed, not slots.is_empty())
+			SettingsPanel.paint_chip(_option_chips[grade][kind], not (kind in allowed), not slots.is_empty())
 
 
 ## 고른 탭 · 그 등급이 켜졌나 · 그 부위를 넣나 · 그 옵션을 막나 — 테스트가 본다
@@ -212,11 +212,11 @@ func slot_on(grade: int, slot: String) -> bool:
 	return bool(_chips[grade][slot].get_meta("on", false))
 
 
-func option_on(grade: int, kind: String) -> bool:
+func option_excluded(grade: int, kind: String) -> bool:
 	return bool(_option_chips[grade][kind].get_meta("on", false))
 
 
-## 등급 스위치 — 켜면 그 등급의 전 부위 · 전 옵션, 끄면 부위를 비운다(옵션은 그대로 둔다)
+## 등급 스위치 — 켜면 그 등급의 전 부위 · 제외 옵션 없음, 끄면 부위를 비운다(옵션은 그대로 둔다)
 func _set_grade(grade: int, on: bool) -> void:
 	var lit := not Ledger.codex_auto_slots(_me, grade).is_empty()
 	if on == lit:
@@ -236,7 +236,8 @@ func _toggle_slot(grade: int, slot: String) -> void:
 	changed.emit(grade, Ledger.clean_slots(slots))
 
 
-## 옵션 칩 — 켜면(활성화) 그 옵션이 붙은 장비를 넣는다
+## 옵션 칩 — 고르면(밝음) 그 옵션이 붙은 장비를 **넣지 않는다** (2026-10-08 요청 "제외하고 싶은 옵션 선택"으로).
+## 장부 값은 그대로 넣을 목록이다 — 고르면 거기서 빼고, 풀면 다시 넣는다
 func _toggle_option(grade: int, kind: String) -> void:
 	var kinds: Array = Ledger.codex_auto_option_kinds(_me, grade).duplicate()
 	if kind in kinds:

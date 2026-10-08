@@ -524,7 +524,8 @@ func _codex_auto(p: Dictionary, at: int) -> bool:
 			or int(stack.get("count", 1)) > 1:
 		return false
 	# 그 등급에서 고른(활성화된) 1차 옵션이 붙은 것만 넣는다 (2026-10-02 요청 "치명타 옵션이 있을 경우 등록 안 되게"
-	# → "등급마다 옵션 설정할 수 있게" → "옵션도 활성화 된 옵션만 자동등록하는걸로 바꿔")
+	# → "등급마다 옵션 설정할 수 있게" → "옵션도 활성화 된 옵션만 자동등록하는걸로 바꿔"
+	# → 2026-10-08 창에서는 "제외하고 싶은 옵션 선택" — 고른 칩 = 넣을 목록에서 뺀 것, 판정은 같다)
 	var allowed := codex_auto_option_kinds(p, int(item.grade))
 	for option in stack.get("options", []):
 		if option is Dictionary and not (str(option.get("kind", "")) in allowed):

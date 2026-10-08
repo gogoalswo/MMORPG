@@ -602,26 +602,27 @@ func _case_panel() -> void:
 	var sheet_size := (sheet.find_child("sheet", true, false) as Control).get_combined_minimum_size()
 	if sheet_size.x > 1280.0 or sheet_size.y > 720.0:
 		_fail("자동 등록 설정 창 %s 가 화면(1280x720)보다 크다" % sheet_size)
-	# 1차 옵션 — 등급마다, 처음엔 다 켜짐. **켠(활성화) 옵션만 넣는다** — 칩은 넣을 목록 전체를 요청한다
+	# 1차 옵션 — 등급마다, 처음엔 제외 없음. **고른 옵션은 제외한다** (2026-10-08) — 칩은 넣을 목록 전체를 요청한다
 	var picks: Array = []
 	panel.auto_options_changed.connect(func(grade: int, kinds: Array) -> void: picks.append([grade, kinds]))
 	var every := Ledger.clean_option_kinds(Items._t().get("optionKinds", []))
-	if not sheet.option_on(3, "crit"):
-		_fail("처음인데 희귀 치명타 옵션이 꺼져 있다")
+	if sheet.option_excluded(3, "crit"):
+		_fail("처음인데 희귀 치명타 옵션이 제외로 골라져 있다")
 	(sheet.find_child("option_3_crit", true, false) as Button).pressed.emit()
 	var no_crit: Array = every.filter(func(kind: String) -> bool: return kind != "crit")
 	panel.refresh({"codex": {}, "bag": [], "codex_auto": {"3": ["armor"]}, "codex_auto_options": {"3": ["maxHp"]}})
 	(sheet.find_child("option_3_crit", true, false) as Button).pressed.emit()
 	if picks != [[3, no_crit], [3, ["crit", "maxHp"]]] \
-			or sheet.option_on(3, "crit") or not sheet.option_on(3, "maxHp") or not sheet.option_on(5, "crit"):
-		_fail("옵션 칩 요청 %s · 희귀 치명타 %s · 희귀 체력 %s · 전설 치명타 %s" % [
-			picks, sheet.option_on(3, "crit"), sheet.option_on(3, "maxHp"), sheet.option_on(5, "crit")])
+			or not sheet.option_excluded(3, "crit") or sheet.option_excluded(3, "maxHp") \
+			or not sheet.option_excluded(3, "penetration") or sheet.option_excluded(5, "crit"):
+		_fail("옵션 칩 요청 %s · 제외 — 희귀 치명타 %s · 희귀 체력 %s · 전설 치명타 %s" % [
+			picks, sheet.option_excluded(3, "crit"), sheet.option_excluded(3, "maxHp"), sheet.option_excluded(5, "crit")])
 	# 꺼진 등급(태초)은 옵션 칩도 종류 칩과 같은 꺼진 판 색 — 값(전 옵션)은 남아 있다
 	var off_slot: StyleBoxFlat = (sheet.find_child("slot_7_weapon", true, false) as Button).get_theme_stylebox("normal")
 	var off_option: StyleBoxFlat = (sheet.find_child("option_7_crit", true, false) as Button).get_theme_stylebox("normal")
-	if off_slot.bg_color != off_option.bg_color or not sheet.option_on(7, "crit"):
-		_fail("꺼진 등급의 칩 색 — 종류 %s · 옵션 %s · 옵션 값 %s" % [off_slot.bg_color, off_option.bg_color, sheet.option_on(7, "crit")])
-	# 등급을 켜면 전 옵션도 켠다
+	if off_slot.bg_color != off_option.bg_color or sheet.option_excluded(7, "crit"):
+		_fail("꺼진 등급의 칩 색 — 종류 %s · 옵션 %s · 옵션 제외 %s" % [off_slot.bg_color, off_option.bg_color, sheet.option_excluded(7, "crit")])
+	# 등급을 켜면 제외 옵션을 비운다(전 옵션을 넣는다)
 	(sheet.find_child("auto_6", true, false).get_node("on") as Button).pressed.emit()
 	if picks.back() != [6, every]:
 		_fail("등급을 켰는데 전 옵션 요청이 아니다 %s" % [picks.back()])

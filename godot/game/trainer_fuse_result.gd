@@ -230,11 +230,9 @@ func _diamond() -> Control:
 	return room
 
 
-## 카드 테두리 색 — 등급 색(`Items.grade_color`)은 어두운 판 위 글자용이라 탁하다. 색조는 두고 채도·밝기만 올려
-## 테두리·불길로 또렷하게 (2026-10-08 요청 "합성 결과를 등급에 맞는 색상으로 테두리를 만들어")
+## 카드 테두리 · 불길 색 — 트레이너 등급 색 그대로 (일반 회색 · 고급 초록 · 희귀 파랑 · 영웅 빨강 · 전설 보라, 2026-10-08 사용자 지정)
 static func edge_color(grade: int) -> Color:
-	var base := TrainerPanel.grade_color(grade)
-	return Color.from_hsv(base.h, minf(base.s * 1.25, 1.0), maxf(base.v, 0.9))
+	return TrainerPanel.grade_color(grade)
 
 
 ## 도전 하나의 카드 — 성공(`got`)은 얻은 트레이너, 실패는 돌려받은 같은 등급 1장(`back`, 옛 결과라 없으면 어두운 칸).

@@ -47,7 +47,7 @@
 | `godot/server/ledger_server.gd` `OPS` | `trainer_draw: "i"` · `trainer_pick: "s"` · `trainer_fuse: "w"`(칸에 넣은 id 목록) — 서버에서는 **서버가 굴린다** |
 | `godot/server/kill_check.gd` `_pace` | 처치 검증 · 샌드백 상한이 **동행 몫**(평타 × 계승 %)을 더해 본다 |
 | `godot/net/local_transport.gd` | `trainerDraw {times}` · `trainerPick {id}` · `trainerFuse {ids}` · `debugDiamonds {count}` |
-| `godot/game/trainer_panel.gd` `TrainerPanel` | 트레이너 창 + **합성 보기**(등급 탭 · 카드 · 등록 칸 30 · 자동 등록 · 합성) + **카드 한 장**(`make_card`) · `grade_color`(등급 색 = 장비 등급 표 `Items.grade_color`) |
+| `godot/game/trainer_panel.gd` `TrainerPanel` | 트레이너 창 + **합성 보기**(등급 탭 · 카드 · 등록 칸 30 · 자동 등록 · 합성) + **카드 한 장**(`make_card`) · `grade_color`(등급 색 = 트레이너 등급 표의 `color` — 아래 "등급 색") |
 | `godot/game/trainer_fuse_result.gd` `TrainerFuseResult` | ★ **합성 결과 판** (아래 "합성") — 흐린 뒤 화면 · 제목 · 도전마다 카드(성공 빛 / 실패는 돌려받은 1장 · 테두리 등급 색) · ✕ |
 | `godot/game/trainer_draw.gd` `TrainerDraw` | ★ **뽑기 연출** (아래 "뽑기 연출") — 수련장 바닥 · 밀랍 조각상 · 빛기둥 · 카드 · [모두 보기] · [확인] |
 | `godot/game/trainer_portraits.gd` `TrainerPortraits` | ★ **카드 그림도 3D 모델** (2026-10-06 요청 "왼쪽 이미지도 3D 모델로") — 카드마다 3D 를 띄우면 무거워서, **보이지 않는 무대 하나**(`SubViewport`, 오른쪽 무대와 같은 빛·각도 `TrainerStage.build_world` · `frame`)에 한 명씩 세워 대기 자세로 252×336 한 장을 찍어 카드에 쓴다. 창을 열면 그 탭의 카드를 줄 세워 한 프레임에 한 명씩 찍고 찍히는 대로 갈아 끼운다(`baked`). 판이 끝날 때까지 기억한다(`_cache`). ★ **찍기 전에는 빈 칸**(2026-10-07 "3D 로딩이 안 됐으면 비어 있게 만들고, 3D 모델을 채워" — 원화를 먼저 세웠더니 2D 가 섰다가 3D 로 바뀌었다). 합성 결과 카드도 찍어 채운다. 원화는 오른쪽 무대가 모델이 없을 때만 쓴다(`_concept`). 상점 뽑기 결과 카드도 같은 그림 — 뽑기 판은 제 것을 하나 띄워 뽑힌 것만 찍는다(2026-10-07, 아래 "뽑기 연출"). 확인: `npm run shot:godot -- trainers` 가 찍힌 장 수와 모델이 그림에서 차지한 범위를 글로 낸다 (53/53장, 세로 약 90%) |
@@ -61,6 +61,16 @@
 | `scripts/fetch-assets.sh` 의 트레이너 줄 | 바르코 결과물 주소 (원화 · 대기 · 달리기 · 펀치) → `build-varco-character.mjs` |
 
 ## 규칙
+
+### 등급 색 ★ (2026-10-08 사용자 지정)
+| 일반 | 고급 | 희귀 | 영웅 | 전설 |
+|---|---|---|---|---|
+| 회색 `#a3a3a3` | 초록 `#4fc35a` | 파랑 `#3f8cff` | 빨강 `#e5433d` | 보라 `#b45cf0` |
+
+- `packages/shared/src/trainers.ts` 의 `TRAINER_GRADES[].color` → `trainers.json` → `TrainerPanel.grade_color`. 카드 테(목록 · 합성 보기 ·
+  칸) · 합성 결과 테두리와 불길 · 이름 글자 · 뽑기 조각상과 빛이 다 이 색을 쓴다.
+- ★ 전엔 장비 등급 색(`Items.grade_color`, 흙빛 · 잿빛 · 탁한 초록 · 금 · 자주)을 빌려 써서 탁하고 등급이 안 갈렸다 —
+  "색상이 잘못 됐어. 일반 : 회색 / 고급 : 초록색 / 희귀 : 파랑색 / 영웅 : 빨간색 / 전설 : 보라색". 장비 색은 그대로 두고 트레이너만 따로 뒀다.
 
 ### 보유 효과
 - 트레이너마다 능력치 **하나** — 등급 안에서 공격력 → 방어력 → 체력 → 치명타 확률 → 치명타 피해 순으로 돌린다
@@ -102,9 +112,8 @@
   창 위로 화면 전체를 덮는다(`top_level`, 뒤 화면은 흐리게 · 가장자리 어둡게). 위 가운데 **합성 결과**(금선 · 마름모), 가운데 **도전마다
   카드 한 장**(한 줄 5장 — 6번 이상이면 줄을 나눠 고르게 담고 판 전체를 0.78 배로, `ROW_MAX` · `MANY_SCALE`) — 성공은 얻은 트레이너(3D 모델을 찍은 그림 · 이름 등급 색 · 테두리 불길 셰이더),
   실패는 **돌려받은 같은 등급 1장**(그림 위 어두운 띠에 `실패`, 불길 없음). 카드는 0.18초 간격으로 튀어나온다. 오른쪽 위 **✕** 로 걷는다.
-  ★ **테두리는 그 카드의 등급 색**(`TrainerFuseResult.edge_color` — 등급 색의 색조는 두고 채도 × 1.25 · 밝기 0.9 이상, 4px + 같은 색 그림자 빛).
+  ★ **테두리는 그 카드의 등급 색**(`TrainerFuseResult.edge_color` = 위 "등급 색" 그대로, 4px + 같은 색 그림자 빛).
   불길도 같은 색이다 — 2026-10-08 요청 "합성 결과를 등급에 맞는 색상으로 테두리를 만들어". 전엔 불길에 주황을 75% 섞어 등급이 다 주황으로 보였다.
-  `Items.grade_color` 를 그대로 쓰지 않는 건 그 색이 어두운 판 위 글자용이라 탁해서 테두리로는 등급이 안 갈리기 때문이다.
   합성 보기의 단추 아래 줄에도 `합성 2번 — 성공 1 · 실패 1` 이 남는다.
 
 ### 동행 ★

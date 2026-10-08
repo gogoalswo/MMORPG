@@ -455,8 +455,24 @@ func _case_panel() -> void:
 	var slot0 := panel.fuse_slots()[0] as Control
 	if panel.fuse_slots().size() != 30 or need.x > 1280 or need.y > 720:
 		_fail("합성 칸 %d개 · 창 최소 크기 %s (30칸이 1280 × 720 에 들어야)" % [panel.fuse_slots().size(), need])
-	elif slot0.custom_minimum_size != Vector2(88, 117) or not (slot0.get_parent().get_parent().get_parent() is ScrollContainer):
+	elif slot0.custom_minimum_size != Vector2(88, 117) or not (slot0.get_parent().get_parent() is ScrollContainer):
 		_fail("합성 칸이 %s · 스크롤 안에 없다 (88 × 117 로 아래로 쭉)" % slot0.custom_minimum_size)
+	# 칸은 **끌어서도** 내려간다 — 휠만 되고 끌기는 칸 단추가 먹었다 (2026-10-08 "클릭해서 내리는 건 안돼")
+	await process_frame
+	await process_frame
+	var slot_scroll := panel.find_child("slot_scroll", true, false) as ScrollContainer
+	var slot_drag: DragScroll = slot_scroll.get_meta("drag_scroll")
+	var grab := slot_scroll.size * 0.5
+	slot_drag.on_input(_trainer_mouse(grab, true))
+	for i in 6:
+		grab.y -= 40
+		var move := InputEventMouseMotion.new()
+		move.position = grab
+		slot_drag.on_input(move)
+	slot_drag.on_input(_trainer_mouse(grab, false))
+	if slot_scroll.scroll_vertical <= 0 or slot0.mouse_filter != Control.MOUSE_FILTER_IGNORE:
+		_fail("합성 칸을 끌었는데 안 내려갔다 (스크롤 %d) · 칸 단추가 입력을 먹는다" % slot_scroll.scroll_vertical)
+	slot_scroll.scroll_vertical = 0
 	panel.refresh({"trainers": {"n01": 5, "n02": 2, "l01": 2}, "trainer_active": "l01"})
 	if panel.fuse_cards().size() != 2 or not panel.fuse_tab(1).get_node("red_dot").visible:
 		_fail("일반 합성 카드 %d장 (n01 · n02 둘이어야) · 빨간 점" % panel.fuse_cards().size())
@@ -469,7 +485,11 @@ func _case_panel() -> void:
 				(card.get_node("hit") as Button).pressed.emit()
 	if panel.slot_ids() != ["n01", "n01", "n01", "n01"]:
 		_fail("카드를 눌러 등록한 칸이 %s" % [panel.slot_ids()])
-	(panel.fuse_slots()[0] as Button).pressed.emit()
+	# 칸은 끌기 목록이 받는다 — 그 자리에서 눌렀다 떼면 그 칸이 빠진다
+	await process_frame
+	var at := slot0.global_position - slot_scroll.global_position + slot0.size * 0.5
+	slot_drag.on_input(_trainer_mouse(at, true))
+	slot_drag.on_input(_trainer_mouse(at, false))
 	if panel.slot_ids().size() != 3:
 		_fail("칸을 눌러도 빠지지 않았다: %s" % [panel.slot_ids()])
 	(panel.fuse_buttons()[0] as Button).pressed.emit()
@@ -558,3 +578,12 @@ func _case_panel() -> void:
 		if store.draw_shown() != null:
 			_fail("확인을 눌러도 뽑기 판이 남았다")
 	store.queue_free()
+
+
+## 끌기 목록에 넣는 왼쪽 단추 누르기 · 떼기 (목록 기준 좌표)
+func _trainer_mouse(at: Vector2, down: bool) -> InputEventMouseButton:
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = down
+	click.position = at
+	return click

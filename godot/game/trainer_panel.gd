@@ -314,18 +314,25 @@ func fuse_result() -> TrainerFuseResult:
 func show_fuse_result(payload: Dictionary) -> void:
 	var results: Array = payload.get("results", [])
 	var got: Array = []
+	var shots: Array = []
 	for r in results:
 		if str(r.get("got", "")) != "":
 			got.append(str(r.got))
-	if results.size() == 1:
-		_fuse_note.text = "성공! %s" % str(Trainers.trainer(got[0]).name) if not got.is_empty() else "실패 — 재료 %d장이 사라졌습니다" % Trainers.fuse_cost()
+		# 실패해도 같은 등급 1장을 돌려받는다(`back`) — 결과 판에 그 카드 그림이 선다
+		for key in ["got", "back"]:
+			if str(r.get(key, "")) != "":
+				shots.append(str(r[key]))
+	if results.size() == 1 and not got.is_empty():
+		_fuse_note.text = "성공! %s" % str(Trainers.trainer(got[0]).name)
+	elif results.size() == 1:
+		_fuse_note.text = "실패 — %s 1장을 돌려받았습니다" % str(Trainers.trainer(str(results[0].get("back", ""))).get("name", "?"))
 	else:
 		_fuse_note.text = "합성 %d번 — 성공 %d · 실패 %d" % [results.size(), got.size(), results.size() - got.size()]
 	hide_fuse_result()
 	_fuse_result = TrainerFuseResult.make(results)
 	_fuse_result.closed.connect(hide_fuse_result)
 	add_child(_fuse_result)
-	_shots.request(got)
+	_shots.request(shots)
 	_seen = ""
 	refresh(_me)
 	_fill_fuse()

@@ -167,6 +167,8 @@ func _build(frame_box: Callable) -> void:
 	_grid.add_theme_constant_override("h_separation", 12)
 	_grid.add_theme_constant_override("v_separation", 12)
 	scroll.add_child(_grid)
+	# 끌어서 내린다 — 합성 칸 · 가방과 같은 길 (`DragScroll`, 2026-10-08). 카드의 `hit` 가 끌기를 먹어 휠로만 내려갔다
+	DragScroll.attach(scroll, _grid, 12)
 	body.add_child(_rule(Vector2(1, 0)))
 
 	# 오른쪽 — 고른 트레이너

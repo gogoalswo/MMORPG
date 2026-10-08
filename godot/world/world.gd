@@ -523,7 +523,7 @@ func attack(player_id: String) -> void:
 	if now < int(player.next_attack_at):
 		return
 	# 샌드백 랭킹전의 카운트 동안은 못 친다 — 시작 신호 전에 넣은 피해는 세지 않으니 헛손질이다
-	if _counting_down(now):
+	if _sandbag_hold(now):
 		return
 	# **스킬 시전 중에는 기본 공격도 못 한다** (2026-09-24 요청). 경직(0.4초)이 풀려도
 	# 스킬 동작은 1초 넘게 남는데, 그 틈에 휘두르면 동작이 끊긴다 (`cast` 의 `cast_until`)
@@ -1021,9 +1021,13 @@ func _drive_sandbag_auto(now: int) -> void:
 			set_auto(id, true)
 
 
-## 카운트 중인가 — 이 동안은 평타·스킬이 막힌다 (걷기는 판 내내 `input_move` 가 막는다)
-func _counting_down(now: int) -> bool:
-	return str(_run.get("dungeon", "")) == "sandbag" and str(_run.result) == "" and now < int(_run.starts_at)
+## 샌드백 판에서 손을 묶는가 — **카운트 중이거나 시간이 다 됐다**. 이 동안은 평타·스킬·트레이너가 막힌다
+## (걷기는 판 내내 `input_move` 가 막는다). 끝난 뒤도 막는 것은 2026-10-08 요청 "시간 0초 되면 공격 멈춰" —
+## 자동사냥만 끄면 화면이 고른 과녁으로 `attack` 을 계속 보내 결과창 뒤로 휘둘렀다
+func _sandbag_hold(now: int) -> bool:
+	if str(_run.get("dungeon", "")) != "sandbag":
+		return false
+	return now < int(_run.starts_at) or now >= int(_run.ends_at) or str(_run.result) != ""
 
 
 ## 샌드백에 넣은 피해를 센다 — 재는 시간 안에 들어간 것만
@@ -1050,9 +1054,12 @@ func _finish_sandbag() -> void:
 		# 로컬은 장부가 바로 고쳤다. 서버에 붙어 있으면 아직 옛 값이라 큰 쪽을 적는다 — 답(`sandbagRecord`)이 오면 창이 고친다
 		best = maxi(maxi(before, damage), int(_players[id].get("sandbag", {}).get("best", 0)))
 	_run.result = "clear"
-	# 결과창 뒤로 계속 치지 않게 저절로 치던 것을 끈다 (`_drive_sandbag_auto`)
+	# 결과창 뒤로 계속 치지 않게 저절로 치던 것을 끈다 (`_drive_sandbag_auto`). 새 평타·스킬은
+	# `_sandbag_hold` 가 막고, 이미 걸어 둔 연타·지대도 여기서 지운다 — 0초 뒤로 한 대도 안 나가게
 	for id in _players:
 		set_auto(id, false)
+	_combos.clear()
+	_zones.clear()
 	_events.append({
 		"type": "dungeonResult", "dungeon": "sandbag", "name": _run.name, "stage": 0,
 		"result": "clear", "kills": 0, "need": 0, "skill_exp": 0, "crystals": 0, "protein": 0,
@@ -2345,7 +2352,7 @@ func cast(player_id: String, skill_id: String, aim_id := "") -> void:
 		return
 
 	var now := Time.get_ticks_msec()
-	if _counting_down(now):
+	if _sandbag_hold(now):
 		return  # 샌드백 랭킹전 카운트 중 (`attack` 과 같다)
 	# **시전 중에는 다른 스킬을 못 쓴다** (2026-09-24 요청). 쿨타임은 스킬마다 따로라
 	# 막지 않으면 연달아 눌러 앞 동작을 끊고, 판정도 동작 하나에 둘이 겹친다.
@@ -3054,7 +3061,7 @@ func _step_buddies(delta: float, now: int) -> void:
 			var gap := pos.distance_to(at)
 			if gap > reach:
 				# 멀면 **플레이어처럼 날아 차며 붙는다** (2026-10-07 요청). 더 멀면 `LUNGE_MAX` 까지 달려와서 난다
-				if gap > LUNGE_MIN and gap <= LUNGE_MAX and now >= int(buddy.next_hit_at) and not _counting_down(now):
+				if gap > LUNGE_MIN and gap <= LUNGE_MAX and now >= int(buddy.next_hit_at) and not _sandbag_hold(now):
 					_buddy_lunge(player, buddy, target, reach * 0.8, now)
 				else:
 					_buddy_walk(buddy, pos, at, reach * 0.8, speed, delta)
@@ -3112,7 +3119,7 @@ func _buddy_walk(buddy: Dictionary, pos: Vector2, to: Vector2, stop: float, spee
 ## 한 대 — 내 평타 간격으로, 내 공격력 × 계승 %. 화면은 `buddySwing` 에서 주먹을 튼다
 func _buddy_strike(player: Dictionary, buddy: Dictionary, target: Dictionary, now: int) -> void:
 	# 샌드백 카운트 동안은 나도 못 친다 — 트레이너도 기다린다
-	if _counting_down(now):
+	if _sandbag_hold(now):
 		return
 	var stats: Dictionary = player.stats
 	var cooldown := Combat.effective_cooldown(stats.attackCooldown, stats.attackSpeed)

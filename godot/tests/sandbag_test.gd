@@ -142,6 +142,22 @@ func _case_auto() -> void:
 	w.step(0.016)
 	if bool(me.auto):
 		_fail("결과가 났는데 계속 친다")
+	# 화면은 고른 과녁이 남아 있어 계속 보낸다 — 0초 뒤로는 평타·스킬 모두 헛손이다 (2026-10-08 요청)
+	w.drain_events()
+	var bag_id := ""
+	for mob in w.snapshot().monsters:
+		bag_id = str(mob.id)
+	for i in 5:
+		me.next_attack_at = 0
+		me.rooted_until = 0
+		me.cast_until = 0
+		w.attack("me")
+		w.strike("me", bag_id)
+		for skill in me.skill_bar:
+			w.cast("me", str(skill))
+		w.step(0.016)
+	if not _all(w.drain_events(), "hit").is_empty():
+		_fail("시간이 0초가 됐는데 계속 맞았다")
 	w.travel("me", "village")
 	w.step(0.016)
 	if bool(w.snapshot().players.me.auto):

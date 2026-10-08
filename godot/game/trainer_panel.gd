@@ -41,8 +41,6 @@ const FUSE_TAB_WIDTH := 130.0
 const FUSE_COLUMNS := 4
 const FUSE_ART := Vector2(88, 117)
 const SLOT_SIZE := Vector2(88, 117)
-## 등록 칸 — 한 줄에 놓는 3장 묶음 수 (30칸 = 1 묶음 × 10줄, 스크롤)
-const SLOT_GROUPS_PER_ROW := 1
 
 const TITLE := GatePanel.PAGE_TITLE_COLOR
 const GOLD := GatePanel.CARD_GOLD
@@ -484,6 +482,8 @@ func _build_fuse(column: VBoxContainer, frame_box: Callable) -> void:
 	shelf_box.add_child(_fuse_grid)
 	_fuse_empty = _label("이 등급 트레이너가 없습니다", 18, DIM)
 	shelf_box.add_child(_fuse_empty)
+	# 끌어서 내린다 — 가방 · 강화 목록과 같은 길 (`DragScroll`, 2026-10-08 "클릭해서 내리는 건 안돼")
+	DragScroll.attach(scroll, _fuse_grid, 10)
 	_fuse_view.add_child(_rule(Vector2(1, 0)))
 
 	# 오른쪽 — 등록 칸(3장 한 줄 = 도전 한 번)과 확률 · 자동 등록 · 합성 · 결과
@@ -514,26 +514,22 @@ func _build_fuse(column: VBoxContainer, frame_box: Callable) -> void:
 	_fuse_count.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	info.add_child(_fuse_count)
 	# 등록 칸 30개(`TRAINER_FUSE_SLOTS`, 2026-10-08 "한 번에 최대 30개 · 총 10번") — 3장 묶음이 도전 한 번,
-	# 묶음을 `SLOT_GROUPS_PER_ROW` 개씩 줄 세운다. 칸 번호는 묶음 순서대로라 합성은 앞 묶음부터 보낸다.
+	# 한 줄이 한 묶음이다. 칸 번호는 위 줄부터라 합성은 앞 묶음부터 보낸다.
 	# 칸은 원래 크기(88 × 117) 그대로 아래로 쭉 내리고 스크롤한다 (2026-10-08 "칸 크기를 이전으로 돌리고 아래로 쭉 내려서 스크롤")
 	var slot_scroll := ScrollContainer.new()
 	slot_scroll.name = "slot_scroll"
 	slot_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	slot_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	stack.add_child(slot_scroll)
+	# 칸은 격자에 바로 넣는다 — 끌기(`DragScroll`)가 격자의 자식을 칸으로 보고 누른 칸을 찾는다
 	var slots := GridContainer.new()
 	slots.name = "slots"
-	slots.columns = SLOT_GROUPS_PER_ROW
+	slots.columns = Trainers.fuse_cost()
 	slots.size_flags_horizontal = Control.SIZE_EXPAND | Control.SIZE_SHRINK_CENTER
-	slots.add_theme_constant_override("h_separation", 26)
+	slots.add_theme_constant_override("h_separation", 8)
 	slots.add_theme_constant_override("v_separation", 14)
 	slot_scroll.add_child(slots)
-	var group: HBoxContainer = null
 	for i in Trainers.fuse_slots():
-		if i % Trainers.fuse_cost() == 0:
-			group = HBoxContainer.new()
-			group.add_theme_constant_override("separation", 8)
-			slots.add_child(group)
 		var slot := Button.new()
 		slot.name = "slot_%d" % i
 		slot.custom_minimum_size = SLOT_SIZE
@@ -553,8 +549,10 @@ func _build_fuse(column: VBoxContainer, frame_box: Callable) -> void:
 			art.set_offset(side, -4)
 		slot.add_child(art)
 		slot.pressed.connect(_unslot.bind(i))
-		group.add_child(slot)
+		slots.add_child(slot)
 		_slots.append(slot)
+	# 칸을 끌어서 내린다 — 그 자리에서 떼면 그 칸을 누른 것(뺀다), 끌면 스크롤 (2026-10-08 "클릭해서 내리는 건 안돼")
+	DragScroll.attach(slot_scroll, slots, 14)
 	_fuse_note = _label("", 18, IVORY)
 	_fuse_note.name = "fuse_note"
 	_fuse_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

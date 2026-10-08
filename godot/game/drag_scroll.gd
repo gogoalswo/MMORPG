@@ -61,7 +61,9 @@ static func top_on_open(scroll: ScrollContainer) -> void:
 static func _let_through(cell: Node) -> void:
 	var box := cell as Control
 	if box != null:
-		box.mouse_filter = Control.MOUSE_FILTER_PASS
+		# 칸 자체가 단추(트레이너 합성 칸)면 비킨다 — PASS 면 단추가 끌고 난 뒤 떼기에도 눌린다.
+		# 누르기는 아래 `on_input` 이 그 칸을 직접 누른다
+		box.mouse_filter = Control.MOUSE_FILTER_IGNORE if box is BaseButton else Control.MOUSE_FILTER_PASS
 	for child in cell.find_children("*", "Control", true, false):
 		(child as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
 
@@ -90,7 +92,10 @@ func on_input(event: InputEvent) -> void:
 			var tapped := not _dragging
 			forget()
 			if tapped and held >= 0 and held == cell_at(click.position):
-				var hit := _grid.get_child(held).get_node_or_null("hit") as Button
+				var cell := _grid.get_child(held)
+				var hit := cell.get_node_or_null("hit") as Button
+				if hit == null:
+					hit = cell as Button
 				if hit != null:
 					hit.pressed.emit()
 		_scroll.accept_event()

@@ -20,6 +20,10 @@ signal closed
 const ART := Vector2(150, 200)
 const NAME_ROOM := 56.0
 const CARD_GAP := 56
+## 한 줄 카드 수 · 줄 사이 · 두 줄일 때 판 전체 배율 (1280 × 720 에 10장이 들어가게)
+const ROW_MAX := 5
+const ROW_GAP := 28
+const MANY_SCALE := 0.78
 ## 카드가 하나씩 튀어나오는 간격 · 걸리는 시간 · 처음 배율
 const POP_GAP := 0.18
 const POP_TIME := 0.28
@@ -112,14 +116,27 @@ func _build(results: Array) -> void:
 
 	_build_title()
 
-	var row := HBoxContainer.new()
-	row.name = "cards"
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", CARD_GAP)
-	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(row)
+	# 도전은 한 번에 10번까지라(칸 30개, 2026-10-08) 한 줄에 `ROW_MAX` 장 — 넘으면 줄을 나눠 고르게 담고 조금 줄인다
+	var column := VBoxContainer.new()
+	column.name = "cards"
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.add_theme_constant_override("separation", ROW_GAP)
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(column)
+	var rows := maxi(1, ceili(results.size() / float(ROW_MAX)))
+	var per := ceili(results.size() / float(rows))
+	if rows > 1:
+		column.scale = Vector2.ONE * MANY_SCALE
+		column.resized.connect(func() -> void: column.pivot_offset = column.size * 0.5)
+	var row: HBoxContainer = null
 	for i in results.size():
+		if i % maxi(per, 1) == 0:
+			row = HBoxContainer.new()
+			row.alignment = BoxContainer.ALIGNMENT_CENTER
+			row.add_theme_constant_override("separation", CARD_GAP)
+			row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			column.add_child(row)
 		var id := str(results[i].get("got", ""))
 		var holder := _card(id)
 		holder.modulate.a = 0.0

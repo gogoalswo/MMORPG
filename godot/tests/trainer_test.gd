@@ -128,14 +128,15 @@ func _case_fuse() -> void:
 		_fail("합성 알림이 %s" % [fuse])
 	elif str(fuse.results[0].got) != "" and int(Trainers.trainer(str(fuse.results[0].got)).grade) != 2:
 		_fail("합성으로 얻은 것이 고급이 아니다: %s" % fuse.results[0].got)
-	# 칸 9장 = 3번 도전, 그보다 많으면 거절. 일반 여분 300장을 자동 등록 → 합성으로 다 쓰면 100번, 20% 라 대략 8 ~ 32번 성공
+	# 칸 30장 = 10번 도전, 그보다 많으면 거절. 일반 여분 300장을 자동 등록 → 합성으로 다 쓰면 100번, 20% 라 대략 8 ~ 32번 성공
 	var many := {}
 	for info in Trainers.of_grade(1):
 		many[str(info.id)] = 16
 	me.trainers = many
-	ledger.trainer_fuse(me, Trainers.auto_pick(me.trainers, 1, [], 12))
+	var over := Trainers.fuse_slots() + Trainers.fuse_cost()
+	ledger.trainer_fuse(me, Trainers.auto_pick(me.trainers, 1, [], over))
 	if Trainers.spare(me.trainers, 1) != 300:
-		_fail("12장을 넣었는데 합성됐다")
+		_fail("%d장(칸보다 많이)을 넣었는데 합성됐다" % over)
 	ledger.take_events()
 	var tries := 0
 	var wins := 0
@@ -449,6 +450,10 @@ func _case_panel() -> void:
 	if panel.fuse_shown():
 		_fail("합성 보기에서 등급 탭을 눌러도 목록으로 안 돌아간다")
 	panel.show_fuse(true)
+	# 칸 30개(도전 10번) · 단추 둘은 맨 아래 — 그래도 1280 × 720 한 화면에 든다 (2026-10-08)
+	var need := panel.get_combined_minimum_size()
+	if panel.fuse_slots().size() != 30 or need.x > 1280 or need.y > 720:
+		_fail("합성 칸 %d개 · 창 최소 크기 %s (30칸이 1280 × 720 에 들어야)" % [panel.fuse_slots().size(), need])
 	panel.refresh({"trainers": {"n01": 5, "n02": 2, "l01": 2}, "trainer_active": "l01"})
 	if panel.fuse_cards().size() != 2 or not panel.fuse_tab(1).get_node("red_dot").visible:
 		_fail("일반 합성 카드 %d장 (n01 · n02 둘이어야) · 빨간 점" % panel.fuse_cards().size())
@@ -492,6 +497,15 @@ func _case_panel() -> void:
 		result.close_button().pressed.emit()
 		if panel.fuse_result() != null:
 			_fail("X 를 눌러도 결과 판이 남았다")
+	# 도전 10번 — 결과 카드 10장이 5장씩 두 줄로 선다
+	var ten: Array = []
+	for i in 10:
+		ten.append({"used": [], "got": "a01" if i % 2 == 0 else ""})
+	panel.show_fuse_result({"grade": 1, "results": ten})
+	var big := panel.fuse_result()
+	if big == null or big.cards().size() != 10 or big.get_node("cards").get_child_count() != 2:
+		_fail("결과 10번이 카드 10장 · 두 줄로 안 섰다")
+	panel.hide_fuse_result()
 	panel.queue_free()
 
 	var store := StorePanel.make(boxes, func(_n: String) -> Texture2D: return null)

@@ -7,7 +7,7 @@ extends Control
 ##   ─────◆  합성 결과  ◆─────                                    [X]
 ##
 ##          (빛)┌────┐      ┌────┐
-##              │모델│      │실패│        ← 성공은 얻은 트레이너(뒤에서 일렁이는 빛), 실패는 돌려받은 같은 등급 1장
+##              │모델│      │실패│        ← 둘 다 그림 위 띠에 성공·실패 글자. 성공은 얻은 트레이너(뒤에서 일렁이는 빛), 실패는 돌려받은 같은 등급 1장
 ##              └────┘      └────┘          — 둘 다 테두리가 그 카드의 등급 색 (`edge_color`)
 ##               이름         이름
 ##
@@ -293,27 +293,28 @@ func _card(result: Dictionary) -> Control:
 	art.texture = TrainerPortraits.cached(id) if has else null
 	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	frame.add_child(art)
-	if not won:
-		# 실패 — 돌려받은 카드 위에 어두운 띠 + `실패` (그림이 없으면 칸 가운데)
-		var fail := Label.new()
-		fail.name = "fail"
-		fail.text = "실패"
-		fail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		fail.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		fail.add_theme_font_size_override("font_size", 22 if has else 30)
-		fail.add_theme_color_override("font_color", Color("#e8a39a") if has else DIM)
-		fail.add_theme_color_override("font_outline_color", Color(0.02, 0.02, 0.02))
-		fail.add_theme_constant_override("outline_size", 6)
-		fail.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		if has:
-			var band := StyleBoxFlat.new()
-			band.bg_color = Color(0.05, 0.04, 0.04, 0.78)
-			fail.add_theme_stylebox_override("normal", band)
-			fail.position = Vector2(4, 4)
-			fail.size = Vector2(ART.x, 34)
-		else:
-			fail.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		frame.add_child(fail)
+	# 카드 위 어두운 띠 + `성공`/`실패` — 성공도 실패처럼 글자를 단다 (2026-10-11 요청 "성공하면 실패처럼 성공이라고
+	# 텍스트 넣어"). 실패인데 그림이 없으면 띠 없이 칸 가운데
+	var verdict := Label.new()
+	verdict.name = "win" if won else "fail"
+	verdict.text = "성공" if won else "실패"
+	verdict.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	verdict.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	verdict.add_theme_font_size_override("font_size", 22 if has else 30)
+	verdict.add_theme_color_override("font_color",
+		Color("#a8e0a0") if won else (Color("#e8a39a") if has else DIM))
+	verdict.add_theme_color_override("font_outline_color", Color(0.02, 0.02, 0.02))
+	verdict.add_theme_constant_override("outline_size", 6)
+	verdict.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if has:
+		var band := StyleBoxFlat.new()
+		band.bg_color = Color(0.05, 0.04, 0.04, 0.78)
+		verdict.add_theme_stylebox_override("normal", band)
+		verdict.position = Vector2(4, 4)
+		verdict.size = Vector2(ART.x, 34)
+	else:
+		verdict.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	frame.add_child(verdict)
 
 	var label := Label.new()
 	label.name = "name"

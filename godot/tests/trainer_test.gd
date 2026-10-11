@@ -560,6 +560,10 @@ func _case_panel() -> void:
 			_fail("성공 카드가 다 안 섰거나 테두리 불길이 없다")
 		elif result.cards()[1].get_node_or_null("flame") != null:
 			_fail("실패 카드에 불길이 있다")
+		elif (result.cards()[0].find_child("win", true, false) as Label) == null \
+				or (result.cards()[0].find_child("win", true, false) as Label).text != "성공" \
+				or (result.cards()[1].find_child("fail", true, false) as Label).text != "실패":
+			_fail("성공 카드에 `성공` · 실패 카드에 `실패` 글자가 없다")
 		elif edge.call(0) != TrainerFuseResult.edge_color(2) or edge.call(1) != TrainerFuseResult.edge_color(1):
 			_fail("결과 카드 테두리가 %s · %s (고급 · 일반 등급 색이어야)" % [edge.call(0), edge.call(1)])
 		elif edge.call(0) == edge.call(1):

@@ -110,13 +110,31 @@ static func power(p: Dictionary) -> int:
 	return roundi(sqrt(Ledger.gear_power(p, equipped) * float(s.attackCooldown) / maxf(1.0, float(cooldown))))
 
 
+## 더미 장비 — 그 레벨로 낄 수 있는 **가장 높은 등급**(`Stats.equip_level`)으로 여섯 부위, 강화 `enhance`, 옵션 없음.
+## 가방 장비와 같은 모양 `{id, grade, enhance, options}` 이라 `World.stats_of` 와 화면(`Rig.set_weapon` · `set_gear`)이 그대로 읽는다
+static func dummy_equipped(level: int, enhance: int) -> Dictionary:
+	var grade := 0
+	for g in range(1, Stats.grade_count() + 1):
+		if Stats.equip_level(g) <= level:
+			grade = g
+	if grade == 0:
+		return {}
+	var out := {}
+	for id in Items.all():
+		var item: Dictionary = Items.all()[id]
+		if int(item.get("grade", 0)) == grade and Items.slots().has(str(item.get("slot", ""))):
+			out[str(item.slot)] = {"id": str(id), "grade": grade, "enhance": enhance, "options": []}
+	return out
+
+
 ## i 번째 더미 이름. 앞말은 i % 10, 뒷말은 (⌊i / 10⌋ × 3 + i % 10) % 10 — i < 50 이면 짝이 겹치지 않는다
 static func dummy_name(i: int) -> String:
 	return NAME_HEADS[i % 10] + NAME_TAILS[(floori(i / 10.0) * 3 + i % 10) % 10]
 
 
-## 더미 상대 50명 — 점수 높은 순. 한 줄은 상대의 **복사본** `{id, name, job, level, score, power}`
-## (`power` 는 결투장 전투력 `power` — 더미는 맨몸이다)
+## 더미 상대 50명 — 점수 높은 순. 한 줄은 상대의 **복사본** `{id, name, job, level, score, equipped, power}`.
+## 장비(`dummy_equipped`)는 2026-10-12 시상대 요청("랭킹 1,2,3위 장착정보 반영해서")으로 줬다 — 그 전엔 맨몸이었다.
+## 장비가 곧 능력치라 전투력(`power`)과 결투(`foe`)에도 그대로 들어간다
 static func dummies(my_level: int) -> Array:
 	var max_level := int(GameData.combat().get("maxLevel", 200))
 	var out: Array = []
@@ -129,6 +147,9 @@ static func dummies(my_level: int) -> Array:
 			"level": clampi(my_level + lift, 1, max_level),
 			"score": DUMMY_TOP_SCORE - DUMMY_SCORE_STEP * i,
 		}
+		# 강화는 순위가 높을수록 — 1위가 최대, 꼴찌가 +0
+		var enhance := roundi(float(Items.max_enhance()) * (DUMMY_COUNT - 1 - i) / (DUMMY_COUNT - 1))
+		copy["equipped"] = dummy_equipped(int(copy.level), enhance)
 		copy["power"] = power(copy)
 		out.append(copy)
 	return out
@@ -142,6 +163,8 @@ static func board(me: Dictionary) -> Dictionary:
 		"id": "me", "name": str(me.get("name", "")), "job": str(me.get("job", "fighter")),
 		"level": int(me.get("level", 1)), "score": score_of(me),
 		"power": power(me), "me": true,
+		# 시상대에 서면 이 장비로 입는다 (`ArenaPodium`)
+		"equipped": me.get("equipped", {}).duplicate(true),
 	}
 	var ranking: Array = challengers.duplicate()
 	ranking.append(mine)

@@ -89,6 +89,12 @@ node scripts/shrink-glb-textures.mjs assets-src/models/varco/tomb.glb public/ass
 fetch_varco d107839c00de50f9776818db0ba5e404 sandbag
 node scripts/shrink-glb-textures.mjs assets-src/models/varco/sandbag.glb public/assets/models/varco_sandbag.glb 1024
 
+# 결투장 시상대 (2026-10-12, docs/features/arena.md "시상대") — 바르코 워크플로우 "Untitled" 의 오른쪽(x 4000~, y 1600) 줄.
+# 원화 두 장 중 첫째(3acc7f90…png, 금테 두른 돌 3단 — 둘째는 반듯했지만 금테가 없었다)에서 뽑은 3D, 원점 바닥(pivotToBottom).
+# 1024 로 줄여 커밋한다
+fetch_varco 10413d8f1237a993f3f38dce851e1038 arena_podium
+node scripts/shrink-glb-textures.mjs assets-src/models/varco/arena_podium.glb public/assets/models/arena_podium.glb 1024
+
 # 트레이너 뽑기 연출 (2026-10-06, docs/features/trainers.md "뽑기 연출") — 바르코 워크플로우 "Untitled" 의 오른쪽 위
 # (x 3200 ~ 5600, y -6000 ~ -4800) 넷 줄. 밀랍 조각상 넷(보디빌더 · 권투선수 · 격투가 · 노사범): 흰 밀랍 원화(어두운 바탕)
 # → 3D(1만 면, pivotToBottom) = 흰 조각상, 같은 원화를 EditImage 로 금빛 밀랍만 입힌 그림 → 그 흰 메시에 Texture3D = 금 조각상
@@ -434,6 +440,7 @@ fetch_icon 0cd496bab7dbf9e3e1b78144b25a235c ui_icon_rank      # 랭킹 — 받�
 fetch_icon 9d0cfd6c330ff0eecd6fb4fd2ecad4be ui_icon_sandbag   # 샌드백 랭킹전 — 받침에 선 가죽 샌드백 (세 장 중 둘째). 2026-10-02 HUD 아이콘 기준 프롬프트 그대로
 fetch_icon 99dd144558994da511b31b91bc589575 ui_icon_shop      # 상점 — 끈 묶은 가죽 돈주머니 · 동전 (세 장 중 셋째). 2026-10-02 HUD 아이콘 기준 프롬프트 그대로
 fetch_icon 2e01e56278ee7715db28877e4e761015 ui_icon_trainer   # PT 트레이너 — 땋은 끈 달린 코치 호루라기 (세 장 중 둘째). 2026-10-06 HUD 아이콘 기준 프롬프트 그대로
+fetch_icon 9b81a66defca8926332dd62d43de6ad8 ui_icon_arena     # 결투장 — 가죽 띠 감은 두 주먹이 X 로 맞댐 (세 장 중 둘째). 2026-10-12 HUD 아이콘 기준 프롬프트 그대로
 fetch_icon 48c32df95c8cead1a978cd760ed10188 ui_icon_fitness   # 헬스 — 쇠 덤벨 (세 장 중 둘째). 2026-09-30 세피아 단색조 (HUD 아이콘 기준 프롬프트 그대로)
 # 2026-10-01 — 도감 단추 · 메뉴를 펼치는 ≡ · 접는 X (HUD 아이콘 기준 프롬프트 그대로, 각 세 장)
 fetch_icon 3949117dc4a7ca950e5e3fc4d7d24511 ui_icon_codex      # 도감 — 방패 문장이 든 펼친 책 (셋째)

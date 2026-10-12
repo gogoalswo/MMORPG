@@ -34,6 +34,7 @@ const MODELS = [
   'varco_portal.glb', // 차원문 (모든 존의 GATE_SPOT)
   'varco_tomb.glb', // 묘비 — 쓰러진 자리 (tomb.gd)
   'varco_sandbag.glb', // 샌드백 랭킹전의 과녁 (docs/features/sandbag.md) — Rig.FILES 의 `sandbag`
+  'arena_podium.glb', // 결투장 시상대 — 돌 3단 + 금테 (docs/features/arena.md "시상대", `ArenaPodium`)
   // 마을 NPC 7명 — zones.ts 의 NpcDef.look (rig.gd 의 FILES)
   'npc_merchant.glb', 'npc_smith.glb', 'npc_trainer.glb',
   'npc_villager_sack.glb', 'npc_villager_apron.glb', 'npc_villager_hood.glb', 'npc_villager_old.glb',
@@ -117,6 +118,7 @@ const ICONS = [
   // 상점 단추 — 가죽 돈주머니 (2026-10-02, docs/features/store.md)
   'ui_icon_shop.png',
   'ui_icon_trainer.png', // PT 트레이너 — 메뉴 판 (docs/features/trainers.md)
+  'ui_icon_arena.png', // 결투장 — 교차한 두 주먹, 메뉴 판 (docs/features/arena.md)
   // 상점 뽑기 상품 카드 — 1회 한 장 · 10회 부채꼴 (2026-10-07, docs/features/trainers.md)
   'ui_draw_trainer_1.png', 'ui_draw_trainer_10.png',
   // 헬스 (2026-09-30, docs/features/fitness.md) — 메뉴 덤벨 · 창 가운데 문장 셋 · 프로틴 셋

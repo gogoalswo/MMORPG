@@ -388,6 +388,9 @@ func _run() -> void:
 	else:
 		var board: Dictionary = Arena.board(game._transport.snapshot().players.values()[0])
 		var view := podium.get_node("view") as SubViewport
+		# 단은 바르코 모델이다 (같은 날 "단도 바르코로 만들고") — 동기화를 안 했으면 여기서 멈춘다
+		if view.get_node_or_null("podium") == null:
+			_fail("시상대 모델(arena_podium.glb)이 없다 — npm run sync:godot 을 돌렸나")
 		for place in [1, 2, 3]:
 			var row: Dictionary = board.ranking[place - 1]
 			var rig := podium.rig_of(place)

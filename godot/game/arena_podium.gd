@@ -7,31 +7,36 @@ extends SubViewportContainer
 ##          이름(1위)
 ##   이름     ┌───┐    이름
 ##   ┌───┐    │ 1 │   ┌───┐
-##   │ 2 │    │   │   │ 3 │      ← 단은 돌빛 상자 + 앞면에 금빛 숫자 (Label3D)
+##   │ 2 │    │   │   │ 3 │      ← 바르코 돌 3단 시상대 한 덩이(`arena_podium.glb`) + 앞면에 금빛 숫자 (Label3D)
 ##
-## 창 안의 작은 3D 화면이다 — 따로 노는 세계(`own_world_3d`)에 카메라 · 빛 · 단 셋 · 캐릭터 셋을 둔다. 바탕은 비춘다(`transparent_bg`).
+## 창 안의 작은 3D 화면이다 — 따로 노는 세계(`own_world_3d`)에 카메라 · 빛 · 시상대 · 캐릭터 셋을 둔다. 바탕은 비춘다(`transparent_bg`).
 ## 캐릭터는 내 캐릭터와 같은 모델(`Rig.create("varco_fighter")`)에 `Rig.set_weapon` · `set_gear` 로 입힌다 — 게임 속 나와 같은 길.
-## 단은 코드로 지은 상자다 — 장비 · 캐릭터 외형이 아니라 받침이라 (CLAUDE.md "외형은 바르코로" 는 장비 · 캐릭터 몫)
+## 단은 처음엔 코드로 지은 상자였다가 같은 날 "단도 바르코로 만들고" 로 바르코 모델이 됐다.
 
 ## 화면 높이(px)
 const HEIGHT := 250.0
-## 단 — 왼쪽부터 2 · 1 · 3위. x 자리 · 높이(m)
-const SPOTS := [
-	{"place": 2, "x": -1.15, "h": 0.42},
-	{"place": 1, "x": 0.0, "h": 0.62},
-	{"place": 3, "x": 1.15, "h": 0.30},
+const MODEL := "res://assets/models/arena_podium.glb"
+## 모델은 폭 1 · 원점 바닥으로 받았다. 폭은 `MODEL_SCALE.x` 배, 높이는 그보다 25% 낮게 키운다 — 원화의 단이 사람 키에 비해
+## 높아서(1위 단이 폭의 절반) 그대로 키우면 1위 단이 1.4m 다. 돌 덩어리라 높이만 줄여도 티가 안 난다
+const MODEL_SCALE := Vector3(2.6, 1.95, 2.6)
+## 단 셋 — 모델 좌표(폭 1)로 **잰** 윗면 가운데 x 와 높이 (2026-10-12, 정점을 x 칸으로 나눠 칸마다 가장 높은 y).
+## 모델을 갈면 다시 잰다 (docs/features/arena.md "시상대")
+const TIERS := [
+	{"place": 2, "x": -0.35, "top": 0.38},
+	{"place": 1, "x": 0.02, "top": 0.525},
+	{"place": 3, "x": 0.375, "top": 0.30},
 ]
-const STEP_SIZE := Vector2(1.0, 0.9)
-const STONE := Color("#3b3a36")
+## 앞면 — 모델 깊이 반(0.195)보다 조금 앞에 숫자를 띄운다
+const FRONT_Z := 0.2
 const GOLD := Color("#e0c27a")
-## 카메라 — 정면 조금 위에서 단 셋과 머리까지 다 들어오게
-const CAMERA_AT := Vector3(0.0, 1.55, 5.6)
-const CAMERA_LOOK := Vector3(0.0, 1.15, 0.0)
+## 카메라 — 정면 조금 위에서 단 셋과 머리 · 이름표까지 다 들어오게
+const CAMERA_AT := Vector3(0.0, 1.7, 6.2)
+const CAMERA_LOOK := Vector3(0.0, 1.45, 0.0)
 const CAMERA_FOV := 36.0
 
 var _view: SubViewport
 var _camera: Camera3D
-## 자리(1 · 2 · 3) → {rig, name(Label3D), top(단 윗면 y)}
+## 자리(1 · 2 · 3) → {rig, name(Label3D), top(단 윗면 y, m)}
 var _stands := {}
 
 
@@ -69,63 +74,48 @@ func _build() -> void:
 	_camera = Camera3D.new()
 	_camera.name = "camera"
 	_camera.fov = CAMERA_FOV
-	_camera.position = CAMERA_AT
 	_view.add_child(_camera)
 	_camera.look_at_from_position(CAMERA_AT, CAMERA_LOOK)
 
-	for spot in SPOTS:
-		var top := float(spot.h)
-		var step := MeshInstance3D.new()
-		step.name = "step_%d" % int(spot.place)
-		var box := BoxMesh.new()
-		box.size = Vector3(STEP_SIZE.x, top, STEP_SIZE.y)
-		step.mesh = box
-		var stone := StandardMaterial3D.new()
-		stone.albedo_color = STONE
-		stone.roughness = 0.85
-		step.material_override = stone
-		step.position = Vector3(float(spot.x), top * 0.5, 0.0)
-		_view.add_child(step)
-		# 윗면 금테 — 얇은 판 한 장
-		var rim := MeshInstance3D.new()
-		var rim_box := BoxMesh.new()
-		rim_box.size = Vector3(STEP_SIZE.x + 0.04, 0.03, STEP_SIZE.y + 0.04)
-		rim.mesh = rim_box
-		var gold := StandardMaterial3D.new()
-		gold.albedo_color = GOLD
-		gold.metallic = 0.6
-		gold.roughness = 0.4
-		rim.material_override = gold
-		rim.position = Vector3(float(spot.x), top, 0.0)
-		_view.add_child(rim)
-		# 앞면 숫자
+	if ResourceLoader.exists(MODEL):
+		var model: Node3D = (load(MODEL) as PackedScene).instantiate()
+		model.name = "podium"
+		model.scale = MODEL_SCALE
+		_view.add_child(model)
+
+	for tier in TIERS:
+		var place := int(tier.place)
+		var x := float(tier.x) * MODEL_SCALE.x
+		var top := float(tier.top) * MODEL_SCALE.y
+		# 앞면 숫자 — 단 높이의 가운데
 		var number := Label3D.new()
-		number.name = "number_%d" % int(spot.place)
-		number.text = str(int(spot.place))
-		number.font_size = 160
+		number.name = "number_%d" % place
+		number.text = str(place)
+		number.font_size = 150
 		number.pixel_size = 0.0022
 		number.modulate = GOLD
-		number.outline_size = 0
-		number.position = Vector3(float(spot.x), top * 0.5, STEP_SIZE.y * 0.5 + 0.01)
+		number.outline_size = 10
+		number.outline_modulate = Color(0, 0, 0, 0.6)
+		number.position = Vector3(x, top * 0.5, FRONT_Z * MODEL_SCALE.z)
 		_view.add_child(number)
 
 		var rig := Rig.create("varco_fighter", Rig.HUMAN_HEIGHT)
 		if rig != null:
-			rig.name = "rig_%d" % int(spot.place)
-			rig.position = Vector3(float(spot.x), top, 0.0)
+			rig.name = "rig_%d" % place
+			rig.position = Vector3(x, top, 0.0)
 			rig.visible = false
 			_view.add_child(rig)
 		var tag := Label3D.new()
-		tag.name = "name_%d" % int(spot.place)
+		tag.name = "name_%d" % place
 		tag.font_size = 72
 		tag.pixel_size = 0.0028
 		tag.outline_size = 14
-		tag.modulate = Color("#f1dc9c") if int(spot.place) == 1 else Color("#ddd6c4")
+		tag.modulate = Color("#f1dc9c") if place == 1 else Color("#ddd6c4")
 		tag.outline_modulate = Color(0, 0, 0, 0.85)
-		tag.position = Vector3(float(spot.x), top + Rig.HUMAN_HEIGHT + 0.22, 0.0)
+		tag.position = Vector3(x, top + Rig.HUMAN_HEIGHT + 0.22, 0.0)
 		tag.visible = false
 		_view.add_child(tag)
-		_stands[int(spot.place)] = {"rig": rig, "name": tag, "top": top}
+		_stands[place] = {"rig": rig, "name": tag, "top": top, "x": x}
 
 
 ## 랭킹 위 셋 `[1위 줄, 2위 줄, 3위 줄]` — 줄은 `Arena.board` 의 랭킹 줄(`name` · `equipped`). 없는 자리는 빈 단

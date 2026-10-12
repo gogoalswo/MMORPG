@@ -425,6 +425,8 @@ var _fitness_panel: FitnessPanel
 var _codex_panel: CodexPanel
 ## 상점 창 — 도감 창과 같은 층(10) · 전체 화면 (store_panel.gd)
 var _store_panel: StorePanel
+## 결투장 창 — 같은 층 · 전체 화면 (arena_panel.gd, docs/features/arena.md)
+var _arena_panel: ArenaPanel
 ## PT 트레이너 창 · 동행 트레이너 모델 (docs/features/trainers.md)
 var _trainer_panel: TrainerPanel
 var _buddy_node: Node3D
@@ -700,6 +702,8 @@ func _on_event(name: StringName, payload: Dictionary) -> void:
 			_fill_rank(payload)
 		&"sandbagRank":
 			_fill_sandbag(payload)
+		&"arenaBoard":
+			_arena_panel.fill(payload)
 		&"sandbagRecord":
 			# 서버에 붙어 있으면 결과창이 먼저 뜨고 최고 기록이 늦게 온다 — 그때 고친다
 			if _dungeon_result.visible:
@@ -2681,6 +2685,7 @@ func _toggle_sandbag() -> void:
 			_codex_panel.close_panel()
 		_store_panel.visible = false
 		_trainer_panel.visible = false
+		_arena_panel.visible = false
 	_sandbag_panel.visible = open
 	if open:
 		_sandbag_note.text = "불러오는 중…"
@@ -3617,6 +3622,8 @@ func _build_skill_bar() -> void:
 		codex_cell,
 		# 샌드백 랭킹전 — 도감 옆 (2026-10-02 요청 "HUD 별도 단추"). 그림은 받침에 선 가죽 샌드백
 		_icon_button("ui_icon_sandbag", "샌드백", _toggle_sandbag, MENU_BTN, true),
+		# 결투장 — 샌드백 옆 (2026-10-12 요청 "HUD에 결투장 버튼", arena.md). 그림(`ui_icon_arena`)은 아직 없어서 글자만 선다
+		_icon_button("ui_icon_arena", "결투장", _toggle_arena, MENU_BTN, true),
 		# 상점 — 샌드백 옆 (2026-10-02 요청, store.md). 그림은 끈 묶은 가죽 돈주머니(`ui_icon_shop`)
 		_icon_button("ui_icon_shop", "상점", _toggle_store, MENU_BTN, true),
 		# PT 트레이너 — 상점 옆 (2026-10-06, trainers.md). 그림은 끈 달린 코치 호루라기(`ui_icon_trainer`)
@@ -5339,6 +5346,19 @@ func _build_gate_panel() -> void:
 	_store_panel.visibility_changed.connect(func(): store_back.visible = _store_panel.visible)
 	top.add_child(_store_panel)
 	_close_button(_store_panel, _toggle_store, 0)
+	# 결투장 창도 같은 층·같은 결이다 → docs/features/arena.md
+	_arena_panel = ArenaPanel.make(_frame_box, _icon)
+	_arena_panel.theme = _ui_root.theme
+	var arena_back := ColorRect.new()
+	arena_back.name = "ArenaBack"
+	arena_back.color = DungeonPanel.CARD_DARK
+	arena_back.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	arena_back.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	arena_back.visible = false
+	top.add_child(arena_back)
+	_arena_panel.visibility_changed.connect(func(): arena_back.visible = _arena_panel.visible)
+	top.add_child(_arena_panel)
+	_close_button(_arena_panel, _toggle_arena, 0)
 	# 뽑기 → 트레이너 — 1회 · 10회 (다이아). 판정은 `Ledger.trainer_draw` → docs/features/trainers.md
 	var rates := PackedStringArray()
 	for g in Trainers.grades():
@@ -5454,6 +5474,7 @@ func _open_gate() -> void:
 	_codex_panel.visible = false
 	_store_panel.visible = false
 	_trainer_panel.visible = false
+	_arena_panel.visible = false
 	_settings_panel.visible = false
 	_gate_panel.open(_shown_zone)
 
@@ -5469,6 +5490,7 @@ func _toggle_dungeon() -> void:
 	_sandbag_panel.visible = false
 	_store_panel.visible = false
 	_trainer_panel.visible = false
+	_arena_panel.visible = false
 	_settings_panel.visible = false
 	_dungeon_panel.entries = _dungeon_entries()
 	_dungeon_panel.open(_shown_zone)
@@ -5500,6 +5522,7 @@ func _toggle_fitness() -> void:
 	_sandbag_panel.visible = false
 	_store_panel.visible = false
 	_trainer_panel.visible = false
+	_arena_panel.visible = false
 	_settings_panel.visible = false
 	_fitness_panel.refresh(_me())
 	_fitness_panel.open()
@@ -5516,6 +5539,7 @@ func _toggle_codex() -> void:
 	_sandbag_panel.visible = false
 	_store_panel.visible = false
 	_trainer_panel.visible = false
+	_arena_panel.visible = false
 	_settings_panel.visible = false
 	_codex_panel.refresh(_me())
 	_codex_panel.open()
@@ -5534,8 +5558,27 @@ func _toggle_store() -> void:
 	if _codex_panel.visible:
 		_codex_panel.close_panel()
 	_trainer_panel.visible = false
+	_arena_panel.visible = false
 	_store_panel.set_diamonds(int(_me().get("diamonds", 0)))
 	_store_panel.open()
+
+
+## 결투장 단추. 열려 있으면 닫는다. 같은 층의 창들을 닫고 열고, 열 때마다 표(순위 · 도전 상대)를 새로 묻는다
+func _toggle_arena() -> void:
+	if _arena_panel.visible:
+		_arena_panel.close_panel()
+		return
+	_gate_panel.visible = false
+	_dungeon_panel.visible = false
+	_fitness_panel.visible = false
+	_sandbag_panel.visible = false
+	_store_panel.visible = false
+	_trainer_panel.visible = false
+	_settings_panel.visible = false
+	if _codex_panel.visible:
+		_codex_panel.close_panel()
+	_arena_panel.open()
+	_transport.send(&"arenaBoard", {})
 
 
 ## 트레이너 단추. 열려 있으면 닫는다. 같은 층의 창들을 닫고 연다 (docs/features/trainers.md)
@@ -5547,6 +5590,7 @@ func _toggle_trainer() -> void:
 	_dungeon_panel.visible = false
 	_fitness_panel.visible = false
 	_sandbag_panel.visible = false
+	_arena_panel.visible = false
 	_store_panel.visible = false
 	_settings_panel.visible = false
 	if _codex_panel.visible:
@@ -5578,6 +5622,7 @@ func _toggle_settings() -> void:
 	_sandbag_panel.visible = false
 	_store_panel.visible = false
 	_trainer_panel.visible = false
+	_arena_panel.visible = false
 	_codex_panel.visible = false
 	_settings_panel.refresh(_me())
 	_settings_panel.open()

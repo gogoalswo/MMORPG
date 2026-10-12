@@ -21,6 +21,8 @@ signal chat(line: Dictionary)
 signal ranked(board: Dictionary)
 ## 샌드백 랭킹전 이번 주 순위 `{top, me, total, week, ends_at}` (docs/features/sandbag.md)
 signal sandbag_ranked(board: Dictionary)
+## 결투장 표 `{ranking, challengers, me, total}` (docs/features/arena.md, `Arena.board`)
+signal arena_listed(board: Dictionary)
 ## 결제 결과 — `{t:"purchased", product, diamonds, already?}` 이거나 `{t:"error", reason, product}`.
 ## **`purchased` 를 받은 뒤에만** 기기가 그 구매를 소모(consume)한다 — 소모해야 같은 상품을 또 산다
 signal purchase_done(result: Dictionary)
@@ -73,6 +75,14 @@ func ask_sandbag_rank() -> bool:
 	if not ready:
 		return false
 	_ws.send_text(JSON.stringify({"t": "sandbagRank"}))
+	return true
+
+
+## 결투장 표(순위 · 도전 상대)를 묻는다 — 답은 `arena_listed` 로 온다
+func ask_arena_board() -> bool:
+	if not ready:
+		return false
+	_ws.send_text(JSON.stringify({"t": "arenaBoard"}))
 	return true
 
 
@@ -160,6 +170,8 @@ func _on_message(raw: Variant) -> void:
 			ranked.emit(message)
 		"sandbagRank":
 			sandbag_ranked.emit(message)
+		"arenaBoard":
+			arena_listed.emit(message)
 		"purchased":
 			replied.emit(message.get("ledger", {}), message.get("events", []))
 			purchase_done.emit(message)

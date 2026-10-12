@@ -58,6 +58,7 @@ static func write(zone_id: String, player: Dictionary) -> void:
 		"trainers": player.get("trainers", {}),
 		"trainer_active": player.get("trainer_active", ""),
 		"sandbag": player.get("sandbag", {}),
+		"arena": player.get("arena", {}),
 		# 던전 하루 입장 `{ 종류 id: {day, count} }` — 없던 칸이라 옛 저장은 빈 사전
 		"dungeon_entries": player.get("dungeon_entries", {}),
 		# 주울 장비 — 등급마다 부위 · 1차 옵션. 없던 칸이라 옛 저장은 다 줍는다(그 전 판의 `loot_skip` … 은 옮겨 읽는다)

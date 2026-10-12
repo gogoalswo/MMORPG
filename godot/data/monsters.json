@@ -1540,6 +1540,26 @@
       "accentColor": "#4a3a2a",
       "scale": 1.3,
       "dummy": true
+    },
+    "duelist": {
+      "id": "duelist",
+      "name": "결투 상대",
+      "level": 1,
+      "maxHp": 1,
+      "attack": 0,
+      "defense": 0,
+      "critResist": 0,
+      "attackRange": 2.2,
+      "attackCooldown": 700,
+      "aggroRange": 99,
+      "leashRange": 99,
+      "moveSpeed": 4.6,
+      "expReward": 0,
+      "look": "varco_fighter",
+      "bodyColor": "#c9a26b",
+      "accentColor": "#5a4630",
+      "scale": 1,
+      "duel": true
     }
   },
   "dropStepBoost": 1.1,
@@ -1560,7 +1580,8 @@
     "mob_beyond3": 2.2,
     "mob_beyond4": 2.2,
     "mob_beyond5": 2.2,
-    "sandbag": 1.2
+    "sandbag": 1.2,
+    "varco_fighter": 1.8
   },
   "heightDefault": 0.9
 }

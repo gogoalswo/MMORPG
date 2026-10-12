@@ -48,6 +48,8 @@ var _landings: Array = []
 ## 둘 다 **죽으면 실패**다. `result` 는 ""(도는 중) · "clear" · "fail" — 정해지면 더 바뀌지 않고,
 ## 정해지는 순간 `dungeonResult` 이벤트 하나가 나가 결과창이 뜬다 → docs/features/dungeons.md "결과창"
 var _run: Dictionary = {}
+## 결투장 — 다음에 열 결투장 존에 세울 상대 복사본 (`start_duel` → `_start_duel`). 세우고 나면 비운다
+var _duel_copy: Dictionary = {}
 
 ## 어느 직업으로 시작하나. 만드는 화면이 없어서 당분간 고정이다
 const DEFAULT_JOB := "fighter"
@@ -331,6 +333,8 @@ func join(player_id: String) -> void:
 		"hunt_focus_at": 0,
 		# 샌드백 랭킹전 `{week, best, unpaid?}` — 그 주 최고 기록 (docs/features/sandbag.md)
 		"sandbag": kept.get("sandbag", {}).duplicate(true),
+		# 결투장 `{score, wins, losses}` (docs/features/arena.md)
+		"arena": kept.get("arena", {}).duplicate(true),
 		# 던전 하루 입장 `{ 종류 id: {day, count} }` (docs/features/dungeons.md "하루 한 번")
 		"dungeon_entries": kept.get("dungeon_entries", {}).duplicate(true),
 		# 주울 장비 — 등급마다 부위 · 1차 옵션. 설정 창 "아이템 → 습득" (`set_loot_grade` · `set_loot_options`).
@@ -343,9 +347,9 @@ func join(player_id: String) -> void:
 		"codex_new": Codex.clean(kept.get("codex_new", {})),
 	}
 	_refresh_stats(_players[player_id])
-	# 샌드백 랭킹전 — 들어오면 샌드백을 보고 선다. 평타는 정면 부채꼴 안만 치므로 등을 지고 서면 헛손질한다
+	# 샌드백 랭킹전 · 결투장 — 들어오면 과녁(상대)을 보고 선다. 평타는 정면 부채꼴 안만 치므로 등을 지고 서면 헛손질한다
 	for monster in _monsters:
-		if bool(monster.get("dummy", false)):
+		if bool(monster.get("dummy", false)) or bool(monster.get("duel", false)):
 			var me: Dictionary = _players[player_id]
 			me.rot = atan2(float(monster.x) - float(me.x), float(monster.z) - float(me.z))
 			break
@@ -372,7 +376,8 @@ func input_move(player_id: String, seq: int, dx: float, dz: float, dt: float) ->
 
 	# **샌드백 존에서는 발을 못 옮긴다** (2026-10-02 요청 "샌드백 입장하면 이동도 내가 못 하게 막아").
 	# 서서 치기만 하는 판이다. `_take_manual` 보다 앞이라 조이스틱을 밀어도 자동사냥이 안 꺼진다
-	if str(_run.get("dungeon", "")) == "sandbag":
+	# 결투장도 같다 — **AI 끼리 싸운다** (2026-10-12 요청 "내가 조종하는게 아니라 AI로 만들어서 서로 싸우게")
+	if str(_run.get("dungeon", "")) in ["sandbag", "arena"]:
 		player.last_seq = seq
 		return
 
@@ -492,7 +497,9 @@ func _move_to(target: String) -> void:
 		join(who)
 		# 마을로 오면 체력을 가득 채운다 (2026-10-02 요청). 죽은 사람은 사망 창의 `revive` 가 채운다
 		var player: Dictionary = _players[who]
-		if (from_dungeon or target == GameData.start_zone()) and not bool(player.get("dead", false)):
+		# 결투장에 들어올 때도 채운다 — 반피로 시작하면 복사본(늘 가득)과 공정하지 않다
+		var refill := from_dungeon or target == GameData.start_zone() or target == Arena.zone()
+		if refill and not bool(player.get("dead", false)):
 			player["hp"] = int(player.stats.maxHp)
 	_events.append({"type": "zone", "zone": target})
 	_check_sandbag_week(Time.get_ticks_msec(), true)
@@ -942,6 +949,9 @@ func _start_run() -> void:
 	if zone_id == Sandbag.zone():
 		_start_sandbag()
 		return
+	if zone_id == Arena.zone():
+		_start_duel()
+		return
 	var stage := GameData.dungeon_stage(zone_id)
 	if stage.is_empty():
 		return
@@ -966,7 +976,7 @@ func _start_run() -> void:
 ## 한 마리 잡았다 — 토벌은 보스면 성공(스킬 경험치는 `Ledger.kill` 이 이미 줬다), 시련은 시간 안이면
 ## 세고 다 채우면 성공(크리스탈은 장부에 청한다)
 func _count_run_kill(player: Dictionary, target: Dictionary, now: int) -> void:
-	if _run.is_empty() or str(_run.result) != "" or str(_run.dungeon) == "sandbag":
+	if _run.is_empty() or str(_run.result) != "" or str(_run.dungeon) in ["sandbag", "arena"]:
 		return
 	if str(_run.dungeon) != "trial":
 		if bool(target.get("boss", false)):
@@ -987,6 +997,9 @@ func _check_run_time(now: int) -> void:
 		return
 	if str(_run.dungeon) == "sandbag":
 		_finish_sandbag()
+		return
+	if str(_run.dungeon) == "arena":
+		_finish_duel_on_time()
 		return
 	_finish_run("fail")
 
@@ -1014,18 +1027,20 @@ func _start_sandbag() -> void:
 ## 자동사냥 단추가 없으므로 판정이 켠다. 매 틱 보는 것은 늦게 들어온 사람도 켜 주기 위해서다.
 ## 끄는 것은 `_finish_sandbag`, 존을 옮기면 `join` 이 끈다
 func _drive_sandbag_auto(now: int) -> void:
-	if str(_run.get("dungeon", "")) != "sandbag" or str(_run.result) != "" or now < int(_run.starts_at):
+	# 결투장도 같은 길 — 카운트가 끝나면 내 쪽 AI(자동사냥)가 상대를 친다
+	if not str(_run.get("dungeon", "")) in ["sandbag", "arena"] or str(_run.result) != "" or now < int(_run.starts_at):
 		return
 	for id in _players:
 		if not bool(_players[id].get("auto", false)):
 			set_auto(id, true)
 
 
-## 샌드백 판에서 손을 묶는가 — **카운트 중이거나 시간이 다 됐다**. 이 동안은 평타·스킬·트레이너가 막힌다
+## 샌드백 · 결투장 판에서 손을 묶는가 — **카운트 중이거나 시간이 다 됐다**. 결투장 상대도 이 동안 선다(`_step_monsters`).
+## 이 동안은 평타·스킬·트레이너가 막힌다
 ## (걷기는 판 내내 `input_move` 가 막는다). 끝난 뒤도 막는 것은 2026-10-08 요청 "시간 0초 되면 공격 멈춰" —
 ## 자동사냥만 끄면 화면이 고른 과녁으로 `attack` 을 계속 보내 결과창 뒤로 휘둘렀다
 func _sandbag_hold(now: int) -> bool:
-	if str(_run.get("dungeon", "")) != "sandbag":
+	if not str(_run.get("dungeon", "")) in ["sandbag", "arena"]:
 		return false
 	return now < int(_run.starts_at) or now >= int(_run.ends_at) or str(_run.result) != ""
 
@@ -1067,6 +1082,75 @@ func _finish_sandbag() -> void:
 	})
 
 
+## --- 결투장 --- (docs/features/arena.md)
+
+## 결투장 창의 [도전] — 서버에서 받은 상대 **복사본**을 들고 결투장 존으로 간다. 이미 결투장이거나 쓰러져 있으면 막는다.
+## 복사본은 판정 쪽이 다시 계산한다 — 창이 보낸 `power` 같은 숫자는 안 쓰고 레벨 · 장비 · 패시브 … 로 `Arena.foe` 가 짓는다
+func start_duel(player_id: String, copy: Dictionary) -> void:
+	var player: Dictionary = _players.get(player_id, {})
+	if player.is_empty() or bool(player.get("dead", false)) or zone_id == Arena.zone() or copy.is_empty():
+		return
+	_duel_copy = copy.duplicate(true)
+	travel(player_id, Arena.zone())
+
+
+## 존을 열 때 — 복사본으로 상대를 세우고 카운트(3초) → 싸우는 시간(60초). 복사본 없이 열렸으면(저장에서
+## 결투장으로 이어 켠 것) 판을 안 연다 — 위쪽 마을가기로 나간다
+func _start_duel() -> void:
+	if _duel_copy.is_empty():
+		return
+	var spot: Array = Arena.table().get("foeSpot", [2.5, -2.5])
+	var foe := Arena.foe(_duel_copy, float(spot[0]), float(spot[1]))
+	_monsters.append(foe)
+	_duel_copy = {}
+	var starts := Time.get_ticks_msec() + Arena.countdown_ms()
+	_run = {
+		"zone": zone_id,
+		"dungeon": "arena",
+		"name": str(zone.get("name", "결투장")),
+		"stage": 0,
+		"skill_exp": 0, "crystals": 0, "protein": 0,
+		"foe": str(foe.name),
+		"foe_id": str(foe.foe_id),
+		"starts_at": starts,
+		"ends_at": starts + Arena.play_ms(),
+		"result": "",
+	}
+
+
+## 시간이 다 됐다 — **남은 체력 비율**이 높은 쪽이 이긴다. 같으면 패배 (도전한 쪽이 끝내야 한다)
+func _finish_duel_on_time() -> void:
+	var mine := 0.0
+	for id in _players:
+		var player: Dictionary = _players[id]
+		mine = float(player.hp) / maxf(1.0, float(player.stats.maxHp))
+	var theirs := 0.0
+	for monster in _monsters:
+		if bool(monster.get("duel", false)):
+			theirs = float(monster.hp) / maxf(1.0, float(monster.max_hp))
+	_finish_duel(mine > theirs)
+
+
+## 결과 — 점수를 장부에 청하고 결과창을 띄운다. 둘 다 멈춘다(`_sandbag_hold` 가 결과 뒤를 본다).
+## 결과창의 점수는 여기서 `Arena.next_score` 로 미리 센다 — 서버에 붙어 있으면 장부 답이 늦게 와도 같은 값이다
+func _finish_duel(won: bool) -> void:
+	if str(_run.get("result", "")) != "":
+		return
+	_run.result = "clear" if won else "fail"
+	var before := Arena.start_score()
+	for id in _players:
+		before = Arena.score_of(_players[id])
+		_ledger_call(_players[id], &"arena_result", [1 if won else 0, str(_run.get("foe_id", ""))])
+		set_auto(id, false)
+	_combos.clear()
+	_zones.clear()
+	_events.append({
+		"type": "dungeonResult", "dungeon": "arena", "name": _run.name, "stage": 0,
+		"result": _run.result, "kills": 0, "need": 0, "skill_exp": 0, "crystals": 0, "protein": 0,
+		"foe": _run.foe, "before": before, "score": Arena.next_score(before, won),
+	})
+
+
 var _next_week_check := 0
 
 ## 지금 주 번호 — 장부의 시계로 (테스트가 바꿔 끼운다)
@@ -1103,6 +1187,9 @@ func _check_sandbag_week(now: int, force := false) -> void:
 ## 던전에서 쓰러졌다 — 어느 던전이든 실패
 func _fail_run_on_death() -> void:
 	if not _run.is_empty() and str(_run.result) == "":
+		if str(_run.dungeon) == "arena":
+			_finish_duel(false)
+			return
 		_finish_run("fail")
 
 
@@ -1156,6 +1243,11 @@ func _step_monsters(delta: float, now: int) -> void:
 	_fill_grid()
 	for monster in _monsters:
 		if int(monster.hp) <= 0 or bool(monster.get("dummy", false)):
+			continue
+		# 결투장 상대는 카운트 동안 · 결과가 난 뒤 선다 (`_sandbag_hold` 가 둘 다 본다). 휘두르던 한 대도 거둔다
+		if bool(monster.get("duel", false)) and _sandbag_hold(now):
+			monster.state = "idle"
+			monster.hit_at = 0
 			continue
 
 		# --- 휘두른 손이 닿는 순간 --- 휘두르기를 알린 뒤 `MONSTER_HIT_DELAY_MS` 가 지나야 피해가
@@ -1463,6 +1555,15 @@ func _hit_player(player: Dictionary, monster: Dictionary, attack: float = -1.0) 
 	# 자동으로 떨어진다. 레벨차 보정 시스템이 따로 필요 없는 이유다 (설계 1장)
 	# 맞는 쪽 K(`damage_taken`) — 후반 감소율이 90% 대까지 올라 방어가 생존을 맡는다
 	var damage := roundi(Stats.damage_taken(power, int(monster.get("level", 1)), float(player.stats.defense)))
+	var crit := false
+	# **결투장 상대는 내가 때릴 때와 같은 식으로 때린다** — 몬스터 쪽 K(`def_k_of`)는 방어가 훨씬 세게 먹어
+	# 같은 레벨 복사본이 거의 못 때렸다. 관통 · 치명타도 내 평타(`_hit_monster`)와 같다 (docs/features/arena.md)
+	if bool(monster.get("duel", false)):
+		var pierced := float(player.stats.defense) * (1.0 - float(monster.get("penetration", 0.0)))
+		damage = roundi(Stats.damage(power, int(monster.get("level", 1)), pierced))
+		crit = Combat.roll_crit(float(monster.get("crit", 0.0)), _rng.randf())
+		if crit:
+			damage = roundi(damage * (1.0 + float(monster.get("crit_damage", 0.0))))
 	if bool(player.get("invincible", false)):
 		damage = 0
 	player.hp = maxi(0, int(player.hp) - damage)
@@ -1472,7 +1573,7 @@ func _hit_player(player: Dictionary, monster: Dictionary, attack: float = -1.0) 
 		"target_kind": "player",
 		"source": monster.id,
 		"amount": damage,
-		"crit": false,
+		"crit": crit,
 		"killed": int(player.hp) <= 0,
 		"x": player.x,
 		"z": player.z,
@@ -1614,7 +1715,8 @@ func restore(player_id: String) -> bool:
 	# **하루 한 번인 던전 안에서 끝냈으면 그 자리로 돌아가지 않는다** — 다시 열면 몬스터가 새로 서서
 	# 깬 뒤 안에서 저장했으면 입장을 안 쓰고 한 판을 더 하게 된다. 못 깼으면 입장이 남아 있어 다시 들어가면 된다
 	var daily_dungeon := int(GameData.dungeon_type_of(zone_saved).get("daily", 0)) > 0
-	if all.has(zone_saved) and zone_saved != zone_id and not daily_dungeon:
+	# 결투장도 이어 켜지 않는다 — 상대 복사본은 저장에 없어서 빈 결투장에 선다 (docs/features/arena.md)
+	if all.has(zone_saved) and zone_saved != zone_id and not daily_dungeon and zone_saved != Arena.zone():
 		open(zone_saved)
 	join(player_id)
 
@@ -1701,6 +1803,9 @@ func restore(player_id: String) -> bool:
 	# 샌드백 랭킹전 — 없던 칸이라 옛 저장은 빈 사전. 주가 지났으면 `_check_sandbag_week` 가 정산한다
 	var raw_sandbag: Variant = saved.get("sandbag", {})
 	player.sandbag = Ledger.from_json(raw_sandbag) if raw_sandbag is Dictionary else {}
+	# 결투장 — 없던 칸이라 옛 저장은 빈 사전 (점수는 시작 점수)
+	var raw_arena: Variant = saved.get("arena", {})
+	player.arena = Ledger.from_json(raw_arena) if raw_arena is Dictionary else {}
 	# 던전 하루 입장 — 없던 칸이라 옛 저장은 빈 사전
 	var raw_entries: Variant = saved.get("dungeon_entries", {})
 	player.dungeon_entries = Ledger.from_json(raw_entries) if raw_entries is Dictionary else {}
@@ -1836,6 +1941,9 @@ func _potion_rule(key: String, fallback: float) -> float:
 func drink_potion(player_id: String, auto := false) -> void:
 	var player: Dictionary = _players.get(player_id, {})
 	if player.is_empty() or bool(player.dead):
+		return
+	# 결투장에서는 못 마신다 — 상대 복사본은 물약이 없다 (화면도 물약 칸을 숨긴다)
+	if str(_run.get("dungeon", "")) == "arena":
 		return
 	var now := Time.get_ticks_msec()
 	if now < int(player.get("potion_ready_at", 0)):
@@ -2698,7 +2806,10 @@ func _hit_monster(player: Dictionary, target: Dictionary, attack: float, skill_i
 	})
 	if dummy:
 		return
-	if target.hp <= 0:
+	# 결투장 상대가 쓰러지면 처치(보상)가 아니라 **승리**다 — 되살아나지도 않는다(`respawn_at` 0)
+	if target.hp <= 0 and bool(target.get("duel", false)):
+		_finish_duel(true)
+	elif target.hp <= 0:
 		_kill(player, target, Time.get_ticks_msec())
 	# **맞으면 때린 사람을 쫓는다** (2026-09-29) — 어그로를 3m 로 좁혀서, 이게 없으면 멀리서
 	# 쏘는 동안 몬스터가 가만히 서 있다. 이미 쫓는 대상이 있거나 집으로 돌아가는 중이면 그대로 둔다

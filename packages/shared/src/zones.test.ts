@@ -8,6 +8,7 @@ import {
 } from './dungeons.ts';
 import { MONSTER_KINDS, tierLevels } from './monsters.ts';
 import { SANDBAG_KIND, SANDBAG_ZONE } from './sandbag.ts';
+import { ARENA_ZONE } from './arena.ts';
 import { GROUND_KINDS } from './zone.ts';
 import { MONSTER_GAP, monsterRadius, scatterSpawn, zoneHalfSize, type Solid } from './movement.ts';
 
@@ -81,6 +82,8 @@ test('차원문 목록이 세상의 모든 존을 덮는다', () => {
     ...DUNGEON_ZONES,
     // 샌드백 랭킹전은 HUD 단추로 간다 (sandbag.ts)
     SANDBAG_ZONE,
+    // 결투장은 결투장 창의 [도전] 으로 간다 (arena.ts)
+    ARENA_ZONE,
   ]);
   assert.deepEqual([...reachable].sort(), Object.keys(ZONES).sort());
 });
@@ -178,7 +181,7 @@ test('차원문이 사냥터 말고는 모든 존에 있다', () => {
   const trials = new Set(DUNGEON_TYPES.find((t) => t.id === 'trial')!.stages.map((s) => s.zone));
   // 샌드백 랭킹전도 없다 — 결과창 "확인" 이 마을로 보낸다 (sandbag.ts)
   const without = Object.values(ZONES).filter(
-    (z) => !z.gate && !fields.has(z.id) && !trials.has(z.id) && z.id !== SANDBAG_ZONE
+    (z) => !z.gate && !fields.has(z.id) && !trials.has(z.id) && z.id !== SANDBAG_ZONE && z.id !== ARENA_ZONE
   );
   assert.deepEqual(without.map((z) => z.id), [], '차원문이 없는 존이 있다');
   const withGate = FIELD_ORDER.filter((id) => getZone(id).gate);

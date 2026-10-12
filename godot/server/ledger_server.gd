@@ -58,6 +58,8 @@ const OPS := {
 	# PT 트레이너 — 뽑기 횟수(1 · 10, 다이아는 장부가 다시 센다 · 확률은 서버가 굴린다) / 동행 id("" 면 돌려보냄)
 	"trainer_draw": "i",
 	"trainer_pick": "s",
+	# 결투장 — 이겼나(1/0) · 상대 id. 서버는 결투장에 들어와 카운트가 지났는지 · 한 판 한 번인지 본다 (`_check_arena`)
+	"arena_result": "is",
 	# 합성 — 칸에 등록한 트레이너 id 목록(3장씩 한 번 도전). 등급·여분·칸 수는 장부가 다시 보고 확률은 서버가 굴린다
 	"trainer_fuse": "w",
 }
@@ -211,6 +213,12 @@ func _op(session: Dictionary, message: Dictionary) -> Dictionary:
 				return _error(req, why)
 			ledger.callv(op, [account.ledger] + args)
 			_touch_sandbag(account)
+		"arena_result":
+			var why := _check_arena(account)
+			if not why.is_empty():
+				print("결투 거절 %s %s" % [account.id, why])
+				return _error(req, why)
+			ledger.callv(op, [account.ledger] + args)
 		"enter":
 			var locked := _enter(account, str(args[0]))
 			if not locked.is_empty():
@@ -334,6 +342,21 @@ func _check_sandbag(account: Dictionary, damage: int) -> String:
 	if float(damage) > KillCheck.max_damage(account.ledger, kind, float(Sandbag.play_ms())):
 		return "too_much"
 	hunt["sandbag_claimed"] = true
+	return ""
+
+
+## 결투장 결과를 믿는 근거 (docs/features/arena.md) — 결투장 존에 들어와 카운트가 지났나, 한 번 들어와 한 판만.
+## **누가 이겼는지는 못 본다** — 싸움이 기기에 있다. 상대가 더미인 동안은 이것으로 둔다
+func _check_arena(account: Dictionary) -> String:
+	var hunt: Dictionary = _hunts.get(account.id, {})
+	if hunt.is_empty() or str(hunt.zone) != Arena.zone():
+		return "wrong_zone"
+	if bool(hunt.get("arena_claimed", false)):
+		return "claimed"
+	var elapsed := float(int(clock.call()) - int(hunt.entered_at))
+	if elapsed + KillCheck.SLACK_MS < float(Arena.countdown_ms()):
+		return "too_early"
+	hunt["arena_claimed"] = true
 	return ""
 
 

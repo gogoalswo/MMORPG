@@ -344,6 +344,18 @@
       }
     ]
   },
+  "arena": {
+    "zone": "arena",
+    "countdown": 3,
+    "seconds": 60,
+    "foeSpot": [
+      2.5,
+      -2.5
+    ],
+    "startScore": 1000,
+    "winScore": 20,
+    "loseScore": 10
+  },
   "zones": {
     "village": {
       "id": "village",
@@ -10721,6 +10733,26 @@
           "respawnMs": 900000
         }
       ],
+      "env": {
+        "skyColor": "#2a2530",
+        "sunIntensity": 1.2,
+        "hemiIntensity": 0.6,
+        "grassDark": "#2a2830",
+        "grassLight": "#3a3640",
+        "ground": "cobble",
+        "groundTint": "#4a4550"
+      }
+    },
+    "arena": {
+      "id": "arena",
+      "name": "결투장",
+      "size": 30,
+      "spawns": {
+        "default": [
+          -2.5,
+          2.5
+        ]
+      },
       "env": {
         "skyColor": "#2a2530",
         "sunIntensity": 1.2,

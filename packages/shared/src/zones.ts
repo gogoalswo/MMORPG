@@ -3,6 +3,7 @@ import { MONSTER_KINDS, beyondIdFor, monsterIdFor, tierLevels } from './monsters
 import { dropGradesFor } from './items.ts';
 import { dungeonZones } from './dungeons.ts';
 import { SANDBAG_ZONE_DEF } from './sandbag.ts';
+import { ARENA_ZONE_DEF } from './arena.ts';
 
 /**
  * 존 배치.
@@ -257,6 +258,8 @@ export const ZONES: Record<string, ZoneDef> = {
   ...Object.fromEntries(dungeonZones(gateFor).map((zone) => [zone.id, zone])),
   // 샌드백 랭킹전 — HUD 단추로만 간다. 차원문 없이 결과창 "확인" 이 마을로 보낸다 (sandbag.ts)
   [SANDBAG_ZONE_DEF.id]: SANDBAG_ZONE_DEF,
+  // 결투장 — 결투장 창의 [도전] 으로만 간다. 결과창 "확인" 이 마을로 보낸다 (arena.ts)
+  [ARENA_ZONE_DEF.id]: ARENA_ZONE_DEF,
 };
 
 export const START_ZONE = VILLAGE.id;

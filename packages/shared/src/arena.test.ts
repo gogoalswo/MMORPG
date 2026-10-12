@@ -21,9 +21,9 @@ test('결투장 존 — 표에 몬스터가 없다 (상대는 도전할 때 세�
   assert.equal(ARENA_FOE_KIND.duel, true);
 });
 
-test('둘은 맵 안에서 떨어져 선다 — 날라차기 거리(4 ~ 10m)', () => {
+test('둘은 붙어서 선다 — 둘 다 걷지 않고 바로 치는 거리(사거리 안)', () => {
   const gap = Math.hypot(ARENA_FOE_SPOT[0] - ARENA_PLAYER_SPOT[0], ARENA_FOE_SPOT[1] - ARENA_PLAYER_SPOT[1]);
-  assert.ok(gap >= 4 && gap <= 10, `거리 ${gap}`);
+  assert.ok(gap <= ARENA_FOE_KIND.attackRange, `거리 ${gap}`);
 });
 
 test('점수 — 이기면 오르고 지면 내리고 0 아래로는 안 간다', () => {

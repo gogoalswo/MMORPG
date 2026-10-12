@@ -27,11 +27,13 @@ export const ARENA_WIN_SCORE = 20;
 export const ARENA_LOSE_SCORE = 10;
 
 /**
- * 둘은 **화면에서 마주 선다** — 카메라가 남동쪽 45° 에서 보므로 화면 오른쪽이 +x·-z 대각선이다
- * (샌드백 자리와 같은 방향). 가운데 거리 약 7m — 날라차기(4 ~ 10m)로 붙는다
+ * 둘은 **붙어서 마주 선 채 시작한다** — 샌드백 자리(sandbag.ts `SANDBAG_PLAYER_SPOT` · `SANDBAG_SPOT`)와 같다.
+ * 카메라가 남동쪽 45° 에서 보므로 화면에서 좌우로 나란히다. 가운데 거리 1.8m 는 격투가 사거리(2.2)보다 짧아
+ * 둘 다 걷지 않고 바로 친다 (2026-10-12 요청 "샌드백처럼 서로 붙어있는 상태에서 시작하도록". 처음엔 7m 떨어져
+ * 날라차기로 붙었다)
  */
-export const ARENA_PLAYER_SPOT: [number, number] = [-2.5, 2.5];
-export const ARENA_FOE_SPOT: [number, number] = [2.5, -2.5];
+export const ARENA_PLAYER_SPOT: [number, number] = [-0.64, 0.64];
+export const ARENA_FOE_SPOT: [number, number] = [0.64, -0.64];
 
 /**
  * 상대의 틀 — 수치(체력 · 공격력 · 방어력 · 치명타 · 공속)는 **복사본의 장부로** 고도 `Arena.foe` 가 덮어쓴다.

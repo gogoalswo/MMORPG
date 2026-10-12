@@ -130,8 +130,12 @@ func _case_duel_start() -> void:
 	if int(me.hp) != int(me.stats.maxHp):
 		_fail("결투장에 들어오면 체력이 가득해야 한다: %d / %d" % [int(me.hp), int(me.stats.maxHp)])
 	var gap := Vector2(float(foe.x) - float(me.x), float(foe.z) - float(me.z)).length()
-	if gap < 4.0 or gap > 10.0:
-		_fail("둘 사이가 날라차기 거리(4 ~ 10m) 밖: %.1f" % gap)
+	# 샌드백처럼 붙어서 시작한다 — 둘 다 걷지 않고 바로 친다 (2026-10-12 요청)
+	if gap > float(foe.attack_range) or gap > float(me.stats.attackRange):
+		_fail("둘이 붙어 있지 않다(사거리 밖): %.1f" % gap)
+	var facing := atan2(float(me.x) - float(foe.x), float(me.z) - float(foe.z))
+	if absf(wrapf(float(foe.rot) - facing, -PI, PI)) > 0.01:
+		_fail("상대가 나를 보고 서 있지 않다")
 	# 이미 결투장이면 또 도전할 수 없다
 	w.start_duel("me", Arena.dummies(30)[1])
 	if str(_foe(w).name) != str(copy.name):
@@ -159,14 +163,17 @@ func _case_duel_countdown() -> void:
 	w.drink_potion("me")
 	if int(me.hp) != 10:
 		_fail("결투장에서 물약을 마셨다")
-	# 카운트가 끝나면 둘 다 움직인다 — 나는 자동사냥, 상대는 쫓아온다
+	# 카운트가 끝나면 둘 다 친다 — 나는 자동사냥, 상대는 붙어 있으니 걷지 않고 바로 휘두른다
 	w.snapshot().dungeon.starts_at = Time.get_ticks_msec() - 1
+	var swung := false
 	for i in 5:
 		w.step(0.1)
+		if not _events_of(w.drain_events(), "mobSwing").is_empty():
+			swung = true
 	if not bool(me.auto):
 		_fail("카운트가 끝났는데 자동이 안 켜졌다")
-	if Vector2(float(foe.x), float(foe.z)).distance_to(at) < 0.1:
-		_fail("카운트가 끝났는데 상대가 안 다가왔다")
+	if not swung:
+		_fail("카운트가 끝났는데 상대가 안 휘둘렀다")
 	# 걸어도 자동은 그대로다 (사람이 몰지 않는다)
 	w.input_move("me", 2, 0.0, 1.0, 0.5)
 	if not bool(me.auto):

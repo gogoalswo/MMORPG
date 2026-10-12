@@ -312,6 +312,10 @@ const MOB_BAR_MS := 5000
 ## 켠다** — 상태(`attack`)로 틀면 사거리 안에 서 있는 내내 3.73초짜리 클립이
 ## 준비 자세부터 감겨, 맞고 있는 동안 한 번도 안 휘두르는 것으로 보인다 (2026-09-24)
 var _mob_swing_until: Dictionary = {}
+## 결투장 상대의 발차기 — 내 평타와 같은 규칙으로 고른다 (`_foe_kick_clip`, docs/features/arena.md)
+var _foe_clip := KICK_FULL
+var _foe_last_kick_at := -100000
+var _foe_kick_to_a := true
 ## 오우거 `Attack` 에서 첫 할퀴기가 시작되는 자리(초). 손이 닿는 건 1.00초라, 판정이 휘두르기를
 ## 알리고 0.2초 뒤(`monsterHitDelayMs`)에 피해를 넣는다. 저레벨 여섯(mob_moves.py)도 1.00 에 친다. 길이는 서버 경직
 ## (`monsterSwingMs` 0.65초)과 같다 → docs/features/characters-and-animation.md
@@ -6289,6 +6293,21 @@ func _buddy_kick_clip(interval_ms: int) -> String:
 	return clip
 
 
+## 결투장 상대 발차기 고르기 — `_kick_clip` 과 같은 규칙. 상태만 상대 것을 따로 쓴다
+func _foe_kick_clip(interval_ms: int) -> String:
+	var now := Time.get_ticks_msec()
+	var chained := now - _foe_last_kick_at <= int(interval_ms * 1.5)
+	_foe_last_kick_at = now
+	if 1000.0 / maxf(1.0, interval_ms) < KICK_CHAIN_HITS:
+		return KICK_FULL
+	if not chained:
+		_foe_kick_to_a = true
+		return KICK_IN
+	var clip := KICK_A if _foe_kick_to_a else KICK_B
+	_foe_kick_to_a = not _foe_kick_to_a
+	return clip
+
+
 func _start_move(clip: String, speed := 1.0) -> void:
 	if not _player is Rig:
 		return
@@ -6439,7 +6458,10 @@ func _draw_state() -> void:
 			# 휘두르기는 **창 끝까지 무조건** 튼다 — 사람이 한 발 물러난 것 때문에
 			# 끊으면 휘두르다 만 채로 동작이 사라진 것으로만 보인다
 			if Time.get_ticks_msec() < int(_mob_swing_until.get(monster.id, 0)):
-				node.play("Attack", 1.0, MOB_SWING_FROM)
+				if bool(monster.get("duel", false)):
+					node.play(_foe_clip, float(monster.get("swing_speed", 1.0)))
+				else:
+					node.play("Attack", 1.0, MOB_SWING_FROM)
 			elif state == "chase":
 				node.play("Run")
 			elif state == "patrol":
@@ -6547,6 +6569,18 @@ func _show_hit(payload: Dictionary) -> void:
 func _swing_mob(id: String) -> void:
 	var node: Node3D = _mob_nodes.get(id, null)
 	if id == "" or not node is Rig:
+		return
+	# 결투장 상대는 **내 연속 앞차기**를 공속 배속으로 찬다 (2026-10-12 요청 "상대 공격 동작도 내 연속 앞차기로
+	# 바꿔"). 클립 0.9초 ÷ 배속 = 다음 대까지의 간격이라 다음 대가 올 때 끝난다 — 동행 트레이너와 같은 길
+	var monster := _find_mob(_transport.snapshot(), id)
+	if bool(monster.get("duel", false)):
+		var rig := node as Rig
+		var speed := maxf(0.01, float(monster.get("swing_speed", 1.0)))
+		_foe_clip = _foe_kick_clip(int(monster.get("attack_cooldown", 900)))
+		if not rig.has_clip(_foe_clip):
+			_foe_clip = "Attack"
+		_mob_swing_until[id] = Time.get_ticks_msec() + int(rig.clip_length(_foe_clip) / speed * 1000.0)
+		rig.play(_foe_clip, speed, 0.0, true)
 		return
 	var swing_ms := int(GameData.combat().get("monsterSwingMs", 650))
 	_mob_swing_until[id] = Time.get_ticks_msec() + swing_ms

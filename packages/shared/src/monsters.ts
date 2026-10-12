@@ -51,6 +51,8 @@ export interface MonsterKind {
   aoe?: MonsterAoe;
   /** 과녁 — 안 죽고 안 움직이고 안 때린다. 샌드백 랭킹전의 샌드백뿐이다 (sandbag.ts) */
   dummy?: boolean;
+  /** 결투장 상대 — 수치는 복사본 장부로 덮어쓰고, 쓰러지면 처치가 아니라 승리다 (arena.ts) */
+  duel?: boolean;
 }
 
 /**

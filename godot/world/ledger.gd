@@ -17,7 +17,7 @@ extends RefCounted
 const KEYS := [
 	"job", "level", "exp", "gold", "skills", "skill_points", "passives",
 	"skill_upgrades", "skill_upgrade_exp", "skill_exp", "bag", "equipped", "granted",
-	"diamonds", "proteins", "fitness", "codex", "sandbag", "dungeon_entries", "loot_slots", "loot_options",
+	"diamonds", "proteins", "fitness", "codex", "sandbag", "arena", "dungeon_entries", "loot_slots", "loot_options",
 	"codex_auto", "codex_auto_options", "codex_new",
 	# PT 트레이너 (docs/features/trainers.md) — `{ id: 개수 }` · 동행 id
 	"trainers", "trainer_active",
@@ -53,6 +53,8 @@ static func fresh(job: String) -> Dictionary:
 		"codex": {},
 		# 샌드백 랭킹전 (docs/features/sandbag.md) — `{week, best, unpaid?}` 그 주 최고 기록과 못 받은 주간 보상
 		"sandbag": {},
+		# 결투장 (docs/features/arena.md) — `{score, wins, losses}`. 한 판도 안 했으면 비어 있다(점수는 시작 점수)
+		"arena": {},
 		# 던전 하루 입장 (docs/features/dungeons.md "하루 한 번") — `{ 종류 id: {day, count} }`
 		"dungeon_entries": {},
 		# 주울 장비 `{ "등급": [부위, …] }` · `{ "등급": [1차 옵션 종류, …] }` — 설정 창 "아이템 → 습득"
@@ -354,6 +356,23 @@ func sandbag_pay(p: Dictionary) -> void:
 	events.append({
 		"type": "sandbagReward", "week": int(unpaid.get("week", 0)), "rank": int(unpaid.get("rank", 0)),
 		"best": int(unpaid.get("best", 0)), "crystals": count,
+	})
+
+
+## --- 결투장 (docs/features/arena.md) ---
+
+## 결투 한 판의 결과 — 이기면 점수가 오르고 지면 내린다 (`Arena.next_score`). 상대(`foe`)는 지금 더미라
+## 상대 점수는 안 건드린다. 서버는 그 존에 들어와 카운트가 지났는지 · 한 판 한 번인지 먼저 본다 (`_check_arena`)
+func arena_result(p: Dictionary, won: int, foe: String) -> void:
+	var mine: Dictionary = p.get("arena", {}).duplicate()
+	var before := Arena.score_of(p)
+	var win := won != 0
+	mine["score"] = Arena.next_score(before, win)
+	mine["wins"] = int(mine.get("wins", 0)) + (1 if win else 0)
+	mine["losses"] = int(mine.get("losses", 0)) + (0 if win else 1)
+	p.arena = mine
+	events.append({
+		"type": "arenaResult", "won": win, "foe": foe, "before": before, "score": int(mine.score),
 	})
 
 

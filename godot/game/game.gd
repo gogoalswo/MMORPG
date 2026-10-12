@@ -2762,6 +2762,10 @@ func _draw_sandbag_hud(run: Dictionary) -> void:
 		return
 	_sandbag_count.text = "시작!"
 	var left := maxi(0, int(run.get("ends_at", 0)) - now)
+	# 결투장은 같은 카운트 · 시계 줄에 상대 이름을 적는다 (docs/features/arena.md)
+	if str(run.get("dungeon", "")) == "arena":
+		_trial_hud.text = "남은 시간 %d초   VS %s" % [ceili(left / 1000.0), str(run.get("foe", ""))]
+		return
 	_trial_hud.text = "남은 시간 %d초   누적 피해 %s" % [ceili(left / 1000.0), DungeonResult.comma(int(run.get("damage", 0)))]
 
 
@@ -5349,6 +5353,7 @@ func _build_gate_panel() -> void:
 	# 결투장 창도 같은 층·같은 결이다 → docs/features/arena.md
 	_arena_panel = ArenaPanel.make(_frame_box, _icon)
 	_arena_panel.theme = _ui_root.theme
+	_arena_panel.challenge_requested.connect(_on_arena_challenge)
 	var arena_back := ColorRect.new()
 	arena_back.name = "ArenaBack"
 	arena_back.color = DungeonPanel.CARD_DARK
@@ -5581,6 +5586,16 @@ func _toggle_arena() -> void:
 	_transport.send(&"arenaBoard", {})
 
 
+## 결투장 [도전] — 창을 닫고 받은 상대 복사본을 들고 결투장으로 (`World.start_duel` 이 다시 본다).
+## 쓰러져 있으면 창의 안내 줄에 적고 그대로 둔다
+func _on_arena_challenge(foe: Dictionary) -> void:
+	if _am_dead():
+		_arena_panel.show_notice("쓰러져 있어 도전할 수 없습니다.")
+		return
+	_arena_panel.close_panel()
+	_transport.send(&"arenaDuel", {"foe": foe})
+
+
 ## 트레이너 단추. 열려 있으면 닫는다. 같은 층의 창들을 닫고 연다 (docs/features/trainers.md)
 func _toggle_trainer() -> void:
 	if _trainer_panel.visible:
@@ -5654,7 +5669,7 @@ func _draw_trial_hud() -> void:
 	if _trial_hud == null:
 		return
 	var trial: Dictionary = _transport.snapshot().get("dungeon", {})
-	if str(trial.get("dungeon", "")) == "sandbag":
+	if str(trial.get("dungeon", "")) in ["sandbag", "arena"]:
 		_draw_sandbag_hud(trial)
 		return
 	if _sandbag_count != null:
@@ -5678,7 +5693,8 @@ func _refresh_home_button() -> void:
 func _refresh_sandbag_dock() -> void:
 	if _auto_cell == null:
 		return
-	var shown := _shown_zone != Sandbag.zone()
+	# 결투장도 숨긴다 — 상대 복사본은 물약이 없고(`World.drink_potion` 이 막는다), 싸움은 판정이 저절로 한다
+	var shown := not _shown_zone in [Sandbag.zone(), Arena.zone()]
 	for node in [_potion_seat, _potion_gap, _auto_gap, _auto_cell]:
 		node.visible = shown
 	if not shown:
@@ -5880,7 +5896,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		# **샌드백 존에서는 화면을 눌러도 아무 일 없다** (2026-10-02 요청 "이동 이펙트도 안 나오게 만들고,
 		# 샌드백도 선택 못 하게"). 판정이 걷기를 막으니(`World.input_move`) 땅을 눌러 걸을 일도, 고리를 세울
 		# 일도 없다. 누르고 있기(`_holding`)도 여기서 안 서므로 클릭 이펙트가 다시 뜨지 않는다
-		if _shown_zone == Sandbag.zone():
+		# 결투장도 같다 — AI 끼리 싸우는 판이다 (docs/features/arena.md)
+		if _shown_zone in [Sandbag.zone(), Arena.zone()]:
 			return
 		var hit := _ground_point(event.position)
 		if hit == Vector3.INF:

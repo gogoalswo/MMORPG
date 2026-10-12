@@ -14,10 +14,11 @@ extends PanelContainer
 ##   │ 랭킹 (끌어 굴린다)    │                                                     │
 ##   │ 1 푸른늑대  1,490     │                                                     │
 ##
-## 표는 `arenaBoard` 답 하나(`Arena.board`) — 서버가 있으면 서버, 없으면 로컬이 짓는다. **결투는 아직 없다** —
-## 도전을 누르면 안내 줄만 바뀐다 (`challenge_requested` 는 결투를 붙일 때 `game.gd` 가 받는다).
+## 표는 `arenaBoard` 답 하나(`Arena.board`) — 서버가 있으면 서버, 없으면 로컬이 짓는다. 도전을 누르면 그 줄
+## (**상대 복사본**)을 `challenge_requested` 로 넘긴다 — `game.gd` 가 창을 닫고 결투장으로 보낸다 (`World.start_duel`).
+## 못 가는 때(쓰러져 있음)는 `game.gd` 가 안내 줄(`show_notice`)에 적는다
 
-signal challenge_requested(id: String)
+signal challenge_requested(foe: Dictionary)
 
 const STONE_IN := 30
 const SIDE_WIDTH := 440.0
@@ -205,6 +206,10 @@ func notice_text() -> String:
 	return _notice.text
 
 
+func show_notice(text: String) -> void:
+	_notice.text = text
+
+
 ## 랭킹 한 줄 — 순위 · 이름 · 점수. 1~3위 밝은 금빛, 내 줄 청록
 func _rank_row(row: Dictionary) -> Control:
 	var rank := int(row.get("rank", 0))
@@ -273,11 +278,8 @@ func _challenger_row(row: Dictionary) -> Control:
 	hit.focus_mode = Control.FOCUS_NONE
 	for state in ["normal", "hover", "pressed", "focus", "disabled"]:
 		hit.add_theme_stylebox_override(state, StyleBoxEmpty.new())
-	var id := str(row.get("id", ""))
-	var label := str(row.get("name", ""))
-	hit.pressed.connect(func() -> void:
-		_notice.text = "%s 님과의 결투는 준비 중입니다." % label
-		challenge_requested.emit(id))
+	var copy := row.duplicate(true)
+	hit.pressed.connect(func() -> void: challenge_requested.emit(copy))
 	card.add_child(hit)
 	return card
 

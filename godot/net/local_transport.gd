@@ -115,6 +115,9 @@ func send(message: StringName, payload: Dictionary) -> void:
 			_server.ask_rank()
 		return
 	match message:
+		# 결투장 [도전] — 받은 상대 복사본을 들고 결투장으로 (docs/features/arena.md)
+		&"arenaDuel":
+			_world.start_duel(MY_ID, payload.get("foe", {}))
 		&"input":
 			_world.input_move(
 				MY_ID,

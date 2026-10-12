@@ -40,6 +40,8 @@ export const BEAST_HEIGHT: Record<string, number> = {
   mob_beyond5: 2.2,
   // 샌드백 랭킹전의 과녁 (2026-10-02) — 사람(1.8)의 어깨께. `scale`(1.3)이 곱해진다
   sandbag: 1.2,
+  // 결투장 상대 (2026-10-12) — 내 캐릭터와 같은 모델 · 같은 키(1.8, 고도 `Rig.HUMAN_HEIGHT`)
+  varco_fighter: 1.8,
 };
 export const BEAST_HEIGHT_DEFAULT = 0.9;
 

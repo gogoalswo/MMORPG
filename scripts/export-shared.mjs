@@ -117,6 +117,16 @@ import {
   DAY_SECONDS,
   SANDBAG_HISTORY_DAYS,
 } from '../packages/shared/src/sandbag.ts';
+import {
+  ARENA_ZONE,
+  ARENA_FOE_KIND,
+  ARENA_FOE_SPOT,
+  ARENA_COUNTDOWN_SECONDS,
+  ARENA_SECONDS,
+  ARENA_START_SCORE,
+  ARENA_WIN_SCORE,
+  ARENA_LOSE_SCORE,
+} from '../packages/shared/src/arena.ts';
 // `index.ts` 가 gear.ts 를 다시 내보내지 않는다 — 설계 표는 직접 가져온다
 import { GEAR_DROP_RATE } from '../packages/shared/src/gear.ts';
 import {
@@ -157,6 +167,16 @@ export function buildData() {
         historyDays: SANDBAG_HISTORY_DAYS,
         rewards: SANDBAG_REWARDS,
       },
+      // 결투장 (arena.ts) — 존 · 카운트 · 싸우는 시간 · 상대 자리 · 점수
+      arena: {
+        zone: ARENA_ZONE,
+        countdown: ARENA_COUNTDOWN_SECONDS,
+        seconds: ARENA_SECONDS,
+        foeSpot: ARENA_FOE_SPOT,
+        startScore: ARENA_START_SCORE,
+        winScore: ARENA_WIN_SCORE,
+        loseScore: ARENA_LOSE_SCORE,
+      },
       zones: ZONES,
       groundKinds: GROUND_KINDS,
       groundLooks: GROUND_LOOKS,
@@ -168,6 +188,8 @@ export function buildData() {
       kinds: {
         ...Object.fromEntries(Object.entries(MONSTER_KINDS).map(([id, k]) => [id, { ...k, dropSteps: DROP_STEPS[id] ?? [] }])),
         [SANDBAG_KIND.id]: SANDBAG_KIND,
+        // 결투장 상대의 틀 — 수치는 복사본 장부로 덮어쓴다 (arena.ts)
+        [ARENA_FOE_KIND.id]: ARENA_FOE_KIND,
       },
       dropStepBoost: DROP_STEP_BOOST,
       heights: BEAST_HEIGHT,

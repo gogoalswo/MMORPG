@@ -113,6 +113,9 @@ func show_result(event: Dictionary) -> void:
 	if str(event.get("dungeon", "")) == "sandbag":
 		_show_sandbag(event)
 		return
+	if str(event.get("dungeon", "")) == "arena":
+		_show_arena(event)
+		return
 	var clear := str(event.get("result", "")) == "clear"
 	_title.text = "%s %d단계" % [str(event.get("name", "던전")), int(event.get("stage", 0))]
 	_verdict.text = "성공" if clear else "실패"
@@ -152,6 +155,25 @@ func _show_sandbag(event: Dictionary) -> void:
 	_verdict.add_theme_color_override("font_color", TITLE)
 	_count.visible = true
 	show_sandbag_best(int(event.get("best", 0)), bool(event.get("new_best", false)))
+	for child in _rewards.get_children():
+		_rewards.remove_child(child)
+		child.queue_free()
+	_show_rewards(false)
+	visible = true
+
+
+## 결투장 (docs/features/arena.md) — 큰 글자 **승리 / 패배**, 그 밑에 상대와 점수 변화. 보상 칸은 숨긴다
+func _show_arena(event: Dictionary) -> void:
+	var won := str(event.get("result", "")) == "clear"
+	var before := int(event.get("before", 0))
+	var after := int(event.get("score", 0))
+	_title.text = str(event.get("name", "결투장"))
+	_verdict.text = "승리" if won else "패배"
+	_verdict.add_theme_color_override("font_color", OK if won else WARN)
+	_count.visible = true
+	_count.add_theme_color_override("font_color", IVORY)
+	_count.text = "VS %s\n점수 %s → %s (%s%d)" % [
+		str(event.get("foe", "")), comma(before), comma(after), "+" if after >= before else "-", absi(after - before)]
 	for child in _rewards.get_children():
 		_rewards.remove_child(child)
 		child.queue_free()

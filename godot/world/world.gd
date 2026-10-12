@@ -1101,6 +1101,9 @@ func _start_duel() -> void:
 		return
 	var spot: Array = Arena.table().get("foeSpot", [2.5, -2.5])
 	var foe := Arena.foe(_duel_copy, float(spot[0]), float(spot[1]))
+	# 붙어서 마주 선다 — 카운트 동안 상대는 안 움직이므로(`_step_monsters`) 처음부터 내 자리를 보게 둔다
+	var mine: Array = zone.get("spawns", {}).get("default", [0.0, 0.0])
+	foe.rot = atan2(float(mine[0]) - float(foe.x), float(mine[1]) - float(foe.z))
 	_monsters.append(foe)
 	_duel_copy = {}
 	var starts := Time.get_ticks_msec() + Arena.countdown_ms()

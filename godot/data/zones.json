@@ -349,8 +349,8 @@
     "countdown": 3,
     "seconds": 60,
     "foeSpot": [
-      2.5,
-      -2.5
+      0.64,
+      -0.64
     ],
     "startScore": 1000,
     "winScore": 20,
@@ -10749,8 +10749,8 @@
       "size": 30,
       "spawns": {
         "default": [
-          -2.5,
-          2.5
+          -0.64,
+          0.64
         ]
       },
       "env": {

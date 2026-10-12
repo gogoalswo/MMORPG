@@ -69,6 +69,8 @@ func _attach(url: String) -> void:
 		event.emit(&"rank", board))
 	_server.sandbag_ranked.connect(func(board: Dictionary) -> void:
 		event.emit(&"sandbagRank", board))
+	_server.arena_listed.connect(func(board: Dictionary) -> void:
+		event.emit(&"arenaBoard", board))
 	_server.purchase_done.connect(func(result: Dictionary) -> void:
 		event.emit(&"purchase", result))
 	_world.remote = _server
@@ -99,6 +101,13 @@ func send(message: StringName, payload: Dictionary) -> void:
 			_server.ask_sandbag_rank()
 		else:
 			event.emit(&"sandbagRank", _local_sandbag_board())
+		return
+	# 결투장 — 상대 목록은 서버가 준다(복사본). 서버가 없으면 같은 표를 여기서 짓는다 (docs/features/arena.md)
+	if message == &"arenaBoard":
+		if _server != null:
+			_server.ask_arena_board()
+		else:
+			event.emit(&"arenaBoard", _local_arena_board())
 		return
 	# 랭킹도 World 를 거치지 않는다 — 서버만 가진 표다
 	if message == &"rank":
@@ -263,6 +272,12 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_PAUSED:
 		if _world != null:
 			_world.save(MY_ID)
+
+
+## 서버 없이 노는 판의 결투장 표 — 서버 답(`LedgerServer._arena_board`)과 같은 `Arena.board` 다
+func _local_arena_board() -> Dictionary:
+	var me: Dictionary = _world.snapshot().get("players", {}).get(MY_ID, {})
+	return Arena.board(me)
 
 
 ## 서버 없이 노는 판의 샌드백 순위 — 나 하나뿐이다. 이번 주 기록이 있으면 1위, 없으면 순위 없음.

@@ -33,7 +33,10 @@ const EXT_DIR = { glb: 'models', png: 'icons', ttf: 'fonts', ktx2: 'textures', w
 const JOBS = ['fighter'];
 
 /** 일부러 그림 없이 두는 이름 — 코드가 글자로 대신한다. 넣을 때는 이유를 적는다 */
-const NO_ASSET = new Set([]);
+const NO_ASSET = new Set([
+  // 결투장 메뉴 아이콘 (2026-10-12) — 바르코가 이 세션에 인증되지 않아 못 뽑았다. 받으면 빼고 목록에 넣는다 (arena.md)
+  'icons/ui_icon_arena.png',
+]);
 
 const listed = new Set(
   jobs.flatMap((job) => job.names.map((name) => `${basename(job.to)}/${name}`)),

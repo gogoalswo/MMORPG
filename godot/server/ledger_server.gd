@@ -131,6 +131,8 @@ func handle(session: Dictionary, message: Variant) -> Dictionary:
 			return _rank(session)
 		"sandbagRank":
 			return _sandbag_rank(session)
+		"arenaBoard":
+			return _arena_board(session)
 		"purchase":
 			return _purchase(session, message)
 	return _error(message.get("id"), "unknown_type")
@@ -364,6 +366,17 @@ func _sandbag_rank(session: Dictionary) -> Dictionary:
 
 ## 순위 — **레벨 → 경험치**, 둘이 같으면 계정 id 순(늘 같은 순서가 나오게).
 ## 서버가 가진 값으로만 매긴다 — 기기가 보낸 숫자는 없다
+## 결투장 표 — **지금은 더미 50명**(`Arena.board`). 진짜 상대를 붙일 때 다른 계정의 장부를 복사해
+## 여기서 `challengers` 로 싣는다 (docs/features/arena.md)
+func _arena_board(session: Dictionary) -> Dictionary:
+	var account: Dictionary = session.get("account", {})
+	if account.is_empty():
+		return _error(null, "no_hello")
+	var me: Dictionary = account.ledger.duplicate()
+	me["name"] = name_of(account)
+	return Arena.board(me)
+
+
 func _rank(session: Dictionary) -> Dictionary:
 	var account: Dictionary = session.get("account", {})
 	if account.is_empty():

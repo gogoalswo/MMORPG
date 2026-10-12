@@ -34,6 +34,7 @@ const MODELS = [
   'varco_portal.glb', // 차원문 (모든 존의 GATE_SPOT)
   'varco_tomb.glb', // 묘비 — 쓰러진 자리 (tomb.gd)
   'varco_sandbag.glb', // 샌드백 랭킹전의 과녁 (docs/features/sandbag.md) — Rig.FILES 의 `sandbag`
+  'arena_podium.glb', // 결투장 시상대 — 돌 3단 + 금테 (docs/features/arena.md "시상대", `ArenaPodium`)
   // 마을 NPC 7명 — zones.ts 의 NpcDef.look (rig.gd 의 FILES)
   'npc_merchant.glb', 'npc_smith.glb', 'npc_trainer.glb',
   'npc_villager_sack.glb', 'npc_villager_apron.glb', 'npc_villager_hood.glb', 'npc_villager_old.glb',

@@ -43,7 +43,9 @@
 | `godot/net/local_transport.gd` | `arenaBoard`(서버면 `ask_arena_board`, 아니면 `Arena.board(나)`) · `arenaDuel` → `World.start_duel` |
 | `godot/net/server_ledger.gd` | `ask_arena_board` · 신호 `arena_listed` |
 | `godot/game/arena_panel.gd` | `ArenaPanel` — 전체 화면 창. 왼쪽 내 기록 + **시상대** + 랭킹, 오른쪽 도전자 목록 + 안내 줄(`show_notice`). 신호 `challenge_requested(복사본)` |
-| `godot/game/arena_podium.gd` | `ArenaPodium` — 시상대 3D 화면(`SubViewport`). 단 셋(2 · 1 · 3) + 랭킹 위 셋이 장착 정보대로(`dress` → `Rig.set_weapon` · `set_gear`) 서고 머리 위 이름표 |
+| `godot/game/arena_podium.gd` | `ArenaPodium` — 시상대 3D 화면(`SubViewport`). 바르코 돌 3단 시상대(`arena_podium.glb`, 잰 단 윗면 `TIERS`) + 랭킹 위 셋이 장착 정보대로(`dress` → `Rig.set_weapon` · `set_gear`) 서고 머리 위 이름표 |
+| `public/assets/models/arena_podium.glb` | 바르코 시상대 모델 (원화 → 3D, 원점 바닥, 폭 1, 텍스처 1024). 주소는 `fetch-assets.sh` |
+| `public/assets/icons/ui_icon_arena.png` | 메뉴 단추 그림 — 교차한 두 주먹 (HUD 아이콘 기준, 세 장 중 둘째) |
 | `godot/game/game.gd` | 메뉴 칸 "결투장"(샌드백 옆) · `_toggle_arena` · `_on_arena_challenge`(창 닫고 `arenaDuel`, 쓰러져 있으면 안내) · `_unhandled_input`(결투장에선 누르기 무시) · `_refresh_sandbag_dock`(물약·자동사냥 칸 숨김) · `_draw_sandbag_hud`(카운트 · "VS 이름") |
 | `godot/game/dungeon_result.gd` | `_show_arena` — 승리/패배 · VS 이름 · 점수 변화, 보상 칸 숨김 |
 | `scripts/check-godot-assets.mjs` | `NO_ASSET` 에 `icons/ui_icon_arena.png` — 그림이 아직 없다 (아래) |
@@ -158,8 +160,12 @@
 
 - 자리: 왼쪽 칸, **내 기록과 랭킹 사이** — 높이 250 의 작은 3D 화면(`ArenaPodium`, `SubViewportContainer` + 따로 노는 세계 ·
   비치는 바탕). 랭킹이 왼쪽에 있어 위 셋이 바로 아래 목록과 이어진다.
-- 단 셋 — 왼쪽부터 2 · 1 · 3위, 높이 0.42 · 0.62 · 0.30m. 돌빛 상자 + 윗면 금테 + 앞면 금빛 숫자(`Label3D`).
-  **코드로 지은 상자다** — 장비 · 캐릭터 외형이 아니라 받침이라 CLAUDE.md "외형은 바르코로" 밖이다. 바르코 모델로 바꾸려면 단 셋을 갈면 된다.
+- 단 — **바르코 돌 3단 시상대 한 덩이** (같은 날 "단도 바르코로 만들고"; 처음엔 코드로 지은 상자 셋이었다). 고른 모양은 사용자
+  ("돌 3단 시상대 하나"). 원화 두 장 중 금테가 있는 첫째에서 3D 를 뽑았다(둘째는 반듯했지만 금테가 없었다). 앞면 금빛 숫자는 `Label3D`.
+- **단 윗면은 모델에서 쟀다** (`TIERS`) — 정점을 x 로 열두 칸 나눠 칸마다 가장 높은 y: 왼쪽(2위) 0.38 · 가운데(1위) 0.525 ·
+  오른쪽(3위) 0.30 (폭 1 기준). 원화의 왼쪽이 −x 로 들어와 앞면이 +z(카메라 쪽)다. **모델을 갈면 다시 잰다.**
+- 크기 `MODEL_SCALE` (2.6, 1.95, 2.6) — 폭은 2.6m, 높이는 25% 낮췄다. 원화의 단이 사람 키에 비해 높아(1위 단이 폭의 절반)
+  그대로 키우면 1위 단이 1.4m 였다. 지금 1위 1.02 · 2위 0.74 · 3위 0.59m.
 - 단 위에는 내 캐릭터와 같은 모델(`varco_fighter`)이 대기 동작으로 서고, **랭킹 줄의 `equipped` 대로 입는다** — 무기는 등급 · 강화
   (주먹 기운 +5 부터), 갑옷 · 투구 · 신발은 등급 스킨. 게임 속 내 캐릭터(`game.gd` `_wear_weapon`)와 같은 길(`ArenaPodium.dress`).
   내가 3위 안이면 내 장비로 선다 (`Arena.board` 의 내 줄에 `equipped` 를 싣는다).

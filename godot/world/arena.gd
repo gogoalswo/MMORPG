@@ -94,13 +94,27 @@ static func foe(copy: Dictionary, x: float, z: float) -> Dictionary:
 	return monster
 
 
+## 결투장 전투력 — 자동 장착이 견주는 값(`Ledger.gear_power` = 한 대 기대 피해 × 버틸 체력)에 **공속 배수**를 곱한다
+## (2026-10-12 요청 "공속도 넣어서 바꿔"). 배수 = 기본 간격 ÷ 지금 간격 (`Combat.effective_cooldown`) — 내 평타 배속
+## (`swing.speed`)과 같은 값이라 공속 패시브가 없으면 1 이고, 질풍각 끝(초당 10타)이면 9배쯤이다.
+## 자동 장착 값에는 안 넣었다 — 장비에 공속 옵션이 없어 어느 장비를 껴도 같은 배수라 고르는 데 쓸모가 없다
+static func power(p: Dictionary) -> int:
+	var equipped: Dictionary = p.get("equipped", {})
+	var s := World.stats_of(
+		str(p.get("job", "fighter")), int(p.get("level", 1)), equipped, p.get("passives", {}), p.get("fitness", {}),
+		p.get("codex", {}), p.get("trainers", {})
+	)
+	var cooldown := Combat.effective_cooldown(float(s.attackCooldown), float(s.attackSpeed))
+	return roundi(Ledger.gear_power(p, equipped) * float(s.attackCooldown) / maxf(1.0, float(cooldown)))
+
+
 ## i 번째 더미 이름. 앞말은 i % 10, 뒷말은 (⌊i / 10⌋ × 3 + i % 10) % 10 — i < 50 이면 짝이 겹치지 않는다
 static func dummy_name(i: int) -> String:
 	return NAME_HEADS[i % 10] + NAME_TAILS[(floori(i / 10.0) * 3 + i % 10) % 10]
 
 
 ## 더미 상대 50명 — 점수 높은 순. 한 줄은 상대의 **복사본** `{id, name, job, level, score, power}`
-## (`power` 는 자동 장착이 견주는 전투력 `Ledger.gear_power` — 더미는 맨몸이다)
+## (`power` 는 결투장 전투력 `power` — 더미는 맨몸이다)
 static func dummies(my_level: int) -> Array:
 	var max_level := int(GameData.combat().get("maxLevel", 200))
 	var out: Array = []
@@ -113,7 +127,7 @@ static func dummies(my_level: int) -> Array:
 			"level": clampi(my_level + lift, 1, max_level),
 			"score": DUMMY_TOP_SCORE - DUMMY_SCORE_STEP * i,
 		}
-		copy["power"] = roundi(Ledger.gear_power(copy, {}))
+		copy["power"] = power(copy)
 		out.append(copy)
 	return out
 
@@ -125,7 +139,7 @@ static func board(me: Dictionary) -> Dictionary:
 	var mine := {
 		"id": "me", "name": str(me.get("name", "")), "job": str(me.get("job", "fighter")),
 		"level": int(me.get("level", 1)), "score": score_of(me),
-		"power": roundi(Ledger.gear_power(me, me.get("equipped", {}))), "me": true,
+		"power": power(me), "me": true,
 	}
 	var ranking: Array = challengers.duplicate()
 	ranking.append(mine)

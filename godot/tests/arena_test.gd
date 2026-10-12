@@ -65,6 +65,15 @@ func _case_board() -> void:
 		_fail("랭킹 26번째 줄이 내 줄이 아니다")
 	if int(list[0].level) <= int(list[49].level):
 		_fail("점수가 높은 더미가 레벨도 높아야 한다")
+	# 전투력은 공속만큼 곱한다 — 같은 레벨 · 장비라도 질풍각을 배우면 그 배수만큼 오른다 (2026-10-12)
+	var bare := {"job": "fighter", "level": 30, "equipped": {}}
+	var fast := {"job": "fighter", "level": 30, "equipped": {}, "passives": {"gale_kicks": 5}}
+	if Arena.power(bare) != roundi(Ledger.gear_power(bare, {})):
+		_fail("공속 패시브가 없으면 전투력이 자동 장착 값과 같아야 한다: %d / %d" % [Arena.power(bare), roundi(Ledger.gear_power(bare, {}))])
+	var s := World.stats_of("fighter", 30, {}, fast.passives)
+	var mul := float(s.attackCooldown) / float(Combat.effective_cooldown(float(s.attackCooldown), float(s.attackSpeed)))
+	if mul <= 1.0 or Arena.power(fast) != roundi(Ledger.gear_power(fast, {}) * mul):
+		_fail("질풍각 5단 전투력이 공속 배수(%.2f)만큼 안 올랐다: %d / 맨몸 %d" % [mul, Arena.power(fast), Arena.power(bare)])
 	# 장부에 점수가 있으면 그 점수로 선다
 	var high := Arena.board({"name": "나", "job": "fighter", "level": 30, "equipped": {}, "arena": {"score": 2000}})
 	if int(high.me.rank) != 1:

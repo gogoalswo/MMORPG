@@ -412,6 +412,13 @@ func _run() -> void:
 		_fail("결투장에 물약·자동사냥 칸이 남았다")
 	if not game._mob_nodes.has("duel_foe") or not game._mob_nodes["duel_foe"] is Rig:
 		_fail("상대가 캐릭터 모델로 안 섰다")
+	else:
+		# 상대가 휘두르면 내 연속 앞차기(평타 넷 중 하나)를 공속 배속으로 찬다 — 몬스터 할퀴기(`Attack`)가 아니다
+		game._on_event(&"mobSwing", {"id": "duel_foe"})
+		await process_frame
+		var foe_rig: Rig = game._mob_nodes["duel_foe"]
+		if not game._foe_clip in game.SWING_CLIPS or foe_rig._playing != game._foe_clip:
+			_fail("상대 공격 동작이 앞차기가 아니다: 고른 것 '%s' · 트는 것 '%s'" % [game._foe_clip, foe_rig._playing])
 
 	# 이기면 결과창 — 승리 · VS 이름 · 점수 1,000 → 1,020. 확인 → 마을
 	var world: World = game._transport._world

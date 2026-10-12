@@ -88,6 +88,8 @@ static func foe(copy: Dictionary, x: float, z: float) -> Dictionary:
 		"penetration": float(s.get("penetration", 0.0)),
 		"attack_range": float(s.attackRange),
 		"attack_cooldown": float(cooldown),
+		# 화면이 앞차기를 트는 배속 — 기본 간격 / 지금 간격. 내 평타의 `swing.speed` 와 같은 값이다
+		"swing_speed": float(s.attackCooldown) / maxf(1.0, float(cooldown)),
 	}, true)
 	return monster
 

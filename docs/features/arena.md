@@ -42,7 +42,8 @@
 | `godot/server/ledger_server.gd` | `"arenaBoard"` → `_arena_board`(그 계정 장부로 `Arena.board`) · `OPS.arena_result` → `_check_arena`(결투장 · 카운트 지남 · 한 판 한 번) |
 | `godot/net/local_transport.gd` | `arenaBoard`(서버면 `ask_arena_board`, 아니면 `Arena.board(나)`) · `arenaDuel` → `World.start_duel` |
 | `godot/net/server_ledger.gd` | `ask_arena_board` · 신호 `arena_listed` |
-| `godot/game/arena_panel.gd` | `ArenaPanel` — 전체 화면 창. 왼쪽 내 기록 + 랭킹, 오른쪽 도전자 목록 + 안내 줄(`show_notice`). 신호 `challenge_requested(복사본)` |
+| `godot/game/arena_panel.gd` | `ArenaPanel` — 전체 화면 창. 왼쪽 내 기록 + **시상대** + 랭킹, 오른쪽 도전자 목록 + 안내 줄(`show_notice`). 신호 `challenge_requested(복사본)` |
+| `godot/game/arena_podium.gd` | `ArenaPodium` — 시상대 3D 화면(`SubViewport`). 단 셋(2 · 1 · 3) + 랭킹 위 셋이 장착 정보대로(`dress` → `Rig.set_weapon` · `set_gear`) 서고 머리 위 이름표 |
 | `godot/game/game.gd` | 메뉴 칸 "결투장"(샌드백 옆) · `_toggle_arena` · `_on_arena_challenge`(창 닫고 `arenaDuel`, 쓰러져 있으면 안내) · `_unhandled_input`(결투장에선 누르기 무시) · `_refresh_sandbag_dock`(물약·자동사냥 칸 숨김) · `_draw_sandbag_hud`(카운트 · "VS 이름") |
 | `godot/game/dungeon_result.gd` | `_show_arena` — 승리/패배 · VS 이름 · 점수 변화, 보상 칸 숨김 |
 | `scripts/check-godot-assets.mjs` | `NO_ASSET` 에 `icons/ui_icon_arena.png` — 그림이 아직 없다 (아래) |
@@ -85,7 +86,11 @@
   예: 30레벨 맨몸 260 · 질풍각 5단(초당 1.6타) 307 · 200레벨 맨몸 4,406 · 질풍각 끝(초당 9.9타) 13,152.
   처음엔 `gear_power` 그대로라 공속이 빠졌다 — 격투가는 공속이 승부를 크게 가르는데 숫자에 안 보였다.
   **자동 장착 값에는 안 넣었다** — 장비에 공속 옵션이 없어 어느 장비를 껴도 같은 배수라 고르는 데 쓸모가 없다.
-  더미는 맨몸 · 직업 `fighter`.
+  직업은 `fighter`.
+- **더미 장비** ★ (2026-10-12, 시상대 요청 "랭킹 1,2,3위 장착정보 반영해서"로 줬다 — 그 전엔 맨몸) — `Arena.dummy_equipped`:
+  그 레벨로 낄 수 있는 **가장 높은 등급**(`Stats.equip_level`)으로 여섯 부위, 강화는 순위가 높을수록(1위 최대 +9 → 꼴찌 +0), 옵션 없음.
+  가방 장비와 같은 모양이라 전투력 · 결투 능력치(`Arena.foe`) · 시상대 모델이 다 같은 장비를 읽는다. 139레벨 기준 1위 5등급 +9 전투력
+  56,760 · 26위 +4 15,234 · 50위 +0 10,309. 위 셋은 레벨 · 강화가 같아 생김새도 같다(더미라서).
 
 ### 결투 — 상대는 몬스터 칸 하나 ★★
 
@@ -146,6 +151,20 @@
 
 상대 복사본은 저장에 없다 — 결투 중에 끄고 다시 켜면 빈 결투장에 섰다. `World.restore` 가 결투장을 빼고 마을에서 시작한다
 (하루 한 번 던전과 같은 자리).
+
+### 시상대 ★ (2026-10-12)
+
+요청: 결투장 창 스크린샷 + "여기에 랭킹 1,2,3위 장착정보 반영해서 시상대 만들어서 모델링 띄워".
+
+- 자리: 왼쪽 칸, **내 기록과 랭킹 사이** — 높이 250 의 작은 3D 화면(`ArenaPodium`, `SubViewportContainer` + 따로 노는 세계 ·
+  비치는 바탕). 랭킹이 왼쪽에 있어 위 셋이 바로 아래 목록과 이어진다.
+- 단 셋 — 왼쪽부터 2 · 1 · 3위, 높이 0.42 · 0.62 · 0.30m. 돌빛 상자 + 윗면 금테 + 앞면 금빛 숫자(`Label3D`).
+  **코드로 지은 상자다** — 장비 · 캐릭터 외형이 아니라 받침이라 CLAUDE.md "외형은 바르코로" 밖이다. 바르코 모델로 바꾸려면 단 셋을 갈면 된다.
+- 단 위에는 내 캐릭터와 같은 모델(`varco_fighter`)이 대기 동작으로 서고, **랭킹 줄의 `equipped` 대로 입는다** — 무기는 등급 · 강화
+  (주먹 기운 +5 부터), 갑옷 · 투구 · 신발은 등급 스킨. 게임 속 내 캐릭터(`game.gd` `_wear_weapon`)와 같은 길(`ArenaPodium.dress`).
+  내가 3위 안이면 내 장비로 선다 (`Arena.board` 의 내 줄에 `equipped` 를 싣는다).
+- 머리 위에 이름(1위 밝은 금빛). 표를 받을 때마다(`fill`) 다시 입힌다.
+- 확인은 투영으로 — `arena_test` 가 셋의 발 · 머리 · 이름표가 시상대 화면 안에 들어오는지 `Camera3D.unproject_position` 으로 본다.
 
 ### 창 — 전체 화면
 

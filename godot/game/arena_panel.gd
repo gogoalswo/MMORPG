@@ -45,6 +45,8 @@ var _ranking: VBoxContainer
 var _challengers: VBoxContainer
 var _count: Label
 var _notice: Label
+## 랭킹 1 · 2 · 3위가 장착 정보대로 서는 시상대 (`ArenaPodium`, 2026-10-12)
+var _podium: ArenaPodium
 
 
 ## `frame_box` · `icon` 은 `game.gd` 것을 받는다 (상점 창과 같다)
@@ -120,6 +122,9 @@ func _build(frame_box: Callable, icon: Callable) -> void:
 	_me_power.name = "me_power"
 	mine_stack.add_child(_me_power)
 
+	# 시상대 — 내 기록과 랭킹 사이 (2026-10-12 요청 "랭킹 1,2,3위 장착정보 반영해서 시상대 만들어서 모델링 띄워")
+	_podium = ArenaPodium.make()
+	side.add_child(_podium)
 	side.add_child(_label("랭킹", 22, GOLD))
 	var ranking_scroll := _scroll("RankingScroll")
 	side.add_child(ranking_scroll)
@@ -182,6 +187,8 @@ func fill(board: Dictionary) -> void:
 	for child in _ranking.get_children():
 		_ranking.remove_child(child)
 		child.queue_free()
+	var top: Array = board.get("ranking", []).slice(0, 3)
+	_podium.show_top(top, get_theme_default_font())
 	for row in board.get("ranking", []):
 		_ranking.add_child(_rank_row(row))
 

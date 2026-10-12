@@ -127,7 +127,9 @@ func _case_duel_start() -> void:
 		_fail("상대 하나여야 한다: %d" % mobs.size())
 		return
 	var foe: Dictionary = mobs[0]
-	var s := World.stats_of("fighter", int(copy.level), {})
+	var s := World.stats_of("fighter", int(copy.level), copy.equipped)
+	if copy.equipped.size() != 6:
+		_fail("더미 장비가 여섯 부위가 아니다: %s" % copy.equipped.keys())
 	if int(foe.max_hp) != int(s.maxHp) or int(foe.level) != int(copy.level) or str(foe.name) != str(copy.name):
 		_fail("상대 능력치가 복사본과 다르다: 체력 %d / %d · Lv %d" % [int(foe.max_hp), int(s.maxHp), int(foe.level)])
 	if str(GameData.monster_kind(str(foe.kind)).get("look", "")) != "varco_fighter":
@@ -378,6 +380,37 @@ func _run() -> void:
 			mine = row
 	if mine == null or (mine.get_child(1) as Label).get_theme_color("font_color") != ArenaPanel.ME:
 		_fail("랭킹에 청록 내 줄이 없다")
+
+	# 시상대 — 1 · 2 · 3위가 랭킹 위 셋의 장착 정보대로 입고 단 위에 선다 (2026-10-12)
+	var podium: ArenaPodium = panel.find_child("ArenaPodium", true, false)
+	if podium == null:
+		_fail("시상대가 없다")
+	else:
+		var board: Dictionary = Arena.board(game._transport.snapshot().players.values()[0])
+		var view := podium.get_node("view") as SubViewport
+		for place in [1, 2, 3]:
+			var row: Dictionary = board.ranking[place - 1]
+			var rig := podium.rig_of(place)
+			if rig == null or not rig.visible:
+				_fail("%d위 단에 모델이 없다" % place)
+				continue
+			if podium.name_of(place).text != str(row.name):
+				_fail("%d위 이름표가 '%s' (랭킹은 '%s')" % [place, podium.name_of(place).text, row.name])
+			var weapon: Dictionary = row.equipped.get("weapon", {})
+			if weapon.is_empty() or rig.weapon_grade() != int(weapon.grade) or rig.weapon_enhance() != int(weapon.enhance):
+				_fail("%d위 무기가 장착 정보와 다르다: 등급 %d +%d" % [place, rig.weapon_grade(), rig.weapon_enhance()])
+			for slot in Armor.SLOTS:
+				if rig.gear_grade(slot) != int(row.equipped.get(slot, {}).get("grade", 0)):
+					_fail("%d위 %s 스킨이 장착 정보와 다르다" % [place, slot])
+			# 발 · 머리 · 이름표가 시상대 화면 안에 들어온다 (스크린샷 대신 투영으로 본다)
+			var cam := podium.camera()
+			var size := Vector2(view.size)
+			for y in [podium.top_of(place), podium.top_of(place) + Rig.HUMAN_HEIGHT + 0.35]:
+				var at := cam.unproject_position(Vector3(rig.position.x, y, 0.0))
+				if at.x < 0.0 or at.y < 0.0 or at.x > size.x or at.y > size.y:
+					_fail("%d위가 시상대 화면 밖이다: %s (화면 %s)" % [place, at, size])
+		if podium.top_of(1) <= podium.top_of(2) or podium.top_of(2) <= podium.top_of(3):
+			_fail("단 높이가 1 > 2 > 3 이 아니다")
 
 	# 둘 다 넘쳐서 굴린다
 	for scroll_name in ["RankingScroll", "ChallengerScroll"]:

@@ -26,7 +26,10 @@ test('트레이너 — 53명을 다 모은 보유 효과', () => {
   const all = trainerOwnedBonus(TRAINERS.map((t) => t.id));
   // 공격력: 일반 4×1 + 고급 3×2 + 희귀 2×3 + 영웅 1×5 + 전설 1×8 = 29
   assert.equal(all.attack, 29);
-  for (const v of Object.values(all)) assert.ok(v > 0 && v <= 30);
+  // 치명타 피해는 등급 값의 두 배 — 일반 4×2 + 고급 3×4 + 희귀 2×6 + 영웅 1×10 = 42
+  assert.equal(all.critDamage, 42);
+  assert.deepEqual(trainerOwnedBonus(['n05']).critDamage, 2);
+  for (const v of Object.values(all)) assert.ok(v > 0 && v <= 42);
   assert.deepEqual(trainerOwnedBonus(['n01', 'zz']).attack, 1);
 });
 

@@ -104,7 +104,7 @@
       "name": "스트레칭 강사 로나",
       "grade": 1,
       "stat": "critDamage",
-      "owned": 1,
+      "owned": 2,
       "inherit": 20,
       "height": 1.8
     },
@@ -149,7 +149,7 @@
       "name": "등산 가이드 호크",
       "grade": 1,
       "stat": "critDamage",
-      "owned": 1,
+      "owned": 2,
       "inherit": 20,
       "height": 1.8
     },
@@ -194,7 +194,7 @@
       "name": "댄스 강사 루루",
       "grade": 1,
       "stat": "critDamage",
-      "owned": 1,
+      "owned": 2,
       "inherit": 20,
       "height": 1.8
     },
@@ -239,7 +239,7 @@
       "name": "농부 근육맨 감자",
       "grade": 1,
       "stat": "critDamage",
-      "owned": 1,
+      "owned": 2,
       "inherit": 20,
       "height": 1.8
     },
@@ -284,7 +284,7 @@
       "name": "태권 사범 한결",
       "grade": 2,
       "stat": "critDamage",
-      "owned": 2,
+      "owned": 4,
       "inherit": 30,
       "height": 1.8
     },
@@ -329,7 +329,7 @@
       "name": "곰 조련사 우르사",
       "grade": 2,
       "stat": "critDamage",
-      "owned": 2,
+      "owned": 4,
       "inherit": 30,
       "height": 1.8
     },
@@ -374,7 +374,7 @@
       "name": "도깨비 코치 방망",
       "grade": 2,
       "stat": "critDamage",
-      "owned": 2,
+      "owned": 4,
       "inherit": 30,
       "height": 1.8
     },
@@ -419,7 +419,7 @@
       "name": "바이킹 역사 하랄드",
       "grade": 3,
       "stat": "critDamage",
-      "owned": 3,
+      "owned": 6,
       "inherit": 40,
       "height": 2
     },
@@ -464,7 +464,7 @@
       "name": "해적 권투가 바르보사",
       "grade": 3,
       "stat": "critDamage",
-      "owned": 3,
+      "owned": 6,
       "inherit": 40,
       "height": 1.8
     },
@@ -509,7 +509,7 @@
       "name": "흑룡 무투가 카이저",
       "grade": 4,
       "stat": "critDamage",
-      "owned": 5,
+      "owned": 10,
       "inherit": 60,
       "height": 1.8
     },

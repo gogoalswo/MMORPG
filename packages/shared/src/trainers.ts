@@ -7,7 +7,7 @@
  *   공격력·방어력·체력에 % 를 곱하고, 공속·치명타·관통은 비율이라 **그대로** 쓴다.
  *   그래서 동행 트레이너의 피해 = 캐릭터 평타 피해 × 계승 % 다.
  * - **보유 효과** — 뽑아서 갖고만 있어도 캐릭터에 붙는다 (2026-10-06 사용자가 고른 "보유 효과").
- *   트레이너마다 능력치 하나, 등급마다 1 · 2 · 3 · 5 · 8 %. 공격력·방어력·체력은 다른 몫(장비·헬스·도감)과
+ *   트레이너마다 능력치 하나, 등급마다 1 · 2 · 3 · 5 · 8 % (치명타 피해만 그 두 배). 공격력·방어력·체력은 다른 몫(장비·헬스·도감)과
  *   **따로 곱하고**, 치명타 확률·치명타 피해는 비율에 더한다.
  * - **동행은 한 명** (사용자가 고른 것). 같은 트레이너가 또 나오면 개수가 는다.
  * - **합성** (2026-10-06 요청: "중복으로 나온 트레이너는 합성해서 다음 등급으로 올릴 수 있는 기능 … 확률에 따라서.
@@ -71,6 +71,13 @@ export const TRAINER_DRAW_MULTI = 10;
  */
 const STAT_CYCLE: TrainerStat[] = ['attack', 'defense', 'maxHp', 'crit', 'critDamage'];
 const TRAINER_LEGEND_STATS: TrainerStat[] = ['attack', 'maxHp', 'crit'];
+
+/**
+ * 치명타 피해만 보유 효과를 등급 값의 **두 배**로 준다 (2026-10-12 검토 → 사용자 지시 "치명타 피해 ×2").
+ * 1%p 가 초반엔 0(치명타가 안 뜬다) · 후반엔 피해 +0.24% 라 같은 등급 공격력 카드의 1/4 이었다.
+ * 장비 옵션 표(`OPTION_MAX_VALUE` 치확 0.5 · 치피 1)와 같은 1 : 2 비율이다
+ */
+const TRAINER_STAT_SCALE: Partial<Record<TrainerStat, number>> = { critDamage: 2 };
 
 /**
  * 명단 — 등급 순서대로. `look` 은 원화 프롬프트의 **사람마다 다른 부분**이다
@@ -187,7 +194,7 @@ function build(): Trainer[] {
         name: row.name,
         grade: g.grade,
         stat,
-        owned: g.owned,
+        owned: g.owned * (TRAINER_STAT_SCALE[stat] ?? 1),
         inherit: g.inherit,
         height: row.height ?? 1.8,
         prompt: `${row.look}. ${TRAINER_PROMPT_TAIL}`,

@@ -94,10 +94,12 @@ static func foe(copy: Dictionary, x: float, z: float) -> Dictionary:
 	return monster
 
 
-## 결투장 전투력 — 자동 장착이 견주는 값(`Ledger.gear_power` = 한 대 기대 피해 × 버틸 체력)에 **공속 배수**를 곱한다
+## 결투장 전투력 — 자동 장착이 견주는 값(`Ledger.gear_power` = 한 대 기대 피해 × 버틸 체력)에 **공속 배수**를 곱하고 제곱근
 ## (2026-10-12 요청 "공속도 넣어서 바꿔"). 배수 = 기본 간격 ÷ 지금 간격 (`Combat.effective_cooldown`) — 내 평타 배속
 ## (`swing.speed`)과 같은 값이라 공속 패시브가 없으면 1 이고, 질풍각 끝(초당 10타)이면 9배쯤이다.
-## 자동 장착 값에는 안 넣었다 — 장비에 공속 옵션이 없어 어느 장비를 껴도 같은 배수라 고르는 데 쓸모가 없다
+## 자동 장착 값에는 안 넣었다 — 장비에 공속 옵션이 없어 어느 장비를 껴도 같은 배수라 고르는 데 쓸모가 없다.
+## **마지막에 제곱근을 씌운다** (같은 날 요청 "전투력이 48억인데 수치가 너무 높아 … 줄여서" → 제곱근을 골랐다) —
+## 공격 × 체력의 곱이라 숫자가 제곱으로 커졌다. 순서는 그대로고, 두 배 세지면 숫자는 √2(1.4)배 오른다
 static func power(p: Dictionary) -> int:
 	var equipped: Dictionary = p.get("equipped", {})
 	var s := World.stats_of(
@@ -105,7 +107,7 @@ static func power(p: Dictionary) -> int:
 		p.get("codex", {}), p.get("trainers", {})
 	)
 	var cooldown := Combat.effective_cooldown(float(s.attackCooldown), float(s.attackSpeed))
-	return roundi(Ledger.gear_power(p, equipped) * float(s.attackCooldown) / maxf(1.0, float(cooldown)))
+	return roundi(sqrt(Ledger.gear_power(p, equipped) * float(s.attackCooldown) / maxf(1.0, float(cooldown))))
 
 
 ## i 번째 더미 이름. 앞말은 i % 10, 뒷말은 (⌊i / 10⌋ × 3 + i % 10) % 10 — i < 50 이면 짝이 겹치지 않는다

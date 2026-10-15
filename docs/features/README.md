@@ -65,7 +65,6 @@ ZoneRoom 돌리기) · `DEPLOY.md`(터널로 친구에게 열어주기). 셋 다
 | [persistence.md](persistence.md) | SQLite 스키마, 마이그레이션, 계정·토큰 |
 | [characters-and-animation.md](characters-and-animation.md) | 캐릭터·몬스터·NPC 외형, 본 구조, 걷기·대기·공격 동작, ★ **격투가 평타·스킬 동작(블렌더로 지음)**, ★ **팬티 차림 몸과 장비 스킨**(갑옷·투구·신발을 끼면 그 부위가 등급 재질로 바뀐다) |
 | [verification.md](verification.md) | **확인하는 방법** — 헤드리스 클라이언트, DOM 읽기, 로그 |
-| [background-input.md](background-input.md) | **포커스 없이 키 누르기** 시험 도구(`scripts/bg-key.ps1`, Windows) — 매크로 막기 기능을 시험할 때 |
 | [godot-migration.md](godot-migration.md) | ★ **지금 만드는 것.** 고도 엔진 이관(모바일 앱) — 어디에 무엇이 있는지, `World`·`Transport` 규칙, 옮긴 것과 안 옮긴 것, 빌드·배포·확인 |
 | [blender.md](blender.md) | 블렌더를 **설치 없이** 화면 없이 돌리기 — `npm run blender`, 자동으로 받는 곳, Setup script 줄, 바르코 캐릭터에 동작 더하기 |
 
